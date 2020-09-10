@@ -11,7 +11,7 @@ jobs:
       with:
         python-version: 3.8
     - name: Build distribution 📦
-      run: python setup.py
+      run: python setup.py sdist bdist_wheel
     - name: Publish distribution 📦 to Test PyPI
       uses: pypa/gh-action-pypi-publish@master
       with:

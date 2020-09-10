@@ -19,12 +19,12 @@ webchanges
     :alt: licence
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/webchanges/latest.svg?style=flat-square&label=Read%20the%20Docs
-   :alt: Read the documentation at https://webchanges.readthedocs.io/en/latest/
-   :target: https://webchanges.readthedocs.io/en/latest/
+   :alt: Read the documentation at https://webchanges.readthedocs.io/
+   :target: https://webchanges.readthedocs.io/
 
 .. |travis| image:: https://img.shields.io/travis/mborsetti/webchanges/master.svg?style=flat-square&label=Travis%20Build
     :target: https://travis-ci.org/mborsetti/webchanges
-    :alt: travis build status
+    :alt: Travis CI build status
 
 .. |appveyor| image:: https://img.shields.io/appveyor/ci/mborsetti/webchanges/master.svg?style=flat-square&logo=appveyor
     :target: https://ci.appveyor.com/project/mborsetti/webchanges

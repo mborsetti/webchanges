@@ -13,7 +13,7 @@ __project_name__ = __package__
 # If unsure, use pkg_resources.parse_version to parse
 __version__ = '3.0.0-beta.2'
 __min_python_version__ = (3, 6)
-__author__ = 'Mike Borsetti'
+__author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'
 __license__ = 'MIT, BSD 3-Clause License'
 __url__ = f'https://github.com/mborsetti/{__project_name__}'
