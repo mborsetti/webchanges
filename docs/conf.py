@@ -15,7 +15,7 @@ import sys
 
 import sphinx_rtd_theme  # noqa:F401 'sphinx_rtd_theme' imported but unused
 
-import webchanges as project_data
+from ..webchanges import __init__ as project_data
 
 sys.path.insert(1, os.path.abspath('..'))
 
