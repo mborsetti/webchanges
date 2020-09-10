@@ -15,6 +15,7 @@ Mandatory packages
 If `webchanges` is installed with `pip`, these Python packages are installed automatically:
 
 * `appdirs <https://github.com/ActiveState/appdirs>`__
+* `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect)
 * `html2text <https://github.com/Alir3z4/html2text>`__
 * `lxml <https://lxml.de>`__
 * `markdown2 <https://github.com/trentm/python-markdown2>`__
