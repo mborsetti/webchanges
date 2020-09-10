@@ -1,0 +1,8 @@
+__pycache__/
+.idea/
+.pytest_cache/
+build/
+dist/
+docs/build/
+htmlcov/
+*.egg-info/

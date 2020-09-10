@@ -1,0 +1,7 @@
+appdirs
+html2text
+lxml
+markdown2
+minidb
+pyyaml
+requests
