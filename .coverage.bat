@@ -4,7 +4,7 @@ rem Windows batch file to run coverage tests before contributing
 
 cd /d "%~dp0"
 
-coverage run --source=webchanges -m pytest -v
+coverage run -m pytest -v
 if %errorlevel% NEQ 0 pause
 coverage report -m
 coverage html

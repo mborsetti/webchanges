@@ -6,11 +6,14 @@ python:
   - "3.7"
   - "3.6"
 install:
+  - pip install --upgrade pip
   - pip install -r requirements.txt
   - pip install flake8 flake8-builtins flake8-import-order pytest coverage
   - sudo apt-get install -y build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
   - pip install pdftotext docutils pygments pytesseract pillow
 script:
-  - coverage run --source=webchanges -m pytest -v
-  - coverage report -m
-#  - coverage html
+# runs coverage and pytest (see .coveragerc)
+  - coverage run
+after_success:
+# uploads data to https://codecov.io/gh/mborsetti/webchanges
+  - bash <(curl -s https://codecov.io/bash)
