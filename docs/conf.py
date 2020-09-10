@@ -17,7 +17,7 @@ import sphinx_rtd_theme  # noqa:F401 'sphinx_rtd_theme' imported but unused
 
 import webchanges as project_data
 
-sys.path.insert(1, os.path.abspath('../..'))
+sys.path.insert(1, os.path.abspath('..'))
 
 
 # -- Project information -----------------------------------------------------
@@ -66,7 +66,7 @@ exclude_patterns = []
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['_static']
 
-master_doc = 'source/index'
+master_doc = 'index'
 
 # -- sphinx_rtd_theme  -------------------------------------------------------
 
