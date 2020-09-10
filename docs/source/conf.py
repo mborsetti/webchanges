@@ -12,14 +12,15 @@
 #
 import os
 import sys
-sys.path.insert(1, os.path.abspath('..\..'))
-import sphinx_rtd_theme
+
+import sphinx_rtd_theme  # noqa:F401 'sphinx_rtd_theme' imported but unused
+
+import webchanges as project_data
+
+sys.path.insert(1, os.path.abspath('../..'))
 
 
 # -- Project information -----------------------------------------------------
-
-
-import webchanges as project_data
 
 project = project_data.__package__
 copyright = project_data.__copyright__

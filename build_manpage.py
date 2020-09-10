@@ -3,7 +3,6 @@
 # rebuilds manpages
 
 import os
-import sys
 from textwrap import wrap
 
 from build_manpages.manpage import Manpage
@@ -35,6 +34,7 @@ A SQLite 3 database that contains the state history of jobs (for diffing)
 {project.__url__}
     """)
 
+
 def build_manpage():
     parser = CommandConfig('', '', '', '', '', '', '', '', verbose=False).parse_args()
     parser.prog = f"{project.__project_name__} {project.__version__}"
@@ -43,4 +43,4 @@ def build_manpage():
     manpage = str(Manpage(parser))
     manpage += ADDITIONAL_TEXT
     with open(os.path.relpath(os.path.join('share', 'man', 'man1', f'{project.__project_name__}.1')), 'w') as f:
-      f.write(manpage)
+        f.write(manpage)
