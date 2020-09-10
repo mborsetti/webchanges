@@ -1,32 +1,32 @@
-==========
-webchanges
-==========
+====================
+webchanges |version|
+====================
 
-|pypi| |support| |licence|
-
-|readthedocs| |travis| |coverage|
-
-.. |pypi| image:: https://img.shields.io/pypi/v/webchanges.svg?style=flat-square
+.. |version| image:: https://img.shields.io/pypi/v/webchanges.svg?label=
     :target: https://pypi.org/project/webchanges/
     :alt: pypi version
 
-.. |support| image:: https://img.shields.io/pypi/pyversions/webchanges.svg?style=flat-square
+.. |support| image:: https://img.shields.io/pypi/pyversions/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: supported Python version
 
-.. |licence| image:: https://img.shields.io/pypi/l/webchanges.svg?style=flat-square
+.. |licence| image:: https://img.shields.io/pypi/l/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: licence
 
-.. |readthedocs| image:: https://img.shields.io/readthedocs/webchanges/latest.svg?style=flat-square&label=Read%20the%20Docs
+.. |issues| image:: https://img.shields.io/github/issues-raw/mborsetti/webchanges
+    :target: https://github.com/mborsetti/webchanges/issues
+    :alt: licence
+
+.. |readthedocs| image:: https://img.shields.io/readthedocs/webchanges/latest.svg?label=
    :alt: Read the documentation at https://webchanges.readthedocs.io/
    :target: https://webchanges.readthedocs.io/
 
-.. |travis| image:: https://img.shields.io/travis/mborsetti/webchanges/master.svg?style=flat-square&label=Travis%20Build
+.. |travis| image:: https://img.shields.io/travis/mborsetti/webchanges/master.svg?label=Travis%20Build
     :target: https://travis-ci.org/mborsetti/webchanges
     :alt: Travis CI build status
 
-.. |appveyor| image:: https://img.shields.io/appveyor/ci/mborsetti/webchanges/master.svg?style=flat-square&logo=appveyor
+.. |appveyor| image:: https://img.shields.io/appveyor/ci/mborsetti/webchanges/master.svg?logo=appveyor
     :target: https://ci.appveyor.com/project/mborsetti/webchanges
     :alt: appveyor build status
 
@@ -43,7 +43,8 @@ a summary of what has changed. This project is a fork of `urlwatch <https://gith
 Installation
 ============
 
-`webchanges` is available on `PyPI <https://pypi.org/project/webchanges/>`__ and can be installed using `pip`::
+`webchanges` is available on `PyPI <https://pypi.org/project/webchanges/>`__ for |support| and can be installed using
+`pip`::
 
    pip install webchanges
 
@@ -52,12 +53,15 @@ Optional dependencies may be needed; see `here <https://webchanges.readthedocs.i
 Documentation
 =============
 
-The documentation is hosted on `Read the Docs <ttps://webchanges.readthedocs.io/en/stable/>`__
+The documentation is hosted on `Read the Docs <ttps://webchanges.readthedocs.io/en/stable/>`__ |readthedocs|
+
 
 Code
 ====
 
 The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__
+
+|issues| |travis| |coverage|
 
 Quick Start
 ============

@@ -4,7 +4,7 @@
 Command line switches
 =====================
 
-.. code-block::
+.. code-block:: none
 
   optional arguments:
     -h, --help            show this help message and exit

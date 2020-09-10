@@ -11,6 +11,13 @@ Unreleased
 
 `Contributions <https://github.com/mborsetti/webchanges/blob/master/CHANGELOG.rst>`__ always welcomed!
 
+Unreleased versions can be installed as follows:
+
+.. code-block:: bash
+
+   pip install --update --index-url https://test.pypi.org/simple/ webchanges
+
+
 Version 3.0.0 (2020-09-15)
 ==========================
 

@@ -1,7 +1,17 @@
+============
+Contributing
+============
+
+|contributors|
+
+.. |contributors| image:: https://img.shields.io/github/contributors/mborsetti/webchanges
+    :target: https://www.github.com/mborsetti/webchanges
+    :alt: contributors
+
 Everyone is welcomed to contribute!
 
-Beginners see this `tutorial <https://github.com/firstcontributions/first-contributions/blob/master/README.md>`__;
-documentation is a great place to start.
+Beginner? It's easy-ish to start! See this `tutorial
+<https://github.com/firstcontributions/first-contributions/blob/master/README.md>`__;
 
 Documentation
 -------------
@@ -22,8 +32,8 @@ all Python dev packages):
 .. code-block:: bash
 
    pip install -U webchanges[testing]
-   # linux:
-   coverage run --source=webchanges -m pytest -v
+   # Linux:
+   coverage run
    # Windows:
    coverage.bat
 
