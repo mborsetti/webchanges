@@ -1,4 +1,0 @@
-include CHANGELOG.rst COPYING
-graft docs
-graft mborsetti/tests
-graft share

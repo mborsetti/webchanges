@@ -11,7 +11,7 @@ install:
   - pip install -r requirements.txt
   - sudo apt-get install -y build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
   - pip install aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pdftotext Pillow pushbullet.py pyppeteer pytesseract redis vobject
-  - pip install coverage docutils flake8 flake8-builtins flake8-import-order pytest
+  - pip install coverage docutils flake8 flake8-import-order pytest
 script:
 # runs coverage and pytest (see .coveragerc)
   - coverage run

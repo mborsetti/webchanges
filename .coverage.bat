@@ -1,4 +1,4 @@
-rem Windows batch file to run coverage tests before contributing
+rem Windows batch file to run tests and coverage before contributing
 
 @echo off
 

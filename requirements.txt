@@ -6,3 +6,4 @@ markdown2
 minidb
 pyyaml
 requests
+colorama ; os_name=="nt"

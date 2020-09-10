@@ -7,15 +7,12 @@ import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
 import docutils.utils
-
 import pkg_resources
-
 import pytest
+import yaml
 
 from webchanges.filters import FilterBase
 from webchanges.jobs import UrlJob
-
-import yaml
 
 root = os.path.join(os.path.dirname(__file__), '../webchanges', '..')
 here = os.path.dirname(__file__)
@@ -51,7 +48,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
 
 def load_filter_testdata():
-    doc = parse_rst(open(os.path.join(root, 'docs/source/filters.rst')).read())
+    doc = parse_rst(open(os.path.join(root, 'docs/filters.rst')).read())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
 
