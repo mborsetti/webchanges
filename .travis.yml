@@ -8,9 +8,9 @@ python:
 install:
   - pip install --upgrade pip
   - pip install -r requirements.txt
-  - pip install flake8 flake8-builtins flake8-import-order pytest coverage
+  - pip install docutils flake8 flake8-builtins flake8-import-order pytest coverage
   - sudo apt-get install -y build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
-  - pip install pdftotext docutils pygments pytesseract pillow
+  - pip install aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pdftotext Pillow pushbullet.py pyppeteer pytesseract redis vobject
 script:
 # runs coverage and pytest (see .coveragerc)
   - coverage run
