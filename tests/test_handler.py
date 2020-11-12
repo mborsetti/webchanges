@@ -6,12 +6,11 @@ import warnings
 
 import pytest
 
-from webchanges import storage
 from webchanges.config import BaseConfig
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheMiniDBStorage, JobsTxt, JobsYaml, YamlConfigStorage
-# from webchanges.util import import_module_from_source
+from webchanges.storage import CacheMiniDBStorage, DEFAULT_CONFIG, JobsYaml, YamlConfigStorage
+from webchanges.util import import_module_from_source
 
 pkgname = 'webchanges'
 root = os.path.join(os.path.dirname(__file__), '../webchanges', '..')
@@ -27,7 +26,7 @@ def test_required_classattrs_in_subclasses():
 
 def test_save_load_jobs():
     jobs = [
-        UrlJob(name='news', url='http://news.orf.at/'),
+        UrlJob(name='news', url='https://news.orf.at/'),
         ShellJob(name='list homedir', command='ls ~'),
         ShellJob(name='list proc', command='ls /proc'),
     ]
@@ -44,6 +43,7 @@ def test_save_load_jobs():
 
     assert len(jobs2) == len(jobs)
     # Assert that the shell jobs have been removed due to secure loading
+    # TODO why not working in Windows?
     if os.name != 'nt':
         assert len(jobs3) == 1
 
@@ -54,42 +54,25 @@ def test_load_config_yaml():
         config = YamlConfigStorage(config_file)
         assert config is not None
         assert config.config is not None
-        assert config.config == storage.DEFAULT_CONFIG
+        assert config.config == DEFAULT_CONFIG
     else:
         print(f'{config_file} not found')
 
 
-def test_load_urls_txt():
-    urls_txt = os.path.join(here, 'data', 'urls.txt')
-    if os.path.exists(urls_txt):
-        assert len(JobsTxt(urls_txt).load_secure()) > 0
+def test_load_jobs_yaml():
+    jobs_yaml = os.path.join(here, 'data', 'jobs.yaml')
+    if os.path.exists(jobs_yaml):
+        assert len(JobsYaml(jobs_yaml).load_secure()) > 0
     else:
-        warnings.warn(f'{urls_txt} not found', UserWarning)
+        warnings.warn(f'{jobs_yaml} not found', UserWarning)
 
 
-# def test_load_urls_yaml():
-#     urls_yaml = 'share/examples/jobs-example.yaml'
-#     if os.path.exists(urls_yaml):
-#         assert len(JobsYaml(urls_yaml).load_secure()) > 0
-#     else:
-#         warnings.warn(f'{urls_yaml} not found', UserWarning)
-
-
-# def test_load_hooks_py():
-#     hooks_py = 'share/examples/hooks.rst'
-#     if os.path.exists(hooks_py):
-#         import_module_from_source('hooks', hooks_py)
-#     else:
-#         warnings.warn(f'{hooks_py} not found', UserWarning)
-
-
-# def test_pep8_conformance():
-#     """Test that we conform to PEP-8."""
-#     style = pycodestyle.StyleGuide(ignore=['E501', 'E402', 'W503'])
-#
-#     py_files = [y for x in os.walk(os.path.abspath('.')) for y in glob(os.path.join(x[0], '*.py'))]
-#     result = style.check_files(py_files)
-#     assert result.total_errors == 0, f"Found #{result.total_errors} code style errors"
+def test_load_hooks_py():
+    hooks_py = os.path.join(here, 'data', 'hooks.py')
+    if os.path.exists(hooks_py):
+        import_module_from_source('hooks', hooks_py)
+    else:
+        warnings.warn(f'{hooks_py} not found', UserWarning)
 
 
 class ConfigForTest(BaseConfig):
@@ -109,12 +92,14 @@ def teardown_func():
         cache = os.path.join(here, 'data', 'cache.db')
         if os.path.exists(cache):
             os.remove(cache)
+        if os.path.exists(cache + '.bak'):
+            os.remove(cache + '.bak')
 
 
 def test_run_watcher():
     with teardown_func():
         urls = os.path.join(root, 'share', 'examples', 'jobs-example.yaml')
-        config = os.path.join(here, 'data', 'urlwatch.yaml')
+        config = os.path.join(here, 'data', 'config.yaml')
         cache = os.path.join(here, 'data', 'cache.db')
         hooks = ''
 
@@ -148,7 +133,7 @@ def test_unserialize_with_unknown_key():
 
 def prepare_retry_test():
     urls = os.path.join(here, 'data', 'invalid-url.yaml')
-    config = os.path.join(here, 'data', 'urlwatch.yaml')
+    config = os.path.join(here, 'data', 'config.yaml')
     cache = os.path.join(here, 'data', 'cache.db')
     hooks = ''
 
@@ -215,7 +200,7 @@ def test_reset_tries_to_zero_when_successful():
 
             # use an url that definitely exists
             job = urlwatcher.jobs[0]
-            job.url = 'file://' + os.path.join(here, 'data', 'urlwatch.yaml')
+            job.url = 'file://' + os.path.join(here, 'data', 'config.yaml')
 
             urlwatcher.run_jobs()
 

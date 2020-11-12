@@ -49,6 +49,21 @@ containing three hyphens, i.e. ``---``.
    name: Example page 2
    url: https://example.org/page2
 
+
+Important: due to an early architectural choice, URLs must be unique to each job. If for some reason you want to monitor
+the same address twice, make sure each job has a unique URL; you can easily accomplish this by adding a # at the end of
+the link followed by a unique remark (the # and everything after is discarded by a web server, but captured by
+`webchanges`):
+
+.. code-block:: yaml
+
+   name: Example homepage
+   url: https://example.org/
+   ---
+   name: Example homepage -- again!
+   url: https://example.org/#2
+
+
 .. _use_browser:
 
 The use_browser directive
@@ -67,7 +82,7 @@ the directive ``use_browser: true`` to the job configuration:
 ^^^^^^^^^^^^^^^^^^^
 
 * The optional `Pyppeteer <https://github.com/pyppeteer/pyppeteer>`__ Python package must be installed; run
-  ``pip isntall webchanges[use_browser]`` to install it.
+  ``pip install webchanges[use_browser]`` to install it.
 * Additional OS-dependent dependencies may be required as well;
   missing dependencies are often the cause of ``pyppeteer.errors.BrowserError:
   Browser closed unexpectedly``. See `here
@@ -108,9 +123,12 @@ For all ``url`` jobs:
 
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
-- ``method``: HTTP method to use (default: ``GET``)
-- ``data``: HTTP POST/PUT data
-- ``ssl_no_verify``: Do not verify SSL certificates (true/false)
+- ``method``: `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use
+  (default: ``GET``)
+- ``data``: HTTP data (defaults request method to ``POST`` and `Content-type
+  https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header to
+  ``application/x-www-form-urlencoded``)
+- ``ssl_no_verify``: Do not verify SSL certificates (true/false) (see :ref:`here <ssl_no_verify>`)
 - ``ignore_cached``: Do not use cache control (ETag/Last-Modified) values (true/false)
 - ``encoding``: Override the character encoding from the server (see :ref:`here <encoding>`)
 - ``ignore_connection_errors``: Ignore (temporary) connection errors (true/false) (see :ref:`here <ignore_errors>`)
@@ -132,7 +150,7 @@ For ``url`` jobs that have ``use_browser: true``:
 Command
 -------
 
-This job type allows you to watch the output of arbitrary shell commands, which is useful for e.g. monitoring a FTP
+This job type allows you to watch the output of arbitrary shell commands, which is useful for e.g. monitoring an FTP
 uploader folder, output of scripts that query external devices (RPi GPIO), etc...
 
 .. code-block:: yaml
@@ -155,7 +173,7 @@ Optional directives (for all job types)
 These optional directives apply to all job types:
 
 - ``name``: Human-readable name/label of the job. If content is HTML, defaults to tile.
-- ``max_tries``: Number of times to retry fetching the resource
+- ``max_tries``: Maximum number of times to run the job to retrieve the resource (default: 1)
 - ``diff_tool``: Command to a custom tool for generating diff text
 - ``compared_versions``: Number of versions to compare for similarity (see :ref:`here <compared_versions>`):
 - ``filter``: :ref:`filters` (if any) to apply to the output (can be tested with ``--test``)

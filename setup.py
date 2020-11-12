@@ -16,7 +16,7 @@ if sys.version_info < project.__min_python_version__:
              f'{".".join(str(v) for v in project.__min_python_version__)} or newer.\n'
              f'You are running {sys.version}')
 
-# build_manpage()
+
 
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()

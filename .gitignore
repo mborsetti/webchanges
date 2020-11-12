@@ -5,4 +5,7 @@ build/
 dist/
 docs/build/
 htmlcov/
-*.egg-info/
+webchanges.egg-info/
+.coverage
+.gitignore
+.publish_pypi.bat

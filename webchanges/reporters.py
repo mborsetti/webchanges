@@ -11,12 +11,10 @@ import sys
 import time
 from math import floor, log10
 
+import requests
 from markdown2 import Markdown
 
-import requests
-
 import webchanges as project
-
 from .mailer import SMTPMailer, SendmailMailer
 from .util import TrackSubClasses, chunk_string, linkify
 from .xmpp import XMPP
@@ -128,7 +126,7 @@ class HtmlReporter(ReporterBase):
 
                 yield '<hr>'
 
-        duration = round(self.duration, max(0, 1 - int(floor(log10(self.duration)))))
+        duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
         yield (f"""
             <div style="font-style:italic">
             Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}
@@ -138,7 +136,7 @@ class HtmlReporter(ReporterBase):
             </body>
             </html>""")
 
-    def _diff_to_html(self, unified_diff: str, is_markdown: bool = False) -> str:
+    def _diff_to_html(self, unified_diff: str, is_markdown: bool = False, markdown_padded_tables: bool = False) -> str:
         if is_markdown:
             # rebuild html from markdown using markdown2 library's Markdown
             markdowner = Markdown(safe_mode='escape', extras=['strike', 'target-blank-links'])
@@ -154,21 +152,21 @@ class HtmlReporter(ReporterBase):
                 if text.lstrip().startswith('* '):  # item of unordered list
                     lstripped = text.lstrip(' ')
                     indent = len(text) - len(lstripped)
-                    pre = '&nbsp;' * indent
+                    pre += '&nbsp;' * indent
                     pre += '● ' if indent == 2 else '⯀ ' if indent == 4 else '○ '
                     text = text.split('* ', 1)[1]
-                elif text.startswith('|'):  # a row in a table; keep it monospaced
-                    pre = '<span style="font-family: monospace">'
-                    post = '</span>'
                 elif text.startswith(' '):  # replace leading spaces or converter will strip
                     lstripped = text.lstrip()
                     text = '&nbsp;' * (len(text) - len(lstripped)) + lstripped
+                if markdown_padded_tables and '|' in text:  # a padded row in a table; keep it monospaced for alignment
+                    pre += '<span style="font-family:monospace;white-space:pre-wrap">'
+                    post += '</span>'
                 html_out = markdowner.convert(text).strip('\n')  # convert markdown to html
                 html_out = html_out.replace('<a', '<a style="font-family:inherit"')  # fix <a> tag styling
                 html_out = html_out.replace('<img', '<img style="max-width:100%;height:auto;max-height:100%"')
                 html_out, sub = mtags.subn('', html_out)  # remove added tags we don't want
                 if sub:
-                    return pre + html_out
+                    return pre + html_out + post
                 html_out = htags.sub(r'<\g<1>strong>', html_out)  # replace heading tags with <strong>
                 return pre + html_out + post
 
@@ -213,7 +211,8 @@ class HtmlReporter(ReporterBase):
         if difftype == 'unified':
             diff = job_state.get_diff()
             if diff:
-                return '\n'.join(self._diff_to_html(diff, job_state.job.is_markdown))
+                return '\n'.join(self._diff_to_html(diff, job_state.job.is_markdown,
+                                                    job_state.job.markdown_padded_tables))
             else:
                 return
 
@@ -615,9 +614,12 @@ class TelegramReporter(TextReporter):
 
 class SlackReporter(TextReporter):
     """Send a message to a Slack channel"""
-    MAX_LENGTH = 40000
 
     __kind__ = 'slack'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_length = self.config.get('max_message_length', 40000)
 
     def submit(self):
         webhook_url = self.config['webhook_url']
@@ -628,7 +630,7 @@ class SlackReporter(TextReporter):
             return
 
         result = None
-        for chunk in chunk_string(text, self.MAX_LENGTH, numbering=True):
+        for chunk in chunk_string(text, self.max_length, numbering=True):
             res = self.submit_to_slack(webhook_url, chunk)
             if res.status_code != requests.codes.ok or res is None:
                 result = res

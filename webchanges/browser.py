@@ -62,7 +62,7 @@ class BrowserLoop(object):
         context = self._browser
         page = await context.newPage()
         if cookies:
-            page.setCookies(cookies)
+            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in cookies.items()])})
         if headers:
             await page.setExtraHTTPHeaders(headers)
         if proxy_username or proxy_password:

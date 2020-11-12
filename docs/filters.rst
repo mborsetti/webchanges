@@ -152,7 +152,7 @@ Example to parse an RSS feed and filter only the titles and publication dates:
          path: '//item/title/text()|//item/pubDate/text()'
 
 To match an element in an `XML namespace <https://www.w3.org/TR/xml-names/>`__, use a namespace prefix before the tag
-name. Use a ``|`` to seperate the namespace prefix and the tag name in a CSS selector, and use a ``:`` in an XPath
+name. Use a ``|`` to separate the namespace prefix and the tag name in a CSS selector, and use a ``:`` in an XPath
 expression.
 
 .. code-block:: yaml

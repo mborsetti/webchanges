@@ -111,7 +111,7 @@ a specific regular expression with ``keep_lines_containing``, and sort the resul
 
     name: Sample webchanges job definition
     url: https://example.com/
-    https_proxy: http://user:passwor@example.net:8080
+    https_proxy: http://user:password@example.net:8080
     max_tries: 2
     filter:
       - xpath: //section[@role="main"]

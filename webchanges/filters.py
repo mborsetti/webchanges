@@ -10,17 +10,13 @@ import subprocess
 import sys
 from enum import Enum
 
-from appdirs import AppDirs
-
 import html2text
-
+import yaml
+from appdirs import AppDirs
 from lxml import etree  # noqa:DUO107 insecure use of XML modules, prefer "defusedxml"
 from lxml.cssselect import CSSSelector  # noqa:DUO107 insecure use of XML modules, prefer "defusedxml"
 
-import yaml
-
 from .util import TrackSubClasses, import_module_from_source
-
 
 logger = logging.getLogger(__name__)
 
@@ -303,9 +299,10 @@ class Html2TextFilter(FilterBase):
             parser.ignore_images = True
             if hasattr(self.job, 'url'):
                 parser.baseurl = self.job.url
-                parser.baseurl = self.job.url
             for k, v in options.items():
                 setattr(parser, k.lower(), v)
+                if k == 'pad_tables':
+                    self.job.markdown_padded_tables = v
 
             d = parser.handle(data)
 

@@ -102,6 +102,22 @@ if the webpage changes into a new unknown state. You can use ``compared_versions
 In this example, changes are only reported if the webpage becomes different from the latest three distinct states. The
 differences are shown relative to the closest match.
 
+.. _ssl_no_verify:
+
+Ignoring SSL errors
+-------------------
+
+Setting `ssl_no_verify` to true may be useful during local development or testing.
+
+When set to true, `webchanges` requests will accept any TLS certificate presented by the server, and will ignore
+hostname mismatches and/or expired certificates, which will make your application vulnerable to man-in-the-middle (MitM)
+attacks.
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   ssl_no_verify: true
+
 
 .. _encoding:
 

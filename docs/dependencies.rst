@@ -69,7 +69,8 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 +-------------------------+-------------------------------------------------------------------------+
 | ``xmpp`` reporter       | * `aioxmpp <https://github.com/horazont/aioxmpp>`__                     |
 +-------------------------+-------------------------------------------------------------------------+
-| ``redis`` database      | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
+| ``redis`` database      | * `msgpack <https://msgpack.org/>`__                                    |
+|                         | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`__                       |
 | storage for email and   |                                                                         |
@@ -85,7 +86,7 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 |                         | * `sphinx_rtd_theme <https://github.com/readthedocs/sphinx_rtd_theme>`__|
 |                         | * all the dependencies listed above except for pdf2text and ocr         |
 +-------------------------+-------------------------------------------------------------------------+
-| ``all``                 | * all the optional packages listed above.                               |
+| ``all``                 | * all the optional packages listed above, including for testing         |
 |                         |   Note: you will also have to **separately install** the required       |
 |                         |   OS-specific dependencies [#f1]_ [#f4]_ [#f5]_                         |
 +-------------------------+-------------------------------------------------------------------------+

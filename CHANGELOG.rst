@@ -9,21 +9,25 @@ Unreleased
 ==========
 * None
 
-`Contributions <https://github.com/mborsetti/webchanges/blob/master/CHANGELOG.rst>`__ always welcomed!
+`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ always welcomed, and you can
+check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.rst>`__ for inspiration.
 
 Unreleased versions can be installed as follows:
 
 .. code-block:: bash
 
-   pip install --update --index-url https://test.pypi.org/simple/ webchanges
+   pip install git+https://github.com/mborsetti/webchanges.git@unreleased
+
+Note: git needs to be `installed <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ for this to work.
 
 
-Version 3.0.0 (2020-09-15)
-==========================
+Version 3.0.0
+=============
+2020-11-12
 
 Milestone
 ---------
-Initial release of `webchanges` as an updated fork of `urlwatch` 2.21. Changes below are relative to `urlwatch` 2.21
+Initial release of `webchanges` as a reworked fork of `urlwatch` 2.21. Changes below are relative to `urlwatch` 2.21
 
 Added
 -----
@@ -50,7 +54,8 @@ Added
 * New report filters ``additions_only`` and ``deletions_only`` allow to track only content that was added (or
   deleted) from the source
 * Support for Python 3.9
-* Backward compatibility with `urlwatch` 2.21 (except running on Python 3.5 or using ``lynx``)
+* Backward compatibility with `urlwatch` 2.21 (except running on Python 3.5 or using ``lynx``, which is replaced by
+  internal ``html2text`` filter)
 
 Changed and deprecated
 ----------------------
@@ -64,7 +69,7 @@ Changed and deprecated
   ``re``
 * New `additions_only` directive to report only added lines (useful when monitoring only new content)
 * New `deletions_only` directive to report only deleted lines
-* `keyring` and `cssselect` Python packages are no longer installed by default
+* `keyring` Python package is no longer installed by default
 * `html2text` and `markdown2` Python packages are installed by default
 * Installation of Python packages required by a feature is now made easier with pip extras (e.g. ``pip install -U
   webchanges[ocr,pdf2text]``)
@@ -81,11 +86,15 @@ Changed and deprecated
 * ``-V`` command line switch added as an alias to ``--version``
 * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
   the current directory, `webchanges` now looks for it in the default configuration directory
+* If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' suffix, `webchanges` now looks for one with
+  such a suffix
 * In Windows, ``--edit`` defaults to using built-in notepad.exe if %EDITOR% or %VISUAL% are not set
 * When using ``--job`` command line switch, if there's no file by that name in the specified directory will look in
   the default one before giving up.
 * The use of the ``kind`` directive in ``jobs.yaml`` configuration files has been deprecated (but is, for now, still
   used internally)
+* The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
+  ``max_message_length`` sub-directive
 * The database (cache) file is backed up at every run to `*.bak`
 * The mix of default and optional dependencies has been updated (see documentation) to enable "Just works"
 * Dependencies are now specified as PyPi `extras
@@ -95,6 +104,7 @@ Changed and deprecated
 * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
   <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__
 * Reports' elapsed time now always has at least 2 significant digits
+* Expanded (only slightly) testing
 * Using flake8 to check PEP-8 compliance and more
 * Using coverage to check unit testing coverage
 
@@ -109,6 +119,7 @@ Fixed
 * HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
   the first sub-directive)
+* The presence of the ``data`` directive in a job would force the method to POST preventing PUTs
 
 Security
 --------

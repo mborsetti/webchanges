@@ -20,10 +20,10 @@ Unicode text.
 **Optional sub-directives**
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* minimal: An abbreviated version (directives below are ignored)
+* minimal: An abbreviated version (directives below are ignored) (true/false); defaults to false
 * line_length: The maximum length of each line
-* show_details: Show details of each job
-* show_footer: Show footer listing number of jobs and elapsed time
+* show_details: Includes the diff of each job (true/false); defaults to true
+* show_footer: Show footer listing number of jobs and elapsed time (true/false); defaults to true
 
 
 .. _html:
@@ -41,7 +41,7 @@ If for some reason you want the output to be the python `HtmlDiff
 **Optional sub-directives**
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* diff: unified (default) or table. See above.
+* diff: 'unified' (default) or 'table'. See above.
 
 
 .. _markdown:

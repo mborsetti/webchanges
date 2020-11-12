@@ -184,7 +184,7 @@ leak from, e.g. from a scan of your jobs file), then configure these directives 
        html: true
        method: smtp
          host: email-smtp.us-west-2.amazonaws.com  # (edit accordingly)
-         user: ABCDEFGHIJ1234567890  # (edit  accordingly)
+         user: ABCDEFGHIJ1234567890  # (edit accordingly)
          insecure_password: 'this_is_my_secret_password'  # (edit accordingly)
          auth: true
          port: 587  # (25 or 465 also work)
@@ -199,6 +199,8 @@ sendmail
 (Linux only)
 
 Calls the `sendmail <https://www.proofpoint.com/us/products/email-protection/open-source-email-solution>`__ program .
+
+
 
 .. _xmpp:
 
@@ -259,6 +261,22 @@ Slack notifications are configured using “Slack Incoming Webhooks”. Here is 
 
 To set up Slack, from you Slack Team, create a new app and activate “Incoming Webhooks” on a channel, you’ll get a
 webhook URL, copy it into the configuration as seen above.
+
+Other messaging services (i.e., Discord) offer Slack-compatible webhooks, but with different maximum message lengths.
+Since Discord has a maximum message length of 2,000 characters, set it up this way:
+
+.. code:: yaml
+
+   slack:
+     enabled: true
+     webhook_url: 'https://discordapp.com/api/webhooks/{webhook.id}'
+     max_message_length: 2000
+
+**sub-directives**
+~~~~~~~~~~~~~~~~~~
+
+* ``webhook_url`` (required): the webhook URL
+* ``max_message_length``: the maximum lenght of a message in characters (default: 40,000)
 
 
 

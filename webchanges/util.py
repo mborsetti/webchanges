@@ -104,6 +104,7 @@ def chunk_string(string, length, *, numbering=False):
         while string:
             if len(string) <= length:
                 parts.append(string)
+                # noinspection PyUnusedLocal
                 string = ''
                 break
 

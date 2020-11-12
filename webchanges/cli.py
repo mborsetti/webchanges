@@ -9,18 +9,19 @@ import sys
 
 from appdirs import AppDirs
 
-# Check if we are installed in the system already
-(prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
-if bindir != 'bin':
-    sys.path.insert(1, os.path.dirname(os.path.abspath(sys.argv[0])))
+from .command import UrlwatchCommand
+from .config import CommandConfig
+from .main import Urlwatch
+from .storage import CacheMiniDBStorage, CacheRedisStorage, JobsYaml, YamlConfigStorage
 
-from .command import UrlwatchCommand  # noqa:E402 Module level import not at top of file
-from .config import CommandConfig  # noqa:E402 Module level import not at top of file
-from .main import Urlwatch  # noqa:E402 Module level import not at top of file
-from .storage import CacheMiniDBStorage, CacheRedisStorage, JobsYaml, YamlConfigStorage  # noqa:E402 not top of file
+# Check if we are installed in the system already # Legacy for apt-get type of packaging
+# (prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
+# if bindir != 'bin':
+#     sys.path.insert(1, os.path.dirname(os.path.abspath(sys.argv[0])))
 
 
 project_name = __package__
+(prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 # directory where the config, jobs and hooks files are located
 if os.name != 'nt':
@@ -93,10 +94,24 @@ def main():
             and command_config.config == os.path.basename(command_config.config)
             and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.config)))):
         command_config.config = os.path.join(command_config.config_dir, os.path.basename(command_config.config))
+    if not command_config.config.endswith('.yaml'):
+        if os.path.isfile(command_config.config + '.yaml'):
+            command_config.config += '.yaml'
+        elif (command_config.config == os.path.basename(command_config.config) and os.path.isfile(
+              os.path.join(command_config.config_dir, os.path.basename(command_config.config + '.yaml')))):
+            command_config.config = os.path.join(command_config.config_dir,
+                                                 os.path.basename(command_config.config + '.yaml'))
     if (not os.path.isfile(command_config.jobs)
             and command_config.jobs == os.path.basename(command_config.jobs)
             and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.jobs)))):
         command_config.jobs = os.path.join(command_config.config_dir, os.path.basename(command_config.jobs))
+    if not command_config.jobs.endswith('.yaml'):
+        if os.path.isfile(command_config.jobs + '.yaml'):
+            command_config.jobs += '.yaml'
+        elif (command_config.jobs == os.path.basename(command_config.jobs) and os.path.isfile(
+                os.path.join(command_config.config_dir, os.path.basename(command_config.jobs + '.yaml')))):
+            command_config.jobs = os.path.join(command_config.config_dir,
+                                               os.path.basename(command_config.jobs + '.yaml'))
     if (not os.path.isfile(command_config.hooks)
             and command_config.hooks == os.path.basename(command_config.hooks)
             and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.hooks)))):
@@ -113,8 +128,8 @@ def main():
     jobs_storage = JobsYaml(command_config.jobs)  # storage.py
 
     # setup urlwatch
-    urlwatch = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    urlwatch_command = UrlwatchCommand(urlwatch)  # command.py
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatch_command = UrlwatchCommand(urlwatcher)  # command.py
 
     # run urlwatch
     urlwatch_command.run()

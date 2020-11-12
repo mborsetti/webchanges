@@ -1,19 +1,19 @@
 # Dockerfile to install this version of code
 # For release version, install using pip:
 # FROM python:latest
-# RUN python3 -m pip install --no-cache-dir urlwatch
+# RUN python3 -m pip install --no-cache-dir webchanges
 
 FROM python:latest
 
-RUN python3 -m pip install --no-cache-dir appdirs html2text lxml markdown2 minidb pyyaml requests
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
-WORKDIR /opt/urlwatch
+WORKDIR /opt/webchanges
 
-COPY urlwatch ./urlwatch
+COPY webchanges ./webchanges
 COPY setup.py .
 
 RUN python3 setup.py install
 
-WORKDIR /root/.urlwatch
+WORKDIR /root/.webchanges
 
-ENTRYPOINT ["urlwatch.py"]
+ENTRYPOINT ["webchanges.py"]

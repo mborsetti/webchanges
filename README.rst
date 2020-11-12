@@ -10,19 +10,20 @@ webchanges |version|
     :target: https://pypi.org/project/webchanges/
     :alt: supported Python version
 
-.. |licence| image:: https://img.shields.io/pypi/l/webchanges.svg
+.. |license| image:: https://img.shields.io/pypi/l/webchanges.svg
     :target: https://pypi.org/project/webchanges/
-    :alt: licence
+    :alt: license
 
 .. |issues| image:: https://img.shields.io/github/issues-raw/mborsetti/webchanges
     :target: https://github.com/mborsetti/webchanges/issues
-    :alt: licence
+    :alt: issues
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/webchanges/latest.svg?label=
-   :alt: Read the documentation at https://webchanges.readthedocs.io/
-   :target: https://webchanges.readthedocs.io/
+    :target: https://webchanges.readthedocs.io/
+    :alt: Read the documentation at https://webchanges.readthedocs.io/
 
-.. |travis| image:: https://img.shields.io/travis/mborsetti/webchanges/master.svg?label=Travis%20Build
+
+.. |travis| image:: https://img.shields.io/travis/mborsetti/webchanges/master.svg?label=Travis%20CI
     :target: https://travis-ci.org/mborsetti/webchanges
     :alt: Travis CI build status
 
@@ -53,15 +54,14 @@ Optional dependencies may be needed; see `here <https://webchanges.readthedocs.i
 Documentation
 =============
 
-The documentation is hosted on `Read the Docs <ttps://webchanges.readthedocs.io/en/stable/>`__ |readthedocs|
+The documentation is hosted on `Read the Docs <ttps://webchanges.readthedocs.io/en/stable/>`__ |readthedocs|.
 
 
 Code
 ====
 
-The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__
-
-|issues| |travis| |coverage|
+The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__:
+|issues| |travis| |coverage|.
 
 Quick Start
 ============
@@ -77,7 +77,7 @@ automatically run `webchanges` periodically:
   no more often than 30 minutes (this would be ``*/30 * * * *``). If you have never used cron before, check out the
   `crontab command help <https://www.computerhope.com/unix/ucrontab.htm>`__.
 - On Windows, use the `Windows Task Scheduler <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__
-  or see `this <https://stackoverflow.com/q/132971/1047040>`__ question on StackOverflow for alternatives.
+  or see `this question <https://stackoverflow.com/q/132971/1047040>`__ on StackOverflow for alternatives.
 
 Contributing
 ============
@@ -88,6 +88,8 @@ documentation fixes and more!). For more information about how to contribute to 
 
 License
 =======
+
+|license|
 
 Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but including code licensed under the
 `BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`__. See the license `here

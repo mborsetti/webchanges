@@ -2,10 +2,9 @@ import logging
 import os
 
 import pytest
+import yaml
 
 from webchanges.filters import FilterBase
-
-import yaml
 
 logger = logging.getLogger(__name__)
 

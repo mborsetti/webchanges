@@ -13,6 +13,10 @@ In addition, two filters are custom-made for diff results:
 * :ref:`deletions_only`
 
 
+Finally, if you're using the default unified diff engine, you can change the number of context lines.
+
+* :ref:`contextlines`
+
 .. _generic_filters:
 
 Generic filters
@@ -52,7 +56,7 @@ Example:
 
 Output:
 
-.. code-block:: none
+.. code-block::
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#add_only
@@ -72,7 +76,7 @@ Example (when the source content shrinks by 75% or more):
 
 Output:
 
-.. code-block:: none
+.. code-block::
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#add_only2
@@ -86,6 +90,9 @@ Output:
    -This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.
    -[More information...](https://www.iana.org/domains/example)
    ---------------------------------------------------------------------------
+
+Note: When using `additions_only`, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
+this can be changed by specifyting the key with the desired value in the job.
 
 
 .. _deletions_only:
@@ -104,7 +111,7 @@ Example:
 
 Output:
 
-.. code-block:: none
+.. code-block::
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#del_only
@@ -114,3 +121,70 @@ Output:
    /**Comparison type: Deletions only**
    @@ -1,2 +1,2 @@
    -This is a line that has been deleted or changed
+
+Note: When using `deletions_only`, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
+this can be changed by specifyting the key with the desired value in the job.
+
+
+.. _contextlines:
+
+contextlines
+------------
+The `contextlines` directive causes a unified diffs to have a set number of context lines that might be different than
+than Python's default of 3 (or as set by the filters above).
+
+
+Example:
+
+.. code-block:: yaml
+
+   url: https://example.com/#lots_of_contextlines
+   contextlines: 5
+
+Output:
+
+.. code-block:: none
+
+   ---------------------------------------------------------------------------
+   CHANGED: https://example.com/#lots_of_contextlines
+   ---------------------------------------------------------------------------
+   --- @   Sat, 01 Oct 2020 00:00:00 +0000
+   ... @   Sat, 01 Oct 2020 01:00:00 +0000
+   @@ -1,15 +1,15 @@
+    This is line 10
+    This is line 11
+    This is line 12
+    This is line 13
+    This is line 14
+   -This is line fifteen
+   +This is line 15
+    This is line 16
+    This is line 17
+    This is line 18
+    This is line 19
+    This is line 20
+
+Example (default):
+
+.. code-block:: yaml
+
+   url: https://example.com/#default_contextlines
+
+Output:
+
+.. code-block:: none
+
+   ---------------------------------------------------------------------------
+   CHANGED: https://example.com/#default_contextlines
+   ---------------------------------------------------------------------------
+   --- @   Sat, 01 Oct 2020 00:00:00 +0000
+   ... @   Sat, 01 Oct 2020 01:00:00 +0000
+   @@ -1,15 +1,15 @@
+    This is line 12
+    This is line 13
+    This is line 14
+   -This is line fifteen
+   +This is line 15
+    This is line 16
+    This is line 17
+    This is line 18

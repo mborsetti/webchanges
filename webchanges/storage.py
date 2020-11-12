@@ -6,10 +6,9 @@ import stat
 from abc import ABCMeta, abstractmethod
 
 import minidb
+import yaml
 
 import webchanges as project
-
-import yaml
 
 try:
     import msgpack
@@ -105,6 +104,7 @@ DEFAULT_CONFIG = {
         'slack': {
             'enabled': False,
             'webhook_url': '',
+            'max_message_length': '',
         },
         'matrix': {
             'enabled': False,
@@ -351,15 +351,6 @@ class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
     def load(self, *args):
         with open(self.filename) as fp:
             return [JobBase.unserialize(job) for job in yaml.safe_load_all(fp) if job is not None]
-
-
-class JobsTxt(BaseTxtFileStorage, JobsBaseFileStorage):
-    def load(self):
-        return list(self.parse(self.filename))
-
-    def save(self, jobs):
-        print(jobs)
-        raise NotImplementedError()
 
 
 class CacheStorage(BaseFileStorage, metaclass=ABCMeta):

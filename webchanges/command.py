@@ -109,6 +109,10 @@ class UrlwatchCommand:
             job_state.process()
             if job_state.exception is not None:
                 raise job_state.exception
+            print()
+            print(job_state.job.pretty_name())
+            print('-' * len(job_state.job.pretty_name()))
+            print()
             print(job_state.new_data)
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
@@ -118,7 +122,7 @@ class UrlwatchCommand:
         job = self._get_job(id)
 
         history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid(), 10)
-        history_data = [key for key, value in sorted(history_data.items(), key=lambda kv: kv[1])]
+        history_data = sorted(history_data.items(), key=lambda kv: kv[1])
 
         if len(history_data) < 2:
             print('Not enough historic data available (need at least 2 different snapshots)')
@@ -126,8 +130,8 @@ class UrlwatchCommand:
 
         for i in range(len(history_data) - 1):
             with JobState(self.urlwatcher.cache_storage, job) as job_state:
-                job_state.old_data = history_data[i]
-                job_state.new_data = history_data[i + 1]
+                job_state.old_data, job_state.timestamp = history_data[i]
+                job_state.new_data, job_state.current_timestamp = history_data[i + 1]
                 print(f'=== Filtered diff between state {i} and state {i + 1} ===')
                 print(job_state.get_diff())
 
@@ -137,7 +141,8 @@ class UrlwatchCommand:
 
     def list_error_jobs(self):
         start = timeit.default_timer()
-        print('The following jobs have errors or returned no data after filtering (may be shown out of order):')
+        print(f'Jobs (if any) in "{self.urlwatch_config.jobs}" with errors or no data after filtering'
+              f' (list may be out of order):')
         jobs = [job.with_defaults(self.urlwatcher.config_storage.config)
                 for job in self.urlwatcher.jobs]
         for idx, job in enumerate(jobs):
@@ -149,21 +154,21 @@ class UrlwatchCommand:
                                            (exit_stack.enter_context(JobState(self.urlwatcher.cache_storage, job))
                                             for job in jobs))):
                 if job_state.exception is not None:
-                    print(f'{job_state.job.idx + 1}: {job_state.exception.args[0]}')
+                    print(f'{job_state.job.idx + 1: 3}: {job_state.exception.args[0]}')
                 elif len(job_state.new_data.strip()) == 0:
                     if self.urlwatch_config.verbose:
-                        print(f'{job_state.job.idx + 1}: No data: {repr(job_state.job)}')
+                        print(f'{job_state.job.idx + 1: 3}: No data: {repr(job_state.job)}')
                     else:
                         pretty_name = job_state.job.pretty_name()
                         location = job_state.job.get_location()
                         if pretty_name != location:
-                            print(f'{job_state.job.idx + 1}: No data: {pretty_name} ( {location} )')
+                            print(f'{job_state.job.idx + 1: 3}: No data: {pretty_name} ( {location} )')
                         else:
-                            print(f'{job_state.job.idx + 1}: No data: {pretty_name}')
+                            print(f'{job_state.job.idx + 1: 3}: No data: {pretty_name}')
 
         end = timeit.default_timer()
         duration = (end - start)
-        duration = round(duration, min(0, 2 - len(str(int(duration)))))
+        duration = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
         print(f"--\nChecked {len(jobs)} source{'s' if len(jobs) > 1 else ''} for errors in"
               f" {duration} seconds")
 

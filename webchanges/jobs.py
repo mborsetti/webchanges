@@ -10,7 +10,6 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 import webchanges as project
-
 from .filters import FilterBase
 from .util import TrackSubClasses
 
@@ -163,14 +162,14 @@ class JobBase(object, metaclass=TrackSubClasses):
 class Job(JobBase):
     __required__ = ()
     __optional__ = ('name', 'filter', 'max_tries', 'diff_tool', 'additions_only', 'deletions_only',
-                    'contextlines', 'compared_versions', 'is_markdown', 'diff_filter')
+                    'contextlines', 'compared_versions', 'is_markdown', 'markdown_padded_tables', 'diff_filter')
 
     def pretty_name(self):
         return self.name if self.name else self.get_location()
 
 
 class UrlJob(Job):
-    """Retrieve an URL from a web server"""
+    """Retrieve an URL from a web server. Triggered by url key and no (or false) use_browser key"""
 
     __kind__ = 'url'
 
@@ -207,9 +206,10 @@ class UrlJob(Job):
             headers['Expires'] = email.utils.formatdate()
 
         if self.method is None:
-            self.method = "GET"
+            self.method = 'GET'
         if self.data is not None:
-            self.method = "POST"
+            if self.method is None:
+                self.method = 'POST'
             headers['Content-type'] = 'application/x-www-form-urlencoded'
             logger.info('Sending POST request to %s', self.url)
 
@@ -237,14 +237,14 @@ class UrlJob(Job):
         else:
             timeout = self.timeout
 
-        response = requests.request(url=self.url,
+        response = requests.request(method=self.method,
+                                    url=self.url,
                                     data=self.data,
                                     headers=headers,
-                                    method=self.method,
-                                    verify=(not self.ssl_no_verify),
                                     cookies=self.cookies,
+                                    timeout=timeout,
                                     proxies=proxies,
-                                    timeout=timeout)
+                                    verify=(not self.ssl_no_verify))
 
         response.raise_for_status()
         if response.status_code == requests.codes.not_modified:
@@ -256,27 +256,32 @@ class UrlJob(Job):
         if FilterBase.filter_chain_needs_bytes(self.filter):
             return response.content
 
-        # If we can't find the encoding in the headers, requests gets all
-        # old-RFC-y and assumes ISO-8859-1 instead of UTF-8. Use the old
-        # behavior and try UTF-8 decoding first.
-        content_type = response.headers.get('Content-type', '')
-        content_type_match = self.CHARSET_RE.match(content_type)
-        if not content_type_match and not self.encoding:
-            try:
-                try:
-                    try:
-                        return response.content.decode('utf-8')
-                    except UnicodeDecodeError:
-                        return response.content.decode('latin1')
-                except UnicodeDecodeError:
-                    return response.content.decode('utf-8', 'ignore')
-            except LookupError:
-                # If this is an invalid encoding, decode as ascii (Debian bug 731931)
-                return response.content.decode('ascii', 'ignore')
+        # # If we can't find the encoding in the headers, requests gets all
+        # # old-RFC-y and assumes ISO-8859-1 instead of UTF-8. Use the old
+        # # behavior and try UTF-8 decoding first.
+        # content_type = response.headers.get('Content-type', '')
+        # content_type_match = self.CHARSET_RE.match(content_type)
+        # if not content_type_match and not self.encoding:
+        #     try:
+        #         try:
+        #             try:
+        #                 return response.content.decode('utf-8')
+        #             except UnicodeDecodeError:
+        #                 return response.content.decode('latin1')
+        #         except UnicodeDecodeError:
+        #             return response.content.decode('utf-8', 'ignore')
+        #     except LookupError:
+        #         # If this is an invalid encoding, decode as ascii (Debian bug 731931)
+        #         return response.content.decode('ascii', 'ignore')
         if self.encoding:
             response.encoding = self.encoding
+        elif response.encoding == 'ISO-8859-1' and not self.CHARSET_RE.match(response.headers.get('Content-type', '')):
+            # requests follows RFC 2616 and defaults to ISO-8859-1 if no explicit charset is present in the HTTP headers
+            # and the Content-Type header contains text, but this IRL is often wrong; the below replaces it with
+            # whatever the chardet library detects it to be
+            response.encoding = response.apparent_encoding
 
-        # if no name is found, set it to the title of the page if found
+        # if no name is given, set it to the title of the page if found in HTML/XML
         if not self.name:
             title = re.findall(r'<title.*?>(.+?)</title>', response.text)
             if title:
@@ -321,7 +326,7 @@ class UrlJob(Job):
 
 
 class BrowserJob(Job):
-    """Retrieve an URL, emulating a real web browser"""
+    """Retrieve an URL, emulating a real web browser. Triggered by url key with use_browser: true"""
 
     __kind__ = 'browser'
 

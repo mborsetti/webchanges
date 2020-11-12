@@ -35,6 +35,8 @@ An example hooks.py file is below:
    #
    #    __kind__ = 'case'
    #
+   #    __no_subfilter__ = True
+   #
    #    def filter(self, data, subfilter=None):
    #        # The subfilter is specified using a colon, for example the "case"
    #        # filter here can be specified as "case:upper" and "case:lower"
@@ -54,6 +56,8 @@ An example hooks.py file is below:
    #    """Custom filter for indenting, needs to be selected manually"""
    #
    #    __kind__ = 'indent'
+   #
+   #    __no_subfilter__ = True
    #
    #    def filter(self, data, subfilter=None):
    #        # The subfilter here is a number of characters to indent
