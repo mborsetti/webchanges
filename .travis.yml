@@ -15,8 +15,8 @@ install:
   - pip install --upgrade aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack
     pdftotext Pillow pushbullet.py pyppeteer pytesseract redis vobject coverage docutils flake8 flake8-import-order
     pytest
-  - pip install --upgrade sphinx ; python_version == '3.8'
-  - pip install --upgrade sphinx_rtd_theme ; python_version == '3.8'
+  # only required for Python 3.8 but cannot find right syntax to limit
+  - pip install --upgrade sphinx sphinx_rtd_theme
 script:
 # runs coverage and pytest (see .coveragerc)
   - coverage run
