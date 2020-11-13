@@ -18,12 +18,17 @@ def test_print_package_versions():
     for package in sorted((
             'appdirs', 'cssselect', 'html2text', 'lxml', 'markdown2', 'minidb', 'yaml', 'requests', 'colorama',
             'pyppeteer', 'bs4', 'jsbeautifier', 'cssbeautifier', 'pdf2text', 'pytesseract', 'PIL', 'vobject',
-            'chump', 'pushbullet', 'matrix_client', 'aioxmpp', 'msgpack', 'redis', 'keyring', 'pytest', 'coverage',
-            'flake8', 'flake8-import-order', 'docutils', 'sphinx_rtd_theme', 'sphinx'), key=str.casefold):
-        try:
-            print(f"{package}=={importlib.import_module(package, '__version__').__version__}")
-        except AttributeError:
-            print(f"{package}=={importlib.import_module(f'{package}.__version__', '__version__').__version__}")
-        except ImportError:
-            print(f"{package} not installed")
+            'chump', 'pushbullet', 'matrix_client', 'aioxmpp', 'msgpack', 'redis', 'keyring', 'docutils', 'pytest',
+            'coverage', 'flake8', 'flake8_import_order', 'docutils', 'sphinx_rtd_theme', 'sphinx'), key=str.casefold):
+        if package not in ('keyring', 'pdf2text', 'pytesseract', 'vobject'):
+            try:
+                if package == 'msgpack':
+                    print(f"msgpack=={importlib.import_module(f'msgpack._version', 'version').version}")
+                if package == 'cssbeautifier':
+                    print(f"cssbeautifier=="
+                          f"{importlib.import_module('cssbeautifier.__version__', '__version__').__version__}")
+                else:
+                    print(f"{package}=={importlib.import_module(package, '__version__').__version__}")
+            except ImportError:
+                print(f"{package} not installed")
     print()
