@@ -22,6 +22,8 @@ def test_print_package_versions():
             'flake8', 'flake8-import-order', 'docutils', 'sphinx_rtd_theme', 'sphinx'), key=str.casefold):
         try:
             print(f"{package}=={importlib.import_module(package, '__version__').__version__}")
+        except AttributeError:
+            print(f"{package}=={importlib.import_module(f'{package}.__version__', '__version__').__version__}")
         except ImportError:
             print(f"{package} not installed")
     print()
