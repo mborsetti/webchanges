@@ -7,12 +7,10 @@ follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versi
 
 Unreleased
 ==========
+* None
 
 Development
 -----------
-* Upgraded Travis CI to Python 3.9 from 3.9-dev and cleaned up pip installs
-* Added Python nightly to Travis CI
-
 `Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ always welcomed, and you can
 check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.rst>`__ for inspiration.
 
@@ -109,6 +107,7 @@ Changed and deprecated
 * Expanded (only slightly) testing
 * Using flake8 to check PEP-8 compliance and more
 * Using coverage to check unit testing coverage
+* Upgraded Travis CI to Python 3.9 from 3.9-dev and cleaned up pip installs
 
 Removed
 -------

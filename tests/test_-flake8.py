@@ -19,7 +19,7 @@ def test_print_package_versions():
             'appdirs', 'cssselect', 'html2text', 'lxml', 'markdown2', 'minidb', 'yaml', 'requests', 'colorama',
             'pyppeteer', 'bs4', 'jsbeautifier', 'cssbeautifier', 'pdf2text', 'pytesseract', 'PIL', 'vobject',
             'chump', 'pushbullet', 'matrix_client', 'aioxmpp', 'msgpack', 'redis', 'keyring', 'docutils', 'pytest',
-            'coverage', 'flake8', 'flake8_import_order', 'docutils', 'sphinx_rtd_theme', 'sphinx'), key=str.casefold):
+            'coverage', 'flake8', 'flake8_import_order', 'docutils', 'sphinx', 'sphinx_rtd_theme'), key=str.casefold):
         if package not in ('keyring', 'pdf2text', 'pytesseract', 'vobject'):
             try:
                 if package == 'msgpack':
