@@ -12,15 +12,19 @@ Command line switches
     -v, --verbose         show debug output
 
   override file defaults:
-    --jobs FILE           read job list (URLs and/or commands) from FILE
+    --jobs FILE, --urls FILE
+                          read job list (URLs) from FILE
     --config FILE         read configuration from FILE
     --hooks FILE          use FILE as hooks.py module
     --cache FILE          use FILE as cache database, alternatively can accept a redis URI
 
   job management:
     --list                list jobs
-    --test JOB            test filter output of job by location or index
-    --test-diff JOB       test diff filter output of job by location or index (needs at least 2 snapshots)
+    --test JOB, --test-filter JOB
+                          test filter output of job by location or index
+    --test-diff JOB, --test-diff-filter JOB
+                          test diff filter output of job by location or index (needs at least 2
+                          snapshots)
     --errors              list jobs with errors or no data captured
     --add JOB             add job (key1=value1,key2=value2,...) (obsolete; use --edit)
     --delete JOB          delete job by location or index (obsolete; use --edit)
@@ -33,10 +37,10 @@ Command line switches
     --xmpp-login          Enter password for XMPP (store in keyring)
 
   launch editor ($EDITOR/$VISUAL):
-    --edit                edit/create job list
+    --edit                edit URL/job list
     --edit-config         edit configuration file
     --edit-hooks          edit hooks script
 
   miscellaneous:
     --gc-cache            remove old cache entries (snapshots)
-    --features            list supported jobs/filters/reporters
+    --features            list supported job types, filters and reporters

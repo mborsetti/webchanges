@@ -60,8 +60,8 @@ stdout
 
 Displays the summary in text format on stdout (the console)
 
-**Optional directives**
-~~~~~~~~~~~~~~~~~~~~~~~
+Optional directives
+~~~~~~~~~~~~~~~~~~~
 
 * color: Uses color (green for additions, red for deletions) (true/false)
 
@@ -83,8 +83,8 @@ Email
 Sends email, via smtp or sendmail.
 
 
-**sub-directives**
-~~~~~~~~~~~~~~~~~~
+sub-directives
+~~~~~~~~~~~~~~
 
 * ``method``: Either `smtp` or `sendmail`
 * ``from``: The sender's email address. **Do not use your main email address** but create a throwaway one!
@@ -122,8 +122,8 @@ Once again, note that this makes it really easy for your password to be picked u
 by other users logged into the system and/or for the password to appear in log files accidentally.
 
 
-**SMTP sub-directives**
-^^^^^^^^^^^^^^^^^^^^^^^
+SMTP sub-directives
+^^^^^^^^^^^^^^^^^^^
 
 * ``host``: The address of the smtp server
 * ``port``: The port used to communicate with the server
@@ -236,8 +236,8 @@ but for an account thatâ€™s only dedicated for this purpose this might be a way.
        insecure_password: 'this_is_my_secret_password'
 
 
-**Required packages**
-~~~~~~~~~~~~~~~~~~~~~
+Required packages
+~~~~~~~~~~~~~~~~~
 To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
 
 .. code-block:: bash
@@ -272,8 +272,8 @@ Since Discord has a maximum message length of 2,000 characters, set it up this w
      webhook_url: 'https://discordapp.com/api/webhooks/{webhook.id}'
      max_message_length: 2000
 
-**sub-directives**
-~~~~~~~~~~~~~~~~~~
+sub-directives
+~~~~~~~~~~~~~~
 
 * ``webhook_url`` (required): the webhook URL
 * ``max_message_length``: the maximum lenght of a message in characters (default: 40,000)
@@ -335,8 +335,8 @@ set ``device: null`` in your config (``webchanges --edit-config``) or leave out 
 Setting the priority is possible via the ``priority`` config option, which can be ``lowest``, ``low``, ``normal``,
 ``high`` or ``emergency``. Any other setting (including leaving the option unset) maps to ``normal``.
 
-**Required packages**
-~~~~~~~~~~~~~~~~~~~~~
+Required packages
+~~~~~~~~~~~~~~~~~
 To use this report you need to install :ref:`optional_packages`. Install them using:
 
 .. code-block:: bash
@@ -354,8 +354,8 @@ Pushbullet notifications are configured similarly to Pushover (see above). Youâ€
 Pushbullet Access Token, which you can generate at https://www.pushbullet.com/#settings
 
 
-**Required packages**
-~~~~~~~~~~~~~~~~~~~~~
+Required packages
+~~~~~~~~~~~~~~~~~
 To use this report you need to install :ref:`optional_packages`. Install them using:
 
 .. code-block:: bash
@@ -448,8 +448,8 @@ Mailgun
 Sends email using the commercial `Mailgun <https://www.mailgun.com/>`__ service.
 
 
-**sub-directives**
-~~~~~~~~~~~~~~~~~~
+sub-directives
+~~~~~~~~~~~~~~
 
 * ``domain``: The domain
 * ``api_key``: API key (see `here

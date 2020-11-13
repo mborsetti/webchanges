@@ -1,8 +1,8 @@
-====================
-webchanges |version|
-====================
+==========
+webchanges
+==========
 
-.. |version| image:: https://img.shields.io/pypi/v/webchanges.svg?label=
+.. |pypi_version| image:: https://img.shields.io/pypi/v/webchanges.svg?label=
     :target: https://pypi.org/project/webchanges/
     :alt: pypi version
 
@@ -22,7 +22,6 @@ webchanges |version|
     :target: https://webchanges.readthedocs.io/
     :alt: Read the documentation at https://webchanges.readthedocs.io/
 
-
 .. |travis| image:: https://img.shields.io/travis/mborsetti/webchanges/master.svg?label=Travis%20CI
     :target: https://travis-ci.org/mborsetti/webchanges
     :alt: Travis CI build status
@@ -35,17 +34,16 @@ webchanges |version|
     :target: https://codecov.io/github/mborsetti/webchanges?branch=master
     :alt: code coverage
 
-`webchanges` checks webpages (or the output of local commands) for changes, and notifies you via e-mail or
+`webchanges` checks web content (or the output of local commands) for changes, and notifies you via e-mail or
 one of many other supported services if one is detected. The notification includes the changed URL or command and
-a summary of what has changed. This project is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as suggested
-`here <https://github.com/thp/urlwatch/pull/518#discussion_r456885484>`__ and is optimized for HTML, ensuring that it
-"just works".
+a summary of what has changed. This project is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as suggested by
+its author to optimize it for HTML.
 
 Installation
 ============
 
-`webchanges` is available on `PyPI <https://pypi.org/project/webchanges/>`__ for |support| and can be installed using
-`pip`::
+`webchanges` |pypi_version| is available on `PyPI <https://pypi.org/project/webchanges/>`__ for |support| and can be
+installed using `pip`::
 
    pip install webchanges
 
@@ -60,8 +58,9 @@ The documentation is hosted on `Read the Docs <ttps://webchanges.readthedocs.io/
 Code
 ====
 
-The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__:
-|issues| |travis| |coverage|.
+|issues| |travis| |coverage|
+
+The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__:.
 
 Quick Start
 ============
@@ -69,22 +68,23 @@ Quick Start
 #. Run ``webchanges --edit`` to customize your job list (this will create ``jobs.yaml`` and ``config.yaml``)
 #. Run ``webchanges --edit-config`` if you want to set up e-mail sending
 
-The interval for checking is defined by how often you run ``webchanges``.  It is recommended to use schedulers to
-automatically run `webchanges` periodically:
+``webchanges`` will check for changes every time you run it, but does not include a scheduler. We recommend using a
+system scheduler to automatically run `webchanges` periodically:
 
-- In Linux, you can use cron. Use
-  `crontab.guru <https://crontab.guru>`__ to figure out the schedule expression for the checking interval, we recommend
-  no more often than 30 minutes (this would be ``*/30 * * * *``). If you have never used cron before, check out the
-  `crontab command help <https://www.computerhope.com/unix/ucrontab.htm>`__.
-- On Windows, use the `Windows Task Scheduler <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__
-  or see `this question <https://stackoverflow.com/q/132971/1047040>`__ on StackOverflow for alternatives.
+- In Linux, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for you. If you
+  have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__.
+- On Windows, you can use the built-in `Windows Task Scheduler
+  <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.
+
 
 Contributing
 ============
 
-We welcome many types of contributions, e.g. documentation, bug reports, pull requests (code, infrastructure or
-documentation fixes and more!). For more information about how to contribute to the project, see `here
-<https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__.
+We welcome any contribution, e.g. documentation, bug reports, new features, etc., as both pull requests and
+`issues <https://github.com/mborsetti/webchanges/issues>`__.
+More information for developers and documenters is `here
+<https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__, and our wishlist is `here
+<https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__.
 
 License
 =======

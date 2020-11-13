@@ -10,8 +10,8 @@ Contributing
 
 Everyone is welcomed to contribute!
 
-Beginner? It's easy-ish to start! See this `tutorial
-<https://github.com/firstcontributions/first-contributions/blob/master/README.md>`__;
+Beginner? It's easy-ish to start! Please see this `tutorial
+<https://github.com/firstcontributions/first-contributions/blob/master/README.md>`__.
 
 Documentation
 -------------

@@ -1,29 +1,27 @@
 .. _diff_filters:
 
-============
-Diff filters
-============
+==================
+Filtering the diff
+==================
 
-The same filters listed at :ref:`filters` can be applied to the diff before it's sent.
-
+All the filters listed in :ref:`filters` can be applied to the diff before it's sent (see below how).
 
 In addition, two filters are custom-made for diff results:
 
 * :ref:`additions_only`
 * :ref:`deletions_only`
 
-
-Finally, if you're using the default unified diff engine, you can change the number of context lines.
+Finally, if you're using unified diff (default), you can change the number of context lines.
 
 * :ref:`contextlines`
 
 .. _generic_filters:
 
-Generic filters
----------------
+Standard filters
+----------------
 
-See :ref:`here <filters>` for the full list of generic filters.  Below is an example on using one on the result from
-the diff:
+See :ref:`here <filters>` for the full list of generic filters.  Below is an example on how you apply a generic filter
+to the result from the diff:
 
 .. code-block:: yaml
 
@@ -44,8 +42,9 @@ deletions). This is extremely useful for monitoring new content on sites where c
 Because lines that are modified generate both a deleted and an added line by the diff, this filter always displays
 modified lines.
 
-As a safeguard, ``additions_only`` will display a warning and all deleted lines when the size of the source shrinks
-by 75% or more.
+As a safeguard, ``additions_only`` will display a warning (and all lines deleted) when the size of the source shrinks
+by 75% or more, as this could be due to changes in where or how the information is published (requiring the job to
+be reconfigured to continue monitoring the relevant information).
 
 Example:
 
@@ -56,7 +55,7 @@ Example:
 
 Output:
 
-.. code-block::
+.. code-block:: none
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#add_only
@@ -76,7 +75,7 @@ Example (when the source content shrinks by 75% or more):
 
 Output:
 
-.. code-block::
+.. code-block:: none
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#add_only2
@@ -111,7 +110,7 @@ Example:
 
 Output:
 
-.. code-block::
+.. code-block:: none
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#del_only

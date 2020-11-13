@@ -5,17 +5,17 @@ Configuration
 =============
 
 The global configuration for `webchanges` contains basic settings for the generic behavior of `webchanges` as well as
-the :ref:`reporters` in **YAML format** called ``config.yaml`` and located in the ``~/.config/webchanges`` (Linux),
-``~/Library/Preferences/webchanges`` (MacOS), or in the ``webchanges`` folder within your Documents folder, i.e.
-``%USERPROFILE%/Documents/webchanges`` (Windows). You can edit it with any text editor or:
+the :ref:`reporters <reporters>` in **YAML format** called ``config.yaml`` and located in the ``~/.config/webchanges``
+(Linux), ``~/Library/Preferences/webchanges`` (MacOS), or in the ``webchanges`` folder within your Documents folder,
+i.e. ``%USERPROFILE%/Documents/webchanges`` (Windows). You can edit it with any text editor or:
 
 .. code:: bash
 
    webchanges --edit-config
 
 
-(Linux) If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment variable in your shell with
-a command such as ``export EDITOR=nano``.
+(Linux) If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment variable in your
+shell with a command such as ``export EDITOR=nano``.
 
 
 
@@ -69,7 +69,7 @@ to apply your current filter to the current page contents.
 Reporters
 ---------
 
-Configuration of reporters is described in :ref:`reporters`.
+Configuration of reporters is described in :ref:`reporters <reporters>`.
 
 Here is an example configuration that reports on standard output in color, as well as HTML email using ``sendmail``:
 
@@ -125,4 +125,4 @@ The possible sub-directives to ``job_defaults`` are:
 * ``url``: Applies only to ``url`` jobs (with directive ``url`` and no ``use_browser``)
 * ``browser``: Applies only to ``url`` jobs with directive ``use_browser`` set to **true**
 
-See :ref:`jobs` about the different job kinds and directives that can be set.
+See :ref:`jobs <jobs>` about the different job kinds and directives that can be set.

@@ -12,16 +12,16 @@ def test_flake8():
     assert report.get_statistics('E') == [], 'Flake8 found violations'
 
 
-def test_package_versions():
+def test_print_package_versions():
     import importlib
     print('\nPackage versions:')
     for package in sorted((
-        'appdirs', 'cssselect', 'html2text', 'lxml', 'markdown2', 'minidb', 'yaml', 'requests', 'colorama',
-        'pyppeteer', 'bs4', 'jsbeautifier', 'cssbeautifier', 'pdf2text', 'pytesseract', 'PIL', 'vobject',
-        'chump', 'pushbullet', 'matrix_client', 'aioxmpp', 'msgpack', 'redis', 'keyring', 'pytest', 'coverage',
-        'flake8', 'flake8-import-order', 'docutils', 'sphinx_rtd_theme', 'sphinx'), key=str.casefold):
+            'appdirs', 'cssselect', 'html2text', 'lxml', 'markdown2', 'minidb', 'yaml', 'requests', 'colorama',
+            'pyppeteer', 'bs4', 'jsbeautifier', 'cssbeautifier', 'pdf2text', 'pytesseract', 'PIL', 'vobject',
+            'chump', 'pushbullet', 'matrix_client', 'aioxmpp', 'msgpack', 'redis', 'keyring', 'pytest', 'coverage',
+            'flake8', 'flake8-import-order', 'docutils', 'sphinx_rtd_theme', 'sphinx'), key=str.casefold):
         try:
             print(f"{package}=={importlib.import_module(package, '__version__').__version__}")
-        except:
+        except ImportError:
             print(f"{package} not installed")
     print()

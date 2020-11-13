@@ -219,8 +219,8 @@ desktop version in the same HTML document, and shows/hides one via CSS depending
 '``maxitems: 1``' to only return the first item.
 
 
-**Optional directives**
-"""""""""""""""""""""""
+Optional directives
+"""""""""""""""""""
 
 * ``selector`` (for css) or ``path`` (for xpath) [can be entered as the value of the `xpath` or `css` directive]
 * ``method``: Either of ``html`` (default) or ``xml``
@@ -275,7 +275,7 @@ To make the output human-friendly you can chain html2text on the result:
    url: https://example.net/id2text.html
    filter:
      - element-by-id: something
-     - html2text: pyhtml2text
+     - html2text:
 
 
 
@@ -286,14 +286,15 @@ html2text
 
 This filter converts HTML (or XML) to plaintext
 
-**Optional directives**
-"""""""""""""""""""""""
+Optional directives
+"""""""""""""""""""
 
 * ``method``: One of:
 
-   - ``html2text``: Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package (default)
-   - ``bs4``: Uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__ Python package
-   - ``re``: a simple regex-based tag stripper
+ - ``html2text``: Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package (default) and retains
+   some simple formatting (Markup language)
+ - ``bs4``: Uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
+ - ``re``: Uses regex to strip tags
 
 
 ``html2text``
@@ -315,8 +316,8 @@ Note: If the content has tables, adding the sub-directive `pad_tables: true` *ma
       - html2text:
           pad_tables: true
 
-**Optional sub-directives**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Optional sub-directives
+~~~~~~~~~~~~~~~~~~~~~~~
 
 * See `documentation <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__
 * Note that the following options are set by default (but can be overridden): ensure that accented
@@ -328,7 +329,7 @@ Note: If the content has tables, adding the sub-directive `pad_tables: true` *ma
 ``bs4``
 ^^^^^^^
 
-This filter extract unfromatted text from HTML using the `BeautifulSoup
+This filter extracts unformatted text from HTML using the `BeautifulSoup
 <https://pypi.org/project/beautifulsoup4/>`__, specifically its
 `get_text(strip=True)
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
@@ -337,14 +338,14 @@ Note that as of Beautiful Soup version 4.9.0, when lxml or html.parser are in us
 and <template> tags are not considered to be ‘text’, since those tags are not part of the human-visible content of the
 page.
 
-**Optional sub-directives**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Optional sub-directives
+~~~~~~~~~~~~~~~~~~~~~~~
 
 * ``parser`` (defaults to ``lxml``): as per `documentation
   <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__
 
-**Required packages**
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Required packages
+~~~~~~~~~~~~~~~~~
 
 To run jobs with this filter, you need to have additional Python package(s) installed.
 
@@ -372,8 +373,8 @@ This filter uses the `BeautifulSoup
 <https://pypi.org/project/cssbeautifier/>`__ Python packages to reformat an
 HTML document to make it more readable.
 
-**Required packages**
-"""""""""""""""""""""
+Required packages
+"""""""""""""""""
 
 To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
 
@@ -386,7 +387,7 @@ To run jobs with this filter, you need to install :ref:`optional_packages`. Inst
 .. _pdf2text:
 
 pdf2text
-------------
+--------
 
 This filter converts a PDF file to plaintext using the `pdftotext
 <https://github.com/jalan/pdftotext/blob/master/README.md#pdftotext>`__ Python
@@ -413,13 +414,13 @@ If the PDF file is password protected, you can specify its password:
          password: webchangessecret
      - strip
 
-**Optional sub-directives**
-"""""""""""""""""""""""""""
+Optional sub-directives
+"""""""""""""""""""""""
 
 * ``password``: password for a password-protected PDF file
 
-**Required packages**
-"""""""""""""""""""""
+Required packages
+"""""""""""""""""
 To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
 
 .. code-block:: bash
@@ -441,6 +442,47 @@ Example:
 
 
 
+.. _ocr:
+
+ocr
+---
+
+This filter extracts text from images using the `Tesseract OCR engine`_ It requires two Python modules to be installed:
+`pytesseract`_ and `Pillow`_. Any file formats supported by Pillow (PIL) are supported.
+
+.. _Tesseract OCR engine: https://github.com/tesseract-ocr
+.. _pytesseract: https://github.com/madmaze/pytesseract
+.. _Pillow: https://python-pillow.org
+
+This filter *must* be the first filter in a chain of filters, since it consumes binary data and outputs text data.
+
+.. code-block:: yaml
+
+   url: https://example.net/ocr-test.png
+   filter:
+     - ocr:
+         timeout: 5
+         language: eng
+     - strip
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``timeout``: Timeout for the recognition, in seconds (default: 10 seconds)
+* ``language``: Text language (e.g. ``fra`` or ``eng+fra``, default: ``eng``)
+
+Required packages
+"""""""""""""""""
+
+To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[ocr]
+
+In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__.
+
+
+
 .. _format-json:
 
 format-json
@@ -449,11 +491,10 @@ format-json
 This filter deserializes a JSON object and reformats it using Python's `json.dumps
 <https://docs.python.org/3/library/json.html#json.dumps>`__ with indentations.
 
-**Optional sub-directives**
-"""""""""""""""""""""""""""
-
+Optional sub-directives
+"""""""""""""""""""""""
 * ``indentation`` (defaults to 4): indent to pretty-print JSON array elements. ``None`` selects the most compact
-    representation.
+  representation.
 
 
 
@@ -482,8 +523,8 @@ This filter reads an iCalendar document and converts them to easy-to read text
    filter:
      - ical2text:
 
-**Required packages**
-"""""""""""""""""""""
+Required packages
+"""""""""""""""""
 
 To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
 
@@ -615,8 +656,8 @@ apply a regular expression and either remove of replace the matched text. The fo
          pattern: '</([^>]*)>'
          repl: '<END OF TAG \1>'
 
-**Optional sub-directives**
-"""""""""""""""""""""""""""
+Optional sub-directives
+"""""""""""""""""""""""
 
 * ``pattern``: pattern to be replaced. This sub-directive must be specified if also using the ``repl`` sub-directive. Otherwise the
   pattern can be specified as the value of ``re.sub``.
@@ -714,46 +755,6 @@ paragraphs (items that are separated by an empty line):
    filter:
      - reverse:
          separator: "\n\n"
-
-
-.. _ocr:
-
-ocr
----
-
-This filter extracts text from images using the `Tesseract OCR engine`_ It requires two Python modules to be installed:
-`pytesseract`_ and `Pillow`_. Any file formats supported by Pillow (PIL) are supported.
-
-.. _Tesseract OCR engine: https://github.com/tesseract-ocr
-.. _pytesseract: https://github.com/madmaze/pytesseract
-.. _Pillow: https://python-pillow.org
-
-This filter *must* be the first filter in a chain of filters, since it consumes binary data and outputs text data.
-
-.. code-block:: yaml
-
-   url: https://example.net/ocr-test.png
-   filter:
-     - ocr:
-         timeout: 5
-         language: eng
-     - strip
-
-**Optional sub-directives**
-"""""""""""""""""""""""""""
-* ``timeout``: Timeout for the recognition, in seconds (default: 10 seconds)
-* ``language``: Text language (e.g. ``fra`` or ``eng+fra``, default: ``eng``)
-
-**Required packages**
-"""""""""""""""""""""
-
-To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
-
-.. code-block:: bash
-
-   pip install --upgrade webchanges[ocr]
-
-In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__.
 
 
 .. _shellpipe:

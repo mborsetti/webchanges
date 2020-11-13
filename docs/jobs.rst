@@ -21,9 +21,9 @@ HTML, `webchanges` will automatically use the pages' title for a name.
 
 **About YAML special characters**
 
-Certain characters that could be present in names could have significance in the YAML format (e.g. certain special
-characters at the beginning of the line or, anywhere, a ``:`` followed by a space or a space followed by ``#``, all
-sort of brackets, and more) and therefore need to either be enclosed in quotes like so:
+Certain characters have significance in the YAML format (e.g. certain special characters at the beginning of the line
+or additionally a ``:`` followed by a space or a space followed by ``#``, all sort of brackets, and more) and therefore
+need to be enclosed in quotes like so:
 
 .. code-block:: yaml
 
@@ -31,7 +31,7 @@ sort of brackets, and more) and therefore need to either be enclosed in quotes l
    name: "This human-readable name/label has a: colon followed by a space and space # followed by hashmark"
    name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
 
-You can learn more about quoting `here <https://www.yaml.info/learn/quote.html#flow>`__ (note: the library we use
+You can learn more about quoting  `here <https://www.yaml.info/learn/quote.html#flow>`__ (note: the library we use
 supports YAML 1.1, and our examples use "flow scalars").  URLs are always safe and don't need to be enclosed in quotes.
 
 
@@ -78,8 +78,8 @@ the directive ``use_browser: true`` to the job configuration:
    url: https://example.org/
    use_browser: true
 
-**IMPORTANT NOTES**
-^^^^^^^^^^^^^^^^^^^
+**IMPORTANT NOTES** for use_browser
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * The optional `Pyppeteer <https://github.com/pyppeteer/pyppeteer>`__ Python package must be installed; run
   ``pip install webchanges[use_browser]`` to install it.
@@ -90,18 +90,18 @@ the directive ``use_browser: true`` to the job configuration:
 * As this job type
   renders the page in a headless Chromium instance, it requires **massively more resources** and time than a simple
   ``url`` job. Use it only on pages where omitting ``use_browser: true`` does not give the right results.
-* Pro TIP: in many instances instead of using ``use_browser: true`` on a page you can monitor the output of an API
-  (URL) called by the site during page loading, API which contains the information you're after.  Monitor page load
+* **Pro tip**: in many instances instead of using ``use_browser: true`` on a page you can monitor the output of an API
+  (URL) called by the site during page loading, an API which contains the information you're after. Monitor page load
   with a browser's Developer's Tools (e.g. `Chrome DevTools
   <https://developers.google.com/web/tools/chrome-devtools>`__) to see if this is the case.
-* The first time you run a job with ``use_browser:true`` could take some time (and bandwidth) because when
+* The first time you run a job with ``use_browser:true`` it could take some time (and bandwidth) because
   ``pyppeteer`` needs to download the `Chromium browser
   <https://www.chromium.org/getting-involved/download-chromium>`__ (~150 MiB) if it is not found on the system.
-  If you don't prefer this behavior, ensure that a suitable Chrome binary is installed. One way to do this is to run
-  ``pyppeteer-install`` command prior to using this library.
-* At the moment, the Chromium version used by ``pyppeteer`` only supports macOS (x86_64), Windows (both x86
-  and x64), and Linux (x86_64). See `this issue <https://github.com/pyppeteer/pyppeteer/issues/155>`__ in the Pyppeteer
-  issue tracker for progress on getting ARM devices supported (e.g. Raspberry Pi).
+  If you don't like this behavior, ensure that a suitable Chromium binary is pre-installed; one way to do this is to run
+  ``pyppeteer-install``.
+* At the moment, the Chromium version used by ``pyppeteer`` does not support ARM devices (e.g. Raspberry Pi) but only
+  supports Linux (x86_64), macOS (x86_64) and Windows (both x86 and x64). See `this issue
+  <https://github.com/pyppeteer/pyppeteer/issues/155>`__ in the Pyppeteer issue tracker.
 
 Required directives
 """""""""""""""""""
@@ -126,7 +126,7 @@ For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 - ``method``: `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use
   (default: ``GET``)
 - ``data``: HTTP data (defaults request method to ``POST`` and `Content-type
-  https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header to
+  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header to
   ``application/x-www-form-urlencoded``)
 - ``ssl_no_verify``: Do not verify SSL certificates (true/false) (see :ref:`here <ssl_no_verify>`)
 - ``ignore_cached``: Do not use cache control (ETag/Last-Modified) values (true/false)
@@ -172,14 +172,14 @@ Optional directives (for all job types)
 ---------------------------------------
 These optional directives apply to all job types:
 
-- ``name``: Human-readable name/label of the job. If content is HTML, defaults to tile.
+- ``name``: Human-readable name/label of the job; if content is HTML, defaults to tile
 - ``max_tries``: Maximum number of times to run the job to retrieve the resource (default: 1)
 - ``diff_tool``: Command to a custom tool for generating diff text
-- ``compared_versions``: Number of versions to compare for similarity (see :ref:`here <compared_versions>`):
+- ``compared_versions``: Number of versions to compare for similarity (see :ref:`here <compared_versions>`)
 - ``filter``: :ref:`filters` (if any) to apply to the output (can be tested with ``--test``)
-- ``diff_filter``: :ref:`filters` (if any) to apply to the diff result (can be tested with ``--test-diff``)
-- ``added_only``: filter unified diff output to keep only addition lines
-- ``deleted_only``: filter unified diff output to keep only deleted lines
+- ``diff_filter``: :ref:`diff_filters` (if any) applied to the diff result (can be tested with ``--test-diff``)
+- ``additions_only``: Filters unified diff output to keep only addition lines (see :ref:`here <additions_only>`)
+- ``deletions_only``: Filters unified diff output to keep only deleted lines (see :ref:`here <deletions_only>`)
 
 Setting default directives
 """"""""""""""""""""""""""

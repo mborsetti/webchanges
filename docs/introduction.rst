@@ -4,31 +4,40 @@
 Introduction
 ============
 
-`webchanges` monitors the output of webpages (or commands on your computer shell).
+`webchanges` monitors the output of web sources (or of commands on your computer).
 
 Every time you run `webchanges`, it:
 
 #. retrieves the output;
 #. transforms and filters it (optional);
-#. compares this with what it saved from the previous run, producing a "diff" report if it finds changes;
+#. compares this with an identically transformed and filtered version saved from the previous run, producing a "diff"
+   report if it finds any changes;
 #. (optional) filters the diff report;
-#. displays such report (default) and/or sends it via one or more methods such as email.
+#. displays such report (default) and/or sends it via one or more methods such as email;
+#. saves the output to use the next time it's run.
 
 
 :ref:`Jobs`
 -----------
-Each such source of data is a "job". The instructions for each such job are contained in a config file in the **YAML
-format** called ``jobs.yaml`` and located in ``~/.config/webchanges`` (Linux), ``~/Library/Preferences/webchanges``
-(MacOS), or in the ``webchanges`` folder within your Documents folder, i.e. ``%USERPROFILE%/Documents/webchanges``
-(Windows).  You can edit it with any text editor or:
+Each web source or command to be monitored is a "job".
+
+The instructions for each such job are contained in a config file in the **YAML format** called ``jobs.yaml`` and
+located in the following directory:
+
+* Linux: ``~/.config/webchanges``
+* MacOS: ``~/Library/Preferences/webchanges``
+* Windows: ``%USERPROFILE%/Documents/webchanges`` (the webchanges folder within your Documents folder)
+
+You can edit it with any text editor or by running:
 
 .. code:: bash
 
    webchanges --edit
 
-For additional information on YAML, see the `YAML specifications <https://yaml.org/spec/>`__.  You can learn more about
-when to use quotes in YAML `here <https://www.yaml.info/learn/quote.html#flow>`__ (note: the library we use 
-supports YAML 1.1, and our examples use "flow scalars").  URLs are always safe and don't need to be enclosed in quotes.
+* For additional information on YAML, see the `YAML specifications <https://yaml.org/spec/>`__.
+* For when to use quotes in YAML see `here <https://www.yaml.info/learn/quote.html#flow>`__
+  (note: the library we use supports YAML 1.1, and our examples use "flow scalars").
+* URLs are always safe and don't need to be enclosed in quotes.
 
 
 The minimum configuration necessary for `webchanges` to work is a single ``url`` directive (for web resources) or
@@ -49,17 +58,19 @@ If you have multiple sources to monitor, i.e. multiple "jobs", separate each wit
    ---
    command: dir
 
-By default, the content is downloaded as-is; if you need for a webpage to be
-rendered and its JavaScript run and only then the HTML captured, add the directive ``use_browser: true``. This
-requires additional installations and uses many resources; see :ref:`here <use_browser>` for more information.
+By default, the content is downloaded as-is. Certain webpages need for their JavaScript to be run in order for their
+content to be rendered; in this case either find the API used by the JavaScript to get the data you care about and
+monitor that API (preferred), or add the directive ``use_browser: true`` to use a virtual browser to render using
+JavaScript. This requires additional installations and uses many resources; see :ref:`here <use_browser>` for more
+information.
 
 .. code-block:: yaml
 
    url: https://example.com/
    use_browser: true
 
-You can add a ``name`` to help you identify what you're monitoring, but `webchanges` will automatically try to use a
-webpage's title if you don't do so:
+You can add a ``name`` to a job to help you identify what you're monitoring, but `webchanges` will automatically try
+to use a webpage's title if you don't do so:
 
 .. code-block:: yaml
 
@@ -79,20 +90,20 @@ Finally, you have a choice of many and many options to finely control the data a
 
 :ref:`Filters`
 --------------
-Once you have collected the output, you may transform it to increase its utility.  You use the ``filter`` directive to
-activate one or more :ref:`filters` to:
+Once you have collected the output, you may transform it to increase its utility. You use the ``filter`` directive to
+activate one or more :ref:`filters <filters>` to:
 
 * select HTML or (XML): ``css``, ``xpath``, ``element-by-class``, ``element-by-id``, ``element-by-style``, ``element-by-tag``
 * extract text from HTML: ``html2text``
 * make HTML more readable: ``beautify``
-* extract text from PDF: ``pdf2text``, ``ocr``
+* extract text from PDF: ``pdf2text``
+* extract text from images or PDF: ``ocr``
 * make JSON more readable: ``format-json``
 * make XML more readable: ``format-xml``
 * make iCal more readable: ``ical2text``
 * make binary readable: ``hexdump``
 * detect if anything changed: ``sha1sum``
 * edit text: ``keep_lines_containing``, ``delete_lines_containing``, ``re.sub``, ``strip``, ``sort``
-
 
 If all you're doing is monitoring the text of a website, this filter will do it:
 
@@ -101,7 +112,6 @@ If all you're doing is monitoring the text of a website, this filter will do it:
     url: https://example.com/
     filters:
       - html2text:  # notice the 2 empty spaces before the hyphen and the colon at the end
-
 
 Filters can be chained. As an example, after retrieving an HTML document by using the ``url`` directive, you
 can extract a selection with the ``xpath`` filter, convert it to text with ``html2text``, extract only lines matching
@@ -135,17 +145,18 @@ Comparison
 ----------
 `webchanges` then automatically performs a comparison between the filtered data collected in this run with
 the one saved from a prior run, computing a diff in the `unified format
-<https://en.wikipedia.org/wiki/Diff#Unified_format>`__ by default.
+<https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ('unified diff') by default.
 
 
 :ref:`Diff filters <diff_filters>`
 ----------------------------------
-After the comparison is generated, you can apply one of the filters above to the diff itself (see
-:ref:`diff_filters`) or one of the two diff-specific ones:
+After the comparison is generated, you can apply one of the filters above to the diff itself  or one of the two
+diff-specific ones:
 
 - ``additions_only``
 - ``deletions_only``
 
+Diff filters Reports are explained :ref:`here <diff_filters>`.
 
 If all you're doing is monitoring the text of a website to see if anything was added, this job definition will do it:
 
@@ -183,3 +194,14 @@ or more of:
 - ``mailgun``
 
 Reporters are explained :ref:`here <reporters>`.
+
+Scheduling
+----------
+
+``webchanges`` will check for changes every time you run it, but does not include a scheduler. We recommend using a
+system scheduler to automatically run `webchanges` periodically:
+
+- In Linux, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for you. If you
+  have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__.
+- On Windows, you can use the built-in `Windows Task Scheduler
+  <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.

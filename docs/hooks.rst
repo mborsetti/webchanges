@@ -1,8 +1,8 @@
 .. _hooks:
 
-=====
-Hooks
-=====
+============
+Python hooks
+============
 
 Python programmers can hook their code with custom functionality by writing it into a ``hooks.py`` file and putting it
 into the same directory as the job and configuration files.  The code will be automatically loaded at startup.

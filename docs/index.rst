@@ -7,7 +7,7 @@
 
 .. highlight:: none
 
-.. include:: ../../README.rst
+.. include:: ../README.rst
 
 =================
 Table of Contents
@@ -15,9 +15,15 @@ Table of Contents
 
 .. toctree::
    :maxdepth: 1
+   :caption: Getting started
 
    Overview <self>
    introduction
+
+.. toctree::
+   :maxdepth: 1
+   :caption: In depth
+
    jobs
    filters
    configuration
@@ -25,16 +31,24 @@ Table of Contents
    reports
    reporters
    dependencies
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Advanced
+
    advanced
    hooks
    cli
-   contributing
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Migration
+
    migration
+
+.. toctree::
+   :maxdepth: 1
+   :caption: About webchanges
+
+   contributing
    changelog
-
-
-# Indices and tables
-# ==================
-#
-# * :ref:`genindex`
-# * :ref:`search`

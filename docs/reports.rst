@@ -4,8 +4,8 @@
 Reports
 =======
 
-Reports are the text of the summary, and can be one of the following formats (depending on what
-ref:`reporter <reporters>` you use):
+Reports are the text of the summary (diff), and can be one of the following formats (depending on what
+:ref:`reporter <reporters>` you use):
 
 * :ref:`text`
 * :ref:`html`
@@ -15,10 +15,10 @@ ref:`reporter <reporters>` you use):
 
 Text
 ----
-Unicode text.
+Unicode text
 
-**Optional sub-directives**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Optional sub-directives
+~~~~~~~~~~~~~~~~~~~~~~~
 
 * minimal: An abbreviated version (directives below are ignored) (true/false); defaults to false
 * line_length: The maximum length of each line
@@ -30,7 +30,7 @@ Unicode text.
 
 HTML
 ----
-HTML.
+HTML
 
 These reports are by default ``unified`` diffs that are prettified by `webchanges`.
 
@@ -38,20 +38,20 @@ If for some reason you want the output to be the python `HtmlDiff
 <https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__ table format, set the sub-directive ``diff`` to
 ``table``.
 
-**Optional sub-directives**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Optional sub-directives
+~~~~~~~~~~~~~~~~~~~~~~~
 
-* diff: 'unified' (default) or 'table'. See above.
+* diff: ``unified`` (default) or ``table``. See above.
 
 
 .. _markdown:
 
 Markdown
 --------
-Markdown text, used for Matrix.
+Markdown text, used for Matrix
 
-**Optional sub-directives**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Optional sub-directives
+~~~~~~~~~~~~~~~~~~~~~~~
 
 * minimal: An abbreviated version (directives below are ignored)
 * show_details: Show details of each job

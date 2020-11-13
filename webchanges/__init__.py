@@ -1,6 +1,6 @@
 """webchanges checks webpages for changes
 
-webchanges checks webpages (or the output of local commands) for changes, and notifies you via e-mail or
+webchanges checks web content (or the output of local commands) for changes, and notifies you via e-mail or
 one of many other supported services if one is detected. The notification includes the changed URL or command and
 a summary of what has changed.
 """
@@ -10,8 +10,8 @@ a summary of what has changed.
 
 __project_name__ = __package__
 # Release numbering follows the Semantic Versioning https://semver.org/spec/v2.0.0.html#semantic-versioning-200
-# If unsure, use pkg_resources.parse_version to parse
-__version__ = '3.0.0-beta.2'
+# If unsure on incrememnts, use pkg_resources.parse_version to parse
+__version__ = '3.0.0'
 __min_python_version__ = (3, 6)
 __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'

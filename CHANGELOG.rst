@@ -7,7 +7,11 @@ follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versi
 
 Unreleased
 ==========
-* None
+
+Development
+-----------
+* Upgraded Travis CI to Python 3.9 from 3.9-dev and cleaned up pip installs
+* Added Python nightly to Travis CI
 
 `Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ always welcomed, and you can
 check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.rst>`__ for inspiration.
@@ -31,8 +35,6 @@ Initial release of `webchanges` as a reworked fork of `urlwatch` 2.21. Changes b
 
 Added
 -----
-* You can now specify just a ``url`` and the "just works for web" philosophy optimizes the monitoring of text in
-  webpages by applying all necessary filters  **TODO**
 * If no job ``name`` is provided, the title of an HTML page will be used for a job name in reports
 * The Python ``html2text`` package (used by the ``html2text`` filter, previously known as ``pyhtml2text``) is now
   initialized with the following purpose-optimized non-default `options
@@ -60,7 +62,7 @@ Added
 Changed and deprecated
 ----------------------
 * Navigation by full browser is now accomplished by specifying the ``url`` and adding the ``use_browser: true``
-  directive. The `navigate` directive has been deprecated for clarity and will trigger a warning ***TODO***
+  directive. The `navigate` directive has been deprecated for clarity and will trigger a warning
 * The name of the default program configuration file has been changed to ``config.yaml``; if at program launch
   ``urlwatch.yaml`` is found and no ``config.yaml`` exists, it is copied over for backward-compatibility.
 * In Windows, the location of config files has been moved to ``%USERPROFILE%\Documents\webchanges``

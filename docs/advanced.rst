@@ -1,8 +1,8 @@
 .. _advanced_topics:
 
-===============
-Advanced topics
-===============
+==============
+Usage examples
+==============
 
 Checking different sites at different intervals
 -----------------------------------------------
@@ -26,35 +26,6 @@ reporting.  Finally, you schedule them similarly to the below (in Linux using cr
 
   00 00 * * * webchanges --jobs slack.yaml --config config-slack.yaml
   05 00 * * * webchanges --jobs email.yaml --config config-email.yaml
-
-
-.. _ignore_errors:
-
-Ignoring connection errors
---------------------------
-
-In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While there is
-a ``display.error`` config option (defaulting to ``true``) to control reporting of errors globally, to ignore network
-errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration file:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   ignore_connection_errors: true
-
-Similarly, you might want to ignore some (temporary) HTTP errors on the server side:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   ignore_http_error_codes: 408, 429, 500, 502, 503, 504
-
-or ignore all HTTP errors if you like:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   ignore_http_error_codes: 4xx, 5xx
 
 
 .. _timeout:
@@ -117,6 +88,35 @@ attacks.
 
    url: https://example.com/
    ssl_no_verify: true
+
+
+.. _ignore_errors:
+
+Ignoring connection errors
+--------------------------
+
+In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While there is
+a ``display.error`` config option (defaulting to ``true``) to control reporting of errors globally, to ignore network
+errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration file:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   ignore_connection_errors: true
+
+Similarly, you might want to ignore some (temporary) HTTP errors on the server side:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   ignore_http_error_codes: 408, 429, 500, 502, 503, 504
+
+or ignore all HTTP errors if you like:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   ignore_http_error_codes: 4xx, 5xx
 
 
 .. _encoding:
@@ -186,12 +186,12 @@ If you want to be notified of new events on a public Facebook page, you can use 
      - re.sub:
          pattern: '(/events/\d*)[^"]*'
          repl: '\1'
-     - html2text: pyhtml2text
+     - html2text:
    comparison_filter: additions
 
 
-Pass diff output to a custom script
------------------------------------
+Passing diff output to a custom script
+--------------------------------------
 
 In some situations, it might be useful to run a script with the diff as input when changes were detected (e.g. to start
 an update or process something). This can be done by combining ``diff_filter`` with the ``shellpipe`` filter, which
@@ -208,21 +208,6 @@ can even have a "normal" filter attached to only watch links (the ``css: a`` par
      - css: a
    diff_filter:
      - shellpipe: /usr/local/bin/process_new_links.sh
-
-
-.. _chromium_revision:
-
-Finding a Chromium revision matching a Google Chrome / Chromium release
------------------------------------------------------------------------
-Unfortunately the Chromium revision number does not match the Google Chrome / Chromium release one.
-There are multiple ways of finding what the revision number is for a stable Chrome release; the one I found useful is
-to go to https://chromium.cypress.io/, selecting the "stable" release channel, and clicking on "get downloads" for the
-one you want.  At the top you will see something like "Base revision: 782793.
-Found build artifacts at 782797 [browse files]".  You want the revision with build artifacts, in this case 782797.
-
-Please note that everytime you change the chromium_revision, a new download is initiated. The old ones are kept on
-your system, and if you no longer need them you can delete them.  If you can't find the directory, try
-``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER; print(DOWNLOADS_FOLDER)"``
 
 
 Using word-based differ (Linux)
@@ -242,13 +227,41 @@ install wdiff`` on Debian or ``brew install wdiff`` on macOS). Coloring is suppo
 potentially not for other diff tools.
 
 
-Adding URLs from the command line
----------------------------------
+.. _chromium_revision:
 
-Quickly adding new URLs to the job list from the command line::
+Using a Chromium revision matching a Google Chrome / Chromium release
+---------------------------------------------------------------------
+Unfortunately the Chromium revision number does not match the Google Chrome / Chromium release one.
+There are multiple ways of finding what the revision number is for a stable Chrome release; the one I found useful is
+to go to https://chromium.cypress.io/, selecting the "stable" release channel, and clicking on "get downloads" for the
+one you want.  At the top you will see something like "Base revision: 782793.
+Found build artifacts at 782797 [browse files]".  You want the revision with build artifacts, in this case 782797.
 
-    webchanges --add url=https://example.org,name=Example
+Please note that everytime you change the chromium_revision, a new download is initiated. The old ones are kept on
+your system, and if you no longer need them you can delete them.  If you can't find the directory, try
+``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER; print(DOWNLOADS_FOLDER)"``
 
+To specify the Chromium revision to use (and other defaults) globally, edit config.yaml:
+
+.. code-block:: yaml
+
+   job_defaults:
+     browser:
+       chromium_revision: 782797
+       switches:
+         - --enable-experimental-web-platform-features
+         - '--window-size=1920,1080'
+
+To specify the Chromium revision to use , individual job:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   use_browser: true
+   chromium_revision: 782797
+   switches:
+     - --enable-experimental-web-platform-features
+     - '--window-size=1920,1080'
 
 .. _local_storage:
 
@@ -273,4 +286,4 @@ You can now run a `webchanges` job defined as such:
 
    url: https://example.org/usedatadir.html
    use_browser: true
-     - user_data_dir: /userdir
+   user_data_dir: /userdir

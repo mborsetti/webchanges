@@ -28,7 +28,8 @@ author = project_data.__author__
 language = 'en'
 
 # The full version, including alpha/beta/rc tags
-release = project_data.__version__
+version = project_data.__version__
+release = version
 
 
 # -- General configuration ---------------------------------------------------
@@ -89,11 +90,3 @@ html_theme_options = {
     'includehidden': True,
     'titles_only': False
 }
-
-# -- name substitutions
-
-# See https://stackoverflow.com/questions/15131613/sphinx-docs-variable
-
-rst_epilog = f'''
-.. |project_name| replace:: {project}
-.. |version| replace:: {project_data.__version__}'''
