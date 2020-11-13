@@ -24,7 +24,7 @@ def test_print_package_versions():
             try:
                 if package == 'msgpack':
                     print(f"msgpack=={importlib.import_module(f'msgpack._version', 'version').version}")
-                if package == 'cssbeautifier':
+                elif package == 'cssbeautifier':
                     print(f"cssbeautifier=="
                           f"{importlib.import_module('cssbeautifier.__version__', '__version__').__version__}")
                 else:
