@@ -2,7 +2,6 @@ dist: focal
 language: python
 cache: pip
 python:
-  - "nightly"
   - "3.9"
   - "3.8"
   - "3.7"
@@ -11,6 +10,7 @@ before_install:
   - sudo apt-get -y update
   - pip install --upgrade pip wheel
 install:
+  - pip install -r requirements.txt
   - sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
   - pip install --upgrade aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack
     pdftotext Pillow pushbullet.py pyppeteer pytesseract redis vobject coverage docutils flake8 flake8-import-order
