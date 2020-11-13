@@ -1,0 +1,11 @@
+- [ ] Smart "just works for web" philosophy automatically applies filters for monitoring webpages
+- [ ] Check warnings when deprecated `navigate` directive is used
+- [ ] Increase unit testing and its code coverage
+- [ ] Document code
+  - [ ] Type hinting
+  - [ ] List all classes
+- [ ] Update database only if all reporters run successfully
+  - [ ] Or queue failed (undelivered) reports?
+- [ ] Package import optimizations
+  - [ ] Make it threadsafe
+- [ ] Reduce number of external packages required
