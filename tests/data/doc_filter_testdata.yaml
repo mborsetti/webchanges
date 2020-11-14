@@ -464,6 +464,5 @@ https://example.net/css-skip-maxitems.html:
     <div class="cpu">Pentium MMX</div>
 https://example.net/shellpipe.html:
   input: |
-    TODO
   output: |
-    TODO
+    TEST

@@ -1,10 +1,6 @@
-.. All code examples here should have a unique URL that maps to
-   an entry in test/data/filter_documentation_testdata.yaml which
-   will be used to provide input/output data for the filter example
-   so that the examples can be verified to be correct automatically.
-
-.. https://github.com/thp/webchanges/pull/524/files
-.. https://raw.githubusercontent.com/mborsetti/webchanges/a307068485cc085d55c3ba5d2dca4f045157045d/docs/source/filters.rst
+.. **** IMPORTANT ****
+   All code examples here need to have a unique URL that maps to an entry in the file
+   test/data/filter_documentation_testdata.yaml. This will be used by testing to ensure that all examples work.
 
 .. _filters:
 
@@ -430,17 +426,6 @@ To run jobs with this filter, you need to install :ref:`optional_packages`. Inst
 In addition, you need to install any of the OS-specific dependencies of Poppler (see
 `website <https://github.com/jalan/pdftotext/blob/master/README.md#os-dependencies>`__).
 
-Example:
-
-.. code-block:: yaml
-
-   name: Convert PDF to text
-   url: https://example.net/sample.pdf
-   filter:
-     - pdf2text:
-         password: pdfpassword
-
-
 
 .. _ocr:
 
@@ -770,4 +755,4 @@ variable ``URLWATCH_JOB_NAME`` will have the name of the job, while ``URLWATCH_J
 
    url: https://example.net/shellpipe.html
    filter:
-     - shellpipe: customscript.py
+     - shellpipe: echo TEST
