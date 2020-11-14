@@ -66,7 +66,7 @@ FILTER_DOC_URLS = load_filter_testdata()
 
 @pytest.mark.parametrize('url, job', FILTER_DOC_URLS.items())
 def test_url(url, job):
-    """Test the yaml code in docs/source/filters.rst against the source and expected results contained
+    """Test the yaml code in docs/filters.rst against the source and expected results contained
     in tests/data/doc_filter_testdata.yaml using 'url' as the key)"""
     # only tests shellpipe in linux; test pdf2text and ocr only if packages are installed (they require
     # OS-specific installations beyond pip)

@@ -6,6 +6,9 @@ python:
   - "3.8"
   - "3.7"
   - "3.6"
+before_install:
+  - sudo apt-get -y update
+  - pip install --upgrade pip wheel
 install:
   - pip install --upgrade pip wheel
   - pip install -r requirements.txt

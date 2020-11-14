@@ -23,15 +23,15 @@ webchanges
     :alt: Read the documentation at https://webchanges.readthedocs.io/
 
 .. |travis| image:: https://img.shields.io/travis/mborsetti/webchanges/master.svg?label=Travis%20CI
-    :target: https://travis-ci.org/mborsetti/webchanges
+    :target: https://travis-ci.com/mborsetti/webchanges
     :alt: Travis CI build status
 
 .. |appveyor| image:: https://img.shields.io/appveyor/ci/mborsetti/webchanges/master.svg?logo=appveyor
     :target: https://ci.appveyor.com/project/mborsetti/webchanges
     :alt: appveyor build status
 
-.. |coverage| image:: https://codecov.io/github/mborsetti/webchanges/coverage.svg?branch=master
-    :target: https://codecov.io/github/mborsetti/webchanges?branch=master
+.. |coverage| image:: https://codecov.io/github/mborsetti/webchanges/coverage.svg
+    :target: https://codecov.io/github/mborsetti/webchanges
     :alt: code coverage
 
 `webchanges` checks web content (or the output of local commands) for changes, and notifies you via e-mail or
