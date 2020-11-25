@@ -51,7 +51,11 @@ https://example.com/html2text.html:
     </section>
     </body>
     </html>
-  output: "Date                    | #Sales \n------------------------|--------\nMonday, 3 February 2020 | 10,000 \nTu, 3 Mar               | 20,000"
+  output: |-
+    | Date                    | #Sales |
+    |-------------------------|--------|
+    | Monday, 3 February 2020 | 10,000 |
+    | Tu, 3 Mar               | 20,000 |
 https://example.com/cal.ics:
   input: |-
     BEGIN:VCALENDAR
@@ -128,14 +132,14 @@ https://example.com/delete_lines_containing.txt:
   output: |-
     abc
     def
-https://example.com/re_sub.txt:
+https://example.com/re_sub.html:
   input: |-
     <h1>This is a test</h1>
-    <a href="https://example.com/re_sub.txt">Here!</href>
+    <a href="https://example.com/re_sub.html">Here!</a>
     This is text referring to h1
   output: |-
     HEADING 1: This is a test<END OF TAG h1>
-    <a>Here!<END OF TAG href>
+    <a>Here!<END OF TAG a>
     This is text referring to h1
 # Don't know how to test this
 https://example.com/strip.html:

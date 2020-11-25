@@ -35,14 +35,14 @@ to the result from the diff:
 additions_only
 ---------------
 
-The ``additions_only`` directive causes the report for that source to contain only lines that are added by the diff (no
+The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the diff (no
 deletions). This is extremely useful for monitoring new content on sites where content gets added while old content
 "scrolls" away.
 
 Because lines that are modified generate both a deleted and an added line by the diff, this filter always displays
 modified lines.
 
-As a safeguard, ``additions_only`` will display a warning (and all lines deleted) when the size of the source shrinks
+As a safeguard, ``additions_only: true`` will display a warning (and all lines deleted) when the size of the source shrinks
 by 75% or more, as this could be due to changes in where or how the information is published (requiring the job to
 be reconfigured to continue monitoring the relevant information).
 
@@ -51,7 +51,7 @@ Example:
 .. code-block:: yaml
 
    url: https://example.com/#add_only
-   additions_only:
+   additions_only: true
 
 Output:
 
@@ -71,7 +71,7 @@ Example (when the source content shrinks by 75% or more):
 .. code-block:: yaml
 
    url: https://example.com/#add_only2
-   additions_only:
+   additions_only: true
 
 Output:
 
@@ -90,15 +90,15 @@ Output:
    -[More information...](https://www.iana.org/domains/example)
    ---------------------------------------------------------------------------
 
-Note: When using `additions_only`, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
-this can be changed by specifyting the key with the desired value in the job.
+Note: When using ``additions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
+this can be changed by specifying the key with the desired value in the job.
 
 
 .. _deletions_only:
 
 deletions_only
 --------------
-The `deletions_only` directive causes the report for that source to contain only lines that are deleted by the diff (no
+The ``deletions_only: true`` directive causes the report for that source to contain only lines that are deleted by the diff (no
 additions).
 
 Example:
@@ -106,7 +106,7 @@ Example:
 .. code-block:: yaml
 
    url: https://example.com/#del_only
-   deletions_only
+   deletions_only: true
 
 Output:
 
@@ -121,15 +121,15 @@ Output:
    @@ -1,2 +1,2 @@
    -This is a line that has been deleted or changed
 
-Note: When using `deletions_only`, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
-this can be changed by specifyting the key with the desired value in the job.
+Note: When using ``deletions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
+this can be changed by specifying the key with the desired value in the job.
 
 
 .. _contextlines:
 
 contextlines
 ------------
-The `contextlines` directive causes a unified diffs to have a set number of context lines that might be different than
+The ``contextlines`` directive causes a unified diffs to have a set number of context lines that might be different than
 than Python's default of 3 (or as set by the filters above).
 
 

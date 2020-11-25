@@ -11,5 +11,5 @@ def test_build_docs():
             run = subprocess.run('sphinx-build -M html ../docs ../docs/build'.split(), capture_output=True)
             stderr = run.stderr.decode()
             assert not stderr
-            stdout=run.stdout.decode()
+            stdout = run.stdout.decode()
             assert not any(x in stdout for x in ('WARNING', 'ERROR'))

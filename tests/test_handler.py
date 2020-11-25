@@ -200,7 +200,7 @@ def test_reset_tries_to_zero_when_successful():
 
             # use an url that definitely exists
             job = urlwatcher.jobs[0]
-            job.url = 'file://' + os.path.join(here, 'data', 'config.yaml')
+            job.url = 'file://' + os.path.join(here, 'data', 'jobs.yaml')
 
             urlwatcher.run_jobs()
 

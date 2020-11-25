@@ -6,7 +6,7 @@ Reporters
 
 By default `webchanges` prints out information about changes to the data collected to standard output (``stdout``),
 which is your terminal if you run it interactively. If running via `cron` or another scheduler service, the destination
-of this output depends on the schedure and its configuration.
+of this output depends on the scheduler and its configuration.
 
 You can change the settings to add or change where the report is sent to.  Settings are contained in the configuration
 file ``webchanges.yaml``, a text file located in the ``~\.urwatch\`` directory (Linux) or in a ``webchanges`` folder
@@ -63,7 +63,7 @@ Displays the summary in text format on stdout (the console)
 Optional directives
 ~~~~~~~~~~~~~~~~~~~
 
-* color: Uses color (green for additions, red for deletions) (true/false)
+* ``color``: Uses color (green for additions, red for deletions) (true/false)
 
 
 .. _browser:

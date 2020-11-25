@@ -332,7 +332,7 @@ class BrowserJob(Job):
 
     __required__ = ('url', 'use_browser')
     __optional__ = ('chromium_revision', 'headers', 'cookies', 'timeout', 'ignore_http_error_codes',
-                    'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'navigate')
+                    'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for', 'navigate')
 
     def get_location(self):
         if not self.url and self.navigate:
@@ -352,7 +352,7 @@ class BrowserJob(Job):
 
     def retrieve(self, job_state):
         response = self.ctx.process(self.url, self.headers, self.cookies, self.timeout, self.proxy_username,
-                                    self.proxy_password, self.wait_until)
+                                    self.proxy_password, self.wait_until, self.wait_for)
         # if no name is found, set it to the title of the page if found
         if not self.name:
             title = re.findall(r'<title.*?>(.+?)</title>', response)

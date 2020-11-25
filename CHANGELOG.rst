@@ -5,14 +5,12 @@ Changelog
 This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`__. Release numbering mostly
 follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__.
 
+**Development**
+`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ always welcomed, and you can
+check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
+
 Unreleased
 ==========
-* None
-
-Development
------------
-`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ always welcomed, and you can
-check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.rst>`__ for inspiration.
 
 Unreleased versions can be installed as follows:
 
@@ -22,6 +20,16 @@ Unreleased versions can be installed as follows:
 
 Note: git needs to be `installed <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ for this to work.
 
+Fixed
+-----
+* Fixed ``format-json`` filter unexpectedly reordering contents of dictionaries
+* Fixed documentation for ``additions_only`` and ``deletions_only`` (value of true is required)
+* Config directory is not created if command line contains --config and --urls to allow running on read-only
+  systems using redis or a database cache residing on a writeable volume
+
+Added
+-----
+* New ``format-json`` subdirective ``sort_keys`` to set the sorting of dictionaries (defaults to false)
 
 Version 3.0.0
 =============

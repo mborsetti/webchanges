@@ -17,23 +17,21 @@ i.e. ``%USERPROFILE%/Documents/webchanges`` (Windows). You can edit it with any 
 (Linux) If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment variable in your
 shell with a command such as ``export EDITOR=nano``.
 
-
-
 **About YAML special characters**
 
-Certain characters that could be present in names could have significance in the YAML format (e.g. certain special
-characters at the beginning of the line or, anywhere, a ``:`` followed by a space or a space followed by ``#``, all
-sort of brackets, and more) and therefore need to either be enclosed in quotes like so:
+Certain characters have significance in the YAML format, e.g. certain special characters at the beginning of the line,
+a ``:`` followed by a space, a space followed by ``#``, all sort of brackets, and more. Strings containing these
+characters or sequences need to be enclosed in quotes:
 
 .. code-block:: yaml
 
    name: This is a human-readable name/label of the job  # and this is a remark
-   name: "This human-readable name/label has a: colon followed by a space and space # followed by hashmark"
+   name: "This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark"
    name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
 
-You can learn more about quoting `here <https://www.yaml.info/learn/quote.html#flow>`__ (note: the library we use
-supports YAML 1.1, and our examples use "flow scalars").  URLs are always safe and don't need to be enclosed in quotes.
-
+You can learn more about quoting  `here <https://www.yaml.info/learn/quote.html#flow>`__ (note: the library we use
+supports YAML 1.1, and our examples use "flow scalars").  URLs and XPaths are always safe and don't need to be enclosed
+in quotes.
 
 
 .. _configuration_display:
@@ -71,7 +69,7 @@ Reporters
 
 Configuration of reporters is described in :ref:`reporters <reporters>`.
 
-Here is an example configuration that reports on standard output in color, as well as HTML email using ``sendmail``:
+Here is an example configuration that reports on standard output in color, as well as HTML email using an SMTP server:
 
 .. code:: yaml
 
@@ -80,26 +78,31 @@ Here is an example configuration that reports on standard output in color, as we
        details: true
        footer: true
        line_length: 75
+       minimal: false
      html:
        diff: unified
      email:
        enabled: true
-       method: sendmail
-       sendmail:
-           path: /usr/sbin/sendmail
-       from: 'webchanges@example.org'
-       to: 'you@example.org'
+       from: 'Web watcher <webwatcher@example.com>'
        html: true
+       method: smtp
+       smtp:
+         host: smtp.example.com
+         user: 'username_goes_here'
+         insecure_password: 'password_goes_here'
+         auth: true
+         port: 587
+         starttls: true
        subject: '{count} changes: {jobs}'
-     stdout:
-       color: true
-       enabled: true
+       to: 'User <user@example.com>'
+       stdout:
+         color: true
+         enabled: true
 
-Any reporter-specific configuration must be below the ``report`` directive in the configuration.
+Any reporter-specific configuration must be inside the ``report`` directive in the configuration.
 
-Configuration settings like ``text``, ``html`` and ``markdown`` will apply to all reporters that derive from that
-reporter (for example, the ``stdout`` reporter uses ``text``, while the ``email`` reporter with ``html: true``
-uses ``html``).
+Reporter configuration settings for ``text`` and ``html`` apply to all reports that derive from that reporter (for
+example, the ``stdout`` reporter uses ``text``, while the ``email`` reporter with ``html: true`` uses ``html``).
 
 .. _job_defaults:
 
@@ -112,11 +115,26 @@ If you want to change some settings for all your jobs, edit the ``job_defaults``
 
    job_defaults:
      all:
-       diff_tool: wdiff
-     url:
-       ignore_connection_errors: true
+       headers:
+         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+         Accept-Language: en-US,en
+         DNT: '1'
+         Pragma: no-cache
+         Sec-Fetch-Dest: document
+         Sec-Fetch-Mode: navigate
+         Sec-Fetch-Site: same-origin
+         Sec-Fetch-User: ?1
+         Upgrade-Insecure-Requests: '1'
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36
+     browser:
+       chromium_revision: 782797
+       switches:
+         - --enable-experimental-web-platform-features
+         - '--window-size=1920,1080'
 
-The above config file sets all jobs to use ``wdiff`` as diff tool, and all ``url`` jobs to ignore connection errors.
+The above config file sets all jobs to use the specified headers, and all ``url`` jobs with ``browser: true`` to
+use a specific ref:`<chromium_revision>` and certain feature `switches
+<https://peter.sh/experiments/chromium-command-line-switches/>`__.
 
 The possible sub-directives to ``job_defaults`` are:
 

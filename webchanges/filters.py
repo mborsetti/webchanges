@@ -413,14 +413,17 @@ class JsonFormatFilter(FilterBase):
 
     __supported_subfilters__ = {
         'indentation': 'Indentation level for pretty-printing',
+        'sort_keys': 'Sort the output of dictionaries by key',
     }
 
     __default_subfilter__ = 'indentation'
 
     def filter(self, data, subfilter):
         indentation = int(subfilter.get('indentation', 4))
+        sort_keys = int(subfilter.get('sort_keys', False))
         parsed_json = json.loads(data)
-        return json.dumps(parsed_json, ensure_ascii=False, sort_keys=True, indent=indentation, separators=(',', ': '))
+        return json.dumps(parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation,
+                          separators=(',', ': '))
 
 
 class XMLFormatFilter(FilterBase):

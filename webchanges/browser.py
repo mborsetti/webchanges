@@ -57,7 +57,8 @@ class BrowserLoop(object):
             await p.close()
         return browser
 
-    async def _get_content(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until):
+    async def _get_content(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until,
+                           wait_for):
         # context = await self._browser.createIncognitoBrowserContext()
         context = self._browser
         page = await context.newPage()
@@ -73,13 +74,17 @@ class BrowserLoop(object):
         if wait_until:
             options['waitUntil'] = wait_until
         await page.goto(url, options)
+        if wait_for:
+            if isinstance(wait_for, (int, float, complex)) and not isinstance(wait_for, bool):
+                wait_for *= 1000
+            await page.waitFor(wait_for)
         content = await page.content()
         await context.close()
         return content
 
-    def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until):
+    def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for):
         return asyncio.run_coroutine_threadsafe(
-            self._get_content(url, headers, cookies, timeout, proxy_username, proxy_password, wait_until),
+            self._get_content(url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for),
             self._event_loop).result()
 
     def destroy(self):
@@ -104,9 +109,9 @@ class BrowserContext(object):
                                                            user_data_dir, switches)
             BrowserContext._BROWSER_REFCNT += 1
 
-    def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until):
+    def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for):
         return BrowserContext._BROWSER_LOOP.process(url, headers, cookies, timeout, proxy_username, proxy_password,
-                                                    wait_until)
+                                                    wait_until, wait_for)
 
     def close(self):
         with BrowserContext._BROWSER_LOCK:
@@ -148,7 +153,7 @@ def main():
         ctx = BrowserContext(args.chromium_revision, args.ignore_https_errors, proxy_server,
                              args.user_data_dir, args.switches)
         print(ctx.process(args.url, args.cookies, args.headers, args.timeout, proxy_password, proxy_username,
-                          args.wait_until))
+                          args.wait_until, args.wait_for))
     finally:
         ctx.close()
 

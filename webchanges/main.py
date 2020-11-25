@@ -35,14 +35,13 @@ class Urlwatch(object):
             self.load_jobs()
 
     def check_directories(self):
-        if not os.path.isdir(self.urlwatch_config.config_dir):
+        if (not (self.urlwatch_config.config and self.urlwatch_config.jobs)
+                and not os.path.isdir(self.urlwatch_config.config_dir)):
             os.makedirs(self.urlwatch_config.config_dir)
-        if not os.path.exists(self.urlwatch_config.config):
-            self.config_storage.write_default_config(self.urlwatch_config.config)
-            print(f"""
-    A default config has been written to {self.urlwatch_config.config}.
-    Use "{self.urlwatch_config.project_name} --edit-config" to customize it.
-        """)
+            if not os.path.exists(self.urlwatch_config.config):
+                self.config_storage.write_default_config(self.urlwatch_config.config)
+                print(f'A default config has been written to {self.urlwatch_config.config}.'
+                      f'Use "{self.urlwatch_config.project_name} --edit-config" to customize it.')
 
     def load_hooks(self):
         if os.path.exists(self.urlwatch_config.hooks):

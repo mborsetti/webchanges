@@ -4,8 +4,8 @@
 Usage examples
 ==============
 
-Checking different sites at different intervals
------------------------------------------------
+Checking different sources at different intervals
+-------------------------------------------------
 
 You can divide your jobs into multiple job lists depending on how often you want to check.  For example, you can have
 a ``daily.yaml`` job list for daily jobs, and a ``weekly.yaml`` for weekly ones.  You then set up the scheduler to
@@ -146,6 +146,21 @@ you can watch the output of the ``date`` command, for example:
 Since the output of ``date`` changes every second, this job should produce a report every time webchanges is run.
 
 
+.. _json_dict:
+
+Selecting items from a JSON dictionary
+--------------------------------------
+If you are watching JSON-encoded dictionary data but are only interested in the data contained in (a) certain key(s),
+you can use a Python command to easily extract it:
+
+
+.. code-block:: yaml
+
+   name: "webchanges watchdog"
+   url: https://example.com/
+   shellpipe: python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
+
+
 Using Redis as a cache backend
 ------------------------------
 To use Redis as a database (cache) backend instead of the default SQLite3 file::
@@ -233,9 +248,14 @@ Using a Chromium revision matching a Google Chrome / Chromium release
 ---------------------------------------------------------------------
 Unfortunately the Chromium revision number does not match the Google Chrome / Chromium release one.
 There are multiple ways of finding what the revision number is for a stable Chrome release; the one I found useful is
-to go to https://chromium.cypress.io/, selecting the "stable" release channel, and clicking on "get downloads" for the
-one you want.  At the top you will see something like "Base revision: 782793.
+to go to https://chromium.cypress.io/, selecting the "stable" release channel `for the OS you need`, and clicking on
+"get downloads" for the one you want.  At the top you will see something like "Base revision: 782793.
 Found build artifacts at 782797 [browse files]".  You want the revision with build artifacts, in this case 782797.
+
+Be aware that the same Google Chrome / Chromium release may be based on a different Chromium revision on different OSs,
+and that not all Chromium revisions are available for all OS platforms (Linux_x64, Mac, Win and Win_x64).  Using a
+release number that cannot be found will lead to a ``zipfile.BadZipFile: File is not a zip file`` error from the
+Pyppeter code.
 
 Please note that everytime you change the chromium_revision, a new download is initiated. The old ones are kept on
 your system, and if you no longer need them you can delete them.  If you can't find the directory, try

@@ -79,9 +79,12 @@ At the moment, the following filters are available:
 
 * To edit/filter text:
 
-  - :ref:`keep_lines_containing`: Keep only lines matching a regular expression
-  - :ref:`delete_lines_containing`: Delete lines matching a regular expression
-  - :ref:`re.sub`: Replace or remove text matching a regular expression
+  - :ref:`keep_lines_containing`: Keep only lines containing specified text or matching`Python regular expression
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
+  - :ref:`delete_lines_containing`: Delete lines containing specified text or matching a `Python regular expression
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
+  - :ref:`re.sub`: Replace or remove text matching a `Python regular expression
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
   - :ref:`strip`: Strip leading and trailing whitespace
   - :ref:`sort`: Sort lines
   - :ref:`reverse`: Reverse the order of items (lines)
@@ -480,8 +483,13 @@ Optional sub-directives
 """""""""""""""""""""""
 * ``indentation`` (defaults to 4): indent to pretty-print JSON array elements. ``None`` selects the most compact
   representation.
+* ``sort_keys`` (defaults to false): sort the output of dictionaries by key.
 
+Advanced tip
+""""""""""""
 
+Python programmers can use an advanced technique to select only certain elements of the JSON object; see
+:ref:`json_dict`.
 
 .. _format-xml:
 
@@ -556,33 +564,34 @@ This filter calculates a SHA-1 hash for the document,
 keep_lines_containing
 ---------------------
 
-This filter *emulates* Linux's `grep` using Pyton's
-`regular expression matching <https://docs.python.org/3/library/re.html>`__
-(regex) and keeps only lines that match the pattern, discarding the others.
-Note that mothwistanding its name, this filter **does not** use the executable
-`grep`.
+This filter keeps only lines that contain the text specified (default) or match the Python `regular
+expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified, discarding the others.
+Note that while this filter emulates Linux's `grep`, it **does not** use the executable `grep`
 
-Example: convert HTML to text, strip whitespace, and only keep lines that have the sequence ``a,b:`` in them:
+Examples:
 
 .. code-block:: yaml
 
-   name: Keep line matching test
+   name: "convert HTML to text, strip whitespace, and only keep lines that have the sequence ``a,b:`` in them"
    url: https://example.com/keep_lines_containing.html
    filter:
      - html2text:
      - strip:
-     - keep_lines_containing:
-         re: 'a,b:'
-
-Example: keep only lines that contain "error" irrespective of its case (e.g. Error, ERROR, etc.):
+     - keep_lines_containing: 'a,b:'
 
 .. code-block:: yaml
 
-   name: "Lines with error in them, case insensitive"
+   name: "keep only lines that contain 'error' irrespective of its case (e.g. Error, ERROR, etc.)"
    url: https://example.com/keep_lines_containing_i.txt
    filter:
      - keep_lines_containing:
          re: '(?i)error'
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``text`` (default): match the text provided
+* ``re``: match the the Python `regular
+  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified
 
 
 
@@ -591,19 +600,24 @@ Example: keep only lines that contain "error" irrespective of its case (e.g. Err
 delete_lines_containing
 -----------------------
 
-This filter is the inverse of ``keep_lines_containing`` above and keeps only lines that do
-not match the text or the `regular expression
-<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__,
-discarding the others.
+This filter is the inverse of ``keep_lines_containing`` above and discards all lines that contain the text specified
+(default) or match the Python `regular expression
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__, keeping the others.
 
-Example: eliminate lines that contain "xyz":
+Example:
 
 .. code-block:: yaml
 
-   name: "Lines with error in them, case insensitive"
+   name: "eliminate lines that contain 'xyz'"
    url: https://example.com/delete_lines_containing.txt
    filter:
      - delete_lines_containing: 'xyz'
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``text`` (default): match the text provided
+* ``re``: match the the Python `regular
+  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified
 
 
 
@@ -622,16 +636,17 @@ This filter removes or replaces text using `regular expressions
    string.
 
 All features are described in Python’s re.sub `documentation <https://docs.python.org/3/library/re.html#re.sub>`__.
-The ``pattern`` and ``repl`` values are passed to this function as-is.
+The ``pattern`` and ``repl`` values are passed to this function as-is; if ``repl`` is missing, then it's considered
+to be an empty string and this filter deletes the matched text.
 
 Just like Python’s `re.sub <https://docs.python.org/3/library/re.html#re.sub>`__ function, there’s the possibility to
-apply a regular expression and either remove of replace the matched text. The following example applies the filter
+apply a regular expression and either remove or replace the matched text. The following example applies the filter
 3 times:
 
 .. code-block:: yaml
 
-   name: "re.sub test"
-   url: https://example.com/re_sub.txt
+   name: "Strip href and change a few tags"
+   url: https://example.com/re_sub.html
    filter:
      - re.sub: '\s*href="[^"]*"'
      - re.sub:
@@ -644,10 +659,10 @@ apply a regular expression and either remove of replace the matched text. The fo
 Optional sub-directives
 """""""""""""""""""""""
 
-* ``pattern``: pattern to be replaced. This sub-directive must be specified if also using the ``repl`` sub-directive. Otherwise the
-  pattern can be specified as the value of ``re.sub``.
-* ``repl``: the string for replacement. If this sub-directive is missing, defaults to empty string (i.e. deletes the string
-  matched in ``pattern``)
+* ``pattern``: pattern to be replaced. This sub-directive must be specified if also using the ``repl`` sub-directive.
+  Otherwise the pattern can be specified as the value of ``re.sub``.
+* ``repl``: the string for replacement. If this sub-directive is missing, defaults to empty string (i.e. deletes the
+  string matched in ``pattern``)
 
 
 
