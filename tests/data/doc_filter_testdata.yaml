@@ -51,11 +51,16 @@ https://example.com/html2text.html:
     </section>
     </body>
     </html>
+#  output: |-
+#    | Date                    | #Sales |
+#    |-------------------------|--------|
+#    | Monday, 3 February 2020 | 10,000 |
+#    | Tu, 3 Mar               | 20,000 |
   output: |-
-    | Date                    | #Sales |
-    |-------------------------|--------|
-    | Monday, 3 February 2020 | 10,000 |
-    | Tu, 3 Mar               | 20,000 |
+    Date                    | #Sales
+    ------------------------|-------
+    Monday, 3 February 2020 | 10,000
+    Tu, 3 Mar               | 20,000
 https://example.com/cal.ics:
   input: |-
     BEGIN:VCALENDAR
