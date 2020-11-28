@@ -612,44 +612,56 @@ class TelegramReporter(TextReporter):
         return (string[0 + i:length + i] for i in range(0, len(string), length))
 
 
-class SlackReporter(TextReporter):
-    """Send a message to a Slack channel"""
+class WebhookReporter(TextReporter):
+    """Send a message to a webhook such as Slack or Discord channel"""
 
-    __kind__ = 'slack'
+    __kind__ = 'webhook'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.max_length = self.config.get('max_message_length', 40000)
+        default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
+        self.max_length = self.config.get('max_message_length', default_max_length)
 
     def submit(self):
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.debug('Not calling slack API (no changes)')
+            logger.debug('Not calling service webhook due to nothing to report')
             return
 
         result = None
         for chunk in chunk_string(text, self.max_length, numbering=True):
-            res = self.submit_to_slack(webhook_url, chunk)
+            res = self.submit_to_webhook(webhook_url, chunk)
             if res.status_code != requests.codes.ok or res is None:
                 result = res
 
         return result
 
-    def submit_to_slack(self, webhook_url, text):
-        logger.debug(f"Sending slack request with text:{text}")
+    def submit_to_webhook(self, webhook_url, text):
+        logger.debug(f"Sending request to webhook with text:{text}")
         post_data = {"text": text}
         result = requests.post(webhook_url, json=post_data)
         try:
             if result.status_code == requests.codes.ok:
-                logger.info("Slack response: ok")
+                logger.info("Server response: ok")
             else:
-                logger.error(f"Slack error: {result.text}")
+                logger.error(f"Server error: {result.text}")
         except ValueError:
             logger.error(
-                f"Failed to parse slack response. HTTP status code: {result.status_code}, content: {result.content}")
+                f"Failed to parse server response. HTTP status code: {result.status_code}, content: {result.content}")
         return result
+
+
+class SlackReporter(WebhookReporter):
+
+    __kind__ = 'slack'
+
+
+    def __init__(self, *args, **kwargs):
+        from warnings import warn
+        warn(f"'slack' reporter is deprecated; replace with 'webhook' (same exact keys)", DeprecationWarning)
+        super().__init__(*args, **kwargs)
 
 
 class MarkdownReporter(ReporterBase):

@@ -101,7 +101,7 @@ DEFAULT_CONFIG = {
             'bot_token': '',
             'chat_id': '',
         },
-        'slack': {
+        'webhook': {
             'enabled': False,
             'webhook_url': '',
             'max_message_length': '',

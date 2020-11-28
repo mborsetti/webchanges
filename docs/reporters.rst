@@ -35,7 +35,7 @@ At the moment, the following reporters are available
 * :ref:`browser`: Display summary on the default web browser
 * :ref:`email`: Send summary via email (including SMTP)
 * :ref:`xmpp`: Send a message using the Extensible Messaging and Presence Protocol (XMPP)
-* :ref:`slack`: Send a message to a Slack channel
+* :ref:`webhook`: Send a message to a Slack or Discord channel using the service's webhook
 * :ref:`telegram`: Send a message using Telegram
 * :ref:`pushbullet`: Send summary via pushbullet.com
 * :ref:`pushover`: Send summary via pushover.net
@@ -246,37 +246,48 @@ To run jobs with this filter, you need to install :ref:`optional_packages`. Inst
 
 
 
-.. _slack:
+.. _webhook:
+
+Webhook (Slack, Discord, etc.)
+------------------------------
+
+Services such as Slack or Discord that support incoming webhooks can be used for notifications using the ``webhook``
+reporter:
+
+.. code:: yaml
+
+   webhook:
+     enabled: true
+     webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
 
 Slack
------
+~~~~~
 
-Slack notifications are configured using “Slack Incoming Webhooks”. Here is a sample configuration:
+To set up Slack, create a new Slack app in the workspace where you want to post messages, toggle **Activate Incoming
+Webhooks** on in the Features page, click **Add New Webhook to Workspace**, pick a channel that the app will post to,
+then click **Authorize** (see `here
+<https://slack.com/intl/en-sg/help/articles/115005265063-Incoming-webhooks-for-Slack>`__). Copy the webhook URL and
+paste it into the configuration as seen above.
+
+Discord
+~~~~~~~
+
+To set up Discord, from your Discord server settings select Integration and create a "New Webhook", give the
+webhook a name to post under, select a channel, press on "Copy Webhook URL" and paste the URL into the configuration as
+seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks>`__).
 
 .. code:: yaml
 
-   slack:
+   webhook:
      enabled: true
-     webhook_url: 'https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ'
-
-To set up Slack, from you Slack Team, create a new app and activate “Incoming Webhooks” on a channel, you’ll get a
-webhook URL, copy it into the configuration as seen above.
-
-Other messaging services (i.e., Discord) offer Slack-compatible webhooks, but with different maximum message lengths.
-Since Discord has a maximum message length of 2,000 characters, set it up this way:
-
-.. code:: yaml
-
-   slack:
-     enabled: true
-     webhook_url: 'https://discordapp.com/api/webhooks/{webhook.id}'
-     max_message_length: 2000
+     webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
 
 sub-directives
 ~~~~~~~~~~~~~~
 
 * ``webhook_url`` (required): the webhook URL
-* ``max_message_length``: the maximum lenght of a message in characters (default: 40,000)
+* ``max_message_length``: the maximum length of a message in characters (default: 40,000 or 2,000 for a URL starting
+  with \https://discordapp.com)
 
 
 

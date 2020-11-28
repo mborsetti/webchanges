@@ -20,16 +20,22 @@ Unreleased versions can be installed as follows:
 
 Note: git needs to be `installed <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ for this to work.
 
+Changed and deprecated
+----------------------
+* Reporter ``slack`` has been renamed to ``webhook`` as it works with any webhook-enabled services such as Discord.
+  Updated documentation with Discord example. The name ``slack``, while deprecated, is still recognized.
+
 Fixed
 -----
-* Fixed ``format-json`` filter unexpectedly reordering contents of dictionaries
-* Fixed documentation for ``additions_only`` and ``deletions_only`` (value of true is required)
-* Config directory is not created if command line contains --config and --urls to allow running on read-only
-  systems using redis or a database cache residing on a writeable volume
+* Fixed ``format-json`` filter from unexpectedly reordering contents of dictionaries
+* Fixed documentation for ``additions_only`` and ``deletions_only`` to specify that value of true is required
+* No longer creating a config directory if command line contains both --config and --urls. This allow running on
+  read-only systems (e.g. using redis or a database cache residing on a writeable volume)
+* Deprecation warnings use DeprecationWarning category, which is always printed
 
 Added
 -----
-* New ``format-json`` subdirective ``sort_keys`` to set the sorting of dictionaries (defaults to false)
+* New ``format-json`` subdirective ``sort_keys`` to set whether dictionaries should be sorted (defaults to false)
 
 Version 3.0.0
 =============

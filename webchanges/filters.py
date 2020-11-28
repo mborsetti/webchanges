@@ -480,7 +480,7 @@ class GrepFilter(FilterBase):
     def filter(self, data, subfilter):
         from warnings import warn
         warn(f"'grep' filter is deprecated; replace with 'keep_lines_containing' (+ 're' subfilter)"
-             f" ( {self.job.get_location()} )")
+             f" ( {self.job.get_location()} )", DeprecationWarning)
         return KeepLinesFilter.filter(self, data, subfilter)
 
 
@@ -520,7 +520,7 @@ class InverseGrepFilter(FilterBase):
     def filter(self, data, subfilter):
         from warnings import warn
         warn(f"'grepi' filter is deprecated; replace with 'delete_lines_containing (+ 're' subfilter')"
-             f" ( {self.job.get_location()} )")
+             f" ( {self.job.get_location()} )", DeprecationWarning)
         return DeleteLinesFilter.filter(self, data, subfilter)
 
 

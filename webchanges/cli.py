@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-"""This is the entry point, specifically main()"""
+"""This is the entry point"""
 
 import logging
 import os.path
 import signal
 import sys
+import warnings
 
 from appdirs import AppDirs
 
@@ -44,7 +45,8 @@ except AttributeError:
 logger = logging.getLogger(project_name)
 
 
-def setup_logger(verbose):
+def setup_logger(verbose: bool) -> None:
+    """Set up the looger"""
     if verbose:
         root_logger = logging.getLogger('')
         console = logging.StreamHandler()
@@ -54,8 +56,8 @@ def setup_logger(verbose):
         root_logger.info('turning on verbose logging mode')
 
 
-def migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file):
-    # migration of config, jobs and hooks files from urlwatch 2.2
+def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cache_file: str) -> None:
+    """Migrate legacy config, jobs and hooks files from urlwatch 2.2"""
     urlwatch_config_dir = os.path.expanduser(os.path.join('~', '.' + 'urlwatch'))
     urlwatch_config_file = os.path.join(urlwatch_config_dir, 'urlwatch.yaml')
     urlwatch_urls_file = os.path.join(urlwatch_config_dir, 'urls.yaml')
@@ -74,7 +76,10 @@ def migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file):
     # TODO migrate XMPP password in keyring
 
 
-def main():
+def main() -> None:
+    # make sure that DeprecationWarnings are displayed from all modules (otherwise only those in __main__ are)
+    warnings.filterwarnings(action='always', category=DeprecationWarning)
+
     # The config, jobs, hooks and cache files
     config_file = os.path.join(config_dir, 'config.yaml')
     jobs_file = os.path.join(config_dir, 'jobs.yaml')
@@ -87,6 +92,8 @@ def main():
     # load config files
     command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
                                    cache_file, verbose=False)
+
+    # set up the logger
     setup_logger(command_config.verbose)
 
     # check for directory of config files entered in cli
@@ -134,14 +141,5 @@ def main():
     # run urlwatch
     urlwatch_command.run()
 
-
 if __name__ == '__main__':
     main()
-
-
-# to be used by argparse-manpage as below (issue: attempted relative import with no known parent package)
-def manpage_parser():
-    return
-
-# from build_manpages.manpage import Manpage
-# print(Manpage(manpage_parser()))

@@ -185,7 +185,7 @@ or more of:
 - ``browser``
 - ``email`` (using SMTP or sendmail)
 - ``xmpp``
-- ``slack``
+- ``webhook`` (for Slack, Discord, etc.)
 - ``telegram``
 - ``pushover``
 - ``pushbullet``

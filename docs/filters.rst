@@ -771,3 +771,5 @@ variable ``URLWATCH_JOB_NAME`` will have the name of the job, while ``URLWATCH_J
    url: https://example.net/shellpipe.html
    filter:
      - shellpipe: echo TEST
+
+If the command errors, the output of that generated the error will be the firt line, before the traceback

@@ -184,6 +184,8 @@ These optional directives apply to all job types:
 - ``diff_filter``: :ref:`diff_filters` (if any) applied to the diff result (can be tested with ``--test-diff``)
 - ``additions_only``: Filters unified diff output to keep only addition lines (see :ref:`here <additions_only>`)
 - ``deletions_only``: Filters unified diff output to keep only deleted lines (see :ref:`here <deletions_only>`)
+- ``is_markdown``: Lets html reporter know that data is markdown and should be reconstructed (default: false if not
+  automatically set by filter)
 
 Setting default directives
 """"""""""""""""""""""""""

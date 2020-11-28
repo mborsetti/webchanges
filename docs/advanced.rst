@@ -156,9 +156,18 @@ you can use a Python command to easily extract it:
 
 .. code-block:: yaml
 
-   name: "webchanges watchdog"
    url: https://example.com/
-   shellpipe: python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
+   shellpipe: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
+
+
+Or, more complex and with formatting for html reporters:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   shellpipe "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\"\"[{v['Title']}]({v['DownloadUrl']})\"\") for v in d['value']]\""
+   is_markdown: true
+
 
 
 Using Redis as a cache backend
