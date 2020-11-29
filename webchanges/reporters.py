@@ -315,6 +315,79 @@ class TextReporter(ReporterBase):
             return summary_part, details_part
 
 
+class MarkdownReporter(ReporterBase):
+    def submit(self):
+        cfg = self.report.config['report']['markdown']
+        show_details = cfg['details']
+        show_footer = cfg['footer']
+
+        if cfg['minimal']:
+            for job_state in self.report.get_filtered_job_states(self.job_states):
+                pretty_name = job_state.job.pretty_name()
+                location = job_state.job.get_location()
+                if pretty_name != location:
+                    location = f'{pretty_name} ({location})'
+                yield '* ' + ': '.join((job_state.verb.upper(), location))
+            return
+
+        summary = []
+        details = []
+        for job_state in self.report.get_filtered_job_states(self.job_states):
+            summary_part, details_part = self._format_output(job_state)
+            summary.extend(summary_part)
+            details.extend(details_part)
+
+        if summary:
+            yield from (f'{idx + 1:02}. {line}' for idx, line in enumerate(summary))
+            yield ''
+
+        if show_details:
+            yield from details
+
+        if summary and show_footer:
+            duration = round(self.duration, max(0, 1 - int(floor(log10(self.duration)))))
+            yield (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
+                   f" seconds with {project.__project_name__}")
+
+    def _format_content(self, job_state):
+        if job_state.verb == 'error':
+            return job_state.traceback.strip()
+
+        if job_state.verb == 'unchanged':
+            return job_state.old_data
+
+        if job_state.old_data in (None, job_state.new_data):
+            return None
+
+        return job_state.get_diff()
+
+    def _format_output(self, job_state):
+        summary_part = []
+        details_part = []
+
+        pretty_name = job_state.job.pretty_name()
+        location = job_state.job.get_location()
+        if pretty_name != location:
+            location = f'{pretty_name} ({location})'
+
+        pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
+        summary = ': '.join((job_state.verb.upper(), location))
+        content = self._format_content(job_state)
+
+        if job_state.verb == 'changed,no_report':
+            return '', ''
+
+        else:
+            summary_part.append(pretty_summary)
+
+            details_part.append('### ' + summary)
+            if content is not None:
+                details_part.extend(('', '```', content, '```', ''))
+            details_part.extend(('', ''))
+
+            return summary_part, details_part
+
+
 class StdoutReporter(TextReporter):
     """Print summary on stdout (the console)"""
 
@@ -613,7 +686,7 @@ class TelegramReporter(TextReporter):
 
 
 class WebhookReporter(TextReporter):
-    """Send a message to a webhook such as Slack or Discord channel"""
+    """Send a text message to a webhook such as Slack or Discord channel"""
 
     __kind__ = 'webhook'
 
@@ -664,77 +737,45 @@ class SlackReporter(WebhookReporter):
         super().__init__(*args, **kwargs)
 
 
-class MarkdownReporter(ReporterBase):
-    def submit(self):
-        cfg = self.report.config['report']['markdown']
-        show_details = cfg['details']
-        show_footer = cfg['footer']
+class WebhookMarkdownReporter(MarkdownReporter):
+    """Send a Markdown message to a webhook such as Mattermost channel"""
 
-        if cfg['minimal']:
-            for job_state in self.report.get_filtered_job_states(self.job_states):
-                pretty_name = job_state.job.pretty_name()
-                location = job_state.job.get_location()
-                if pretty_name != location:
-                    location = f'{pretty_name} ({location})'
-                yield '* ' + ': '.join((job_state.verb.upper(), location))
+    __kind__ = 'webhook_markdown'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
+        self.max_length = self.config.get('max_message_length', default_max_length)
+
+    def submit(self):
+        webhook_url = self.config['webhook_url']
+        text = '\n'.join(super().submit())
+
+        if not text:
+            logger.debug('Not calling service webhook due to nothing to report')
             return
 
-        summary = []
-        details = []
-        for job_state in self.report.get_filtered_job_states(self.job_states):
-            summary_part, details_part = self._format_output(job_state)
-            summary.extend(summary_part)
-            details.extend(details_part)
+        result = None
+        for chunk in chunk_string(text, self.max_length, numbering=True):
+            res = self.submit_to_webhook(webhook_url, chunk)
+            if res.status_code != requests.codes.ok or res is None:
+                result = res
 
-        if summary:
-            yield from (f'{idx + 1:02}. {line}' for idx, line in enumerate(summary))
-            yield ''
+        return result
 
-        if show_details:
-            yield from details
-
-        if summary and show_footer:
-            duration = round(self.duration, max(0, 1 - int(floor(log10(self.duration)))))
-            yield (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-                   f" seconds with {project.__project_name__}")
-
-    def _format_content(self, job_state):
-        if job_state.verb == 'error':
-            return job_state.traceback.strip()
-
-        if job_state.verb == 'unchanged':
-            return job_state.old_data
-
-        if job_state.old_data in (None, job_state.new_data):
-            return None
-
-        return job_state.get_diff()
-
-    def _format_output(self, job_state):
-        summary_part = []
-        details_part = []
-
-        pretty_name = job_state.job.pretty_name()
-        location = job_state.job.get_location()
-        if pretty_name != location:
-            location = f'{pretty_name} ({location})'
-
-        pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
-        summary = ': '.join((job_state.verb.upper(), location))
-        content = self._format_content(job_state)
-
-        if job_state.verb == 'changed,no_report':
-            return '', ''
-
-        else:
-            summary_part.append(pretty_summary)
-
-            details_part.append('### ' + summary)
-            if content is not None:
-                details_part.extend(('', '```', content, '```', ''))
-            details_part.extend(('', ''))
-
-            return summary_part, details_part
+    def submit_to_webhook(self, webhook_url, text):
+        logger.debug(f"Sending request to webhook with text:{text}")
+        post_data = {"text": text}
+        result = requests.post(webhook_url, json=post_data)
+        try:
+            if result.status_code == requests.codes.ok:
+                logger.info("Server response: ok")
+            else:
+                logger.error(f"Server error: {result.text}")
+        except ValueError:
+            logger.error(
+                f"Failed to parse server response. HTTP status code: {result.status_code}, content: {result.content}")
+        return result
 
 
 class MatrixReporter(MarkdownReporter):

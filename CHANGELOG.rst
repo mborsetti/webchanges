@@ -36,6 +36,7 @@ Fixed
 Added
 -----
 * New ``format-json`` subdirective ``sort_keys`` to set whether dictionaries should be sorted (defaults to false)
+* New ``webhook_markdown`` reporter for services such as Mattermost who expect Markdown-formatted text
 
 Version 3.0.0
 =============

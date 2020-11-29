@@ -17,7 +17,6 @@ if sys.version_info < project.__min_python_version__:
              f'You are running {sys.version}')
 
 
-
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 with open('README.rst') as f:

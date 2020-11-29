@@ -46,7 +46,7 @@ logger = logging.getLogger(project_name)
 
 
 def setup_logger(verbose: bool) -> None:
-    """Set up the looger"""
+    """Set up the logger"""
     if verbose:
         root_logger = logging.getLogger('')
         console = logging.StreamHandler()

@@ -248,11 +248,11 @@ To run jobs with this filter, you need to install :ref:`optional_packages`. Inst
 
 .. _webhook:
 
-Webhook (Slack, Discord, etc.)
-------------------------------
+Webhook (Slack, Discord, Mattermost etc.)
+-----------------------------------------
 
-Services such as Slack or Discord that support incoming webhooks can be used for notifications using the ``webhook``
-reporter:
+Services such as Slack, Discord, Mattermost etc. that support incoming webhooks can be used for notifications using the
+``webhook`` or ``webhook_markdown`` reporters:
 
 .. code:: yaml
 
@@ -281,6 +281,20 @@ seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-I
    webhook:
      enabled: true
      webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
+
+Mattermost
+~~~~~~~~~~
+
+To set up Mattermost follow the documentation `here <https://docs.mattermost.com/developer/webhooks-incoming.html>`__
+to generate a webhook URL and paste it into the configuration as such (note that Mattermost prefers markdown so we're
+using the ``webhook_markdown`` variant:
+
+.. code:: yaml
+
+   webhook_markdown:
+     enabled: true
+     webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
+
 
 sub-directives
 ~~~~~~~~~~~~~~

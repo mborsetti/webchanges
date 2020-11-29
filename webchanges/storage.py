@@ -106,6 +106,11 @@ DEFAULT_CONFIG = {
             'webhook_url': '',
             'max_message_length': '',
         },
+        'webhook_markdown': {
+            'enabled': False,
+            'webhook_url': '',
+            'max_message_length': '',
+        },
         'matrix': {
             'enabled': False,
             'homeserver': '',
