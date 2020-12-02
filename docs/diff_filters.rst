@@ -55,6 +55,12 @@ Example:
 
 Output:
 
+.. image:: html_diff_filters_example_1.png
+  :width: 500
+  :alt: HTML reporter example output
+
+or (text):
+
 .. code-block:: none
 
    ---------------------------------------------------------------------------
@@ -75,12 +81,18 @@ Example (when the source content shrinks by 75% or more):
 
 Output:
 
+.. image:: html_diff_filters_example_2.png
+  :width: 500
+  :alt: HTML reporter example output
+
+or (text):
+
 .. code-block:: none
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#add_only2
    ---------------------------------------------------------------------------
-   ... @   Sat, 12 Jul 2020 00:00:00 +0000
+   --- @   Sat, 12 Jul 2020 00:00:00 +0000
    +++ @   Sat, 12 Jul 2020 01:00:00 +0000
    /**Comparison type: Additions only**
    /**Deletions are being shown as 75% or more of the content has been deleted**
@@ -109,6 +121,12 @@ Example:
    deletions_only: true
 
 Output:
+
+.. image:: html_diff_filters_example_3.png
+  :width: 500
+  :alt: HTML reporter example output
+
+or (text):
 
 .. code-block:: none
 

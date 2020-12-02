@@ -15,14 +15,16 @@ run `webchanges`, defining which job list to use, at different intervals.  For e
   0 0 0 * * webchanges --jobs weekly.yaml
 
 
-Getting reports via different channel for different sources
------------------------------------------------------------
+Getting reports via different channels for different sources
+------------------------------------------------------------
 
-Job-specific alerts (reports) are not enabled, so the workaround is to create two job lists and two configurations.
-For example, you can have a ``slack.yaml`` job list for jobs you want to be notified of via slack, and a ``email.yaml``
-one for jobs you want to be notified of via email.  You then create two configuration files, for example
-``config-slack.yaml`` and ``config-email.yaml``, and set them the first for slack reporting and the second for email
-reporting.  Finally, you schedule them similarly to the below (in Linux using cron)::
+Job-specific alerts (reports) is not a functionality of `webchanges`, but you can work around this by creating multiple
+configurations and job lists, and run `webchanges` multiple times specifying ``--jobs`` and ``--config``.
+
+For example, you can create two configuration files, e.g. ``config-slack.yaml`` and ``config-email.yaml`` (the
+first set for slack reporting and the second for email reporting) and two job lists, e.g. ``slack.yaml`` and
+``email.yaml`` (the first containing jobs you want to be notified of via slack, the second for jobs you want to be
+notified of via email).  You can then run `webchanges` similarly to the below example (taken from Linux crontab)::
 
   00 00 * * * webchanges --jobs slack.yaml --config config-slack.yaml
   05 00 * * * webchanges --jobs email.yaml --config config-email.yaml
@@ -160,19 +162,24 @@ you can use a Python command to easily extract it:
    shellpipe: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
 
 
-Or, more complex and with formatting for html reporters:
+Escaping is a bit complex: for example, ``"`` inside the Python code becomes ``\\\"`` and ``\n`` becomes ``\\n``
+-- and so on -- due to being inside a double quoted shell string inside a double quoted YAML string). The example below
+combines both escaping and signaling to the downstream html reporter that its output is in Markdown:
 
 .. code-block:: yaml
 
    url: https://example.com/
-   shellpipe "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\"\"[{v['Title']}]({v['DownloadUrl']})\"\") for v in d['value']]\""
+   shellpipe: "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\\\"[{v['Title']}]\\n({v['DownloadUrl']})\\\") for v in d['value']]\""
    is_markdown: true
 
+Please read the file permission restrictions in the filter's explanation :ref:`here <shellpipe>`.
 
 
 Using Redis as a cache backend
 ------------------------------
-To use Redis as a database (cache) backend instead of the default SQLite3 file::
+To use Redis as a database (cache) backend instead of the default SQLite3 file:
+
+.. code-block:: bash
 
     webchanges --cache=redis://localhost:6379/
 
@@ -182,16 +189,15 @@ There is no migration path from the existing SQLite3 database, the cache will be
 Watching changes on .onion (Tor) pages
 --------------------------------------
 
-Since pages on the `Tor Network`_ are not accessible via public DNS and TCP, you need to either configure a Tor client
-as HTTP/HTTPS proxy or use the ``torify(1)`` tool from the ``tor`` package (``apt install tor`` on Debian,``brew install
-tor`` on macOS). Setting up Tor is out of scope for this document. On a properly set up Tor installation, one can just
-prefix the ``webchanges`` command with the ``torify`` wrapper to access .onion pages:
+Since pages on the `Tor Network <https://www.torproject.org>`_ are not accessible via public DNS and TCP, you need to
+either configure a Tor client as HTTP/HTTPS proxy or use the ``torify(1)`` tool from the ``tor`` package (``apt install
+tor`` on Debian or Ubuntu,``brew install tor`` on macOS). Setting up Tor is out of scope for this document. On a
+properly set up Tor installation, one can just prefix the ``webchanges`` command with the ``torify`` wrapper to access
+.onion pages:
 
 .. code-block:: bash
 
    torify webchanges
-
-.. _Tor Network: https://www.torproject.org
 
 
 Watching Facebook page events
@@ -267,8 +273,8 @@ release number that cannot be found will lead to a ``zipfile.BadZipFile: File is
 Pyppeter code.
 
 Please note that everytime you change the chromium_revision, a new download is initiated. The old ones are kept on
-your system, and if you no longer need them you can delete them.  If you can't find the directory, try
-``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER; print(DOWNLOADS_FOLDER)"``
+your system, and if you no longer need them you can delete them.  If you can't find the directory where they are stored,
+run ``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER; print(DOWNLOADS_FOLDER)"``
 
 To specify the Chromium revision to use (and other defaults) globally, edit config.yaml:
 
@@ -281,7 +287,7 @@ To specify the Chromium revision to use (and other defaults) globally, edit conf
          - --enable-experimental-web-platform-features
          - '--window-size=1920,1080'
 
-To specify the Chromium revision to use , individual job:
+To specify the same on an individual job:
 
 .. code-block:: yaml
 
@@ -303,13 +309,13 @@ use a pre-existing user directory.
 
 Specifically:
 
-# create an empty directory somewhere (e.g. `/userdir`)
-# run Chromium Google Chrome browser with the ``--user-data-dir`` switch pointing to this directory (e.g.
-`chrome.exe --user-data-dir=/userdir``
-# browse to the site that you're interested in tracking and log in or do whatever is needed
-# quit the browser
+#. Create an empty directory somewhere (e.g. ``/userdir``)
+#. Run Chromium Google Chrome browser with the ``--user-data-dir`` switch pointing to this directory (e.g. ``chrome.exe
+   --user-data-dir=/userdir``)
+#. Browse to the site that you're interested in tracking and log in or do whatever is needed
+#. Quit the browser
 
-You can now run a `webchanges` job defined as such:
+You can now run a `webchanges` job defined like this:
 
 .. code-block:: yaml
 

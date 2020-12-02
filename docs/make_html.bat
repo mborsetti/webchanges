@@ -29,3 +29,4 @@ goto end
 :end
 pause
 popd
+exit

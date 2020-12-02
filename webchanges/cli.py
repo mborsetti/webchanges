@@ -141,5 +141,6 @@ def main() -> None:
     # run urlwatch
     urlwatch_command.run()
 
+
 if __name__ == '__main__':
     main()

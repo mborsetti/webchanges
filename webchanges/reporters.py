@@ -730,10 +730,9 @@ class SlackReporter(WebhookReporter):
 
     __kind__ = 'slack'
 
-
     def __init__(self, *args, **kwargs):
         from warnings import warn
-        warn(f"'slack' reporter is deprecated; replace with 'webhook' (same exact keys)", DeprecationWarning)
+        warn("'slack' reporter is deprecated; replace with 'webhook' (same exact keys)", DeprecationWarning)
         super().__init__(*args, **kwargs)
 
 

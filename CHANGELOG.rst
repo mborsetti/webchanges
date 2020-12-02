@@ -54,10 +54,10 @@ Added
   <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__: unicode_snob = True,
   body_width = 0, single_line_break = True, and ignore_images = True
 * The output from ``html2text`` filter is reconstructed into HTML (for html reports), preserving basic formatting
-  such as bolding, italics, list bullets, etc. as well as making links clickable
-* HTML formatting is radically more legible and useful, including long lines wrapping around
+  such as bolding, italics, underlining, list bullets, etc. as well as, most importantly, rebuilding clickable links
 * HTML formatting uses color (green or red) and strikethrough to mark added and deleted lines
-* HTML reports are now rendered correctly by email clients who reformat stylesheets (e.g. Gmail)
+* HTML formatting is radically more legible and useful, including long lines wrapping around
+* HTML reports are now rendered correctly by email clients who override stylesheets (e.g. Gmail)
 * Filter ``format-xml`` reformats (pretty-prints) XML
 * ``webchanges --errors`` will run all jobs and list all errors and empty responses (after filtering)
 * Browser jobs now recognize ``cookies``, ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout`` sub-directives

@@ -772,4 +772,14 @@ variable ``URLWATCH_JOB_NAME`` will have the name of the job, while ``URLWATCH_J
    filter:
      - shellpipe: echo TEST
 
-If the command errors, the output of that generated the error will be the firt line, before the traceback
+If the command errors, the output of that generated the error will be the first line, before the traceback
+
+WARNING: On Linux systems, this filter will not run for security reasons unless both the config directory and the jobs
+file is not group/other-writable and is owned by the same user who is running the job.  To set this up:
+
+.. code-block:: bash
+
+   cd ~/.config/webchanges
+   sudo chown $USER:$GROUP . *
+   chmod g-w . *
+   chmod o-w . *
