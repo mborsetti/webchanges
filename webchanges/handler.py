@@ -143,7 +143,11 @@ class JobState(object):
                 if proc.returncode == 0:
                     return False
                 elif proc.returncode == 1:
-                    return proc.stdout
+                    head = f'Using external diff tool "{self.job.diff_tool}"\n'
+                    head += f'Old: {email.utils.formatdate(self.timestamp, localtime=True)}\n'
+                    head += f'New: {email.utils.formatdate(time.time(), localtime=True)}\n'
+                    head += '-' * 36 + '\n'
+                    return head + proc.stdout
                 else:
                     raise RuntimeError(proc.stderr) from subprocess.CalledProcessError(proc.returncode, cmdline)
 

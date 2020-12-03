@@ -28,6 +28,7 @@ Added
 * New ``webhook_markdown`` reporter for services such as Mattermost, which expects Markdown-formatted text
 * Code autodoc, highlighting just how badly the code needs documentation!
 * Colorize output from ``use_diff: wdiff`` is colorized in html reports
+* Reports now show date/time of diffs when using external ``diff_tool``
 
 Changed and deprecated
 ----------------------
