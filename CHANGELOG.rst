@@ -27,13 +27,14 @@ Added
 * New ``format-json`` subdirective ``sort_keys`` sets whether JSON dictionaries should be sorted (defaults to false)
 * New ``webhook_markdown`` reporter for services such as Mattermost, which expects Markdown-formatted text
 * Code autodoc, highlighting just how badly the code needs documentation!
-* Colorize output from ``use_diff: wdiff`` is colorized in html reports
+* Output from ``diff_tool: wdiff`` is colorized in html reports
 * Reports now show date/time of diffs when using external ``diff_tool``
 
 Changed and deprecated
 ----------------------
 * Reporter ``slack`` has been renamed to ``webhook`` as it works with any webhook-enabled service such as Discord.
   Updated documentation with Discord example. The name ``slack``, while deprecated, is still recognized.
+* Improvements in report colorization code
 
 Fixed
 -----

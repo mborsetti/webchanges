@@ -12,8 +12,7 @@ DIFFTOHTMLTESTDATA = [
     ('-Deleted line', '<tr style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through">'
                       '<td>Deleted line</td></tr>'),
     # Changes line
-    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fafbfc;font-family:monospace">'
-                        '<td style="font-family:monospace">@@ -1,1 +1,1 @@</td></tr>'),
+    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fafbfc;font-family:monospace"><td>@@ -1,1 +1,1 @@</td></tr>'),
     # Horizontal ruler is manually expanded since <hr> tag is used to separate jobs
     ('+* * *', '<tr style="background-color:#e6ffed"><td>'
                '--------------------------------------------------------------------------------</td></tr>'),
@@ -52,26 +51,28 @@ REPORTER = [report for report, v in DEFAULT_CONFIG['report'].items() if v.get('e
 def test_diff_to_html(inpt, out):
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
-    job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': False, 'diff_tool': ''})
+    job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': False})
     result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
-    assert result[202:-8] == out
+    assert result[186:-8] == out
 
 
 def test_diff_to_htm_padded_table():
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
-    job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': True, 'diff_tool': ''})
+    job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': True})
     result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
-    assert result[202:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
+    assert result[186:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
                               'row |</span></td></tr>')
 
 
 def test_diff_to_htm_wdiff():
     # must add to fake headers to get what we want:
-    inpt = '[-old-] {+new+}'
+    inpt = '[-old-]{+new+}'
     job = JobBase.unserialize({'url': '', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'})
     result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
-    assert result == '<span style="color:#cb2431;">[-old-]</span> <span style="color:green;">{+new+}</span>'
+    assert result == ('<span style="font-family:monospace;white-space:pre-wrap">'
+                      '<span style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through">[-old-]</span>'
+                      '<span style="background-color:#e6ffed">{+new+}</span></span>')
 
 
 @pytest.mark.parametrize('reporter', REPORTER)

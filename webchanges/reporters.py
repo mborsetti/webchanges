@@ -36,10 +36,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Regular expressions that match the added/removed markers of GNU wdiff output
-WDIFF_ADDED_RE = r'[{][+].*?[+][}]'
-WDIFF_REMOVED_RE = r'[\[][-].*?[-][]]'
-
 
 class ReporterBase(object, metaclass=TrackSubClasses):
     __subclasses__ = {}
@@ -136,14 +132,18 @@ class HtmlReporter(ReporterBase):
             </body>
             </html>""")
 
-    def _diff_to_html(self, unified_diff: str, job) -> str:
-        if job.diff_tool.startswith('wdiff'):
-            for line in unified_diff.splitlines():
-                line = html.escape(line)
-                line = re.sub(WDIFF_ADDED_RE, lambda x: '<span style="color:green;">' + x.group(0) + '</span>', line)
-                line = re.sub(WDIFF_REMOVED_RE, lambda x: '<span style="color:#cb2431;">' + x.group(0) + '</span>',
-                              line)
-                yield line
+    def _diff_to_html(self, diff: str, job) -> str:
+        if job.diff_tool and job.diff_tool.startswith('wdiff'):
+            # wdiff colorization
+            yield '<span style="font-family:monospace;white-space:pre-wrap">'
+            diff = html.escape(diff)
+            diff = re.sub(r'[{][+].*?[+][}]', lambda x: f'<span style="background-color:#e6ffed">{x.group(0)}</span>',
+                          diff, flags=re.DOTALL)
+            diff = re.sub(r'[\[][-].*?[-][]]', lambda x: (
+                f'<span style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through">{x.group(0)}'
+                f'</span>'), diff, flags=re.DOTALL)
+            yield diff
+            yield '</span>'
         else:
             if job.is_markdown:
                 # rebuild html from markdown using markdown2 library's Markdown
@@ -182,7 +182,7 @@ class HtmlReporter(ReporterBase):
             else:
                 yield '<table style="border-collapse:collapse;font-family:monospace">'
 
-            for i, line in enumerate(unified_diff.splitlines()):
+            for i, line in enumerate(diff.splitlines()):
                 if line[0] == '+':
                     style = ' style="background-color:#e6ffed"' if i > 1 else ' style="color:green"'
                 elif line[0] == '-':
@@ -190,15 +190,17 @@ class HtmlReporter(ReporterBase):
                              else ' style="color:#cb2431"')
                 elif line[0] == '@':  # unified_diff section header
                     style = ' style="background-color:#fafbfc;font-family:monospace"'
-                elif line[0] == '/':  # additions or deletions only header
+                elif line[0] == '/':  # informational header added by webchanges
                     style = ' style="background-color:lightyellow"'
                 elif line[0] == '.':  # from additions_only/deletions_only
                     style = ' style="font-family:monospace"'
                 else:
                     style = ''
+                if i <= 1:
+                    style = style[:-1] + ';font-family:monospace"' if style else ' style="font-family:monospace"'
                 if i <= 1 or line[0] == '@':  # unified_diff headers
-                    yield f'<tr{style}><td style="font-family:monospace">{line}</td></tr>'
-                elif line[0] != '@':
+                    yield f'<tr{style}><td>{line}</td></tr>'
+                else:
                     if job.is_markdown:
                         yield f'<tr{style}><td>{mark_to_html(line[1:])}</td></tr>'
                     else:
@@ -426,20 +428,23 @@ class StdoutReporter(TextReporter):
             return functools.partial(print, file=AnsiToWin32(sys.stdout).stream)
         return print
 
-    def submit(self):
+    def submit(self, job=None):
         print = self._get_print()
 
         cfg = self.report.config['report']['text']
         line_length = cfg['line_length']
 
-        separators = (line_length * '=', line_length * '-', '-- ') if line_length else ()
+        separators = (line_length * '=', line_length * '-', '--') if line_length else ()
         body = '\n'.join(super().submit())
 
-        for line in body.splitlines():
-            # Basic colorization for wdiff-style differences
-            line = re.sub(WDIFF_ADDED_RE, lambda x: self._green(x.group(0)), line)
-            line = re.sub(WDIFF_REMOVED_RE, lambda x: self._red(x.group(0)), line)
+        if any(diff_tool.startswith('wdiff') for diff_tool in
+               [job_state.job.diff_tool for job_state in self.job_states if job_state.job.diff_tool]):
+            # wdiff colorization
+            body = re.sub(r'[{][+].*?[+][}]', lambda x: self._green(x.group(0)), body, flags=re.DOTALL)
+            body = re.sub(r'[\[][-].*?[-][]]', lambda x: self._red(x.group(0)), body, flags=re.DOTALL)
+            separators = (*separators, '-' * 36)
 
+        for line in body.splitlines():
             # FIXME: This isn't ideal, but works for now...
             if line in separators:
                 print(line)
@@ -733,7 +738,6 @@ class WebhookReporter(TextReporter):
 
 
 class SlackReporter(WebhookReporter):
-
     __kind__ = 'slack'
 
     def __init__(self, *args, **kwargs):
