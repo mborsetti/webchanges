@@ -8,6 +8,9 @@ Python programmers can hook their own code (with custom functionality) by writin
 placing it into the same directory as the job and configuration files.  The code will be automatically loaded at
 startup.
 
+Smaller code snippets can also be run using the :ref:`shellpipe` filter, for example as used :ref:`here <json_dict>`
+for filtering JSON dictionaries.
+
 An example hooks.py file is below:
 
 .. code-block:: python
@@ -28,7 +31,7 @@ An example hooks.py file is below:
    #    __required__ = ('username', 'password')
    #
    #    def retrieve(self, job_state):
-   #        return 'Would log in to {} with {} and {}\n'.format(self.url, self.username, self.password)
+   #        return f'Would log in to {self.url} with {self.username} and {self.password}\n'
 
 
    #class CaseFilter(filters.FilterBase):
@@ -72,8 +75,7 @@ An example hooks.py file is below:
 
 
    class CustomMatchUrlFilter(filters.AutoMatchFilter):
-       # The AutoMatchFilter will apply automatically to all filters
-       # that have the given properties set
+       """The AutoMatchFilter will apply automatically to all filters that have the given properties set"""
        MATCH = {'url': 'https://example.org/'}
 
        # An auto-match filter does not have any subfilters
@@ -82,7 +84,7 @@ An example hooks.py file is below:
 
 
    class CustomRegexMatchUrlFilter(filters.RegexMatchFilter):
-       # Similar to AutoMatchFilter
+       """Similar to AutoMatchFilter"""
        MATCH = {'url': re.compile('https://example.org/.*')}
 
        # An auto-match filter does not have any subfilters

@@ -41,7 +41,6 @@ its author to optimize it for HTML.
 
 Installation
 ============
-
 `webchanges` |pypi_version| is available on `PyPI <https://pypi.org/project/webchanges/>`__ for |support| and can be
 installed using `pip`::
 
@@ -51,20 +50,16 @@ Optional dependencies may be needed; see `here <https://webchanges.readthedocs.i
 
 Documentation
 =============
-
 The documentation is hosted on `Read the Docs <ttps://webchanges.readthedocs.io/en/stable/>`__ |readthedocs|.
-
 
 Code
 ====
-
 |issues| |travis| |coverage|
 
-The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__:.
+The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 
 Quick Start
 ============
-
 #. Run ``webchanges --edit`` to customize your job list (this will create ``jobs.yaml`` and ``config.yaml``)
 #. Run ``webchanges --edit-config`` if you want to set up e-mail sending
 
@@ -79,7 +74,6 @@ system scheduler to automatically run `webchanges` periodically:
 
 Contributing
 ============
-
 We welcome any contribution, e.g. documentation, bug reports, new features, etc., as both pull requests and
 `issues <https://github.com/mborsetti/webchanges/issues>`__.
 More information for developers and documenters is `here
@@ -88,7 +82,6 @@ More information for developers and documenters is `here
 
 License
 =======
-
 |license|
 
 Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but including code licensed under the

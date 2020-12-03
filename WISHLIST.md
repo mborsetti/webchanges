@@ -9,3 +9,4 @@
 - [ ] Package import optimizations
   - [ ] Make it threadsafe
 - [ ] Reduce number of external packages required
+- [ ] Remove --add JOB and --delete JOB

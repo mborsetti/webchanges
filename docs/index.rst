@@ -15,14 +15,14 @@ Table of Contents
 
 .. toctree::
    :maxdepth: 1
-   :caption: Getting started
+   :caption: Getting Started
 
    Overview <self>
    introduction
 
 .. toctree::
    :maxdepth: 1
-   :caption: In depth
+   :caption: In Depth
 
    jobs
    filters
@@ -52,3 +52,10 @@ Table of Contents
 
    contributing
    changelog
+
+.. autosummary::
+   :toctree: _autosummary
+   :caption: Code autodoc
+   :recursive:
+
+   webchanges

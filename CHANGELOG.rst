@@ -3,11 +3,13 @@ Changelog
 *********
 
 This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`__. Release numbering mostly
-follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__.
+follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__.  Minor documentation
+updates are not listed here and are ongoing.
 
 **Development**
-`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ always welcomed, and you can
-check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
+
+`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ are always welcomed, and you
+can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
 
 Unreleased
 ==========
@@ -20,23 +22,26 @@ Unreleased versions can be installed as follows:
 
 Note: git needs to be `installed <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ for this to work.
 
+Added
+-----
+* New ``format-json`` subdirective ``sort_keys`` sets whether JSON dictionaries should be sorted (defaults to false)
+* New ``webhook_markdown`` reporter for services such as Mattermost, which expects Markdown-formatted text
+* Code autodoc, highlighting just how badly the code needs documentation!
+* Colorize output from ``use_diff: wdiff`` is colorized in html reports
+
 Changed and deprecated
 ----------------------
-* Reporter ``slack`` has been renamed to ``webhook`` as it works with any webhook-enabled services such as Discord.
+* Reporter ``slack`` has been renamed to ``webhook`` as it works with any webhook-enabled service such as Discord.
   Updated documentation with Discord example. The name ``slack``, while deprecated, is still recognized.
 
 Fixed
 -----
 * Fixed ``format-json`` filter from unexpectedly reordering contents of dictionaries
 * Fixed documentation for ``additions_only`` and ``deletions_only`` to specify that value of true is required
-* No longer creating a config directory if command line contains both --config and --urls. This allow running on
+* No longer creating a config directory if command line contains both ``--config`` and ``--urls``. This allow running on
   read-only systems (e.g. using redis or a database cache residing on a writeable volume)
-* Deprecation warnings use DeprecationWarning category, which is always printed
+* Deprecation warnings now use the ``DeprecationWarning`` category, which is always printed
 
-Added
------
-* New ``format-json`` subdirective ``sort_keys`` to set whether dictionaries should be sorted (defaults to false)
-* New ``webhook_markdown`` reporter for services such as Mattermost who expect Markdown-formatted text
 
 Version 3.0.0
 =============

@@ -135,18 +135,17 @@ class JobState(object):
                 old_file_path = os.path.join(tmpdir, 'old_file')
                 new_file_path = os.path.join(tmpdir, 'new_file')
                 with open(old_file_path, 'w+b') as old_file, open(new_file_path, 'w+b') as new_file:
-                    old_file.write(self.old_data.encode('utf-8'))
-                    new_file.write(self.new_data.encode('utf-8'))
+                    old_file.write(self.old_data.encode())
+                    new_file.write(self.new_data.encode())
                 cmdline = shlex.split(self.job.diff_tool) + [old_file_path, new_file_path]
-                proc = subprocess.Popen(cmdline, stdout=subprocess.PIPE)
-                stdout, _ = proc.communicate()
+                proc = subprocess.run(cmdline, capture_output=True, text=True)
                 # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
                 if proc.returncode == 0:
                     return False
                 elif proc.returncode == 1:
-                    return stdout.decode('utf-8')
+                    return proc.stdout
                 else:
-                    raise subprocess.CalledProcessError(proc.returncode, cmdline)
+                    raise RuntimeError(proc.stderr) from subprocess.CalledProcessError(proc.returncode, cmdline)
 
         timestamp_old = email.utils.formatdate(self.timestamp, localtime=True)
         timestamp_new = email.utils.formatdate(self.current_timestamp or time.time(), localtime=True)

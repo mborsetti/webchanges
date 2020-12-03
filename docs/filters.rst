@@ -101,7 +101,6 @@ Python programmers can write their own plug-in that could include filters; see :
 
 css and xpath
 -------------
-
 The ``css`` filter extracts content based on a `CSS selector <https://www.w3.org/TR/selectors/>`__. It uses the
 `cssselect <https://pypi.org/project/cssselect/>`__ Python package, which has limitations and extensions as explained
 in its `documentation <https://cssselect.readthedocs.io/en/latest/#supported-selectors>`__.
@@ -127,7 +126,6 @@ other examples
 
 Using CSS and XPath filters with XML and exclusions
 """""""""""""""""""""""""""""""""""""""""""""""""""
-
 By default, CSS and XPath filters are set up for HTML documents, but it is possible to use them for XML documents as
 well.
 
@@ -191,7 +189,6 @@ removed from the final result. For example, the following job will not have any 
 
 Limiting the returned items from a CSS Selector or XPath
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""
-
 If you only want to return a subset of the items returned by a CSS selector or XPath filter, you can use two additional
 subfilters:
 
@@ -212,7 +209,6 @@ the first, and return at most two elements), you can use this filter:
 
 Duplicated results
 """"""""""""""""""
-
 If you get multiple results from one page, but you only expected one (e.g. because the page contains both a mobile and
 desktop version in the same HTML document, and shows/hides one via CSS depending on the viewport size), you can use
 '``maxitems: 1``' to only return the first item.
@@ -220,7 +216,6 @@ desktop version in the same HTML document, and shows/hides one via CSS depending
 
 Optional directives
 """""""""""""""""""
-
 * ``selector`` (for css) or ``path`` (for xpath) [can be entered as the value of the `xpath` or `css` directive]
 * ``method``: Either of ``html`` (default) or ``xml``
 * ``namespaces`` Mapping of XML namespaces for matching
@@ -234,10 +229,8 @@ Optional directives
 
 element-by-
 -----------
-
-The filters **element-by-class**, **element-by-id**, **element-by-style**,
-and **element-by-tag** allow you to select all matching instances of a given
-HTML element.
+The filters **element-by-class**, **element-by-id**, **element-by-style**, and **element-by-tag** allow you to select
+all matching instances of a given HTML element.
 
 Examples:
 
@@ -282,12 +275,10 @@ To make the output human-friendly you can chain html2text on the result:
 
 html2text
 -------------
-
-This filter converts HTML (or XML) to plaintext
+This filter converts HTML (or XML) to plaintext.
 
 Optional directives
 """""""""""""""""""
-
 * ``method``: One of:
 
  - ``html2text``: Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package (default) and retains
@@ -297,7 +288,7 @@ Optional directives
 
 
 ``html2text``
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^
 This filter converts HTML into `Markdown <https://www.markdownguide.org/>`__.
 using the `html2text <https://pypi.org/project/html2text/>`__ Python package.
 
@@ -317,7 +308,6 @@ Note: If the content has tables, adding the sub-directive `pad_tables: true` *ma
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-
 * See `documentation <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__
 * Note that the following options are set by default (but can be overridden): ensure that accented
   characters are kept as they are (`unicode_snob: true`), lines aren't chopped up
@@ -327,10 +317,8 @@ Optional sub-directives
 
 ``bs4``
 ^^^^^^^
-
 This filter extracts unformatted text from HTML using the `BeautifulSoup
-<https://pypi.org/project/beautifulsoup4/>`__, specifically its
-`get_text(strip=True)
+<https://pypi.org/project/beautifulsoup4/>`__, specifically its `get_text(strip=True)
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
 
 Note that as of Beautiful Soup version 4.9.0, when lxml or html.parser are in use, the contents of <script>, <style>,
@@ -339,15 +327,12 @@ page.
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-
 * ``parser`` (defaults to ``lxml``): as per `documentation
   <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__
 
 Required packages
 ~~~~~~~~~~~~~~~~~
-
-To run jobs with this filter, you need to have additional Python package(s) installed.
-
+To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
 Install them using:
 
 .. code-block:: bash
@@ -356,7 +341,6 @@ Install them using:
 
 ``re``
 ^^^^^^
-
 A simple HTML/XML tag stripper based on applying a regex.  Very fast but may
 not yield the prettiest results.
 
@@ -365,17 +349,14 @@ not yield the prettiest results.
 
 beautify
 --------
-
-This filter uses the `BeautifulSoup
-<https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
-<https://pypi.org/project/jsbeautifier/>`__ and `cssbeautifier
-<https://pypi.org/project/cssbeautifier/>`__ Python packages to reformat an
-HTML document to make it more readable.
+This filter uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
+<https://pypi.org/project/jsbeautifier/>`__ and `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ Python
+packages to reformat an HTML document to make it more readable.
 
 Required packages
 """""""""""""""""
-
-To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
+To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
+Install them using:
 
 .. code-block:: bash
 
@@ -387,11 +368,9 @@ To run jobs with this filter, you need to install :ref:`optional_packages`. Inst
 
 pdf2text
 --------
-
 This filter converts a PDF file to plaintext using the `pdftotext
-<https://github.com/jalan/pdftotext/blob/master/README.md#pdftotext>`__ Python
-library, itself based on the `Poppler <https://poppler.freedesktop.org/>`__
-library.
+<https://github.com/jalan/pdftotext/blob/master/README.md#pdftotext>`__ Python library, itself based on the `Poppler
+<https://poppler.freedesktop.org/>`__ library.
 
 This filter *must* be the first filter in a chain of filters.
 
@@ -415,12 +394,12 @@ If the PDF file is password protected, you can specify its password:
 
 Optional sub-directives
 """""""""""""""""""""""
-
 * ``password``: password for a password-protected PDF file
 
 Required packages
 """""""""""""""""
-To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
+To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
+Install them using:
 
 .. code-block:: bash
 
@@ -434,15 +413,10 @@ In addition, you need to install any of the OS-specific dependencies of Poppler 
 
 ocr
 ---
+This filter extracts text from images using the `Tesseract OCR engine <https://github.com/tesseract-ocr>`_. Any file
+format supported by the `Pillow <https://python-pillow.org>`_ (PIL Fork) Python package is supported.
 
-This filter extracts text from images using the `Tesseract OCR engine`_ It requires two Python modules to be installed:
-`pytesseract`_ and `Pillow`_. Any file formats supported by Pillow (PIL) are supported.
-
-.. _Tesseract OCR engine: https://github.com/tesseract-ocr
-.. _pytesseract: https://github.com/madmaze/pytesseract
-.. _Pillow: https://python-pillow.org
-
-This filter *must* be the first filter in a chain of filters, since it consumes binary data and outputs text data.
+This filter *must* be the first filter in a chain of filters, since it consumes binary data.
 
 .. code-block:: yaml
 
@@ -460,8 +434,8 @@ Optional sub-directives
 
 Required packages
 """""""""""""""""
-
-To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
+To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
+Install them using:
 
 .. code-block:: bash
 
@@ -475,7 +449,6 @@ In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tes
 
 format-json
 ---------------
-
 This filter deserializes a JSON object and reformats it using Python's `json.dumps
 <https://docs.python.org/3/library/json.html#json.dumps>`__ with indentations.
 
@@ -487,7 +460,6 @@ Optional sub-directives
 
 Advanced tip
 """"""""""""
-
 Python programmers can use an advanced technique to select only certain elements of the JSON object; see
 :ref:`json_dict`.
 
@@ -495,10 +467,8 @@ Python programmers can use an advanced technique to select only certain elements
 
 format-xml
 ----------
-
 This filter deserializes an XML object and reformats it using the `lxml <https://lxml.de>`__ Python package's
 etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ option.
-
 
 
 
@@ -506,7 +476,6 @@ etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.
 
 ical2text
 ---------
-
 This filter reads an iCalendar document and converts them to easy-to read text
 
 .. code-block:: yaml
@@ -518,8 +487,8 @@ This filter reads an iCalendar document and converts them to easy-to read text
 
 Required packages
 """""""""""""""""
-
-To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
+To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
+Install them using:
 
 .. code-block:: bash
 
@@ -531,7 +500,6 @@ To run jobs with this filter, you need to install :ref:`optional_packages`. Inst
 
 hexdump
 -----------
-
 This filter display the contents both in binary and ASCII (hex dump format).
 
 .. code-block:: yaml
@@ -547,8 +515,7 @@ This filter display the contents both in binary and ASCII (hex dump format).
 
 sha1sum
 -----------
-
-This filter calculates a SHA-1 hash for the document,
+This filter calculates a SHA-1 hash for the document.
 
 .. code-block:: yaml
 
@@ -563,10 +530,9 @@ This filter calculates a SHA-1 hash for the document,
 
 keep_lines_containing
 ---------------------
-
 This filter keeps only lines that contain the text specified (default) or match the Python `regular
 expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified, discarding the others.
-Note that while this filter emulates Linux's `grep`, it **does not** use the executable `grep`
+Note that while this filter emulates Linux's `grep`, it **does not** use the executable `grep`.
 
 Examples:
 
@@ -599,7 +565,6 @@ Optional sub-directives
 
 delete_lines_containing
 -----------------------
-
 This filter is the inverse of ``keep_lines_containing`` above and discards all lines that contain the text specified
 (default) or match the Python `regular expression
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__, keeping the others.
@@ -625,7 +590,6 @@ Optional sub-directives
 
 re.sub
 ------
-
 This filter removes or replaces text using `regular expressions
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
 
@@ -658,7 +622,6 @@ apply a regular expression and either remove or replace the matched text. The fo
 
 Optional sub-directives
 """""""""""""""""""""""
-
 * ``pattern``: pattern to be replaced. This sub-directive must be specified if also using the ``repl`` sub-directive.
   Otherwise the pattern can be specified as the value of ``re.sub``.
 * ``repl``: the string for replacement. If this sub-directive is missing, defaults to empty string (i.e. deletes the
@@ -670,9 +633,8 @@ Optional sub-directives
 
 strip
 -----
-
-This filter removes leading and trailing whitespace.  It applies to the entire
-document: it is **not** applied line-by line.
+This filter removes leading and trailing whitespace.  It applies to the entire document: it is **not** applied
+line-by line.
 
 .. code-block:: yaml
 
@@ -686,12 +648,11 @@ document: it is **not** applied line-by line.
 
 sort
 ----
+This filter performs a line-based sorting, ignoring cases (case folding as per Python's `implementation
+<https://docs.python.org/3/library/stdtypes.html#str.casefold>`__
 
-This filter performs a line-based sorting, ignoring cases (case folding as per
-Python's `implementation <https://docs.python.org/3/library/stdtypes.html#str.casefold>`__
-
-If the source provides data in random order, you should sort it before
-the comparison in order to avoid diffing based only on changes in the sequence.
+If the source provides data in random order, you should sort it before the comparison in order to avoid diffing based
+only on changes in the sequence.
 
 .. code-block:: yaml
 
@@ -700,9 +661,8 @@ the comparison in order to avoid diffing based only on changes in the sequence.
    filter:
      - sort
 
-The sort filter takes an optional ``separator`` parameter that defines
-the item separator (by default sorting is line-based), for example to
-sort text paragraphs (text separated by an empty line):
+The sort filter takes an optional ``separator`` parameter that defines the item separator (by default sorting is
+line-based), for example to sort text paragraphs (text separated by an empty line):
 
 .. code:: yaml
 
@@ -711,9 +671,8 @@ sort text paragraphs (text separated by an empty line):
      - sort:
          separator: "\n\n"
 
-This can be combined with a boolean ``reverse`` option, which is useful
-for sorting and reversing with the same separator (using ``%`` as
-separator, this would turn ``3%2%4%1`` into ``4%3%2%1``):
+This can be combined with a boolean ``reverse`` option, which is useful for sorting and reversing with the same
+separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1``):
 
 .. code:: yaml
 
@@ -757,11 +716,11 @@ paragraphs (items that are separated by an empty line):
          separator: "\n\n"
 
 
+
 .. _shellpipe:
 
 shellpipe
 ---------
-
 The data to be filtered is passed to a command or script and the output from the script is used.  The environment
 variable ``URLWATCH_JOB_NAME`` will have the name of the job, while ``URLWATCH_JOB_LOCATION`` its location
 (either URL or command).

@@ -41,7 +41,8 @@ If for some reason you want the output to be the python `HtmlDiff
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-* diff: ``unified`` (default) or ``table``. See above.
+* diff: ``unified`` (default) or ``table``; see above. Note that the use of an external differ (``diff_tool``) in the
+  job will override this sub-directive.
 
 
 .. _markdown:

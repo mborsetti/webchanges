@@ -4,27 +4,6 @@
 Dependencies
 ============
 
-Python version
---------------
-
-`webchanges` requires `Python <https://www.python.org/>`__ 3.6 or higher to run.
-
-Mandatory packages
-------------------
-
-If `webchanges` is installed with `pip`, these Python packages are installed automatically:
-
-* `appdirs <https://github.com/ActiveState/appdirs>`__
-* `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect)
-* `html2text <https://github.com/Alir3z4/html2text>`__
-* `lxml <https://lxml.de>`__
-* `markdown2 <https://github.com/trentm/python-markdown2>`__
-* `minidb <https://thp.io/2010/minidb/>`__
-* `PyYAML <https://pyyaml.org/>`__
-* `requests <https://requests.readthedocs.io/en/master/>`__
-* `colorama <https://github.com/tartley/colorama>`__  (for Windows installations)
-
-
 .. _optional_packages:
 
 Optional packages
@@ -33,8 +12,8 @@ Optional packages
 Certain features require additional Python packages to work. These optional packages are installed by appending
 to the name `webchanges` the name of the feature (from the table below) inside square brackets, like so::
 
-    python3 -m pip install webchanges[use_browser]
-    python3 -m pip install webchanges[use_browser,redis]
+    pip install --upgrade webchanges[use_browser]
+    pip install --upgrade webchanges[use_browser,redis]
 
 +-------------------------+-------------------------------------------------------------------------+
 | Feature                 | Python package(s) installed                                             |
@@ -100,3 +79,19 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 .. [#f3] Optional, to beautify content of <style> tags
 .. [#f4] see https://github.com/jalan/pdftotext#os-dependencies
 .. [#f5] see https://tesseract-ocr.github.io/tessdoc/Home.html
+
+
+Installed packages
+------------------
+
+These Python packages are installed automatically by `pip`:
+
+* `appdirs <https://github.com/ActiveState/appdirs>`__
+* `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect)
+* `html2text <https://github.com/Alir3z4/html2text>`__
+* `lxml <https://lxml.de>`__
+* `markdown2 <https://github.com/trentm/python-markdown2>`__
+* `minidb <https://thp.io/2010/minidb/>`__
+* `PyYAML <https://pyyaml.org/>`__
+* `requests <https://requests.readthedocs.io/en/master/>`__
+* `colorama <https://github.com/tartley/colorama>`__  (for Windows installations)

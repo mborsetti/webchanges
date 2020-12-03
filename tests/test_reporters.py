@@ -52,17 +52,26 @@ REPORTER = [report for report, v in DEFAULT_CONFIG['report'].items() if v.get('e
 def test_diff_to_html(inpt, out):
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
-    result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, is_markdown=True)))
+    job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': False, 'diff_tool': ''})
+    result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
     assert result[202:-8] == out
 
 
-def test_diff_padded_table():
+def test_diff_to_htm_padded_table():
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
-    result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, is_markdown=True,
-                                                                     markdown_padded_tables=True)))
+    job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': True, 'diff_tool': ''})
+    result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
     assert result[202:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
                               'row |</span></td></tr>')
+
+
+def test_diff_to_htm_wdiff():
+    # must add to fake headers to get what we want:
+    inpt = '[-old-] {+new+}'
+    job = JobBase.unserialize({'url': '', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'})
+    result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
+    assert result == '<span style="color:#cb2431;">[-old-]</span> <span style="color:green;">{+new+}</span>'
 
 
 @pytest.mark.parametrize('reporter', REPORTER)

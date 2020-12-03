@@ -8,13 +8,12 @@ Introduction
 
 Every time you run `webchanges`, it:
 
-#. retrieves the output;
+#. retrieves the output from the source;
 #. transforms and filters it (optional);
-#. compares this with an identically transformed and filtered version saved from the previous run, producing a "diff"
-   report if it finds any changes;
+#. compares it with the version saved from the previous run, producing a "diff" report if it finds any changes;
 #. (optional) filters the diff report;
 #. displays such report (default) and/or sends it via one or more methods such as email;
-#. saves the output to use the next time it's run.
+#. saves the output to use the next time it is run.
 
 
 :ref:`Jobs`
@@ -35,7 +34,7 @@ You can edit it with any text editor or by running:
    webchanges --edit
 
 * For additional information on YAML, see the `YAML specifications <https://yaml.org/spec/>`__.
-* For when to use quotes in YAML see `here <https://www.yaml.info/learn/quote.html#flow>`__
+* For information on when to use quotes in YAML see `here <https://www.yaml.info/learn/quote.html#flow>`__
   (note: the library we use supports YAML 1.1, and our examples use "flow scalars").
 * URLs are always safe and don't need to be enclosed in quotes.
 
@@ -156,7 +155,7 @@ diff-specific ones:
 - ``additions_only``
 - ``deletions_only``
 
-Diff filters Reports are explained :ref:`here <diff_filters>`.
+Diff filters are explained :ref:`here <diff_filters>`.
 
 If all you're doing is monitoring the text of a website to see if anything was added, this job definition will do it:
 

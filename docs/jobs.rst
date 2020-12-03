@@ -125,7 +125,7 @@ For all ``url`` jobs:
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
 - ``method``: `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use
-  (default: ``GET``)
+  (default: ``GET`` unless ``data``, below, is set)
 - ``data``: HTTP data (defaults request method to ``POST`` and `Content-type
   <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header to
   ``application/x-www-form-urlencoded``)
@@ -134,7 +134,7 @@ For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 - ``encoding``: Override the character encoding from the server (see :ref:`here <encoding>`)
 - ``ignore_connection_errors``: Ignore (temporary) connection errors (true/false) (see :ref:`here <ignore_errors>`)
 - ``ignore_http_error_codes``: List of HTTP errors to ignore (see :ref:`here <ignore_errors>`)
-- ``ignore_timeout_errors``: Do not report errors when the timeout is hit (true/false)
+- ``ignore_timeout_errors``: Do not report errors when the timeout is hit (true/false) (see :ref:`here <ignore_errors>`)
 - ``ignore_too_many_redirects``: Ignore redirect loops (true/false) (see :ref:`here <ignore_errors>`)
 
 For ``url`` jobs that have ``use_browser: true``:
@@ -178,16 +178,16 @@ These optional directives apply to all job types:
 
 - ``name``: Human-readable name/label of the job (default: if content is HTML, the title; otherwise the URL or command)
 - ``max_tries``: Maximum number of times to run the job to retrieve the resource (default: 1)
-- ``diff_tool``: Command to an external tool for generating diff text
-- ``compared_versions``: Number of versions to compare for similarity (see :ref:`here <compared_versions>`)
+- ``diff_tool``: Command to an external tool for generating diff text. See example usage :ref:`here <word_based_differ>`
+- ``compared_versions``: Number of :ref:`versions to compare <compared_versions>` for similarity
 - ``filter``: :ref:`filters` (if any) to apply to the output (can be tested with ``--test``)
 - ``diff_filter``: :ref:`diff_filters` (if any) applied to the diff result (can be tested with ``--test-diff``)
-- ``additions_only``: Filters unified diff output to keep only addition lines (see :ref:`here <additions_only>`)
-- ``deletions_only``: Filters unified diff output to keep only deleted lines (see :ref:`here <deletions_only>`)
-- ``is_markdown``: Lets html reporter know that data is markdown and should be reconstructed (default: false if not
-  automatically set by filter)
+- ``additions_only``: Filters unified diff output to keep only :ref:`addition lines <additions_only>`
+- ``deletions_only``: Filters unified diff output to keep only :ref:`deleted lines <deletions_only>`
+- ``is_markdown``: Lets html reporter know that data is markdown and should be reconstructed (default: false, but could
+  be set by a filter such as ``html2text``)
 
 Setting default directives
 """"""""""""""""""""""""""
 
-See :ref:`job_defaults` for how to configure directives for all jobs at once.
+See :ref:`job_defaults` for how to configure default directives for all jobs

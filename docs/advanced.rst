@@ -240,21 +240,25 @@ can even have a "normal" filter attached to only watch links (the ``css: a`` par
      - shellpipe: /usr/local/bin/process_new_links.sh
 
 
-Using word-based differ (Linux)
--------------------------------
+.. _word_based_differ:
 
-You can also specify an external ``diff``-style tool (a tool that takes two filenames (old, new) as parameter and
-returns on its standard output the difference of the files), for example to use GNU ``wdiff`` to get word-based
-differences instead of line-based difference:
+Using word-based differ (``wdiff``)
+-----------------------------------
+
+You can also specify an **external** ``diff``-style tool (a tool that takes two filenames (old, new) as parameter and
+returns the difference of the files on its standard output). For example, to to get word-based differences instead of
+line-based difference, use GNU ``wdiff``:
 
 .. code-block:: yaml
 
    url: https://example.com/
    diff_tool: wdiff
 
-Note that ``diff_tool`` specifies an external command-line tool, so that tool must be installed separately (e.g. ``apt
-install wdiff`` on Debian or ``brew install wdiff`` on macOS). Coloring is supported for ``wdiff``-style output, but
-potentially not for other diff tools.
+In order for this to work, ``wdiff`` needs to  be installed separately (e.g. ``apt install wdiff`` on Debian/Ubuntu,
+``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
+Windows). Colored output is supported for ``wdiff``.
+
+The use of an external differ will override the ``diff`` setting of the ``html`` report.
 
 
 .. _chromium_revision:

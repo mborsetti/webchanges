@@ -1,12 +1,12 @@
 """webchanges checks webpages for changes
 
 webchanges checks web content (or the output of local commands) for changes and shows or notifies you via e-mail or
-one of many other supported services if any change detected; the notification includes the changed URL (or command) and
-a summary of the changes.
+one of many other supported services if any change is detected; the notification includes the changed URL (or command)
+and a 'diff' summary of the changes.
 """
 
 # The docstring above (__doc__) and the variables below are used in the program and for builds, including
-# documentation.
+# documentation (Sphynx autodoc)
 
 __project_name__ = __package__
 # Release numbering follows the Semantic Versioning https://semver.org/spec/v2.0.0.html#semantic-versioning-200
