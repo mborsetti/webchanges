@@ -166,7 +166,8 @@ class HtmlReporter(ReporterBase):
                     elif text.startswith(' '):  # replace leading spaces or converter will strip
                         lstripped = text.lstrip()
                         text = '&nbsp;' * (len(text) - len(lstripped)) + lstripped
-                    if job.markdown_padded_tables and '|' in text:  # a padded row in a table; keep it monospaced for alignment
+                    if job.markdown_padded_tables and '|' in text:
+                        # a padded row in a table; keep it monospaced for alignment
                         pre += '<span style="font-family:monospace;white-space:pre-wrap">'
                         post += '</span>'
                     html_out = markdowner.convert(text).strip('\n')  # convert markdown to html

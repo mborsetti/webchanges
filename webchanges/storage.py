@@ -6,7 +6,6 @@ import stat
 from abc import ABCMeta, abstractmethod
 
 import minidb
-import yaml
 
 import webchanges as project
 
@@ -19,6 +18,8 @@ try:
     import redis
 except ImportError:
     redis = None
+
+import yaml
 
 from .filters import FilterBase
 from .jobs import JobBase, ShellJob, UrlJob

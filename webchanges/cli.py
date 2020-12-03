@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""This is the entry point"""
+"""Module containing the entry point"""
 
 import logging
 import os.path
@@ -77,6 +77,7 @@ def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cac
 
 
 def main() -> None:
+    """The program's entry point"""
     # make sure that DeprecationWarnings are displayed from all modules (otherwise only those in __main__ are)
     warnings.filterwarnings(action='always', category=DeprecationWarning)
 
