@@ -112,10 +112,9 @@ Required directives
 Optional directives
 """""""""""""""""""
 
-- ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
-
 For all ``url`` jobs:
 
+- ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
 - ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`)
 - ``headers``: Headers to send along with the request (a dict)
 - ``http_proxy``: Proxy server to use for HTTP requests (e.g. "http://username:password@proxy.com:8080")

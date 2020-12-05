@@ -11,16 +11,10 @@ updates are not listed here and are ongoing.
 `Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ are always welcomed, and you
 can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
 
-Unreleased
-==========
 
-Unreleased versions can be installed as follows:
-
-.. code-block:: bash
-
-   pip install git+https://github.com/mborsetti/webchanges.git@unreleased
-
-Note: git needs to be `installed <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ for this to work.
+Version 3.0.1
+=============
+2020-12-05
 
 Added
 -----
@@ -43,7 +37,7 @@ Fixed
 * No longer creating a config directory if command line contains both ``--config`` and ``--urls``. This allow running on
   read-only systems (e.g. using redis or a database cache residing on a writeable volume)
 * Deprecation warnings now use the ``DeprecationWarning`` category, which is always printed
-
+* All filters take a subfilter (upstream `PR <https://github.com/thp/urlwatch/pull/600>`__)
 
 Version 3.0.0
 =============

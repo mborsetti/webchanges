@@ -52,7 +52,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
             filter_instance = filtercls(state.job, state)
             if filter_instance.match():
                 logger.info('Auto-applying filter %r to %s', filter_instance, state.job.get_location())
-                data = filter_instance.filter(data)
+                data = filter_instance.filter(data, None)  # all filters take a subfilter
 
         return data
 

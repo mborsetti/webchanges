@@ -55,7 +55,7 @@ SETUP = {
     # data_files is deprecated. It does not work with wheels, so it should be avoided.
     'package_dir': {'': '.'},
     'package_data': {'': ['*.rst']},
-    'exclude_package_data': {'': ['build_manpage.py', 'webchanges.py'], 'docs': ['*'], 'share': ['*']},
+    'exclude_package_data': {'': [''], 'docs': ['*']},
     'install_requires': requirements,
     'entry_points': {'console_scripts': [f'{project.__project_name__}={project.__package__}.cli:main']},
     'extras_require': {'use_browser': ['pyppeteer'],

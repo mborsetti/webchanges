@@ -72,9 +72,11 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 
 .. rubric:: Footnotes
 
-.. [#f1] ``pypetteer``'s OS-specific dependencies (non required in Windows or MacOS) are listed `here
-   <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`__.
-   A missing dependency is often the cause of the error ``pyppeteer.errors.BrowserError: Browser closed unexpectedly``.
+.. [#f1] ``pyppeteer``'s OS-specific dependencies (non required in Windows or MacOS) are listed `here
+   <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`__ (yes,
+   it's a page from puppeteer, which is the project upon which pyppeteer is created.  A missing dependency is often the
+   cause of the error ``pyppeteer.errors.BrowserError: Browser closed unexpectedly``.  Also pay close attention to
+   instructions if you're running it in Docker or other specialized environments.
 .. [#f2] Optional, to beautify content of <script> tags
 .. [#f3] Optional, to beautify content of <style> tags
 .. [#f4] see https://github.com/jalan/pdftotext#os-dependencies
