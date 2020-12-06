@@ -12,6 +12,11 @@ updates are not listed here and are ongoing.
 can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
 
 
+Version 3.0.2
+=============
+2020-12-06
+* #`1 <https://github.com/mborsetti/webchanges/issues/1>`__ Fixed logic in reading EDITOR environment variable
+
 Version 3.0.1
 =============
 2020-12-05
