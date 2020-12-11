@@ -12,7 +12,8 @@ DIFFTOHTMLTESTDATA = [
     ('-Deleted line', '<tr style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through">'
                       '<td>Deleted line</td></tr>'),
     # Changes line
-    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fafbfc;font-family:monospace"><td>@@ -1,1 +1,1 @@</td></tr>'),
+    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fafbfc><td style="font-family:monospace">@@ -1,1 +1,1 @@'
+                        '</td></tr>'),
     # Horizontal ruler is manually expanded since <hr> tag is used to separate jobs
     ('+* * *', '<tr style="background-color:#e6ffed"><td>'
                '--------------------------------------------------------------------------------</td></tr>'),
@@ -53,7 +54,7 @@ def test_diff_to_html(inpt, out):
     inpt = '-fake head 1\n+fake head 2\n' + inpt
     job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': False})
     result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
-    assert result[186:-8] == out
+    assert result[246:-8] == out
 
 
 def test_diff_to_htm_padded_table():
@@ -61,7 +62,7 @@ def test_diff_to_htm_padded_table():
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
     job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': True})
     result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
-    assert result[186:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
+    assert result[246:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
                               'row |</span></td></tr>')
 
 
