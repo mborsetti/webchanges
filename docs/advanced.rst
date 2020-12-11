@@ -158,7 +158,8 @@ you can use a Python command to easily extract it:
 
 .. code-block:: yaml
 
-   url: https://example.com/
+   url: https://example.com/api_data.json
+   user_visible_url: https://example.com
    shellpipe: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
 
 
@@ -168,7 +169,8 @@ combines both escaping and signaling to the downstream html reporter that its ou
 
 .. code-block:: yaml
 
-   url: https://example.com/
+   url: https://example.com/api_data.json
+   user_visible_url: https://example.com
    shellpipe: "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\\\"[{v['Title']}]\\n({v['DownloadUrl']})\\\") for v in d['value']]\""
    is_markdown: true
 

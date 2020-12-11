@@ -12,7 +12,7 @@ DIFFTOHTMLTESTDATA = [
     ('-Deleted line', '<tr style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through">'
                       '<td>Deleted line</td></tr>'),
     # Changes line
-    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fafbfc><td style="font-family:monospace">@@ -1,1 +1,1 @@'
+    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fafbfc"><td style="font-family:monospace">@@ -1,1 +1,1 @@'
                         '</td></tr>'),
     # Horizontal ruler is manually expanded since <hr> tag is used to separate jobs
     ('+* * *', '<tr style="background-color:#e6ffed"><td>'
