@@ -947,8 +947,8 @@ class ShellPipeFilter(FilterBase):
             'URLWATCH_JOB_LOCATION': self.job.get_location() if self.job else '',
         })
 
-        return subprocess.check_output(subfilter['command'], shell=True,  # noqa:DUO116 use of "shell=True" is insecure
-                                       input=data.encode(encoding), env=env).decode(encoding)
+        return subprocess.run(subfilter['command'], input=data.encode(encoding), capture_output=True, shell=True,
+                              check=True, env=env).stdout.decode(encoding)  # noqa:DUO116 use of "shell=True" is insec
 
 
 class OCRFilter(FilterBase):

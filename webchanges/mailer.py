@@ -78,10 +78,7 @@ class SendmailMailer(Mailer):
         self.sendmail_path = sendmail_path
 
     def send(self, msg):
-        p = subprocess.Popen([self.sendmail_path, '-oi', msg['To']],
-                             stdin=subprocess.PIPE,
-                             stderr=subprocess.PIPE,
-                             universal_newlines=True)
+        p = subprocess.run([self.sendmail_path, '-oi', msg['To']], capture_output=True, text=True)
         result = p.communicate(msg.as_string())
         if p.returncode:
             logger.error(f'Sendmail failed with {result}')

@@ -80,7 +80,7 @@ def edit_file(filename):
             raise SystemExit('Please set the path to the editor in the environment variable $EDITOR'
                              ' e.g. "export EDITOR=nano"')
 
-    subprocess.check_call(shlex.split(editor) + [filename])
+    subprocess.run(shlex.split(editor) + [filename], check=True)
 
 
 def import_module_from_source(module_name, source_path):

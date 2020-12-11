@@ -300,8 +300,8 @@ sub-directives
 ~~~~~~~~~~~~~~
 
 * ``webhook_url`` (required): the webhook URL
-* ``max_message_length``: the maximum length of a message in characters (default: 40,000 or 2,000 for a URL starting
-  with \https://discordapp.com)
+* ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
+  with \https://discordapp.com, then 2,000)
 
 
 

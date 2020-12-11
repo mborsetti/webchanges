@@ -374,13 +374,10 @@ class ShellJob(Job):
         return self.command
 
     def retrieve(self, job_state):
-        process = subprocess.Popen(self.command, stdout=subprocess.PIPE, shell=True)  # noqa:DUO116 "shell=True" insecr
-        stdout_data, stderr_data = process.communicate()
-        result = process.wait()
+        needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
+        process = subprocess.run(self.command, capture_output=False, shell=True, text=(not needs_bytes))  # noqa:DUO116
+        result = process.returncode
         if result != 0:
-            raise ShellError(result)
+            raise ShellError(process.stderr)
 
-        if FilterBase.filter_chain_needs_bytes(self.filter):
-            return stdout_data
-
-        return stdout_data.decode('utf-8')
+        return process.stdout

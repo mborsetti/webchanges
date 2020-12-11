@@ -12,9 +12,27 @@ updates are not listed here and are ongoing.
 can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
 
 
+Unreleased
+==========
+
+Unreleased versions can be installed as follows:
+
+.. code-block:: bash
+
+   pip install git+https://github.com/mborsetti/webchanges.git@unreleased
+
+Note: git needs to be `installed <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ for this to work.
+
+Internals
+---------
+* Use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__
+
 Version 3.0.2
 =============
 2020-12-06
+
+Fixed
+-----
 * #`1 <https://github.com/mborsetti/webchanges/issues/1>`__ Fixed logic in reading EDITOR environment variable
 
 Version 3.0.1
