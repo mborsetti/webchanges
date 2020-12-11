@@ -23,6 +23,11 @@ Unreleased versions can be installed as follows:
 
 Note: git needs to be `installed <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ for this to work.
 
+Added
+-----
+* New subdirective ``user_visible_url`` for jobs to replace the URL in reports, useful e.g. if the watched URL is a REST
+  API endpoint but you want to link to the webpage instead (#`590 <https://github.com/thp/urlwatch/pull/590>`_ upstream)
+
 Internals
 ---------
 * Use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__

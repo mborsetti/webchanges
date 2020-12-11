@@ -120,6 +120,8 @@ For all ``url`` jobs:
 - ``http_proxy``: Proxy server to use for HTTP requests (e.g. "http://username:password@proxy.com:8080")
 - ``https_proxy``: Proxy server to use for HTTPS requests
 - ``timeout``: Override the default timeout, in seconds (see :ref:`here <timeout>`)
+- ``user_visible_url``: Use this text in reports (e.g. when watched URL is a REST API endpoint but you want to link to
+  the webpage instead)
 
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
