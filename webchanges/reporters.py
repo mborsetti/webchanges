@@ -190,17 +190,15 @@ class HtmlReporter(ReporterBase):
                     style = (' style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through"' if i > 1
                              else ' style="color:#cb2431"')
                 elif line[0] == '@':  # unified_diff section header
-                    style = ' style="background-color:#fafbfc;font-family:monospace"'
+                    style = ' style="background-color:#fafbfc"'
                 elif line[0] == '/':  # informational header added by webchanges
                     style = ' style="background-color:lightyellow"'
-                elif line[0] == '.':  # from additions_only/deletions_only
-                    style = ' style="font-family:monospace"'
                 else:
                     style = ''
                 if i <= 1:
                     style = style[:-1] + ';font-family:monospace"' if style else ' style="font-family:monospace"'
-                if i <= 1 or line[0] == '@':  # unified_diff headers
-                    yield f'<tr{style}><td>{line}</td></tr>'
+                if i <= 1 or line[0] == '@' or line[0] == '.':  # unified_diff headers or additions_only/deletions_only
+                    yield f'<tr{style}><td style="font-family:monospace">{line}</td></tr>'
                 else:
                     if job.is_markdown:
                         yield f'<tr{style}><td>{mark_to_html(line[1:])}</td></tr>'
