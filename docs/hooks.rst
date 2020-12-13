@@ -41,7 +41,7 @@ An example hooks.py file is below:
    #
    #    __no_subfilter__ = True
    #
-   #    def filter(self, data, subfilter=None):
+   #    def filter(self, data, subfilter):
    #        # The subfilter is specified using a colon, for example the "case"
    #        # filter here can be specified as "case:upper" and "case:lower"
    #
@@ -63,7 +63,7 @@ An example hooks.py file is below:
    #
    #    __no_subfilter__ = True
    #
-   #    def filter(self, data, subfilter=None):
+   #    def filter(self, data, subfilter):
    #        # The subfilter here is a number of characters to indent
    #
    #        if subfilter is None:
@@ -78,8 +78,7 @@ An example hooks.py file is below:
        """The AutoMatchFilter will apply automatically to all filters that have the given properties set"""
        MATCH = {'url': 'https://example.org/'}
 
-       # An auto-match filter does not have any subfilters
-       def filter(self, data):
+       def filter(self, data, subfilter):
            return data.replace('foo', 'bar')
 
 
@@ -87,8 +86,7 @@ An example hooks.py file is below:
        """Similar to AutoMatchFilter"""
        MATCH = {'url': re.compile('https://example.org/.*')}
 
-       # An auto-match filter does not have any subfilters
-       def filter(self, data):
+       def filter(self, data, subfilter):
            return data.replace('foo', 'bar')
 
 

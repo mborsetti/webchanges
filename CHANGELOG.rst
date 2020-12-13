@@ -15,18 +15,19 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/maste
 Unreleased
 ==========
 
-Unreleased versions can be installed as follows:
+Unreleased versions can be installed as follows (`git
+<https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ needs to be installed):
 
 .. code-block:: bash
 
    pip install git+https://github.com/mborsetti/webchanges.git@unreleased
 
-Note: git needs to be `installed <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ for this to work.
 
 Added
 -----
-* New subdirective ``user_visible_url`` for jobs to replace the URL in reports, useful e.g. if the watched URL is a REST
-  API endpoint but you want to link to the webpage instead (#`590 <https://github.com/thp/urlwatch/pull/590>`_ upstream)
+* New job subdirective ``user_visible_url`` to replace the URL in reports, useful e.g. if the watched URL is a REST
+  API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`_
+  upstream)
 
 Internals
 ---------
@@ -38,7 +39,7 @@ Version 3.0.2
 
 Fixed
 -----
-* #`1 <https://github.com/mborsetti/webchanges/issues/1>`__ Fixed logic in reading EDITOR environment variable
+* # `1 <https://github.com/mborsetti/webchanges/issues/1>`__ Fixed logic in reading EDITOR environment variable
 
 Version 3.0.1
 =============
@@ -50,7 +51,7 @@ Added
 * New ``webhook_markdown`` reporter for services such as Mattermost, which expects Markdown-formatted text
 * Code autodoc, highlighting just how badly the code needs documentation!
 * Output from ``diff_tool: wdiff`` is colorized in html reports
-* Reports now show date/time of diffs when using external ``diff_tool``
+* Reports now show date/time of diffs when using an external ``diff_tool``
 
 Changed and deprecated
 ----------------------
@@ -62,7 +63,7 @@ Fixed
 -----
 * Fixed ``format-json`` filter from unexpectedly reordering contents of dictionaries
 * Fixed documentation for ``additions_only`` and ``deletions_only`` to specify that value of true is required
-* No longer creating a config directory if command line contains both ``--config`` and ``--urls``. This allow running on
+* No longer creating a config directory if command line contains both ``--config`` and ``--urls``. Allow running on
   read-only systems (e.g. using redis or a database cache residing on a writeable volume)
 * Deprecation warnings now use the ``DeprecationWarning`` category, which is always printed
 * All filters take a subfilter (upstream `PR <https://github.com/thp/urlwatch/pull/600>`__)
@@ -139,6 +140,8 @@ Changed and deprecated
   used internally)
 * The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
   ``max_message_length`` sub-directive
+* Legacy lib/hooks.py file no longer supported. ``hooks.py`` needs to be in the same directory as the configuration
+  files.
 * The database (cache) file is backed up at every run to `*.bak`
 * The mix of default and optional dependencies has been updated (see documentation) to enable "Just works"
 * Dependencies are now specified as PyPi `extras

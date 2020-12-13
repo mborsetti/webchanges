@@ -12,11 +12,10 @@ from enum import Enum
 
 import html2text
 import yaml
-from appdirs import AppDirs
 from lxml import etree  # noqa:DUO107 insecure use of XML modules, prefer "defusedxml"
 from lxml.cssselect import CSSSelector  # noqa:DUO107 insecure use of XML modules, prefer "defusedxml"
 
-from .util import TrackSubClasses, import_module_from_source
+from .util import TrackSubClasses
 
 logger = logging.getLogger(__name__)
 
@@ -167,41 +166,6 @@ class RegexMatchFilter(FilterBase):
         result = len(matches) > 0 and all(matches)
         logger.debug('Matching %r with %r result: %r', self, self.job, result)
         return result
-
-
-class LegacyHooksPyFilter(FilterBase):
-    """Loads custom filters (classes) in lib/hooks.py file"""
-    def __init__(self, job, state):
-        super().__init__(job, state)
-
-        self.hooks = None
-        # TODO urlwatch_dir should not be recreated here (code from cli.py)
-        pkgname = 'urlwatch'
-        if os.name != 'nt':
-            urlwatch_dir = os.path.expanduser(os.path.join('~', '.' + pkgname))
-        else:
-            urlwatch_dir = os.path.expanduser(os.path.join('~', 'Documents', pkgname))
-        if not os.path.exists(urlwatch_dir):
-            urlwatch_dir = AppDirs(pkgname).user_config_dir
-        FILENAME = os.path.join(urlwatch_dir, 'lib', 'hooks.py')
-        if os.path.exists(FILENAME):
-            try:
-                self.hooks = import_module_from_source('legacy_hooks', FILENAME)
-            except Exception as e:
-                logger.error('Could not load legacy hooks file: %s', e)
-
-    def match(self):
-        return self.hooks is not None
-
-    def filter(self, data):
-        try:
-            result = self.hooks.filter(self.job.get_location(), data)
-            if result is None:
-                result = data
-            return result
-        except Exception as e:
-            logger.warning('Could not apply legacy hooks filter: %s', e)
-            return data
 
 
 class BeautifyFilter(FilterBase):
