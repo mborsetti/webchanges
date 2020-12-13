@@ -22,7 +22,7 @@ from webchanges import reporters
 #
 #    __kind__ = 'case'
 #
-#    def filter(self, data, subfilter=None):
+#    def filter(self, data, subfilter):
 #        # The subfilter is specified using a colon, for example the "case"
 #        # filter here can be specified as "case:upper" and "case:lower"
 #
@@ -42,7 +42,7 @@ from webchanges import reporters
 #
 #    __kind__ = 'indent'
 #
-#    def filter(self, data, subfilter=None):
+#    def filter(self, data, subfilter):
 #        # The subfilter here is a number of characters to indent
 #
 #        if subfilter is None:
@@ -59,7 +59,7 @@ class CustomMatchUrlFilter(filters.AutoMatchFilter):
     MATCH = {'url': 'https://example.org/'}
 
     # An auto-match filter does not have any subfilters
-    def filter(self, data):
+    def filter(self, data, subfilter):
         return data.replace('foo', 'bar')
 
 
@@ -68,7 +68,7 @@ class CustomRegexMatchUrlFilter(filters.RegexMatchFilter):
     MATCH = {'url': re.compile('https://example.org/.*')}
 
     # An auto-match filter does not have any subfilters
-    def filter(self, data):
+    def filter(self, data, subfilter):
         return data.replace('foo', 'bar')
 
 
