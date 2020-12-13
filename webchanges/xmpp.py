@@ -14,7 +14,7 @@ except ImportError:
 class XMPP(object):
     def __init__(self, sender, recipient, insecure_password=None):
         if aioxmpp is None:
-            raise ImportError('Python package "aioxmpp" not installed')
+            raise ImportError('Python package "aioxmpp" is not installed; cannot use the "xmpp" reporter')
 
         self.sender = sender
         self.recipient = recipient
@@ -44,13 +44,16 @@ class XMPP(object):
 
 
 def xmpp_have_password(sender):
+    if keyring is None:
+        raise ImportError('Python package "keyring" is non installed - service unsupported')
+
     return keyring.get_password('urlwatch_xmpp', sender) is not None
 
 
 def xmpp_set_password(sender):
     """ Set the keyring password for the XMPP connection. Interactive."""
     if keyring is None:
-        raise ImportError('Python package "keyring" missing - service unsupported')
+        raise ImportError('Python package "keyring" is non installed - service unsupported')
 
     password = getpass.getpass(prompt=f'Enter password for {sender}: ')
     keyring.set_password('urlwatch_xmpp', sender, password)

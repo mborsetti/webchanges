@@ -15,6 +15,11 @@ except ImportError:
     msgpack = None
 
 try:
+    import pwd
+except ImportError:
+    pwd = None
+
+try:
     import redis
 except ImportError:
     redis = None
@@ -167,11 +172,14 @@ def get_current_user():
     try:
         return os.getlogin()
     except OSError:
-        # If there is no controlling terminal, because urlwatch is launched by
+        # Linux
+        # If there is no controlling terminal, because webchanges is launched by
         # cron, or by a systemd.service for example, os.getlogin() fails with:
         # OSError: [Errno 25] Inappropriate ioctl for device
-        import pwd
-        return pwd.getpwuid(os.getuid()).pw_name
+        if pwd is None:
+            raise ImportError(f'Python library "pwd" not available')
+        else:
+            return pwd.getpwuid(os.getuid()).pw_name
 
 
 class BaseStorage(metaclass=ABCMeta):

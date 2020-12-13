@@ -13,6 +13,12 @@ from .filters import FilterBase
 from .jobs import NotModifiedError
 from .reporters import ReporterBase
 
+try:
+    from diff_match_patch import diff_match_patch
+except ImportError:
+    diff_match_patch = None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -107,7 +113,8 @@ class JobState(object):
     def get_diff_match_patch(self):
         """WORK IN PROGRESS use of diff_match_patch library"""
         if self._generated_diff_match_patch is None:
-            from diff_match_patch import diff_match_patch
+            if diff_match_patch is None:
+                raise ImportError(f'Python package "diff_match_patch" is not installed')
 
             dmp = diff_match_patch()
             diff = dmp.diff_main(self.old_data, self.new_data)

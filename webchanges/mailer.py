@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import email.mime.multipart
 import email.mime.text
 import email.utils

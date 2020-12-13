@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 from enum import Enum
+from warnings import warn
 
 import html2text
 import yaml
@@ -16,6 +17,42 @@ from lxml import etree  # noqa:DUO107 insecure use of XML modules, prefer "defus
 from lxml.cssselect import CSSSelector  # noqa:DUO107 insecure use of XML modules, prefer "defusedxml"
 
 from .util import TrackSubClasses
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
+
+try:
+    import jsbeautifier
+except ImportError:
+    jsbeautifier = None
+
+try:
+    import cssbeautifier
+except ImportError:
+    cssbeautifier = None
+
+try:
+    import pdftotext
+except ImportError:
+    pdftotext = None
+
+try:
+    import vobject
+except ImportError:
+    vobject = None
+
+try:
+    import pytesseract
+except ImportError:
+    pytesseract = None
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
 
 logger = logging.getLogger(__name__)
 
@@ -176,35 +213,25 @@ class BeautifyFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data, subfilter):
-        try:
-            from bs4 import BeautifulSoup as bs
-        except ImportError:
+        if BeautifulSoup is None:
             raise ImportError(f'Python package "BeautifulSoup" is not installed; cannot use the "beautify" filter'
                               f' ( {self.job.get_location()} )')
 
-        soup = bs(data, features="lxml")
+        soup = BeautifulSoup(data, features="lxml")
 
-        try:
-            import jsbeautifier
-        except ImportError:
+        if jsbeautifier is None:
             logger.info(f'Python package "jsbeautifier" is not installed; will not beautify <script> tags'
                         f' ( {self.job.get_location()} )')
-            jsbeautifier = None
-
-        if jsbeautifier:
+        else:
             scripts = soup.find_all('script')
             for script in scripts:
                 if script.string:
                     beautified_js = jsbeautifier.beautify(script.string)
                     script.string = beautified_js
 
-        try:
-            import cssbeautifier
-        except ImportError:
+        if cssbeautifier is None:
             logger.info('Python package "cssbeautifier" is not installed; will not beautify <style> tags')
-            cssbeautifier = None
-
-        if cssbeautifier:
+        else:
             styles = soup.find_all('style')
             for style in styles:
                 if style.string:
@@ -273,11 +300,10 @@ class Html2TextFilter(FilterBase):
             return d
 
         elif method == 'bs4':
-            try:
-                from bs4 import BeautifulSoup
-            except ImportError:
+            if BeautifulSoup is None:
                 raise ImportError(f'Python package "BeautifulSoup" is not installed; cannot use the "html2text: bs4"'
                                   f' filter ( {self.job.get_location()} )')
+
             parser = options.pop('parser', 'lxml')
             soup = BeautifulSoup(data, parser)
             d = soup.get_text(strip=True)
@@ -313,16 +339,15 @@ class Pdf2TextFilter(FilterBase):
     }
 
     def filter(self, data, subfilter):
+        if pdftotext is None:
+            raise ImportError(f'Python package "pdftotext" (and OS-specific dependencies) is not installed; cannot use'
+                              f' "html2text: pdf2text" filter ( {self.job.get_location()} )')
+
         # data must be bytes
         if not isinstance(data, bytes):
             raise ValueError(f'The "html2text: pdf2text" filter needs bytes input (is it the first filter?)'
                              f' ( {self.job.get_location()} )')
 
-        try:
-            import pdftotext
-        except ImportError:
-            raise ImportError(f'Python package "pdftotext" (and OS-specific dependencies) is not installed; cannot use'
-                              f' "html2text: pdf2text" filter ( {self.job.get_location()} )')
         return '\n\n'.join(pdftotext.PDF(io.BytesIO(data), password=subfilter.get('password', '')))
 
 
@@ -334,11 +359,10 @@ class Ical2TextFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data, subfilter):
-        try:
-            import vobject
-        except ImportError:
+        if vobject is None:
             raise ImportError(f'Python package "vobject" is not installed; cannot use "html2text: ical2text" filter'
                               f' ( {self.job.get_location()} )')
+
         result = []
         if isinstance(data, str):
             parsedCal = vobject.readOne(data)
@@ -442,7 +466,6 @@ class GrepFilter(FilterBase):
     __default_subfilter__ = 're'
 
     def filter(self, data, subfilter):
-        from warnings import warn
         warn(f"'grep' filter is deprecated; replace with 'keep_lines_containing' (+ 're' subfilter)"
              f" ( {self.job.get_location()} )", DeprecationWarning)
         return KeepLinesFilter.filter(self, data, subfilter)
@@ -482,7 +505,6 @@ class InverseGrepFilter(FilterBase):
     __default_subfilter__ = 're'
 
     def filter(self, data, subfilter):
-        from warnings import warn
         warn(f"'grepi' filter is deprecated; replace with 'delete_lines_containing (+ 're' subfilter')"
              f" ( {self.job.get_location()} )", DeprecationWarning)
         return DeleteLinesFilter.filter(self, data, subfilter)
@@ -938,14 +960,12 @@ class OCRFilter(FilterBase):
         language = subfilter.get('language', None)
         timeout = int(subfilter.get('timeout', 10))
 
-        try:
-            import pytesseract
-        except ImportError:
+        if pytesseract is None:
             raise ImportError(f'Python package "pytesseract" is not installed; cannot use the "ocr" filter'
                               f' ( {self.job.get_location()} )')
-        try:
-            from PIL import Image
-        except ImportError:
+
+        if Image is None:
             raise ImportError(f'Python package "Pillow" is not installed; cannot use the "ocr" filter'
                               f' ( {self.job.get_location()} )')
+
         return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout)

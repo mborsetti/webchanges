@@ -10,6 +10,7 @@ import re
 import sys
 import time
 from math import floor, log10
+from warnings import warn
 
 import requests
 from markdown2 import Markdown
@@ -33,6 +34,12 @@ try:
     from pushbullet import Pushbullet
 except ImportError:
     Pushbullet = None
+
+if os.name == 'nt':
+    try:
+        from colorama import AnsiToWin32
+    except ImportError:
+        AnsiToWin32 = None
 
 logger = logging.getLogger(__name__)
 
@@ -422,8 +429,7 @@ class StdoutReporter(TextReporter):
         return self._incolor(4, s)
 
     def _get_print(self):
-        if os.name == 'nt' and self._has_color:
-            from colorama import AnsiToWin32
+        if os.name == 'nt' and self._has_color and AnsiToWin32 is not None:
             return functools.partial(print, file=AnsiToWin32(sys.stdout).stream)
         return print
 
@@ -740,7 +746,6 @@ class SlackReporter(WebhookReporter):
     __kind__ = 'slack'
 
     def __init__(self, *args, **kwargs):
-        from warnings import warn
         warn("'slack' reporter is deprecated; replace with 'webhook' (same exact keys)", DeprecationWarning)
         super().__init__(*args, **kwargs)
 

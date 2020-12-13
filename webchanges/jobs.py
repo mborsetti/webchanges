@@ -340,9 +340,8 @@ class BrowserJob(Job):
         return self.url if self.url else self.navigate
 
     def main_thread_enter(self):
-        from .browser import BrowserContext, get_proxy
-
         # check if proxy is being used
+        from .browser import BrowserContext, get_proxy
         proxy_server, self.proxy_username, self.proxy_password = get_proxy(self.url, self.http_proxy, self.https_proxy)
         self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_http_error_codes,
                                   self.user_data_dir, self.switches)

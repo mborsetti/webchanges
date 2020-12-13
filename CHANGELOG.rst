@@ -29,6 +29,13 @@ Added
   API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`_
   upstream)
 
+Fixed
+-----
+* Make imports thread-safe. This might increase startup times a bit, as dependencies are imported on boot instead of
+  when first used, but importing in Python is not (yet) thread-safe, so we cannot import new modules from the worker
+  threads reliably (upstream
+  `af522e4 <https://github.com/thp/urlwatch/commit/af522e4f763e76faa80db7c796806f1ea6661cc6>`_)
+
 Internals
 ---------
 * Use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__
