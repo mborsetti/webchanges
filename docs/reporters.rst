@@ -95,16 +95,20 @@ sub-directives
 SMTP
 ~~~~
 
-.. _smtp-login-with-keyring:
+.. _smtp-login-with-keychain:
 
-SMTP login with keyring
-^^^^^^^^^^^^^^^^^^^^^^^
+SMTP login with keychain
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 For added security, you can store your password on a keychain if you have one installed.  To do so, run ``webchanges
---smtp-login`` and enter your password.  Note that this won't allow you to run `webchanges` unattended
-(e.g. from a scheduler), so you can save it in the ``insecure_password`` directive in the SMTP config instead. However,
-as the name says, storing the password as plaintext in the configuration is insecure and bad practice,
-but for an email account that’s only dedicated for sending emails this might be a way.
+--smtp-login`` and enter your password.  To do so you also need to install ``keyring`` and its dependencies. Please see
+`here <https://pypi.org/project/keyring/>`_ for instructions, including on how to configure ``keyring`` to use the
+keychain backend you're using.
+
+However a ``keyring`` won't allow you to run `webchanges` unattended (e.g. from a scheduler), so you can save the
+password in the ``insecure_password`` directive in the SMTP config. However, as the name says, storing the password as
+plaintext in the configuration is insecure and bad practice, but for an email account that’s only dedicated for sending
+emails this might be a way.
 
 **Never ever use this method with your your primary email account!**
 
@@ -122,6 +126,8 @@ Once again, note that this makes it really easy for your password to be picked u
 by other users logged into the system and/or for the password to appear in log files accidentally.
 
 
+
+
 SMTP sub-directives
 ^^^^^^^^^^^^^^^^^^^
 
@@ -130,7 +136,7 @@ SMTP sub-directives
 * ``starttls``: Whether the server uses TLS (secure)
 * ``auth``: Whether authentication via username/password is required (true/false)
 * ``user``: The username used to authenticate
-* ``insecure_password``: The passowrd used to authenticate (if no ``keyring``)
+* ``insecure_password``: The password used to authenticate (if no ``keyring``)
 
 
 Gmail example
@@ -224,7 +230,7 @@ For added security, you can store your password on a keychain if you have one in
 --xmpp-login`` and enter your password.  Note that this won't allow you to run `webchanges` unattended
 (e.g. from a scheduler), so you can save it in the ``insecure_password`` directive in the XMPP config instead. However,
 as the name says, storing the password as plaintext in the configuration is insecure and bad practice,
-but for an account that’s only dedicated for this purpose this might be a way.
+but for an account that’s only dedicated for this purpose running on a tighly secured machne this might be a way.
 
 .. code-block:: yaml
 
@@ -243,6 +249,17 @@ To run jobs with this filter, you need to install :ref:`optional_packages`. Inst
 .. code-block:: bash
 
    pip install --upgrade webchanges[xmpp]
+
+
+If using a keychain to store the password, you also need to install ``keyring`` and its dependencies. Please see
+`here <https://pypi.org/project/keyring/>`_ for instructions, including on how to configure ``keyring`` to use the
+keychain backend you're using.
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[xmpp]
+
+
 
 
 

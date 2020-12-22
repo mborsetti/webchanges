@@ -32,9 +32,9 @@ Added
 Fixed
 -----
 * Make imports thread-safe. This might increase startup times a bit, as dependencies are imported on boot instead of
-  when first used, but importing in Python is not (yet) thread-safe, so we cannot import new modules from the worker
-  threads reliably (upstream
-  `af522e4 <https://github.com/thp/urlwatch/commit/af522e4f763e76faa80db7c796806f1ea6661cc6>`_)
+  when first used, but importing in Python is not (yet) thread-safe, so we cannot import new modules from the parallel
+  worker threads reliably (# `559 <https://github.com/thp/urlwatch/issues/559>`_ upstream)
+* Write unicode-compatible YAML files
 
 Internals
 ---------

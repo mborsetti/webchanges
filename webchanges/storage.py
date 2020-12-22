@@ -177,7 +177,7 @@ def get_current_user():
         # cron, or by a systemd.service for example, os.getlogin() fails with:
         # OSError: [Errno 25] Inappropriate ioctl for device
         if pwd is None:
-            raise ImportError(f'Python library "pwd" not available')
+            raise ImportError('Python library "pwd" not available')
         else:
             return pwd.getpwuid(os.getuid()).pw_name
 
@@ -342,7 +342,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
     def save(self, *args):
         with open(self.filename, 'w') as fp:
-            yaml.safe_dump(self.config, fp, default_flow_style=False, sort_keys=False)
+            yaml.safe_dump(self.config, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 
 class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
@@ -360,7 +360,8 @@ class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
         print(f'Saving updated list to {self.filename}')
 
         with open(self.filename, 'w') as fp:
-            yaml.safe_dump_all([job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False)
+            yaml.safe_dump_all([job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False,
+                               allow_unicode=True)
 
     def load(self, *args):
         with open(self.filename) as fp:

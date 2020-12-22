@@ -124,7 +124,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
                            for filter_kind in filter_spec.split(',')]
 
             logger.warning('String-based filter definitions (%s) are deprecated, please convert to dict-style:\n\n%s',
-                           old_filter_spec, yaml.safe_dump(filter_spec, default_flow_style=False))
+                           old_filter_spec, yaml.safe_dump(filter_spec, default_flow_style=False, allow_unicode=True))
 
         if isinstance(filter_spec, list):
             for item in filter_spec:

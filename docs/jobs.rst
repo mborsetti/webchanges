@@ -19,11 +19,38 @@ HTML, `webchanges` will automatically use the pages' title for a name.
    url: https://example.org/
 
 
-**About YAML special characters**
+**YAML tips**
 
-Certain characters have significance in the YAML format, e.g. certain special characters at the beginning of the line,
-a ``:`` followed by a space, a space followed by ``#``, all sort of brackets, and more. Strings containing these
-characters or sequences need to be enclosed in quotes:
+YAML has lots of idiosyncrasies that make it and finicky, and new users often have issues with it.  Here are some tips
+and things to look for when using YAML.
+
+* Indentation: All indentation must be done with spaces (2 spaces is suggested); tabs are not recognized/allowed.
+  Indentation is mandatory.
+* Nesting: the indentation logic sometimes changes when nesting dictionaries.
+
+.. code-block:: yaml
+
+    filter:
+      - html2text:           # notice 2 spaces before the '-'
+          pad_tables: true   # notice 6 spaces before the name
+
+
+* There must be a space after the ``:`` between the key name and its value. The lack of such space is often the
+  reason behind "Unknown filter kind" errors with no arguments
+
+.. code-block:: yaml
+
+   filter:
+     - re.sub: text  # This is correct
+
+.. code-block:: yaml
+
+   filter:
+     - re.sub:text  # This is INCORRECT; space is required
+
+* Escaping special characters: Certain characters at the beginning of the line such as a ``-``, a ``:`` followed by a
+  space, a space followed by ``#``, the ``%`` sign (anywhere), all sort of brackets, and more are all considered special characters by YAML.
+  Strings containing these characters or sequences need to be enclosed in quotes:
 
 .. code-block:: yaml
 
@@ -31,9 +58,19 @@ characters or sequences need to be enclosed in quotes:
    name: "This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark"
    name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
 
-You can learn more about quoting  `here <https://www.yaml.info/learn/quote.html#flow>`__ (note: the library we use
-supports YAML 1.1, and our examples use "flow scalars").  URLs and XPaths are always safe and don't need to be enclosed
-in quotes.
+* You can learn more about quoting special characters `here <https://www.yaml.info/learn/quote.html#flow>`__ (the
+  library we use supports YAML 1.1, and our examples use "flow scalars").  URLs and XPaths are always safe and don't
+  need to be enclosed in quotes.
+
+* According to YAML specification, only ASCII characters can be used. Within double-quotes, special characters may be
+  represented with a ``\u``-style escape sequence:
+
+.. code-block:: yaml
+
+   name: "\u00A9"  # The copyright sign ©
+
+
+For additional information on YAML, see the `YAML specifications <https://yaml.org/spec/>`__.
 
 **Multiple jobs**
 

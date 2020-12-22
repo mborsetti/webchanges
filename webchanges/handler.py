@@ -114,7 +114,7 @@ class JobState(object):
         """WORK IN PROGRESS use of diff_match_patch library"""
         if self._generated_diff_match_patch is None:
             if diff_match_patch is None:
-                raise ImportError(f'Python package "diff_match_patch" is not installed')
+                raise ImportError('Python package "diff_match_patch" is not installed')
 
             dmp = diff_match_patch()
             diff = dmp.diff_main(self.old_data, self.new_data)
