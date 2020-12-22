@@ -23,6 +23,11 @@ Unreleased versions can be installed as follows (`git
    pip install git+https://github.com/mborsetti/webchanges.git@unreleased
 
 
+
+Version 3.0.3
+=============
+2020-12-21
+
 Added
 -----
 * New job subdirective ``user_visible_url`` to replace the URL in reports, useful e.g. if the watched URL is a REST
