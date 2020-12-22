@@ -29,6 +29,13 @@ Added
   API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`_
   upstream)
 
+Changed
+-------
+* The Markdown reporter now supports limiting the report length via the ``max_length`` parameter of the ``submit``
+  method. The length limiting logic is smart in the sense that it will try trimming the details first, followed by
+  omitting them completely, followed by omitting the summary. If a part of the report is omitted, a note about this is
+  added to the report. (# `572 <https://github.com/thp/urlwatch/issues/572>`_ upstream by Denis Kasak)
+
 Fixed
 -----
 * Make imports thread-safe. This might increase startup times a bit, as dependencies are imported on boot instead of
