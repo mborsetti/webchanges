@@ -942,7 +942,7 @@ class ShellPipeFilter(FilterBase):
 
 
 class OCRFilter(FilterBase):
-    """Convert text in images to plaintext (requires Python packages 'pytesseract' and 'Pillow")"""
+    """Convert text in images to plaintext (requires Python packages 'pytesseract' and 'Pillow')"""
 
     __kind__ = 'ocr'
     __uses_bytes__ = True
@@ -968,4 +968,4 @@ class OCRFilter(FilterBase):
             raise ImportError(f'Python package "Pillow" is not installed; cannot use the "ocr" filter'
                               f' ( {self.job.get_location()} )')
 
-        return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout)
+        return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip()

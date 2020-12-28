@@ -51,7 +51,7 @@ https://example.com/html2text.html:
     </section>
     </body>
     </html>
-  output: "Date                    | #Sales ------------------------|--------\nMonday, 3 February 2020 | 10,000 \nTu, 3 Mar               | 20,000"
+  output: "Date                    | #Sales \n------------------------|--------\nMonday, 3 February 2020 | 10,000 \nTu, 3 Mar               | 20,000"
 # The below is for when new html2text patch is released
 #  output: |-
 #    | Date                    | #Sales |
