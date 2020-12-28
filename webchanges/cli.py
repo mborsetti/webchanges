@@ -87,7 +87,7 @@ def main() -> None:
     hooks_file = os.path.join(config_dir, 'hooks.py')
     cache_file = os.path.join(cache_dir, 'cache.db')
 
-    # migrate legacy urlwatch 2.21 files
+    # migrate legacy urlwatch 2.22 files
     migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file)
 
     # load config files

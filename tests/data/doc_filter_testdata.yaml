@@ -36,7 +36,7 @@ https://example.net/id2text.html:
       <p>And no other element.</p>
     </body>
     </html>
-  output: |-
+  output: |
     Only this element, only the text.
 https://example.com/html2text.html:
   input: |-
@@ -51,7 +51,8 @@ https://example.com/html2text.html:
     </section>
     </body>
     </html>
-  output: "Date                    | #Sales \n------------------------|--------\nMonday, 3 February 2020 | 10,000 \nTu, 3 Mar               | 20,000"
+  output: "Date                    | #Sales ------------------------|--------\nMonday, 3 February 2020 | 10,000 \nTu, 3 Mar               | 20,000"
+# The below is for when new html2text patch is released
 #  output: |-
 #    | Date                    | #Sales |
 #    |-------------------------|--------|
@@ -106,14 +107,14 @@ https://example.com/keep_lines_containing.html:
   input: |-
     <html>
     <body>
-    a,b:<br>
-    b<br>
-    c<br>
+    <p>a,b:</p>
+    <p>b</p>
+    <p>c</p>
     </body>
     </html>
   output: |-
     a,b:
-https://example.com/keep_lines_containing_i.txt:
+https://example.com/keep_lines_containing_re.txt:
   input: |-
     error 1
     ERROR 2
@@ -133,6 +134,14 @@ https://example.com/delete_lines_containing.txt:
   output: |-
     abc
     def
+https://example.com/delete_lines_containing_re.txt:
+  input: |-
+    warning 1
+    WARNING 2
+    Good
+    Warning 3
+  output: |-
+    Good
 https://example.com/re_sub.html:
   input: |-
     <h1>This is a test</h1>
@@ -142,10 +151,18 @@ https://example.com/re_sub.html:
     HEADING 1: This is a test<END OF TAG h1>
     <a>Here!<END OF TAG a>
     This is text referring to h1
-# Don't know how to test this
-https://example.com/strip.html:
+https://example.com/re_sub_group.html:
   input: |-
+    This is a test
+    Page generated in 1.2 milliseconds.
   output: |-
+    This is a test
+    Page generated in X milliseconds.
+https://example.com/strip.html:
+  input: |
+    This paragraph ends with a newline
+  output: |-
+    This paragraph ends with a newline
 https://example.net/version.html:
   input: |-
     <html>
@@ -185,7 +202,7 @@ https://example.net/xpath.html:
       <marquee>But there is more</marquee>
     </body>
     </html>
-  output: |
+  output: |-
     <marquee>Just Below The Body Tag</marquee>
     <marquee>But there is more</marquee>
 https://example.net/css.html:
@@ -207,7 +224,7 @@ https://example.net/css.html:
       </ul>
     </body>
     </html>
-  output: |
+  output: |-
     <li class="unchecked">Milk</li>
     <li class="unchecked">Bread</li>
 https://example.com/blog/xpath-index.rss:
@@ -266,8 +283,7 @@ https://example.net/feed/xpath-namespace.xml:
         </item>
       </channel>
     </rss>
-  output: |-
-    protests
+  output: protests
 https://example.org/feed/css-namespace.xml:
   input: |-
     <?xml version="1.0"?>
@@ -284,7 +300,7 @@ https://example.org/feed/css-namespace.xml:
         </item>
       </channel>
     </rss>
-  output: |-
+  output: |
     stylesheets
 https://example.org/css-exclude.html:
   input: |-
@@ -294,7 +310,7 @@ https://example.org/css-exclude.html:
       <p>And some paragraph, too. <a href="http://example.net/">Also check out example.net!</a></p>
     </body>
     </html>
-  output: |
+  output: |-
     <body>
       <h1>A page in a book</h1>
       <p>And some paragraph, too. </p>
@@ -458,14 +474,14 @@ https://example.net/ocr-test.png:
     jumped over the lazy fox. The quick
     brown dog jumped over the lazy fox.
 https://example.net/css-skip-maxitems.html:
-  input: |
+  input: |-
     <body>
       <div class="cpu">486</div>
       <div class="cpu">Pentium</div>
       <div class="cpu">Pentium MMX</div>
       <div class="cpu">Pentium Pro</div>
     </body>
-  output: |
+  output: |-
     <div class="cpu">Pentium</div>
     <div class="cpu">Pentium MMX</div>
 https://example.net/shellpipe.html:

@@ -138,7 +138,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     def get_guid(self):
         location = self.get_location()
         sha_hash = hashlib.new('sha1')
-        sha_hash.update(location.encode('utf-8'))
+        sha_hash.update(location.encode())
         return sha_hash.hexdigest()
 
     def retrieve(self, job_state):
@@ -265,11 +265,11 @@ class UrlJob(Job):
         #     try:
         #         try:
         #             try:
-        #                 return response.content.decode('utf-8')
+        #                 return response.content.decode()
         #             except UnicodeDecodeError:
         #                 return response.content.decode('latin1')
         #         except UnicodeDecodeError:
-        #             return response.content.decode('utf-8', 'ignore')
+        #             return response.content.decode(errors='ignore')
         #     except LookupError:
         #         # If this is an invalid encoding, decode as ascii (Debian bug 731931)
         #         return response.content.decode('ascii', 'ignore')

@@ -370,7 +370,7 @@ class Ical2TextFilter(FilterBase):
             try:
                 parsedCal = vobject.readOne(data)
             except Exception:
-                parsedCal = vobject.readOne(data.decode('utf-8', 'ignore'))
+                parsedCal = vobject.readOne(data.decode(errors='ignore'))
 
         for event in parsedCal.getChildren():
             if event.name == 'VEVENT':
@@ -670,7 +670,7 @@ class Sha1Filter(FilterBase):
 
     def filter(self, data, subfilter):
         sha = hashlib.sha1()  # noqa:DUO130 insecure use of "hashlib" module
-        sha.update(data.encode('utf-8', 'ignore'))
+        sha.update(data.encode(errors='ignore'))
         return sha.hexdigest()
 
 
@@ -682,7 +682,7 @@ class HexdumpFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data, subfilter):
-        data = bytearray(data.encode('utf-8', 'ignore'))
+        data = bytearray(data.encode(errors='ignore'))
         blocks = [data[i * 16:(i + 1) * 16] for i in range(int((len(data) + (16 - 1)) / 16))]
         return '\n'.join('%s  %s' % (' '.join('%02x' % c for c in block),
                                      ''.join((chr(c) if (c > 31 and c < 127) else '.')

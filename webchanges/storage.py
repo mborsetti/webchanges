@@ -298,7 +298,8 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
         # is the same as the file/directory owner and only owner can write
         shelljob_errors = self.shelljob_security_checks()
         if shelljob_errors and any(is_shell_job(job) for job in jobs):
-            print(f"Removing shell jobs, because {' and '.join(shelljob_errors)}")
+            print(f"Removing 'command' job(s) because {' and '.join(shelljob_errors)} (see "
+                  f"https://webchanges.readthedocs.io/en/stable/jobs.html#command_config)")
             jobs = [job for job in jobs if not is_shell_job(job)]
 
         return jobs
@@ -439,7 +440,7 @@ class CacheDirStorage(CacheStorage):
                 data = fp.read()
         except UnicodeDecodeError:
             with open(filename, 'rb') as fp:
-                data = fp.read().decode('utf-8', 'ignore')
+                data = fp.read().decode(errors='ignore')
 
         timestamp = os.stat(filename)[stat.ST_MTIME]
 

@@ -88,5 +88,4 @@ def test_url(url, job):
             # TODO: FilterBase.process(cls, filter_kind, subfilter, state, data):
 
         expected_output_data = d['output']
-        # TODO: figure out why .rstrip() is needed
-        assert input_data.rstrip() == expected_output_data.rstrip()
+        assert input_data == expected_output_data

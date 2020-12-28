@@ -18,7 +18,7 @@ webchanges
     :target: https://github.com/mborsetti/webchanges/issues
     :alt: issues
 
-.. |readthedocs| image:: https://img.shields.io/readthedocs/webchanges/latest.svg?label=
+.. |readthedocs| image:: https://img.shields.io/readthedocs/webchanges/stable.svg?label=
     :target: https://webchanges.readthedocs.io/
     :alt: Read the documentation at https://webchanges.readthedocs.io/
 
@@ -50,7 +50,7 @@ Optional dependencies may be needed; see `here <https://webchanges.readthedocs.i
 
 Documentation
 =============
-The documentation is hosted on `Read the Docs <ttps://webchanges.readthedocs.io/en/stable/>`__ |readthedocs|.
+The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__ |readthedocs|.
 
 Code
 ====

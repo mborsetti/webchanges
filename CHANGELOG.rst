@@ -22,6 +22,7 @@ Unreleased versions can be installed as follows (`git
 
    pip install git+https://github.com/mborsetti/webchanges.git@unreleased
 
+Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__
 
 
 Version 3.0.3
@@ -33,6 +34,7 @@ Added
 * New job subdirective ``user_visible_url`` to replace the URL in reports, useful e.g. if the watched URL is a REST
   API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`_
   upstream)
+* Compatibility with `urlwatch` 2.22
 
 Changed
 -------

@@ -85,7 +85,7 @@ At the moment, the following filters are available:
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
   - :ref:`re.sub`: Replace or remove text matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
-  - :ref:`strip`: Strip leading and trailing whitespace
+  - :ref:`strip`: Strip leading and trailing whitespace (entire document, not line-by-line)
   - :ref:`sort`: Sort lines
   - :ref:`reverse`: Reverse the order of items (lines)
 
@@ -221,8 +221,7 @@ Optional directives
 * ``namespaces`` Mapping of XML namespaces for matching
 * ``exclude``: Elements to remove from the final result
 * ``skip``: 'Number of elements to skip from the beginning (default: 0)
-* ``maxitems``: Maximum numbe of items to be returned
-
+* ``maxitems``: Maximum number of items to return (default: all)
 
 
 .. _element-by-:
@@ -327,8 +326,8 @@ page.
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``parser`` (defaults to ``lxml``): as per `documentation
-  <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__
+* ``parser``: As per `documentation
+  <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__  (default: ``lxml``)
 
 Required packages
 ~~~~~~~~~~~~~~~~~
@@ -379,7 +378,6 @@ This filter *must* be the first filter in a chain of filters.
    url: https://example.net/pdf-test.pdf
    filter:
      - pdf2text
-     - strip
 
 
 If the PDF file is password protected, you can specify its password:
@@ -390,11 +388,10 @@ If the PDF file is password protected, you can specify its password:
    filter:
      - pdf2text:
          password: webchangessecret
-     - strip
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``password``: password for a password-protected PDF file
+* ``password``: Password for a password-protected PDF file
 
 Required packages
 """""""""""""""""
@@ -425,12 +422,11 @@ This filter *must* be the first filter in a chain of filters, since it consumes 
      - ocr:
          timeout: 5
          language: eng
-     - strip
 
 Optional sub-directives
 """""""""""""""""""""""
 * ``timeout``: Timeout for the recognition, in seconds (default: 10 seconds)
-* ``language``: Text language (e.g. ``fra`` or ``eng+fra``, default: ``eng``)
+* ``language``: Text language (e.g. ``fra`` or ``eng+fra``) (default: ``eng``)
 
 Required packages
 """""""""""""""""
@@ -454,9 +450,9 @@ This filter deserializes a JSON object and reformats it using Python's `json.dum
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``indentation`` (defaults to 4): indent to pretty-print JSON array elements. ``None`` selects the most compact
-  representation.
-* ``sort_keys`` (defaults to false): sort the output of dictionaries by key.
+* ``indentation``: Number of characters indent to pretty-print JSON array elements; ``None`` selects the most compact
+  representation (default: 4)
+* ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false)
 
 Advanced tip
 """"""""""""
@@ -542,22 +538,23 @@ Examples:
    url: https://example.com/keep_lines_containing.html
    filter:
      - html2text:
-     - strip:
      - keep_lines_containing: 'a,b:'
 
 .. code-block:: yaml
 
-   name: "keep only lines that contain 'error' irrespective of its case (e.g. Error, ERROR, etc.)"
-   url: https://example.com/keep_lines_containing_i.txt
+   name: "keep only lines that contain 'error' irrespective of its case (e.g. Error, ERROR, error, etc.)"
+   url: https://example.com/keep_lines_containing_re.txt
    filter:
      - keep_lines_containing:
          re: '(?i)error'
 
+Note: in regex ``(?i)`` is the inline flag for `case-insensitive matching <https://docs.python.org/3/library/re.html#re.I>`__.
+
 Optional sub-directives
 """""""""""""""""""""""
-* ``text`` (default): match the text provided
-* ``re``: match the the Python `regular
-  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified
+* ``text`` (default): Match the text provided
+* ``re``: Match the the Python `regular
+  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
 
 
 
@@ -569,7 +566,7 @@ This filter is the inverse of ``keep_lines_containing`` above and discards all l
 (default) or match the Python `regular expression
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__, keeping the others.
 
-Example:
+Examples:
 
 .. code-block:: yaml
 
@@ -578,11 +575,26 @@ Example:
    filter:
      - delete_lines_containing: 'xyz'
 
+
+.. code-block:: yaml
+
+   name: "eliminate lines that start with 'warning' irrespective of its case (e.g. Warning, Warning, warning, etc.)"
+   url: https://example.com/delete_lines_containing_re.txt
+   filter:
+     - delete_lines_containing:
+         re: '^(?i)warning'
+
+Notes: in regex ``^`` (caret) matches the `start of the string
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ and ``(?i)`` is the inline flag for
+`case-insensitive matching <https://docs.python.org/3/library/re.html#re.I>`__.
+
+
+
 Optional sub-directives
 """""""""""""""""""""""
-* ``text`` (default): match the text provided
-* ``re``: match the the Python `regular
-  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified
+* ``text`` (default): Match the text provided
+* ``re``: Match the the Python `regular
+  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
 
 
 
@@ -590,22 +602,16 @@ Optional sub-directives
 
 re.sub
 ------
-This filter removes or replaces text using `regular expressions
+This filter deletes or replaces text using Python `regular expressions
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
 
-1. Just specifying a string as the value will remove the matches.
-2. Simple patterns can be replaced with another string using ``pattern`` as the expression and ``repl`` as the
-   replacement.
-3. You can use regex groups (``()``) and back-reference them with ``\1`` (etc..) to put groups into the replacement
-   string.
+Just specifying a regular expression as the value will remove the match, or patterns can be replaced with another string
+using ``pattern`` as the expression and ``repl`` as the replacement. All features are described in Python’s re.sub
+`documentation <https://docs.python.org/3/library/re.html#re.sub>`__. The ``pattern`` and ``repl`` values are passed to
+this function as-is; if ``repl`` is missing, then it's considered to be an empty string, and this filter deletes the the
+leftmost non-overlapping occurrences of ``pattern``.
 
-All features are described in Python’s re.sub `documentation <https://docs.python.org/3/library/re.html#re.sub>`__.
-The ``pattern`` and ``repl`` values are passed to this function as-is; if ``repl`` is missing, then it's considered
-to be an empty string and this filter deletes the matched text.
-
-Just like Python’s `re.sub <https://docs.python.org/3/library/re.html#re.sub>`__ function, there’s the possibility to
-apply a regular expression and either remove or replace the matched text. The following example applies the filter
-3 times:
+The following example applies the filter 3 times:
 
 .. code-block:: yaml
 
@@ -620,21 +626,34 @@ apply a regular expression and either remove or replace the matched text. The fo
          pattern: '</([^>]*)>'
          repl: '<END OF TAG \1>'
 
+You can use any Python regex syntax: for example groups (``()``), back-referencing them with ``\1`` (etc.), to put
+groups into the replacement string as in the example below which replaces the number of milliseconds (which may vary
+each time you check this page and generate a change report) with an X (which therefore never changes):
+
+name: "Change the number with an X"
+url: https://example.com/re_sub_group.html
+filter:
+  - html2text:
+  - re.sub:
+      pattern: '(Page generated in )([0-9.])*( milliseconds.)'
+      repl: '\1X\3'
+
+
 Optional sub-directives
 """""""""""""""""""""""
-* ``pattern``: pattern to be replaced. This sub-directive must be specified if also using the ``repl`` sub-directive.
-  Otherwise the pattern can be specified as the value of ``re.sub``.
-* ``repl``: the string for replacement. If this sub-directive is missing, defaults to empty string (i.e. deletes the
+* ``pattern``: Regular expression to match for replacement; this sub-directive must be specified when using the ``repl``
+  sub-directive, otherwise the pattern can be specified as the value of ``re.sub`` (in which case a match will be
+  deleted)
+* ``repl``: The string for replacement. If this sub-directive is missing, defaults to empty string (i.e. deletes the
   string matched in ``pattern``)
-
 
 
 .. _strip:
 
 strip
 -----
-This filter removes leading and trailing whitespace.  It applies to the entire document: it is **not** applied
-line-by line.
+This filter removes leading and trailing whitespace.  Unlike many other filters, this filter is applied to the entire
+document and is **not** applied line-by line.
 
 .. code-block:: yaml
 
@@ -648,8 +667,8 @@ line-by line.
 
 sort
 ----
-This filter performs a line-based sorting, ignoring cases (case folding as per Python's `implementation
-<https://docs.python.org/3/library/stdtypes.html#str.casefold>`__
+This filter performs a line-based sorting, ignoring cases (i.e. case folding as per Python's `implementation
+<https://docs.python.org/3/library/stdtypes.html#str.casefold>`__).
 
 If the source provides data in random order, you should sort it before the comparison in order to avoid diffing based
 only on changes in the sequence.
@@ -681,6 +700,12 @@ separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1`
      - sort:
          separator: '%'
          reverse: true
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``separator``: The string used to separate items to be sorted (default: ``\n``, i.e. line-based sorting)
+* ``reverse`` (true/false): Whether the sorting direction is reversed (default: false)
+
 
 
 .. _reverse:
@@ -716,14 +741,20 @@ paragraphs (items that are separated by an empty line):
          separator: "\n\n"
 
 
+Optional sub-directives
+"""""""""""""""""""""""
+* ``separator`` (optional): The string used to separate items whose order is to be reversed (default: ``\n``, i.e.
+  line-based reversing); it can also be specified inline as the value of ``reverse``
+
+
 
 .. _shellpipe:
 
 shellpipe
 ---------
-The data to be filtered is passed to a command or script and the output from the script is used.  The environment
-variable ``URLWATCH_JOB_NAME`` will have the name of the job, while ``URLWATCH_JOB_LOCATION`` its location
-(either URL or command).
+The data to be filtered is passed to a 'shell' command or script and the output from this is used by `webchanges`. The
+environment variable ``URLWATCH_JOB_NAME`` will have the name of the job, while ``URLWATCH_JOB_LOCATION`` its 'location'
+(the value of either ``url`` or ``command``).
 
 .. code-block:: yaml
 
@@ -731,10 +762,11 @@ variable ``URLWATCH_JOB_NAME`` will have the name of the job, while ``URLWATCH_J
    filter:
      - shellpipe: echo TEST
 
-If the command errors, the output of that generated the error will be the first line, before the traceback
+If the command errors, the output of that error will be in the first line, before the traceback.
 
 WARNING: On Linux systems, this filter will not run for security reasons unless both the config directory and the jobs
-file is not group/other-writable and is owned by the same user who is running the job.  To set this up:
+file are owned by and writeable **only** by the same user (and not by the group or other users) who is running the job.
+To set this up:
 
 .. code-block:: bash
 

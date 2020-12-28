@@ -49,8 +49,8 @@ and things to look for when using YAML.
      - re.sub:text  # This is INCORRECT; space is required
 
 * Escaping special characters: Certain characters at the beginning of the line such as a ``-``, a ``:`` followed by a
-  space, a space followed by ``#``, the ``%`` sign (anywhere), all sort of brackets, and more are all considered special characters by YAML.
-  Strings containing these characters or sequences need to be enclosed in quotes:
+  space, a space followed by ``#``, the ``%`` sign (anywhere), all sort of brackets, and more are all considered special
+  characters by YAML. Strings containing these characters or sequences need to be enclosed in quotes:
 
 .. code-block:: yaml
 
@@ -200,6 +200,25 @@ uploader folder, output of scripts that query external devices (RPi GPIO), etc.
    name: What is in my home directory?
    command: dir -al ~
 
+.. _command_config:
+
+Important note for command jobs
+"""""""""""""""""""""""""""""""
+
+When `webchanges` is run in Linux, for security purposes a ``command`` job will only run if the configuration file is
+both owned by the same user running `webchanges` and can be **only** written by such user. To change the ownership and
+change the access permissions of the file (to remove write permission from the group and all other users), run the
+following command from within the directory where the configuration file is located (e.g. ``~/.config/webchanges``):
+
+.. code-block:: bash
+
+   sudo chown $USER:$(id -g -n) *.yaml
+   sudo chmod g-r,o-r *.yaml
+
+* ``sudo`` may or may not be required.
+* Replace ``$USER`` with the user name that runs `webchanges` if different than the use you're logged in when making the
+  above changes, similarly with ``$(id -g -n)`` for the group.
+
 Required directives
 """""""""""""""""""
 
@@ -215,7 +234,8 @@ Optional directives (for all job types)
 These optional directives apply to all job types:
 
 - ``name``: Human-readable name/label of the job (default: if content is HTML, the title; otherwise the URL or command)
-- ``max_tries``: Maximum number of times to run the job to retrieve the resource (default: 1)
+- ``max_tries``: Number of consecutive times the job has to fail before reporting an error (default: 1); see
+  :ref:`below <max_tries>`
 - ``diff_tool``: Command to an external tool for generating diff text. See example usage :ref:`here <word_based_differ>`
 - ``compared_versions``: Number of :ref:`versions to compare <compared_versions>` for similarity
 - ``filter``: :ref:`filters` (if any) to apply to the output (can be tested with ``--test``)
@@ -224,6 +244,20 @@ These optional directives apply to all job types:
 - ``deletions_only``: Filters unified diff output to keep only :ref:`deleted lines <deletions_only>`
 - ``is_markdown``: Lets html reporter know that data is markdown and should be reconstructed (default: false, but could
   be set by a filter such as ``html2text``)
+
+.. _max_tries:
+
+max_tries
+"""""""""
+
+Due to legacy naming, this directive doesn't do what intuition would tell you it should do, rather, it tells
+`webchanges` **not** to report a job error until the job has failed for the number of consecutive times of
+``max_tries``. Specifically, when a job fails, `webchanges` increases an internal counter, and will report an error
+only when this counter reaches or exceeds the number of ``max_tries`` (default: 1, i.e. immediately). The internal
+counter is reset to 0 when the job succeeds.
+
+For example, if you set a job with ``max_tries: 12`` and run `webchanges` every 5 minutes, you will only get notified
+if the job has failed every single time during the span of one hour (5 minutes * 12).
 
 Setting default directives
 """"""""""""""""""""""""""
