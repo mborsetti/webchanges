@@ -35,7 +35,7 @@ HTML
 These reports are by default ``unified`` diffs that are prettified by `webchanges`.
 
 If for some reason you want the output to be the python `HtmlDiff
-<https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__ table format, set the sub-directive ``diff`` to
+<https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`_ table format, set the sub-directive ``diff`` to
 ``table``.
 
 Optional sub-directives

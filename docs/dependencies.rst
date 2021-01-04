@@ -18,51 +18,51 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 +-------------------------+-------------------------------------------------------------------------+
 | Feature                 | Python package(s) installed                                             |
 +=========================+=========================================================================+
-| ``use _browser`` set to | * `pyppeteer <https://github.com/pyppeteer/pyppeteer>`__                |
+| ``use _browser`` set to | * `pyppeteer <https://github.com/pyppeteer/pyppeteer>`_                 |
 | true (in a url job)     |   Note: you may also have to **separately install**                     |
 |                         |   OS-specific dependencies [#f1]_                                       |
 +-------------------------+-------------------------------------------------------------------------+
-| ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
+| ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`_    |
 | html2text filter        |                                                                         |
 |                         |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
-| ``beautify`` filter     | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
-|                         | * `jsbeautifier <https://pypi.org/project/jsbeautifier/>`__ [#f2]_      |
-|                         | * `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ [#f3]_    |
+| ``beautify`` filter     | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`_    |
+|                         | * `jsbeautifier <https://pypi.org/project/jsbeautifier/>`_ [#f2]_       |
+|                         | * `cssbeautifier <https://pypi.org/project/cssbeautifier/>`_ [#f3]_     |
 +-------------------------+-------------------------------------------------------------------------+
-| ``pdf2text`` filter     | * `pdftotext <https://github.com/jalan/pdftotext>`__                    |
+| ``pdf2text`` filter     | * `pdftotext <https://github.com/jalan/pdftotext>`_                     |
 |                         |   Note: you will also have to **separately install** the required       |
 |                         |   OS-specific dependencies [#f4]_                                       |
 +-------------------------+-------------------------------------------------------------------------+
-| ``ocr`` filter          | * `pytesseract <https://github.com/madmaze/pytesseract>`__              |
+| ``ocr`` filter          | * `pytesseract <https://github.com/madmaze/pytesseract>`_               |
 |                         |   Note: requires Tesseract to be **separately installed** [#f5]_        |
-|                         | * `Pillow <https://python-pillow.org>`__                                |
+|                         | * `Pillow <https://python-pillow.org>`_                                 |
 +-------------------------+-------------------------------------------------------------------------+
-| ``ical2text`` filter    | * `vobject <https://eventable.github.io/vobject/>`__                    |
+| ``ical2text`` filter    | * `vobject <https://eventable.github.io/vobject/>`_                     |
 +-------------------------+-------------------------------------------------------------------------+
-| ``pushover`` reporter   | * `chump <https://github.com/karanlyons/chump/>`__                      |
+| ``pushover`` reporter   | * `chump <https://github.com/karanlyons/chump/>`_                       |
 +-------------------------+-------------------------------------------------------------------------+
-| ``pushbullet`` reporter | * `pushbullet.py <https://github.com/randomchars/pushbullet.py>`__      |
+| ``pushbullet`` reporter | * `pushbullet.py <https://github.com/randomchars/pushbullet.py>`_       |
 +-------------------------+-------------------------------------------------------------------------+
-| ``matrix`` reporter     | * `matrix_client <https://github.com/matrix-org/matrix-python-sdk>`__   |
+| ``matrix`` reporter     | * `matrix_client <https://github.com/matrix-org/matrix-python-sdk>`_    |
 +-------------------------+-------------------------------------------------------------------------+
-| ``xmpp`` reporter       | * `aioxmpp <https://github.com/horazont/aioxmpp>`__                     |
+| ``xmpp`` reporter       | * `aioxmpp <https://github.com/horazont/aioxmpp>`_                      |
 +-------------------------+-------------------------------------------------------------------------+
-| ``redis`` database      | * `msgpack <https://msgpack.org/>`__                                    |
-|                         | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
+| ``redis`` database      | * `msgpack <https://msgpack.org/>`_                                     |
+|                         | * `redis <https://github.com/andymccurdy/redis-py>`_                    |
 +-------------------------+-------------------------------------------------------------------------+
-| ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`__                       |
+| ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`_                        |
 | storage for email and   |                                                                         |
 | xmpp reporters          |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
-| ``testing``             | * `pytest <https://docs.pytest.org/en/latest/>`__                       |
-|                         | * `coverage <https://github.com/nedbat/coveragepy>`__                   |
-| (to work on             | * `flake8 <https://gitlab.com/pycqa/flake8>`__                          |
+| ``testing``             | * `pytest <https://docs.pytest.org/en/latest/>`_                        |
+|                         | * `coverage <https://github.com/nedbat/coveragepy>`_                    |
+| (to work on             | * `flake8 <https://gitlab.com/pycqa/flake8>`_                           |
 | contributions to the    | * `flake8-import-order                                                  |
-| project)                |   <https://github.com/PyCQA/flake8-import-order>`__                     |
-|                         | * `docutils <https://docutils.sourceforge.io>`__                        |
-|                         | * `sphinx <https://www.sphinx-doc.org/en/master/>`__                    |
-|                         | * `sphinx_rtd_theme <https://github.com/readthedocs/sphinx_rtd_theme>`__|
+| project)                |   <https://github.com/PyCQA/flake8-import-order>`_                      |
+|                         | * `docutils <https://docutils.sourceforge.io>`_                         |
+|                         | * `sphinx <https://www.sphinx-doc.org/en/master/>`_                     |
+|                         | * `sphinx_rtd_theme <https://github.com/readthedocs/sphinx_rtd_theme>`_ |
 |                         | * all the dependencies listed above except for pdf2text and ocr         |
 +-------------------------+-------------------------------------------------------------------------+
 | ``all``                 | * all the optional packages listed above, including for testing         |
@@ -73,7 +73,7 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 .. rubric:: Footnotes
 
 .. [#f1] ``pyppeteer``'s OS-specific dependencies (non required in Windows or MacOS) are listed `here
-   <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`__ (yes,
+   <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`_ (yes,
    it's a page from puppeteer, which is the project upon which pyppeteer is created.  A missing dependency is often the
    cause of the error ``pyppeteer.errors.BrowserError: Browser closed unexpectedly``.  Also pay close attention to
    instructions if you're running it in Docker or other specialized environments.
@@ -88,12 +88,12 @@ Installed packages
 
 These Python packages are installed automatically by `pip`:
 
-* `appdirs <https://github.com/ActiveState/appdirs>`__
-* `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect)
-* `html2text <https://github.com/Alir3z4/html2text>`__
-* `lxml <https://lxml.de>`__
-* `markdown2 <https://github.com/trentm/python-markdown2>`__
-* `minidb <https://thp.io/2010/minidb/>`__
-* `PyYAML <https://pyyaml.org/>`__
-* `requests <https://requests.readthedocs.io/en/master/>`__
-* `colorama <https://github.com/tartley/colorama>`__  (for Windows installations)
+* `appdirs <https://github.com/ActiveState/appdirs>`_
+* `cssselect <https://github.com/scrapy/cssselect>`_ (required by lxml.cssselect)
+* `html2text <https://github.com/Alir3z4/html2text>`_
+* `lxml <https://lxml.de>`_
+* `markdown2 <https://github.com/trentm/python-markdown2>`_
+* `minidb <https://thp.io/2010/minidb/>`_
+* `PyYAML <https://pyyaml.org/>`_
+* `requests <https://requests.readthedocs.io/en/master/>`_
+* `colorama <https://github.com/tartley/colorama>`_  (for Windows installations)

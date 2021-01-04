@@ -127,7 +127,7 @@ Overriding the content encoding
 -------------------------------
 
 For web pages with misconfigured HTTP headers or rare encodings, it may be useful to explicitly specify an encoding from
-Python’s `Standard Encodings <https://docs.python.org/3/library/codecs.html#standard-encodings>`__:
+Python’s `Standard Encodings <https://docs.python.org/3/library/codecs.html#standard-encodings>`_:
 
 .. code-block:: yaml
 
@@ -257,7 +257,7 @@ line-based difference, use GNU ``wdiff``:
    diff_tool: wdiff
 
 In order for this to work, ``wdiff`` needs to  be installed separately (e.g. ``apt install wdiff`` on Debian/Ubuntu,
-``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
+``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`_ for
 Windows). Colored output is supported for ``wdiff``.
 
 The use of an external differ will override the ``diff`` setting of the ``html`` report.

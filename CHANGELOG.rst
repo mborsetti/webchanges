@@ -2,27 +2,27 @@
 Changelog
 *********
 
-This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`__. Release numbering mostly
-follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__.  Minor documentation
+This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`_. Release numbering mostly
+follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`_.  Minor documentation
 updates are not listed here and are ongoing.
 
 **Development**
 
-`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ are always welcomed, and you
-can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
+`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`_ are always welcomed, and you
+can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`_ for inspiration.
 
 
 Unreleased
 ==========
 
 Unreleased versions can be installed as follows (`git
-<https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ needs to be installed):
+<https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_ needs to be installed):
 
 .. code-block:: bash
 
    pip install git+https://github.com/mborsetti/webchanges.git@unreleased
 
-Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__
+Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`_
 
 Added
 -----
@@ -32,7 +32,7 @@ Added
 Fixed
 -----
 * ``telegram`` reporter's ``chat_id`` can be numeric (fixes # `610 <https://github.com/thp/urlwatch/issues/610>`_
-  upstream)
+  upstream by `ramelito <https://github.com/ramelito>`_)
 
 Version 3.0.3
 =============
@@ -42,7 +42,7 @@ Added
 -----
 * New job subdirective ``user_visible_url`` to replace the URL in reports, useful e.g. if the watched URL is a REST
   API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`_
-  upstream)
+  upstream by `huxiba <https://github.com/huxiba>`_)
 * Compatibility with `urlwatch` 2.22
 
 Changed
@@ -50,18 +50,20 @@ Changed
 * The Markdown reporter now supports limiting the report length via the ``max_length`` parameter of the ``submit``
   method. The length limiting logic is smart in the sense that it will try trimming the details first, followed by
   omitting them completely, followed by omitting the summary. If a part of the report is omitted, a note about this is
-  added to the report. (# `572 <https://github.com/thp/urlwatch/issues/572>`_ upstream by Denis Kasak)
+  added to the report. (# `572 <https://github.com/thp/urlwatch/issues/572>`_ upstream by `Denis Kasak
+  <https://github.com/dkasak>`_)
 
 Fixed
 -----
 * Make imports thread-safe. This might increase startup times a bit, as dependencies are imported on boot instead of
   when first used, but importing in Python is not (yet) thread-safe, so we cannot import new modules from the parallel
-  worker threads reliably (# `559 <https://github.com/thp/urlwatch/issues/559>`_ upstream)
+  worker threads reliably (# `559 <https://github.com/thp/urlwatch/issues/559>`_ upstream by `Scott MacVicar
+  <https://github.com/scottmac>`_)
 * Write unicode-compatible YAML files
 
 Internals
 ---------
-* Use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__
+* Use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`_
 
 Version 3.0.2
 =============
@@ -69,7 +71,8 @@ Version 3.0.2
 
 Fixed
 -----
-* # `1 <https://github.com/mborsetti/webchanges/issues/1>`__ Fixed logic in reading EDITOR environment variable
+* Logic error in reading ``EDITOR`` environment variable (# `1 <https://github.com/mborsetti/webchanges/issues/1>`_
+  contributed by `MazdaFunSun <https://github.com/mazdafunsunn>`_)
 
 Version 3.0.1
 =============
@@ -96,7 +99,8 @@ Fixed
 * No longer creating a config directory if command line contains both ``--config`` and ``--urls``. Allow running on
   read-only systems (e.g. using redis or a database cache residing on a writeable volume)
 * Deprecation warnings now use the ``DeprecationWarning`` category, which is always printed
-* All filters take a subfilter (upstream `PR <https://github.com/thp/urlwatch/pull/600>`__)
+* All filters take a subfilter (# `600 <https://github.com/thp/urlwatch/pull/600>`_ upstream by `Martin Monperrus
+  <https://github.com/monperrus>`_)
 
 Version 3.0.0
 =============
@@ -104,14 +108,16 @@ Version 3.0.0
 
 Milestone
 ---------
-Initial release of `webchanges` as a reworked fork of `urlwatch` 2.21. Changes below are relative to `urlwatch` 2.21
+Initial release of `webchanges` as a reworked fork of `urlwatch` 2.21
 
 Added
 -----
+Relative to `urlwatch` 2.21:
+
 * If no job ``name`` is provided, the title of an HTML page will be used for a job name in reports
 * The Python ``html2text`` package (used by the ``html2text`` filter, previously known as ``pyhtml2text``) is now
   initialized with the following purpose-optimized non-default `options
-  <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__: unicode_snob = True,
+  <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`_: unicode_snob = True,
   body_width = 0, single_line_break = True, and ignore_images = True
 * The output from ``html2text`` filter is reconstructed into HTML (for html reports), preserving basic formatting
   such as bolding, italics, underlining, list bullets, etc. as well as, most importantly, rebuilding clickable links
@@ -134,6 +140,8 @@ Added
 
 Changed and deprecated
 ----------------------
+Relative to `urlwatch` 2.21:
+
 * Navigation by full browser is now accomplished by specifying the ``url`` and adding the ``use_browser: true``
   directive. The `navigate` directive has been deprecated for clarity and will trigger a warning
 * The name of the default program configuration file has been changed to ``config.yaml``; if at program launch
@@ -175,11 +183,11 @@ Changed and deprecated
 * The database (cache) file is backed up at every run to `*.bak`
 * The mix of default and optional dependencies has been updated (see documentation) to enable "Just works"
 * Dependencies are now specified as PyPi `extras
-  <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`__ to simplify their installation
-* Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`__ to `timeit.default_timer
-  <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__
+  <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`_ to simplify their installation
+* Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`_ to `timeit.default_timer
+  <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`_
 * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
-  <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__
+  <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`_
 * Reports' elapsed time now always has at least 2 significant digits
 * Expanded (only slightly) testing
 * Using flake8 to check PEP-8 compliance and more
@@ -188,11 +196,15 @@ Changed and deprecated
 
 Removed
 -------
+Relative to `urlwatch` 2.21:
+
 * The ``html2text`` filter's ``lynx`` method is no longer supported; use ``html2text`` instead
 * Python 3.5 (obsoleted by 3.6 on December 23, 2016) is no longer supported
 
 Fixed
 -----
+Relative to `urlwatch` 2.21:
+
 * The ``html2text`` filter's ``html2text`` method defaults to unicode handling
 * HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
@@ -201,10 +213,14 @@ Fixed
 
 Security
 --------
+Relative to `urlwatch` 2.21:
+
 * None
 
 Documentation changes
 ---------------------
+Relative to `urlwatch` 2.21:
+
 * Complete rewrite of the documentation
 
 Known bugs

@@ -153,10 +153,10 @@ https://example.com/re_sub.html:
     This is text referring to h1
 https://example.com/re_sub_group.html:
   input: |-
-    This is a test
-    Page generated in 1.2 milliseconds.
-  output: |-
-    This is a test
+    <h1>This is a test</h1>
+    <div>Page generated in 1.2 milliseconds.</div>
+  output: |
+    # This is a test
     Page generated in X milliseconds.
 https://example.com/strip.html:
   input: |

@@ -36,7 +36,7 @@ At the moment, the following reporters are available
 * :ref:`email`: Send summary via email (including SMTP)
 * :ref:`xmpp`: Send a message using the Extensible Messaging and Presence Protocol (XMPP)
 * :ref:`webhook`: Send a message to a Slack or Discord channel using the service's webhook
-* :ref:`telegram`: Send a message using Telegram
+* :ref:``_`: Send a message using `_
 * :ref:`pushbullet`: Send summary via pushbullet.com
 * :ref:`pushover`: Send summary via pushover.net
 * :ref:`ifttt`: Send summary via IFTTT
@@ -322,32 +322,32 @@ sub-directives
 
 
 
-.. _telegram:
+.. _`_:
 
-Telegram
+`_
 --------
 
-Telegram notifications are configured using the Telegram Bot API. For this, you’ll need a Bot API token and a chat id
-(see https://core.telegram.org/bots). Sample configuration:
+`_ notifications are configured using the `_ Bot API. For this, you’ll need a Bot API token and a chat id
+(see https://core.`_.org/bots). Sample configuration:
 
 .. code:: yaml
 
-   telegram:
+   `_:
      enabled: true
      bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf' # your bot api token
      chat_id: '88888888' # the chat id where the messages should be sent
 
-To set up Telegram, from your Telegram app, chat up BotFather (New Message, Search, “BotFather”), then say ``/newbot``
+To set up `_, from your `_ app, chat up BotFather (New Message, Search, “BotFather”), then say ``/newbot``
 and follow the instructions. Eventually it will tell you the bot token (in the form seen above,
 ``<number>:<random string>``) - add this to your config file.
 
 You can then click on the link of your bot, which will send the message ``/start``. At this point, you can use the
-command ``webchanges --telegram-chats`` to list the private chats the bot is involved with. This is the chat ID that you
+command ``webchanges --`_-chats`` to list the private chats the bot is involved with. This is the chat ID that you
 need to put into the config file as ``chat_id``. You may add multiple chat IDs as a YAML list:
 
 .. code:: yaml
 
-   telegram:
+   `_:
      enabled: true
      bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf' # your bot api token
      chat_id:

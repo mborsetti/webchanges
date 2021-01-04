@@ -58,7 +58,7 @@ and things to look for when using YAML.
    name: "This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark"
    name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
 
-* You can learn more about quoting special characters `here <https://www.yaml.info/learn/quote.html#flow>`__ (the
+* You can learn more about quoting special characters `here <https://www.yaml.info/learn/quote.html#flow>`_ (the
   library we use supports YAML 1.1, and our examples use "flow scalars").  URLs and XPaths are always safe and don't
   need to be enclosed in quotes.
 
@@ -70,7 +70,7 @@ and things to look for when using YAML.
    name: "\u00A9"  # The copyright sign ©
 
 
-For additional information on YAML, see the `YAML specifications <https://yaml.org/spec/>`__.
+For additional information on YAML, see the `YAML specifications <https://yaml.org/spec/>`_.
 
 **Multiple jobs**
 
@@ -121,25 +121,25 @@ you are interested in, add the directive ``use_browser: true`` to the job config
 Important notes for use_browser directive
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* The optional `Pyppeteer <https://github.com/pyppeteer/pyppeteer>`__ Python package must be installed; run
+* The optional `Pyppeteer <https://github.com/pyppeteer/pyppeteer>`_ Python package must be installed; run
   ``pip install webchanges[use_browser]`` to install it
 * Additional OS-dependent dependencies may be required as well;
   missing dependencies are often the cause of ``pyppeteer.errors.BrowserError:
   Browser closed unexpectedly``; see `here
-  <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`__
+  <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`_
 * As this job type
   renders the page in a headless Chromium instance, it requires **massively more resources** and time than a simple
   ``url`` job; use it only on pages where omitting ``use_browser: true`` does not give the right results
 * **Pro tip**: in many instances you can get the data you want to watch from an API (URL) called by the site during page
   loading instead of using ``use_browser: true`` on a page; monitor page load with a browser's Developer's Tools (e.g.
-  `Chrome DevTools   <https://developers.google.com/web/tools/chrome-devtools>`__) to see if this is the case
+  `Chrome DevTools   <https://developers.google.com/web/tools/chrome-devtools>`_) to see if this is the case
 * The first time you run a job with ``use_browser:true``, ``pyppeteer`` needs to download the `Chromium browser
-  <https://www.chromium.org/getting-involved/download-chromium>`__ (~150 MiB) if it is not found on the system, and
+  <https://www.chromium.org/getting-involved/download-chromium>`_ (~150 MiB) if it is not found on the system, and
   therefore it could take some time (and bandwidth); to avoid this, ensure that a suitable Chromium binary is
   pre-installed; one way to do this is to run ``pyppeteer-install``
 * At the moment, the Chromium version used by ``pyppeteer`` does not support ARM devices (e.g. Raspberry Pi) but only
   supports Linux (x86_64), macOS (x86_64) and Windows (both x86 and x64); see `this issue
-  <https://github.com/pyppeteer/pyppeteer/issues/155>`__ in the Pyppeteer project.
+  <https://github.com/pyppeteer/pyppeteer/issues/155>`_ in the Pyppeteer project.
 
 Required directives
 """""""""""""""""""
@@ -162,10 +162,10 @@ For all ``url`` jobs:
 
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
-- ``method``: `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use
+- ``method``: `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`_ to use
   (default: ``GET`` unless ``data``, below, is set)
 - ``data``: HTTP data (defaults request method to ``POST`` and `Content-type
-  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header to
+  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`_ header to
   ``application/x-www-form-urlencoded``)
 - ``ssl_no_verify``: Do not verify SSL certificates (true/false) (see :ref:`here <ssl_no_verify>`)
 - ``ignore_cached``: Do not use cache control (ETag/Last-Modified) values (true/false)
@@ -185,10 +185,10 @@ For ``url`` jobs that have ``use_browser: true``:
 - ``switches``: Additional command line switch(es) for Chromium (a dict)
 - ``wait_until``: When to consider navigation succeeded (``load``, ``domcontentloaded``, ``networkidle0``, or
   ``networkidle2``) (see
-  `documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__)
+  `documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`_)
 - ``wait_for``: Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath
   string is matched before getting the HTML (see `documentation
-  <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds)
+  <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`_ - but we use seconds)
 
 
 Command
