@@ -23,3 +23,20 @@ The following items have changed and the old ones deprecated (will eventually be
 * The name of the default job file has changed to ``jobs.yaml`` (if ``urls.yaml`` is found at startup,
   it is copied to ``jobs.yaml`` automatically)
 
+If you are upgrading from a version prior to 2.22, make sure that you have implemented all breaking changes in your
+job and configuration files.  For example:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   filter: html2text
+
+no longer works in `urlwatch` 2.22, and therefore in `webchanges`, as all filters must be specified as subfilters like
+this: (see `here <https://github.com/thp/urlwatch/pull/600#issuecomment-753944678>`__)
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   filter:
+     - html2text:
+

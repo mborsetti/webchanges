@@ -29,6 +29,10 @@ Added
 * ``chromium_revision`` for jobs with ``use_browser" true`` (using Pyppeteer) can have a different value based on OS by
   specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
 
+Fixed
+-----
+* ``telegram`` reporter's ``chat_id`` can be numeric (fixes # `610 <https://github.com/thp/urlwatch/issues/610>`_
+  upstream)
 
 Version 3.0.3
 =============

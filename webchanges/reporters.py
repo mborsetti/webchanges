@@ -783,7 +783,7 @@ class TelegramReporter(TextReporter):
 
         bot_token = self.config['bot_token']
         chat_ids = self.config['chat_id']
-        chat_ids = [chat_ids] if isinstance(chat_ids, str) else chat_ids
+        chat_ids = [chat_ids] if not isinstance(chat_ids, list) else chat_ids
 
         text = '\n'.join(super().submit())
 
@@ -801,7 +801,7 @@ class TelegramReporter(TextReporter):
         return result
 
     def submitToTelegram(self, bot_token, chat_id, text):
-        logger.debug(f"Sending telegram request to chat id:'{chat_id}'")
+        logger.debug(f"Sending telegram request to chat id: '{chat_id}'")
         result = requests.post(
             f"https://api.telegram.org/bot{bot_token}/sendMessage",
             data={"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"})
