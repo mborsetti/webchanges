@@ -304,6 +304,22 @@ To specify the same on an individual job:
      - --enable-experimental-web-platform-features
      - '--window-size=1920,1080'
 
+
+In addition, if you use multiple OSs, you can specify different Chromium revisions to use based on the OS ``webchanges``
+is running under by using one of the ``linux``, ``mac``, ``win32`` and/or ``win64`` keys, both as a global default
+or in individual jobs:
+
+.. code-block:: yaml
+
+   job_defaults:
+     browser:
+       chromium_revision:
+         - linux: 812859
+         - mac: 812892
+         - win32: 812862
+         - win64: 812872
+
+
 .. _local_storage:
 
 Browsing websites using local storage for authentication

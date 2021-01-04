@@ -605,11 +605,12 @@ re.sub
 This filter deletes or replaces text using Python `regular expressions
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
 
-Just specifying a regular expression as the value will remove the match, or patterns can be replaced with another string
-using ``pattern`` as the expression and ``repl`` as the replacement. All features are described in Python’s re.sub
-`documentation <https://docs.python.org/3/library/re.html#re.sub>`__. The ``pattern`` and ``repl`` values are passed to
-this function as-is; if ``repl`` is missing, then it's considered to be an empty string, and this filter deletes the the
-leftmost non-overlapping occurrences of ``pattern``.
+Just specifying a regular expression (regex) as the value will remove the match. Patterns can be replaced with another
+string using ``pattern`` as the expression and ``repl`` as the replacement.
+
+All features are described in Python’s re.sub `documentation <https://docs.python.org/3/library/re.html#re.sub>`__. The
+``pattern`` and ``repl`` values are passed to this function as-is; if ``repl`` is missing, then it's considered to be an
+empty string, and this filter deletes the the leftmost non-overlapping occurrences of ``pattern``.
 
 The following example applies the filter 3 times:
 
@@ -626,18 +627,21 @@ The following example applies the filter 3 times:
          pattern: '</([^>]*)>'
          repl: '<END OF TAG \1>'
 
-You can use any Python regex syntax: for example groups (``()``), back-referencing them with ``\1`` (etc.), to put
-groups into the replacement string as in the example below which replaces the number of milliseconds (which may vary
-each time you check this page and generate a change report) with an X (which therefore never changes):
+You can use the entire range of Python's `regular expression (regex) syntax
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__: for example groups (``()``) in the ``pattern``
+and ``\1`` (etc.) to refer to these groups in the ``repl`` as in the example below, which replaces the number of
+milliseconds (which may vary each time you check this page and generate a change report) with an X (which therefore
+never changes):
 
-name: "Change the number with an X"
-url: https://example.com/re_sub_group.html
-filter:
-  - html2text:
-  - re.sub:
-      pattern: '(Page generated in )([0-9.])*( milliseconds.)'
-      repl: '\1X\3'
+.. code-block:: yaml
 
+   name: "Replace a changing number in a sentence with an X"
+   url: https://example.com/re_sub_group.html
+   filter:
+     - html2text:
+     - re.sub:
+         pattern: '(Page generated in )([0-9.])*( milliseconds.)'
+         repl: '\1X\3'
 
 Optional sub-directives
 """""""""""""""""""""""

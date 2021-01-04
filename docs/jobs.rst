@@ -177,7 +177,9 @@ For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
 For ``url`` jobs that have ``use_browser: true``:
 
-- ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here <chromium_revision>`)
+- ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here <chromium_revision>`);
+  can be different for different OSs, in which case is a list of one or more of the following keys: ``linux``, ``mac``,
+  ``win32`` and ``win64``
 - ``ignore_https_errors``: Ignore HTTPs errors (true/false)
 - ``user_data_dir``: A path to a pre-existing user directory that Chromium should be using
 - ``switches``: Additional command line switch(es) for Chromium (a dict)

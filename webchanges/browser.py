@@ -38,11 +38,19 @@ class BrowserLoop(object):
         self._loop_thread.start()
 
     async def _launch_browser(self, chromium_revision, proxy_server, ignore_https_errors, user_data_dir, switches):
-        chromium_revision = str(chromium_revision) if chromium_revision else chromium_revision
-        if chromium_revision:
-            os.environ['PYPPETEER_CHROMIUM_REVISION'] = chromium_revision
         import pyppeteer
 
+        if chromium_revision:
+            if isinstance(chromium_revision, list):
+                self._chromium_revision = None
+                platform = pyppeteer.chromium_downloader.current_platform()
+                for _os in chromium_revision:
+                    if platform in _os:
+                        self._chromium_revision = _os[platform]
+                        break
+            else:
+                self._chromium_revision = chromium_revision
+            os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(self._chromium_revision)
         args = []
         if proxy_server:
             args.append(f'--proxy-server={proxy_server}')

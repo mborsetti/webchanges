@@ -24,6 +24,11 @@ Unreleased versions can be installed as follows (`git
 
 Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__
 
+Added
+-----
+* ``chromium_revision`` for jobs with ``use_browser" true`` (using Pyppeteer) can have a different value based on OS by
+  specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
+
 
 Version 3.0.3
 =============
