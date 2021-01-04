@@ -29,7 +29,7 @@ characters or sequences need to be enclosed in quotes:
    name: "This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark"
    name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
 
-You can learn more about quoting  `here <https://www.yaml.info/learn/quote.html#flow>`_ (note: the library we use
+You can learn more about quoting  `here <https://www.yaml.info/learn/quote.html#flow>`__ (note: the library we use
 supports YAML 1.1, and our examples use "flow scalars").  URLs and XPaths are always safe and don't need to be enclosed
 in quotes.
 
@@ -134,7 +134,7 @@ If you want to change some settings for all your jobs, edit the ``job_defaults``
 
 The above config file sets all jobs to use the specified headers, and all ``url`` jobs with ``browser: true`` to
 use a specific ref:`<chromium_revision>` and certain feature `switches
-<https://peter.sh/experiments/chromium-command-line-switches/>`_.
+<https://peter.sh/experiments/chromium-command-line-switches/>`__.
 
 The possible sub-directives to ``job_defaults`` are:
 

@@ -127,7 +127,7 @@ Overriding the content encoding
 -------------------------------
 
 For web pages with misconfigured HTTP headers or rare encodings, it may be useful to explicitly specify an encoding from
-Python’s `Standard Encodings <https://docs.python.org/3/library/codecs.html#standard-encodings>`_:
+Python’s `Standard Encodings <https://docs.python.org/3/library/codecs.html#standard-encodings>`__:
 
 .. code-block:: yaml
 
@@ -191,7 +191,7 @@ There is no migration path from the existing SQLite3 database, the cache will be
 Watching changes on .onion (Tor) pages
 --------------------------------------
 
-Since pages on the `Tor Network <https://www.torproject.org>`_ are not accessible via public DNS and TCP, you need to
+Since pages on the `Tor Network <https://www.torproject.org>`__ are not accessible via public DNS and TCP, you need to
 either configure a Tor client as HTTP/HTTPS proxy or use the ``torify(1)`` tool from the ``tor`` package (``apt install
 tor`` on Debian or Ubuntu,``brew install tor`` on macOS). Setting up Tor is out of scope for this document. On a
 properly set up Tor installation, one can just prefix the ``webchanges`` command with the ``torify`` wrapper to access
@@ -257,7 +257,7 @@ line-based difference, use GNU ``wdiff``:
    diff_tool: wdiff
 
 In order for this to work, ``wdiff`` needs to  be installed separately (e.g. ``apt install wdiff`` on Debian/Ubuntu,
-``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`_ for
+``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
 Windows). Colored output is supported for ``wdiff``.
 
 The use of an external differ will override the ``diff`` setting of the ``html`` report.

@@ -32,7 +32,7 @@ job and configuration files.  For example:
    filter: html2text
 
 no longer works in `urlwatch` 2.22, and therefore in `webchanges`, as all filters must be specified as subfilters like
-this: (see `here <https://github.com/thp/urlwatch/pull/600#issuecomment-753944678>`_)
+this: (see `here <https://github.com/thp/urlwatch/pull/600#issuecomment-753944678>`__)
 
 .. code-block:: yaml
 
