@@ -3,7 +3,6 @@
 ============================
 Migration from urlwatch 2.22
 ============================
-
 `webchanges` |version| is backward compatible with `urlwatch` 2.22 and its configuration files.
 
 Changes

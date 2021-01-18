@@ -3,7 +3,6 @@
 ====
 Jobs
 ====
-
 Jobs are made of the sources that `webchanges` can monitor and the instructions on transformations (filters) to apply
 to the data once retrieved.
 
@@ -78,7 +77,6 @@ Multiple jobs are separated by a line containing three hyphens, i.e. ``---``.
 
 URL
 ---
-
 This is the main job type -- it retrieves a document from a web server.
 
 .. code-block:: yaml
@@ -108,7 +106,6 @@ the link followed by a unique remark (the # and everything after is discarded by
 
 JavaScript rendering
 """"""""""""""""""""
-
 If you're monitoring a website that requires for its content to be rendered with JavaScript in order to monitor the data
 you are interested in, add the directive ``use_browser: true`` to the job configuration:
 
@@ -120,7 +117,6 @@ you are interested in, add the directive ``use_browser: true`` to the job config
 
 Important notes for use_browser directive
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 * The optional `Pyppeteer <https://github.com/pyppeteer/pyppeteer>`__ Python package must be installed; run
   ``pip install webchanges[use_browser]`` to install it
 * Additional OS-dependent dependencies may be required as well;
@@ -143,12 +139,10 @@ Important notes for use_browser directive
 
 Required directives
 """""""""""""""""""
-
 - ``url``: The URL to the web document to monitor
 
 Optional directives
 """""""""""""""""""
-
 For all ``url`` jobs:
 
 - ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
@@ -193,7 +187,6 @@ For ``url`` jobs that have ``use_browser: true``:
 
 Command
 -------
-
 This job type allows you to watch the output of arbitrary shell commands, which is useful for e.g. monitoring an FTP
 uploader folder, output of scripts that query external devices (RPi GPIO), etc.
 
@@ -206,29 +199,27 @@ uploader folder, output of scripts that query external devices (RPi GPIO), etc.
 
 Important note for command jobs
 """""""""""""""""""""""""""""""
-
 When `webchanges` is run in Linux, for security purposes a ``command`` job will only run if the configuration file is
-both owned by the same user running `webchanges` and can be **only** written by such user. To change the ownership and
-change the access permissions of the file (to remove write permission from the group and all other users), run the
-following command from within the directory where the configuration file is located (e.g. ``~/.config/webchanges``):
+both owned by the same user running `webchanges` and can **only** be written by such user. To change the ownership and
+the access permissions of the file (i.e. remove write permission for the group and all other users), run the
+following commands:
 
 .. code-block:: bash
 
+   cd ~/.config/webchanges  # could be different
    sudo chown $USER:$(id -g -n) *.yaml
-   sudo chmod g-r,o-r *.yaml
+   sudo chmod go-w *.yaml
 
 * ``sudo`` may or may not be required.
-* Replace ``$USER`` with the user name that runs `webchanges` if different than the use you're logged in when making the
+* Replace ``$USER`` with the username that runs `webchanges` if different than the use you're logged in when making the
   above changes, similarly with ``$(id -g -n)`` for the group.
 
 Required directives
 """""""""""""""""""
-
 - ``command``: The shell command to execute
 
 Optional directives
 """""""""""""""""""
-
 - none
 
 Optional directives (for all job types)
@@ -251,7 +242,6 @@ These optional directives apply to all job types:
 
 max_tries
 """""""""
-
 Due to legacy naming, this directive doesn't do what intuition would tell you it should do, rather, it tells
 `webchanges` **not** to report a job error until the job has failed for the number of consecutive times of
 ``max_tries``. Specifically, when a job fails, `webchanges` increases an internal counter, and will report an error
@@ -263,5 +253,4 @@ if the job has failed every single time during the span of one hour (5 minutes *
 
 Setting default directives
 """"""""""""""""""""""""""
-
 See :ref:`job_defaults` for how to configure default directives for all jobs

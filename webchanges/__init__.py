@@ -1,8 +1,8 @@
-"""webchanges checks webpages for changes
+"""Check web (or commands) for changes and notify
 
 webchanges checks web content (or the output of local commands) for changes and shows or notifies you via e-mail or
 one of many other supported services if any change is detected; the notification includes the changed URL (or command)
-and a 'diff' summary of the changes.
+and a 'diff' summary of the changes. You can fine-tune what to track by using filters.
 """
 
 # The docstring above (__doc__) and the variables below are used in the program and for builds, including

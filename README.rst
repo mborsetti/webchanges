@@ -30,9 +30,18 @@ webchanges
     :target: https://ci.appveyor.com/project/mborsetti/webchanges
     :alt: appveyor build status
 
-.. |coverage| image:: https://codecov.io/github/mborsetti/webchanges/coverage.svg
+.. |coverage| image:: https://codecov.io/gh/mborsetti/webchanges/branch/master/graphs/badge.svg?
     :target: https://codecov.io/github/mborsetti/webchanges
     :alt: code coverage
+
+.. role:: underline
+    :class: underline
+
+.. role:: additions
+    :class: additions
+
+.. role:: deletions
+    :class: deletions
 
 `webchanges` checks web content (or the output of local commands) for changes, and notifies you via e-mail or
 one of many other supported services if one is detected. The notification includes the changed URL or command and
@@ -87,3 +96,33 @@ License
 Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but including code licensed under the
 `BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`__. See the license `here
 <https://github.com/mborsetti/webchanges/blob/master/COPYING>`__.
+
+
+Improvements from `urlwatch`
+============================
+
+This fork is optimized for HTML:
+
+* Links are `clickable <https://pypi.org/project/webchanges/>`__!
+* Formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and indentation is
+  preserved
+* :additions:`Added` and :deletions:`deleted` lines are highlighted with color and strikethrough
+* Long lines wrap around
+* HTML is rendered correctly by email clients such as Gmail who override stylesheets
+* Other legibility improvements
+
+It also has a new `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__
+filter that makes it easier to track content that was added without the distractions of the content that was deleted
+(and a similar `deletions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#deletions-only>`__ one)
+as well as many other refinements (see `changelog
+<https://github.com/mborsetti/webchanges/blob/master/CHANGELOG.rst>`__).
+
+Examples:
+
+.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/master/docs/html_diff_filters_example_1.png
+    :width: 504
+
+|
+
+.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/master/docs/html_diff_filters_example_3.png
+    :width: 504

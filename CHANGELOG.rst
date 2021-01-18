@@ -2,68 +2,77 @@
 Changelog
 *********
 
-This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`_. Release numbering mostly
-follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`_.  Minor documentation
+This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`__. Release numbering mostly
+follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__.  Minor documentation
 updates are not listed here and are ongoing.
 
 **Development**
 
-`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`_ are always welcomed, and you
-can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`_ for inspiration.
+`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ are always welcomed, and you
+can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
 
 
 Unreleased
 ==========
 
 Unreleased versions can be installed as follows (`git
-<https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_ needs to be installed):
+<https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ needs to be installed):
 
 .. code-block:: bash
 
    pip install git+https://github.com/mborsetti/webchanges.git@unreleased
 
-Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`_
+Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__.
 
 Added
 -----
 * ``chromium_revision`` for jobs with ``use_browser" true`` (using Pyppeteer) can have a different value based on OS by
   specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
+* Show text of the error when command of ``shellpipe`` filter returns one
 
 Fixed
 -----
-* ``telegram`` reporter's ``chat_id`` can be numeric (fixes # `610 <https://github.com/thp/urlwatch/issues/610>`_
-  upstream by `ramelito <https://github.com/ramelito>`_)
+* ``telegram`` reporter's ``chat_id`` can be numeric (fixes # `610 <https://github.com/thp/urlwatch/issues/610>`__
+  upstream by `ramelito <https://github.com/ramelito>`__)
 
 Version 3.0.3
 =============
 2020-12-21
 
+⚠ Breaking Change
+-----------------
+* Compatibility with `urlwatch` 2.22, including the ⚠ breaking change of removing the ability to write custom filters
+  that do not take a subfilter as argument (see `here
+  <https://urlwatch.readthedocs.io/en/latest/deprecated.html#filters-without-subfilters-since-2-22>`__ upstream)
+* Inadvertently released as a PATCH instead of a MAJOR release as it should have been under `Semantic Versioning
+  <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__ rules given the incompatible API change upstream (see
+  discussion `here <https://github.com/thp/urlwatch/pull/600#issuecomment-754525630>`__ upstream)
+
 Added
 -----
 * New job subdirective ``user_visible_url`` to replace the URL in reports, useful e.g. if the watched URL is a REST
-  API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`_
-  upstream by `huxiba <https://github.com/huxiba>`_)
-* Compatibility with `urlwatch` 2.22
+  API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`__
+  upstream by `huxiba <https://github.com/huxiba>`__)
 
 Changed
 -------
 * The Markdown reporter now supports limiting the report length via the ``max_length`` parameter of the ``submit``
   method. The length limiting logic is smart in the sense that it will try trimming the details first, followed by
   omitting them completely, followed by omitting the summary. If a part of the report is omitted, a note about this is
-  added to the report. (# `572 <https://github.com/thp/urlwatch/issues/572>`_ upstream by `Denis Kasak
-  <https://github.com/dkasak>`_)
+  added to the report. (# `572 <https://github.com/thp/urlwatch/issues/572>`__ upstream by `Denis Kasak
+  <https://github.com/dkasak>`__)
 
 Fixed
 -----
 * Make imports thread-safe. This might increase startup times a bit, as dependencies are imported on boot instead of
   when first used, but importing in Python is not (yet) thread-safe, so we cannot import new modules from the parallel
-  worker threads reliably (# `559 <https://github.com/thp/urlwatch/issues/559>`_ upstream by `Scott MacVicar
-  <https://github.com/scottmac>`_)
+  worker threads reliably (# `559 <https://github.com/thp/urlwatch/issues/559>`__ upstream by `Scott MacVicar
+  <https://github.com/scottmac>`__)
 * Write unicode-compatible YAML files
 
 Internals
 ---------
-* Use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`_
+* Upgraded to use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__
 
 Version 3.0.2
 =============
@@ -71,8 +80,8 @@ Version 3.0.2
 
 Fixed
 -----
-* Logic error in reading ``EDITOR`` environment variable (# `1 <https://github.com/mborsetti/webchanges/issues/1>`_
-  contributed by `MazdaFunSun <https://github.com/mazdafunsunn>`_)
+* Logic error in reading ``EDITOR`` environment variable (# `1 <https://github.com/mborsetti/webchanges/issues/1>`__
+  contributed by `MazdaFunSun <https://github.com/mazdafunsunn>`__)
 
 Version 3.0.1
 =============
@@ -99,8 +108,8 @@ Fixed
 * No longer creating a config directory if command line contains both ``--config`` and ``--urls``. Allow running on
   read-only systems (e.g. using redis or a database cache residing on a writeable volume)
 * Deprecation warnings now use the ``DeprecationWarning`` category, which is always printed
-* All filters take a subfilter (# `600 <https://github.com/thp/urlwatch/pull/600>`_ upstream by `Martin Monperrus
-  <https://github.com/monperrus>`_)
+* All filters take a subfilter (# `600 <https://github.com/thp/urlwatch/pull/600>`__ upstream by `Martin Monperrus
+  <https://github.com/monperrus>`__)
 
 Version 3.0.0
 =============
@@ -117,7 +126,7 @@ Relative to `urlwatch` 2.21:
 * If no job ``name`` is provided, the title of an HTML page will be used for a job name in reports
 * The Python ``html2text`` package (used by the ``html2text`` filter, previously known as ``pyhtml2text``) is now
   initialized with the following purpose-optimized non-default `options
-  <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`_: unicode_snob = True,
+  <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__: unicode_snob = True,
   body_width = 0, single_line_break = True, and ignore_images = True
 * The output from ``html2text`` filter is reconstructed into HTML (for html reports), preserving basic formatting
   such as bolding, italics, underlining, list bullets, etc. as well as, most importantly, rebuilding clickable links
@@ -183,11 +192,11 @@ Relative to `urlwatch` 2.21:
 * The database (cache) file is backed up at every run to `*.bak`
 * The mix of default and optional dependencies has been updated (see documentation) to enable "Just works"
 * Dependencies are now specified as PyPi `extras
-  <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`_ to simplify their installation
-* Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`_ to `timeit.default_timer
-  <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`_
+  <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`__ to simplify their installation
+* Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`__ to `timeit.default_timer
+  <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__
 * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
-  <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`_
+  <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__
 * Reports' elapsed time now always has at least 2 significant digits
 * Expanded (only slightly) testing
 * Using flake8 to check PEP-8 compliance and more

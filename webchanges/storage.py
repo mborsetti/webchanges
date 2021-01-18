@@ -299,7 +299,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
         shelljob_errors = self.shelljob_security_checks()
         if shelljob_errors and any(is_shell_job(job) for job in jobs):
             print(f"Removing 'command' job(s) because {' and '.join(shelljob_errors)} (see "
-                  f"https://webchanges.readthedocs.io/en/stable/jobs.html#command_config)")
+                  f"https://webchanges.readthedocs.io/en/stable/jobs.html#important-note-for-command-jobs)")
             jobs = [job for job in jobs if not is_shell_job(job)]
 
         return jobs

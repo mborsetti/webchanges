@@ -3,7 +3,6 @@
 ==================
 Filtering the diff
 ==================
-
 All the filters listed in :ref:`filters` can be applied to the diff before it's sent (see below how).
 
 In addition, two filters are custom-made for diff results:
@@ -19,7 +18,6 @@ Finally, if you're using unified diff (default), you can change the number of co
 
 Standard filters
 ----------------
-
 See :ref:`here <filters>` for the full list of generic filters.  Below is an example on how you apply a generic filter
 to the result from the diff:
 
@@ -34,7 +32,6 @@ to the result from the diff:
 
 additions_only
 ---------------
-
 The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the diff (no
 deletions). This is extremely useful for monitoring new content on sites where content gets added while old content
 "scrolls" away.

@@ -165,7 +165,7 @@ class Job(JobBase):
                     'contextlines', 'compared_versions', 'is_markdown', 'markdown_padded_tables', 'diff_filter')
 
     def pretty_name(self):
-        return self.name if self.name else self.get_location()
+        return self.name or self.get_location()
 
 
 class UrlJob(Job):
@@ -332,12 +332,13 @@ class BrowserJob(Job):
 
     __required__ = ('url', 'use_browser')
     __optional__ = ('chromium_revision', 'headers', 'cookies', 'timeout', 'ignore_http_error_codes',
-                    'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for', 'navigate')
+                    'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for', 'navigate',
+                    'user_visible_url')
 
     def get_location(self):
         if not self.url and self.navigate:
             logger.warning("'navigate:' key is deprecated. Replace with 'url:'")
-        return self.url if self.url else self.navigate
+        return self.user_visible_url or self.url or self.navigate
 
     def main_thread_enter(self):
         # check if proxy is being used

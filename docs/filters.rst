@@ -7,7 +7,6 @@
 =======
 Filters
 =======
-
 Filters can be applied at either of two stages of processing:
 
 * Applied to the downloaded data before storing it and diffing for changes (``filter``)

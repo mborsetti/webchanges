@@ -8,7 +8,6 @@ Dependencies
 
 Optional packages
 -----------------
-
 Certain features require additional Python packages to work. These optional packages are installed by appending
 to the name `webchanges` the name of the feature (from the table below) inside square brackets, like so::
 
@@ -85,7 +84,6 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 
 Installed packages
 ------------------
-
 These Python packages are installed automatically by `pip`:
 
 * `appdirs <https://github.com/ActiveState/appdirs>`__

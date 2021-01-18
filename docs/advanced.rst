@@ -6,7 +6,6 @@ Usage examples
 
 Checking different sources at different intervals
 -------------------------------------------------
-
 You can divide your jobs into multiple job lists depending on how often you want to check.  For example, you can have
 a ``daily.yaml`` job list for daily jobs, and a ``weekly.yaml`` for weekly ones.  You then set up the scheduler to
 run `webchanges`, defining which job list to use, at different intervals.  For example in Linux using cron::
@@ -17,7 +16,6 @@ run `webchanges`, defining which job list to use, at different intervals.  For e
 
 Getting reports via different channels for different sources
 ------------------------------------------------------------
-
 Job-specific alerts (reports) is not a functionality of `webchanges`, but you can work around this by creating multiple
 configurations and job lists, and run `webchanges` multiple times specifying ``--jobs`` and ``--config``.
 
@@ -34,7 +32,6 @@ notified of via email).  You can then run `webchanges` similarly to the below ex
 
 Changing the default timeout
 ----------------------------
-
 By default, url jobs timeout after 60 seconds. If you want a different timeout period, use the ``timeout`` directive to
 specify it in number of seconds, or set it to 0 to never timeout.
 
@@ -48,7 +45,6 @@ specify it in number of seconds, or set it to 0 to never timeout.
 
 Supplying cookie data
 ---------------------
-
 It is possible to add cookies to HTTP requests for pages that need it, the YAML syntax for this is:
 
 .. code-block:: yaml
@@ -63,7 +59,6 @@ It is possible to add cookies to HTTP requests for pages that need it, the YAML 
 
 Comparing with several latest snapshots
 ---------------------------------------
-
 If a webpage frequently changes between several known stable states, it may be desirable to have changes reported only
 if the webpage changes into a new unknown state. You can use ``compared_versions`` to do this:
 
@@ -79,7 +74,6 @@ differences are shown relative to the closest match.
 
 Ignoring SSL errors
 -------------------
-
 Setting `ssl_no_verify` to true may be useful during local development or testing.
 
 When set to true, `webchanges` requests will accept any TLS certificate presented by the server, and will ignore
@@ -96,7 +90,6 @@ attacks.
 
 Ignoring connection errors
 --------------------------
-
 In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While there is
 a ``display.error`` config option (defaulting to ``true``) to control reporting of errors globally, to ignore network
 errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration file:
@@ -125,7 +118,6 @@ or ignore all HTTP errors if you like:
 
 Overriding the content encoding
 -------------------------------
-
 For web pages with misconfigured HTTP headers or rare encodings, it may be useful to explicitly specify an encoding from
 Python’s `Standard Encodings <https://docs.python.org/3/library/codecs.html#standard-encodings>`__:
 
@@ -190,7 +182,6 @@ There is no migration path from the existing SQLite3 database, the cache will be
 
 Watching changes on .onion (Tor) pages
 --------------------------------------
-
 Since pages on the `Tor Network <https://www.torproject.org>`__ are not accessible via public DNS and TCP, you need to
 either configure a Tor client as HTTP/HTTPS proxy or use the ``torify(1)`` tool from the ``tor`` package (``apt install
 tor`` on Debian or Ubuntu,``brew install tor`` on macOS). Setting up Tor is out of scope for this document. On a
@@ -204,7 +195,6 @@ properly set up Tor installation, one can just prefix the ``webchanges`` command
 
 Watching Facebook page events
 -----------------------------
-
 If you want to be notified of new events on a public Facebook page, you can use the following job pattern, replace
 ``PAGE`` with the name of the page (can be found by navigating to the events page on your browser):
 
@@ -222,9 +212,23 @@ If you want to be notified of new events on a public Facebook page, you can use 
    comparison_filter: additions
 
 
+Watching Github releases
+------------------------
+This is an example how to watch the GitHub “releases” page for a given
+project for the latest release version, to be notified of new releases:
+
+.. code-block:: yaml
+
+   url: https://github.com/thp/urlwatch/releases
+   filter:
+     - xpath: '(//div[contains(@class,"release-timeline-tags")]//h4)[1]/a'
+     - xpath: '(//div[contains(@class,"release-header")]//a)[1]'
+     - html2text: re
+     - strip
+
+
 Passing diff output to a custom script
 --------------------------------------
-
 In some situations, it might be useful to run a script with the diff as input when changes were detected (e.g. to start
 an update or process something). This can be done by combining ``diff_filter`` with the ``shellpipe`` filter, which
 can be any custom script.
@@ -246,7 +250,6 @@ can even have a "normal" filter attached to only watch links (the ``css: a`` par
 
 Using word-based differ (``wdiff``)
 -----------------------------------
-
 You can also specify an **external** ``diff``-style tool (a tool that takes two filenames (old, new) as parameter and
 returns the difference of the files on its standard output). For example, to to get word-based differences instead of
 line-based difference, use GNU ``wdiff``:
@@ -324,7 +327,6 @@ or in individual jobs:
 
 Browsing websites using local storage for authentication
 ---------------------------------------------------------
-
 Some sites don't use cookies, rather store their functional equivalent using 'Local Storage'.  In these circumstances,
 you can use `webchanges` with ``use_browser: true`` directive and its ``user_data_dir`` sub-directive to instruct it to
 use a pre-existing user directory.

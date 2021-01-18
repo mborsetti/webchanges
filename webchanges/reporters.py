@@ -117,7 +117,7 @@ class HtmlReporter(ReporterBase):
             content = self._format_content(job_state, cfg['diff'])
             if content is not None:
                 if hasattr(job, 'url'):
-                    yield (f'<h3>{job_state.verb.title()}: <a href="{html.escape(job.url)}">'
+                    yield (f'<h3>{job_state.verb.title()}: <a href="{html.escape(job.get_location())}">'
                            f'{html.escape(job.pretty_name())}</a></h3>')
                 elif job.pretty_name() != job.get_location():
                     yield (f'<h3>{job_state.verb.title()}: <span title="{html.escape(job.get_location())}">'

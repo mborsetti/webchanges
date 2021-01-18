@@ -3,7 +3,6 @@
 =======
 Reports
 =======
-
 Reports are the text of the summary (diff), and can be one of the following formats (depending on what
 :ref:`reporter <reporters>` you use):
 
@@ -19,7 +18,6 @@ Unicode text
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-
 * minimal: An abbreviated version (directives below are ignored) (true/false); defaults to false
 * line_length: The maximum length of each line
 * show_details: Includes the diff of each job (true/false); defaults to true
@@ -40,7 +38,6 @@ If for some reason you want the output to be the python `HtmlDiff
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-
 * diff: ``unified`` (default) or ``table``; see above. Note that the use of an external differ (``diff_tool``) in the
   job will override this sub-directive.
 
@@ -53,7 +50,6 @@ Markdown text, used for Matrix
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-
 * minimal: An abbreviated version (directives below are ignored)
 * show_details: Show details of each job
 * show_footer: Show footer listing number of jobs and elapsed time

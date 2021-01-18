@@ -3,7 +3,6 @@
 ============
 Introduction
 ============
-
 `webchanges` monitors the output of web sources (or of commands on your computer).
 
 Every time you run `webchanges`, it:

@@ -3,7 +3,6 @@
 =============
 Configuration
 =============
-
 The global configuration for `webchanges` contains basic settings for the generic behavior of `webchanges` as well as
 the :ref:`reporters <reporters>` in **YAML format** called ``config.yaml`` and located in the ``~/.config/webchanges``
 (Linux), ``~/Library/Preferences/webchanges`` (MacOS), or in the ``webchanges`` folder within your Documents folder,
@@ -38,7 +37,6 @@ in quotes.
 
 Display
 -------
-
 In addition to always reporting changes (which is the whole point of webchanges), webchanges by default reports
 newly-added (``new``) pages and errors (``error``). You can change this behavior in the ``display`` section of the
 configuration:
@@ -66,7 +64,6 @@ to apply your current filter to the current page contents.
 
 Reporters
 ---------
-
 Configuration of reporters is described in :ref:`reporters <reporters>`.
 
 Here is an example configuration that reports on standard output in color, as well as HTML email using an SMTP server:
@@ -108,7 +105,6 @@ example, the ``stdout`` reporter uses ``text``, while the ``email`` reporter wit
 
 Job Defaults
 ------------
-
 If you want to change some settings for all your jobs, edit the ``job_defaults`` section in your config file:
 
 .. code-block:: yaml

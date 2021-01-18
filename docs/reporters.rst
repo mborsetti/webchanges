@@ -3,7 +3,6 @@
 =========
 Reporters
 =========
-
 By default `webchanges` prints out information about changes to the data collected to standard output (``stdout``),
 which is your terminal if you run it interactively. If running via `cron` or another scheduler service, the destination
 of this output depends on the scheduler and its configuration.
@@ -57,12 +56,10 @@ Please note that many reporters need additional Python packages installed to wor
 
 stdout
 ------
-
 Displays the summary in text format on stdout (the console)
 
 Optional directives
 ~~~~~~~~~~~~~~~~~~~
-
 * ``color``: Uses color (green for additions, red for deletions) (true/false)
 
 
@@ -70,27 +67,25 @@ Optional directives
 
 Browser
 -------
-
 Displays the summary in HTML format using the system's default web browser
-
 
 
 .. _email:
 
 Email
 -----
-
 Sends email, via smtp or sendmail.
-
 
 sub-directives
 ~~~~~~~~~~~~~~
-
 * ``method``: Either `smtp` or `sendmail`
 * ``from``: The sender's email address. **Do not use your main email address** but create a throwaway one!
 * ``to``: The destination email address
 * ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported
 * ``html``: Whether the email includes HTML (true/false)
+
+
+.. _smtp:
 
 SMTP
 ~~~~
@@ -99,7 +94,6 @@ SMTP
 
 SMTP login with keychain
 ^^^^^^^^^^^^^^^^^^^^^^^^
-
 For added security, you can store your password on a keychain if you have one installed.  To do so, run ``webchanges
 --smtp-login`` and enter your password.  To do so you also need to install ``keyring`` and its dependencies. Please see
 `here <https://pypi.org/project/keyring/>`_ for instructions, including on how to configure ``keyring`` to use the
@@ -125,12 +119,8 @@ Seriously! Create a throw-away Gmail (or other) account just for sending out the
 Once again, note that this makes it really easy for your password to be picked up by software running on your machine,
 by other users logged into the system and/or for the password to appear in log files accidentally.
 
-
-
-
 SMTP sub-directives
 ^^^^^^^^^^^^^^^^^^^
-
 * ``host``: The address of the smtp server
 * ``port``: The port used to communicate with the server
 * ``starttls``: Whether the server uses TLS (secure)
@@ -138,10 +128,8 @@ SMTP sub-directives
 * ``user``: The username used to authenticate
 * ``insecure_password``: The password used to authenticate (if no ``keyring``)
 
-
 Gmail example
 ^^^^^^^^^^^^^
-
 WARNING: You **do not want to do this with your primary Google account**, but rather get a free separate one just for
 sending mails from `webchanges` and similar programs. Allowing less secure apps and storing the password (even if it's
 in the keychain) is not good security practice for your primary account. You have been warned!
@@ -172,7 +160,6 @@ Then configure these directives as follows:
 
 Amazon Simple Email Service (SES) example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 First ensure that you have configured SES as per the `Quick start
 <https://docs.aws.amazon.com/ses/latest/DeveloperGuide/quick-start.html>`__
 
@@ -207,12 +194,10 @@ sendmail
 Calls the `sendmail <https://www.proofpoint.com/us/products/email-protection/open-source-email-solution>`__ program .
 
 
-
 .. _xmpp:
 
 XMPP
 ----
-
 You can have notifications sent to you through the `XMPP protocol`.
 
 To achieve this, you should register a new XMPP account that is just used for `webchanges`.
@@ -241,7 +226,6 @@ but for an account that’s only dedicated for this purpose running on a tighly 
        recipient: 'YOUR_ACCOUNT_NAME'
        insecure_password: 'this_is_my_secret_password'
 
-
 Required packages
 ~~~~~~~~~~~~~~~~~
 To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
@@ -260,14 +244,10 @@ keychain backend you're using.
    pip install --upgrade webchanges[xmpp]
 
 
-
-
-
 .. _webhook:
 
 Webhook (Slack, Discord, Mattermost etc.)
 -----------------------------------------
-
 Services such as Slack, Discord, Mattermost etc. that support incoming webhooks can be used for notifications using the
 ``webhook`` or ``webhook_markdown`` reporters:
 
@@ -279,7 +259,6 @@ Services such as Slack, Discord, Mattermost etc. that support incoming webhooks 
 
 Slack
 ~~~~~
-
 To set up Slack, create a new Slack app in the workspace where you want to post messages, toggle **Activate Incoming
 Webhooks** on in the Features page, click **Add New Webhook to Workspace**, pick a channel that the app will post to,
 then click **Authorize** (see `here
@@ -288,7 +267,6 @@ paste it into the configuration as seen above.
 
 Discord
 ~~~~~~~
-
 To set up Discord, from your Discord server settings select Integration and create a "New Webhook", give the
 webhook a name to post under, select a channel, press on "Copy Webhook URL" and paste the URL into the configuration as
 seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks>`__).
@@ -301,7 +279,6 @@ seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-I
 
 Mattermost
 ~~~~~~~~~~
-
 To set up Mattermost follow the documentation `here <https://docs.mattermost.com/developer/webhooks-incoming.html>`__
 to generate a webhook URL and paste it into the configuration as such (note that Mattermost prefers markdown so we're
 using the ``webhook_markdown`` variant:
@@ -312,21 +289,17 @@ using the ``webhook_markdown`` variant:
      enabled: true
      webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
 
-
 sub-directives
 ~~~~~~~~~~~~~~
-
 * ``webhook_url`` (required): the webhook URL
 * ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
   with \https://discordapp.com, then 2,000)
-
 
 
 .. _telegram:
 
 Telegram
 --------
-
 Telegram notifications are configured using the Telegram Bot API. For this, you’ll need a Bot API token and a chat id
 (see https://core.telegram.org/bots). Sample configuration:
 
@@ -357,12 +330,10 @@ need to put into the config file as ``chat_id``. You may add multiple chat IDs a
 Don’t forget to also enable the reporter.
 
 
-
 .. _pushover:
 
 Pushover
 --------
-
 You can configure webchanges to send real time notifications about changes via `Pushover <https://pushover.net/>`__.
 To enable this, ensure you
 have the ``chump`` python package installed (see :doc:`dependencies`). Then edit your config (``webchanges
@@ -386,15 +357,12 @@ To use this report you need to install :ref:`optional_packages`. Install them us
    pip install --upgrade webchanges[pushover]
 
 
-
 .. _pushbullet:
 
 Pushbullet
 ----------
-
 Pushbullet notifications are configured similarly to Pushover (see above). You’ll need to add to the config your
 Pushbullet Access Token, which you can generate at https://www.pushbullet.com/#settings
-
 
 Required packages
 ~~~~~~~~~~~~~~~~~
@@ -405,12 +373,10 @@ To use this report you need to install :ref:`optional_packages`. Install them us
    pip install --upgrade webchanges[pushbullet]
 
 
-
 .. _ifttt:
 
 IFTTT
 -----
-
 To configure IFTTT events, you need to retrieve your key from `<https://ifttt.com/maker_webhooks/settings>`__.
 
 The URL shown in "Account Info" has the following format:
@@ -441,7 +407,6 @@ These values will be passed on to the Action in your Recipe.
 
 Matrix
 ------
-
 Sends notifications through the `Matrix protocol <https://matrix.org>`__.
 
 You first need to register a Matrix account for the bot on any home server.
@@ -481,18 +446,15 @@ notifications to a public Matrix room, as the messages quickly become noisy:
      minimal: true
 
 
-
 .. _mailgun:
 
 Mailgun
 -------
-
 Sends email using the commercial `Mailgun <https://www.mailgun.com/>`__ service.
 
 
 sub-directives
 ~~~~~~~~~~~~~~
-
 * ``domain``: The domain
 * ``api_key``: API key (see `here
   <https://help.mailgun.com/hc/en-us/articles/203380100-Where-Can-I-Find-My-API-Key-and-SMTP-Credentials->`__)
