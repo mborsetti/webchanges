@@ -136,6 +136,8 @@ Important notes for use_browser directive
 * At the moment, the Chromium version used by ``pyppeteer`` does not support ARM devices (e.g. Raspberry Pi) but only
   supports Linux (x86_64), macOS (x86_64) and Windows (both x86 and x64); see `this issue
   <https://github.com/pyppeteer/pyppeteer/issues/155>`__ in the Pyppeteer project.
+* If you get ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error, see
+  :ref:`here <pyppeteer_target_closed>` for a potential solution
 
 Required directives
 """""""""""""""""""

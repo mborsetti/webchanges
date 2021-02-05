@@ -323,6 +323,28 @@ or in individual jobs:
          - win64: 812872
 
 
+.. _pyppeteer_target_closed:
+
+Using `use_browser: true` in low-memory environments
+----------------------------------------------------
+In certain Linux environments with limited memory, `use_browser: true` jobs may fail with a
+``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error.
+
+In such cases, try adding the `--disable-dev-shm-usage
+<https://peter.sh/experiments/chromium-command-line-switches/#disable-dev-shm-usage>`__ Chromium switch in the config
+file as follows:
+
+.. code-block:: yaml
+
+   job_defaults:
+     browser:
+       switches:
+         - --disable-dev-shm-usage
+
+This switch disables the use of the faster RAM-based temporary storage file system, whose size limit crashes Chromium,
+forcing instead the use of the drive-based filesystem, which may be slower but of ampler capacity.
+
+
 .. _local_storage:
 
 Browsing websites using local storage for authentication

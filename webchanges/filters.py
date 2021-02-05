@@ -935,8 +935,8 @@ class ShellPipeFilter(FilterBase):
 
         try:
             return subprocess.run(subfilter['command'], input=data.encode(encoding), stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE, shell=True, check=True,
-                              env=env).stdout.decode(encoding)  # noqa:DUO116 use of "shell=True" is insecure
+                                  stderr=subprocess.PIPE, shell=True, check=True,
+                                  env=env).stdout.decode(encoding)  # noqa:DUO116 use of "shell=True" is insecure
         # Python 3.7
         # return subprocess.run(subfilter['command'], input=data.encode(encoding), capture_output=True, shell=True,
         #                       check=True, env=env).stdout.decode(encoding)  # noqa:DUO116 use of "shell=True" is insec
