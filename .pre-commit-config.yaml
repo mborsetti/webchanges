@@ -17,7 +17,7 @@ repos:
       - id: check-ast
       - id: check-builtin-literals
       - id: end-of-file-fixer
-      - id: trailing-whitespace
+#      - id: trailing-whitespace  # removes trailing whitespace from test files too!
 #      - id: fix-encoding-pragma  # adds redundant # -*- coding: utf-8 -*-
 
 #  - repo: https://github.com/python/black
