@@ -44,7 +44,7 @@ jobs:
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-      - uses: actions/checkout@v2
+        uses: actions/checkout@v2
 
       # Build Python and packages per https://github.com/actions/setup-python
       - name: Set up Python ${{ matrix.python-version }}
@@ -95,7 +95,8 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
     needs: [test]
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out repo
+        uses: actions/checkout@v2
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
