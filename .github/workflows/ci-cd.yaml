@@ -96,9 +96,10 @@ jobs:
     container: python:3-slim
     steps:
     - name: Finished
+      #  let the Coveralls service (launched as COVERALLS_PARALLEL: true) know you have completed all your parallel runs
       run: |
         pip3 install -U coveralls
-        coveralls --service=github --finish
+        coveralls --finish
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

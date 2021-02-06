@@ -28,6 +28,8 @@ to the result from the diff:
    - delete_lines_containing: "@@"
 
 
+.. _additions_only:
+
 additions_only
 ---------------
 The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the diff (no
