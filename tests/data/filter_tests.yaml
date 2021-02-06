@@ -102,8 +102,8 @@ xpath_xml_namespaces:
         </feed>
     expected_result: |
         <item xmlns:f="foo">
-        
-        
+
+
         <data>abc</data>
         </item>
         <f:item xmlns:f="foo">
@@ -158,8 +158,8 @@ css_xml_namespaces:
         </feed>
     expected_result: |
         <item xmlns:f="foo">
-        
-        
+
+
         <data>abc</data>
         </item>
         <f:item xmlns:f="foo">
