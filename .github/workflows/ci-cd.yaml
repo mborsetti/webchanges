@@ -88,19 +88,19 @@ jobs:
           COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
           COVERALLS_PARALLEL: true
 
-  coveralls:
-    name: Finish Coveralls
-    needs: [test]
-    runs-on: ubuntu-latest
-    # A Docker container to run any steps in a job that don't already specify a container
-    container: python:3-slim
-    steps:
-    - name: Finished
-      run: |
-        pip3 install -U coveralls
-        coveralls --finish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#  coveralls:
+#    name: Finish Coveralls
+#    needs: [test]
+#    runs-on: ubuntu-latest
+#    # A Docker container to run any steps in a job that don't already specify a container
+#    container: python:3-slim
+#    steps:
+#    - name: Finished
+#      run: |
+#        pip3 install -U coveralls
+#        coveralls --finish
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     runs-on: ubuntu-latest
