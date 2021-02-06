@@ -59,10 +59,8 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 |                         | * `coverage <https://github.com/nedbat/coveragepy>`__                   |
 |                         | * `pre-commit <https://pre-commit.com/>`__                              |
 | (to work on             | * `flake8 <https://gitlab.com/pycqa/flake8>`__                          |
-| contributions to the    | * `flake8-import-order                                                  |
-| project)                |   <https://github.com/PyCQA/flake8-import-order>`__                     |
-|                         | * `docutils <https://docutils.sourceforge.io>`__                        |
-|                         | * `sphinx <https://www.sphinx-doc.org/en/master/>`__                    |
+| contributions to the    | * `docutils <https://docutils.sourceforge.io>`__                        |
+| project)                | * `sphinx <https://www.sphinx-doc.org/en/master/>`__                    |
 |                         | * `sphinx_rtd_theme <https://github.com/readthedocs/sphinx_rtd_theme>`__|
 |                         | * all the dependencies listed above except for pdf2text and ocr         |
 +-------------------------+-------------------------------------------------------------------------+
