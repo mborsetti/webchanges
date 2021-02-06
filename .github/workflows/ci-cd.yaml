@@ -82,25 +82,25 @@ jobs:
       - name: Upload Coverage
         # The version of coveralls that supports py27, doesn't support github actions
         if: matrix.python-version != '2.7'
-        run: coveralls
+        run: coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
           COVERALLS_PARALLEL: true
 
-#  coveralls:
-#    name: Finish Coveralls
-#    needs: [test]
-#    runs-on: ubuntu-latest
-#    # A Docker container to run any steps in a job that don't already specify a container
-#    container: python:3-slim
-#    steps:
-#    - name: Finished
-#      run: |
-#        pip3 install -U coveralls
-#        coveralls --finish
-#      env:
-#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  coveralls:
+    name: Finish Coveralls
+    needs: [test]
+    runs-on: ubuntu-latest
+    # A Docker container to run any steps in a job that don't already specify a container
+    container: python:3-slim
+    steps:
+    - name: Finished
+      run: |
+        pip3 install -U coveralls
+        coveralls --service=github --finish
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     runs-on: ubuntu-latest
