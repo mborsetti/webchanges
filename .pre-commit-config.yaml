@@ -1,0 +1,46 @@
+# Configuration for pre-commit (see https://pre-commit.com/)
+# A framework for managing and maintaining multi-language pre-commit hooks.
+
+# Requires the pre-commit package manager to be installed: pip install pre-commit
+
+# To install pre-commit into your git hooks (i.e. at .git/hooks/pre-commit), run 'pre-commit install'.
+# To update hooks to the latest version automatically, run 'pre-commit autoupdate'. By default, this will bring the
+# hooks to the latest tag on the default branch.
+
+# NOTE: in this implementation, tox runs 'pre-commit run -a'
+
+# A list of repository mappings.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.4.0
+    hooks:
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+#      - id: fix-encoding-pragma  # adds redundant # -*- coding: utf-8 -*-
+
+#  - repo: https://github.com/python/black
+#    rev: 20.8b1
+#    hooks:
+#      - id: black
+#        language_version: python3
+
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.8.4
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-import-order]
+
+#  - repo: https://github.com/pre-commit/pygrep-hooks
+#    rev: v1.7.0
+#    hooks:
+#      # Detect common mistake of using single backticks when writing rst
+#      - id: rst-backticks
+#
+#  - repo: https://github.com/myint/rstcheck
+#    rev: 3f92957478422df87bd730abde66f089cc1ee19b
+#    hooks:
+#      # Checks syntax of reStructuredText and code blocks nested within it.
+#      - id: rstcheck
+#        additional_dependencies: [rstcheck]

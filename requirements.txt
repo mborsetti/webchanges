@@ -1,4 +1,5 @@
 appdirs
+colorama;os_name=="nt"
 cssselect
 html2text
 lxml
@@ -6,4 +7,3 @@ markdown2
 minidb
 pyyaml
 requests
-colorama ; os_name=="nt"

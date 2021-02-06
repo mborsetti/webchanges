@@ -57,10 +57,14 @@ packages, as below) before creating a pull request:
 .. code-block:: bash
 
    pip install -U webchanges[testing]
+
    # Linux:
-   python -m coverage run
+   python -m pytest -v
+   pre-commit autoupdate
+   pre-commit run -a
+
    # Windows:
-   coverage.bat
+   .test.bat
 
 All tests need to pass, and the amount of lines covered by tests should not decrease.
 

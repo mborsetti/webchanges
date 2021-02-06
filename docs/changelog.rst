@@ -1,5 +1,5 @@
 .. _changelog:
 
-.. Changelog transcluded from the NEWS file
+.. Changelog included from the NEWS file
 
 .. include:: ../CHANGELOG.rst

@@ -1,5 +1,5 @@
 .. _contributing:
 
-.. Contributing transcluded from the CONTRIBUTING.rst file
+.. Contributing included from the CONTRIBUTING.rst file
 
 .. include:: ../CONTRIBUTING.rst

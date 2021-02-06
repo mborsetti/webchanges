@@ -271,10 +271,10 @@ The use of an external differ will override the ``diff`` setting of the ``html``
 Using a Chromium revision matching a Google Chrome / Chromium release
 ---------------------------------------------------------------------
 Unfortunately the Chromium revision number does not match the Google Chrome / Chromium release one.
-There are multiple ways of finding what the revision number is for a stable Chrome release; the one I found useful is
+There are multiple ways of finding what the revision number is for a stable Chrome release; the one I found easiest is
 to go to https://chromium.cypress.io/, selecting the "stable" release channel `for the OS you need`, and clicking on
-"get downloads" for the one you want.  At the top you will see something like "Base revision: 782793.
-Found build artifacts at 782797 [browse files]".  You want the revision with build artifacts, in this case 782797.
+"get downloads" for the one you want. At the top you will see something like "Base revision: 782793.
+Found build artifacts at 782797 [browse files]". You want the revision with build artifacts, in this case 782797.
 
 Be aware that the same Google Chrome / Chromium release may be based on a different Chromium revision on different OSs,
 and that not all Chromium revisions are available for all OS platforms (Linux_x64, Mac, Win and Win_x64).  Using a
@@ -282,8 +282,9 @@ release number that cannot be found will lead to a ``zipfile.BadZipFile: File is
 Pyppeter code.
 
 Please note that everytime you change the chromium_revision, a new download is initiated. The old ones are kept on
-your system, and if you no longer need them you can delete them.  If you can't find the directory where they are stored,
-run ``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER; print(DOWNLOADS_FOLDER)"``
+your system using up space, and if you no longer need them you can delete them.  If you can't find the directory where
+they are stored, run ``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER;
+print(DOWNLOADS_FOLDER)"``
 
 To specify the Chromium revision to use (and other defaults) globally, edit config.yaml:
 
@@ -309,8 +310,8 @@ To specify the same on an individual job:
 
 
 In addition, if you use multiple OSs, you can specify different Chromium revisions to use based on the OS ``webchanges``
-is running under by using one of the ``linux``, ``mac``, ``win32`` and/or ``win64`` keys, both as a global default
-or in individual jobs:
+is running in by using one of the ``linux``, ``mac``, ``win32`` and/or ``win64`` keys, either as a global default (like
+below) or in individual jobs:
 
 .. code-block:: yaml
 
@@ -327,7 +328,7 @@ or in individual jobs:
 
 Using `use_browser: true` in low-memory environments
 ----------------------------------------------------
-In certain Linux environments with limited memory, `use_browser: true` jobs may fail with a
+In certain Linux environments with limited memory, jobs with ``use_browser: true`` may fail with a
 ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error.
 
 In such cases, try adding the `--disable-dev-shm-usage
@@ -349,16 +350,17 @@ forcing instead the use of the drive-based filesystem, which may be slower but o
 
 Browsing websites using local storage for authentication
 ---------------------------------------------------------
-Some sites don't use cookies, rather store their functional equivalent using 'Local Storage'.  In these circumstances,
-you can use `webchanges` with ``use_browser: true`` directive and its ``user_data_dir`` sub-directive to instruct it to
-use a pre-existing user directory.
+Some sites don't use cookies for authentication but store their functional equivalent using 'Local Storage'.  In these
+circumstances, you can use `webchanges` with ``use_browser: true`` directive and its ``user_data_dir`` sub-directive to
+instruct it to use a pre-existing user directory.
 
 Specifically:
 
 #. Create an empty directory somewhere (e.g. ``/userdir``)
 #. Run Chromium Google Chrome browser with the ``--user-data-dir`` switch pointing to this directory (e.g. ``chrome.exe
    --user-data-dir=/userdir``)
-#. Browse to the site that you're interested in tracking and log in or do whatever is needed
+#. Browse to the site that you're interested in tracking and log in or do whatever is needed for it to save the
+   authentication data in local storage
 #. Quit the browser
 
 You can now run a `webchanges` job defined like this:

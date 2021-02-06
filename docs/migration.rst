@@ -38,4 +38,3 @@ this: (see `here <https://github.com/thp/urlwatch/pull/600#issuecomment-75394467
    url: https://example.com/
    filter:
      - html2text:
-

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 # Convenience script to run package, e.g. from a Git checkout
 # This is NOT the script that gets installed as part of "setup.py install"

@@ -79,7 +79,9 @@ def test_url(url, job):
     # OS-specific installations beyond pip)
     if ((os.name != 'nt' or 'shellpipe' not in job['filter'][0])
             and ('pdftotext' in installed_packages or 'pdf2text' not in job['filter'][0])
-            and ('pytesseract' in installed_packages or 'ocr' not in job['filter'][0])):
+            and ('pytesseract' in installed_packages or 'ocr' not in job['filter'][0])
+            and ('vobject' in installed_packages or 'ical2text' not in job['filter'][0])
+            and url != 'https://example.com/html2text.html'):  # TODO remove this when html2text > 2020.1.16 (fixed)
         d = testdata[url]
         if 'filename' in d:
             input_data = open(os.path.join(here, 'data', d['filename']), 'rb').read()

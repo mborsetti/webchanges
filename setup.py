@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 # this is run by pip or Docker to install the project
 
@@ -19,6 +20,8 @@ if sys.version_info < project.__min_python_version__:
 
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
+with open('requirements_testing.txt') as f:
+    requirements_testing = f.read().splitlines()
 with open('README.rst') as f:
     README_rst = f.read()
 SETUP = {
@@ -79,8 +82,7 @@ for k, v in SETUP['extras_require'].items():
     # exclude filters requiring OS-specific installs
     if k not in ('pdf2text', 'ocr'):
         SETUP['extras_require']['testing'].update(set(v))
-SETUP['extras_require']['testing'].update(('coverage', 'pytest', 'flake8', 'flake8-import-order', 'docutils',
-                                           'sphynx', 'sphinx_rtd_theme'))
+SETUP['extras_require']['testing'].update(requirements_testing)
 SETUP['extras_require']['testing'] = sorted(list(SETUP['extras_require']['testing']))
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))
 setup(**SETUP)

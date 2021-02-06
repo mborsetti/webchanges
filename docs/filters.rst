@@ -581,11 +581,11 @@ Examples:
    url: https://example.com/delete_lines_containing_re.txt
    filter:
      - delete_lines_containing:
-         re: '^(?i)warning'
+         re: '(?i)^warning'
 
-Notes: in regex ``^`` (caret) matches the `start of the string
-<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ and ``(?i)`` is the inline flag for
-`case-insensitive matching <https://docs.python.org/3/library/re.html#re.I>`__.
+Notes: in regex ``(?i)`` is the inline flag for `case-insensitive matching
+<https://docs.python.org/3/library/re.html#re.I>`__ and ``^`` (caret) matches the `start of the string
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
 
 
 

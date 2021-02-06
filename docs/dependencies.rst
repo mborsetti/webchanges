@@ -55,7 +55,9 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 | xmpp reporters          |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
 | ``testing``             | * `pytest <https://docs.pytest.org/en/latest/>`__                       |
+|                         | * `pytest-cov <https://pytest-cov.readthedocs.io/>`__                   |
 |                         | * `coverage <https://github.com/nedbat/coveragepy>`__                   |
+|                         | * `pre-commit <https://pre-commit.com/>`__                              |
 | (to work on             | * `flake8 <https://gitlab.com/pycqa/flake8>`__                          |
 | contributions to the    | * `flake8-import-order                                                  |
 | project)                |   <https://github.com/PyCQA/flake8-import-order>`__                     |

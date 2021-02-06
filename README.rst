@@ -22,9 +22,9 @@ webchanges
     :target: https://webchanges.readthedocs.io/
     :alt: Read the documentation at https://webchanges.readthedocs.io/
 
-.. |travis| image:: https://img.shields.io/travis/mborsetti/webchanges/master.svg?label=Travis%20CI
-    :target: https://travis-ci.com/mborsetti/webchanges
-    :alt: Travis CI build status
+.. |CI| image:: https://github.com/mborsetti/webchanges/workflows/Tests/badge.svg
+    :target: https://github.com/mborsetti/webchanges/actions
+    :alt: CI testing status
 
 .. |appveyor| image:: https://img.shields.io/appveyor/ci/mborsetti/webchanges/master.svg?logo=appveyor
     :target: https://ci.appveyor.com/project/mborsetti/webchanges
@@ -63,7 +63,7 @@ The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io
 
 Code
 ====
-|issues| |travis| |coverage|
+|issues| |CI| |coverage|
 
 The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 

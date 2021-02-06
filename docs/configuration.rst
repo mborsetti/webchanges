@@ -129,7 +129,7 @@ If you want to change some settings for all your jobs, edit the ``job_defaults``
          - '--window-size=1920,1080'
 
 The above config file sets all jobs to use the specified headers, and all ``url`` jobs with ``browser: true`` to
-use a specific ref:`<chromium_revision>` and certain feature `switches
+use a specific Chromium :ref:`revision <chromium_revision>` and certain Chromium feature `switches
 <https://peter.sh/experiments/chromium-command-line-switches/>`__.
 
 The possible sub-directives to ``job_defaults`` are:

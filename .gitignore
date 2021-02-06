@@ -3,10 +3,12 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
-docs/build/
+docs/_autosummary
+docs/_build/
 htmlcov/
 webchanges.egg-info/
 .coverage
 .gitignore
 .publish_pypi.bat
 .build_manpage.py
+coverage.xml
