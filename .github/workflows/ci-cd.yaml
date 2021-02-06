@@ -52,21 +52,28 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies (and update pip)
+      - name: Install dependencies (and update pip) (Linux)
+        if: runner.os == 'Linux'
         # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-              sudo apt-get -y update
-              sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
-          fi
+          sudo apt-get -y update
+          sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
+          python -m pip install -U pip wheel coveralls
+          python -m pip install -U -r requirements.txt
+          python -m pip install -U -r requirements_testing.txt
+          python -m pip install -U aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject pdftotext Pillow pytesseract
+          python -m pip install -e .
+
+      - name: Install dependencies (and update pip) (not-Linux)
+        if: runner.os != 'Linux'
+        # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path
+        run: |
           python -m pip install -U pip wheel coveralls
           python -m pip install -U -r requirements.txt
           python -m pip install -U -r requirements_testing.txt
           python -m pip install -U aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject
-          if [ "$RUNNER_OS" == "Linux" ]; then
-              python -m pip install -U pdftotext Pillow pytesseract
-          fi
           python -m pip install -e .
+
 
       - name: Run tests
         run: |
