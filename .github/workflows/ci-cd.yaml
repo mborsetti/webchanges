@@ -29,7 +29,7 @@ jobs:
       - name: Run pre-commit
         uses: pre-commit/action@v2.0.0
 
-  test_linux:
+  test:
     name: "Test: python=${{ matrix.python-version }} on ${{ matrix.os }}"
     # matrix.os is defined in strategy
     runs-on: ${{ matrix.os }}
