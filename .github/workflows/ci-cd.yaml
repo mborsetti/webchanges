@@ -56,8 +56,8 @@ jobs:
         # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-              apt-get -y update
-              apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
+              sudo apt-get -y update
+              sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
           fi
           python -m pip install -U pip wheel coveralls
           python -m pip install -U -r requirements.txt
