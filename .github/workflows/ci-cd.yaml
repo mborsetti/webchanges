@@ -80,7 +80,7 @@ jobs:
           #      curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe --output Miniconda3-latest-Windows-x86_64.exe
           #      start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
           #      del Miniconda3-latest-Windows-x86_64.exe /y
-          #      conda install -c conda-forge poppler
+          #      conda install -y -c conda-forge poppler
           #      curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
           #      start /wait "" tesseract-setup.exe /S
           #      del tesseract-setup /y
@@ -94,6 +94,8 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest -v
+        env:
+          PYTHONUTF8: 1
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@master
