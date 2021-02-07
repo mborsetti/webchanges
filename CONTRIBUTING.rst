@@ -56,18 +56,14 @@ packages, as below) before creating a pull request:
 
 .. code-block:: bash
 
-   pip install -U webchanges[testing]
+   pip install -U tox webchanges[testing]
    tox
 
 Alternatively, you can manually run the following commands
 
-   # Linux:
-   python -m pytest -v
    pre-commit autoupdate
    pre-commit run -a
-
-   # Windows:
-   .test.bat
+   python -m pytest -v
 
 All tests need to pass, and the amount of lines covered by tests should not decrease.
 

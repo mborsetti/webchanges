@@ -129,7 +129,7 @@ def chunk_string(string, length, *, numbering=False):
 # (i.e. limited risk in this application)
 _URL_RE = re.compile(r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
 &amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|
-&quot;)*\)))+)""")  # noqa:DUO138 catastrophic "re" usage - denial-of-service possible
+&quot;)*\)))+)""")  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible
 
 
 def linkify(

@@ -376,9 +376,9 @@ class ShellJob(Job):
     def retrieve(self, job_state):
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         process = subprocess.run(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
-                                 text=(not needs_bytes))  # noqa:DUO116 use of "shell=True" is insecure
+                                 text=(not needs_bytes))  # noqa: DUO116 use of "shell=True" is insecure
         # Python 3.7
-        # process = subprocess.run(self.command, capture_output=False, shell=True, text=(not needs_bytes)) # noqa:DUO116
+        # process = subprocess.run(self.command, capture_output=False, shell=True, text=(not needs_bytes))
         result = process.returncode
         if result != 0:
             raise ShellError(process.stderr)

@@ -511,7 +511,7 @@ class CacheMiniDBStorage(CacheStorage):
                                                 order_by=minidb.columns(CacheEntry.c.timestamp.desc,
                                                                         CacheEntry.c.tries.desc),
                                                 where=(CacheEntry.c.guid == guid)
-                                                & ((CacheEntry.c.tries == 0) | (CacheEntry.c.tries == None))):  # noqa:E501,E711 comparison to None should be 'if cond is None:
+                                                & ((CacheEntry.c.tries == 0) | (CacheEntry.c.tries == None))):  # noqa: E501,E711 comparison to None should be 'if cond is None:
             if data not in history:
                 history[data] = timestamp
                 if len(history) >= count:

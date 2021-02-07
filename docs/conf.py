@@ -14,14 +14,14 @@ import os
 import sys
 
 # below required for local build
-import sphinx_rtd_theme  # noqa:F401 'sphinx_rtd_theme' imported but unused
+import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused
 
 # below required for autosummary
 current_dir = os.path.dirname(__file__)
 target_dir = os.path.abspath(os.path.join(current_dir, '../webchanges'))
 sys.path.insert(1, target_dir)
 
-import webchanges as project_data  # noqa:E402 module level import not at top of file
+import webchanges as project_data  # noqa: E402 module level import not at top of file
 
 
 # -- Project information -----------------------------------------------------

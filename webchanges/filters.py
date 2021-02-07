@@ -13,8 +13,8 @@ from warnings import warn
 
 import html2text
 import yaml
-from lxml import etree  # noqa:DUO107 insecure use of XML modules, prefer "defusedxml"
-from lxml.cssselect import CSSSelector  # noqa:DUO107 insecure use of XML modules, prefer "defusedxml"
+from lxml import etree  # noqa: DUO107 insecure use of XML modules, prefer "defusedxml"
+from lxml.cssselect import CSSSelector  # noqa: DUO107 insecure use of XML modules, prefer "defusedxml"
 
 from .util import TrackSubClasses
 
@@ -669,7 +669,7 @@ class Sha1Filter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data, subfilter):
-        sha = hashlib.sha1()  # noqa:DUO130 insecure use of "hashlib" module
+        sha = hashlib.sha1()  # noqa: DUO130 insecure use of "hashlib" module
         sha.update(data.encode(errors='ignore'))
         return sha.hexdigest()
 
@@ -936,10 +936,10 @@ class ShellPipeFilter(FilterBase):
         try:
             return subprocess.run(subfilter['command'], input=data.encode(encoding), stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE, shell=True, check=True,
-                                  env=env).stdout.decode(encoding)  # noqa:DUO116 use of "shell=True" is insecure
+                                  env=env).stdout.decode(encoding)  # noqa: DUO116 use of "shell=True" is insecure
         # Python 3.7
         # return subprocess.run(subfilter['command'], input=data.encode(encoding), capture_output=True, shell=True,
-        #                       check=True, env=env).stdout.decode(encoding)  # noqa:DUO116 use of "shell=True" is insec
+        #                       check=True, env=env).stdout.decode(encoding)  # noqa: DUO116 use of "shell=True" is inse
         except subprocess.CalledProcessError as e:
             logger.error(f"filter 'shellpipe' returned error ( {self.job.get_location()} ):")
             logger.error(e.stderr.decode())
