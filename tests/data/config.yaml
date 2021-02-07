@@ -1,0 +1,84 @@
+display:
+  new: true
+  error: true
+  unchanged: false
+report:
+  html:
+    diff: unified
+    diff_numlines: null
+  text:
+    line_length: 75
+    details: true
+    footer: true
+    minimal: false
+  markdown:
+    details: true
+    footer: true
+    minimal: false
+  stdout:
+    enabled: true
+    color: true
+  browser:
+    enabled: false
+    title: '[webchanges] {count} changes: {jobs}'
+  email:
+    enabled: false
+    html: true
+    to: ''
+    from: ''
+    subject: '[webchanges] {count} changes: {jobs}'
+    method: smtp
+    smtp:
+      host: localhost
+      user: ''
+      port: 25
+      starttls: true
+      auth: true
+      insecure_password: ''
+    sendmail:
+      path: sendmail
+  pushover:
+    enabled: false
+    app: ''
+    device: null
+    sound: spacealarm
+    user: ''
+    priority: normal
+  pushbullet:
+    enabled: false
+    api_key: ''
+  telegram:
+    enabled: false
+    bot_token: ''
+    chat_id: ''
+  webhook:
+    enabled: false
+    webhook_url: ''
+    max_message_length: ''
+  matrix:
+    enabled: false
+    homeserver: ''
+    access_token: ''
+    room_id: ''
+  mailgun:
+    enabled: false
+    region: us
+    api_key: ''
+    domain: ''
+    from_mail: ''
+    from_name: ''
+    to: ''
+    subject: '{count} changes: {jobs}'
+  ifttt:
+    enabled: false
+    key: ''
+    event: ''
+  xmpp:
+    enabled: false
+    sender: ''
+    recipient: ''
+job_defaults:
+  all: {}
+  url: {}
+  browser: {}
+  shell: {}

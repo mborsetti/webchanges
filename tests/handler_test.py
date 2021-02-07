@@ -98,7 +98,8 @@ def teardown_func():
 
 def test_run_watcher():
     with teardown_func():
-        urls = os.path.join(root, 'share', 'examples', 'jobs-example.yaml')
+        # urls = os.path.join(root, 'share', 'examples', 'jobs-example.yaml')
+        urls = os.path.join(here, 'data', 'jobs.yaml')
         config = os.path.join(here, 'data', 'config.yaml')
         cache = os.path.join(here, 'data', 'cache.db')
         hooks = ''

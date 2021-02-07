@@ -77,11 +77,7 @@ def test_url(url, job):
     in tests/data/doc_filter_testdata.yaml using 'url' as the key)"""
     # only tests shellpipe in linux; test pdf2text and ocr only if packages are installed (they require
     # OS-specific installations beyond pip)
-    if ((os.name != 'nt' or 'shellpipe' not in job['filter'][0])
-            and ('pdftotext' in installed_packages or 'pdf2text' not in job['filter'][0])
-            and ('pytesseract' in installed_packages or 'ocr' not in job['filter'][0])
-            and ('vobject' in installed_packages or 'ical2text' not in job['filter'][0])
-            and url != 'https://example.com/html2text.html'):  # TODO remove this when html2text > 2020.1.16 (fixed)
+    if url != 'https://example.com/html2text.html':  # TODO remove this when html2text > 2020.1.16 (fixed)
         d = testdata[url]
         if 'filename' in d:
             input_data = open(os.path.join(here, 'data', d['filename']), 'rb').read()
@@ -89,10 +85,15 @@ def test_url(url, job):
             input_data = d['input']
 
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job['filter']):
+            # skip if package is not installed
+            if ((filter_kind == 'pdf2text' and 'pdftotext' not in installed_packages)
+                    or (filter_kind == 'ocr' and 'pytesseract' not in installed_packages)
+                    or (filter_kind == 'ical2text' and 'vobject' not in installed_packages)):
+                return
             filtercls = FilterBase.__subclasses__[filter_kind]
             input_data = filtercls(UrlJob(url=url), None).filter(input_data, subfilter)
-            if 'pdf2text' in job['filter']:
-                input_data = input_data.rstrip()  # fix for macOS (returns string ending in \n\x0c)
+            if filter_kind in ('pdf2text', 'shellpipe'):  # fix for macOS or OS-specific end of line
+                input_data = input_data.rstrip()
             # TODO: FilterBase.process(cls, filter_kind, subfilter, state, data):
 
         expected_output_data = d['output']

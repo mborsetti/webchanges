@@ -7,7 +7,6 @@ max_tries: 2
 filter:
   - xpath: //section[@role="main"]
   - html2text:
-      method: html2text
       unicode_snob: true
       body_width: 0
       inline_links: false
