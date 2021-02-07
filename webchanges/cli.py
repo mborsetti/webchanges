@@ -10,6 +10,7 @@ import warnings
 
 from appdirs import AppDirs
 
+from . import __min_python_version__
 from .command import UrlwatchCommand
 from .config import CommandConfig
 from .main import Urlwatch
@@ -80,6 +81,11 @@ def main() -> None:
     """The program's entry point"""
     # make sure that DeprecationWarnings are displayed from all modules (otherwise only those in __main__ are)
     warnings.filterwarnings(action='always', category=DeprecationWarning)
+
+    # Issue deprecation warning if running on 3.6
+    if (sys.version_info.major, sys.version_info.minor) == __min_python_version__:
+        logger.warning('Support for this version of Python is and will be removed 3 years from the date of the next '
+                       'major release who replaced it', DeprecationWarning)
 
     # The config, jobs, hooks and cache files
     config_file = os.path.join(config_dir, 'config.yaml')
