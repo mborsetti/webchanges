@@ -24,6 +24,8 @@ jobs:
       # Build Python and packages per https://github.com/actions/setup-python
       - name: Set up Python
         uses: actions/setup-python@v2
+        with:
+          python-version: 3.8  # as per https://docs.readthedocs.io/en/stable/config-file/v2.html?#build-image
 
       # Install dependencies needed by the repo: local in .pre-commit-config.yaml
       - name: Install dependencies
@@ -31,7 +33,6 @@ jobs:
           python -m pip install -U pip wheel
           python -m pip install -U -r docs/requirements.txt
           export PATH=$(pwd)/webchanges:$PATH
-          echo $PATH
 
       # Run pre-commit cache per https://github.com/pre-commit/action
       - name: Run pre-commit
@@ -115,8 +116,6 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v2
-        with:
-          python-version: latest
 
       # Install pip dependencies from setup.py
       - name: Install dependencies
