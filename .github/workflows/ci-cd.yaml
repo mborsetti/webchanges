@@ -29,7 +29,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -U pip wheel
-          python -m pip install -U sphinx sphinx_rtd_theme
+          python -m pip install -U -r docs/requirements.txt
+          ls -hal
 
       # Run pre-commit cache per https://github.com/pre-commit/action
       - name: Run pre-commit
