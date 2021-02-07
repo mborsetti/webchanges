@@ -1,10 +1,9 @@
-# Example hooks file for webchanges
+"""Example hooks file for webchanges (used in testing)"""
 
 import re
 
-from webchanges import filters
 # from webchanges import jobs
-from webchanges import reporters
+from webchanges import filters, reporters
 
 
 # class CustomLoginJob(jobs.UrlJob):

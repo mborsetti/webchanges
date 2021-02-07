@@ -11,7 +11,7 @@ and a 'diff' summary of the changes. You can fine-tune what to track by using fi
 __project_name__ = __package__
 # Release numbering largely follows Semantic Versioning https://semver.org/spec/v2.0.0.html#semantic-versioning-200
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.0.4-pre-release'
+__version__ = '3.0.4-a'
 __min_python_version__ = (3, 6)
 __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'

@@ -1,6 +1,7 @@
 __pycache__/
 .idea/
 .pytest_cache/
+.tox/
 build/
 dist/
 docs/_autosummary

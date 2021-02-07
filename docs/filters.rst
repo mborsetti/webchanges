@@ -137,7 +137,7 @@ Example to parse an RSS feed and filter only the titles and publication dates:
      - css:
          method: xml
          selector: 'item > title, item > pubDate'
-     - html2text: re
+     - html2text: strip_tags
 
 .. code-block:: yaml
 

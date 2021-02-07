@@ -35,6 +35,14 @@ Fixed
 * ``telegram`` reporter's ``chat_id`` can be numeric (fixes # `610 <https://github.com/thp/urlwatch/issues/610>`__
   upstream by `ramelito <https://github.com/ramelito>`__)
 
+Internals
+---------
+* Moved continuous integration (CI) testing from Travis to `GitHub Actions <https://docs.github.com/en/actions>`__
+* Moved linting (flake8) and testing of doc build from pytest to the `pre-commit <https://pre-commit.com>`__ framework
+* Added continuous delivery (CD) using `bump2version <https://pypi.org/project/bump2version/>`__ and `GitHub Actions
+  <https://docs.github.com/en/actions>`__
+* Added automated local testing using `tox <https://tox.readthedocs.io/en/latest/>`__
+
 Version 3.0.3
 =============
 2020-12-21

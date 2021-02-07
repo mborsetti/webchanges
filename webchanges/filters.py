@@ -217,7 +217,7 @@ class BeautifyFilter(FilterBase):
             raise ImportError(f'Python package "BeautifulSoup" is not installed; cannot use the "beautify" filter'
                               f' ( {self.job.get_location()} )')
 
-        soup = BeautifulSoup(data, features="lxml")
+        soup = BeautifulSoup(data, features='lxml')
 
         if jsbeautifier is None:
             logger.info(f'Python package "jsbeautifier" is not installed; will not beautify <script> tags'
@@ -312,14 +312,14 @@ class Html2TextFilter(FilterBase):
         elif method in ('strip_tags', 're'):  # re for backward compatibility
             if method == 're':
                 logger.warning(f"filter html2text's method 're' is deprecated: replace with 'strip_tags'"
-                               f"( {self.job.get_location()} )")
+                               f'( {self.job.get_location()} )')
             stripped_tags = re.sub(r'<[^>]*>', '', data)
             d = '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''))
             return d
 
         elif method == 'lynx':
             logger.error(f"'filter html2text's method 'lynx' is no longer supported."
-                         f" ( {self.job.get_location()} )")
+                         f' ( {self.job.get_location()} )')
 
         else:
             raise ValueError(f'Unknown filter html2text method: {method!r} ( {self.job.get_location()} )')
@@ -467,7 +467,7 @@ class GrepFilter(FilterBase):
 
     def filter(self, data, subfilter):
         warn(f"'grep' filter is deprecated; replace with 'keep_lines_containing' (+ 're' subfilter)"
-             f" ( {self.job.get_location()} )", DeprecationWarning)
+             f' ( {self.job.get_location()} )', DeprecationWarning)
         return KeepLinesFilter.filter(self, data, subfilter)
 
 
@@ -506,7 +506,7 @@ class InverseGrepFilter(FilterBase):
 
     def filter(self, data, subfilter):
         warn(f"'grepi' filter is deprecated; replace with 'delete_lines_containing (+ 're' subfilter')"
-             f" ( {self.job.get_location()} )", DeprecationWarning)
+             f' ( {self.job.get_location()} )', DeprecationWarning)
         return DeleteLinesFilter.filter(self, data, subfilter)
 
 

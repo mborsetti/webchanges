@@ -57,6 +57,9 @@ packages, as below) before creating a pull request:
 .. code-block:: bash
 
    pip install -U webchanges[testing]
+   tox
+
+Alternatively, you can manually run the following commands
 
    # Linux:
    python -m pytest -v

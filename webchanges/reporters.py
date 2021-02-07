@@ -286,7 +286,7 @@ class TextReporter(ReporterBase):
         if summary and show_footer:
             duration = round(self.duration, max(0, 1 - int(floor(log10(self.duration)))))
             yield (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-                   f" seconds with {project.__project_name__} {project.__version__}")
+                   f' seconds with {project.__project_name__} {project.__version__}')
 
     def _format_content(self, job_state):
         if job_state.verb == 'error':
@@ -354,14 +354,14 @@ class MarkdownReporter(ReporterBase):
         if summary and show_footer:
             duration = round(self.duration, max(0, 1 - int(floor(log10(self.duration)))))
             footer = (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in"
-                      f" {duration} seconds with {project.__project_name__} {project.__version__}")
+                      f' {duration} seconds with {project.__project_name__} {project.__version__}')
         else:
             footer = None
 
         if not show_details:
             details = None
 
-        trimmed_msg = "*Parts of the report were omitted due to message length.*\n"
+        trimmed_msg = '*Parts of the report were omitted due to message length.*\n'
         max_length -= len(trimmed_msg)
 
         trimmed, summary, details, footer = MarkdownReporter._render(max_length, summary, details, footer)
@@ -408,7 +408,7 @@ class MarkdownReporter(ReporterBase):
             return (False, summary, details, footer)
         else:
             if summary_len > max_length:
-                return (True, [], [], "")
+                return (True, [], [], '')
             elif footer_len > max_length - summary_len:
                 return (True, summary, [], footer[:max_length - summary_len])
             elif not details:
@@ -446,7 +446,7 @@ class MarkdownReporter(ReporterBase):
                         if len(body) <= body_len_per_details:
                             trimmed_details.append((header, body))
                         else:
-                            trimmed_details.append((header, ""))
+                            trimmed_details.append((header, ''))
 
                         # If the current item's body did not use all of its
                         # allocated space, distribute the unused space into
@@ -464,17 +464,17 @@ class MarkdownReporter(ReporterBase):
 
     @staticmethod
     def _format_details_body(s, max_length):
-        wrapper_length = len("```diff\n\n```")
+        wrapper_length = len('```diff\n\n```')
 
         # Message to print when the diff is too long.
-        trim_message = "*diff trimmed*"
+        trim_message = '*diff trimmed*'
         trim_message_length = len(trim_message)
 
         if max_length is None or len(s) + wrapper_length <= max_length:
-            return False, "```diff\n{}\n```".format(s)
+            return False, '```diff\n{}\n```'.format(s)
         else:
             target_max_length = max_length - trim_message_length - wrapper_length
-            pos = s.rfind("\n", 0, target_max_length)
+            pos = s.rfind('\n', 0, target_max_length)
 
             if pos == -1:
                 # Just a single long line, so cut it short.
@@ -483,7 +483,7 @@ class MarkdownReporter(ReporterBase):
                 # Multiple lines, cut off extra lines.
                 s = s[0:pos]
 
-            return True, "{}\n```diff\n{}\n```".format(trim_message, s)
+            return True, '{}\n```diff\n{}\n```'.format(trim_message, s)
 
     def _format_content(self, job_state):
         if job_state.verb == 'error':
@@ -606,13 +606,13 @@ class EMailReporter(TextReporter):
         if not body_text:
             logger.debug('Not sending e-mail (no changes)')
             return
-        if self.config['method'] == "smtp":
+        if self.config['method'] == 'smtp':
             smtp_user = self.config['smtp'].get('user', None) or self.config['from']
             use_auth = self.config['smtp'].get('auth', False)
             mailer = SMTPMailer(smtp_user, self.config['smtp']['host'], self.config['smtp']['port'],
                                 self.config['smtp']['starttls'], use_auth,
                                 self.config['smtp'].get('insecure_password'))
-        elif self.config['method'] == "sendmail":
+        elif self.config['method'] == 'sendmail':
             mailer = SendmailMailer(self.config['sendmail']['path'])
         else:
             logger.error(f'Invalid entry for method {self.config["method"]}')
@@ -751,13 +751,13 @@ class MailGunReporter(TextReporter):
 
         logger.debug(f"Sending Mailgun request for domain:'{domain}'")
         result = requests.post(
-            f"https://api{region}.mailgun.net/v3/{domain}/messages",
-            auth=("api", api_key),
-            data={"from": f"{from_name} <{from_mail}>",
-                  "to": to,
-                  "subject": subject,
-                  "text": body_text,
-                  "html": body_html})
+            f'https://api{region}.mailgun.net/v3/{domain}/messages',
+            auth=('api', api_key),
+            data={'from': f'{from_name} <{from_mail}>',
+                  'to': to,
+                  'subject': subject,
+                  'text': body_text,
+                  'html': body_html})
 
         try:
             json_res = result.json()
@@ -768,7 +768,7 @@ class MailGunReporter(TextReporter):
                 logger.error(f"Mailgun error: {json_res['message']}")
         except ValueError:
             logger.error(
-                f"Failed to parse Mailgun response. HTTP status code: {result.status_code}, content: {result.content}")
+                f'Failed to parse Mailgun response. HTTP status code: {result.status_code}, content: {result.content}')
 
         return result
 
@@ -803,8 +803,8 @@ class TelegramReporter(TextReporter):
     def submitToTelegram(self, bot_token, chat_id, text):
         logger.debug(f"Sending telegram request to chat id: '{chat_id}'")
         result = requests.post(
-            f"https://api.telegram.org/bot{bot_token}/sendMessage",
-            data={"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"})
+            f'https://api.telegram.org/bot{bot_token}/sendMessage',
+            data={'chat_id': chat_id, 'text': text, 'disable_web_page_preview': 'true'})
         try:
             json_res = result.json()
 
@@ -814,7 +814,7 @@ class TelegramReporter(TextReporter):
                 logger.error(f"Telegram error: {json_res['description']}")
         except ValueError:
             logger.error(
-                f"Failed to parse telegram response. HTTP status code: {result.status_code}, content: {result.content}")
+                f'Failed to parse telegram response. HTTP status code: {result.status_code}, content: {result.content}')
         return result
 
     def chunkstring(self, string, length):
@@ -848,17 +848,17 @@ class WebhookReporter(TextReporter):
         return result
 
     def submit_to_webhook(self, webhook_url, text):
-        logger.debug(f"Sending request to webhook with text:{text}")
-        post_data = {"text": text}
+        logger.debug(f'Sending request to webhook with text:{text}')
+        post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
         try:
             if result.status_code == requests.codes.ok:
-                logger.info("Server response: ok")
+                logger.info('Server response: ok')
             else:
-                logger.error(f"Server error: {result.text}")
+                logger.error(f'Server error: {result.text}')
         except ValueError:
             logger.error(
-                f"Failed to parse server response. HTTP status code: {result.status_code}, content: {result.content}")
+                f'Failed to parse server response. HTTP status code: {result.status_code}, content: {result.content}')
         return result
 
 
@@ -897,17 +897,17 @@ class WebhookMarkdownReporter(MarkdownReporter):
         return result
 
     def submit_to_webhook(self, webhook_url, text):
-        logger.debug(f"Sending request to webhook with text:{text}")
-        post_data = {"text": text}
+        logger.debug(f'Sending request to webhook with text:{text}')
+        post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
         try:
             if result.status_code == requests.codes.ok:
-                logger.info("Server response: ok")
+                logger.info('Server response: ok')
             else:
-                logger.error(f"Server error: {result.text}")
+                logger.error(f'Server error: {result.text}')
         except ValueError:
             logger.error(
-                f"Failed to parse server response. HTTP status code: {result.status_code}, content: {result.content}")
+                f'Failed to parse server response. HTTP status code: {result.status_code}, content: {result.content}')
         return result
 
 
@@ -933,16 +933,16 @@ class MatrixReporter(MarkdownReporter):
 
         client_api = matrix_client.api.MatrixHttpApi(homeserver_url, access_token)
 
-        body_html = Markdown(extras=["fenced-code-blocks", "highlightjs-lang"]).convert(body_markdown)
+        body_html = Markdown(extras=['fenced-code-blocks', 'highlightjs-lang']).convert(body_markdown)
 
         client_api.send_message_event(
             room_id,
-            "m.room.message",
+            'm.room.message',
             content={
-                "msgtype": "m.text",
-                "format": "org.matrix.custom.html",
-                "body": body_markdown,
-                "formatted_body": body_html
+                'msgtype': 'm.text',
+                'format': 'org.matrix.custom.html',
+                'body': body_markdown,
+                'formatted_body': body_html
             }
         )
 

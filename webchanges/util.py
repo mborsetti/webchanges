@@ -178,7 +178,7 @@ def linkify(
             href = 'http://' + href  # no proto specified, use http
 
         if callable(extra_params):
-            params = " " + extra_params(href).strip()
+            params = ' ' + extra_params(href).strip()
         else:
             params = extra_params
 

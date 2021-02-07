@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 # this is run by pip or Docker to install the project
-
 import re
 import sys
 
@@ -17,13 +15,10 @@ if sys.version_info < project.__min_python_version__:
              f'{".".join(str(v) for v in project.__min_python_version__)} or newer.\n'
              f'You are running {sys.version}')
 
+requirements = map(str.strip, open('requirements.txt').readlines())
+requirements_testing = map(str.strip, open('requirements_testing.txt').readlines())
+README_rst = open('README.rst').read()
 
-with open('requirements.txt') as f:
-    requirements = f.read().splitlines()
-with open('requirements_testing.txt') as f:
-    requirements_testing = f.read().splitlines()
-with open('README.rst') as f:
-    README_rst = f.read()
 SETUP = {
     'name': project.__project_name__,
     'version': project.__version__,
@@ -54,12 +49,10 @@ SETUP = {
         'Intended Audience :: Developers'
     ],
     'license': project.__license__,
-    # 'license_file': 'LICENSE',
+    # below to include in sdist the files read above (see https://stackoverflow.com/questions/37753833)
     # data_files is deprecated. It does not work with wheels, so it should be avoided.
-    'package_dir': {'': '.'},
-    'package_data': {'': ['*.rst']},
-    'exclude_package_data': {'': [''], 'docs': ['*']},
-    'install_requires': requirements,
+    'data_files': ['requirements.txt', 'requirements_testing.txt'],
+    'install_requires': list(requirements),
     'entry_points': {'console_scripts': [f'{project.__project_name__}={project.__package__}.cli:main']},
     'extras_require': {'use_browser': ['pyppeteer'],
                        'beautify': ['beautifulsoup4', 'jsbeautifier', 'cssbeautifier'],

@@ -68,7 +68,7 @@ def test_load_jobs_yaml():
 
 
 def test_load_hooks_py():
-    hooks_py = os.path.join(here, 'data', 'hooks.py')
+    hooks_py = os.path.join(here, 'data', 'hooks_test.py')
     if os.path.exists(hooks_py):
         import_module_from_source('hooks', hooks_py)
     else:
@@ -88,7 +88,7 @@ def teardown_func():
     try:
         yield
     finally:
-        "tear down test fixtures"
+        'tear down test fixtures'
         cache = os.path.join(here, 'data', 'cache.db')
         if os.path.exists(cache):
             os.remove(cache)

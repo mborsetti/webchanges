@@ -9,13 +9,13 @@ from webchanges.filters import FilterBase
 logger = logging.getLogger(__name__)
 
 TESTDATA = [
-    # Legacy string-style filter definition conversion
-    ('keep_lines_containing', [('keep_lines_containing', {})]),
-    ('keep_lines_containing:foo', [('keep_lines_containing', {'text': 'foo'})]),
-    ('beautify,keep_lines_containing:foo,html2text', [('beautify', {}), ('keep_lines_containing', {'text': 'foo'}),
-                                                      ('html2text', {})]),
-    ('re.sub:.*', [('re.sub', {'pattern': '.*'})]),
-    ('re.sub', [('re.sub', {})]),
+    # Legacy string-style filter definition conversion  DEPRECATED
+    # ('keep_lines_containing', [('keep_lines_containing', {})]),
+    # ('keep_lines_containing:foo', [('keep_lines_containing', {'text': 'foo'})]),
+    # ('beautify,keep_lines_containing:foo,html2text', [('beautify', {}), ('keep_lines_containing', {'text': 'foo'}),
+    #                                                   ('html2text', {})]),
+    # ('re.sub:.*', [('re.sub', {'pattern': '.*'})]),
+    # ('re.sub', [('re.sub', {})]),
 
     # New dict-style filter definition normalization/mapping
     ([{'keep_lines_containing': None}], [('keep_lines_containing', {})]),

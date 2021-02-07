@@ -170,7 +170,7 @@ class UrlwatchCommand:
         duration = (end - start)
         duration = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
         print(f"--\nChecked {len(jobs)} source{'s' if len(jobs) > 1 else ''} for errors in"
-              f" {duration} seconds")
+              f' {duration} seconds')
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)

@@ -9,5 +9,5 @@ pre-commit autoupdate
 if not errorlevel 0 pause
 pre-commit run -a
 if not errorlevel 0 pause
-python -m pytest -v
+python -m pytest tests/ -v
 if not errorlevel 0 pause
