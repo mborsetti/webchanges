@@ -39,7 +39,7 @@ repos:
         entry: python -m sphinx.cmd.build
         args: [-a, -E, -W, docs, docs/_build]
         language: system
-        files: ^docs/_static
+        files: ^docs
         types: [file]
         pass_filenames: false
 #      # https://www.sphinx-doc.org/en/master/usage/extensions/doctest.html#module-sphinx.ext.doctest
@@ -48,7 +48,7 @@ repos:
 #        entry: python -m sphinx-build
 #        args: [-a, -E, -b, doctest, docs, docs/_build]
 #        language: system
-#        files: ^docs/_static
+#        files: ^docs
 #        types: [file]
 #        pass_filenames: false
 
