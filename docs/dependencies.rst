@@ -60,7 +60,7 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 |                         | * `pre-commit <https://pre-commit.com/>`__                              |
 | (to work on             | * `flake8 <https://gitlab.com/pycqa/flake8>`__                          |
 | contributions to the    | * `docutils <https://docutils.sourceforge.io>`__                        |
-| project)                | * `sphinx <https://www.sphinx-doc.org/en/master/>`__                    |
+| project)                | * `sphinx <https://www.sphinx-doc.org/>`__                              |
 |                         | * `sphinx_rtd_theme <https://github.com/readthedocs/sphinx_rtd_theme>`__|
 |                         | * all the dependencies listed above except for pdf2text and ocr         |
 +-------------------------+-------------------------------------------------------------------------+
@@ -93,5 +93,5 @@ These Python packages are installed automatically by `pip`:
 * `markdown2 <https://github.com/trentm/python-markdown2>`__
 * `minidb <https://thp.io/2010/minidb/>`__
 * `PyYAML <https://pyyaml.org/>`__
-* `requests <https://requests.readthedocs.io/en/master/>`__
+* `requests <https://requests.readthedocs.io/>`__
 * `colorama <https://github.com/tartley/colorama>`__  (for Windows installations)

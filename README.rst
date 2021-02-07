@@ -22,13 +22,9 @@ webchanges
     :target: https://webchanges.readthedocs.io/
     :alt: Read the documentation at https://webchanges.readthedocs.io/
 
-.. |CI| image:: https://github.com/mborsetti/webchanges/workflows/Tests/badge.svg
+.. |CI| image:: https://github.com/mborsetti/webchanges/workflows/Tests/badge.svg?event=pull_request&branch=main
     :target: https://github.com/mborsetti/webchanges/actions
     :alt: CI testing status
-
-.. |appveyor| image:: https://img.shields.io/appveyor/ci/mborsetti/webchanges/master.svg?logo=appveyor
-    :target: https://ci.appveyor.com/project/mborsetti/webchanges
-    :alt: appveyor build status
 
 .. |coverage| image:: https://codecov.io/gh/mborsetti/webchanges/branch/main/graphs/badge.svg
     :target: https://app.codecov.io/gh/mborsetti/webchanges/branch/main
@@ -90,8 +86,8 @@ Contributing
 We welcome any contribution, e.g. documentation, bug reports, new features, etc., as both pull requests and
 `issues <https://github.com/mborsetti/webchanges/issues>`__.
 More information for developers and documenters is `here
-<https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__, and our wishlist is `here
-<https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__.
+<https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__, and our wishlist is `here
+<https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__.
 
 License
 =======
@@ -99,7 +95,7 @@ License
 
 Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but including code licensed under the
 `BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`__. See the license `here
-<https://github.com/mborsetti/webchanges/blob/master/COPYING>`__.
+<https://github.com/mborsetti/webchanges/blob/main/COPYING>`__.
 
 
 Improvements from `urlwatch`
@@ -119,14 +115,14 @@ It also has a new `additions_only <https://webchanges.readthedocs.io/en/stable/d
 filter that makes it easier to track content that was added without the distractions of the content that was deleted
 (and a similar `deletions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#deletions-only>`__ one)
 as well as many other refinements (see `changelog
-<https://github.com/mborsetti/webchanges/blob/master/CHANGELOG.rst>`__).
+<https://github.com/mborsetti/webchanges/blob/main/CHANGELOG.rst>`__).
 
 Examples:
 
-.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/master/docs/html_diff_filters_example_1.png
+.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/main/docs/html_diff_filters_example_1.png
     :width: 504
 
 |
 
-.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/master/docs/html_diff_filters_example_3.png
+.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/main/docs/html_diff_filters_example_3.png
     :width: 504

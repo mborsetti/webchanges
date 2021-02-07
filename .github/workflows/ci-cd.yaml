@@ -52,6 +52,9 @@ jobs:
 #        os: [windows-latest]
 #        python-version: ['3.9']
 
+    env:
+      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
+
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
@@ -83,7 +86,7 @@ jobs:
           #      del tesseract-setup /y
           #      CICD_PIPINSTALL="pdftotext Pillow pytesseract"
           fi
-          python -m pip install -U pip wheel coveralls
+          python -m pip install -U pip wheel
           python -m pip install -U -r requirements.txt -r requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject $CICD_PIPINSTALL
           python -m pip install -e .
         shell: bash
@@ -96,33 +99,32 @@ jobs:
         uses: codecov/codecov-action@master
         with:
           flags: ${{ matrix.python-version }},${{ matrix.os }}
+          name: ${{ env.commitmsg }}
           fail_ci_if_error: true
-          verbose: true # optional (default = false)
+#          verbose: true # optional (default = false)
 
       - name: Upload coverage to Coveralls
-        run: coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
-          COVERALLS_PARALLEL: true
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          flag-name: tests-${{ matrix.python-version }}-${{ matrix.os }}
+          parallel: true
 
   coveralls:
-    name: Finish Coveralls
+    name: Coveralls finished
     needs: [test]
     runs-on: ubuntu-latest
-    # The Docker container (https://hub.docker.com/) to run any steps in a job that don't already specify a container
-    container: python:3-slim
     steps:
-    - name: Finished
-      #  Let the Coveralls service (launched as COVERALLS_PARALLEL: true) know you have completed all your parallel runs
-      run: |
-        python -m pip install -U coveralls
-        coveralls --finish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Coveralls finished
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        parallel-finished: true
 
   deploy:
+    name: Deploy release
     runs-on: ubuntu-latest
+    # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
     needs: [test]
     steps:
@@ -149,4 +151,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
-          password: ${{ secrets.PYPI_PASSWORD }}
+          password: ${{ secrets.pypi_password }}

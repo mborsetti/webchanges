@@ -8,8 +8,8 @@ updates are not listed here and are ongoing.
 
 **Development**
 
-`Contributions <https://github.com/mborsetti/webchanges/blob/master/CONTRIBUTING.rst>`__ are always welcomed, and you
-can check out the `wish list <https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__ for inspiration.
+`Contributions <https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__ are always welcomed, and you
+can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__ for inspiration.
 
 
 Unreleased
