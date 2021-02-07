@@ -38,8 +38,10 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        python-version: [3.9, 3.8, 3.7, 3.6]
+#        os: [ubuntu-latest, windows-latest, macOS-latest]
+#        python-version: [3.9, 3.8, 3.7, 3.6]
+        os: [windows-latest]
+        python-version: [3.9]
 
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
@@ -52,17 +54,22 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies (and update pip) (Linux)
-        if: runner.os == 'Linux'
+      - name: Install dependencies (and update pip)
+#        if: runner.os == 'Linux'
         # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path
         run: |
-          sudo apt-get -y update
-          sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
+          if [ "$RUNNER_OS" == "Linux" ]; then
+              sudo apt-get -y update
+              sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
+          fi
           python -m pip install -U pip wheel coveralls
           python -m pip install -U -r requirements.txt
           python -m pip install -U -r requirements_testing.txt
-          python -m pip install -U aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject pdftotext Pillow pytesseract
+          python -m pip install -U aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject
+          if [ "$RUNNER_OS" == "Linux" ]; then
+              python -m pip install -U pdftotext Pillow pytesseract
           python -m pip install -e .
+        shell: bash
 
       - name: Install dependencies (and update pip) (not-Linux)
         if: runner.os != 'Linux'
@@ -74,10 +81,9 @@ jobs:
           python -m pip install -U aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject
           python -m pip install -e .
 
-
       - name: Run tests
         run: |
-          python -m pytest -v
+          python -X faulthandler -m pytest -v
 
       - name: Upload Coverage
         # The version of coveralls that supports py27, doesn't support github actions
@@ -92,7 +98,7 @@ jobs:
     name: Finish Coveralls
     needs: [test]
     runs-on: ubuntu-latest
-    # A Docker container to run any steps in a job that don't already specify a container
+    # A Docker container (https://hub.docker.com/) to run any steps in a job that don't already specify a container
     container: python:3-slim
     steps:
     - name: Finished
