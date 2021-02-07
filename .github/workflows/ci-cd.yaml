@@ -92,8 +92,14 @@ jobs:
         shell: bash
 
       - name: Run tests
+        # workaround for Windows fatal exception: access violation
         run: |
-          python -m pytest -v
+          if [ "$RUNNER_OS" == "Windows" ]; then
+              python -m pytest -v -p no:faulthandler
+          else
+              python -m pytest -v
+          fi
+        shell: bash
         env:
           PYTHONUTF8: 1
 
