@@ -33,6 +33,11 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
 
 `Unreleased`
 =================
+2021-02-08
+
+Fixed
+-----
+* Documentation was failing to build at https://webchanges.readthedocs.io/
 
 
 Version 3.1.0
