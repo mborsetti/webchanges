@@ -79,7 +79,7 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 .. [#f2] Optional, to beautify content of <script> tags
 .. [#f3] Optional, to beautify content of <style> tags
 .. [#f4] see https://github.com/jalan/pdftotext#os-dependencies
-.. [#f5] see https://tesseract-ocr.github.io/tessdoc/Home.html
+.. [#f5] see https://tesseract-ocr.github.io/tessdoc/Installation.html
 
 
 Installed packages
