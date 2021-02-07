@@ -32,6 +32,26 @@ repos:
       - id: flake8
 #        additional_dependencies: [flake8-import-order]  # conflicts with PyCharm's Optimize imports
 
+  - repo: local
+    hooks:
+      - id: sphinx-build
+        name: sphinx build
+        entry: python -m sphinx.cmd.build
+        args: [-a, -E, -W, docs, docs/_build]
+        language: system
+        files: ^docs/_static
+        types: [file]
+        pass_filenames: false
+#      # https://www.sphinx-doc.org/en/master/usage/extensions/doctest.html#module-sphinx.ext.doctest
+#      - id: sphinx-doctest
+#        name: sphinx doctest
+#        entry: python -m sphinx-build
+#        args: [-a, -E, -b, doctest, docs, docs/_build]
+#        language: system
+#        files: ^docs/_static
+#        types: [file]
+#        pass_filenames: false
+
 #  - repo: https://github.com/pre-commit/pygrep-hooks
 #    rev: v1.7.0
 #    hooks:

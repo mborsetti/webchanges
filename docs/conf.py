@@ -47,6 +47,7 @@ extensions = [
     # 'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
+    # 'sphinx.ext.doctest',
     # 'sphinx.ext.mathjax',
     # 'sphinx.ext.viewcode',
     # 'sphinxcontrib.httpdomain',

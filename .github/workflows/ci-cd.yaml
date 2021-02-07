@@ -38,10 +38,10 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-#        os: [ubuntu-latest, windows-latest, macOS-latest]
-#        python-version: [3.9, 3.8, 3.7, 3.6]
-        os: [windows-latest]
-        python-version: [3.7]
+        os: [ubuntu-latest, macOS-latest]  # TODO add windows-latest (GHA failing 07-feb-21)
+        python-version: [rc, latest, 3.8, 3.7, 3.6]
+#        os: [windows-latest]
+#        python-version: [latest]
 
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
@@ -55,7 +55,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-#        if: runner.os == 'Linux'
         # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
@@ -77,8 +76,6 @@ jobs:
           python -m pytest -v
 
       - name: Upload Coverage
-        # The version of coveralls that supports py27, doesn't support github actions
-        if: matrix.python-version != '2.7'
         run: coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -89,11 +86,11 @@ jobs:
     name: Finish Coveralls
     needs: [test]
     runs-on: ubuntu-latest
-    # A Docker container (https://hub.docker.com/) to run any steps in a job that don't already specify a container
+    # The Docker container (https://hub.docker.com/) to run any steps in a job that don't already specify a container
     container: python:3-slim
     steps:
     - name: Finished
-      #  let the Coveralls service (launched as COVERALLS_PARALLEL: true) know you have completed all your parallel runs
+      #  Let the Coveralls service (launched as COVERALLS_PARALLEL: true) know you have completed all your parallel runs
       run: |
         pip3 install -U coveralls
         coveralls --finish
@@ -108,10 +105,10 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v2
 
-      - name: Set up Python 3.9
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.9
+          python-version: latest
 
       # Install pip dependencies from setup.py
       - name: Install dependencies
