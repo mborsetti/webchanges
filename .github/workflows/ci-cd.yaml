@@ -46,11 +46,11 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]  # TODO add windows-latest (GHA failing 07-feb-21)
+#        os: [ubuntu-latest, macOS-latest]  # TODO add windows-latest (GHA failing 07-feb-21)
         # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
-        python-version: ['3.9', '3.8', '3.7', '3.6']
-#        os: [windows-latest]
-#        python-version: ['3.9']
+#        python-version: ['3.9', '3.8', '3.7', '3.6']
+        os: [windows-latest]
+        python-version: ['3.9']
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
@@ -119,11 +119,11 @@ jobs:
           COVERALLS_PARALLEL: true
 
   coveralls:
-    name: Coveralls finished
+    name: Finish Coveralls parallel
     needs: [test]
     runs-on: ubuntu-latest
     steps:
-    - name: Coveralls finished
+    - name: Coveralls parallel finished
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.github_token }}
