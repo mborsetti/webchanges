@@ -30,9 +30,13 @@ webchanges
     :target: https://ci.appveyor.com/project/mborsetti/webchanges
     :alt: appveyor build status
 
-.. |coverage| image:: https://codecov.io/gh/mborsetti/webchanges/branch/master/graphs/badge.svg?
-    :target: https://codecov.io/github/mborsetti/webchanges
-    :alt: code coverage
+.. |coverage| image:: https://codecov.io/gh/mborsetti/webchanges/branch/main/graphs/badge.svg
+    :target: https://app.codecov.io/gh/mborsetti/webchanges/branch/main
+    :alt: code coverage by Codecov
+
+.. |coveralls| image:: https://coveralls.io/repos/github/mborsetti/webchanges/badge.svg?branch=main
+    :target: https://coveralls.io/github/mborsetti/webchanges?branch=main
+    :alt: code coverage by Coveralls
 
 .. role:: underline
     :class: underline
@@ -63,7 +67,7 @@ The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io
 
 Code
 ====
-|issues| |CI| |coverage|
+|issues| |CI| |coverage| |coverall|
 
 The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 
