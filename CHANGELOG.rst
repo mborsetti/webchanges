@@ -12,9 +12,6 @@ updates are not listed here and are ongoing.
 can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__ for inspiration.
 
 
-Unreleased
-==========
-
 Unreleased versions can be installed as follows (`git
 <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ needs to be installed):
 
@@ -24,11 +21,16 @@ Unreleased versions can be installed as follows (`git
 
 Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__.
 
+`Unreleased`
+===============
+
 Added
 -----
 * Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. Pyppeteer)
   based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
 * If ``shellpipe`` filter returns an error, show its text
+* Show deprecation warning if running on the lowest Python version supported (mention 3 years support from the release
+  date of the next major version)
 
 Fixed
 -----
@@ -37,12 +39,13 @@ Fixed
 
 Internals
 ---------
-* Added testing on macOS platform
+* First PiPy release with new continuous integration (CI) and continuous delivery (CD) pipeline based on `bump2version
+  <https://pypi.org/project/bump2version/>`__, git tags, and `GitHub Actions <https://docs.github.com/en/actions>`__
 * Moved continuous integration (CI) testing from Travis to `GitHub Actions <https://docs.github.com/en/actions>`__
-* Moved linting (flake8) and doc build testing from pytest to the `pre-commit <https://pre-commit.com>`__ framework
-* Added continuous delivery (CD) using `bump2version <https://pypi.org/project/bump2version/>`__ and `GitHub Actions
-  <https://docs.github.com/en/actions>`__
+* Moved linting (flake8) and documentation build testing from pytest to the `pre-commit
+  <https://pre-commit.com>`__ framework
 * Added automated pre-commit local testing using `tox <https://tox.readthedocs.io/en/latest/>`__
+* Added continuous integration (CI) testing on macOS platform
 
 Version 3.0.3
 =============

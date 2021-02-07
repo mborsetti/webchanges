@@ -80,6 +80,6 @@ SETUP['extras_require']['testing'] = sorted(list(SETUP['extras_require']['testin
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))
 setup(**SETUP)
 
-# to build (https://packaging.python.org/tutorials/packaging-projects/):
+# to build manually (https://packaging.python.org/tutorials/packaging-projects/):
 # $ python setup.py sdist bdist_wheel
 # $ python -m twine upload --repository testpypi dist/*
