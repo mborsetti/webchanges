@@ -1,3 +1,1 @@
 bump2version
-pip
-wheel

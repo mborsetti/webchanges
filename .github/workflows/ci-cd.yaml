@@ -46,11 +46,11 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-#        os: [ubuntu-latest, macOS-latest]  # TODO add windows-latest (GHA failing 07-feb-21)
+        os: [ubuntu-latest, macOS-latest]  # TODO windows-latest: pytest crashing on 07-feb-21
         # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
-#        python-version: ['3.9', '3.8', '3.7', '3.6']
-        os: [windows-latest]
-        python-version: ['3.9']
+        python-version: ['3.9', '3.8', '3.7', '3.6']
+#        os: [windows-latest]
+#        python-version: ['3.9']
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
@@ -67,24 +67,27 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
+        # do full install and testing of pdf2text and ocr only on latest Python version
         # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
+          if [ $(python3 -c "import sys; print(sys.version_info.minor)") == 9 ]; then
+            if [ "$RUNNER_OS" == "Linux" ]; then
               sudo apt-get -y update
               sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
               CICD_PIPINSTALL="pdftotext Pillow pytesseract"
-          elif [ "$RUNNER_OS" == "macOS" ]; then
+            elif [ "$RUNNER_OS" == "macOS" ]; then
               brew install pkg-config poppler python tesseract
               CICD_PIPINSTALL="pdftotext Pillow pytesseract"
-          # elif [ "$RUNNER_OS" == "Windows" ]; then
-          #      curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe --output Miniconda3-latest-Windows-x86_64.exe
-          #      start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
-          #      del Miniconda3-latest-Windows-x86_64.exe /y
-          #      conda install -y -c conda-forge poppler
-          #      curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
-          #      start /wait "" tesseract-setup.exe /S
-          #      del tesseract-setup /y
-          #      CICD_PIPINSTALL="pdftotext Pillow pytesseract"
+            # elif [ "$RUNNER_OS" == "Windows" ]; then
+            #    curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe --output Miniconda3-latest-Windows-x86_64.exe
+            #    start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
+            #    del Miniconda3-latest-Windows-x86_64.exe /y
+            #    conda install -y -c conda-forge poppler
+            #    curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
+            #    start /wait "" tesseract-setup.exe /S
+            #    del tesseract-setup /y
+            #    CICD_PIPINSTALL="pdftotext Pillow pytesseract"
+            fi
           fi
           python -m pip install -U pip wheel coveralls
           python -m pip install -U -r requirements.txt -r requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject $CICD_PIPINSTALL
