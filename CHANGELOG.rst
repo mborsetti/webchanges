@@ -21,8 +21,12 @@ Unreleased versions can be installed as follows (`git
 
 Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__.
 
-Version '3.1.0'
-===============
+`Unreleased`
+=================
+
+
+Version 3.1.0
+=================
 2021-02-07
 
 Added
