@@ -68,6 +68,7 @@ jobs:
           python -m pip install -U aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject
           if [ "$RUNNER_OS" == "Linux" ]; then
               python -m pip install -U pdftotext Pillow pytesseract
+          fi
           python -m pip install -e .
         shell: bash
 
