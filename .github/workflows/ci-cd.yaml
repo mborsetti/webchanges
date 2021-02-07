@@ -103,13 +103,6 @@ jobs:
           fail_ci_if_error: true
 #          verbose: true # optional (default = false)
 
-      - name: Upload coverage to Coveralls
-        run: coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
-          COVERALLS_PARALLEL: true
-
 #      # below not working as pytest-cov does not create the ./coverage/lcov.info file!
 #      - name: Upload LCOV coverage data to Coveralls
 #        uses: coverallsapp/github-action@master
@@ -117,6 +110,13 @@ jobs:
 #          github-token: ${{ secrets.github_token }}
 #          flag-name: tests-${{ matrix.python-version }}-${{ matrix.os }}
 #          parallel: true
+
+      - name: Upload coverage to Coveralls
+        run: coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
+          COVERALLS_PARALLEL: true
 
   coveralls:
     name: Coveralls finished
