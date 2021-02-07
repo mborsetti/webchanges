@@ -86,7 +86,7 @@ jobs:
           #      del tesseract-setup /y
           #      CICD_PIPINSTALL="pdftotext Pillow pytesseract"
           fi
-          python -m pip install -U pip wheel
+          python -m pip install -U pip wheel coveralls
           python -m pip install -U -r requirements.txt -r requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject $CICD_PIPINSTALL
           python -m pip install -e .
         shell: bash
@@ -104,11 +104,19 @@ jobs:
 #          verbose: true # optional (default = false)
 
       - name: Upload coverage to Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.github_token }}
-          flag-name: tests-${{ matrix.python-version }}-${{ matrix.os }}
-          parallel: true
+        run: coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
+          COVERALLS_PARALLEL: true
+
+#      # below not working as pytest-cov does not create the ./coverage/lcov.info file!
+#      - name: Upload LCOV coverage data to Coveralls
+#        uses: coverallsapp/github-action@master
+#        with:
+#          github-token: ${{ secrets.github_token }}
+#          flag-name: tests-${{ matrix.python-version }}-${{ matrix.os }}
+#          parallel: true
 
   coveralls:
     name: Coveralls finished

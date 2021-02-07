@@ -6,6 +6,7 @@ source = webchanges
 omit =
     tests/*
     docs/*
+relative_files = True
 command_line = -m pytest -v
 
 [report]
