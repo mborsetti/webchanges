@@ -37,7 +37,7 @@ repos:
       - id: sphinx-build
         name: sphinx build
         entry: python -m sphinx.cmd.build
-        args: [-a, -E, docs, docs/_build]  # removed -W due to failures, TODO find a way to use it
+        args: [-a, -E, docs, docs/_build]  # removed -W due to autosummary warnings, TODO find a way to use it
         language: system
         files: ^docs
         types: [file]
