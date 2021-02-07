@@ -4,7 +4,7 @@ Changelog
 
 This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`__. Release numbering mostly
 follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__.  Minor documentation
-updates are not listed here and are ongoing.
+updates and improvements are not listed here and are ongoing.
 
 **Development**
 
@@ -21,6 +21,16 @@ Unreleased versions can be installed as follows (`git
 
 Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__.
 
+.. Categories used:
+   ⚠ Breaking Changes for changes that break existing functionality.
+   Added for new features.
+   Changed for changes in existing functionality.
+   Deprecated for soon-to-be removed features.
+   Removed for now removed features.
+   Fixed for any bug fixes.
+   Security in case of vulnerabilities.
+   Internals for changes that don't affect users.
+
 `Unreleased`
 =================
 
@@ -31,9 +41,9 @@ Version 3.1.0
 
 Added
 -----
-* Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. Pyppeteer)
+* Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. using Pyppeteer)
   based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
-* If ``shellpipe`` filter returns an error, show its text
+* If ``shellpipe`` filter returns an error it now shows the error text
 * Show deprecation warning if running on the lowest Python version supported (mention 3 years support from the release
   date of the next major version)
 
@@ -44,7 +54,7 @@ Fixed
 
 Internals
 ---------
-* First PiPy release with new continuous integration (CI) and continuous delivery (CD) pipeline based on `bump2version
+* First PyPi release with new continuous integration (CI) and continuous delivery (CD) pipeline based on `bump2version
   <https://pypi.org/project/bump2version/>`__, git tags, and `GitHub Actions <https://docs.github.com/en/actions>`__
 * Moved continuous integration (CI) testing from Travis to `GitHub Actions <https://docs.github.com/en/actions>`__
 * Moved linting (flake8) and documentation build testing from pytest to the `pre-commit
@@ -56,8 +66,8 @@ Version 3.0.3
 =============
 2020-12-21
 
-⚠ Breaking Change
------------------
+⚠ Breaking Changes
+------------------
 * Compatibility with `urlwatch` 2.22, including the ⚠ breaking change of removing the ability to write custom filters
   that do not take a subfilter as argument (see `here
   <https://urlwatch.readthedocs.io/en/latest/deprecated.html#filters-without-subfilters-since-2-22>`__ upstream)

@@ -1,13 +1,14 @@
 # Configuration for pre-commit (see https://pre-commit.com/)
 # A framework for managing and maintaining multi-language pre-commit hooks.
 
-# Requires the pre-commit package manager to be installed: pip install pre-commit
+# List of hooks at https://pre-commit.com/hooks.html
 
+# Requires the pre-commit package manager to be installed: pip install pre-commit
 # To install pre-commit into your git hooks (i.e. at .git/hooks/pre-commit), run 'pre-commit install'.
 # To update hooks to the latest version automatically, run 'pre-commit autoupdate'. By default, this will bring the
 # hooks to the latest tag on the default branch.
 
-# NOTE: in this implementation, tox runs 'pre-commit run -a'
+# NOTE: in this package implementation, tox runs 'pre-commit run -a'
 
 # A list of repository mappings.
 repos:
@@ -113,6 +114,7 @@ repos:
         description: Linter
 #        additional_dependencies: [flake8-import-order]  # conflicts with PyCharm's Optimize imports
 
+#  NOT using this because it fails (and no support for Python > 3.6!)
 #  - repo: https://github.com/myint/rstcheck
 #    rev: 3f92957478422df87bd730abde66f089cc1ee19b
 #    hooks:
@@ -120,7 +122,6 @@ repos:
 #      # See .rstcheck.cfg for configuration
 #      - id: rstcheck
 #        name: Check *.rst syntax (rstcheck)
-#        files: ^docs
 
   - repo: local
     hooks:
