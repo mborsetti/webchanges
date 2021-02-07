@@ -19,11 +19,11 @@ jobs:
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@main
 
       # Build Python and packages per https://github.com/actions/setup-python
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@main
         with:
           python-version: '3.8'  # as per https://docs.readthedocs.io/en/stable/config-file/v2.html?#build-image
 
@@ -35,7 +35,7 @@ jobs:
 
       # Run pre-commit cache per https://github.com/pre-commit/action
       - name: Run pre-commit
-        uses: pre-commit/action@v2.0.0
+        uses: pre-commit/action@master
 
   test:
     name: "Test: python=${{ matrix.python-version }} on ${{ matrix.os }}"
@@ -55,11 +55,11 @@ jobs:
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@main
 
       # Build Python and packages per https://github.com/actions/setup-python
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -92,7 +92,14 @@ jobs:
         run: |
           python -m pytest -v
 
-      - name: Upload Coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@master
+        with:
+          flags: ${{ matrix.python-version }},${{ matrix.os }}
+          fail_ci_if_error: true
+          verbose: true # optional (default = false)
+
+      - name: Upload coverage to Coveralls
         run: coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -109,7 +116,7 @@ jobs:
     - name: Finished
       #  Let the Coveralls service (launched as COVERALLS_PARALLEL: true) know you have completed all your parallel runs
       run: |
-        pip3 install -U coveralls
+        python -m pip install -U coveralls
         coveralls --finish
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -120,10 +127,10 @@ jobs:
     needs: [test]
     steps:
       - name: Check out repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@main
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@main
 
       # Install pip dependencies from setup.py
       - name: Install dependencies
