@@ -109,6 +109,7 @@ repos:
     rev: 3.8.4
     hooks:
       - id: flake8
+        name: Check for errors, style, and over-complexity (flake8)
         description: Linter
 #        additional_dependencies: [flake8-import-order]  # conflicts with PyCharm's Optimize imports
 
@@ -118,13 +119,13 @@ repos:
 #      # Checks syntax of reStructuredText and code blocks nested within it.
 #      # See .rstcheck.cfg for configuration
 #      - id: rstcheck
-#        description: Check syntax of reStructuredText and code blocks nested within it
+#        name: Check *.rst syntax (rstcheck)
 #        files: ^docs
 
   - repo: local
     hooks:
       - id: sphinx-build
-        name: sphinx documentation build
+        name: Check documentation (sphinx-build)
         entry: python -m sphinx.cmd.build
         args: [-a, -E, docs, docs/_build]  # removed -W due to autosummary warnings, TODO find a way to use it
         language: system
