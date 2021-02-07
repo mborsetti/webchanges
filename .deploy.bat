@@ -28,10 +28,37 @@ set /p r=Do you want to do it for real? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
 
+echo.
+echo bumping version to next %v%
 bump2version --commit --tag --no-sign-tags %v%
+if NOT ["%errorlevel%"]==["0"] (
+    pause
+    exit /b %errorlevel%
+)
+
+echo.
+echo pushing branch
 git push
+if NOT ["%errorlevel%"]==["0"] (
+    pause
+    exit /b %errorlevel%
+)
+
+echo.
+echo pushing branch to main and setting flags
 git push origin unreleased:main --follow-tags
+if NOT ["%errorlevel%"]==["0"] (
+    pause
+    exit /b %errorlevel%
+)
+
+echo.
+echo bumping version locally to post
 bump2version --no-commit --no-tag postkind
+if NOT ["%errorlevel%"]==["0"] (
+    pause
+    exit /b %errorlevel%
+)
 
 echo Remember to create a new section in CHANGELOG.rst as follows:
 echo `Unreleased`
