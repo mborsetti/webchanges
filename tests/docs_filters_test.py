@@ -91,6 +91,8 @@ def test_url(url, job):
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job['filter']):
             filtercls = FilterBase.__subclasses__[filter_kind]
             input_data = filtercls(UrlJob(url=url), None).filter(input_data, subfilter)
+            if 'pdf2text' in job['filter']:
+                input_data = input_data.rstrip()  # fix for macOS (returns string ending in \n\x0c)
             # TODO: FilterBase.process(cls, filter_kind, subfilter, state, data):
 
         expected_output_data = d['output']

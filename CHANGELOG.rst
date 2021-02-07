@@ -26,9 +26,9 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
 
 Added
 -----
-* ``chromium_revision`` for jobs with ``use_browser" true`` (using Pyppeteer) can have a different value based on OS by
-  specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
-* Show text of the error when command of ``shellpipe`` filter returns one
+* Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. Pyppeteer)
+  based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
+* If ``shellpipe`` filter returns an error, show its text
 
 Fixed
 -----
@@ -37,11 +37,12 @@ Fixed
 
 Internals
 ---------
+* Added testing on macOS platform
 * Moved continuous integration (CI) testing from Travis to `GitHub Actions <https://docs.github.com/en/actions>`__
-* Moved linting (flake8) and testing of doc build from pytest to the `pre-commit <https://pre-commit.com>`__ framework
+* Moved linting (flake8) and doc build testing from pytest to the `pre-commit <https://pre-commit.com>`__ framework
 * Added continuous delivery (CD) using `bump2version <https://pypi.org/project/bump2version/>`__ and `GitHub Actions
   <https://docs.github.com/en/actions>`__
-* Added automated local testing using `tox <https://tox.readthedocs.io/en/latest/>`__
+* Added automated pre-commit local testing using `tox <https://tox.readthedocs.io/en/latest/>`__
 
 Version 3.0.3
 =============
