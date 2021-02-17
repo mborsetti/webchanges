@@ -1,6 +1,7 @@
 # This is an example jobs.yaml file for webchanges
 # Empty lines and lines starting with "#" are ignored
 name: Sample webchanges job definition
+note: Used by handler_test.test_load_jobs_yaml() to see if loading works and by handler_test.test_run_watcher()
 url: https://example.com/
 https_proxy: http://user:password@example.net:8080
 max_tries: 2

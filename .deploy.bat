@@ -13,10 +13,13 @@ echo.
 set /p r=Did you update CHANGELOG.rst by adding today's date under `Unreleased`? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
+set /p r=Did you copy the release info from CHANGELOG.rst to RELEASE.rst? [N/y] || set r=n
+if %r% EQU N r=n
+if %r% EQU n exit /b
 set /p r=Did you run local tests (tox) and commit? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
-set /p v=Do you want to bump by a major, minor or patch version? [PATCH] || set v=patch
+set /p v=Do you want to bump by a major, minor or patch version? [minor] || set v=minor
 echo.
 bump2version --verbose --allow-dirty --dry-run --commit --tag --no-sign-tags %v%
 if NOT ["%errorlevel%"]==["0"] (

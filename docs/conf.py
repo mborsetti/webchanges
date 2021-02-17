@@ -16,13 +16,16 @@ import sys
 # below required for local build
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused
 
-# below required to import module and for autosummary
+# below required to import project_data module
 current_dir = os.path.dirname(__file__)
 target_dir = os.path.abspath(os.path.join(current_dir, '..'))
 sys.path.insert(1, target_dir)
 
 import webchanges as project_data  # noqa: E402 module level import not at top of file
 
+# below required for autosummary build on readthedocs.io
+target_dir = os.path.abspath(os.path.join(current_dir, '..', 'webchanges'))
+sys.path.insert(1, target_dir)
 
 # -- Project information -----------------------------------------------------
 
@@ -40,7 +43,7 @@ release = version
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = '3.3'
+needs_sphinx = '3.4'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom

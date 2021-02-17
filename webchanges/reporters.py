@@ -112,19 +112,18 @@ class HtmlReporter(ReporterBase):
             <body style="font-family:Arial,Helvetica,sans-serif;font-size:13px;">"""
 
         for job_state in self.report.get_filtered_job_states(self.job_states):
-            job = job_state.job
-
             content = self._format_content(job_state, cfg['diff'])
             if content is not None:
-                if hasattr(job, 'url'):
-                    yield (f'<h3>{job_state.verb.title()}: <a href="{html.escape(job.get_location())}">'
-                           f'{html.escape(job.pretty_name())}</a></h3>')
-                elif job.pretty_name() != job.get_location():
-                    yield (f'<h3>{job_state.verb.title()}: <span title="{html.escape(job.get_location())}">'
-                           f'{html.escape(job.pretty_name())}</span></h3>')
+                if hasattr(job_state.job, 'url'):
+                    yield (f'<h3>{job_state.verb.title()}: <a href="{html.escape(job_state.job.get_location())}">'
+                           f'{html.escape(job_state.job.pretty_name())}</a></h3>')
+                elif job_state.job.pretty_name() != job_state.job.get_location():
+                    yield (f'<h3>{job_state.verb.title()}: <span title="{html.escape(job_state.job.get_location())}">'
+                           f'{html.escape(job_state.job.pretty_name())}</span></h3>')
                 else:
-                    yield f'<h3>{job_state.verb.title()}: {html.escape(job.get_location())}</h3>'
-
+                    yield f'<h3>{job_state.verb.title()}: {html.escape(job_state.job.get_location())}</h3>'
+                if hasattr(job_state.job, 'note'):
+                    yield (f'<h4>{html.escape(job_state.job.note)}</h4>')
                 yield content
 
                 yield '<hr>'
@@ -263,6 +262,8 @@ class TextReporter(ReporterBase):
                 if pretty_name != location:
                     location = f'{pretty_name} ( {location} )'
                 yield ': '.join((job_state.verb.upper(), location))
+                if hasattr(job_state.job, 'note'):
+                    yield job_state.job.note
             return
 
         summary = []
@@ -342,6 +343,8 @@ class MarkdownReporter(ReporterBase):
                 if pretty_name != location:
                     location = f'{pretty_name} ({location})'
                 yield '* ' + ': '.join((job_state.verb.upper(), location))
+                if hasattr(job_state.job, 'note'):
+                    yield job_state.job.note
             return
 
         summary = []

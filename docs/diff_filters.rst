@@ -32,9 +32,9 @@ to the result from the diff:
 
 additions_only
 ---------------
-The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the diff (no
-deletions). This is extremely useful for monitoring new content on sites where content gets added while old content
-"scrolls" away.
+The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the
+diff (no deletions). This is extremely useful for monitoring new content on sites where content gets added while old
+content "scrolls" away.
 
 Because lines that are modified generate both a deleted and an added line by the diff, this filter always displays
 modified lines.

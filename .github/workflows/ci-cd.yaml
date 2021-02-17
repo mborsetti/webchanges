@@ -1,5 +1,7 @@
 # GitHub Actions docs: https://docs.github.com/en/actions/learn-github-actions
 # Reference syntax: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+# Env. variables: https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
+# Add'l variables: https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions
 
 # Requires encrypted secret (see https://docs.github.com/en/actions/reference/encrypted-secrets) secrets.pypi_password
 
@@ -171,3 +173,15 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.pypi_password }}
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body_path: RELEASE.rst
+          draft: false
+          prerelease: false

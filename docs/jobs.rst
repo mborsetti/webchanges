@@ -155,6 +155,7 @@ For all ``url`` jobs:
 - ``timeout``: Override the default timeout, in seconds (see :ref:`here <timeout>`)
 - ``user_visible_url``: Use this text in reports (e.g. when watched URL is a REST API endpoint but you want to link to
   the webpage instead)
+- ``note``: Information added under the header in reports
 
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
@@ -185,7 +186,9 @@ For ``url`` jobs that have ``use_browser: true``:
 - ``wait_for``: Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath
   string is matched before getting the HTML (see `documentation
   <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds)
-
+- ``wait_for_navigation``: Wait until navigation lands on a URL starting with this text (i.e. redirects). Use when you
+  get the ``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation.``
+  error.
 
 Command
 -------

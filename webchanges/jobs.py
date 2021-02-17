@@ -102,7 +102,7 @@ class JobBase(object, metaclass=TrackSubClasses):
             if len(kinds) == 1 or (len(kinds) == 2 and kinds[0] == 'url'):  # url defaults to kind: url
                 kind = kinds[0]
             elif len(kinds) == 0:
-                raise ValueError(f'Kind is not specified, and no job matches: {data}')
+                raise ValueError(f"Parameters don't match a job type; check for errors/typos/text escaping:\n{data}")
             else:
                 raise ValueError(f'Multiple kinds of jobs match {data}: {kinds}')
         else:
@@ -161,7 +161,7 @@ class JobBase(object, metaclass=TrackSubClasses):
 
 class Job(JobBase):
     __required__ = ()
-    __optional__ = ('name', 'filter', 'max_tries', 'diff_tool', 'additions_only', 'deletions_only',
+    __optional__ = ('name', 'note', 'filter', 'max_tries', 'diff_tool', 'additions_only', 'deletions_only',
                     'contextlines', 'compared_versions', 'is_markdown', 'markdown_padded_tables', 'diff_filter')
 
     def pretty_name(self):
@@ -332,8 +332,8 @@ class BrowserJob(Job):
 
     __required__ = ('url', 'use_browser')
     __optional__ = ('chromium_revision', 'headers', 'cookies', 'timeout', 'ignore_http_error_codes',
-                    'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for', 'navigate',
-                    'user_visible_url')
+                    'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for',
+                    'wait_for_navigation', 'user_visible_url', 'navigate')
 
     def get_location(self):
         if not self.url and self.navigate:
@@ -352,7 +352,7 @@ class BrowserJob(Job):
 
     def retrieve(self, job_state):
         response = self.ctx.process(self.url, self.headers, self.cookies, self.timeout, self.proxy_username,
-                                    self.proxy_password, self.wait_until, self.wait_for)
+                                    self.proxy_password, self.wait_until, self.wait_for, self.wait_for_navigation)
         # if no name is found, set it to the title of the page if found
         if not self.name:
             title = re.findall(r'<title.*?>(.+?)</title>', response)

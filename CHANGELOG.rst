@@ -11,8 +11,7 @@ updates and improvements are not listed here and are ongoing.
 `Contributions <https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__ are always welcomed, and you
 can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__ for inspiration.
 
-
-Unreleased versions can be installed as follows (`git
+The unreleased versions can be installed as follows (`git
 <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ needs to be installed):
 
 .. code-block:: bash
@@ -21,7 +20,7 @@ Unreleased versions can be installed as follows (`git
 
 Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__.
 
-.. Categories used:
+.. Categories used (in order):
    ⚠ Breaking Changes for changes that break existing functionality.
    Added for new features.
    Changed for changes in existing functionality.
@@ -31,6 +30,21 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Security in case of vulnerabilities.
    Internals for changes that don't affect users.
 
+Unreleased
+=================
+
+Fixed
+-----
+* Specifying ``chromium_revision`` had no effect (bug introduced in Version 3.1.0)
+* Improved error message when there's a mistake in the job parameters in jobs.yaml
+
+Added
+-----
+* Job key ``note`` will print the text after the job header in the report
+* New ``wait_for_navigate`` key for jobs with ``use_browser: true`` (i.e. using Pyppeteer). Allows to wait for
+  navigation to reach a URL starting with the one specified before extracting content. Useful when the URL redirects
+  elsewhere before displaying content.
+
 Version 3.1.1
 =================
 2021-02-08
@@ -38,7 +52,6 @@ Version 3.1.1
 Fixed
 -----
 * Documentation was failing to build at https://webchanges.readthedocs.io/
-
 
 Version 3.1.0
 =================
@@ -49,8 +62,8 @@ Added
 * Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. using Pyppeteer)
   based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
 * If ``shellpipe`` filter returns an error it now shows the error text
-* Show deprecation warning if running on the lowest Python version supported (mention 3 years support from the release
-  date of the next major version)
+* Show deprecation warning if running on the lowest Python version supported (mentioning the 3 years support from the
+  release date of the next major version)
 
 Fixed
 -----
@@ -130,7 +143,8 @@ Added
 Changed and deprecated
 ----------------------
 * Reporter ``slack`` has been renamed to ``webhook`` as it works with any webhook-enabled service such as Discord.
-  Updated documentation with Discord example. The name ``slack``, while deprecated, is still recognized.
+  Updated documentation with Discord example. The name ``slack``, while deprecated and in line to be removed in a future
+  release, is still recognized.
 * Improvements in report colorization code
 
 Fixed
@@ -184,7 +198,8 @@ Changed and deprecated
 Relative to `urlwatch` 2.21:
 
 * Navigation by full browser is now accomplished by specifying the ``url`` and adding the ``use_browser: true``
-  directive. The `navigate` directive has been deprecated for clarity and will trigger a warning
+  directive. The `navigate` directive has been deprecated for clarity and will trigger a warning; it will be removed in
+  a future release
 * The name of the default program configuration file has been changed to ``config.yaml``; if at program launch
   ``urlwatch.yaml`` is found and no ``config.yaml`` exists, it is copied over for backward-compatibility.
 * In Windows, the location of config files has been moved to ``%USERPROFILE%\Documents\webchanges``
@@ -201,12 +216,16 @@ Relative to `urlwatch` 2.21:
   is found and no ``jobs.yaml`` exists, it is copied over for backward-compatibility
 * The ``html2text`` filter's ``re`` method has been renamed ``strip_tags``, which is deprecated and will trigger a
   warning
-* The ``grep`` filter has been renamed ``keep_lines_containing``, which is deprecated and will trigger a warning
-* The ``grepi`` filter has been renamed ``delete_lines_containing``, which is deprecated and will trigger a warning
+* The ``grep`` filter has been renamed ``keep_lines_containing``, which is deprecated and will trigger a warning; it
+  will be removed in a future release
+* The ``grepi`` filter has been renamed ``delete_lines_containing``, which is deprecated and will trigger a warning; it
+  will be removed in a future release
 * Both the ``keep_lines_containing`` and ``delete_lines_containing`` accept ``text`` (default) in addition to ``re``
   (regular expressions)
-* ``--test`` command line switch is used to test a job (formerly ``--test-filter``, deprecated)
-* ``--test-diff`` command line switch is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated)
+* ``--test`` command line switch is used to test a job (formerly ``--test-filter``, deprecated and will be removed in
+  a future release)
+* ``--test-diff`` command line switch is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated and will
+  be removed in a future release)
 * ``-V`` command line switch added as an alias to ``--version``
 * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
   the current directory, `webchanges` now looks for it in the default configuration directory
@@ -216,7 +235,7 @@ Relative to `urlwatch` 2.21:
 * When using ``--job`` command line switch, if there's no file by that name in the specified directory will look in
   the default one before giving up.
 * The use of the ``kind`` directive in ``jobs.yaml`` configuration files has been deprecated (but is, for now, still
-  used internally)
+  used internally); it will be removed in a future release
 * The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
   ``max_message_length`` sub-directive
 * Legacy lib/hooks.py file no longer supported. ``hooks.py`` needs to be in the same directory as the configuration

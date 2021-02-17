@@ -50,8 +50,8 @@ its author to optimize it for HTML.
 
 Installation
 ============
-`webchanges` |pypi_version| is available on `PyPI <https://pypi.org/project/webchanges/>`__ for |support| (versions that
-have not been obsoleted by a new major release in the last 3 years) and can be installed using `pip`::
+`webchanges` |pypi_version| is available on `PyPI <https://pypi.org/project/webchanges/>`__ for |support| (Python
+versions are supported for 3 years after being obsoleted by a new major release) and can be installed using `pip`::
 
    pip install webchanges
 

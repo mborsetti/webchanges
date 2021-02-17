@@ -112,6 +112,8 @@ class UrlwatchCommand:
             print()
             print(job_state.job.pretty_name())
             print('-' * len(job_state.job.pretty_name()))
+            if hasattr(job_state.job, 'note'):
+                print(job_state.job.note)
             print()
             print(job_state.new_data)
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
