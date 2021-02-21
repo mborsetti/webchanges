@@ -44,4 +44,6 @@ cache_storage = CacheMiniDBStorage('')
 def test_job(input, output):
     job = JobBase.unserialize(input)
     job_state = JobState(cache_storage, job)
+    job.main_thread_enter()
     assert output in job.retrieve(job_state)
+    job.main_thread_exit()
