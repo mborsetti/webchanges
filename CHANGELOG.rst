@@ -33,17 +33,31 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
 Unreleased
 =================
 
+Added
+-----
+* Job key ``note`` adds a note in a report appearing after the job header
+* New ``wait_for_navigate`` key for jobs with ``use_browser: true`` (i.e. using Pyppeteer) allows to wait for
+  navigation to reach a URL starting with the one specified before extracting content. Useful when the URL redirects
+  elsewhere before displaying content you're interested in.
+* New ``block_elements`` key for jobs with ``use_browser: true`` (i.e. using Pyppeteer) allows to specify
+  `resource types
+  <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ to skip
+  requesting (downloading) in order to speed up retrieval of the content.  Only resource types `supported by
+  Chromium <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed.
+  Typical list includes ``stylesheet``, ``font``, ``image``, and ``media`` but may break some sites. ⚠ Ignored in
+  Python versions < 3.7 and may not work with all Chromium revisions (some hang).
+
 Fixed
 -----
 * Specifying ``chromium_revision`` had no effect (bug introduced in Version 3.1.0)
-* Improved error message when there's a mistake in the job parameters in jobs.yaml
+* Improved the error message when jobs.yaml has a mistake in the job parameters
 
-Added
------
-* Job key ``note`` will print the text after the job header in the report
-* New ``wait_for_navigate`` key for jobs with ``use_browser: true`` (i.e. using Pyppeteer). Allows to wait for
-  navigation to reach a URL starting with the one specified before extracting content. Useful when the URL redirects
-  elsewhere before displaying content.
+Internals
+---------
+* When running in Python 3.7 or higher, jobs with ``use_browser: true`` (i.e. using Pyppeteer) are a bit more reliable
+  as they are now launched using ``asyncio.run()``, and therefore Python takes care of managing the asyncio event loop,
+  finalizing asynchronous generators, and closing the threadpool, tasks that previously were handled by custom code
+* Additional testing to include Pyppeteer and retrieving content from the internet
 
 Version 3.1.1
 =================

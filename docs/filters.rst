@@ -773,7 +773,10 @@ To set this up:
 
 .. code-block:: bash
 
-   cd ~/.config/webchanges
-   sudo chown $USER:$GROUP . *
-   chmod g-w . *
-   chmod o-w . *
+   cd ~/.config/webchanges  # could be different
+   sudo chown $USER:$(id -g -n) *.yaml
+   sudo chmod go-w *.yaml
+
+* ``sudo`` may or may not be required.
+* Replace ``$USER`` with the username that runs `webchanges` if different than the use you're logged in when making the
+  above changes, similarly with ``$(id -g -n)`` for the group.

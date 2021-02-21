@@ -1,3 +1,5 @@
+"""tests filters based on a set of patterns"""
+
 import logging
 import os
 

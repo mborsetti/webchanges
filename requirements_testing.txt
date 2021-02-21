@@ -1,6 +1,7 @@
 coverage
 docutils
 pre-commit
+pyppeteer
 pytest
 pytest-cov
 sphinx

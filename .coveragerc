@@ -4,6 +4,7 @@
 branch = True
 source = webchanges
 omit =
+    .tox/*
     tests/*
     docs/*
 relative_files = True

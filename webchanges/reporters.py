@@ -122,7 +122,7 @@ class HtmlReporter(ReporterBase):
                            f'{html.escape(job_state.job.pretty_name())}</span></h3>')
                 else:
                     yield f'<h3>{job_state.verb.title()}: {html.escape(job_state.job.get_location())}</h3>'
-                if hasattr(job_state.job, 'note'):
+                if hasattr(job_state.job, 'note') and job_state.job.note:
                     yield (f'<h4>{html.escape(job_state.job.note)}</h4>')
                 yield content
 

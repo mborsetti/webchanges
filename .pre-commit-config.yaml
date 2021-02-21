@@ -56,7 +56,7 @@ repos:
         description: removes UTF-8 byte order marker
       - id: fix-encoding-pragma
         args: ['--remove']
-        description: Remove # -*- coding: utf-8 -*- to the top of python files
+        description: "Remove # -*- coding: utf-8 -*- from the top of python files"
 #      - id: file-contents-sorter
 #        description: Sort the lines in specified files (defaults to alphabetical)
 #      - id: forbid-new-submodules

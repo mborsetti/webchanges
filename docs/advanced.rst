@@ -92,7 +92,9 @@ Ignoring connection errors
 --------------------------
 In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While there is
 a ``display.error`` config option (defaulting to ``true``) to control reporting of errors globally, to ignore network
-errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration file:
+errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration.
+For connection errors during local development or testing due to TLS/SSL use the ``ssl_no_verify`` directive above
+instead.
 
 .. code-block:: yaml
 

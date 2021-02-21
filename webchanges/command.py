@@ -236,12 +236,12 @@ class UrlwatchCommand:
         if self.urlwatch_config.telegram_chats:
             config = self.urlwatcher.config_storage.config['report'].get('telegram', None)
             if not config:
-                print('You need to configure telegram in your config first (see README.md)')
+                print('You need to configure telegram in your config first (see documentation)')
                 sys.exit(1)
 
             bot_token = config.get('bot_token', None)
             if not bot_token:
-                print('You need to set up your bot token first (see README.md)')
+                print('You need to set up your bot token first (see documentation)')
                 sys.exit(1)
 
             info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe').json()

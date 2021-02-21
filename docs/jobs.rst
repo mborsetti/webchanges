@@ -139,6 +139,7 @@ Important notes for use_browser directive
 * If you get ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error, see
   :ref:`here <pyppeteer_target_closed>` for a potential solution
 
+
 Required directives
 """""""""""""""""""
 - ``url``: The URL to the web document to monitor
@@ -189,6 +190,12 @@ For ``url`` jobs that have ``use_browser: true``:
 - ``wait_for_navigation``: Wait until navigation lands on a URL starting with this text (i.e. redirects). Use when you
   get the ``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation.``
   error.
+- ``block_elements``: Do not request (download) specified `resource types
+  <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ as to
+  speed up retrieval of the content. Only resource types `supported by Chromium
+  <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed. Typical
+  list includes ``stylesheet``, ``font``, ``image``, and ``media`` but may break some sites.  ⚠ Ignored in Python
+  versions < 3.7 and may not work with all Chromium revisions (some hang).
 
 Command
 -------
@@ -200,7 +207,7 @@ uploader folder, output of scripts that query external devices (RPi GPIO), etc.
    name: What is in my home directory?
    command: dir -al ~
 
-.. _command_config:
+.. _important_note_for_command_jobs:
 
 Important note for command jobs
 """""""""""""""""""""""""""""""

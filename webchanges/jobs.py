@@ -1,10 +1,13 @@
+import asyncio
 import email.utils
 import hashlib
 import logging
 import os
 import re
 import subprocess
+import sys
 import textwrap
+from urllib.parse import urlsplit
 
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -102,7 +105,15 @@ class JobBase(object, metaclass=TrackSubClasses):
             if len(kinds) == 1 or (len(kinds) == 2 and kinds[0] == 'url'):  # url defaults to kind: url
                 kind = kinds[0]
             elif len(kinds) == 0:
-                raise ValueError(f"Parameters don't match a job type; check for errors/typos/text escaping:\n{data}")
+                if 'url' in data and data.get('use_browser'):
+                    kind = 'browser'
+                elif 'url' in data:
+                    kind = 'url'
+                elif 'command' in data:
+                    kind = 'shell'
+                else:
+                    raise ValueError(
+                        f"Parameters don't match a job type; check for errors/typos/text escaping:\n{data}")
             else:
                 raise ValueError(f'Multiple kinds of jobs match {data}: {kinds}')
         else:
@@ -333,7 +344,7 @@ class BrowserJob(Job):
     __required__ = ('url', 'use_browser')
     __optional__ = ('chromium_revision', 'headers', 'cookies', 'timeout', 'ignore_http_error_codes',
                     'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for',
-                    'wait_for_navigation', 'user_visible_url', 'navigate')
+                    'wait_for_navigation', 'user_visible_url', 'block_elements', 'navigate')
 
     def get_location(self):
         if not self.url and self.navigate:
@@ -341,18 +352,25 @@ class BrowserJob(Job):
         return self.user_visible_url or self.url or self.navigate
 
     def main_thread_enter(self):
-        # check if proxy is being used
-        from .browser import BrowserContext, get_proxy
-        proxy_server, self.proxy_username, self.proxy_password = get_proxy(self.url, self.http_proxy, self.https_proxy)
-        self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_http_error_codes,
-                                  self.user_data_dir, self.switches)
+        if sys.version_info < (3, 7):
+            # check if proxy is being used
+            from .browser import BrowserContext, get_proxy
+            proxy_server, self.proxy_username, self.proxy_password = get_proxy(self.url, self.http_proxy,
+                                                                               self.https_proxy)
+            self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_http_error_codes,
+                                      self.user_data_dir, self.switches)
 
     def main_thread_exit(self):
-        self.ctx.close()
+        if sys.version_info < (3, 7):
+            self.ctx.close()
 
     def retrieve(self, job_state):
-        response = self.ctx.process(self.url, self.headers, self.cookies, self.timeout, self.proxy_username,
-                                    self.proxy_password, self.wait_until, self.wait_for, self.wait_for_navigation)
+        if sys.version_info < (3, 7):
+            response = self.ctx.process(self.url, self.headers, self.cookies, self.timeout, self.proxy_username,
+                                        self.proxy_password, self.wait_until, self.wait_for, self.wait_for_navigation)
+        else:
+            response = asyncio.run(self._retrieve())
+
         # if no name is found, set it to the title of the page if found
         if not self.name:
             title = re.findall(r'<title.*?>(.+?)</title>', response)
@@ -360,6 +378,115 @@ class BrowserJob(Job):
                 self.name = title[0]
 
         return response
+
+    @staticmethod
+    def current_platform() -> str:
+        """Get current platform name by short string.
+        Originally from pyppeteer.chromium_downloader"""
+        if sys.platform.startswith('linux'):
+            return 'linux'
+        elif sys.platform.startswith('darwin'):
+            return 'mac'
+        elif sys.platform.startswith('win') or sys.platform.startswith('msys') or sys.platform.startswith('cyg'):
+            if sys.maxsize > 2 ** 31 - 1:
+                return 'win64'
+            return 'win32'
+        raise OSError('Platform unsupported by Pyppeteer (use_browser: true): ' + sys.platform)
+
+    async def _retrieve(self):
+        # launch browser
+        if self.chromium_revision:
+            if isinstance(self.chromium_revision, list):
+                self._revision = None
+                platform = self.current_platform()
+                for _os in self.chromium_revision:
+                    if platform in _os:
+                        self._revision = _os[platform]
+                        break
+            else:
+                self._revision = self.chromium_revision
+            os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(self._revision)
+
+        import pyppeteer  # must take place after setting os.environ variables
+
+        args = []
+        if self.http_proxy or self.https_proxy:
+            if urlsplit(self.url).scheme == 'http':
+                proxy = self.http_proxy
+            elif urlsplit(self.url).scheme == 'https':
+                proxy = self.https_proxy
+            else:
+                proxy = ''
+            if proxy:
+                proxy_server = f'{urlsplit(proxy).scheme}://{urlsplit(proxy).hostname}' + (
+                    f':{urlsplit(proxy).port}' if urlsplit(proxy).port else '')
+            proxy_username = str(urlsplit(proxy).username) if urlsplit(proxy).username else ''
+            proxy_password = str(urlsplit(proxy).password) if urlsplit(proxy).password else ''
+            args.append(f'proxy-server={proxy_server}')
+        if self.user_data_dir:
+            args.append(f'user-data-dir={os.path.expanduser(os.path.expandvars(self.user_data_dir))}')
+        if self.switches:
+            if isinstance(self.switches, str):
+                self.switches = self.switches.split(',')
+            self.switches = [switch.lstrip('--') for switch in self.switches]
+            args.extend(self.switches)
+        # as signal only works in main thread, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
+        browser = await pyppeteer.launch(ignoreHTTPSErrors=self.ignore_http_error_codes, args=args, handleSIGINT=False,
+                                         handleSIGTERM=False, handleSIGHUP=False)
+        for p in (await browser.pages()):
+            await p.close()
+
+        # get content
+        page = await browser.newPage()
+        if self.cookies:
+            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
+        if self.headers:
+            await page.setExtraHTTPHeaders(self.headers)
+        if (self.http_proxy or self.https_proxy) and (proxy_username or proxy_password):
+            await page.authenticate({'username': proxy_username, 'password': proxy_password})
+        options = {}
+        if self.timeout:
+            options['timeout'] = self.timeout * 1000
+        if self.wait_until:
+            options['waitUntil'] = self.wait_until
+        if self.block_elements:
+            # web_request_resource_types = [
+            #     # https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType
+            #     'beacon', 'csp_report', 'font', 'image', 'imageset', 'media', 'main_frame', 'media', 'object',
+            #     'object_subrequest', 'ping', 'script', 'speculative', 'stylesheet', 'sub_frame', 'web_manifest',
+            #     'websocket', 'xbl', 'xml_dtd', 'xmlhttprequest', 'xslt', 'other']
+            chrome_web_request_resource_types = [
+                # https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType
+                'main_frame', 'sub_frame', 'stylesheet', 'script', 'image', 'font', 'object', 'xmlhttprequest', 'ping',
+                'csp_report', 'media', 'websocket', 'other']
+            for element in self.block_elements:
+                if element not in chrome_web_request_resource_types:
+                    await browser.close()
+                    raise ValueError(f"Unknown or unsupported '{element}' resource type in 'block_elements' "
+                                     f'( {self.get_location()} )')
+            await page.setRequestInterception(True)
+
+            async def intercept(request, block_elements):
+                if any(request.resourceType == _ for _ in (block_elements)):
+                    await request.abort()
+                else:
+                    await request.continue_()
+            page.on('request', lambda req: asyncio.ensure_future(intercept(req, self.block_elements)))
+
+        await page.goto(self.url, options)
+
+        if self.wait_for:
+            if isinstance(self.wait_for, (int, float, complex)) and not isinstance(self.wait_for, bool):
+                self.wait_for *= 1000
+            await page.waitFor(self.wait_for, options)
+        if self.wait_for_navigation:
+            while not page.url.startswith(self.wait_for_navigation):
+                logger.info(f'Waiting for redirection from {page.url}')
+                await page.waitForNavigation(options)
+        content = await page.content()
+        await browser.close()
+
+        return content
 
 
 class ShellJob(Job):

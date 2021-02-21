@@ -42,9 +42,8 @@ def test_save_load_jobs():
     os.remove(name)
 
     assert len(jobs2) == len(jobs)
-    # Assert that the shell jobs have been removed due to secure loading
-    # TODO why not working in Windows?
-    if os.name != 'nt':
+    # Assert that the shell jobs have been removed due to secure loading in Linux
+    if os.name == 'linux':
         assert len(jobs3) == 1
 
 

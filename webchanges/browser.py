@@ -1,3 +1,7 @@
+"""
+For compatibility with sys.version_info < (3, 7)
+Not used otherwise (upgraded to using asyncio.run from within BrowserJob class)"""
+
 import asyncio
 import logging
 import os
