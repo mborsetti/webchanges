@@ -507,7 +507,7 @@ class ShellJob(Job):
             process = subprocess.run(shlex.split(self.command), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      shell=True, text=(not needs_bytes))  # noqa: DUO116 use of "shell=True" is insecure
         else:
-            process = subprocess.run(shlex.split(self.command), capture_output=False, shell=True,
+            process = subprocess.run(shlex.split(self.command), capture_output=True, shell=True,
                                      text=(not needs_bytes))
         result = process.returncode
         if result != 0:
