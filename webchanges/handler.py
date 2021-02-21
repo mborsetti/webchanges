@@ -145,9 +145,9 @@ class JobState(object):
                     old_file.write(self.old_data.encode())
                     new_file.write(self.new_data.encode())
                 cmdline = shlex.split(self.job.diff_tool) + [old_file_path, new_file_path]
-                proc = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                proc = subprocess.run(shlex.split(cmdline), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Python 3.7
-                # proc = subprocess.run(cmdline, capture_output=True, text=True)
+                # proc = subprocess.run(shlex.split(cmdline), capture_output=True, text=True)
                 # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
                 if proc.returncode == 0:
                     return False

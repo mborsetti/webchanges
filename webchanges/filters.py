@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import subprocess
 import sys
 from enum import Enum
@@ -934,12 +935,13 @@ class ShellPipeFilter(FilterBase):
         })
 
         try:
-            return subprocess.run(subfilter['command'], input=data.encode(encoding), stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE, shell=True, check=True,
+            return subprocess.run(shlex.split(subfilter['command']), input=data.encode(encoding),
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, check=True,
                                   env=env).stdout.decode(encoding)  # noqa: DUO116 use of "shell=True" is insecure
         # Python 3.7
-        # return subprocess.run(subfilter['command'], input=data.encode(encoding), capture_output=True, shell=True,
-        #                       check=True, env=env).stdout.decode(encoding)  # noqa: DUO116 use of "shell=True" is inse
+        # return subprocess.run(shlex.split(subfilter['command']), input=data.encode(encoding), capture_output=True,
+        #                       shell=True, check=True, env=env).stdout.decode(encoding)  # noqa: DUO116
+        #                       # use of "shell=True" is insecure
         except subprocess.CalledProcessError as e:
             logger.error(f"filter 'shellpipe' returned error ( {self.job.get_location()} ):")
             logger.error(e.stderr.decode())
