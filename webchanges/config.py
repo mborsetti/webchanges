@@ -77,8 +77,6 @@ class CommandConfig(BaseConfig):
         group.add_argument('--gc-cache', action='store_true', help='remove old cache entries (snapshots)')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
 
-        print(f'{parser.prog=}')
-
         # workaround for throwing error when invoked by pytest
         if parser.prog == self.project_name:  # pragma: no cover
             args = parser.parse_args()
