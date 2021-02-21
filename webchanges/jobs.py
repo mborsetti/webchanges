@@ -4,7 +4,6 @@ import hashlib
 import logging
 import os
 import re
-import shlex
 import subprocess
 import sys
 import textwrap
@@ -504,11 +503,10 @@ class ShellJob(Job):
     def retrieve(self, job_state):
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         if sys.version_info < (3, 7):
-            process = subprocess.run(shlex.split(self.command), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                     shell=True, text=(not needs_bytes))  # noqa: DUO116 use of "shell=True" is insecure
+            process = subprocess.run(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
+                                     text=(not needs_bytes))  # noqa: DUO116 use of "shell=True" is insecure
         else:
-            process = subprocess.run(shlex.split(self.command), capture_output=True, shell=True,
-                                     text=(not needs_bytes))
+            process = subprocess.run(self.command, capture_output=True, shell=True, text=(not needs_bytes))
         result = process.returncode
         if result != 0:
             raise ShellError(process.stderr)
