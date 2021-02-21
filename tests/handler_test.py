@@ -6,14 +6,15 @@ import warnings
 
 import pytest
 
+from webchanges import __project_name__
 from webchanges.config import BaseConfig
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheMiniDBStorage, DEFAULT_CONFIG, JobsYaml, YamlConfigStorage
 from webchanges.util import import_module_from_source
 
-pkgname = 'webchanges'
-root = os.path.join(os.path.dirname(__file__), '../webchanges', '..')
+pkgname = __project_name__
+root = os.path.join(os.path.dirname(__file__), f'../{pkgname}', '..')
 here = os.path.dirname(__file__)
 
 

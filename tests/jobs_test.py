@@ -1,6 +1,7 @@
 """tests filters based on a set of patterns"""
 
 import logging
+import os
 import sys
 
 import pytest
@@ -31,6 +32,8 @@ TESTDATA = [
       'ignore_https_errors': False,
       'switches': {'--disable-dev-shm-usage': '', '--window-size': '1920,1080'},
       'wait_until': 'load',
+      'wait_for': 1,
+      'wait_for_navigation': 'https://www.google.com/'
       },
      'Google'),
     ({'command': 'echo test',
@@ -44,7 +47,7 @@ cache_storage = CacheMiniDBStorage('')
 @pytest.mark.parametrize('input, output', TESTDATA)
 def test_job(input, output):
     job = JobBase.unserialize(input)
-    if not isinstance(job, BrowserJob) or sys.version_info >= (3, 7):
+    if not os.getenv('GITHUB_ACTIONS') or not isinstance(job, BrowserJob) or sys.version_info >= (3, 7):
         # legacy code for Pyppeteer does not pass testing in GitHub Actions as it fails with error
         # pyppeteer.errors.BrowserError: Browser closed unexpectedly
         job_state = JobState(cache_storage, job)

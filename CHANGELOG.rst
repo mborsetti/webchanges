@@ -57,7 +57,8 @@ Internals
 * When running in Python 3.7 or higher, jobs with ``use_browser: true`` (i.e. using Pyppeteer) are a bit more reliable
   as they are now launched using ``asyncio.run()``, and therefore Python takes care of managing the asyncio event loop,
   finalizing asynchronous generators, and closing the threadpool, tasks that previously were handled by custom code
-* Additional testing to include Pyppeteer and retrieving content from the internet
+* Additional testing to include Pyppeteer (Python 3.7 or higher) and running jobs that retrieve content from the
+  internet
 
 Version 3.1.1
 =================

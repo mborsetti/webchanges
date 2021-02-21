@@ -77,12 +77,12 @@ def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cac
     # TODO migrate XMPP password in keyring
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     """The program's entry point"""
     # make sure that DeprecationWarnings are displayed from all modules (otherwise only those in __main__ are)
     warnings.filterwarnings(action='always', category=DeprecationWarning)
 
-    # Issue deprecation warning if running on 3.6
+    # Issue deprecation warning if running on minimum version supported
     if (sys.version_info.major, sys.version_info.minor) == __min_python_version__:
         logger.warning('Support for this version of Python is and will be removed 3 years from the date of the next '
                        'major release who replaced it', DeprecationWarning)
