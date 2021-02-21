@@ -503,12 +503,19 @@ class ShellJob(Job):
     def retrieve(self, job_state):
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         if sys.version_info < (3, 7):
-            process = subprocess.run(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
-                                     text=(not needs_bytes))  # noqa: DUO116 use of "shell=True" is insecure
-        else:
-            process = subprocess.run(self.command, capture_output=True, shell=True, text=(not needs_bytes))
-        result = process.returncode
-        if result != 0:
-            raise ShellError(process.stderr)
+            process = subprocess.run(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     shell=True)  # noqa: DUO116 use of "shell=True" is insecure
+            result = process.returncode
+            if result != 0:
+                raise ShellError(process.stderr)
 
-        return process.stdout
+            if needs_bytes:
+                return process.stdout
+            else:
+                return process.stdout.decode()
+        else:
+            try:
+                return subprocess.run(self.command, capture_output=True, shell=True, check=True,
+                                      text=(not needs_bytes)).stdout  # noqa: DUO116 use of "shell=True" is insecure
+            except subprocess.CalledProcessError as e:
+                raise ShellError(e.stderr).with_traceback(e)
