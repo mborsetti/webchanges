@@ -328,8 +328,8 @@ below) or in individual jobs:
 
 .. _pyppeteer_target_closed:
 
-Using `use_browser: true` in low-memory environments
-----------------------------------------------------
+Running ``use_browser: true`` jobs in low-memory environments
+-------------------------------------------------------------
 In certain Linux environments with limited memory, jobs with ``use_browser: true`` may fail with a
 ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error.
 
@@ -375,8 +375,11 @@ You can now run a `webchanges` job defined like this:
 
 .. _pyppeteer_block_elements:
 
-Speeding up ``use_browser: true``
----------------------------------
+Speeding up ``use_browser: true`` jobs
+--------------------------------------
+
+⚠ Only if running in Python Version 3.7 or higher
+
 If you're not interested in all elements of a website, you can skip downloading the ones that you don't care, paying
 attention to do some testing as some elements may be required for the correct rendering of the website. Typical elements
 to skip include ``stylesheet``, ``font``, ``image``, and ``media`` (but use with caution) and can be specified like

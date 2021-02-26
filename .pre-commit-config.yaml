@@ -128,7 +128,7 @@ repos:
       - id: sphinx-build
         name: Check documentation (sphinx-build)
         entry: python -m sphinx.cmd.build
-        args: [-a, -E, docs, docs/_build]  # removed -W due to autosummary warnings, TODO find a way to use it
+        args: [-a, -E, -W, docs, docs/_build]
         language: system
         files: ^docs
         types: [file]

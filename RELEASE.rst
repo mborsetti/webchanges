@@ -14,8 +14,8 @@ Added
 * ``wait_for_navigate`` directive for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer) to wait for
   navigation to reach a URL starting with the specified one before extracting content. Useful when the URL redirects
   elsewhere before displaying content you're interested in and Pyppeteer captures the intermediate page.
-* ``block_elements`` directive (⚠ Python >= 3.7) for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer)
-  to specify `resource types
+* ``block_elements`` directive (⚠ only for Python >= 3.7) for URL jobs with ``use_browser: true`` (i.e. using
+  Pyppeteer) to specify `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (elements) to
   skip   requesting (downloading) in order to speed up retrieval of the content.  Only resource types `supported by
   Chromium <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed.

@@ -16,7 +16,6 @@ if sys.version_info < project.__min_python_version__:
              f'You are running {sys.version}')
 
 requirements = map(str.strip, open('requirements.txt').readlines())
-requirements_testing = map(str.strip, open('requirements_testing.txt').readlines())
 README_rst = open('README.rst').read()
 
 SETUP = {
@@ -51,7 +50,7 @@ SETUP = {
     'license': project.__license__,
     # below to include in sdist the files read above (see https://stackoverflow.com/questions/37753833)
     # data_files is deprecated. It does not work with wheels, so it should be avoided.
-    'data_files': ['requirements.txt', 'requirements_testing.txt'],
+    'data_files': ['requirements.txt'],
     'install_requires': list(requirements),
     'entry_points': {'console_scripts': [f'{project.__project_name__}={project.__package__}.cli:main']},
     'extras_require': {'use_browser': ['pyppeteer'],
@@ -70,13 +69,6 @@ SETUP = {
     'project_urls': {'Bug Tracker': f'{project.__url__.rstrip("//")}/issues',
                      'Source Code': project.__url__,
                      'Documentation': f'https://{project.__project_name__}.readthedocs.io'}}
-SETUP['extras_require']['testing'] = set()
-for k, v in SETUP['extras_require'].items():
-    # exclude filters requiring OS-specific installs
-    if k not in ('pdf2text', 'ocr'):
-        SETUP['extras_require']['testing'].update(set(v))
-SETUP['extras_require']['testing'].update(requirements_testing)
-SETUP['extras_require']['testing'] = sorted(list(SETUP['extras_require']['testing']))
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))
 setup(**SETUP)
 

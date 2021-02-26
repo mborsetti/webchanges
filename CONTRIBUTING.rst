@@ -13,6 +13,8 @@ Everyone is welcomed to contribute!
 Beginner? It's easy-ish to start! Please see this `tutorial
 <https://github.com/firstcontributions/first-contributions/blob/master/README.md>`__.
 
+Please make your contributions to the `unrealeased <https://github.com/mborsetti/webchanges/tree/unreleased>`__ branch.
+
 Documentation
 -------------
 Great documentation is absolutely key in any a project.  Please feel free to contribute edits and additions to it,
@@ -47,20 +49,19 @@ Please keep in mind PEP-20's `Zen of Python <https://www.python.org/dev/peps/pep
 - Namespaces are one honking great idea -- let's do more of those!
 
 
-Please base your contributions on the `unrealeased <https://github.com/mborsetti/webchanges/tree/unreleased>`__ branch.
-
 Testing code
 ~~~~~~~~~~~~
 You can ensure that your code contributions pass all tests by running tests locally (after installing all Python dev
-packages, as below) before creating a pull request:
+packages, as below) before creating a pull request, starting from the project's root directory:
 
 .. code-block:: bash
 
-   pip install -U tox webchanges[testing]
+   pip install -U tox -r tests/requirements_testing.txt
    tox
 
 Alternatively, you can manually run the following commands
 
+   pip install -U -r tests/requirements_testing.txt
    pre-commit autoupdate
    pre-commit run -a
    python -m pytest -v

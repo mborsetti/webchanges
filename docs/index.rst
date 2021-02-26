@@ -18,6 +18,7 @@ Table of Contents
 
    Overview <self>
    introduction
+   yaml_syntax
 
 .. toctree::
    :maxdepth: 1
