@@ -23,8 +23,8 @@ sys.path.insert(1, target_dir)
 
 import webchanges as project_data  # noqa: E402 module level import not at top of file
 
-# below required for autosummary build on readthedocs.io
-target_dir = os.path.abspath(os.path.join(current_dir, '..', 'webchanges'))
+# below required for autosummary build on GitHub actions's pre-commit and on readthedocs.io
+target_dir = os.path.abspath(os.path.join(current_dir, 'webchanges'))
 sys.path.insert(1, target_dir)
 
 # -- Project information -----------------------------------------------------
