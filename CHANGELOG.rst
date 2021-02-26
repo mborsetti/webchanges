@@ -35,29 +35,35 @@ Unreleased
 
 Added
 -----
-* Job key ``note`` adds a note in a report appearing after the job header
-* New ``wait_for_navigate`` key for jobs with ``use_browser: true`` (i.e. using Pyppeteer) allows to wait for
-  navigation to reach a URL starting with the one specified before extracting content. Useful when the URL redirects
-  elsewhere before displaying content you're interested in.
-* New ``block_elements`` key for jobs with ``use_browser: true`` (i.e. using Pyppeteer) allows to specify
-  `resource types
-  <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ to skip
-  requesting (downloading) in order to speed up retrieval of the content.  Only resource types `supported by
+* ``note`` job directive to add a freetext note appearing in the report after the job header
+* ``wait_for_navigate`` directive for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer) to wait for
+  navigation to reach a URL starting with the specified one before extracting content. Useful when the URL redirects
+  elsewhere before displaying content you're interested in and Pyppeteer captures the intermediate page.
+* ``block_elements`` directive (⚠ Python >= 3.7) for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer)
+  to specify `resource types
+  <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (elements) to
+  skip requesting (downloading) in order to speed up retrieval of the content.  Only resource types `supported by
   Chromium <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed.
-  Typical list includes ``stylesheet``, ``font``, ``image``, and ``media`` but may break some sites. ⚠ Ignored in
-  Python versions < 3.7 and may not work with all Chromium revisions (some hang).
+  Typical list includes ``stylesheet``, ``font``, ``image``, and ``media`` but use with caution.
+
+Changes
+-------
+* If any jobs have ``use_browser: true`` (i.e. are using Pyppeteer), the maximum number of concurrent threads is the
+  number of available CPUs instead of the `default
+  <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`__ to avoid
+  instability due to Pyppeteer's high usage of CPU
 
 Fixed
 -----
-* Specifying ``chromium_revision`` had no effect (bug introduced in Version 3.1.0)
-* Improved the error message when jobs.yaml has a mistake in the job parameters
+* Specifying ``chromium_revision`` had no effect (bug introduced in version 3.1.0)
+* Improved the text of the error message when jobs.yaml has a mistake in the job parameters
 
 Internals
 ---------
 * When running in Python 3.7 or higher, jobs with ``use_browser: true`` (i.e. using Pyppeteer) are a bit more reliable
   as they are now launched using ``asyncio.run()``, and therefore Python takes care of managing the asyncio event loop,
   finalizing asynchronous generators, and closing the threadpool, tasks that previously were handled by custom code
-* Additional testing to include Pyppeteer (Python 3.7 or higher) and running jobs that retrieve content from the
+* Additional testing to include running jobs that use Pyppeteer (Python 3.7 or higher) and to retrieve content from the
   internet
 
 Version 3.1.1

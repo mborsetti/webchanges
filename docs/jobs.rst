@@ -180,22 +180,23 @@ For ``url`` jobs that have ``use_browser: true``:
   ``win32`` and ``win64``
 - ``ignore_https_errors``: Ignore HTTPs errors (true/false)
 - ``user_data_dir``: A path to a pre-existing user directory that Chromium should be using
-- ``switches``: Additional command line switch(es) for Chromium (a dict)
+- ``switches``: Additional command line `switch(es) for Chromium
+  <https://peter.sh/experiments/chromium-command-line-switches/>`__ (list)
 - ``wait_until``: When to consider navigation succeeded (``load``, ``domcontentloaded``, ``networkidle0``, or
   ``networkidle2``) (see
   `documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__)
+- ``wait_for_navigation``: Wait until navigation lands on a URL starting with this text (e.g. due to redirects); helps
+  to avoid the ``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation``
+  error. If ``wait_for`` is also used, ``wait_for_navigation`` is applied first. Cannot be used with ``block_elements``.
 - ``wait_for``: Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath
-  string is matched before getting the HTML (see `documentation
-  <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds)
-- ``wait_for_navigation``: Wait until navigation lands on a URL starting with this text (i.e. redirects). Use when you
-  get the ``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation.``
-  error.
-- ``block_elements``: Do not request (download) specified `resource types
+  string is matched, before getting the HTML content (see `documentation
+  <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds). If
+  ``wait_for_navigation`` is also used, ``wait_for`` is applied after. Cannot be used with ``block_elements``.
+- ``block_elements`` (⚠ Python >= 3.7): Do not request (download) specified `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ as to
-  speed up retrieval of the content. Only resource types `supported by Chromium
-  <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed. Typical
-  list includes ``stylesheet``, ``font``, ``image``, and ``media`` but may break some sites.  ⚠ Ignored in Python
-  versions < 3.7 and may not work with all Chromium revisions (some hang).
+  speed up retrieval of the content (list). Only resource types `supported by Chromium
+  <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed. See
+  :ref:`here <pyppeteer_block_elements>`.
 
 Command
 -------

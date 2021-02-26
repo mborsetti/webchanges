@@ -57,7 +57,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         # Fail if any required keys are not provided
         for k in self.__required__:
             if k not in kwargs:
-                raise ValueError(f'Required field {k} missing: {kwargs}')
+                raise ValueError(f'Required field {k} missing: {kwargs!r}')
 
         for k, v in list(kwargs.items()):
             setattr(self, k, v)
@@ -113,9 +113,9 @@ class JobBase(object, metaclass=TrackSubClasses):
                     kind = 'shell'
                 else:
                     raise ValueError(
-                        f"Parameters don't match a job type; check for errors/typos/text escaping:\n{data}")
+                        f"Parameters don't match a job type; check for errors/typos/text escaping:\n{data!r}")
             else:
-                raise ValueError(f'Multiple kinds of jobs match {data}: {kinds}')
+                raise ValueError(f'Multiple kinds of jobs match {data!r}: {kinds!r}')
         else:
             kind = data['kind']
 
@@ -130,7 +130,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         return cls(**{k: v for k, v in list(data.items()) if k in cls.__required__ or k in cls.__optional__})
 
     def __repr__(self):
-        return f'<{self.__kind__} {" ".join(f"{k}={v}" for k, v in list(self.to_dict().items()))}'
+        return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
     def _set_defaults(self, defaults):
         if isinstance(defaults, dict):
@@ -222,7 +222,7 @@ class UrlJob(Job):
             if self.method is None:
                 self.method = 'POST'
             headers['Content-type'] = 'application/x-www-form-urlencoded'
-            logger.info('Sending POST request to %s', self.url)
+            logger.info(f'Sending POST request to {self.url}')
 
         if self.http_proxy is not None:
             proxies['http'] = self.http_proxy
@@ -231,7 +231,7 @@ class UrlJob(Job):
 
         file_scheme = 'file://'
         if self.url.startswith(file_scheme):
-            logger.info('Using local filesystem (%s URI scheme)', file_scheme)
+            logger.info(f'Using local filesystem ({file_scheme} URI scheme)')
             with open(self.url[len(file_scheme):], 'rt') as f:
                 file = f.read()
             return file
@@ -348,7 +348,7 @@ class BrowserJob(Job):
 
     def get_location(self):
         if not self.url and self.navigate:
-            logger.warning("'navigate:' key is deprecated. Replace with 'url:'")
+            logger.warning("'navigate:' key is deprecated. Replace with 'url:' and 'use_browser: true")
         return self.user_visible_url or self.url or self.navigate
 
     def main_thread_enter(self):
@@ -407,7 +407,11 @@ class BrowserJob(Job):
                 self._revision = self.chromium_revision
             os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(self._revision)
 
-        import pyppeteer  # must take place after setting os.environ variables
+        try:
+            import pyppeteer  # must be imported after setting os.environ variables
+        except ImportError:
+            raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
+                              f' ( {self.job.get_location()} )')
 
         args = []
         if self.http_proxy or self.https_proxy:
@@ -420,28 +424,30 @@ class BrowserJob(Job):
             if proxy:
                 proxy_server = f'{urlsplit(proxy).scheme}://{urlsplit(proxy).hostname}' + (
                     f':{urlsplit(proxy).port}' if urlsplit(proxy).port else '')
-            proxy_username = str(urlsplit(proxy).username) if urlsplit(proxy).username else ''
-            proxy_password = str(urlsplit(proxy).password) if urlsplit(proxy).password else ''
-            args.append(f'proxy-server={proxy_server}')
+                proxy_username = str(urlsplit(proxy).username) if urlsplit(proxy).username else ''
+                proxy_password = str(urlsplit(proxy).password) if urlsplit(proxy).password else ''
+                args.append(f'--proxy-server={proxy_server}')
         if self.user_data_dir:
-            args.append(f'user-data-dir={os.path.expanduser(os.path.expandvars(self.user_data_dir))}')
+            args.append(f'--user-data-dir={os.path.expanduser(os.path.expandvars(self.user_data_dir))}')
         if self.switches:
             if isinstance(self.switches, str):
                 self.switches = self.switches.split(',')
-            self.switches = [switch.lstrip('--') for switch in self.switches]
+            if not isinstance(self.switches, list):
+                raise TypeError(f"'switches' needs to be a string or list, not {type(self.switches)} "
+                                f'( {self.get_location()} )')
+            self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
             args.extend(self.switches)
         # as signal only works in main thread, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
         browser = await pyppeteer.launch(ignoreHTTPSErrors=self.ignore_http_error_codes, args=args, handleSIGINT=False,
                                          handleSIGTERM=False, handleSIGHUP=False)
-        for p in (await browser.pages()):
-            await p.close()
 
-        # get content
+        # browse to page and get content
         page = await browser.newPage()
-        if self.cookies:
-            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
+
         if self.headers:
             await page.setExtraHTTPHeaders(self.headers)
+        if self.cookies:
+            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
         if (self.http_proxy or self.https_proxy) and (proxy_username or proxy_password):
             await page.authenticate({'username': proxy_username, 'password': proxy_password})
         options = {}
@@ -450,6 +456,11 @@ class BrowserJob(Job):
         if self.wait_until:
             options['waitUntil'] = self.wait_until
         if self.block_elements:
+            if isinstance(self.block_elements, str):
+                self.block_elements = self.block_elements.split(',')
+            if not isinstance(self.block_elements, list):
+                raise TypeError(f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
+                                f'( {self.get_location()} )')
             # web_request_resource_types = [
             #     # https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType
             #     'beacon', 'csp_report', 'font', 'image', 'imageset', 'media', 'main_frame', 'media', 'object',
@@ -464,25 +475,38 @@ class BrowserJob(Job):
                     await browser.close()
                     raise ValueError(f"Unknown or unsupported '{element}' resource type in 'block_elements' "
                                      f'( {self.get_location()} )')
-            await page.setRequestInterception(True)
 
-            async def intercept(request, block_elements):
-                if any(request.resourceType == _ for _ in (block_elements)):
+            async def intercept(request, elements):
+                if any(request.resourceType == _ for _ in elements):
                     await request.abort()
                 else:
                     await request.continue_()
-            page.on('request', lambda req: asyncio.ensure_future(intercept(req, self.block_elements)))
 
-        await page.goto(self.url, options)
+            def handle_request(intercepted_request):
+                asyncio.create_task(intercept(intercepted_request, self.block_elements))
 
-        if self.wait_for:
-            if isinstance(self.wait_for, (int, float, complex)) and not isinstance(self.wait_for, bool):
-                self.wait_for *= 1000
-            await page.waitFor(self.wait_for, options)
+            await page.setRequestInterception(True)
+            page.on('request', handle_request)
+
+        await page.goto(self.url, options=options)
+
         if self.wait_for_navigation:
+            if self.block_elements:
+                # TODO understand if the below, required, completely undoes blocking of resource loading
+                page.remove_listener('request', handle_request)
+                await page.setRequestInterception(False)
             while not page.url.startswith(self.wait_for_navigation):
                 logger.info(f'Waiting for redirection from {page.url}')
-                await page.waitForNavigation(options)
+                await page.waitForNavigation(option=options)
+        if self.wait_for:
+            if self.block_elements:
+                # TODO understand if the below, required, completely undoes blocking of resource loading
+                page.remove_listener('request', handle_request)
+                await page.setRequestInterception(False)
+            if isinstance(self.wait_for, (int, float, complex)) and not isinstance(self.wait_for, bool):
+                self.wait_for *= 1000
+            await page.waitFor(self.wait_for, options=options)
+
         content = await page.content()
         await browser.close()
 
@@ -518,4 +542,4 @@ class ShellJob(Job):
                 return subprocess.run(self.command, capture_output=True, shell=True, check=True,
                                       text=(not needs_bytes)).stdout  # noqa: DUO116 use of "shell=True" is insecure
             except subprocess.CalledProcessError as e:
-                raise ShellError(e.stderr).with_traceback(e)
+                raise ShellError(e.stderr).with_traceback(e.__traceback__)

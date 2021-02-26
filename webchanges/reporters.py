@@ -322,6 +322,8 @@ class TextReporter(ReporterBase):
 
             sep = (line_length * '-') or None
             details_part.extend((sep, summary, sep))
+            if hasattr(job_state.job, 'note'):
+                details_part.extend((job_state.job.note, ''))
             if content is not None:
                 details_part.extend((content, sep))
             details_part.extend(('', '') if sep else ('',))
@@ -580,9 +582,9 @@ class StdoutReporter(TextReporter):
                 print(self._green(line))
             elif line.startswith('-'):
                 print(self._red(line))
-            elif any(line.startswith(prefix) for prefix in ('NEW:', 'CHANGED:', 'UNCHANGED:', 'ERROR:')):
+            elif any(line.startswith(prefix) for prefix in ('NEW: ', 'CHANGED: ', 'UNCHANGED: ', 'ERROR: ')):
                 first, second = line.split(' ', 1)
-                if line.startswith('ERROR:'):
+                if line.startswith('ERROR: '):
                     print(first, self._red(second))
                 else:
                     print(first, self._blue(second))

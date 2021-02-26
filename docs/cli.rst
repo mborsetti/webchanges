@@ -31,10 +31,10 @@ Command line switches
 
   reporters:
     --test-reporter REPORTER
-                          Send a test notification
-    --smtp-login          Check SMTP login
-    --telegram-chats      List telegram chats the bot is joined to
-    --xmpp-login          Enter password for XMPP (store in keyring)
+                          send a test notification
+    --smtp-login          check SMTP login
+    --telegram-chats      list telegram chats the bot is joined to
+    --xmpp-login          enter password for XMPP (store in keyring)
 
   launch editor ($EDITOR/$VISUAL):
     --edit                edit URL/job list

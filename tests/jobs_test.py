@@ -30,7 +30,7 @@ TESTDATA = [
       'timeout': 15,
       'chromium_revision': 827102,
       'ignore_https_errors': False,
-      'switches': {'--disable-dev-shm-usage': '', '--window-size': '1920,1080'},
+      'switches': ['--disable-dev-shm-usage', '--window-size=1298,1406'],
       'wait_until': 'load',
       'wait_for': 1,
       'wait_for_navigation': 'https://www.google.com/'

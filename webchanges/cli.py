@@ -2,6 +2,8 @@
 
 """Module containing the entry point"""
 
+# See config module for the actual CLI arguments
+
 import logging
 import os.path
 import signal
@@ -136,8 +138,7 @@ def main() -> None:  # pragma: no cover
 
     if any(command_config.cache.startswith(prefix) for prefix in ('redis://', 'rediss://')):
         cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
-    else:
-        cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
+    cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
 
     jobs_storage = JobsYaml(command_config.jobs)  # storage.py
 

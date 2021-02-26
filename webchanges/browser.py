@@ -1,6 +1,8 @@
 """
 For compatibility with sys.version_info < (3, 7)
-Not used otherwise (upgraded to using asyncio.run from within BrowserJob class)"""
+Not used otherwise (upgraded to using asyncio.run from within BrowserJob class)
+Not included in coverage
+"""
 
 import asyncio
 import logging
@@ -69,7 +71,11 @@ class BrowserLoop(object):
                 self._chromium_revision = chromium_revision
             os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(self._chromium_revision)
 
-        import pyppeteer  # must take place after setting os.environ variables
+        try:
+            import pyppeteer  # must be imported after setting os.environ variables
+        except ImportError:
+            raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
+                              f' ( {self.job.get_location()} )')
 
         args = []
         if proxy_server:
@@ -79,10 +85,14 @@ class BrowserLoop(object):
         if switches:
             if isinstance(switches, str):
                 switches = switches.split(',')
+            if not isinstance(self.switches, list):
+                raise TypeError(f"'switches' needs to be a string or list, not {type(self.switches)} "
+                                f'( {self.get_location()} )')
+            self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
             args.extend(switches)
         browser = await pyppeteer.launch(ignoreHTTPSErrors=ignore_https_errors, args=args)
-        for p in (await browser.pages()):
-            await p.close()
+        # for p in (await browser.pages()):
+        #     await p.close()
         return browser
 
     async def _get_content(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until,
@@ -90,10 +100,11 @@ class BrowserLoop(object):
         # context = await self._browser.createIncognitoBrowserContext()
         context = self._browser
         page = await context.newPage()
-        if cookies:
-            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in cookies.items()])})
+
         if headers:
             await page.setExtraHTTPHeaders(headers)
+        if cookies:
+            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in cookies.items()])})
         if proxy_username or proxy_password:
             await page.authenticate({'username': proxy_username, 'password': proxy_password})
         options = {}
@@ -102,16 +113,18 @@ class BrowserLoop(object):
         if wait_until:
             options['waitUntil'] = wait_until
         await page.goto(url, options)
-        if wait_for:
-            if isinstance(wait_for, (int, float, complex)) and not isinstance(wait_for, bool):
-                wait_for *= 1000
-            await page.waitFor(wait_for)
         if wait_for_navigation:
             while not page.url.startswith(wait_for_navigation):
                 logger.info(f'Waiting for redirection from {page.url}')
                 await page.waitForNavigation()
+        if wait_for:
+            if isinstance(wait_for, (int, float, complex)) and not isinstance(wait_for, bool):
+                wait_for *= 1000
+            await page.waitFor(wait_for)
+
         content = await page.content()
         await context.close()
+
         return content
 
     def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for,

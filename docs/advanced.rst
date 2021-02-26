@@ -344,8 +344,8 @@ file as follows:
        switches:
          - --disable-dev-shm-usage
 
-This switch disables the use of the faster RAM-based temporary storage file system, whose size limit crashes Chromium,
-forcing instead the use of the drive-based filesystem, which may be slower but of ampler capacity.
+This switch disables the use of the faster RAM-based temporary storage file system, whose size limit may cause Chromium
+to crash, forcing instead the use of the drive-based filesystem, which may be slower but of ampler capacity.
 
 
 .. _local_storage:
@@ -372,3 +372,36 @@ You can now run a `webchanges` job defined like this:
    url: https://example.org/usedatadir.html
    use_browser: true
    user_data_dir: /userdir
+
+.. _pyppeteer_block_elements:
+
+Speeding up ``use_browser: true``
+---------------------------------
+If you're not interested in all elements of a website, you can skip downloading the ones that you don't care, paying
+attention to do some testing as some elements may be required for the correct rendering of the website. Typical elements
+to skip include ``stylesheet``, ``font``, ``image``, and ``media`` (but use with caution) and can be specified like
+this on a job-by-job basis:
+
+.. code-block:: yaml
+
+   name: This is a Javascript site
+   note: It's just a test
+   url: https://www.example.com
+   use_browser: true
+   block_elements:
+     - stylesheet
+     - font
+     - image
+     - media
+
+or in  the config file (for all ``use_browser: true`` jobs):
+
+.. code-block:: yaml
+
+   job_defaults:
+     browser:
+       block_elements:
+         - stylesheet
+         - font
+         - image
+         - media

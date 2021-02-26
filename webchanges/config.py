@@ -63,10 +63,10 @@ class CommandConfig(BaseConfig):
         group.add_argument('--delete', metavar='JOB', help='delete job by location or index (obsolete; use --edit)')
 
         group = parser.add_argument_group('reporters')
-        group.add_argument('--test-reporter', metavar='REPORTER', help='Send a test notification')
-        group.add_argument('--smtp-login', action='store_true', help='Check SMTP login')
-        group.add_argument('--telegram-chats', action='store_true', help='List telegram chats the bot is joined to')
-        group.add_argument('--xmpp-login', action='store_true', help='Enter password for XMPP (store in keyring)')
+        group.add_argument('--test-reporter', metavar='REPORTER', help='send a test notification')
+        group.add_argument('--smtp-login', action='store_true', help='check SMTP login')
+        group.add_argument('--telegram-chats', action='store_true', help='list telegram chats the bot is joined to')
+        group.add_argument('--xmpp-login', action='store_true', help='enter password for XMPP (store in keyring)')
 
         group = parser.add_argument_group('launch editor ($EDITOR/$VISUAL)')
         group.add_argument('--edit', action='store_true', help='edit URL/job list')
@@ -74,11 +74,13 @@ class CommandConfig(BaseConfig):
         group.add_argument('--edit-hooks', action='store_true', help='edit hooks script')
 
         group = parser.add_argument_group('miscellaneous')
+        # group.add_argument('--db-engine', choices=['sqlite3', 'minidb'], default='minidb',
+        #                    help='database engine to use (default: %(default)s)')
         group.add_argument('--gc-cache', action='store_true', help='remove old cache entries (snapshots)')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
 
-        # workaround for throwing error when invoked by pytest
-        if parser.prog == self.project_name:  # pragma: no cover
+        # workaround for avoiding triggering error when invoked by pytest
+        if parser.prog != '_jb_pytest_runner.py':
             args = parser.parse_args()
 
             for i, arg in enumerate(vars(args)):
