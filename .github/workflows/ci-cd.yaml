@@ -91,9 +91,9 @@ jobs:
             #    CICD_PIPINSTALL="pdftotext Pillow pytesseract"
             fi
           fi
-          python -m pip install -U pip wheel coveralls
-          python -m pip install -U -r requirements.txt -r tests/requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject $CICD_PIPINSTALL
+          python -m pip install -U pip setuptools wheel
           python -m pip install -e .
+          python -m pip install -U coveralls -r tests/requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject $CICD_PIPINSTALL
         shell: bash
 
       - name: Run tests

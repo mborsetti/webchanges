@@ -4,7 +4,6 @@ cssselect
 html2text
 lxml
 markdown2
-minidb
 msgpack
 pyyaml
 requests
