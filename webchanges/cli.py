@@ -16,7 +16,8 @@ from . import __min_python_version__
 from .command import UrlwatchCommand
 from .config import CommandConfig
 from .main import Urlwatch
-from .storage import CacheMiniDBStorage, CacheRedisStorage, JobsYaml, YamlConfigStorage
+from .storage import CacheDirStorage, CacheMiniDBStorage, CacheRedisStorage, CacheSQLite3Storage, JobsYaml, \
+    YamlConfigStorage
 
 # Check if we are installed in the system already # Legacy for apt-get type of packaging
 # (prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -138,7 +139,12 @@ def main() -> None:  # pragma: no cover
 
     if any(command_config.cache.startswith(prefix) for prefix in ('redis://', 'rediss://')):
         cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
-    cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
+    elif command_config.database_engine == 'sqlite3':
+        cache_storage = CacheSQLite3Storage(command_config.cache)  # storage.py
+    elif command_config.database_engine == 'textfiles':
+        cache_storage = CacheDirStorage(command_config.cache)  # storage.py
+    else:
+        cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
 
     jobs_storage = JobsYaml(command_config.jobs)  # storage.py
 

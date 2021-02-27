@@ -53,9 +53,11 @@ Table of Contents
    contributing
    changelog
 
-.. autosummary::
+..
+   Lots of work required to make autosummary work so commented it out
+   autosummary
    :toctree: _autosummary
    :caption: Code autodoc
    :recursive:
-
+..
    webchanges

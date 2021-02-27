@@ -98,7 +98,7 @@ class UrlwatchCommand:
             raise SystemExit(1)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
-    def test_filter(self, id):
+    def test_job(self, id):
         job = self._get_job(id)
 
         if isinstance(job, UrlJob):
@@ -120,7 +120,7 @@ class UrlwatchCommand:
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
         return 0
 
-    def test_diff_filter(self, id):
+    def test_diff(self, id):
         job = self._get_job(id)
 
         history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid(), 10)
@@ -213,14 +213,17 @@ class UrlwatchCommand:
         if self.urlwatch_config.gc_cache:
             self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
             sys.exit(0)
+        if self.urlwatch_config.clean_cache:
+            self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
+            sys.exit(0)
         if self.urlwatch_config.edit:
             sys.exit(self.urlwatcher.jobs_storage.edit())
         if self.urlwatch_config.edit_hooks:
             sys.exit(self.edit_hooks())
-        if self.urlwatch_config.test_filter:
-            sys.exit(self.test_filter(self.urlwatch_config.test_filter))
-        if self.urlwatch_config.test_diff_filter:
-            sys.exit(self.test_diff_filter(self.urlwatch_config.test_diff_filter))
+        if self.urlwatch_config.test_job:
+            sys.exit(self.test_job(self.urlwatch_config.test_job))
+        if self.urlwatch_config.test_diff:
+            sys.exit(self.test_diff(self.urlwatch_config.test_diff))
         if self.urlwatch_config.errors:
             sys.exit(self.list_error_jobs())
         if self.urlwatch_config.list:

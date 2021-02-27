@@ -8,7 +8,7 @@ import pytest
 
 from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, JobBase
-from webchanges.storage import CacheMiniDBStorage
+from webchanges.storage import CacheSQLite3Storage
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +41,12 @@ TESTDATA = [
      'test'),
 ]
 
-cache_storage = CacheMiniDBStorage('')
+cache_storage = CacheSQLite3Storage('')
 
 
-@pytest.mark.parametrize('input, output', TESTDATA)
-def test_job(input, output):
-    job = JobBase.unserialize(input)
+@pytest.mark.parametrize('input_job', 'output', TESTDATA)
+def test_job(input_job, output):
+    job = JobBase.unserialize(input_job)
     if not os.getenv('GITHUB_ACTIONS') or not isinstance(job, BrowserJob) or sys.version_info >= (3, 7):
         # legacy code for Pyppeteer does not pass testing in GitHub Actions as it fails with error
         # pyppeteer.errors.BrowserError: Browser closed unexpectedly

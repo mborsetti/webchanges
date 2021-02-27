@@ -10,7 +10,7 @@ from webchanges.cli import migrate_from_urlwatch
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheMiniDBStorage, JobsYaml, YamlConfigStorage
+from webchanges.storage import CacheSQLite3Storage, JobsYaml, YamlConfigStorage
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file)
 
 
 config_storage = YamlConfigStorage(config_file)
-cache_storage = CacheMiniDBStorage(cache_file)
+cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = JobsYaml(jobs_file)
 command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
                                cache_file, verbose=False)
@@ -66,13 +66,13 @@ def test_command_get_jobs():
 
 # def test_command_test_filter():
 #     urlwatch_command = UrlwatchCommand(Urlwatch(command_config, config_storage, cache_storage, jobs_storage))
-#     assert not urlwatch_command.test_filter(1)
+#     assert not urlwatch_command.test_job(1)
 #     urlwatch_command.urlwatcher.close()
 #
 #
 # def test_command_test_diff_filter():
 #     urlwatch_command = UrlwatchCommand(Urlwatch(command_config, config_storage, cache_storage, jobs_storage))
-#     assert 1 == urlwatch_command.test_diff_filter(1)
+#     assert 1 == urlwatch_command.test_diff(1)
 #     urlwatch_command.urlwatcher.close()
 
 

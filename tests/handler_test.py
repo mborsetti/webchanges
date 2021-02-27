@@ -10,7 +10,7 @@ from webchanges import __project_name__
 from webchanges.config import BaseConfig
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheMiniDBStorage, DEFAULT_CONFIG, JobsYaml, YamlConfigStorage
+from webchanges.storage import CacheMiniDBStorage, CacheSQLite3Storage, DEFAULT_CONFIG, JobsYaml, YamlConfigStorage
 from webchanges.util import import_module_from_source
 
 pkgname = __project_name__
@@ -96,7 +96,7 @@ def teardown_func():
             os.remove(cache + '.bak')
 
 
-def test_run_watcher():
+def test_run_watcher_minidb():
     with teardown_func():
         # urls = os.path.join(root, 'share', 'examples', 'jobs-example.yaml')
         urls = os.path.join(here, 'data', 'jobs.yaml')
@@ -107,6 +107,26 @@ def test_run_watcher():
         config_storage = YamlConfigStorage(config)
         jobs_storage = JobsYaml(urls)
         cache_storage = CacheMiniDBStorage(cache)
+        try:
+            urlwatch_config = ConfigForTest(config, urls, cache, hooks, True)
+
+            urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+            urlwatcher.run_jobs()
+        finally:
+            cache_storage.close()
+
+
+def test_run_watcher_sqlite3():
+    with teardown_func():
+        # urls = os.path.join(root, 'share', 'examples', 'jobs-example.yaml')
+        urls = os.path.join(here, 'data', 'jobs.yaml')
+        config = os.path.join(here, 'data', 'config.yaml')
+        cache = os.path.join(here, 'data', 'cache.db')
+        hooks = ''
+
+        config_storage = YamlConfigStorage(config)
+        jobs_storage = JobsYaml(urls)
+        cache_storage = CacheSQLite3Storage(cache)
         try:
             urlwatch_config = ConfigForTest(config, urls, cache, hooks, True)
 
@@ -132,7 +152,7 @@ def test_unserialize_with_unknown_key():
         })
 
 
-def prepare_retry_test():
+def prepare_retry_test_minidb():
     urls = os.path.join(here, 'data', 'invalid-url.yaml')
     config = os.path.join(here, 'data', 'config.yaml')
     cache = os.path.join(here, 'data', 'cache.db')
@@ -148,19 +168,19 @@ def prepare_retry_test():
     return urlwatcher, cache_storage
 
 
-def test_number_of_tries_in_cache_is_increased():
+def test_number_of_tries_in_cache_is_increased_minidb():
     with teardown_func():
-        urlwatcher, cache_storage = prepare_retry_test()
+        urlwatcher, cache_storage = prepare_retry_test_minidb()
         try:
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job, job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
             assert tries == 0
 
             urlwatcher.run_jobs()
             urlwatcher.run_jobs()
 
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job, job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
 
             assert tries == 2
             assert urlwatcher.report.job_states[-1].verb == 'error'
@@ -168,12 +188,12 @@ def test_number_of_tries_in_cache_is_increased():
             cache_storage.close()
 
 
-def test_report_error_when_out_of_tries():
+def test_report_error_when_out_of_tries_minidb():
     with teardown_func():
-        urlwatcher, cache_storage = prepare_retry_test()
+        urlwatcher, cache_storage = prepare_retry_test_minidb()
         try:
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job, job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
             assert tries == 0
 
             urlwatcher.run_jobs()
@@ -185,18 +205,18 @@ def test_report_error_when_out_of_tries():
             cache_storage.close()
 
 
-def test_reset_tries_to_zero_when_successful():
+def test_reset_tries_to_zero_when_successful_minidb():
     with teardown_func():
-        urlwatcher, cache_storage = prepare_retry_test()
+        urlwatcher, cache_storage = prepare_retry_test_minidb()
         try:
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job, job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
             assert tries == 0
 
             urlwatcher.run_jobs()
 
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job, job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
             assert tries == 1
 
             # use an url that definitely exists
@@ -206,7 +226,87 @@ def test_reset_tries_to_zero_when_successful():
             urlwatcher.run_jobs()
 
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job, job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            assert tries == 0
+        finally:
+            cache_storage.close()
+
+
+def prepare_retry_test_sqlite3():
+    urls = os.path.join(here, 'data', 'invalid-url.yaml')
+    config = os.path.join(here, 'data', 'config.yaml')
+    cache = os.path.join(here, 'data', 'cache.db')
+    hooks = ''
+
+    config_storage = YamlConfigStorage(config)
+    cache_storage = CacheSQLite3Storage(cache)
+    jobs_storage = JobsYaml(urls)
+
+    urlwatch_config = ConfigForTest(config, urls, cache, hooks, True)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+
+    return urlwatcher, cache_storage
+
+
+def test_number_of_tries_in_cache_is_increased_sqlite3():
+    with teardown_func():
+        urlwatcher, cache_storage = prepare_retry_test_sqlite3()
+        try:
+            job = urlwatcher.jobs[0]
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            assert tries == 0
+
+            urlwatcher.run_jobs()
+            urlwatcher.run_jobs()
+
+            job = urlwatcher.jobs[0]
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+
+            assert tries == 2
+            assert urlwatcher.report.job_states[-1].verb == 'error'
+        finally:
+            cache_storage.close()
+
+
+def test_report_error_when_out_of_tries_sqlite3():
+    with teardown_func():
+        urlwatcher, cache_storage = prepare_retry_test_sqlite3()
+        try:
+            job = urlwatcher.jobs[0]
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            assert tries == 0
+
+            urlwatcher.run_jobs()
+            urlwatcher.run_jobs()
+
+            report = urlwatcher.report
+            assert report.job_states[-1].verb == 'error'
+        finally:
+            cache_storage.close()
+
+
+def test_reset_tries_to_zero_when_successful_sqlite3():
+    with teardown_func():
+        urlwatcher, cache_storage = prepare_retry_test_sqlite3()
+        try:
+            job = urlwatcher.jobs[0]
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            assert tries == 0
+
+            urlwatcher.run_jobs()
+
+            job = urlwatcher.jobs[0]
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            assert tries == 1
+
+            # use an url that definitely exists
+            job = urlwatcher.jobs[0]
+            job.url = 'file://' + os.path.join(here, 'data', 'jobs.yaml')
+
+            urlwatcher.run_jobs()
+
+            job = urlwatcher.jobs[0]
+            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
             assert tries == 0
         finally:
             cache_storage.close()

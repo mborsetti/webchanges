@@ -54,10 +54,10 @@ class CommandConfig(BaseConfig):
                                                             'alternatively can accept a redis URI'), default=self.cache)
         group = parser.add_argument_group('job management')
         group.add_argument('--list', action='store_true', help='list jobs')
-        group.add_argument('--test', '--test-filter', dest='test_filter', metavar='JOB',
-                           help='test filter output of job by location or index')
-        group.add_argument('--test-diff', '--test-diff-filter', dest='test_diff_filter', metavar='JOB',
-                           help='test diff filter output of job by location or index (needs at least 2 snapshots)')
+        group.add_argument('--test', '--test-filter', dest='test_job', metavar='JOB',
+                           help='test job and its filter (by location or index)')
+        group.add_argument('--test-diff', '--test-diff-filter', dest='test_diff', metavar='JOB',
+                           help="test job's diff filter (shows up to 10 historical snapshots) (by location or index)")
         group.add_argument('--errors', action='store_true', help='list jobs with errors or no data captured')
         group.add_argument('--add', metavar='JOB', help='add job (key1=value1,key2=value2,...) (obsolete; use --edit)')
         group.add_argument('--delete', metavar='JOB', help='delete job by location or index (obsolete; use --edit)')
@@ -74,9 +74,11 @@ class CommandConfig(BaseConfig):
         group.add_argument('--edit-hooks', action='store_true', help='edit hooks script')
 
         group = parser.add_argument_group('miscellaneous')
-        # group.add_argument('--db-engine', choices=['sqlite3', 'minidb'], default='minidb',
-        #                    help='database engine to use (default: %(default)s)')
-        group.add_argument('--gc-cache', action='store_true', help='remove old cache entries (snapshots)')
+        group.add_argument('--gc-cache', action='store_true',
+                           help='garbage collect by removing non-tracked and old snapshots from the database')
+        group.add_argument('--clean-cache', action='store_true', help='remove old snapshots from the cache database')
+        group.add_argument('--database-engine', choices=['sqlite3', 'minidb', 'textfiles'], default='sqlite3',
+                           help='database engine to use (default: %(default)s)')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
 
         # workaround for avoiding triggering error when invoked by pytest

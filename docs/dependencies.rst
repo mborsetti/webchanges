@@ -47,8 +47,7 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 +-------------------------+-------------------------------------------------------------------------+
 | ``xmpp`` reporter       | * `aioxmpp <https://github.com/horazont/aioxmpp>`__                     |
 +-------------------------+-------------------------------------------------------------------------+
-| ``redis`` database      | * `msgpack <https://msgpack.org/>`__                                    |
-|                         | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
+| ``redis`` database      | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`__                       |
 | storage for email and   |                                                                         |
@@ -83,7 +82,7 @@ These Python packages are installed automatically by `pip`:
 * `html2text <https://github.com/Alir3z4/html2text>`__
 * `lxml <https://lxml.de>`__
 * `markdown2 <https://github.com/trentm/python-markdown2>`__
-* `minidb <https://thp.io/2010/minidb/>`__
+* `msgpack <https://msgpack.org/>`__
 * `PyYAML <https://pyyaml.org/>`__
 * `requests <https://requests.readthedocs.io/>`__
 * `colorama <https://github.com/tartley/colorama>`__  (only in Windows installations)

@@ -42,5 +42,8 @@ Command line switches
     --edit-hooks          edit hooks script
 
   miscellaneous:
-    --gc-cache            remove old cache entries (snapshots)
+    --gc-cache            garbage collect by removing non-tracked and old snapshots from the database
+    --clean-cache         remove old snapshots from the cache database
+    --database-engine {sqlite3,minidb,textfiles}
+                          database engine to use (default: sqlite3)
     --features            list supported job types, filters and reporters

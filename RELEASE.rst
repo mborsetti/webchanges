@@ -8,6 +8,12 @@
    Security in case of vulnerabilities.
    Internals for changes that don't affect users.
 
+⚠ Breaking Changes
+------------------
+* Only the most recent saved snapshots is migrated the first time you run this version due to an upgrade to the
+  database. This has no effect on the ordinary use of the program othern than reducing the number of historical results
+  from ``--test-diffs`` util more snapshots are captured.
+
 Added
 -----
 * ``note`` job directive to add a freetext note appearing in the report after the job header
@@ -17,7 +23,7 @@ Added
 * ``block_elements`` directive (⚠ only for Python >= 3.7) for URL jobs with ``use_browser: true`` (i.e. using
   Pyppeteer) to specify `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (elements) to
-  skip   requesting (downloading) in order to speed up retrieval of the content.  Only resource types `supported by
+  skip requesting (downloading) in order to speed up retrieval of the content.  Only resource types `supported by
   Chromium <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed.
   Typical list includes ``stylesheet``, ``font``, ``image``, and ``media`` but use with caution.
 
@@ -35,8 +41,14 @@ Fixed
 
 Internals
 ---------
+* Removed dependency on ``minidb`` package dependency in favor for Python's built-in ``sqlite3``
+* Database is now smaller due to data compression with `msgpack <https://msgpack.org/index.html>`__; will automatically
+  detect if an old schema database is found and migrate the last snapshot to the new one
+* New command line argument ``--database-engine`` allows selecting engine and accepts ``sqlite3`` (default),
+  ``minidb`` (legacy, requiring package by the same name) and ``textfiles`` (creates text files with the latest
+  snapshot)
 * When running in Python 3.7 or higher, jobs with ``use_browser: true`` (i.e. using Pyppeteer) are a bit more reliable
   as they are now launched using ``asyncio.run()``, and therefore Python takes care of managing the asyncio event loop,
   finalizing asynchronous generators, and closing the threadpool, tasks that previously were handled by custom code
-* Additional testing to include running jobs that use Pyppeteer (Python 3.7 or higher) and to retrieve content from the
-  internet
+* Additional testing to include test actual jobs that use Pyppeteer (Python 3.7 or higher) and to retrieve content from
+  the internet
