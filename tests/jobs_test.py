@@ -44,7 +44,7 @@ TESTDATA = [
 cache_storage = CacheSQLite3Storage('')
 
 
-@pytest.mark.parametrize('input_job', 'output', TESTDATA)
+@pytest.mark.parametrize('input_job, output', TESTDATA)
 def test_job(input_job, output):
     job = JobBase.unserialize(input_job)
     if not os.getenv('GITHUB_ACTIONS') or not isinstance(job, BrowserJob) or sys.version_info >= (3, 7):
