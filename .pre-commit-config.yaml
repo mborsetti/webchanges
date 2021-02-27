@@ -61,9 +61,10 @@ repos:
 #        description: Sort the lines in specified files (defaults to alphabetical)
 #      - id: forbid-new-submodules
 #        description: Prevent addition of new git submodules
-      - id: mixed-line-ending
-        args: ['--fix=lf']
-        description: Forces to replace line ending by the UNIX 'lf' character
+#      - id: mixed-line-ending
+#        args: ['--fix=lf']
+#        description: Forces replacing of line ending by the UNIX 'lf' character
+#        note: switched to using gitattributes https://git-scm.com/docs/gitattributes
       - id: name-tests-test
         description: Assert that files in tests/ end in _test.py
 #      - id: no-commit-to-branch
