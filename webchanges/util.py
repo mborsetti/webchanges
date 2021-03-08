@@ -54,20 +54,6 @@ class TrackSubClasses(type):
         super().__init__(name, bases, namespace)
 
 
-def atomic_rename(old_filename, new_filename):
-    """Renames a file"""
-    if os.name == 'nt' and os.path.exists(new_filename):
-        new_old_filename = new_filename + '.bak'
-        if os.path.exists(new_old_filename):
-            os.remove(new_old_filename)
-        os.rename(new_filename, new_old_filename)
-        os.rename(old_filename, new_filename)
-        if os.path.exists(new_old_filename):
-            os.remove(new_old_filename)
-    else:
-        os.rename(old_filename, new_filename)
-
-
 def edit_file(filename):
     """Opens the editor to edit the file"""
     editor = os.environ.get('EDITOR', None)

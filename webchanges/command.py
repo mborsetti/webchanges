@@ -13,7 +13,7 @@ from .handler import JobState, Report
 from .jobs import JobBase, UrlJob
 from .mailer import smtp_have_password, smtp_set_password
 from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
-from .util import atomic_rename, edit_file, import_module_from_source
+from .util import edit_file, import_module_from_source
 from .worker import run_parallel
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class UrlwatchCommand:
                 shutil.copy(self.urlwatch_config.hooks_py_example, hooks_edit)
             edit_file(hooks_edit)
             import_module_from_source('hooks', hooks_edit)
-            atomic_rename(hooks_edit, self.urlwatch_config.hooks)
+            os.replace(hooks_edit, self.urlwatch_config.hooks)
             print('Saving edit changes in', self.urlwatch_config.hooks)
         except SystemExit:
             raise

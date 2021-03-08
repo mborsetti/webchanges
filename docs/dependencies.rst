@@ -9,7 +9,7 @@ Dependencies
 Optional packages
 -----------------
 Certain features require additional Python packages to work. These optional packages are installed by appending
-to the name `webchanges` the name of the feature (from the table below) inside square brackets, like so::
+to the name `webchanges` the name of the feature (from the table below) inside square brackets, like this::
 
     pip install --upgrade webchanges[use_browser]
     pip install --upgrade webchanges[use_browser,redis]
@@ -18,8 +18,8 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 | Feature                 | Python package(s) installed                                             |
 +=========================+=========================================================================+
 | ``use _browser`` set to | * `pyppeteer <https://github.com/pyppeteer/pyppeteer>`__                |
-| true (in a url job)     | * Note: you may also have to **separately install**                     |
-|                         |   OS-specific dependencies [#f1]_                                       |
+| true (in a url job)     | * Note: you may also have to **separately install** OS-specific         |
+|                         |    dependencies [#f1]_                                                  |
 +-------------------------+-------------------------------------------------------------------------+
 | ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
 | html2text filter        |                                                                         |
@@ -30,8 +30,8 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 |                         | * `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ [#f3]_    |
 +-------------------------+-------------------------------------------------------------------------+
 | ``pdf2text`` filter     | * `pdftotext <https://github.com/jalan/pdftotext>`__                    |
-|                         | * Note: you will also have to **separately install** the required       |
-|                         |   OS-specific dependencies [#f4]_                                       |
+|                         | * Note: you will also have to **separately install** OS-specific        |
+|                         |   dependencies [#f4]_                                                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``ocr`` filter          | * `pytesseract <https://github.com/madmaze/pytesseract>`__              |
 |                         |   Note: requires Tesseract to be **separately installed** [#f5]_        |
@@ -50,17 +50,16 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 | ``redis`` database      | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`__                       |
-| storage for email and   |                                                                         |
-| xmpp reporters          |                                                                         |
+| keyring storage         |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
-| ``all``                 | * all the optional packages listed above                                |
-|                         | * Note: you will also have to **separately install** the required       |
-|                         |   OS-specific dependencies [#f1]_ [#f4]_ [#f5]_                         |
+| ``all``                 | * All the optional packages listed above                                |
+|                         | * Note: you will also have to **separately install** OS-specific        |
+|                         |   dependencies [#f1]_ [#f4]_ [#f5]_                                     |
 +-------------------------+-------------------------------------------------------------------------+
 
 .. rubric:: Footnotes
 
-.. [#f1] ``pyppeteer``'s OS-specific dependencies (only Linux requires them) are listed `here
+.. [#f1] Pyppeteer's OS-specific dependencies (only Linux requires them) are listed `here
    <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch-on-unix>`__
    (yes, it's a page from puppeteer, which is the project upon which pyppeteer is created).  A missing dependency is
    often the cause of the error ``pyppeteer.errors.BrowserError: Browser closed unexpectedly``.  Also pay close

@@ -79,8 +79,8 @@ class CommandConfig(BaseConfig):
 
         group = parser.add_argument_group('miscellaneous')
         group.add_argument('--gc-cache', action='store_true',
-                           help='garbage collect the cache database by removing old snapshots plus all data of old jobs'
-                                ' now deleted')
+                           help='garbage collect the cache database by removing old snapshots plus all data of jobs'
+                                ' not in the jobs file')
         group.add_argument('--clean-cache', action='store_true', help='remove old snapshots from the cache database')
         group.add_argument('--rollback-cache', metavar='TIMESTAMP', type=int,
                            help='delete recent snapshots > timestamp; backup the database before using!')

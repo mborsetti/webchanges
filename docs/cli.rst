@@ -42,8 +42,8 @@ Command line switches
     --edit-hooks          edit hooks script
 
   miscellaneous:
-    --gc-cache            garbage collect the cache database by removing old snapshots plus all data
-                          of old jobs now deleted
+    --gc-cache            garbage collect the cache database by removing old snapshots plus all data of
+                          jobs not in the jobs file
     --clean-cache         remove old snapshots from the cache database
     --rollback-cache TIMESTAMP
                           delete recent snapshots > timestamp; backup the database before using!
@@ -62,12 +62,17 @@ by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating the
 Useful when you missed notifications or they got lost: roll back the database to the time of the last good report, then
 run `webchanges` again to get a new report with the differences since that time.
 
-You can find multiple sites that calculate Unix time for you, such as https://www.unixtimestamp.com/
+You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
+<https://www.unixtimestamp.com/>`__
 
-**WARNING: all snapshots captured after the timestamp value are permanently deleted. This is irreversible.**  Back up
-the database before doing a rollback in case of a mistake (or fat-finger).
+**WARNING: all snapshots captured after the time of the timestamp are permanently deleted. This is irreversible.**  Back
+up the database before doing a rollback in case of a mistake (or fat-finger).
 
-This feature only works with the default ``sqlite3`` database engine.
+This feature does not work with database engines ``minidb`` or ``textfiles``.
+
+
+`New in version 3.2.`
+
 
 
 .. _database-engine:
@@ -75,13 +80,17 @@ This feature only works with the default ``sqlite3`` database engine.
 Select a database engine
 -------------------------
 
-The requirement for the ``minidb`` database engine has been removed in version 3.2 and the database system has migrated
+The requirement for the ``minidb`` Python package has been removed in version 3.2 and the database system has migrated
 to one that relies on the built-in ``sqlite3``, is more efficient due to indexing, creates smaller files due to data
 compression with `msgpack <https://msgpack.org/index.html>`__ and provides additional functionality. Migration from the
 old-style database is done automatically and the old file is preserved for manual deletion.
 
 To continue using the minidb-based database structure used in prior versions and in `urlwatch` 2, launch `webchanges`
-with the command line switch ``--cache-engine minidb``. The ``minidib`` package must be installed for this to work.
+with the command line switch ``--cache-engine minidb``. The ``minidib`` Python package must be installed for this to
+work.
 
 To have the latest snapshot of each job saved as a separate text file instead of as a record in a database, use
 ``--cache-engine textfiles``.
+
+
+`New in version 3.2.`

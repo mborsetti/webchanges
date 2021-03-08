@@ -1,10 +1,15 @@
 - [ ] Smart "just works for web" philosophy automatically applies correct filters for monitoring webpages
-- [ ] Increase unit testing and its code coverage
+- [ ] Add more tests
+  - [ ] Increase line coverage
 - [ ] Document code
   - [ ] Type hinting
-  - [ ] List all classes
-- [ ] Update database only if all reporters run successfully
+  - [ ] Docstrings
+  - [ ] Make autodoc work!
+- [ ] Database grows to infinity! (and it's not even documented!)
+- [ ] Update database only if all reporters run successfully without errors
   - [ ] Or queue failed (undelivered) reports?
-- [ ] Reduce number of external packages required
-- [ ] Remove --add JOB and --delete JOB
-- [ ] Use built-in sqlite3 database (eliminate need for yet another import)
+- [ ] Improve handling of terminated execution (related)
+  - [ ] If the retrieved data were only saved to the database after it was output, this way of missing diffs would 
+        be prevented
+  - [ ] Provide a convenient way to show past diffs that might have been missed due to exceptions or user error
+- [ ] Remove --add JOB and --delete JOB code

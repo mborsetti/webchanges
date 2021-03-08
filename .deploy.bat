@@ -44,7 +44,8 @@ echo.
 echo Bumping version to next %v%
 bump2version --commit --tag --no-sign-tags %v%
 if NOT ["%errorlevel%"]==["0"] (
-    echo make sure to commit all other before running this script
+    echo make sure to commit all files (other than those modified by bump2version)
+    echo before running this script
     pause
     exit /b %errorlevel%
 )
@@ -58,7 +59,7 @@ if NOT ["%errorlevel%"]==["0"] (
 )
 
 echo.
-echo Bumping version locally to post-release 0 (will complain about CHANGELOG.rst)
+echo Bumping version locally to post-release
 bump2version --no-commit --no-tag postkind
 if NOT ["%errorlevel%"]==["0"] (
     pause

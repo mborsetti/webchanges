@@ -30,6 +30,16 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Security in case of vulnerabilities.
    Internals for changes that don't affect users.
 
+Version 3.2.4.post0
+===================
+Unreleased
+
+Intenal
+-------
+* Replaced atomic_rename custom fuction with Python bult-in `os.replace()
+  <https://docs.python.org/3/library/os.html#os.replace>`__ which was new in version 3.3 and does the same thing
+
+
 Version 3.2.4
 ===================
 2021-03-08
@@ -41,11 +51,12 @@ Added
   navigation to reach a URL starting with the specified one before extracting content. Useful when the URL redirects
   elsewhere before displaying content you're interested in and Pyppeteer would capture the intermediate page.
 * Command line switch ``--rollback-cache TIMESTAMP``: rollback the snapshot database to a previous time, useful when
-  you miss notifications; see `here <https://webchanges.readthedocs.io/en/stable/cli.html#rollback-cache>`__
-* Command line switch ``--cache-engine ENGINE``: specify ``minidib`` to continue using the database structure used
-  in prior versions and `urlwatch` 2.  Default ``sqlite3`` creates a smaller database due to data compression with
-  `msgpack <https://msgpack.org/index.html>`__; migration from old minidb database is done automatically and the old
-  database preserved for manual deletion
+  you miss notifications; see `here <https://webchanges.readthedocs.io/en/stable/cli.html#rollback-cache>`__. Does not
+  work with database engine ``minidb`` or ``textfiles``.
+* Command line switch ``--cache-engine ENGINE``: specify ``minidb`` to continue using the database structure used
+  in prior versions and `urlwatch` 2.  New default ``sqlite3`` creates a smaller database due to data compression with
+  `msgpack <https://msgpack.org/index.html>`__ and offers additional features; migration from old minidb database is
+  done automatically and the old database preserved for manual deletion.
 * Job directive ``block_elements`` for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer) (⚠ ignored in Python
   < 3.7) (experimental feature): specify `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (elements) to
@@ -58,7 +69,7 @@ Changes
 -------
 * A new, more efficient indexed database is used and only the most recent saved snapshot is migrated the first time you
   run this version. This has no effect on the ordinary use of the program other than reducing the number of historical
-  results from ``--test-diffs`` util more snapshots are captured.  To continue using the legacy database format, launch
+  results from ``--test-diffs`` util more snapshots are captured. To continue using the legacy database format, launch
   with ``database-engine minidb`` and ensure that the package ``minidb`` is installed.
 * If any jobs have ``use_browser: true`` (i.e. are using Pyppeteer), the maximum number of concurrent threads is set to
   the number of available CPUs instead of the `default
@@ -67,9 +78,9 @@ Changes
 * Default configuration now specifies the use of Chromium revisions equivalent to Chrome 89.0.4389.72 827102
   for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer) to increase stability. Note: if you already have a
   configuration file and want to upgrade to this version, see `here
-  <https://webchanges.readthedocs.io/en/stable/advanced.html#using-a-chromium-revision-matching-a-google-chrome-chromium-release>`__
-  The Chromium revisions used now are 'linux': 843831, 'win64': 843846, 'win32': 843832, and 'macos': 843846.
-* Temporarily removed code autodoc from the documentation as it's wasn't building correctly
+  <https://webchanges.readthedocs.io/en/stable/advanced.html#using-a-chromium-revision-matching-a-google-chrome-chromium-release>`__.
+  The Chromium revisions used now are 'linux': 843831, 'win64': 843846, 'win32': 843832, and 'mac': 843846.
+* Temporarily removed code autodoc from the documentation as it was not building correctly
 
 Fixed
 -----
@@ -78,12 +89,12 @@ Fixed
 
 Internals
 ---------
-* Removed dependency on ``minidb`` package and are now directly using Python's built-in ``sqlite3`` without additional
-  layer allowing for better control and increased functionality
+* Removed dependency on ``minidb`` package and are now directly using Python's built-in ``sqlite3``, allowing for better
+  control and increased functionality
 * Database is now smaller due to data compression with `msgpack <https://msgpack.org/index.html>`__
-* An old schema database is automatically detected and the last snapshot for each job will be migrated to the new one,
+* Migration from an old schema database is automatic and the last snapshot for each job will be migrated to the new one,
   preserving the old database file for manual deletion
-* No longer backing up database to `*.bak` (introduced in version 3.0.0) now that it can be rolled back
+* No longer backing up database to `*.bak` now that it can be rolled back
 * New command line argument ``--database-engine`` allows selecting engine and accepts ``sqlite3`` (default),
   ``minidb`` (legacy compatibility, requires package by the same name) and ``textfiles`` (creates a text file of the
   latest snapshot for each job)

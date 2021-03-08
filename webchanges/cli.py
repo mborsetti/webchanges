@@ -6,6 +6,7 @@
 
 import logging
 import os.path
+import shutil
 import signal
 import sys
 import warnings
@@ -61,20 +62,18 @@ def setup_logger(verbose: bool) -> None:
 
 def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cache_file: str) -> None:
     """Check for config, jobs and hooks files from urlwatch 2.2 and migrate them (copy to new naming)"""
-    urlwatch_config_dir = os.path.expanduser(os.path.join('~', '.' + 'urlwatch'))
-    urlwatch_config_file = os.path.join(urlwatch_config_dir, 'urlwatch.yaml')
-    urlwatch_urls_file = os.path.join(urlwatch_config_dir, 'urls.yaml')
-    urlwatch_hooks_file = os.path.join(urlwatch_config_dir, 'hooks.py')
-    urlwatch_cache_dir = AppDirs('urlwatch').user_cache_dir
-    urlwatch_cache_file = os.path.join(urlwatch_cache_dir, 'cache.db')
-    for old_file, new_file in zip((urlwatch_config_file, urlwatch_urls_file, urlwatch_hooks_file, urlwatch_cache_file),
+    uw_urlwatch_dir = os.path.expanduser(os.path.join('~', '.' + 'urlwatch'))
+    uw_config_file = os.path.join(uw_urlwatch_dir, 'urlwatch.yaml')
+    uw_urls_file = os.path.join(uw_urlwatch_dir, 'urls.yaml')
+    uw_hooks_file = os.path.join(uw_urlwatch_dir, 'hooks.py')
+    uw_cache_dir = AppDirs('urlwatch').user_cache_dir
+    uw_cache_file = os.path.join(uw_cache_dir, 'cache.db')
+    for old_file, new_file in zip((uw_config_file, uw_urls_file, uw_hooks_file, uw_cache_file),
                                   (config_file, jobs_file, hooks_file, cache_file)):
         if os.path.isfile(old_file) and not os.path.isfile(new_file):
-            import shutil
-
             os.makedirs(os.path.dirname(new_file), exist_ok=True)
             shutil.copyfile(old_file, new_file)
-            logger.warning(f"Copied urlwatch '{old_file}' file to '{new_file}'")
+            logger.warning(f"Copied urlwatch '{old_file}' file to webchanges '{new_file}'")
 
 
 def main() -> None:  # pragma: no cover
@@ -108,11 +107,12 @@ def main() -> None:  # pragma: no cover
     setup_logger(command_config.verbose)
 
     # check for directory of config files entered in cli
+    # TODO: make this legible!
     if (not os.path.isfile(command_config.config)
             and command_config.config == os.path.basename(command_config.config)
             and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.config)))):
         command_config.config = os.path.join(command_config.config_dir, os.path.basename(command_config.config))
-    if not command_config.config.endswith('.yaml'):
+    if os.path.splitext(command_config.config)[1] != '.yaml':
         if os.path.isfile(command_config.config + '.yaml'):
             command_config.config += '.yaml'
         elif (command_config.config == os.path.basename(command_config.config) and os.path.isfile(
@@ -123,11 +123,11 @@ def main() -> None:  # pragma: no cover
             and command_config.jobs == os.path.basename(command_config.jobs)
             and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.jobs)))):
         command_config.jobs = os.path.join(command_config.config_dir, os.path.basename(command_config.jobs))
-    if not command_config.jobs.endswith('.yaml'):
+    if os.path.splitext(command_config.jobs)[1] != '.yaml':
         if os.path.isfile(command_config.jobs + '.yaml'):
             command_config.jobs += '.yaml'
         elif (command_config.jobs == os.path.basename(command_config.jobs) and os.path.isfile(
-                os.path.join(command_config.config_dir, os.path.basename(command_config.jobs + '.yaml')))):
+              os.path.join(command_config.config_dir, os.path.basename(command_config.jobs + '.yaml')))):
             command_config.jobs = os.path.join(command_config.config_dir,
                                                os.path.basename(command_config.jobs + '.yaml'))
     if (not os.path.isfile(command_config.hooks)

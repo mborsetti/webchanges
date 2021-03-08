@@ -18,7 +18,7 @@ here = os.path.dirname(__file__)
 
 project_name = __project_name__
 config_dir = os.path.join(here, 'data')
-(prefix, bindir) = os.path.split(config_dir)
+prefix, bindir = os.path.split(config_dir)
 config_file = os.path.join(here, 'data', 'config.yaml')
 jobs_file = os.path.join(here, 'data', 'command_jobs.yaml')
 cache_file = os.path.join(here, 'data', 'cache.db')
@@ -29,6 +29,12 @@ cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = JobsYaml(jobs_file)
 command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
                                cache_file, verbose=False)
+
+editor = os.getenv('EDITOR')
+os.environ['EDITOR'] = 'echo'
+visual = os.getenv('VISUAL')
+if visual:
+    del os.environ['VISUAL']
 
 
 def test_migration():
@@ -43,6 +49,11 @@ def test_command_check_edit_config():
     urlwatch_command = UrlwatchCommand(Urlwatch(command_config, config_storage, cache_storage, jobs_storage))
     assert not urlwatch_command.check_edit_config()
     urlwatch_command.urlwatcher.close()
+
+
+# def test_command_edit_hooks():
+#     urlwatch_command = UrlwatchCommand(Urlwatch(command_config, config_storage, cache_storage, jobs_storage))
+#     assert not urlwatch_command.edit_hooks()
 
 
 def test_command_show_features():
@@ -109,8 +120,13 @@ def test_command_check_xmpp_login():
 @pytest.fixture(scope='session', autouse=True)
 def cleanup(request):
     """Cleanup once we are finished."""
-    def close_and_remove_file():
+    def finalizer():
+        if editor:
+            os.environ['EDITOR'] = editor
+        if visual:
+            os.environ['VISUAL'] = visual
         for filename in (cache_file, f'{cache_file}.bak', f'{cache_file}.minidb'):
             if os.path.exists(filename):
                 os.remove(filename)
-    request.addfinalizer(close_and_remove_file)
+
+    request.addfinalizer(finalizer)

@@ -8,10 +8,11 @@ Contributing
     :target: https://www.github.com/mborsetti/webchanges
     :alt: contributors
 
-Everyone is welcomed to contribute! Beginner? It's easy-ish to start! Please see this `tutorial
-<https://github.com/firstcontributions/first-contributions/blob/master/README.md>`__.
+Everyone is welcomed to contribute: there's even a `wish list
+<https://github.com/mborsetti/webchanges/blob/master/WISHLIST.md>`__! Beginner? It's easy-ish to start! Please see this
+`tutorial <https://github.com/firstcontributions/first-contributions/blob/master/README.md>`__.
 
-If you can provide a solution as a pull request, please do so. If not, open an issue `here
+If you can contribute with a pull request, please do so. If not, open an issue `here
 <https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.
 
 Please make your contributions to the `unrealeased <https://github.com/mborsetti/webchanges/tree/unreleased>`__ branch.

@@ -882,6 +882,8 @@ class WebhookReporter(TextReporter):
 
 
 class SlackReporter(WebhookReporter):
+    """Deprecated; use webhook instead"""
+
     __kind__ = 'slack'
 
     def __init__(self, *args, **kwargs):

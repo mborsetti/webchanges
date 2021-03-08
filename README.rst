@@ -22,7 +22,7 @@ webchanges
     :target: https://webchanges.readthedocs.io/
     :alt: Read the documentation at https://webchanges.readthedocs.io/
 
-.. |CI| image:: https://github.com/mborsetti/webchanges/workflows/Tests/badge.svg?event=pull_request&branch=main
+.. |CI| image:: https://github.com/mborsetti/webchanges/workflows/Tests/badge.svg?branch=main
     :target: https://github.com/mborsetti/webchanges/actions
     :alt: CI testing status
 
@@ -101,21 +101,24 @@ Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but in
 Improvements from `urlwatch`
 ============================
 
-This fork is optimized for HTML:
+You can seamlessly upgrade from `urlwatch` 2.22 (see `here
+<https://webchanges.readthedocs.io/en/stable/migration.html>`__) and benefit from these HTML-focused improvements:
 
 * Links are `clickable <https://pypi.org/project/webchanges/>`__!
 * Formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and indentation is
   preserved
-* :additions:`Added` and :deletions:`deleted` lines are highlighted with color and strikethrough
-* Long lines wrap around
-* HTML is rendered correctly by email clients such as Gmail who override stylesheets
+* Uses color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines and long lines wrap
+  around
+* HTML is rendered correctly by email clients who override stylesheets (e.g. Gmail)
 * Other legibility improvements
-
-It also has a new `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__
-filter that makes it easier to track content that was added without the distractions of the content that was deleted
-(and a similar `deletions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#deletions-only>`__ one)
-as well as many other refinements (see `changelog
-<https://github.com/mborsetti/webchanges/blob/main/CHANGELOG.rst>`__).
+* Multiple changes to how Pyppeteer is run (for websites that need JavaScript rendering before capture) increasing
+  stability, reliability, flexibility and control
+* New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
+  which makes it easier to track content that was added without the distractions of the content that was deleted
+* Better documentation
+* Many many other additions, refinements and fixes (see `detailed information
+  <https://webchanges.readthedocs.io/en/stable/migration.html#detailed-information>`__ and `changelog
+  <https://github.com/mborsetti/webchanges/blob/main/CHANGELOG.rst>`__)
 
 Examples:
 

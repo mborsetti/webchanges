@@ -27,7 +27,7 @@ import webchanges as project
 
 from .filters import FilterBase
 from .jobs import JobBase, ShellJob, UrlJob
-from .util import atomic_rename, edit_file
+from .util import edit_file
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +225,7 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
                 print('Your changes have been saved in', file_edit)
                 return 1
 
-        atomic_rename(file_edit, self.filename)
+        os.replace(file_edit, self.filename)
         print('Saving edit changes in', self.filename)
 
     @classmethod
@@ -503,7 +503,9 @@ class CacheSQLite3Storage(CacheStorage):
         if tables == ('CacheEntry',):
             # found a minidb legacy database; rename it for migration and create new one
             self.db.close()
-            os.rename(filename, filename + '.minidb')
+            fn_base, fn_ext = os.path.splitext(filename)
+            minidb_filename = f'{fn_base}_mindib{fn_ext}'
+            os.replace(filename, minidb_filename)
             self.db = sqlite3.connect(filename, check_same_thread=False)
             self.cur = self.db.cursor()
         if tables != ('webchanges',):
@@ -513,7 +515,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
         if tables == ('CacheEntry',):
             # migrate the minidb legacy database renamed above
-            self.migrate_from_minidb(filename + '.minidb')
+            self.migrate_from_minidb(minidb_filename)
 
     def close(self) -> None:
         """Cleans up the database and closes the connection to it"""

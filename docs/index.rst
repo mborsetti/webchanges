@@ -9,9 +9,11 @@
 
 .. include:: ../README.rst
 
-=================
-Table of Contents
-=================
+------------
+
+===============================
+Documentation table of contents
+===============================
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
