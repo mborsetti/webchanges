@@ -78,7 +78,7 @@ At the moment, the following filters are available:
 
 * To edit/filter text:
 
-  - :ref:`keep_lines_containing`: Keep only lines containing specified text or matching`Python regular expression
+  - :ref:`keep_lines_containing`: Keep only lines containing specified text or matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
   - :ref:`delete_lines_containing`: Delete lines containing specified text or matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
@@ -282,7 +282,7 @@ Optional directives
  - ``html2text``: Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package (default) and retains
    some simple formatting (Markup language)
  - ``bs4``: Uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
- - ``re``: Uses regex to strip tags
+ - ``strip_tags``: Uses regex to strip tags
 
 
 ``html2text``
@@ -330,18 +330,23 @@ Optional sub-directives
 
 Required packages
 ~~~~~~~~~~~~~~~~~
-To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
-Install them using:
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
 
 .. code-block:: bash
 
    pip install --upgrade webchanges[bs4]
 
-``re``
-^^^^^^
-A simple HTML/XML tag stripper based on applying a regex.  Very fast but may
-not yield the prettiest results.
 
+``strip_tags``
+^^^^^^^^^^^^^^
+A simple HTML/XML tag stripper based on applying a regex.  Very fast but may not yield the prettiest results.
+
+`Changed in version 3.0:` method renamed to ``strip_tags`` from ``re``.
+
+`Changed in version 3.0:` filter defaults to the use of Python ``html2text`` package.
+
+`Removed in version 3.0:` method ``lynx`` requiring external OS-specific dependency.
 
 .. _beautify:
 
@@ -349,17 +354,16 @@ beautify
 --------
 This filter uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
 <https://pypi.org/project/jsbeautifier/>`__ and `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ Python
-packages to reformat an HTML document to make it more readable.
+packages to reformat the HTML in a document to make it more readable (keeping it as HTML).
 
 Required packages
 """""""""""""""""
-To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
-Install them using:
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
 
 .. code-block:: bash
 
    pip install --upgrade webchanges[beautify]
-
 
 
 .. _pdf2text:
@@ -370,7 +374,7 @@ This filter converts a PDF file to plaintext using the `pdftotext
 <https://github.com/jalan/pdftotext/blob/master/README.md#pdftotext>`__ Python library, itself based on the `Poppler
 <https://poppler.freedesktop.org/>`__ library.
 
-This filter *must* be the first filter in a chain of filters.
+This filter *must* be the first filter in a chain of filters, since it consumes binary data.
 
 .. code-block:: yaml
 
@@ -394,14 +398,14 @@ Optional sub-directives
 
 Required packages
 """""""""""""""""
-To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
-Install them using:
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
 
 .. code-block:: bash
 
    pip install --upgrade webchanges[pdf2text]
 
-In addition, you need to install any of the OS-specific dependencies of Poppler (see
+In addition, you need to first install any of the OS-specific dependencies of Poppler (see
 `website <https://github.com/jalan/pdftotext/blob/master/README.md#os-dependencies>`__).
 
 
@@ -429,14 +433,14 @@ Optional sub-directives
 
 Required packages
 """""""""""""""""
-To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
-Install them using:
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
 
 .. code-block:: bash
 
    pip install --upgrade webchanges[ocr]
 
-In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__.
+In addition, you need to first install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__.
 
 
 
@@ -444,7 +448,7 @@ In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tes
 
 format-json
 ---------------
-This filter deserializes a JSON object and reformats it using Python's `json.dumps
+This filter deserializes a JSON object and formats it using Python's `json.dumps
 <https://docs.python.org/3/library/json.html#json.dumps>`__ with indentations.
 
 Optional sub-directives
@@ -465,6 +469,8 @@ format-xml
 This filter deserializes an XML object and reformats it using the `lxml <https://lxml.de>`__ Python package's
 etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ option.
 
+`New in version 3.0.`
+
 
 
 .. _ical2text:
@@ -482,8 +488,8 @@ This filter reads an iCalendar document and converts them to easy-to read text
 
 Required packages
 """""""""""""""""
-To run jobs with this filter, you need to install :ref:`additional Python packages <optional_packages>`.
-Install them using:
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
 
 .. code-block:: bash
 
@@ -555,6 +561,8 @@ Optional sub-directives
 * ``re``: Match the the Python `regular
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
 
+`Changed in version 3.0`: renamed from ``grep``.
+
 
 
 .. _delete_lines_containing:
@@ -583,17 +591,17 @@ Examples:
      - delete_lines_containing:
          re: '(?i)^warning'
 
-Notes: in regex ``(?i)`` is the inline flag for `case-insensitive matching
+Notes: in regex, ``(?i)`` is the inline flag for `case-insensitive matching
 <https://docs.python.org/3/library/re.html#re.I>`__ and ``^`` (caret) matches the `start of the string
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
-
-
 
 Optional sub-directives
 """""""""""""""""""""""
 * ``text`` (default): Match the text provided
 * ``re``: Match the the Python `regular
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
+
+`Changed in version 3.0`: renamed from ``grepi``.
 
 
 
@@ -767,13 +775,16 @@ environment variable ``URLWATCH_JOB_NAME`` will have the name of the job, while 
 
 If the command errors, the output of that error will be in the first line, before the traceback.
 
-WARNING: On Linux systems, this filter will not run for security reasons unless both the config directory and the jobs
-file are owned by and writeable **only** by the same user (and not by the group or other users) who is running the job.
-To set this up:
+WARNING: On Linux and macOS systems, this filter will not run for security reasons unless both the config directory and
+the jobs file are owned by and writeable **only** by the user who is running the job, and not by the group or other
+users. To set this up:
 
 .. code-block:: bash
 
-   cd ~/.config/webchanges
-   sudo chown $USER:$GROUP . *
-   chmod g-w . *
-   chmod o-w . *
+   cd ~/.config/webchanges  # could be different
+   sudo chown $USER:$(id -g -n) *.yaml
+   sudo chmod go-w *.yaml
+
+* ``sudo`` may or may not be required
+* Replace ``$USER:$(id -g -n)`` with the username that runs `webchanges` if different than the use you're logged in when
+  making the above changes

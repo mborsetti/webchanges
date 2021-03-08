@@ -1,10 +1,13 @@
+import asyncio
 import email.utils
 import hashlib
 import logging
 import os
 import re
 import subprocess
+import sys
 import textwrap
+from urllib.parse import urlsplit
 
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -54,7 +57,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         # Fail if any required keys are not provided
         for k in self.__required__:
             if k not in kwargs:
-                raise ValueError(f'Required field {k} missing: {kwargs}')
+                raise ValueError(f'Required field {k} missing: {kwargs!r}')
 
         for k, v in list(kwargs.items()):
             setattr(self, k, v)
@@ -73,7 +76,7 @@ class JobBase(object, metaclass=TrackSubClasses):
             else:
                 result.append(f'  * {sc.__kind__}')
 
-            for msg, value in (('    Required keys: ', sc.__required__), ('    Optional keys: ', sc.__optional__)):
+            for msg, value in (('    Required: ', sc.__required__), ('    Optional: ', sc.__optional__)):
                 if value:
                     values = ('\n' + (len(msg) * ' ')).join(textwrap.wrap(', '.join(value), 79 - len(msg)))
                     result.append(f'{msg}{values}')
@@ -102,9 +105,17 @@ class JobBase(object, metaclass=TrackSubClasses):
             if len(kinds) == 1 or (len(kinds) == 2 and kinds[0] == 'url'):  # url defaults to kind: url
                 kind = kinds[0]
             elif len(kinds) == 0:
-                raise ValueError(f'Kind is not specified, and no job matches: {data}')
+                if 'url' in data and data.get('use_browser'):
+                    kind = 'browser'
+                elif 'url' in data:
+                    kind = 'url'
+                elif 'command' in data:
+                    kind = 'shell'
+                else:
+                    raise ValueError(
+                        f"Parameters don't match a job type; check for errors/typos/text escaping:\n{data!r}")
             else:
-                raise ValueError(f'Multiple kinds of jobs match {data}: {kinds}')
+                raise ValueError(f'Multiple kinds of jobs match {data!r}: {kinds!r}')
         else:
             kind = data['kind']
 
@@ -119,7 +130,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         return cls(**{k: v for k, v in list(data.items()) if k in cls.__required__ or k in cls.__optional__})
 
     def __repr__(self):
-        return f'<{self.__kind__} {" ".join(f"{k}={v}" for k, v in list(self.to_dict().items()))}'
+        return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
     def _set_defaults(self, defaults):
         if isinstance(defaults, dict):
@@ -161,7 +172,7 @@ class JobBase(object, metaclass=TrackSubClasses):
 
 class Job(JobBase):
     __required__ = ()
-    __optional__ = ('name', 'filter', 'max_tries', 'diff_tool', 'additions_only', 'deletions_only',
+    __optional__ = ('name', 'note', 'filter', 'max_tries', 'diff_tool', 'additions_only', 'deletions_only',
                     'contextlines', 'compared_versions', 'is_markdown', 'markdown_padded_tables', 'diff_filter')
 
     def pretty_name(self):
@@ -169,7 +180,7 @@ class Job(JobBase):
 
 
 class UrlJob(Job):
-    """Retrieve an URL from a web server. Triggered by url key and no (or false) use_browser key"""
+    """Retrieve a URL from a web server"""
 
     __kind__ = 'url'
 
@@ -211,7 +222,7 @@ class UrlJob(Job):
             if self.method is None:
                 self.method = 'POST'
             headers['Content-type'] = 'application/x-www-form-urlencoded'
-            logger.info('Sending POST request to %s', self.url)
+            logger.info(f'Sending POST request to {self.url}')
 
         if self.http_proxy is not None:
             proxies['http'] = self.http_proxy
@@ -220,7 +231,7 @@ class UrlJob(Job):
 
         file_scheme = 'file://'
         if self.url.startswith(file_scheme):
-            logger.info('Using local filesystem (%s URI scheme)', file_scheme)
+            logger.info(f'Using local filesystem ({file_scheme} URI scheme)')
             with open(self.url[len(file_scheme):], 'rt') as f:
                 file = f.read()
             return file
@@ -326,33 +337,47 @@ class UrlJob(Job):
 
 
 class BrowserJob(Job):
-    """Retrieve an URL, emulating a real web browser. Triggered by url key with use_browser: true"""
+    """Retrieve a URL, emulating a real web browser (use_browser: true)"""
 
     __kind__ = 'browser'
 
     __required__ = ('url', 'use_browser')
     __optional__ = ('chromium_revision', 'headers', 'cookies', 'timeout', 'ignore_http_error_codes',
-                    'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for', 'navigate',
-                    'user_visible_url')
+                    'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for',
+                    'wait_for_navigation', 'user_visible_url', 'block_elements', 'navigate')
+
+    DEFAULT_CHROMIUM_REVISION = {
+        'linux': 843831,
+        'win64': 843846,
+        'win32': 843832,
+        'mac': 843846,
+    }
 
     def get_location(self):
         if not self.url and self.navigate:
-            logger.warning("'navigate:' key is deprecated. Replace with 'url:'")
+            logger.warning("'navigate:' key is deprecated. Replace with 'url:' and 'use_browser: true")
         return self.user_visible_url or self.url or self.navigate
 
     def main_thread_enter(self):
-        # check if proxy is being used
-        from .browser import BrowserContext, get_proxy
-        proxy_server, self.proxy_username, self.proxy_password = get_proxy(self.url, self.http_proxy, self.https_proxy)
-        self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_http_error_codes,
-                                  self.user_data_dir, self.switches)
+        if sys.version_info < (3, 7):
+            # check if proxy is being used
+            from .browser import BrowserContext, get_proxy
+            proxy_server, self.proxy_username, self.proxy_password = get_proxy(self.url, self.http_proxy,
+                                                                               self.https_proxy)
+            self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_http_error_codes,
+                                      self.user_data_dir, self.switches)
 
     def main_thread_exit(self):
-        self.ctx.close()
+        if sys.version_info < (3, 7):
+            self.ctx.close()
 
     def retrieve(self, job_state):
-        response = self.ctx.process(self.url, self.headers, self.cookies, self.timeout, self.proxy_username,
-                                    self.proxy_password, self.wait_until, self.wait_for)
+        if sys.version_info < (3, 7):
+            response = self.ctx.process(self.url, self.headers, self.cookies, self.timeout, self.proxy_username,
+                                        self.proxy_password, self.wait_until, self.wait_for, self.wait_for_navigation)
+        else:
+            response = asyncio.run(self._retrieve())
+
         # if no name is found, set it to the title of the page if found
         if not self.name:
             title = re.findall(r'<title.*?>(.+?)</title>', response)
@@ -360,6 +385,141 @@ class BrowserJob(Job):
                 self.name = title[0]
 
         return response
+
+    @staticmethod
+    def current_platform() -> str:
+        """Get current platform name by short string.
+        Originally from pyppeteer.chromium_downloader"""
+        if sys.platform.startswith('linux'):
+            return 'linux'
+        elif sys.platform.startswith('darwin'):
+            return 'mac'
+        elif sys.platform.startswith('win') or sys.platform.startswith('msys') or sys.platform.startswith('cyg'):
+            if sys.maxsize > 2 ** 31 - 1:
+                return 'win64'
+            return 'win32'
+        raise OSError('Platform unsupported by Pyppeteer (use_browser: true): ' + sys.platform)
+
+    async def _retrieve(self):
+        # launch browser
+        if not self.chromium_revision:
+            self.chromium_revision = self.DEFAULT_CHROMIUM_REVISION
+        if isinstance(self.chromium_revision, dict):
+            for key, value in self.DEFAULT_CHROMIUM_REVISION.items():
+                if key not in self.chromium_revision:
+                    self.chromium_revision[key] = value
+            try:
+                _revision = self.chromium_revision[self.current_platform()]
+            except KeyError:
+                raise KeyError(f"No 'chromium_revision' key for operating system {self.current_platform()} found")
+        else:
+            _revision = self.chromium_revision
+        os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(_revision)
+
+        logger.info(f"os.environ.get('PYPPETEER_DOWNLOAD_HOST')={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}")
+        logger.info(f"os.environ.get('PYPPETEER_CHROMIUM_REVISION')="
+                    f"{os.environ.get('PYPPETEER_CHROMIUM_REVISION')}")
+        logger.info(f"os.environ.get('PYPPETEER_NO_PROGRESS_BAR')={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}")
+        try:
+            from pyppeteer import launch  # must be imported after setting os.environ variables
+        except ImportError:
+            raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
+                              f' ( {self.job.get_location()} )')
+
+        args = []
+        if self.http_proxy or self.https_proxy:
+            if urlsplit(self.url).scheme == 'http':
+                proxy = self.http_proxy
+            elif urlsplit(self.url).scheme == 'https':
+                proxy = self.https_proxy
+            else:
+                proxy = ''
+            if proxy:
+                proxy_server = f'{urlsplit(proxy).scheme}://{urlsplit(proxy).hostname}' + (
+                    f':{urlsplit(proxy).port}' if urlsplit(proxy).port else '')
+                proxy_username = str(urlsplit(proxy).username) if urlsplit(proxy).username else ''
+                proxy_password = str(urlsplit(proxy).password) if urlsplit(proxy).password else ''
+                args.append(f'--proxy-server={proxy_server}')
+        if self.user_data_dir:
+            args.append(f'--user-data-dir={os.path.expanduser(os.path.expandvars(self.user_data_dir))}')
+        if self.switches:
+            if isinstance(self.switches, str):
+                self.switches = self.switches.split(',')
+            if not isinstance(self.switches, list):
+                raise TypeError(f"'switches' needs to be a string or list, not {type(self.switches)} "
+                                f'( {self.get_location()} )')
+            self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
+            args.extend(self.switches)
+        # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
+        browser = await launch(ignoreHTTPSErrors=self.ignore_http_error_codes, args=args, handleSIGINT=False,
+                               handleSIGTERM=False, handleSIGHUP=False)
+
+        # browse to page and get content
+        page = await browser.newPage()
+
+        if self.headers:
+            await page.setExtraHTTPHeaders(self.headers)
+        if self.cookies:
+            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
+        if (self.http_proxy or self.https_proxy) and (proxy_username or proxy_password):
+            await page.authenticate({'username': proxy_username, 'password': proxy_password})
+        options = {}
+        if self.timeout:
+            options['timeout'] = self.timeout * 1000
+        if self.wait_until:
+            options['waitUntil'] = self.wait_until
+        if self.block_elements:  # FIXME: Pyppeteer freezes on certain sites if this is on; contribute if you know why
+            if isinstance(self.block_elements, str):
+                self.block_elements = self.block_elements.split(',')
+            if not isinstance(self.block_elements, list):
+                raise TypeError(f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
+                                f'( {self.get_location()} )')
+            # web_request_resource_types = [
+            #     # https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType
+            #     'beacon', 'csp_report', 'font', 'image', 'imageset', 'media', 'main_frame', 'media', 'object',
+            #     'object_subrequest', 'ping', 'script', 'speculative', 'stylesheet', 'sub_frame', 'web_manifest',
+            #     'websocket', 'xbl', 'xml_dtd', 'xmlhttprequest', 'xslt', 'other']
+            chrome_web_request_resource_types = [
+                # https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType
+                'main_frame', 'sub_frame', 'stylesheet', 'script', 'image', 'font', 'object', 'xmlhttprequest', 'ping',
+                'csp_report', 'media', 'websocket', 'other']
+            for element in self.block_elements:
+                if element not in chrome_web_request_resource_types:
+                    await browser.close()
+                    raise ValueError(f"Unknown or unsupported '{element}' resource type in 'block_elements' "
+                                     f'( {self.get_location()} )')
+
+            async def intercept(request, elements):
+                if any(request.resourceType == _ for _ in elements):
+                    await request.abort()
+                else:
+                    await request.continue_()
+
+            def handle_request(intercepted_request):
+                asyncio.create_task(intercept(intercepted_request, self.block_elements))
+
+            await page.setRequestInterception(True)
+            page.on('request', handle_request)  # inherited from Bases: pyee.EventEmitter
+
+        await page.goto(self.url, options=options)
+
+        # TODO understand if the below is required
+        # if self.block_elements:
+        #     page.remove_listener('request', handle_request)
+        #     await page.setRequestInterception(False)
+        if self.wait_for_navigation:
+            while not page.url.startswith(self.wait_for_navigation):
+                logger.info(f'Waiting for redirection from {page.url}')
+                await page.waitForNavigation(option=options)
+        if self.wait_for:
+            if isinstance(self.wait_for, (int, float, complex)) and not isinstance(self.wait_for, bool):
+                self.wait_for *= 1000
+            await page.waitFor(self.wait_for, options=options)
+
+        content = await page.content()
+        await browser.close()
+
+        return content
 
 
 class ShellJob(Job):
@@ -375,12 +535,20 @@ class ShellJob(Job):
 
     def retrieve(self, job_state):
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
-        process = subprocess.run(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
-                                 text=(not needs_bytes))  # noqa: DUO116 use of "shell=True" is insecure
-        # Python 3.7
-        # process = subprocess.run(self.command, capture_output=False, shell=True, text=(not needs_bytes))
-        result = process.returncode
-        if result != 0:
-            raise ShellError(process.stderr)
+        if sys.version_info < (3, 7):
+            process = subprocess.run(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     shell=True)  # noqa: DUO116 use of "shell=True" is insecure
+            result = process.returncode
+            if result != 0:
+                raise ShellError(process.stderr)
 
-        return process.stdout
+            if needs_bytes:
+                return process.stdout
+            else:
+                return process.stdout.decode()
+        else:
+            try:
+                return subprocess.run(self.command, capture_output=True, shell=True, check=True,
+                                      text=(not needs_bytes)).stdout  # noqa: DUO116 use of "shell=True" is insecure
+            except subprocess.CalledProcessError as e:
+                raise ShellError(e.stderr).with_traceback(e.__traceback__)

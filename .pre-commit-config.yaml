@@ -56,14 +56,15 @@ repos:
         description: removes UTF-8 byte order marker
       - id: fix-encoding-pragma
         args: ['--remove']
-        description: Remove # -*- coding: utf-8 -*- to the top of python files
+        description: "Remove # -*- coding: utf-8 -*- from the top of python files"
 #      - id: file-contents-sorter
 #        description: Sort the lines in specified files (defaults to alphabetical)
 #      - id: forbid-new-submodules
 #        description: Prevent addition of new git submodules
-      - id: mixed-line-ending
-        args: ['--fix=lf']
-        description: Forces to replace line ending by the UNIX 'lf' character
+#      - id: mixed-line-ending
+#        args: ['--fix=lf']
+#        description: Forces replacing of line ending by the UNIX 'lf' character
+#        note: switched to using gitattributes https://git-scm.com/docs/gitattributes
       - id: name-tests-test
         description: Assert that files in tests/ end in _test.py
 #      - id: no-commit-to-branch
@@ -78,7 +79,7 @@ repos:
 #        description: Trims trailing whitespace
 
   - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.7.1
+    rev: v1.8.0
     hooks:
       - id: python-check-blanket-noqa
         description: "Enforce that noqa annotations always occur with specific codes. Sample annotations: # noqa: F401, # noqa: F401,W203"
@@ -128,7 +129,7 @@ repos:
       - id: sphinx-build
         name: Check documentation (sphinx-build)
         entry: python -m sphinx.cmd.build
-        args: [-a, -E, docs, docs/_build]  # removed -W due to autosummary warnings, TODO find a way to use it
+        args: [-a, -E, -W, docs, docs/_build]
         language: system
         files: ^docs
         types: [file]

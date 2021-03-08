@@ -1,12 +1,10 @@
-- [ ] Smart "just works for web" philosophy automatically applies filters for monitoring webpages
-- [ ] Check warnings when deprecated `navigate` directive is used
+- [ ] Smart "just works for web" philosophy automatically applies correct filters for monitoring webpages
 - [ ] Increase unit testing and its code coverage
 - [ ] Document code
   - [ ] Type hinting
   - [ ] List all classes
 - [ ] Update database only if all reporters run successfully
   - [ ] Or queue failed (undelivered) reports?
-- [ ] Package import optimizations
-  - [ ] Make it threadsafe
 - [ ] Reduce number of external packages required
 - [ ] Remove --add JOB and --delete JOB
+- [ ] Use built-in sqlite3 database (eliminate need for yet another import)

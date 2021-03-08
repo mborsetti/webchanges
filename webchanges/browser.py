@@ -1,6 +1,13 @@
+"""
+For compatibility with sys.version_info < (3, 7)
+Not used otherwise (upgraded to using asyncio.run from within BrowserJob class)
+Not included in coverage
+"""
+
 import asyncio
 import logging
 import os
+import sys
 import threading
 from urllib.parse import urlsplit
 
@@ -37,20 +44,43 @@ class BrowserLoop(object):
         self._loop_thread = threading.Thread(target=self._event_loop.run_forever)
         self._loop_thread.start()
 
-    async def _launch_browser(self, chromium_revision, proxy_server, ignore_https_errors, user_data_dir, switches):
-        import pyppeteer
+    @staticmethod
+    def current_platform() -> str:
+        """Get current platform name by short string.
+        Originally from pyppeteer.chromium_downloader"""
+        if sys.platform.startswith('linux'):
+            return 'linux'
+        elif sys.platform.startswith('darwin'):
+            return 'mac'
+        elif sys.platform.startswith('win') or sys.platform.startswith('msys') or sys.platform.startswith('cyg'):
+            if sys.maxsize > 2 ** 31 - 1:
+                return 'win64'
+            return 'win32'
+        raise OSError('Unsupported platform: ' + sys.platform)
 
+    async def _launch_browser(self, chromium_revision, proxy_server, ignore_https_errors, user_data_dir, switches):
         if chromium_revision:
-            if isinstance(chromium_revision, list):
-                self._chromium_revision = None
-                platform = pyppeteer.chromium_downloader.current_platform()
-                for _os in chromium_revision:
-                    if platform in _os:
-                        self._chromium_revision = _os[platform]
-                        break
-            else:
-                self._chromium_revision = chromium_revision
-            os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(self._chromium_revision)
+            if chromium_revision:
+                if isinstance(chromium_revision, dict):
+                    try:
+                        _revision = chromium_revision[self.current_platform()]
+                    except KeyError:
+                        raise KeyError(
+                            f"No 'chromium_revision' key for operating system {self.current_platform()} found")
+                else:
+                    _revision = chromium_revision
+                os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(_revision)
+
+        logger.info(f"os.environ.get('PYPPETEER_DOWNLOAD_HOST')={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}")
+        logger.info(f"os.environ.get('PYPPETEER_CHROMIUM_REVISION')="
+                    f"{os.environ.get('PYPPETEER_CHROMIUM_REVISION')}")
+        logger.info(f"os.environ.get('PYPPETEER_NO_PROGRESS_BAR')={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}")
+        try:
+            import pyppeteer  # must be imported after setting os.environ variables
+        except ImportError:
+            raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
+                              f' ( {self.job.get_location()} )')
+
         args = []
         if proxy_server:
             args.append(f'--proxy-server={proxy_server}')
@@ -59,21 +89,26 @@ class BrowserLoop(object):
         if switches:
             if isinstance(switches, str):
                 switches = switches.split(',')
+            if not isinstance(switches, list):
+                raise TypeError(f"'switches' needs to be a string or list, not {type(switches)} "
+                                f'( {self.get_location()} )')
+            switches = [f"--{switch.lstrip('--')}" for switch in switches]
             args.extend(switches)
         browser = await pyppeteer.launch(ignoreHTTPSErrors=ignore_https_errors, args=args)
-        for p in (await browser.pages()):
-            await p.close()
+        # for p in (await browser.pages()):
+        #     await p.close()
         return browser
 
     async def _get_content(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until,
-                           wait_for):
+                           wait_for, wait_for_navigation):
         # context = await self._browser.createIncognitoBrowserContext()
         context = self._browser
         page = await context.newPage()
-        if cookies:
-            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in cookies.items()])})
+
         if headers:
             await page.setExtraHTTPHeaders(headers)
+        if cookies:
+            await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in cookies.items()])})
         if proxy_username or proxy_password:
             await page.authenticate({'username': proxy_username, 'password': proxy_password})
         options = {}
@@ -82,17 +117,25 @@ class BrowserLoop(object):
         if wait_until:
             options['waitUntil'] = wait_until
         await page.goto(url, options)
+        if wait_for_navigation:
+            while not page.url.startswith(wait_for_navigation):
+                logger.info(f'Waiting for redirection from {page.url}')
+                await page.waitForNavigation()
         if wait_for:
             if isinstance(wait_for, (int, float, complex)) and not isinstance(wait_for, bool):
                 wait_for *= 1000
             await page.waitFor(wait_for)
+
         content = await page.content()
         await context.close()
+
         return content
 
-    def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for):
+    def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for,
+                wait_for_navigation):
         return asyncio.run_coroutine_threadsafe(
-            self._get_content(url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for),
+            self._get_content(url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for,
+                              wait_for_navigation),
             self._event_loop).result()
 
     def destroy(self):
@@ -117,9 +160,10 @@ class BrowserContext(object):
                                                            user_data_dir, switches)
             BrowserContext._BROWSER_REFCNT += 1
 
-    def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for):
+    def process(self, url, headers, cookies, timeout, proxy_username, proxy_password, wait_until, wait_for,
+                wait_for_navigation):
         return BrowserContext._BROWSER_LOOP.process(url, headers, cookies, timeout, proxy_username, proxy_password,
-                                                    wait_until, wait_for)
+                                                    wait_until, wait_for, wait_for_navigation)
 
     def close(self):
         with BrowserContext._BROWSER_LOCK:
@@ -142,15 +186,17 @@ def main():
     parser.add_argument('--chromium_revision', help='Chromium revision to use')
     parser.add_argument('--http_proxy', help='proxy to be used with http URLs')
     parser.add_argument('--https_proxy', help='proxy to be used with https URLs')
-    parser.add_argument('--headers', help='HTTP headers in JSON format (escape double quotes etc.)', type=json.loads)
-    parser.add_argument('--cookies', help='cookies in JSON format (escape double quotes etc.)', type=json.loads)
+    parser.add_argument('--headers', type=json.loads, help='HTTP headers in JSON format (escape double quotes etc.)')
+    parser.add_argument('--cookies', type=json.loads, help='cookies in JSON format (escape double quotes etc.)')
     parser.add_argument('--timeout', help='timeout in seconds')
     parser.add_argument('--ignore_https_errors', help='ignore HTTPS errors')
     parser.add_argument('--user_data_dir', help='the directory path of a Chromium user profile to use')
     parser.add_argument('--switches', help='additional Chromium switches, comma separated')
-    parser.add_argument('--wait-until',
+    parser.add_argument('--wait_until',
                         choices=['load', 'domcontentloaded', 'networkidle0', 'networkidle2'],
-                        help='When pyppeteer considers a pageload finished')
+                        help='when pyppeteer considers a pageload finished')
+    parser.add_argument('--wait_for', help='wait for a selector, xpath, function string, or timeout (seconds)')
+    parser.add_argument('--wait_for_navigation', help='wait until redirected to a URL starting with this text')
     args = parser.parse_args()
 
     setup_logger(args.verbose)
@@ -161,7 +207,7 @@ def main():
         ctx = BrowserContext(args.chromium_revision, args.ignore_https_errors, proxy_server,
                              args.user_data_dir, args.switches)
         print(ctx.process(args.url, args.cookies, args.headers, args.timeout, proxy_password, proxy_username,
-                          args.wait_until, args.wait_for))
+                          args.wait_until, args.wait_for, args.wait_for_navigation))
     finally:
         ctx.close()
 

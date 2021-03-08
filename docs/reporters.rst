@@ -52,17 +52,6 @@ Please note that many reporters need additional Python packages installed to wor
 :ref:`dependencies`.
 
 
-.. _stdout:
-
-stdout
-------
-Displays the summary in text format on stdout (the console)
-
-Optional directives
-~~~~~~~~~~~~~~~~~~~
-* ``color``: Uses color (green for additions, red for deletions) (true/false)
-
-
 .. _browser:
 
 Browser
@@ -94,15 +83,21 @@ SMTP
 
 SMTP login with keychain
 ^^^^^^^^^^^^^^^^^^^^^^^^
-For added security, you can store your password on a keychain if you have one installed.  To do so, run ``webchanges
---smtp-login`` and enter your password.  To do so you also need to install ``keyring`` and its dependencies. Please see
-`here <https://pypi.org/project/keyring/>`_ for instructions, including on how to configure ``keyring`` to use the
-keychain backend you're using.
+You can store your password securely on a keychain if you have one installed by running ``webchanges --smtp-login``;
+this also requires having the optional ``safe_password`` dependencies installed (see below).  However, be aware that
+the use of safe password and ``keyring`` won't allow you to run `webchanges` unattended (e.g. from a scheduler), so
+you can save the password in the ``insecure_password`` directive in the XMPP config instead:
 
-However a ``keyring`` won't allow you to run `webchanges` unattended (e.g. from a scheduler), so you can save the
-password in the ``insecure_password`` directive in the SMTP config. However, as the name says, storing the password as
-plaintext in the configuration is insecure and bad practice, but for an email account that’s only dedicated for sending
-emails this might be a way.
+.. code-block:: yaml
+
+   report:
+     email:
+       method: smtp
+         auth: true
+         insecure_password: 'this_is_my_secret_password'
+
+As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet for an
+account that only sends these reports this might be a low-risk way.
 
 **Never ever use this method with your your primary email account!**
 
@@ -189,188 +184,23 @@ leak from, e.g. from a scan of your jobs file), then configure these directives 
 sendmail
 ~~~~~~~~
 
-(Linux only)
+Calls the external `sendmail <https://www.proofpoint.com/us/products/email-protection/open-source-email-solution>`__
+program, which must already be installed and configured.
 
-Calls the `sendmail <https://www.proofpoint.com/us/products/email-protection/open-source-email-solution>`__ program .
 
-
-.. _xmpp:
-
-XMPP
-----
-You can have notifications sent to you through the `XMPP protocol`.
-
-To achieve this, you should register a new XMPP account that is just used for `webchanges`.
-
-Here is a sample configuration:
-
-.. code:: yaml
-
-   xmpp:
-     enabled: true
-     sender: 'BOT_ACCOUNT_NAME'
-     recipient: 'YOUR_ACCOUNT_NAME'
-
-For added security, you can store your password on a keychain if you have one installed.  To do so, run ``webchanges
---xmpp-login`` and enter your password.  Note that this won't allow you to run `webchanges` unattended
-(e.g. from a scheduler), so you can save it in the ``insecure_password`` directive in the XMPP config instead. However,
-as the name says, storing the password as plaintext in the configuration is insecure and bad practice,
-but for an account that’s only dedicated for this purpose running on a tighly secured machne this might be a way.
-
-.. code-block:: yaml
-
-   report:
-     xmpp:
-       enabled: true
-       sender: 'BOT_ACCOUNT_NAME'
-       recipient: 'YOUR_ACCOUNT_NAME'
-       insecure_password: 'this_is_my_secret_password'
-
-Required packages
+Optional packages
 ~~~~~~~~~~~~~~~~~
-To run jobs with this filter, you need to install :ref:`optional_packages`. Install them using:
+If using a keychain to store the password, you also need to:
+
+* Install the ``safe_password`` :ref:`optional package <optional_packages>` as per below,
+* Install all the dependencies of the ``keyring`` package as per documentation `here
+  <https://pypi.org/project/keyring/>`_,
+* Configure the ``keyring`` package to use the keychain backend you're using in your system following the instructions
+  on the same page.
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[xmpp]
-
-
-If using a keychain to store the password, you also need to install ``keyring`` and its dependencies. Please see
-`here <https://pypi.org/project/keyring/>`_ for instructions, including on how to configure ``keyring`` to use the
-keychain backend you're using.
-
-.. code-block:: bash
-
-   pip install --upgrade webchanges[xmpp]
-
-
-.. _webhook:
-
-Webhook (Slack, Discord, Mattermost etc.)
------------------------------------------
-Services such as Slack, Discord, Mattermost etc. that support incoming webhooks can be used for notifications using the
-``webhook`` or ``webhook_markdown`` reporters:
-
-.. code:: yaml
-
-   webhook:
-     enabled: true
-     webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
-
-Slack
-~~~~~
-To set up Slack, create a new Slack app in the workspace where you want to post messages, toggle **Activate Incoming
-Webhooks** on in the Features page, click **Add New Webhook to Workspace**, pick a channel that the app will post to,
-then click **Authorize** (see `here
-<https://slack.com/intl/en-sg/help/articles/115005265063-Incoming-webhooks-for-Slack>`__). Copy the webhook URL and
-paste it into the configuration as seen above.
-
-Discord
-~~~~~~~
-To set up Discord, from your Discord server settings select Integration and create a "New Webhook", give the
-webhook a name to post under, select a channel, press on "Copy Webhook URL" and paste the URL into the configuration as
-seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks>`__).
-
-.. code:: yaml
-
-   webhook:
-     enabled: true
-     webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
-
-Mattermost
-~~~~~~~~~~
-To set up Mattermost follow the documentation `here <https://docs.mattermost.com/developer/webhooks-incoming.html>`__
-to generate a webhook URL and paste it into the configuration as such (note that Mattermost prefers markdown so we're
-using the ``webhook_markdown`` variant:
-
-.. code:: yaml
-
-   webhook_markdown:
-     enabled: true
-     webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
-
-sub-directives
-~~~~~~~~~~~~~~
-* ``webhook_url`` (required): the webhook URL
-* ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
-  with \https://discordapp.com, then 2,000)
-
-
-.. _telegram:
-
-Telegram
---------
-Telegram notifications are configured using the Telegram Bot API. For this, you’ll need a Bot API token and a chat id
-(see https://core.telegram.org/bots). Sample configuration:
-
-.. code:: yaml
-
-   telegram:
-     enabled: true
-     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf' # your bot api token
-     chat_id: '88888888' # the chat id where the messages should be sent
-
-To set up Telegram, from your Telegram app, chat up BotFather (New Message, Search, “BotFather”), then say ``/newbot``
-and follow the instructions. Eventually it will tell you the bot token (in the form seen above,
-``<number>:<random string>``) - add this to your config file.
-
-You can then click on the link of your bot, which will send the message ``/start``. At this point, you can use the
-command ``webchanges --telegram-chats`` to list the private chats the bot is involved with. This is the chat ID that you
-need to put into the config file as ``chat_id``. You may add multiple chat IDs as a YAML list:
-
-.. code:: yaml
-
-   telegram:
-     enabled: true
-     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf' # your bot api token
-     chat_id:
-       - '11111111'
-       - '22222222'
-
-Don’t forget to also enable the reporter.
-
-
-.. _pushover:
-
-Pushover
---------
-You can configure webchanges to send real time notifications about changes via `Pushover <https://pushover.net/>`__.
-To enable this, ensure you
-have the ``chump`` python package installed (see :doc:`dependencies`). Then edit your config (``webchanges
---edit-config``) and enable pushover. You will also need to add to the config your Pushover user key and a unique app
-key (generated by registering webchanges as an application on your `Pushover account
-<https://pushover.net/apps/build>`__.
-
-You can send to a specific device by using the device name, as indicated when you add or view your list of devices in
-the Pushover console. For example ``device:  'MyPhone'``, or ``device: 'MyLaptop'``. To send to *all* of your devices,
-set ``device: null`` in your config (``webchanges --edit-config``) or leave out the device configuration completely.
-
-Setting the priority is possible via the ``priority`` config option, which can be ``lowest``, ``low``, ``normal``,
-``high`` or ``emergency``. Any other setting (including leaving the option unset) maps to ``normal``.
-
-Required packages
-~~~~~~~~~~~~~~~~~
-To use this report you need to install :ref:`optional_packages`. Install them using:
-
-.. code-block:: bash
-
-   pip install --upgrade webchanges[pushover]
-
-
-.. _pushbullet:
-
-Pushbullet
-----------
-Pushbullet notifications are configured similarly to Pushover (see above). You’ll need to add to the config your
-Pushbullet Access Token, which you can generate at https://www.pushbullet.com/#settings
-
-Required packages
-~~~~~~~~~~~~~~~~~
-To use this report you need to install :ref:`optional_packages`. Install them using:
-
-.. code-block:: bash
-
-   pip install --upgrade webchanges[pushbullet]
+   pip install --upgrade webchanges[safe_password]
 
 
 .. _ifttt:
@@ -401,6 +231,25 @@ The event will contain three values in the posted JSON:
 * ``value3``: The location of the job (``url`` or ``command`` directive in ``jobs.yaml``)
 
 These values will be passed on to the Action in your Recipe.
+
+
+.. _mailgun:
+
+Mailgun
+-------
+Sends email using the commercial `Mailgun <https://www.mailgun.com/>`__ service.
+
+
+sub-directives
+~~~~~~~~~~~~~~
+* ``domain``: The domain
+* ``api_key``: API key (see `here
+  <https://help.mailgun.com/hc/en-us/articles/203380100-Where-Can-I-Find-My-API-Key-and-SMTP-Credentials->`__)
+* ``from_name``: Sender's name
+* ``from_mail``: Sender's email address
+* ``to``: Recipient's email address
+* ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported
+* ``region`` (optional)
 
 
 .. _matrix:
@@ -446,20 +295,206 @@ notifications to a public Matrix room, as the messages quickly become noisy:
      minimal: true
 
 
-.. _mailgun:
+.. _pushbullet:
 
-Mailgun
--------
-Sends email using the commercial `Mailgun <https://www.mailgun.com/>`__ service.
+Pushbullet
+----------
+Pushbullet notifications are configured similarly to Pushover (see above). You’ll need to add to the config your
+Pushbullet Access Token, which you can generate at https://www.pushbullet.com/#settings
 
+Required packages
+~~~~~~~~~~~~~~~~~
+To use this report you need to install :ref:`optional_packages`. Install them using:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[pushbullet]
+
+
+.. _pushover:
+
+Pushover
+--------
+You can configure webchanges to send real time notifications about changes via `Pushover <https://pushover.net/>`__.
+To enable this, ensure you
+have the ``chump`` python package installed (see :doc:`dependencies`). Then edit your config (``webchanges
+--edit-config``) and enable pushover. You will also need to add to the config your Pushover user key and a unique app
+key (generated by registering webchanges as an application on your `Pushover account
+<https://pushover.net/apps/build>`__.
+
+You can send to a specific device by using the device name, as indicated when you add or view your list of devices in
+the Pushover console. For example ``device:  'MyPhone'``, or ``device: 'MyLaptop'``. To send to *all* of your devices,
+set ``device: null`` in your config (``webchanges --edit-config``) or leave out the device configuration completely.
+
+Setting the priority is possible via the ``priority`` config option, which can be ``lowest``, ``low``, ``normal``,
+``high`` or ``emergency``. Any other setting (including leaving the option unset) maps to ``normal``.
+
+Required packages
+~~~~~~~~~~~~~~~~~
+To use this report you need to install :ref:`optional_packages`. Install them using:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[pushover]
+
+
+
+.. _stdout:
+
+stdout
+------
+Displays the summary in text format on stdout (the console)
+
+Optional directives
+~~~~~~~~~~~~~~~~~~~
+* ``color``: Uses color (green for additions, red for deletions) (true/false)
+
+
+
+.. _telegram:
+
+Telegram
+--------
+Telegram notifications are configured using the Telegram Bot API. For this, you’ll need a Bot API token and a chat id
+(see https://core.telegram.org/bots). Sample configuration:
+
+.. code:: yaml
+
+   telegram:
+     enabled: true
+     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf' # your bot api token
+     chat_id: '88888888' # the chat id where the messages should be sent
+
+To set up Telegram, from your Telegram app, chat up BotFather (New Message, Search, “BotFather”), then say ``/newbot``
+and follow the instructions. Eventually it will tell you the bot token (in the form seen above,
+``<number>:<random string>``) - add this to your config file.
+
+You can then click on the link of your bot, which will send the message ``/start``. At this point, you can use the
+command ``webchanges --telegram-chats`` to list the private chats the bot is involved with. This is the chat ID that you
+need to put into the config file as ``chat_id``. You may add multiple chat IDs as a YAML list:
+
+.. code:: yaml
+
+   telegram:
+     enabled: true
+     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf' # your bot api token
+     chat_id:
+       - '11111111'
+       - '22222222'
+
+Don’t forget to also enable the reporter.
+
+
+
+.. _webhook:
+
+Webhook (Slack, Discord, Mattermost etc.)
+-----------------------------------------
+Services such as Slack, Discord, Mattermost etc. that support incoming webhooks can be used for notifications using the
+``webhook`` or ``webhook_markdown`` reporters:
+
+.. code:: yaml
+
+   webhook:
+     enabled: true
+     webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
+
+Slack
+~~~~~
+To set up Slack, create a new Slack app in the workspace where you want to post messages, toggle **Activate Incoming
+Webhooks** on in the Features page, click **Add New Webhook to Workspace**, pick a channel that the app will post to,
+then click **Authorize** (see `here
+<https://slack.com/intl/en-sg/help/articles/115005265063-Incoming-webhooks-for-Slack>`__). Copy the webhook URL and
+paste it into the configuration as seen above.
+
+`Changed in version 3.0.1:` reporter renamed from ``slack`` to ``webhook``
+
+Discord
+~~~~~~~
+To set up Discord, from your Discord server settings select Integration and create a "New Webhook", give the
+webhook a name to post under, select a channel, press on "Copy Webhook URL" and paste the URL into the configuration as
+seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks>`__).
+
+.. code:: yaml
+
+   webhook:
+     enabled: true
+     webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
+
+Mattermost
+~~~~~~~~~~
+To set up Mattermost follow the documentation `here <https://docs.mattermost.com/developer/webhooks-incoming.html>`__
+to generate a webhook URL and paste it into the configuration as such (note that Mattermost prefers markdown so we're
+using the ``webhook_markdown`` variant):
+
+.. code:: yaml
+
+   webhook_markdown:
+     enabled: true
+     webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
 
 sub-directives
 ~~~~~~~~~~~~~~
-* ``domain``: The domain
-* ``api_key``: API key (see `here
-  <https://help.mailgun.com/hc/en-us/articles/203380100-Where-Can-I-Find-My-API-Key-and-SMTP-Credentials->`__)
-* ``from_name``: Sender's name
-* ``from_mail``: Sender's email address
-* ``to``: Recipient's email address
-* ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported
-* ``region`` (optional)
+* ``webhook_url`` (required): the webhook URL
+* ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
+  with \https://discordapp.com, then 2,000). `New in version 3.0.`
+
+`Added in version 3.0.1:` ``webhook-markdown`` variant
+
+
+
+.. _xmpp:
+
+XMPP
+----
+You can have notifications sent to you through the `XMPP protocol`.
+
+To achieve this, you should register a new XMPP account that is just used for `webchanges`.
+
+Here is a sample configuration:
+
+.. code:: yaml
+
+   xmpp:
+     enabled: true
+     sender: 'BOT_ACCOUNT_NAME'
+     recipient: 'YOUR_ACCOUNT_NAME'
+
+You can store your password securely on a keychain if you have one installed by running ``webchanges --xmpp-login``;
+this also requires having the optional ``safe_password`` dependencies installed (see below).  However, be aware that
+the use of safe password and ``keyring`` won't allow you to run `webchanges` unattended (e.g. from a scheduler), so
+you can save the password in the ``insecure_password`` directive in the XMPP config instead:
+
+.. code-block:: yaml
+
+   report:
+     xmpp:
+       enabled: true
+       sender: 'BOT_ACCOUNT_NAME'
+       recipient: 'YOUR_ACCOUNT_NAME'
+       insecure_password: 'this_is_my_secret_password'
+
+As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet for an
+account that only sends these reports this might be a low-risk way.
+
+Required packages
+~~~~~~~~~~~~~~~~~
+To run jobs with this reporter, you need to install :ref:`optional_packages`. Install them using:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[xmpp]
+
+Optional packages
+~~~~~~~~~~~~~~~~~
+If using a keychain to store the password, you also need to:
+
+* install the ``safe_password`` :ref:`optional package <optional_packages>` as per below,
+* install all the dependencies of the ``keyring`` package as per documentation `here
+  <https://pypi.org/project/keyring/>`_,
+* configure the ``keyring`` package to use the keychain backend you're using in your system following the instructions
+  on the same page.
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[safe_password]

@@ -32,9 +32,9 @@ to the result from the diff:
 
 additions_only
 ---------------
-The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the diff (no
-deletions). This is extremely useful for monitoring new content on sites where content gets added while old content
-"scrolls" away.
+The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the
+diff (no deletions). This is extremely useful for monitoring new content on sites where content gets added while old
+content "scrolls" away.
 
 Because lines that are modified generate both a deleted and an added line by the diff, this filter always displays
 modified lines.
@@ -102,6 +102,8 @@ or (text):
 Note: When using ``additions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
 this can be changed by specifying the key with the desired value in the job.
 
+`New in Version 3.0`
+
 
 .. _deletions_only:
 
@@ -138,6 +140,8 @@ or (text):
 
 Note: When using ``deletions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
 this can be changed by specifying the key with the desired value in the job.
+
+`New in Version 3.0`
 
 
 .. _contextlines:
@@ -202,3 +206,5 @@ Output:
     This is line 16
     This is line 17
     This is line 18
+
+`New in Version 3.0`

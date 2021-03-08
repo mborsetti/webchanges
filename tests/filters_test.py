@@ -1,5 +1,8 @@
+"""tests filters based on a set of patterns"""
+
 import logging
 import os
+import sys
 
 import pytest
 import yaml
@@ -7,6 +10,13 @@ import yaml
 from webchanges.filters import FilterBase
 
 logger = logging.getLogger(__name__)
+
+# https://stackoverflow.com/questions/31469707/
+if sys.version_info[0:2] == (3, 6) and os.name == 'nt':
+    import _locale
+
+    _locale._getdefaultlocale = (lambda *args: ['en_US', 'utf8'])
+
 
 TESTDATA = [
     # Legacy string-style filter definition conversion  DEPRECATED

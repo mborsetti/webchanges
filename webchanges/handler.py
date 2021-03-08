@@ -43,7 +43,7 @@ class JobState(object):
         try:
             self.job.main_thread_enter()
         except Exception as ex:
-            logger.info('Exception while creating resources for job: %r', self.job, exc_info=True)
+            logger.info(f'Exception while creating resources for job: {self.job!r}', exc_info=True)
             self.exception = ex
             self.traceback = traceback.format_exc()
 
@@ -54,11 +54,11 @@ class JobState(object):
             self.job.main_thread_exit()
         except Exception:
             # We don't want exceptions from releasing resources to override job run results
-            logger.warning('Exception while releasing resources for job: %r', self.job, exc_info=True)
+            logger.warning(f'Exception while releasing resources for job: {self.job!r}', exc_info=True)
 
     def load(self):
         guid = self.job.get_guid()
-        self.old_data, self.timestamp, self.tries, self.etag = self.cache_storage.load(self.job, guid)
+        self.old_data, self.timestamp, self.tries, self.etag = self.cache_storage.load(guid)
         if self.tries is None:
             self.tries = 0
         if self.job.compared_versions and self.job.compared_versions > 1:
@@ -69,10 +69,10 @@ class JobState(object):
             # If no new data has been retrieved due to an exception, use the old job data
             self.new_data = self.old_data
 
-        self.cache_storage.save(self.job, self.job.get_guid(), self.new_data, time.time(), self.tries, self.etag)
+        self.cache_storage.save(self.job.get_guid(), self.new_data, time.time(), self.tries, self.etag)
 
     def process(self):
-        logger.info('Processing: %s', self.job)
+        logger.info(f'Processing: {self.job}')
 
         if self.exception:
             return self
@@ -98,7 +98,7 @@ class JobState(object):
                 self.error_ignored = self.job.ignore_error(e)
                 if not (self.error_ignored or isinstance(e, NotModifiedError)):
                     self.tries += 1
-                    logger.debug('Increasing number of tries to %i for %s', self.tries, self.job)
+                    logger.debug(f'Increasing number of tries to {self.tries} for {self.job}')
         except Exception as e:
             # job failed its chance to handle error
             self.exception = e
@@ -106,7 +106,7 @@ class JobState(object):
             self.error_ignored = False
             if not isinstance(e, NotModifiedError):
                 self.tries += 1
-                logger.debug('Increasing number of tries to %i for %s', self.tries, self.job)
+                logger.debug(f'Increasing number of tries to {self.tries} for {self.job}')
 
         return self
 
@@ -145,9 +145,9 @@ class JobState(object):
                     old_file.write(self.old_data.encode())
                     new_file.write(self.new_data.encode())
                 cmdline = shlex.split(self.job.diff_tool) + [old_file_path, new_file_path]
-                proc = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                proc = subprocess.run(shlex.split(cmdline), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Python 3.7
-                # proc = subprocess.run(cmdline, capture_output=True, text=True)
+                # proc = subprocess.run(shlex.split(cmdline), capture_output=True, text=True)
                 # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
                 if proc.returncode == 0:
                     return False
@@ -206,7 +206,7 @@ class Report(object):
 
     def _result(self, verb, job_state):
         if job_state.exception is not None:
-            logger.debug('Got exception while processing %r', job_state.job, exc_info=job_state.exception)
+            logger.debug(f'Got exception while processing {job_state.job!r}', exc_info=job_state.exception)
 
         job_state.verb = verb
         self.job_states.append(job_state)

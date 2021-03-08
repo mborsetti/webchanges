@@ -18,7 +18,7 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 | Feature                 | Python package(s) installed                                             |
 +=========================+=========================================================================+
 | ``use _browser`` set to | * `pyppeteer <https://github.com/pyppeteer/pyppeteer>`__                |
-| true (in a url job)     |   Note: you may also have to **separately install**                     |
+| true (in a url job)     | * Note: you may also have to **separately install**                     |
 |                         |   OS-specific dependencies [#f1]_                                       |
 +-------------------------+-------------------------------------------------------------------------+
 | ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
@@ -30,7 +30,7 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 |                         | * `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ [#f3]_    |
 +-------------------------+-------------------------------------------------------------------------+
 | ``pdf2text`` filter     | * `pdftotext <https://github.com/jalan/pdftotext>`__                    |
-|                         |   Note: you will also have to **separately install** the required       |
+|                         | * Note: you will also have to **separately install** the required       |
 |                         |   OS-specific dependencies [#f4]_                                       |
 +-------------------------+-------------------------------------------------------------------------+
 | ``ocr`` filter          | * `pytesseract <https://github.com/madmaze/pytesseract>`__              |
@@ -47,39 +47,30 @@ to the name `webchanges` the name of the feature (from the table below) inside s
 +-------------------------+-------------------------------------------------------------------------+
 | ``xmpp`` reporter       | * `aioxmpp <https://github.com/horazont/aioxmpp>`__                     |
 +-------------------------+-------------------------------------------------------------------------+
-| ``redis`` database      | * `msgpack <https://msgpack.org/>`__                                    |
-|                         | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
+| ``redis`` database      | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`__                       |
 | storage for email and   |                                                                         |
 | xmpp reporters          |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
-| ``testing``             | * `pytest <https://docs.pytest.org/en/latest/>`__                       |
-|                         | * `pytest-cov <https://pytest-cov.readthedocs.io/>`__                   |
-|                         | * `coverage <https://github.com/nedbat/coveragepy>`__                   |
-|                         | * `pre-commit <https://pre-commit.com/>`__                              |
-| (to work on             | * `flake8 <https://gitlab.com/pycqa/flake8>`__                          |
-| contributions to the    | * `docutils <https://docutils.sourceforge.io>`__                        |
-| project)                | * `sphinx <https://www.sphinx-doc.org/>`__                              |
-|                         | * `sphinx_rtd_theme <https://github.com/readthedocs/sphinx_rtd_theme>`__|
-|                         | * all the dependencies listed above except for pdf2text and ocr         |
-+-------------------------+-------------------------------------------------------------------------+
-| ``all``                 | * all the optional packages listed above, including for testing         |
-|                         |   Note: you will also have to **separately install** the required       |
+| ``all``                 | * all the optional packages listed above                                |
+|                         | * Note: you will also have to **separately install** the required       |
 |                         |   OS-specific dependencies [#f1]_ [#f4]_ [#f5]_                         |
 +-------------------------+-------------------------------------------------------------------------+
 
 .. rubric:: Footnotes
 
-.. [#f1] ``pyppeteer``'s OS-specific dependencies (non required in Windows or MacOS) are listed `here
-   <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`__ (yes,
-   it's a page from puppeteer, which is the project upon which pyppeteer is created.  A missing dependency is often the
-   cause of the error ``pyppeteer.errors.BrowserError: Browser closed unexpectedly``.  Also pay close attention to
-   instructions if you're running it in Docker or other specialized environments.
+.. [#f1] ``pyppeteer``'s OS-specific dependencies (only Linux requires them) are listed `here
+   <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch-on-unix>`__
+   (yes, it's a page from puppeteer, which is the project upon which pyppeteer is created).  A missing dependency is
+   often the cause of the error ``pyppeteer.errors.BrowserError: Browser closed unexpectedly``.  Also pay close
+   attention to the documentation if you're running in `Docker
+   <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#running-puppeteer-in-docker>`__ or other
+   specialized environments.
 .. [#f2] Optional, to beautify content of <script> tags
 .. [#f3] Optional, to beautify content of <style> tags
-.. [#f4] see https://github.com/jalan/pdftotext#os-dependencies
-.. [#f5] see https://tesseract-ocr.github.io/tessdoc/Installation.html
+.. [#f4] see `here <https://github.com/jalan/pdftotext#os-dependencies>`__
+.. [#f5] see `here <https://tesseract-ocr.github.io/tessdoc/Installation.html>`__
 
 
 Installed packages
@@ -91,7 +82,7 @@ These Python packages are installed automatically by `pip`:
 * `html2text <https://github.com/Alir3z4/html2text>`__
 * `lxml <https://lxml.de>`__
 * `markdown2 <https://github.com/trentm/python-markdown2>`__
-* `minidb <https://thp.io/2010/minidb/>`__
+* `msgpack <https://msgpack.org/>`__
 * `PyYAML <https://pyyaml.org/>`__
 * `requests <https://requests.readthedocs.io/>`__
-* `colorama <https://github.com/tartley/colorama>`__  (for Windows installations)
+* `colorama <https://github.com/tartley/colorama>`__  (only in Windows installations)

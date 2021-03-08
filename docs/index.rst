@@ -18,6 +18,7 @@ Table of Contents
 
    Overview <self>
    introduction
+   yaml_syntax
 
 .. toctree::
    :maxdepth: 1
@@ -36,8 +37,8 @@ Table of Contents
    :caption: Advanced
 
    advanced
-   hooks
    cli
+   hooks
 
 .. toctree::
    :maxdepth: 1
@@ -52,9 +53,11 @@ Table of Contents
    contributing
    changelog
 
-.. autosummary::
+..
+   Lots of work required to make autosummary work so commented it out
+   autosummary
    :toctree: _autosummary
    :caption: Code autodoc
    :recursive:
-
+..
    webchanges

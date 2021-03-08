@@ -92,7 +92,9 @@ Ignoring connection errors
 --------------------------
 In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While there is
 a ``display.error`` config option (defaulting to ``true``) to control reporting of errors globally, to ignore network
-errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration file:
+errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration.
+For connection errors during local development or testing due to TLS/SSL use the ``ssl_no_verify`` directive above
+instead.
 
 .. code-block:: yaml
 
@@ -212,19 +214,26 @@ If you want to be notified of new events on a public Facebook page, you can use 
    comparison_filter: additions
 
 
-Watching Github releases
-------------------------
-This is an example how to watch the GitHub “releases” page for a given
-project for the latest release version, to be notified of new releases:
+Watching Github releases and Gitlab tags
+----------------------------------------
+This is an example how to watch the GitHub “releases” page for a given project for the latest release version, to be
+notified of new releases:
 
 .. code-block:: yaml
 
-   url: https://github.com/thp/urlwatch/releases
+   url: https://github.com/git/git/releases
    filter:
-     - xpath: '(//div[contains(@class,"release-timeline-tags")]//h4)[1]/a'
-     - xpath: '(//div[contains(@class,"release-header")]//a)[1]'
-     - html2text: re
-     - strip
+     - xpath: (//div[contains(@class,"release-timeline-tags")]//h4)[1]/a
+     - html2text:
+
+This is the corresponding version for Gitlab tags:
+
+.. code-block:: yaml
+
+   url: https://gitlab.com/gitlab-org/gitlab/-/tags
+   filter:
+     - xpath: (//a[contains(@class,"item-title ref-name")])[1]
+     - html2text:
 
 
 Passing diff output to a custom script
@@ -270,20 +279,24 @@ The use of an external differ will override the ``diff`` setting of the ``html``
 
 Using a Chromium revision matching a Google Chrome / Chromium release
 ---------------------------------------------------------------------
-Unfortunately the Chromium revision number does not match the Google Chrome / Chromium release one.
-There are multiple ways of finding what the revision number is for a stable Chrome release; the one I found easiest is
-to go to https://chromium.cypress.io/, selecting the "stable" release channel `for the OS you need`, and clicking on
-"get downloads" for the one you want. At the top you will see something like "Base revision: 782793.
-Found build artifacts at 782797 [browse files]". You want the revision with build artifacts, in this case 782797.
+``webchanges`` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72.  If you want a
+different one, you can do so, but unfortunately the Chromium revision number does not match the Google Chrome /
+Chromium release one.
+
+There are multiple ways of finding what the revision number is for a stable Chrome release; the
+one I found easiest is to go to https://chromium.cypress.io/, selecting the "stable" release channel `for the OS you
+need`, and clicking on "get downloads" for the one you want. At the top you will see something like "Base revision:
+843830. Found build artifacts at 843831 [browse files]". You want the revision with build artifacts, in this example
+843831.
 
 Be aware that the same Google Chrome / Chromium release may be based on a different Chromium revision on different OSs,
-and that not all Chromium revisions are available for all OS platforms (Linux_x64, Mac, Win and Win_x64).  Using a
+and that not all Chromium revisions are available for all OS platforms (Linux_x64, Mac, Win and Win_x64). Using a
 release number that cannot be found will lead to a ``zipfile.BadZipFile: File is not a zip file`` error from the
 Pyppeter code.
 
-Please note that everytime you change the chromium_revision, a new download is initiated. The old ones are kept on
-your system using up space, and if you no longer need them you can delete them.  If you can't find the directory where
-they are stored, run ``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER;
+Please note that every time you change the chromium_revision, a new download is initiated and the old version is kept
+on your system, using up space. If you no longer need it you need to delete it manually; the the directory where it is
+stored can be found by running ``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER;
 print(DOWNLOADS_FOLDER)"``
 
 To specify the Chromium revision to use (and other defaults) globally, edit config.yaml:
@@ -292,10 +305,11 @@ To specify the Chromium revision to use (and other defaults) globally, edit conf
 
    job_defaults:
      browser:
-       chromium_revision: 782797
+       chromium_revision:
+         linux: 843831
        switches:
          - --enable-experimental-web-platform-features
-         - '--window-size=1920,1080'
+         - '--window-size=1298,1406'
 
 To specify the same on an individual job:
 
@@ -303,31 +317,32 @@ To specify the same on an individual job:
 
    url: https://example.com/
    use_browser: true
-   chromium_revision: 782797
+   chromium_revision:
+     linux: 843831
    switches:
      - --enable-experimental-web-platform-features
-     - '--window-size=1920,1080'
+     - '--window-size=1298,1406'
 
 
-In addition, if you use multiple OSs, you can specify different Chromium revisions to use based on the OS ``webchanges``
-is running in by using one of the ``linux``, ``mac``, ``win32`` and/or ``win64`` keys, either as a global default (like
-below) or in individual jobs:
+If you use multiple OSs, you can specify different Chromium revisions to use based on the OS ``webchanges`` is running
+in by using a dict with one or more of ``linux``, ``mac``, ``win32`` and/or ``win64`` keys, either as a global default
+(like below) or in individual jobs:
 
 .. code-block:: yaml
 
    job_defaults:
      browser:
        chromium_revision:
-         - linux: 812859
-         - mac: 812892
-         - win32: 812862
-         - win64: 812872
+         linux: 843831
+         win64: 843846
+         win32: 843832
+         mac: 843846
 
 
 .. _pyppeteer_target_closed:
 
-Using `use_browser: true` in low-memory environments
-----------------------------------------------------
+Running ``use_browser: true`` jobs in low-memory environments
+-------------------------------------------------------------
 In certain Linux environments with limited memory, jobs with ``use_browser: true`` may fail with a
 ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error.
 
@@ -342,8 +357,8 @@ file as follows:
        switches:
          - --disable-dev-shm-usage
 
-This switch disables the use of the faster RAM-based temporary storage file system, whose size limit crashes Chromium,
-forcing instead the use of the drive-based filesystem, which may be slower but of ampler capacity.
+This switch disables the use of the faster RAM-based temporary storage file system, whose size limit may cause Chromium
+to crash, forcing instead the use of the drive-based filesystem, which may be slower but of ampler capacity.
 
 
 .. _local_storage:
@@ -361,7 +376,7 @@ Specifically:
    --user-data-dir=/userdir``)
 #. Browse to the site that you're interested in tracking and log in or do whatever is needed for it to save the
    authentication data in local storage
-#. Quit the browser
+#. Exit the browser
 
 You can now run a `webchanges` job defined like this:
 
@@ -370,3 +385,41 @@ You can now run a `webchanges` job defined like this:
    url: https://example.org/usedatadir.html
    use_browser: true
    user_data_dir: /userdir
+
+.. _pyppeteer_block_elements:
+
+Speeding up ``use_browser: true`` jobs
+--------------------------------------
+
+⚠ Ignored if in Python Version 3.6
+
+⚠ Experimental: on certain sites this seems to totally freeze execution; test before use
+
+If you're not interested in all elements of a website, you can skip downloading the ones that you don't care, paying
+attention to do some testing as some elements may be required for the correct rendering of the website. Typical elements
+to skip include ``stylesheet``, ``font``, ``image``, and ``media`` (but use with caution) and can be specified like
+this on a job-by-job basis:
+
+.. code-block:: yaml
+
+   name: This is a Javascript site
+   note: It's just a test
+   url: https://www.example.com
+   use_browser: true
+   block_elements:
+     - stylesheet
+     - font
+     - image
+     - media
+
+or in the config file (for all ``use_browser: true`` jobs):
+
+.. code-block:: yaml
+
+   job_defaults:
+     browser:
+       block_elements:
+         - stylesheet
+         - font
+         - image
+         - media

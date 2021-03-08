@@ -2,6 +2,8 @@
 
 """Module containing the entry point"""
 
+# See config module for the actual CLI arguments
+
 import logging
 import os.path
 import signal
@@ -14,7 +16,7 @@ from . import __min_python_version__
 from .command import UrlwatchCommand
 from .config import CommandConfig
 from .main import Urlwatch
-from .storage import CacheMiniDBStorage, CacheRedisStorage, JobsYaml, YamlConfigStorage
+from .storage import CacheDirStorage, CacheRedisStorage, CacheSQLite3Storage, JobsYaml, YamlConfigStorage
 
 # Check if we are installed in the system already # Legacy for apt-get type of packaging
 # (prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -58,7 +60,7 @@ def setup_logger(verbose: bool) -> None:
 
 
 def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cache_file: str) -> None:
-    """Migrate legacy config, jobs and hooks files from urlwatch 2.2"""
+    """Check for config, jobs and hooks files from urlwatch 2.2 and migrate them (copy to new naming)"""
     urlwatch_config_dir = os.path.expanduser(os.path.join('~', '.' + 'urlwatch'))
     urlwatch_config_file = os.path.join(urlwatch_config_dir, 'urlwatch.yaml')
     urlwatch_urls_file = os.path.join(urlwatch_config_dir, 'urls.yaml')
@@ -72,20 +74,22 @@ def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cac
 
             os.makedirs(os.path.dirname(new_file), exist_ok=True)
             shutil.copyfile(old_file, new_file)
-            logger.warning(f'Copied urlwatch {old_file} to {project_name} {new_file}')
-
-    # TODO migrate XMPP password in keyring
+            logger.warning(f"Copied urlwatch '{old_file}' file to '{new_file}'")
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     """The program's entry point"""
-    # make sure that DeprecationWarnings are displayed from all modules (otherwise only those in __main__ are)
-    warnings.filterwarnings(action='always', category=DeprecationWarning)
+    # make sure that PendingDeprecationWarning are displayed from all modules (otherwise only those in __main__ are)
+    warnings.filterwarnings('default', category=PendingDeprecationWarning)
 
-    # Issue deprecation warning if running on 3.6
-    if (sys.version_info.major, sys.version_info.minor) == __min_python_version__:
-        logger.warning('Support for this version of Python is and will be removed 3 years from the date of the next '
-                       'major release who replaced it', DeprecationWarning)
+    # Issue deprecation warning if running on minimum version supported
+    if sys.version_info[0:2] == __min_python_version__:
+        current_minor_version = '.'.join(str(n) for n in sys.version_info[0:2])
+        next_minor_version = f'{__min_python_version__[0]}.{__min_python_version__[1] + 1}'
+        warning = (f'Support for Python {current_minor_version} will be ending three years from the date Python '
+                   f'{next_minor_version} was released')
+        print(f'WARNING: {warning}\n')
+        PendingDeprecationWarning(warning)
 
     # The config, jobs, hooks and cache files
     config_file = os.path.join(config_dir, 'config.yaml')
@@ -136,7 +140,13 @@ def main() -> None:
 
     if any(command_config.cache.startswith(prefix) for prefix in ('redis://', 'rediss://')):
         cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
+    elif command_config.database_engine == 'sqlite3':
+        cache_storage = CacheSQLite3Storage(command_config.cache)  # storage.py
+    elif command_config.database_engine == 'textfiles':
+        cache_storage = CacheDirStorage(command_config.cache)  # storage.py
     else:
+        from .storage_minidb import CacheMiniDBStorage
+
         cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
 
     jobs_storage = JobsYaml(command_config.jobs)  # storage.py
@@ -150,4 +160,5 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+
     main()

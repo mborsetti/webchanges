@@ -1,11 +1,13 @@
+""" test various utility functions """
+
 import pytest
 
 from webchanges.util import chunk_string, linkify
 
 TESTDATA = [
     # Numbering for just one item doesn't add the numbers
-    (('Hello World', 100, True, ['Hello World'])),
-    (('This Is A Long Message', 5, False, ['This', 'Is A', 'Long', 'Messa', 'ge'])),
+    ('Hello World', 100, True, ['Hello World']),
+    ('This Is A Long Message', 5, False, ['This', 'Is A', 'Long', 'Messa', 'ge']),
     (('This Is A Very Long Message That Should Be Numbered', 20, True,
      # 12345678901234567890
       ['This Is A Very (1/4)',
@@ -30,3 +32,6 @@ def test_chunkstring(string, length, numbering, output):
 
 def test_linkify():
     assert linkify('Test www.example.com') == 'Test <a href="http://www.example.com">www.example.com</a>'
+    assert (linkify('Test www.example.com/thisisalonglink', shorten=True)
+            == 'Test <a href="http://www.example.com/thisisalonglink" '
+               'title=http://www.example.com/thisisalonglink>www.example.com/thisisal...</a>')

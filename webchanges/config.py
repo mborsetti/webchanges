@@ -50,37 +50,50 @@ class CommandConfig(BaseConfig):
                            help='read job list (URLs) from FILE', default=self.jobs)
         group.add_argument('--config', metavar='FILE', help='read configuration from FILE', default=self.config)
         group.add_argument('--hooks', metavar='FILE', help='use FILE as hooks.py module', default=self.hooks)
-        group.add_argument('--cache', metavar='FILE', help=('use FILE as cache database, '
+        group.add_argument('--cache', metavar='FILE', help=('use FILE as cache database or directory, '
                                                             'alternatively can accept a redis URI'), default=self.cache)
         group = parser.add_argument_group('job management')
         group.add_argument('--list', action='store_true', help='list jobs')
-        group.add_argument('--test', '--test-filter', dest='test_filter', metavar='JOB',
-                           help='test filter output of job by location or index')
-        group.add_argument('--test-diff', '--test-diff-filter', dest='test_diff_filter', metavar='JOB',
-                           help='test diff filter output of job by location or index (needs at least 2 snapshots)')
+        group.add_argument('--test', '--test-filter', dest='test_job', metavar='JOB',
+                           help='test job and its filter (by URL/command or index)')
+        group.add_argument('--test-diff', '--test-diff-filter', dest='test_diff', metavar='JOB',
+                           help="test job's diff filter (up to 10 historical snapshots) (by URL/command or index)")
         group.add_argument('--errors', action='store_true', help='list jobs with errors or no data captured')
         group.add_argument('--add', metavar='JOB', help='add job (key1=value1,key2=value2,...) (obsolete; use --edit)')
-        group.add_argument('--delete', metavar='JOB', help='delete job by location or index (obsolete; use --edit)')
+        group.add_argument('--delete', metavar='JOB',
+                           help='delete job by URL/command or index number. WARNING: all remarks are deleted from file '
+                                '(obsolete; use --edit)')
 
         group = parser.add_argument_group('reporters')
-        group.add_argument('--test-reporter', metavar='REPORTER', help='Send a test notification')
-        group.add_argument('--smtp-login', action='store_true', help='Check SMTP login')
-        group.add_argument('--telegram-chats', action='store_true', help='List telegram chats the bot is joined to')
-        group.add_argument('--xmpp-login', action='store_true', help='Enter password for XMPP (store in keyring)')
+        group.add_argument('--test-reporter', metavar='REPORTER', help='send a test notification')
+        group.add_argument('--smtp-login', action='store_true',
+                           help='enter or check password for SMTP email (stored in keyring)')
+        group.add_argument('--telegram-chats', action='store_true', help='list telegram chats program is joined to')
+        group.add_argument('--xmpp-login', action='store_true',
+                           help='enter or check password for XMPP (stored in keyring)')
 
         group = parser.add_argument_group('launch editor ($EDITOR/$VISUAL)')
-        group.add_argument('--edit', action='store_true', help='edit URL/job list')
+        group.add_argument('--edit', action='store_true', help='edit job (URL/command) list')
         group.add_argument('--edit-config', action='store_true', help='edit configuration file')
         group.add_argument('--edit-hooks', action='store_true', help='edit hooks script')
 
         group = parser.add_argument_group('miscellaneous')
-        group.add_argument('--gc-cache', action='store_true', help='remove old cache entries (snapshots)')
+        group.add_argument('--gc-cache', action='store_true',
+                           help='garbage collect the cache database by removing old snapshots plus all data of old jobs'
+                                ' now deleted')
+        group.add_argument('--clean-cache', action='store_true', help='remove old snapshots from the cache database')
+        group.add_argument('--rollback-cache', metavar='TIMESTAMP', type=int,
+                           help='delete recent snapshots > timestamp; backup the database before using!')
+        group.add_argument('--database-engine', choices=['sqlite3', 'minidb', 'textfiles'], default='sqlite3',
+                           help='database engine to use (default: %(default)s)')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
 
-        args = parser.parse_args()
+        # workaround for avoiding triggering error when invoked by pytest
+        if parser.prog != '_jb_pytest_runner.py':
+            args = parser.parse_args()
 
-        for i, arg in enumerate(vars(args)):
-            argval = getattr(args, arg)
-            setattr(self, arg, argval)
+            for arg in vars(args):
+                argval = getattr(args, arg)
+                setattr(self, arg, argval)
 
         return parser

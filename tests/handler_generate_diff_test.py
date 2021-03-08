@@ -1,3 +1,5 @@
+"""test the generation of various types of diffs"""
+
 from webchanges.handler import JobState
 from webchanges.jobs import ShellJob
 

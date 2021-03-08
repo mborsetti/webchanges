@@ -32,10 +32,7 @@ You can edit it with any text editor or by running:
 
    webchanges --edit
 
-* For additional information on YAML, see the `YAML specifications <https://yaml.org/spec/>`__.
-* For information on when to use quotes in YAML see `here <https://www.yaml.info/learn/quote.html#flow>`__
-  (note: the library we use supports YAML 1.1, and our examples use "flow scalars").
-* URLs are always safe and don't need to be enclosed in quotes.
+See a summary of the YAML syntax :ref:`here <yaml_syntax>`
 
 
 The minimum configuration necessary for `webchanges` to work is a single ``url`` directive (for web resources) or

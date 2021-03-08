@@ -4,8 +4,12 @@
 branch = True
 source = webchanges
 omit =
+    .tox/*
     tests/*
     docs/*
+    setup.py
+    webchanges.py
+    webchanges/browser.py
 relative_files = True
 command_line = -m pytest -v
 
