@@ -31,7 +31,7 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals for changes that don't affect users.
 
 Version 3.2.3
-=================
+===================
 2021-03-08
 
 Added

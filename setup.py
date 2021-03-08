@@ -31,7 +31,7 @@ SETUP = {
     'classifiers': [
         'Environment :: Console',
         'Topic :: Internet',
-        'Topic :: Internet :: WWW/HTTP'
+        'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
         'Topic :: Utilities',
         'Development Status :: 5 - Production/Stable',
@@ -39,7 +39,7 @@ SETUP = {
         'License :: OSI Approved :: BSD License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3 :: Only'
+        'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
