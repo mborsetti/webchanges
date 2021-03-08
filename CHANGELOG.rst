@@ -30,7 +30,7 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Security in case of vulnerabilities.
    Internals for changes that don't affect users.
 
-Version 3.2.0
+Version 3.2.1
 =================
 2021-03-08
 
@@ -111,7 +111,7 @@ Fixed
 -----
 * Documentation was failing to build at https://webchanges.readthedocs.io/
 
-Version 3.2.0
+Version 3.2.1
 =================
 2021-02-07
 
