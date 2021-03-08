@@ -1,7 +1,4 @@
-# This is an example jobs.yaml file for webchanges
-# Empty lines and lines starting with "#" are ignored
-name: Sample webchanges job definition
-note: Used by command_test.py
+name: Sample webchanges job list used by command_test.py
 command: echo test
 filter:
   - keep_lines_containing: test

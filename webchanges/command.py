@@ -12,10 +12,9 @@ from .filters import FilterBase
 from .handler import JobState, Report
 from .jobs import JobBase, UrlJob
 from .mailer import smtp_have_password, smtp_set_password
-from .reporters import ReporterBase
+from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from .util import atomic_rename, edit_file, import_module_from_source
 from .worker import run_parallel
-from .xmpp import xmpp_have_password, xmpp_set_password
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +50,6 @@ class UrlwatchCommand:
             print('Your changes have been saved in', hooks_edit)
             return 1
 
-        return 0
-
     def show_features(self):
         print()
         print('Supported jobs:\n')
@@ -64,7 +61,6 @@ class UrlwatchCommand:
         print('Supported reporters:\n')
         print(ReporterBase.reporter_documentation())
         print()
-        return 0
 
     def list_jobs(self):
         for idx, job in enumerate(self.urlwatcher.jobs):
@@ -77,7 +73,6 @@ class UrlwatchCommand:
                     print(f'{idx + 1}: {pretty_name} ( {location} )')
                 else:
                     print(f'{idx + 1}: {pretty_name}')
-        return 0
 
     def _find_job(self, query):
         try:
@@ -112,13 +107,13 @@ class UrlwatchCommand:
             print()
             print(job_state.job.pretty_name())
             print('-' * len(job_state.job.pretty_name()))
-            if hasattr(job_state.job, 'note'):
+            if hasattr(job_state.job, 'note') and job_state.job.note:
                 print(job_state.job.note)
             print()
             print(job_state.new_data)
+
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
-        return 0
 
     def test_diff(self, id):
         job = self._get_job(id)
@@ -139,7 +134,6 @@ class UrlwatchCommand:
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
-        return 0
 
     def list_error_jobs(self):
         start = timeit.default_timer()
@@ -176,7 +170,6 @@ class UrlwatchCommand:
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
-        return 0
 
     def modify_urls(self):
         save = True
@@ -205,16 +198,20 @@ class UrlwatchCommand:
         if save:
             self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
-        return 0
-
     def handle_actions(self):
         if self.urlwatch_config.features:
             sys.exit(self.show_features())
         if self.urlwatch_config.gc_cache:
             self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
+            self.urlwatcher.cache_storage.close()
             sys.exit(0)
         if self.urlwatch_config.clean_cache:
             self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
+            self.urlwatcher.cache_storage.close()
+            sys.exit(0)
+        if self.urlwatch_config.rollback_cache is not None:
+            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
+            self.urlwatcher.cache_storage.close()
             sys.exit(0)
         if self.urlwatch_config.edit:
             sys.exit(self.urlwatcher.jobs_storage.edit())

@@ -24,15 +24,16 @@ jobs_file = os.path.join(here, 'data', 'command_jobs.yaml')
 cache_file = os.path.join(here, 'data', 'cache.db')
 hooks_file = os.path.join(here, 'data', 'hooks_test.py')
 
-# test migration of legacy urlwatch files
-migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file)
-
-
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = JobsYaml(jobs_file)
 command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
                                cache_file, verbose=False)
+
+
+def test_migration():
+    """test migration of legacy urlwatch files"""
+    assert not migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file)
 
 
 def test_command_check_edit_config():
@@ -109,8 +110,7 @@ def test_command_check_xmpp_login():
 def cleanup(request):
     """Cleanup once we are finished."""
     def close_and_remove_file():
-        if os.path.exists(cache_file):
-            os.remove(cache_file)
-        if os.path.exists(cache_file + '.bak'):
-            os.remove(cache_file + '.bak')
+        for filename in (cache_file, f'{cache_file}.bak', f'{cache_file}.minidb'):
+            if os.path.exists(filename):
+                os.remove(filename)
     request.addfinalizer(close_and_remove_file)

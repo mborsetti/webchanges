@@ -2,6 +2,7 @@ import asyncio
 import difflib
 import email.utils
 import functools
+import getpass
 import html
 import itertools
 import logging
@@ -10,6 +11,7 @@ import re
 import sys
 import time
 from math import floor, log10
+from typing import Generator
 from warnings import warn
 
 import requests
@@ -18,12 +20,21 @@ from markdown2 import Markdown
 import webchanges as project
 from .mailer import SMTPMailer, SendmailMailer
 from .util import TrackSubClasses, chunk_string, linkify
-from .xmpp import XMPP
+
+try:
+    import aioxmpp
+except ImportError:
+    aioxmpp = None
 
 try:
     import chump
 except ImportError:
     chump = None
+
+try:
+    import keyring
+except ImportError:
+    keyring = None
 
 try:
     import matrix_client.api
@@ -95,10 +106,11 @@ class ReporterBase(object, metaclass=TrackSubClasses):
 
 
 class HtmlReporter(ReporterBase):
-    def submit(self):
-        yield from (str(part) for part in self._parts())
+    def submit(self) -> Generator[str, None, None]:
+        yield from self._parts()
 
-    def _parts(self):
+    def _parts(self) -> Generator[str, None, None]:
+        """generator yielding the HTML; called by submit. Calls _format_content"""
         cfg = self.report.config['report']['html']
 
         yield f"""
@@ -138,7 +150,8 @@ class HtmlReporter(ReporterBase):
             </body>
             </html>""")
 
-    def _diff_to_html(self, diff: str, job) -> str:
+    def _diff_to_html(self, diff: str, job) -> Generator[str, None, None]:
+        """generator yielding the HTML-formatted unified diff; called by _format_content"""
         if job.diff_tool and job.diff_tool.startswith('wdiff'):
             # wdiff colorization
             yield '<span style="font-family:monospace;white-space:pre-wrap">'
@@ -212,7 +225,8 @@ class HtmlReporter(ReporterBase):
                         yield f'<tr{style}><td>{linkify(line[1:])}</td></tr>'
             yield '</table>'
 
-    def _format_content(self, job_state, difftype):
+    def _format_content(self, job_state, difftype: str) -> str:
+        """generator yielding the HTML for a job; called by _parts. Calls _diff_to_html"""
         if job_state.verb == 'error':
             return f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
 
@@ -1005,3 +1019,51 @@ class BrowserReporter(HtmlReporter):
         webbrowser.open(f.name)
         time.sleep(2)
         os.remove(f.name)
+
+
+class XMPP(object):
+    def __init__(self, sender, recipient, insecure_password=None):
+        if aioxmpp is None:
+            raise ImportError('Python package "aioxmpp" is not installed; cannot use the "xmpp" reporter')
+
+        self.sender = sender
+        self.recipient = recipient
+        self.insecure_password = insecure_password
+
+    async def send(self, chunk):
+        if self.insecure_password:
+            password = self.insecure_password
+        elif keyring is not None:
+            password = keyring.get_password('urlwatch_xmpp', self.sender)
+            if password is None:
+                raise ValueError(f'No password available in keyring for {self.sender}')
+        else:
+            raise ValueError(f'No password available for {self.sender}')
+
+        jid = aioxmpp.JID.fromstr(self.sender)
+        client = aioxmpp.PresenceManagedClient(
+            jid, aioxmpp.make_security_layer(password)
+        )
+        recipient_jid = aioxmpp.JID.fromstr(self.recipient)
+
+        async with client.connected() as stream:
+            msg = aioxmpp.Message(to=recipient_jid, type_=aioxmpp.MessageType.CHAT,)
+            msg.body[None] = chunk
+
+            await stream.send_and_wait_for_sent(msg)
+
+
+def xmpp_have_password(sender):
+    if keyring is None:
+        raise ImportError('Python package "keyring" is non installed - service unsupported')
+
+    return keyring.get_password('urlwatch_xmpp', sender) is not None
+
+
+def xmpp_set_password(sender):
+    """ Set the keyring password for the XMPP connection. Interactive."""
+    if keyring is None:
+        raise ImportError('Python package "keyring" is non installed - service unsupported')
+
+    password = getpass.getpass(prompt=f'Enter password for {sender}: ')
+    keyring.set_password('urlwatch_xmpp', sender, password)

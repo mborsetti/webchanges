@@ -60,17 +60,21 @@ class BrowserLoop(object):
 
     async def _launch_browser(self, chromium_revision, proxy_server, ignore_https_errors, user_data_dir, switches):
         if chromium_revision:
-            if isinstance(chromium_revision, list):
-                self._chromium_revision = None
-                platform = self.current_platform()
-                for _os in chromium_revision:
-                    if platform in _os:
-                        self._chromium_revision = _os[platform]
-                        break
-            else:
-                self._chromium_revision = chromium_revision
-            os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(self._chromium_revision)
+            if chromium_revision:
+                if isinstance(chromium_revision, dict):
+                    try:
+                        _revision = chromium_revision[self.current_platform()]
+                    except KeyError:
+                        raise KeyError(
+                            f"No 'chromium_revision' key for operating system {self.current_platform()} found")
+                else:
+                    _revision = chromium_revision
+                os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(_revision)
 
+        logger.info(f"os.environ.get('PYPPETEER_DOWNLOAD_HOST')={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}")
+        logger.info(f"os.environ.get('PYPPETEER_CHROMIUM_REVISION')="
+                    f"{os.environ.get('PYPPETEER_CHROMIUM_REVISION')}")
+        logger.info(f"os.environ.get('PYPPETEER_NO_PROGRESS_BAR')={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}")
         try:
             import pyppeteer  # must be imported after setting os.environ variables
         except ImportError:
@@ -85,10 +89,10 @@ class BrowserLoop(object):
         if switches:
             if isinstance(switches, str):
                 switches = switches.split(',')
-            if not isinstance(self.switches, list):
-                raise TypeError(f"'switches' needs to be a string or list, not {type(self.switches)} "
+            if not isinstance(switches, list):
+                raise TypeError(f"'switches' needs to be a string or list, not {type(switches)} "
                                 f'( {self.get_location()} )')
-            self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
+            switches = [f"--{switch.lstrip('--')}" for switch in switches]
             args.extend(switches)
         browser = await pyppeteer.launch(ignoreHTTPSErrors=ignore_https_errors, args=args)
         # for p in (await browser.pages()):

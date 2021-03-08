@@ -1,6 +1,6 @@
 # This is an example jobs.yaml file for webchanges
 # Empty lines and lines starting with "#" are ignored
-# Example must work to speed up testing
+# Used in testing, so this must work or it hangs testing
 name: Sample webchanges job definition
 note: Used by handler_test.test_run_watcher() and handler_test.test_load_jobs_yaml()
 url: https://example.com/

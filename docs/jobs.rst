@@ -149,14 +149,17 @@ Optional directives
 For all ``url`` jobs:
 
 - ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
-- ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`)
-- ``headers``: Headers to send along with the request (a dict)
-- ``http_proxy``: Proxy server to use for HTTP requests (e.g. "http://username:password@proxy.com:8080")
-- ``https_proxy``: Proxy server to use for HTTPS requests
-- ``timeout``: Override the default timeout, in seconds (see :ref:`here <timeout>`)
+- ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`). `Added in version 3.0:` works for
+  all ``url`` jobs.
+- ``headers``: Headers to send along with the request (a dict). `Added in version 3.0:` works for all ``url`` jobs.
+- ``http_proxy``: Proxy server to use for HTTP requests (e.g. "http://username:password@proxy.com:8080"). `Added in
+  version 3.0:` works for all ``url`` jobs.
+- ``https_proxy``: Proxy server to use for HTTPS requests. `Added in version 3.0:` works for all ``url`` jobs.
+- ``timeout``: Override the default timeout, in seconds (see :ref:`here <timeout>`). `Added in version 3.0:` works for
+  all ``url`` jobs.
 - ``user_visible_url``: Use this text in reports (e.g. when watched URL is a REST API endpoint but you want to link to
-  the webpage instead)
-- ``note``: Information added under the header in reports
+  the webpage instead). `New in version 3.0.3.`
+- ``note``: Information added under the header in reports. `New in version 3.2.`
 
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
@@ -175,28 +178,44 @@ For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
 For ``url`` jobs that have ``use_browser: true``:
 
-- ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here <chromium_revision>`);
-  can be different for different OSs, in which case is a list of one or more of the following keys: ``linux``, ``mac``,
-  ``win32`` and ``win64``
-- ``ignore_https_errors``: Ignore HTTPs errors (true/false)
-- ``user_data_dir``: A path to a pre-existing user directory that Chromium should be using
+- ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here <chromium_revision>`).
+  `New in version 3.0.`  This can be different for different OSs, in which case is a list of one or more of the
+  following keys: ``linux``, ``mac``, ``win32`` and ``win64``. `Added in version 3.1:` keys for different OSs.
+- ``ignore_https_errors``: Ignore HTTPs errors (true/false). `New in version 3.0.`
+- ``user_data_dir``: A path to a pre-existing user directory that Chromium should be using. `New in version 3.0.`
 - ``switches``: Additional command line `switch(es) for Chromium
-  <https://peter.sh/experiments/chromium-command-line-switches/>`__ (list)
+  <https://peter.sh/experiments/chromium-command-line-switches/>`__ (list). `New in version 3.0.`
 - ``wait_until``: When to consider navigation succeeded (``load``, ``domcontentloaded``, ``networkidle0``, or
   ``networkidle2``) (see
-  `documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__)
+  `documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__). `New in version
+  3.0.`
 - ``wait_for_navigation``: Wait until navigation lands on a URL starting with this text (e.g. due to redirects); helps
   to avoid the ``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation``
   error. If ``wait_for`` is also used, ``wait_for_navigation`` is applied first. Cannot be used with ``block_elements``.
+  `New in version 3.2.`.
 - ``wait_for``: Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath
   string is matched, before getting the HTML content (see `documentation
   <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds). If
   ``wait_for_navigation`` is also used, ``wait_for`` is applied after. Cannot be used with ``block_elements``.
-- ``block_elements`` (⚠ Python >= 3.7): Do not request (download) specified `resource types
+- ``block_elements`` (⚠ Python >= 3.7) (experimental feature): Do not request (download) specified `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ as to
   speed up retrieval of the content (list). Only resource types `supported by Chromium
   <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed. See
-  :ref:`here <pyppeteer_block_elements>`.
+  :ref:`here <pyppeteer_block_elements>`. `New in version 3.2.`
+- Setting the system environment variable ``PYPPETEER_NO_PROGRESS_BAR`` to true will prevent showing a download
+  progress bar if Pyppeteer needs to be downloaded; however, this will cause a `crash
+  <https://github.com/pyppeteer/pyppeteer/pull/224>`__ in Pyppetter <= 0.2.25
+
+Known issues
+""""""""""""
+* ``url`` jobs with ``use_browser: true`` (i.e. using Pyppeteer) will at times display the below error message in stdout
+  (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed in the
+  future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+
+  ``Future exception was never retrieved``
+  ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
+  ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
+
 
 Command
 -------
@@ -239,7 +258,8 @@ Optional directives (for all job types)
 ---------------------------------------
 These optional directives apply to all job types:
 
-- ``name``: Human-readable name/label of the job (default: if content is HTML, the title; otherwise the URL or command)
+- ``name``: Human-readable name/label of the job (if not specified: if content is HTML, the title; otherwise the URL or
+  command). `New in version 3.0:` auto-detect from HTML.
 - ``max_tries``: Number of consecutive times the job has to fail before reporting an error (default: 1); see
   :ref:`below <max_tries>`
 - ``diff_tool``: Command to an external tool for generating diff text. See example usage :ref:`here <word_based_differ>`

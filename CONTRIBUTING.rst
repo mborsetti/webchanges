@@ -8,17 +8,18 @@ Contributing
     :target: https://www.github.com/mborsetti/webchanges
     :alt: contributors
 
-Everyone is welcomed to contribute!
-
-Beginner? It's easy-ish to start! Please see this `tutorial
+Everyone is welcomed to contribute! Beginner? It's easy-ish to start! Please see this `tutorial
 <https://github.com/firstcontributions/first-contributions/blob/master/README.md>`__.
+
+If you can provide a solution as a pull request, please do so. If not, open an issue `here
+<https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.
 
 Please make your contributions to the `unrealeased <https://github.com/mborsetti/webchanges/tree/unreleased>`__ branch.
 
 Documentation
 -------------
-Great documentation is absolutely key in any a project.  Please feel free to contribute edits and additions to it,
-especially if you're new!  It is written in reStructuredText for Sphinx, and you can read a primer `here
+Great documentation is absolutely key in any a project. Please feel free to contribute edits and additions to it,
+especially if you're new! It is written in reStructuredText for Sphinx, and you can read a primer `here
 <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`__.
 
 Code
@@ -49,6 +50,9 @@ Please keep in mind PEP-20's `Zen of Python <https://www.python.org/dev/peps/pep
 - Namespaces are one honking great idea -- let's do more of those!
 
 
+Testing contributions
+---------------------
+
 Testing code
 ~~~~~~~~~~~~
 You can ensure that your code contributions pass all tests by running tests locally (after installing all Python dev
@@ -61,19 +65,17 @@ packages, as below) before creating a pull request, starting from the project's 
 
 Alternatively, you can manually run the following commands
 
+.. code-block:: bash
+
    pip install -U -r tests/requirements_testing.txt
    pre-commit autoupdate
    pre-commit run -a
    python -m pytest -v
 
-All tests need to pass, and the amount of lines covered by tests should not decrease.
+All tests need to pass, and the amount of lines covered by tests should not decrease (please write new or update the
+tests!)
 
 Testing documentation
 ~~~~~~~~~~~~~~~~~~~~~
 For documentation, build it locally using ``$ make html`` (Linux) or ``make_html.bat`` (Windows) from within the docs
 directory and monitor for errors.
-
-Open an issue
--------------
-If you can provide a solution as a pull request, please do so. If not, open an issue `here
-<https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.

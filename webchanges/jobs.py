@@ -76,7 +76,7 @@ class JobBase(object, metaclass=TrackSubClasses):
             else:
                 result.append(f'  * {sc.__kind__}')
 
-            for msg, value in (('    Required keys: ', sc.__required__), ('    Optional keys: ', sc.__optional__)):
+            for msg, value in (('    Required: ', sc.__required__), ('    Optional: ', sc.__optional__)):
                 if value:
                     values = ('\n' + (len(msg) * ' ')).join(textwrap.wrap(', '.join(value), 79 - len(msg)))
                     result.append(f'{msg}{values}')
@@ -180,7 +180,7 @@ class Job(JobBase):
 
 
 class UrlJob(Job):
-    """Retrieve an URL from a web server. Triggered by url key and no (or false) use_browser key"""
+    """Retrieve a URL from a web server"""
 
     __kind__ = 'url'
 
@@ -337,7 +337,7 @@ class UrlJob(Job):
 
 
 class BrowserJob(Job):
-    """Retrieve an URL, emulating a real web browser. Triggered by url key with use_browser: true"""
+    """Retrieve a URL, emulating a real web browser (use_browser: true)"""
 
     __kind__ = 'browser'
 
@@ -345,6 +345,13 @@ class BrowserJob(Job):
     __optional__ = ('chromium_revision', 'headers', 'cookies', 'timeout', 'ignore_http_error_codes',
                     'http_proxy', 'https_proxy', 'user_data_dir', 'switches', 'wait_until', 'wait_for',
                     'wait_for_navigation', 'user_visible_url', 'block_elements', 'navigate')
+
+    DEFAULT_CHROMIUM_REVISION = {
+        'linux': 843831,
+        'win64': 843846,
+        'win32': 843832,
+        'macos': 843846,
+    }
 
     def get_location(self):
         if not self.url and self.navigate:
@@ -395,20 +402,26 @@ class BrowserJob(Job):
 
     async def _retrieve(self):
         # launch browser
-        if self.chromium_revision:
-            if isinstance(self.chromium_revision, list):
-                self._revision = None
-                platform = self.current_platform()
-                for _os in self.chromium_revision:
-                    if platform in _os:
-                        self._revision = _os[platform]
-                        break
-            else:
-                self._revision = self.chromium_revision
-            os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(self._revision)
+        if not self.chromium_revision:
+            self.chromium_revision = self.DEFAULT_CHROMIUM_REVISION
+        if isinstance(self.chromium_revision, dict):
+            for key, value in self.DEFAULT_CHROMIUM_REVISION.items():
+                if key not in self.chromium_revision:
+                    self.chromium_revision[key] = value
+            try:
+                _revision = self.chromium_revision[self.current_platform()]
+            except KeyError:
+                raise KeyError(f"No 'chromium_revision' key for operating system {self.current_platform()} found")
+        else:
+            _revision = self.chromium_revision
+        os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(_revision)
 
+        logger.info(f"os.environ.get('PYPPETEER_DOWNLOAD_HOST')={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}")
+        logger.info(f"os.environ.get('PYPPETEER_CHROMIUM_REVISION')="
+                    f"{os.environ.get('PYPPETEER_CHROMIUM_REVISION')}")
+        logger.info(f"os.environ.get('PYPPETEER_NO_PROGRESS_BAR')={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}")
         try:
-            import pyppeteer  # must be imported after setting os.environ variables
+            from pyppeteer import launch  # must be imported after setting os.environ variables
         except ImportError:
             raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
                               f' ( {self.job.get_location()} )')
@@ -437,9 +450,9 @@ class BrowserJob(Job):
                                 f'( {self.get_location()} )')
             self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
             args.extend(self.switches)
-        # as signal only works in main thread, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
-        browser = await pyppeteer.launch(ignoreHTTPSErrors=self.ignore_http_error_codes, args=args, handleSIGINT=False,
-                                         handleSIGTERM=False, handleSIGHUP=False)
+        # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
+        browser = await launch(ignoreHTTPSErrors=self.ignore_http_error_codes, args=args, handleSIGINT=False,
+                               handleSIGTERM=False, handleSIGHUP=False)
 
         # browse to page and get content
         page = await browser.newPage()
@@ -455,7 +468,7 @@ class BrowserJob(Job):
             options['timeout'] = self.timeout * 1000
         if self.wait_until:
             options['waitUntil'] = self.wait_until
-        if self.block_elements:
+        if self.block_elements:  # FIXME: Pyppeteer freezes on certain sites if this is on; contribute if you know why
             if isinstance(self.block_elements, str):
                 self.block_elements = self.block_elements.split(',')
             if not isinstance(self.block_elements, list):
@@ -486,23 +499,19 @@ class BrowserJob(Job):
                 asyncio.create_task(intercept(intercepted_request, self.block_elements))
 
             await page.setRequestInterception(True)
-            page.on('request', handle_request)
+            page.on('request', handle_request)  # inherited from Bases: pyee.EventEmitter
 
         await page.goto(self.url, options=options)
 
+        # TODO understand if the below is required
+        # if self.block_elements:
+        #     page.remove_listener('request', handle_request)
+        #     await page.setRequestInterception(False)
         if self.wait_for_navigation:
-            if self.block_elements:
-                # TODO understand if the below, required, completely undoes blocking of resource loading
-                page.remove_listener('request', handle_request)
-                await page.setRequestInterception(False)
             while not page.url.startswith(self.wait_for_navigation):
                 logger.info(f'Waiting for redirection from {page.url}')
                 await page.waitForNavigation(option=options)
         if self.wait_for:
-            if self.block_elements:
-                # TODO understand if the below, required, completely undoes blocking of resource loading
-                page.remove_listener('request', handle_request)
-                await page.setRequestInterception(False)
             if isinstance(self.wait_for, (int, float, complex)) and not isinstance(self.wait_for, bool):
                 self.wait_for *= 1000
             await page.waitFor(self.wait_for, options=options)

@@ -1,5 +1,4 @@
 @ECHO OFF
-
 pushd %~dp0
 
 REM Command file to generate Sphinx documentation
@@ -24,7 +23,9 @@ if errorlevel 9009 (
 )
 
 %SPHINXBUILD% -M html %SOURCEDIR% %BUILDDIR% -E -W -v %SPHINXOPTS% %O%
-goto end
+echo %errorlevel%
+
+if %errorlevel% equ 0 start "" "file://%~dp0_build\html\index.html"
 
 :end
 pause

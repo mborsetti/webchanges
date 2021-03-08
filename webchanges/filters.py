@@ -297,9 +297,7 @@ class Html2TextFilter(FilterBase):
                 if k == 'pad_tables':
                     self.job.markdown_padded_tables = v
 
-            d = parser.handle(data)
-
-            return d
+            return parser.handle(data)
 
         elif method == 'bs4':
             if BeautifulSoup is None:
@@ -308,19 +306,17 @@ class Html2TextFilter(FilterBase):
 
             parser = options.pop('parser', 'lxml')
             soup = BeautifulSoup(data, parser)
-            d = soup.get_text(strip=True)
-            return d
+            return soup.get_text(strip=True)
 
         elif method in ('strip_tags', 're'):  # re for backward compatibility
             if method == 're':
                 logger.warning(f"filter html2text's method 're' is deprecated: replace with 'strip_tags' "
                                f'( {self.job.get_location()} )', DeprecationWarning)
             stripped_tags = re.sub(r'<[^>]*>', '', data)
-            d = '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''))
-            return d
+            return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''))
 
         elif method == 'lynx':
-            logger.error(f"'filter html2text's method 'lynx' is no longer supported."
+            logger.error(f"'filter html2text's method 'lynx' is no longer supported; use the 'html2text' filter instead"
                          f' ( {self.job.get_location()} )')
 
         else:

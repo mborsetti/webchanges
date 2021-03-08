@@ -121,12 +121,10 @@ def chunk_string(string, length, *, numbering=False):
     return (string[i:length + i].strip() for i in range(0, len(string), length))
 
 
-# Using regex from tornado library
-# The regex is modified to avoid character entities other than &amp; so
-# that we won't pick up &quot;, etc.
-# Note it is vulnerable to Regular expression Denial of Service (ReDoS),
-# which would divert computational  resources to an expensive regex match
-# (i.e. limited risk in this application)
+# Using regex from tornado library https://github.com/tornadoweb/tornado/blob/master/tornado/escape.py
+# This regex should avoid character entities other than &amp; so that we won't pick up &quot;, etc.
+# Note: it is vulnerable to Regular expression Denial of Service (ReDoS), which would divert computational resources to
+# an expensive regex match. There's a limited risk in this application and can't find anything better
 _URL_RE = re.compile(r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
 &amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|
 &quot;)*\)))+)""")  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible

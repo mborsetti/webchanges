@@ -18,7 +18,7 @@ TESTDATA = [
       'method': 'GET',
       'ssl_no_verify': False,
       'ignore_cached': True,
-      'encoding': 'utf-8',
+      'encoding': 'ascii',  # required for testing Python 3.6 in Windows as it has a tendency of erroring on cp1252
       'ignore_connection_errors': False,
       'ignore_http_error_codes': 200,
       'ignore_timeout_errors': False,
@@ -28,9 +28,8 @@ TESTDATA = [
     ({'url': 'https://www.google.com/',
       'use_browser': True,
       'timeout': 15,
-      'chromium_revision': 827102,
       'ignore_https_errors': False,
-      'switches': ['--disable-dev-shm-usage', '--window-size=1298,1406'],
+      'switches': ['--window-size=1298,1406'],
       'wait_until': 'load',
       'wait_for': 1,
       'wait_for_navigation': 'https://www.google.com/'

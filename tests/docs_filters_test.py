@@ -7,6 +7,7 @@ import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
 import docutils.utils
+import html2text
 import pkg_resources
 import pytest
 import yaml
@@ -77,7 +78,8 @@ def test_url(url, job):
     in tests/data/doc_filter_testdata.yaml using 'url' as the key)"""
     # only tests shellpipe in linux; test pdf2text and ocr only if packages are installed (they require
     # OS-specific installations beyond pip)
-    if url != 'https://example.com/html2text.html':  # TODO remove this when html2text > 2020.1.16 (fixed)
+    if url != 'https://example.com/html2text.html' or html2text.__version__ <= (2020, 1, 16):
+        # TODO update output and remove this when html2text > 2020.1.16 (https://github.com/Alir3z4/html2text/pull/339)
         d = testdata[url]
         if 'filename' in d:
             input_data = open(os.path.join(here, 'data', d['filename']), 'rb').read()

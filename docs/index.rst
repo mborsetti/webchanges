@@ -37,8 +37,8 @@ Table of Contents
    :caption: Advanced
 
    advanced
-   hooks
    cli
+   hooks
 
 .. toctree::
    :maxdepth: 1

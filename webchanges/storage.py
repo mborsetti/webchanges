@@ -1,4 +1,5 @@
 import copy
+import getpass
 import logging
 import os
 import shutil
@@ -6,13 +7,9 @@ import sqlite3
 import stat
 import threading
 from abc import ABCMeta, abstractmethod
+from datetime import datetime
 
 import msgpack
-
-try:
-    import minidb
-except ImportError:
-    minidb = None
 
 try:
     import pwd
@@ -170,20 +167,6 @@ def merge(source, destination):
     return destination
 
 
-def get_current_user():
-    try:
-        return os.getlogin()
-    except OSError:
-        # Linux
-        # If there is no controlling terminal, because webchanges is launched by
-        # cron, or by a systemd.service for example, os.getlogin() fails with:
-        # OSError: [Errno 25] Inappropriate ioctl for device
-        if pwd is None:
-            raise ModuleNotFoundError('Python standard module "pwd" not available')
-        else:
-            return pwd.getpwuid(os.getuid()).pw_name
-
-
 class BaseStorage(metaclass=ABCMeta):
     @abstractmethod
     def load(self, *args):
@@ -195,7 +178,7 @@ class BaseStorage(metaclass=ABCMeta):
 
 
 class BaseFileStorage(BaseStorage, metaclass=ABCMeta):
-    def __init__(self, filename):
+    def __init__(self, filename: str) -> None:
         self.filename = filename
 
 
@@ -270,13 +253,13 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
         if (dir_st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) != 0:
             shelljob_errors.append(f'{dirname} is group/world-writable')
         if dir_st.st_uid != current_uid:
-            shelljob_errors.append(f'{dirname} not owned by {get_current_user()}')
+            shelljob_errors.append(f'{dirname} not owned by {getpass.getuser()}')
 
         file_st = os.stat(self.filename)
         if (file_st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) != 0:
             shelljob_errors.append(f'{self.filename} is group/world-writable')
         if file_st.st_uid != current_uid:
-            shelljob_errors.append(f'{self.filename} not owned by {get_current_user()}')
+            shelljob_errors.append(f'{self.filename} not owned by {getpass.getuser()}')
 
         return shelljob_errors
 
@@ -349,7 +332,6 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
 
 class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
-
     @classmethod
     def parse(cls, *args):
         filename = args[0]
@@ -396,6 +378,10 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
     def clean(self, guid):
         ...
 
+    @abstractmethod
+    def rollback(self, guid):
+        ...
+
     def backup(self):
         for guid in self.get_guids():
             data, timestamp, tries, etag = self.load(guid)
@@ -407,7 +393,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
 
     def gc(self, known_guids):
         for guid in set(self.get_guids()) - set(known_guids):
-            print(f'Removing: {guid} (no longer being tracked)')
+            print(f'Deleting: {guid} (no longer being tracked)')
             self.delete(guid)
         self.clean_cache(known_guids)
 
@@ -415,16 +401,27 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         if hasattr(self, 'clean_all'):
             count = self.clean_all()
             if count:
-                print(f'Removed {count} old snapshots')
+                print(f'Deleted {count} old snapshots')
         else:
             for guid in known_guids:
                 count = self.clean(guid)
                 if count > 0:
-                    print(f'Removed {count} old snapshots of {guid}')
+                    print(f'Deleted {count} old snapshots of {guid}')
+
+    def rollback_cache(self, timestamp):
+        count = self.rollback(timestamp)
+        try:
+            timestamp_date = datetime.fromtimestamp(timestamp).astimezone().isoformat()
+        except OSError:
+            timestamp_date = datetime.fromtimestamp(timestamp).isoformat()
+        if count:
+            print(f'Deleted {count} snapshots taken after {timestamp_date}')
+        else:
+            print(f'No snapshots taken after {timestamp_date} found to delete')
 
 
 class CacheDirStorage(CacheStorage):
-    """Stores the information in individual files in a directory"""
+    """Stores the information in individual files in a directory 'filename'"""
     def __init__(self, filename):
         super().__init__(filename)
         if not os.path.exists(filename):
@@ -469,29 +466,33 @@ class CacheDirStorage(CacheStorage):
     def clean(self, guid):
         """We only store the latest version, no need to clean"""
 
+    def rollback(self, timestamp: float) -> None:
+        raise NotImplementedError("'textfiles' databases cannot be rolled back as new snapshots overwrite old ones")
+
 
 class CacheSQLite3Storage(CacheStorage):
     """
-    Handles storage of the snapshot in a SQLite database using Python's built-in sqlite3 module
+    Handles storage of the snapshot in a SQLite database in the 'filename' file using Python's built-in sqlite3 module
     and the msgpack package.
-    The data is stored in the following columns:
-    * uuid: unique hash of the "location", i.e. the URL
-    * timestamp: the timestamp of when the snapshot was taken
+
+    The database contains the 'webchanges' table with the following columns:
+    * uuid: unique hash of the "location", i.e. the URL; indexed
+    * timestamp: the Unix timestamp of when then the snapshot was taken
     * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
     """
-    def __init__(self, filename):
-        """Opens the database file and creates a table and index if not already existing"""
-        super().__init__(filename)
+    def __init__(self, filename: str) -> None:
+        """Opens the database file and, if new, creates a table and index
 
-        if msgpack is None:
-            raise ImportError("Python package 'msgpack' is missing")
+        :param filename: The full filename of the database file
+        """
+        super().__init__(filename)
 
         dirname = os.path.dirname(filename)
         if dirname and not os.path.isdir(dirname):
             os.makedirs(dirname)
         # if os.path.isfile(filename):
         #     import shutil
-        #     _ = shutil.copy2(filename, filename + '.bak')
+        #     _ = shutil.copy2(filename, f'{filename}.{int(time.time())}.bak')
 
         # https://stackoverflow.com/questions/26629080
         self.lock = threading.RLock()
@@ -500,20 +501,22 @@ class CacheSQLite3Storage(CacheStorage):
         self.cur = self.db.cursor()
         tables = self.cur.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
         if tables == ('CacheEntry',):
-            # found a minidb legacy database
+            # found a minidb legacy database; rename it for migration and create new one
             self.db.close()
             os.rename(filename, filename + '.minidb')
             self.db = sqlite3.connect(filename, check_same_thread=False)
             self.cur = self.db.cursor()
         if tables != ('webchanges',):
+            # not yet initialized
             self.cur.execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
             self.cur.execute('CREATE INDEX idx_uuid ON webchanges (uuid)')
             self.db.commit()
         if tables == ('CacheEntry',):
+            # migrate the minidb legacy database renamed above
             self.migrate_from_minidb(filename + '.minidb')
 
-    def close(self):
-        """cleans up the database and closes the connection to it"""
+    def close(self) -> None:
+        """Cleans up the database and closes the connection to it"""
         with self.lock:
             self.cur.execute('VACUUM')
             self.db.commit()
@@ -521,20 +524,32 @@ class CacheSQLite3Storage(CacheStorage):
             del self.db
             del self.cur
 
-    def get_guids(self):
-        """lists the unique 'guid's contained in the database"""
+    def get_guids(self) -> list:
+        """Lists the unique 'guid's contained in the database
+
+        :returns: A list of guids
+        """
         with self.lock:
             self.cur.row_factory = lambda cursor, row: row[0]
             guids = self.cur.execute('SELECT DISTINCT uuid FROM webchanges').fetchall()
             self.cur.row_factory = None
         return guids
 
-    def load(self, guid):
-        """return the most recent entry matching a 'guid'"""
+    def load(self, guid: str) -> (str, float, int, str):  # TODO handle NoneType
+        """return the most recent entry matching a 'guid'
+
+        :param guid: The guid
+
+        :returns: A tuple (data, timestamp, tries, etag)
+            WHERE
+            data is the data
+            timestamp is the timestamp
+            tries is the number of tries
+            etag is the ETag
+        """
         with self.lock:
             row = self.cur.execute('SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? '
                                    'ORDER BY timestamp DESC LIMIT 1', (guid,)).fetchone()
-
         if row:
             msgpack_data, timestamp = row
             r = msgpack.unpackb(msgpack_data)
@@ -542,8 +557,17 @@ class CacheSQLite3Storage(CacheStorage):
 
         return None, None, 0, None
 
-    def get_history_data(self, guid, count=1):
-        """return a dict of k:data and v:timestamp of the last 'count' entries matching a 'guid'"""
+    def get_history_data(self, guid: str, count: int = 1) -> dict:
+        """Return some data from the last 'count' entries matching a 'guid'
+
+        :param guid: The guid
+        :param count: The maximum number of entries to return
+
+        :returns: A dict (key: value)
+            WHERE
+            key is the data
+            value is the timestamp
+        """
         history = {}
         if count < 1:
             return history
@@ -561,39 +585,61 @@ class CacheSQLite3Storage(CacheStorage):
                             break
         return history
 
-    def save(self, guid, data, timestamp, tries, etag):
-        """save the data from a job"""
-        r = {
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
+        """Save the data from a job
+
+        :param guid: The guid
+        :param data: The data
+        :param timestamp: The timestamp
+        :param tries: The number of tries
+        :param etag: The ETag
+        """
+        c = {
             'd': data,
             't': tries,
             'e': etag,
         }
-        msgpack_data = msgpack.packb(r)
+        msgpack_data = msgpack.packb(c)
         with self.lock:
             self.cur.execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
             self.db.commit()
 
-    def delete(self, guid):
-        """delete all entries matching a 'guid'"""
+    def delete(self, guid: str) -> None:
+        """Delete all entries matching a 'guid'
+
+        :param guid: The guid
+        """
         with self.lock:
             self.cur.execute('DELETE FROM webchanges WHERE uuid = ?', (guid,))
             self.db.commit()
 
-    def clean(self, guid, keep_entries=1):
-        """delete all entries except the most recent 'keep_entries' ones for a 'guid'"""
+    def clean(self, guid: str, keep_entries: int = 1) -> int:
+        """For the given 'guid', keep only the latest 'keep_entries' entries and delete all other (older) ones
+        Use clean_all() if you want to remove all older entries
+
+        :param guid: The guid
+        :param keep_entries: Number of entries to keep after deletion
+
+        :returns: Number of records deleted
+        """
         with self.lock:
             self.cur.execute('''
                 DELETE FROM webchanges
-                WHERE EXISTS (
-                    SELECT ? FROM webchanges w
-                    WHERE w.uuid = ? AND w.timestamp < webchanges.timestamp
-                )''', (keep_entries, guid))
+                WHERE ROWID IN (
+                    SELECT ROWID FROM webchanges
+                    WHERE uuid = ?
+                    ORDER BY timestamp DESC
+                    LIMIT -1 OFFSET ?
+                )''', (guid, keep_entries))
             num_del = self.cur.execute('SELECT changes()').fetchone()[0]
             self.db.commit()
-            return num_del
+        return num_del
 
-    def clean_all(self):
-        """delete all entries except the most recent for all guids"""
+    def clean_all(self) -> int:
+        """Delete all older entries for each 'guid' (keep only last one)
+
+        :returns: Number of records deleted
+        """
         with self.lock:
             self.cur.execute('''
                 DELETE FROM webchanges
@@ -603,20 +649,38 @@ class CacheSQLite3Storage(CacheStorage):
                 )''')
             num_del = self.cur.execute('SELECT changes()').fetchone()[0]
             self.db.commit()
-            return num_del
+        return num_del
+
+    def rollback(self, timestamp: float) -> int:
+        """Rollback database to timestamp
+
+        :returns: Number of records deleted
+        """
+        with self.lock:
+            self.cur.execute('''
+                DELETE FROM webchanges
+                WHERE EXISTS (
+                     SELECT 1 FROM webchanges w
+                     WHERE w.uuid = webchanges.uuid AND webchanges.timestamp > ? AND w.timestamp > ?
+                )''', (timestamp, timestamp))
+            num_del = self.cur.execute('SELECT changes()').fetchone()[0]
+            self.db.commit()
+        return num_del
 
     def migrate_from_minidb(self, filename):
         print("Found 'minidb' database and upgrading it to the new engine (note: only the last snapshot is retained).")
         logger.info("Found legacy 'minidb' database and converting it to 'sqlite3' and new schema. "
                     "Package 'minidb' needs to be installed for the conversion.")
 
+        from .storage_minidb import CacheMiniDBStorage
+
         legacy_db = CacheMiniDBStorage(filename)
         for guid in legacy_db.get_guids():
             data, timestamp, tries, etag = legacy_db.load(guid)
             self.save(guid, data, timestamp, tries, etag)
         legacy_db.close()
-        print(f'Database upgrade finished; the following file be safely deleted: {filename}')
-        print("'minidb' package can be removed (unless used by another program): $ pip uninstall minidb")
+        print(f'Database upgrade finished; the following backup file can be safely deleted: {filename}')
+        print("and the 'minidb' package can be removed (unless used by another program): $ pip uninstall minidb")
         print('-' * 80)
 
 
@@ -629,7 +693,8 @@ class CacheRedisStorage(CacheStorage):
 
         self.db = redis.from_url(filename)
 
-    def _make_key(self, guid):
+    @staticmethod
+    def _make_key(guid):
         return 'guid:' + guid
 
     def close(self):
@@ -661,7 +726,7 @@ class CacheRedisStorage(CacheStorage):
         for i in range(0, self.db.llen(key)):
             r = self.db.lindex(key, i)
             c = msgpack.unpackb(r)
-            if (c['tries'] == 0 or c['tries'] is None):
+            if c['tries'] == 0 or c['tries'] is None:
                 if c['data'] not in history:
                     history[c['data']] = c['timestamp']
                     if len(history) >= count:
@@ -686,77 +751,5 @@ class CacheRedisStorage(CacheStorage):
         if self.db.ltrim(key, 0, 0):
             return i - self.db.llen(key)
 
-
-class CacheMiniDBStorage(CacheStorage):
-    """legacy code for backwards-compatibility with version < 3.2.0 and --dababase-engine minidb"""
-
-    class CacheEntry(minidb.Model):
-        guid = str
-        timestamp = int
-        data = str
-        tries = int
-        etag = str
-
-    def __init__(self, filename):
-        super().__init__(filename)
-
-        if minidb is None:
-            raise ImportError("Python package 'minidb' is missing")
-
-        dirname = os.path.dirname(filename)
-        if dirname and not os.path.isdir(dirname):
-            os.makedirs(dirname)
-
-        self.db = minidb.Store(self.filename, debug=True)
-        self.db.register(self.CacheEntry)
-
-    def close(self):
-        self.db.close()
-        self.db = None
-
-    def get_guids(self):
-        return (guid for guid, in self.CacheEntry.query(self.db, minidb.Function('distinct', self.CacheEntry.c.guid)))
-
-    def load(self, guid):
-        for data, timestamp, tries, etag in self.CacheEntry.query(
-                self.db,
-                self.CacheEntry.c.data // self.CacheEntry.c.timestamp // self.CacheEntry.c.tries
-                // self.CacheEntry.c.etag,
-                order_by=minidb.columns(self.CacheEntry.c.timestamp.desc, self.CacheEntry.c.tries.desc),
-                where=self.CacheEntry.c.guid == guid, limit=1):
-            return data, timestamp, tries, etag
-
-        return None, None, 0, None
-
-    def get_history_data(self, guid, count=1):
-        history = {}
-        if count < 1:
-            return history
-        for data, timestamp in self.CacheEntry.query(
-                self.db, self.CacheEntry.c.data // self.CacheEntry.c.timestamp,
-                order_by=minidb.columns(self.CacheEntry.c.timestamp.desc, self.CacheEntry.c.tries.desc),
-                where=(self.CacheEntry.c.guid == guid)
-                & ((self.CacheEntry.c.tries == 0) | (self.CacheEntry.c.tries is None))):
-            if data not in history:
-                history[data] = timestamp
-                if len(history) >= count:
-                    break
-        return history
-
-    def save(self, guid, data, timestamp, tries, etag=None):
-        self.db.save(self.CacheEntry(guid=guid, timestamp=timestamp, data=data, tries=tries, etag=etag))
-        self.db.commit()
-
-    def delete(self, guid):
-        self.CacheEntry.delete_where(self.db, self.CacheEntry.c.guid == guid)
-        self.db.commit()
-
-    def clean(self, guid):
-        keep_id = next((self.CacheEntry.query(self.db, self.CacheEntry.c.id, where=self.CacheEntry.c.guid == guid,
-                                              order_by=self.CacheEntry.c.timestamp.desc, limit=1)), (None,))[0]
-
-        if keep_id is not None:
-            result = self.CacheEntry.delete_where(self.db,
-                                                  (self.CacheEntry.c.guid == guid) & (self.CacheEntry.c.id != keep_id))
-            self.db.commit()
-            return result
+    def rollback(self, timestamp: float) -> None:
+        raise NotImplementedError("'redis' databases cannot be rolled back as new snapshots overwrite old ones")
