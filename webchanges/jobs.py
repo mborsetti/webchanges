@@ -350,7 +350,7 @@ class BrowserJob(Job):
         'linux': 843831,
         'win64': 843846,
         'win32': 843832,
-        'macos': 843846,
+        'mac': 843846,
     }
 
     def get_location(self):
