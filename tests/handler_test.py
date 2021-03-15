@@ -91,8 +91,11 @@ def teardown_func():
     finally:
         'tear down test fixtures'
         cache_file = os.path.join(here, 'data', 'cache.db')
-        if os.path.exists(cache_file):
-            os.remove(cache_file)
+        fn_base, fn_ext = os.path.splitext(cache_file)
+        minidb_cache_file = f'{fn_base}_minidb{fn_ext}'
+        for filename in (cache_file, minidb_cache_file):
+            if os.path.exists(filename):
+                os.remove(filename)
 
 
 def test_run_watcher_minidb():

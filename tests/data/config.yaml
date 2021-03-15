@@ -5,7 +5,6 @@ display:
 report:
   html:
     diff: unified
-    diff_numlines: null
   text:
     line_length: 75
     details: true

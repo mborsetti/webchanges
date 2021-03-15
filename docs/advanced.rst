@@ -260,9 +260,11 @@ line-based difference, use GNU ``wdiff``:
 
 In order for this to work, ``wdiff`` needs to  be installed separately (e.g. ``apt install wdiff`` on Debian/Ubuntu,
 ``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
-Windows). Colored output is supported for ``wdiff``.
+Windows).
 
-The use of an external differ will override the ``diff`` setting of the ``html`` report.
+When using ``diff_tool: wdiff`` with an ``html`` report, the output of ``wdiff`` will be colorized.
+
+Note: the use of an external differ will override the ``diff`` setting of the ``html`` report.
 
 
 .. _chromium_revision:

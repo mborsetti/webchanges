@@ -42,7 +42,6 @@ DEFAULT_CONFIG = {
         # text, html and markdown are three content types of reports
         'html': {
             'diff': 'unified',  # 'unified' or 'table'
-            'diff_numlines': None,  # default if None
         },
 
         'text': {
