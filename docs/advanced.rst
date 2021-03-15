@@ -171,16 +171,6 @@ combines both escaping and signaling to the downstream html reporter that its ou
 Please read the file permission restrictions in the filter's explanation :ref:`here <shellpipe>`.
 
 
-Using Redis as a cache backend
-------------------------------
-To use Redis as a database (cache) backend instead of the default SQLite3 file:
-
-.. code-block:: bash
-
-    webchanges --cache=redis://localhost:6379/
-
-There is no migration path from the existing SQLite3 database, the cache will be empty the first time Redis is used.
-
 
 Watching changes on .onion (Tor) pages
 --------------------------------------

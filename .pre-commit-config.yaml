@@ -108,7 +108,7 @@ repos:
 #        language_version: python3
 
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.8.4
+    rev: 3.9.0
     hooks:
       - id: flake8
         name: Check for errors, style, and over-complexity (flake8)

@@ -69,7 +69,7 @@ and things to look for when using YAML.
    name: "\u00A9"  # The copyright sign ©
 
 
-For additional information on YAML, see the `YAML specifications <https://yaml.org/spec/>`__.
+For additional information on YAML, see the :ref:yaml_syntax and the references at the bottom of that page.
 
 **Multiple jobs**
 
@@ -88,10 +88,9 @@ This is the main job type -- it retrieves a document from a web server.
    url: https://example.org/page2
 
 
-Important: due to an early architectural choice, URLs must be unique to each job. If for some reason you want to monitor
-the same address twice, make sure each job has a unique URL. You can easily accomplish this by adding a # at the end of
-the link followed by a unique remark (the # and everything after is discarded by a web server, but captured by
-`webchanges`):
+Important: due to a legacy architectural choice, URLs must be **unique** to each job. If for some reason you want to
+monitor the same resource multiple times, make each job's URL unique by adding # at the end of the link followed by a
+unique remark (the # and everything after is discarded by a web server, but captured by `webchanges`):
 
 .. code-block:: yaml
 

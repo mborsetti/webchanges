@@ -813,13 +813,13 @@ class TelegramReporter(TextReporter):
         result = None
         for chunk in chunk_string(text, self.MAX_LENGTH, numbering=True):
             for chat_id in chat_ids:
-                res = self.submitToTelegram(bot_token, chat_id, chunk)
+                res = self.submit_to_telegram(bot_token, chat_id, chunk)
                 if res.status_code != requests.codes.ok or res is None:
                     result = res
 
         return result
 
-    def submitToTelegram(self, bot_token, chat_id, text):
+    def submit_to_telegram(self, bot_token, chat_id, text):
         logger.debug(f"Sending telegram request to chat id: '{chat_id}'")
         result = requests.post(
             f'https://api.telegram.org/bot{bot_token}/sendMessage',

@@ -22,19 +22,20 @@ in the :ref:`introduction <introduction>`, it also implements:
 
 * An upgrade in Pyppeteer-based browsing to render JavaScript that includes:
 
-  * using the same engine powering Chrome 89
-  * replacing with Python's ``asyncio.run()`` the legacy custom code managing the asyncio event loop, finalizing
-    asynchronous generators, and closing the threadpool to increase reliability (only if running Python 3.7 or higher)
+  * using the same browser engine powering Chrome 89
+  * using Python's built-in ``asyncio.run()`` to manage the asyncio event loop, finalizing asynchronous generators, and
+    closing the threadpool instead of legacy custom code managing to increase reliability (only if running **Python
+    3.7** or higher)
   * reduction in concurrency for higher stability
   * new directives allowing much more flexibility and control: ``chromium_revision``, ``switches``, ``wait_until``,
     ``ignore_https_errors``, ``wait_for_navigate``, ``wait_for``, ``user_data_dir``, ``block_elements``, ``cookies``,
     ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
   removes the need for a dependency
-* The us ofe the webpage's title as a job ``name`` if one isn't provided and the ability to add a job ``note`` in the
+* The use of the webpage's title as a job ``name`` if one isn't provided and the ability to add a job ``note`` in the
   report
-* The optimization of the ``html2text`` filters's default settings for web content
-* A new ``--errors`` command line switch to let you know if jobs error out or have empty responses after filters are
+* The optimization of the default settings of the ``html2text`` filter for web content
+* A new ``--errors`` command line switch to show any jobs that error out or have empty responses after filters are
   applied
 * The support of Unicode throughout, including in filters and in the YAML files containing jobs and configuration
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
@@ -48,14 +49,16 @@ in the :ref:`introduction <introduction>`, it also implements:
 How-to
 ------
 If you are using `urlwatch` 2.22, simply install `webchanges` and run it. It will find the existing `urlwatch` files,
-read them, and run just fine unless you were still running ``lynx``.  It may complain about some deprecations (see
-below), but you will have time to do the edits.
+read them, and, unless you were still running ``lynx`` (see below), it will run just fine as is.  It may complain about
+some directive name changes and other :ref:`deprecations <migration_deprecations>`, but you will have time to make the
+edits.
 
-If you encounter an issue please open an issue `here <https://github.com/mborsetti/webchanges/issues>`__ and someone
-will look into it.
+If you encounter any problems or have any suggestions please open an issue `here
+<https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.
 
 If you are upgrading from a version prior to 2.22, before running `webchanges` make sure that you have implemented all
-`urlwatch` breaking changes in your job and configuration files and you can run `urlwatch` 2.22.  For example:
+`urlwatch` breaking changes in your job and configuration files and you can run `urlwatch` 2.22 (including running on
+Python 3.6 or higher).  For example:
 
 .. code-block:: yaml
 
@@ -71,43 +74,51 @@ this: (see `here <https://github.com/thp/urlwatch/pull/600#issuecomment-75394467
    filter:
      - html2text:
 
+.. _migration_deprecations:
 
 Deprecations
 ------------
-The following items have changed, and the old ones deprecated. While they will be removed in a future release, they
+Of the changes (see below), the following are deprecations. While they will be removed in a future release, they
 are still working:
 
+* The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
+  default method instead or construct a custom ``shellpipe``
 * Job directive ``kind`` is unused: remove from job
 * Job directive ``navigate`` is deprecated: use ``url`` and add ``use_browser: true``
 * Method ``pyhtml2text`` of filter ``html2text`` is deprecated; since that method is now the default, remove the method
-* Method ``re`` of filter ``html2text`` is changed: replace with ``strip_tags``
-* Filter ``grep`` is changed: replace with ``keep_lines_containing``
-* Filter ``grepi`` is changed: replace with ``delete_lines_containing``
-* Command line ``--test-filter`` is changed: use ``--test`` instead
-* Command line ``--test-diff-filter`` is changed: use ``--test-diff`` instead
-* The location of config files in Windows has changed to ``%USERPROFILE%/Documents/webchanges``
-  where they can be more easily edited and backed up
-* The name of the default job file has changed to ``jobs.yaml`` (if ``urls.yaml`` is found at startup,
-  it is copied to ``jobs.yaml`` automatically)
+  subdirective
+* Method ``re`` of filter ``html2text`` is renamed to ``strip_tags``
+* Filter ``grep`` is renamed to ``keep_lines_containing``
+* Filter ``grepi`` is renamed to ``delete_lines_containing``
+* Command line ``--test-filter`` switch is renamed to ``--test``
+* Command line ``--test-diff-filter`` switch is renamed to ``--test-diff``
+
+Also be aware that:
+
+* The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
+  default method instead or construct a custom ``shellpipe``
+* The name of the default job file has changed to ``jobs.yaml`` (if at startup only ``urls.yaml`` is found as during an
+  upgrade, it is copied to ``jobs.yaml`` automatically)
+* The location of config and jobs files in Windows has changed to ``%USERPROFILE%/Documents/webchanges``
+  where they can be more easily edited and backed up (if at startup the only files found are in the old location as
+  during an upgrade, they will be copied to the  new directory automatically)
 
 .. _migration_changes:
 
 Detailed information
 --------------------
 
-Removed
-~~~~~~~
+Breaking Changes
+~~~~~~~~~~~~~~~~
 Relative to `urlwatch` 2.22:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
   default method instead or construct a custom ``shellpipe``
-* Python 3.5 (obsoleted by Python 3.6 on December 23, 2016) is no longer supported
 
-Changes and additions
+Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
-Everything, except running on Python 3.5 or using ``lynx`` instead of the internal ``html2text`` filter, should work
-out of the box with a ``urlwatch`` 2.22 setup, but the following changes and deprecations are made for better clarity
-and future development:
+Everything, except using ``lynx`` instead of the internal ``html2text`` filter, should work out of the box with a
+`urlwatch` 2.22 setup, but the following changes and deprecations are made for better clarity and future development:
 
 * Navigation by full browser is now accomplished by specifying the ``url`` and adding the ``use_browser: true``
   directive. The `navigate` directive has been deprecated for clarity and will trigger a warning; it will be removed in
@@ -145,7 +156,7 @@ and future development:
   the current directory, `webchanges` now looks for it in the default configuration directory
 * If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' suffix, `webchanges` now also looks for one
   with such a suffix
-* In Windows, ``--edit`` defaults to using built-in notepad.exe if either the %EDITOR% or %VISUAL% evironmental variable
+* In Windows, ``--edit`` defaults to using built-in notepad.exe if either the %EDITOR% or %VISUAL% environment variable
   is not set
 * When using ``--job`` command line switch, if there's no file by that name in the specified directory will look in
   the default one before giving up.
@@ -153,8 +164,13 @@ and future development:
   used internally); it will be removed in a future release
 * The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
   ``max_message_length`` sub-directive
-* Legacy lib/hooks.py file no longer supported. ``hooks.py`` needs to be in the same directory as the configuration
-  files.
+* Legacy lib/hooks.py file location is no longer supported: ``hooks.py`` needs to be in the same directory as the
+  configuration files.
+* The name of the default job file has changed to ``jobs.yaml`` (if at startup only ``urls.yaml`` is found as during an
+  upgrade, it is copied to ``jobs.yaml`` automatically)
+* The location of config and jobs files in Windows has changed to ``%USERPROFILE%/Documents/webchanges``
+  where they can be more easily edited and backed up (if at startup the only files found are in the old location as
+  during an upgrade, they will be copied to the  new directory automatically)
 * The mix of default and optional dependencies has been updated (see documentation) to enable "Just works"
 * Dependencies are now specified as PyPi `extras
   <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`__ to simplify their installation
@@ -175,10 +191,11 @@ Fixed
 ~~~~~
 Relative to `urlwatch` 2.22:
 
-* The ``html2text`` filter's ``html2text`` method defaults to unicode handling
+* The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
 * HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
   the first sub-directive)
 * The presence of the ``data`` directive in a job would force the method to POST, impeding the ability to do PUTs
-* Fixed ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by the new
-  subdirective ``sort_keys``
+* ``format-json`` filter from unexpectedly reordered contents of dictionaries; it no longer does that, but a new
+  subdirective ``sort_keys`` allows you to set it to do so
+* Various system errors and freezes when running ``url`` jobs with ``use_browser: true`` (formerly ``navigate`` jobs)

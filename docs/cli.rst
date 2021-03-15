@@ -47,20 +47,20 @@ Command line switches
     --clean-cache         remove old snapshots from the cache database
     --rollback-cache TIMESTAMP
                           delete recent snapshots > timestamp; backup the database before using!
-    --database-engine {sqlite3,minidb,textfiles}
-                          database engine to use (default: sqlite3)
+    --database-engine {sqlite3,redis,minidb,textfiles}
+                          database engine to use (default: sqlite3 unless redis URI in --cache)
     --features            list supported job types, filters and reporters
 
 
 .. _rollback-cache:
 
-Roll back the snapshot database
--------------------------------
+Rollback the database
+---------------------
 
-You can roll back the database to an earlier time by running `webchanges` with the ``--rollback-cache`` switch followed
-by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating the point in time you want to go back to.
-Useful when you missed notifications or they got lost: roll back the database to the time of the last good report, then
-run `webchanges` again to get a new report with the differences since that time.
+You can rollback the snapshots database to an earlier time by running `webchanges` with the ``--rollback-cache`` switch
+followed by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating the point in time you want to go
+back to. Useful when you missed notifications or they got lost: rollback the database to the time of the last good
+report, then run `webchanges` again to get a new report with the differences since that time.
 
 You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
 <https://www.unixtimestamp.com/>`__
@@ -68,7 +68,7 @@ You can find multiple sites that calculate Unix time for you, such as `www.unixt
 **WARNING: all snapshots captured after the time of the timestamp are permanently deleted. This is irreversible.**  Back
 up the database before doing a rollback in case of a mistake (or fat-finger).
 
-This feature does not work with database engines ``minidb`` or ``textfiles``.
+This feature does not work with database engines ``redis``, ``textfiles`` or ``minidb``.
 
 
 `New in version 3.2.`
@@ -80,17 +80,36 @@ This feature does not work with database engines ``minidb`` or ``textfiles``.
 Select a database engine
 -------------------------
 
+Default
+~~~~~~~
 The requirement for the ``minidb`` Python package has been removed in version 3.2 and the database system has migrated
 to one that relies on the built-in ``sqlite3``, is more efficient due to indexing, creates smaller files due to data
-compression with `msgpack <https://msgpack.org/index.html>`__ and provides additional functionality. Migration from the
-old-style database is done automatically and the old file is preserved for manual deletion.
+compression with `msgpack <https://msgpack.org/index.html>`__, and provides additional functionality.
 
-To continue using the minidb-based database structure used in prior versions and in `urlwatch` 2, launch `webchanges`
-with the command line switch ``--cache-engine minidb``. The ``minidib`` Python package must be installed for this to
-work.
+Migration of the latest snapshots from the legacy (minidb) database is done automatically and the old file is preserved
+for manual deletion.
 
+Redis
+~~~~~
+To use Redis as a database (cache) backend, simply specify a redis URI in the ``--cache switch``:
+
+.. code-block:: bash
+
+    webchanges --cache=redis://localhost:6379/
+
+For this to work, optional dependencies need to be installed; please see :ref:`here <dependencies>`
+
+There is no migration path from an existing database: the cache will be empty the first time Redis is used.
+
+Text files
+~~~~~~~~~~
 To have the latest snapshot of each job saved as a separate text file instead of as a record in a database, use
 ``--cache-engine textfiles``.
+
+minidb (legacy)
+~~~~~~~~~~~~~~~
+To use the minidb-based database structure used in prior versions and in `urlwatch` 2, launch `webchanges` with the
+command line switch ``--cache-engine minidb``. The ``minidib`` Python package must be installed for this to work.
 
 
 `New in version 3.2.`

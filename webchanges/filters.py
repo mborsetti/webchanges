@@ -683,8 +683,7 @@ class HexdumpFilter(FilterBase):
         data = bytearray(data.encode(errors='ignore'))
         blocks = [data[i * 16:(i + 1) * 16] for i in range(int((len(data) + (16 - 1)) / 16))]
         return '\n'.join('%s  %s' % (' '.join('%02x' % c for c in block),
-                                     ''.join((chr(c) if (c > 31 and c < 127) else '.')
-                                             for c in block)) for block in blocks)
+                                     ''.join((chr(c) if (31 < c < 127) else '.') for c in block)) for block in blocks)
 
 
 class LxmlParser:

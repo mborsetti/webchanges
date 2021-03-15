@@ -504,7 +504,7 @@ class CacheSQLite3Storage(CacheStorage):
             # found a minidb legacy database; rename it for migration and create new one
             self.db.close()
             fn_base, fn_ext = os.path.splitext(filename)
-            minidb_filename = f'{fn_base}_mindib{fn_ext}'
+            minidb_filename = f'{fn_base}_minidb{fn_ext}'
             os.replace(filename, minidb_filename)
             self.db = sqlite3.connect(filename, check_same_thread=False)
             self.cur = self.db.cursor()
@@ -520,11 +520,10 @@ class CacheSQLite3Storage(CacheStorage):
     def close(self) -> None:
         """Cleans up the database and closes the connection to it"""
         with self.lock:
-            self.cur.execute('VACUUM')
-            self.db.commit()
+            self.db.execute('VACUUM')
             self.db.close()
-            del self.db
-            del self.cur
+        del self.db
+        del self.cur
 
     def get_guids(self) -> list:
         """Lists the unique 'guid's contained in the database

@@ -71,8 +71,10 @@ SETUP = {
                        'redis': ['redis']},
     'python_requires': f'>={".".join(str(v) for v in project.__min_python_version__)}',
     'project_urls': {'Bug Tracker': f'{project.__url__.rstrip("//")}/issues',
-                     'Source Code': project.__url__,
-                     'Documentation': f'https://{project.__project_name__}.readthedocs.io'}}
+                     'CI': f'{project.__url__.rstrip("//")}/actions',
+                     'Documentation': f'https://{project.__project_name__}.readthedocs.io',
+                     'Source Code': project.__url__}
+}
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))
 setup(**SETUP)
 

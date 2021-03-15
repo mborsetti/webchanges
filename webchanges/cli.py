@@ -135,20 +135,26 @@ def main() -> None:  # pragma: no cover
             and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.hooks)))):
         command_config.hooks = os.path.join(command_config.config_dir, os.path.basename(command_config.hooks))
 
-    # setup storage API
+    # setup config file API
     config_storage = YamlConfigStorage(command_config.config)  # storage.py
 
-    if any(command_config.cache.startswith(prefix) for prefix in ('redis://', 'rediss://')):
-        cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
-    elif command_config.database_engine == 'sqlite3':
+    # setup database API
+    if command_config.database_engine == 'sqlite3':
         cache_storage = CacheSQLite3Storage(command_config.cache)  # storage.py
+    elif any(command_config.cache.startswith(prefix) for prefix in ('redis://', 'rediss://')):
+        cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
+    elif command_config.database_engine == 'redis':
+        raise RuntimeError("A redis URI (starting with 'redis://' or 'rediss://' needs to be specified with --cache")
     elif command_config.database_engine == 'textfiles':
         cache_storage = CacheDirStorage(command_config.cache)  # storage.py
-    else:
-        from .storage_minidb import CacheMiniDBStorage
+    elif command_config.database_engine == 'minidb':
+        from .storage_minidb import CacheMiniDBStorage  # legacy code imported only if needed
 
         cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
+    else:
+        raise NotImplementedError(f'Database engine {command_config.database_engine} not implemented')
 
+    # setup jobs file API
     jobs_storage = JobsYaml(command_config.jobs)  # storage.py
 
     # setup urlwatch

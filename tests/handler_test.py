@@ -57,7 +57,7 @@ def test_load_config_yaml():
         assert config.config is not None
         assert config.config == DEFAULT_CONFIG
     else:
-        print(f'{config_file} not found')
+        warnings.warn(f'{config_file} not found', UserWarning)
 
 
 def test_load_jobs_yaml():
@@ -91,9 +91,8 @@ def teardown_func():
     finally:
         'tear down test fixtures'
         cache_file = os.path.join(here, 'data', 'cache.db')
-        for filename in (cache_file, f'{cache_file}.bak', f'{cache_file}.minidb'):
-            if os.path.exists(filename):
-                os.remove(filename)
+        if os.path.exists(cache_file):
+            os.remove(cache_file)
 
 
 def test_run_watcher_minidb():

@@ -1,4 +1,4 @@
-- [ ] Smart "just works for web" philosophy automatically applies correct filters for monitoring webpages
+- [ ] Smart "just works for the web" philosophy automatically applies correct filters for monitoring webpages
 - [ ] Add more tests
   - [ ] Increase line coverage
 - [ ] Document code

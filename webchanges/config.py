@@ -84,8 +84,8 @@ class CommandConfig(BaseConfig):
         group.add_argument('--clean-cache', action='store_true', help='remove old snapshots from the cache database')
         group.add_argument('--rollback-cache', metavar='TIMESTAMP', type=int,
                            help='delete recent snapshots > timestamp; backup the database before using!')
-        group.add_argument('--database-engine', choices=['sqlite3', 'minidb', 'textfiles'], default='sqlite3',
-                           help='database engine to use (default: %(default)s)')
+        group.add_argument('--database-engine', choices=['sqlite3', 'redis', 'minidb', 'textfiles'], default='sqlite3',
+                           help='database engine to use (default: %(default)s unless redis URI in --cache)')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
 
         # workaround for avoiding triggering error when invoked by pytest

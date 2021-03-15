@@ -27,7 +27,7 @@ class UrlwatchCommand:
 
     def edit_hooks(self):
         fn_base, fn_ext = os.path.splitext(self.urlwatch_config.hooks)
-        hooks_edit = fn_base + '.edit' + fn_ext
+        hooks_edit = f'{fn_base}.edit{fn_ext}'
         try:
             if os.path.exists(self.urlwatch_config.hooks):
                 shutil.copy(self.urlwatch_config.hooks, hooks_edit)
@@ -37,7 +37,7 @@ class UrlwatchCommand:
             edit_file(hooks_edit)
             import_module_from_source('hooks', hooks_edit)
             os.replace(hooks_edit, self.urlwatch_config.hooks)
-            print('Saving edit changes in', self.urlwatch_config.hooks)
+            print(f'Saving edit changes in {self.urlwatch_config.hooks}')
         except SystemExit:
             raise
         except Exception as e:
@@ -46,8 +46,8 @@ class UrlwatchCommand:
             print(e)
             print('======')
             print('')
-            print('The file', self.urlwatch_config.hooks, 'was NOT updated.')
-            print('Your changes have been saved in', hooks_edit)
+            print(f'The file {self.urlwatch_config.hooks} was NOT updated.')
+            print(f'Your changes have been saved in {hooks_edit}')
             return 1
 
     def show_features(self):
@@ -137,8 +137,8 @@ class UrlwatchCommand:
 
     def list_error_jobs(self):
         start = timeit.default_timer()
-        print(f'Jobs (if any) in "{self.urlwatch_config.jobs}" with errors or no data after filtering'
-              f' (list may be out of order):')
+        print(f"Jobs (if any) with errors or returning no data after filtering in\n'{self.urlwatch_config.jobs}':\n"
+              f'*list may be out of order\n')
         jobs = [job.with_defaults(self.urlwatcher.config_storage.config)
                 for job in self.urlwatcher.jobs]
         for idx, job in enumerate(jobs):
@@ -165,8 +165,7 @@ class UrlwatchCommand:
         end = timeit.default_timer()
         duration = (end - start)
         duration = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
-        print(f"--\nChecked {len(jobs)} source{'s' if len(jobs) > 1 else ''} for errors in"
-              f' {duration} seconds')
+        print(f"--\nChecked {len(jobs)} job{'s' if len(jobs) else ''} in {duration} seconds")
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
