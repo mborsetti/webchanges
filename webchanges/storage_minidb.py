@@ -9,6 +9,7 @@ Having it into a standalone module allows running the program without having the
 """
 
 import os
+from typing import Iterator, Union
 
 from .storage import CacheStorage
 
@@ -27,7 +28,7 @@ class CacheMiniDBStorage(CacheStorage):
         tries = int
         etag = str
 
-    def __init__(self, filename):
+    def __init__(self, filename) -> None:
         super().__init__(filename)
 
         if minidb is None:
@@ -40,14 +41,14 @@ class CacheMiniDBStorage(CacheStorage):
         self.db = minidb.Store(self.filename, debug=True)
         self.db.register(self.CacheEntry)
 
-    def close(self):
+    def close(self) -> None:
         self.db.close()
         self.db = None
 
-    def get_guids(self):
+    def get_guids(self) -> Iterator[str]:
         return (guid for guid, in self.CacheEntry.query(self.db, minidb.Function('distinct', self.CacheEntry.c.guid)))
 
-    def load(self, guid):
+    def load(self, guid: str) -> (Union[str, None], Union[float, None], int, Union[str, None]):
         for data, timestamp, tries, etag in self.CacheEntry.query(
                 self.db,
                 self.CacheEntry.c.data // self.CacheEntry.c.timestamp // self.CacheEntry.c.tries
@@ -58,7 +59,7 @@ class CacheMiniDBStorage(CacheStorage):
 
         return None, None, 0, None
 
-    def get_history_data(self, guid, count=1):
+    def get_history_data(self, guid: str, count: int = 1):
         history = {}
         if count < 1:
             return history
@@ -73,15 +74,15 @@ class CacheMiniDBStorage(CacheStorage):
                     break
         return history
 
-    def save(self, guid, data, timestamp, tries, etag=None):
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Union[str, None] = None) -> None:
         self.db.save(self.CacheEntry(guid=guid, timestamp=timestamp, data=data, tries=tries, etag=etag))
         self.db.commit()
 
-    def delete(self, guid):
+    def delete(self, guid: str) -> None:
         self.CacheEntry.delete_where(self.db, self.CacheEntry.c.guid == guid)
         self.db.commit()
 
-    def clean(self, guid):
+    def clean(self, guid: str):
         keep_id = next((self.CacheEntry.query(self.db, self.CacheEntry.c.id, where=self.CacheEntry.c.guid == guid,
                                               order_by=self.CacheEntry.c.timestamp.desc, limit=1)), (None,))[0]
 
@@ -91,5 +92,5 @@ class CacheMiniDBStorage(CacheStorage):
             self.db.commit()
             return result
 
-    def rollback(self, timestamp: float) -> None:
+    def rollback(self, timestamp: float) -> NotImplementedError:
         raise NotImplementedError("Rolling back of legacy 'minidb' databases is not supported")

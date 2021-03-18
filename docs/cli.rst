@@ -16,7 +16,7 @@ Command line switches
                           read job list (URLs) from FILE
     --config FILE         read configuration from FILE
     --hooks FILE          use FILE as hooks.py module
-    --cache FILE          use FILE as cache database, alternatively can accept a redis URI
+    --cache FILE          use FILE as a cache (snapshots database), alternatively can accept a redis URI
 
   job management:
     --list                list jobs

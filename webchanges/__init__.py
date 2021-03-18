@@ -1,4 +1,4 @@
-"""Check web (or commands) for changes and notify
+"""Check web (or commands) for changes sincae last run and notify
 
 webchanges checks web content (or the output of local commands) for changes and shows or notifies you via e-mail or
 one of many other supported services if any change is detected; the notification includes the changed URL (or command)
@@ -19,7 +19,7 @@ __min_python_version__ = (3, 6)  # minimum version of Python required to run
 __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'
 __license__ = 'MIT, BSD 3-Clause License'
-__url__ = f'https://github.com/mborsetti/{__project_name__}'
+__url__ = f'https://pypi.org/project/{__project_name__}/'
 __user_agent__ = f'{__project_name__}/{__version__} (+{__url__})'
 
 

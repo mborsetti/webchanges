@@ -50,7 +50,7 @@ class CommandConfig(BaseConfig):
                            help='read job list (URLs) from FILE', default=self.jobs)
         group.add_argument('--config', metavar='FILE', help='read configuration from FILE', default=self.config)
         group.add_argument('--hooks', metavar='FILE', help='use FILE as hooks.py module', default=self.hooks)
-        group.add_argument('--cache', metavar='FILE', help=('use FILE as cache database or directory, '
+        group.add_argument('--cache', metavar='FILE', help=('use FILE as cache (snapshots database) or directory, '
                                                             'alternatively can accept a redis URI'), default=self.cache)
         group = parser.add_argument_group('job management')
         group.add_argument('--list', action='store_true', help='list jobs')

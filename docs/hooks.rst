@@ -3,18 +3,18 @@
 =================
 Python code hooks
 =================
-Python programmers can hook their own code (with custom functionality) by writing it into a ``hooks.py`` file and
-placing it into the same directory as the job and configuration files.  The code will be automatically loaded at
-startup.
+Python programmers can hook their own code to expand `webchanges` with custom functionality by writing it into a
+``hooks.py`` file and placing it into the same directory as the job and configuration files.  The code will be
+automatically loaded at startup.
 
 Smaller code snippets can also be run using the :ref:`shellpipe` filter, for example as used :ref:`here <json_dict>`
 for filtering JSON dictionaries.
 
-An example hooks.py file is below:
+An example ``hooks.py`` file is below:
 
 .. code-block:: python
 
-   # Example hooks file for webchanges
+   # Example hooks.py file for webchanges
 
    import re
 

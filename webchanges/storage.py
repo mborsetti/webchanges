@@ -8,6 +8,7 @@ import stat
 import threading
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
+from typing import Any, Dict, Hashable, Iterator, List, Tuple, Type, Union
 
 import msgpack
 
@@ -26,7 +27,7 @@ import yaml
 import webchanges as project
 
 from .filters import FilterBase
-from .jobs import JobBase, ShellJob, UrlJob
+from .jobs import Job, JobBase, ShellJob, UrlJob
 from .util import edit_file
 
 logger = logging.getLogger(__name__)
@@ -153,7 +154,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def merge(source, destination):
+def merge(source: dict, destination: dict) -> dict:
     # https://stackoverflow.com/a/20666342
     for key, value in source.items():
         if isinstance(value, dict):
@@ -182,17 +183,17 @@ class BaseFileStorage(BaseStorage, metaclass=ABCMeta):
 
 
 class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename):
+    def __init__(self, filename) -> None:
         super().__init__(filename)
         self.config = {}
         self.load()
 
     @classmethod
     @abstractmethod
-    def parse(cls, *args):
+    def parse(cls, *args) -> Iterator:
         ...
 
-    def edit(self, example_file=None):
+    def edit(self, example_file: Union[str, None] = None) -> int:
         fn_base, fn_ext = os.path.splitext(self.filename)
         file_edit = fn_base + '.edit' + fn_ext
 
@@ -228,18 +229,18 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
         print('Saving edit changes in', self.filename)
 
     @classmethod
-    def write_default_config(cls, filename):
+    def write_default_config(cls, filename: str) -> None:
         config_storage = cls(None)
         config_storage.filename = filename
         config_storage.save()
 
 
 class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename):
+    def __init__(self, filename) -> None:
         super().__init__(filename)
         self.filename = filename
 
-    def shelljob_security_checks(self):
+    def shelljob_security_checks(self) -> List[str]:
 
         if os.name == 'nt':
             return []
@@ -262,7 +263,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
 
         return shelljob_errors
 
-    def load_secure(self):
+    def load_secure(self) -> Union[list, bool]:
         jobs = self.load()
 
         def is_shell_job(job):
@@ -291,7 +292,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
 
 class BaseTxtFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
     @classmethod
-    def parse(cls, *args):
+    def parse(cls, *args) -> Iterator[Type[Job]]:
         filename = args[0]
         if filename is not None and os.path.exists(filename):
             with open(filename) as fp:
@@ -314,7 +315,7 @@ class BaseTxtFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
 
 class BaseYamlFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
     @classmethod
-    def parse(cls, *args):
+    def parse(cls, *args) -> Union[Dict[Hashable, Any], list, None]:
         filename = args[0]
         if filename is not None and os.path.exists(filename):
             with open(filename) as fp:
@@ -322,24 +323,24 @@ class BaseYamlFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
 
 
 class YamlConfigStorage(BaseYamlFileStorage):
-    def load(self, *args):
+    def load(self, *args) -> None:
         self.config = merge(self.parse(self.filename) or {}, copy.deepcopy(DEFAULT_CONFIG))
 
-    def save(self, *args):
+    def save(self, *args) -> None:
         with open(self.filename, 'w') as fp:
             yaml.safe_dump(self.config, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 
 class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
     @classmethod
-    def parse(cls, *args):
+    def parse(cls, *args) -> Iterator[Type[Job]]:
         filename = args[0]
         if filename is not None and os.path.exists(filename):
             with open(filename) as fp:
                 return [JobBase.unserialize(job) for job in yaml.safe_load_all(fp)
                         if job is not None]
 
-    def save(self, *args):
+    def save(self, *args) -> None:
         jobs = args[0]
         print(f'Saving updated list to {self.filename}')
 
@@ -347,56 +348,56 @@ class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
             yaml.safe_dump_all([job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False,
                                allow_unicode=True)
 
-    def load(self, *args):
+    def load(self, *args) -> Iterator[Type[Job]]:
         with open(self.filename) as fp:
             return [JobBase.unserialize(job) for job in yaml.safe_load_all(fp) if job is not None]
 
 
 class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         ...
 
     @abstractmethod
-    def get_guids(self):
+    def get_guids(self) -> Iterator[str]:
         ...
 
     @abstractmethod
-    def load(self, guid):
+    def load(self, guid: str) -> (Union[str, None], Union[float, None], Union[int, None], Union[str, None]):
         ...
 
     @abstractmethod
-    def save(self, guid, data, timestamp, tries, etag):
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
         ...
 
     @abstractmethod
-    def delete(self, guid):
+    def delete(self, guid: str) -> None:
         ...
 
     @abstractmethod
-    def clean(self, guid):
+    def clean(self, guid: str) -> Union[int, None]:
         ...
 
     @abstractmethod
-    def rollback(self, guid):
+    def rollback(self, timestamp: float) -> Union[int, NotImplementedError]:
         ...
 
-    def backup(self):
+    def backup(self) -> Iterator[Tuple[str, str, float, int, str]]:
         for guid in self.get_guids():
             data, timestamp, tries, etag = self.load(guid)
             yield guid, data, timestamp, tries, etag
 
-    def restore(self, entries):
+    def restore(self, entries: Iterator[Tuple[str, str, float, int, str]]) -> None:
         for guid, data, timestamp, tries, etag in entries:
             self.save(guid, data, timestamp, tries, etag)
 
-    def gc(self, known_guids):
+    def gc(self, known_guids: List[str]) -> None:
         for guid in set(self.get_guids()) - set(known_guids):
             print(f'Deleting: {guid} (no longer being tracked)')
             self.delete(guid)
         self.clean_cache(known_guids)
 
-    def clean_cache(self, known_guids):
+    def clean_cache(self, known_guids: List[str]) -> None:
         if hasattr(self, 'clean_all'):
             count = self.clean_all()
             if count:
@@ -407,7 +408,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
                 if count > 0:
                     print(f'Deleted {count} old snapshots of {guid}')
 
-    def rollback_cache(self, timestamp):
+    def rollback_cache(self, timestamp: float) -> None:
         count = self.rollback(timestamp)
         try:
             timestamp_date = datetime.fromtimestamp(timestamp).astimezone().isoformat()
@@ -421,24 +422,24 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
 
 class CacheDirStorage(CacheStorage):
     """Stores the information in individual files in a directory 'filename'"""
-    def __init__(self, filename):
+    def __init__(self, filename) -> None:
         super().__init__(filename)
         if not os.path.exists(filename):
             os.makedirs(filename)
 
-    def close(self):
+    def close(self) -> None:
         """No need to close"""
 
-    def _get_filename(self, guid):
+    def _get_filename(self, guid: str) -> str:
         return os.path.join(self.filename, guid)
 
-    def get_guids(self):
+    def get_guids(self) -> List[str]:
         return os.listdir(self.filename)
 
-    def load(self, guid):
+    def load(self, guid: str) -> (Union[str, None], Union[float, None], int, Union[str, None]):
         filename = self._get_filename(guid)
         if not os.path.exists(filename):
-            return None, None, None, None
+            return None, None, 0, None
 
         try:
             with open(filename) as fp:
@@ -451,18 +452,18 @@ class CacheDirStorage(CacheStorage):
 
         return data, timestamp, None, None
 
-    def save(self, guid, data, timestamp, tries, etag):
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
         # Timestamp is not saved as is read from the file's timestamp; ETag is ignored
         filename = self._get_filename(guid)
         with open(filename, 'w+') as fp:
             fp.write(data)
 
-    def delete(self, guid):
+    def delete(self, guid: str) -> None:
         filename = self._get_filename(guid)
         if os.path.exists(filename):
             os.unlink(filename)
 
-    def clean(self, guid):
+    def clean(self, guid: str) -> None:
         """We only store the latest version, no need to clean"""
 
     def rollback(self, timestamp: float) -> None:
@@ -524,7 +525,7 @@ class CacheSQLite3Storage(CacheStorage):
         del self.db
         del self.cur
 
-    def get_guids(self) -> list:
+    def get_guids(self) -> List[str]:
         """Lists the unique 'guid's contained in the database
 
         :returns: A list of guids
@@ -535,7 +536,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.cur.row_factory = None
         return guids
 
-    def load(self, guid: str) -> (str, float, int, str):  # TODO handle NoneType
+    def load(self, guid: str) -> (Union[str, None], Union[float, None], int, Union[str, None]):  # TODO handle NoneType
         """return the most recent entry matching a 'guid'
 
         :param guid: The guid
@@ -557,7 +558,7 @@ class CacheSQLite3Storage(CacheStorage):
 
         return None, None, 0, None
 
-    def get_history_data(self, guid: str, count: int = 1) -> dict:
+    def get_history_data(self, guid: str, count: int = 1) -> Dict[str, float]:
         """Return some data from the last 'count' entries matching a 'guid'
 
         :param guid: The guid
@@ -667,7 +668,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
         return num_del
 
-    def migrate_from_minidb(self, filename):
+    def migrate_from_minidb(self, filename: str) -> None:
         print("Found 'minidb' database and upgrading it to the new engine (note: only the last snapshot is retained).")
         logger.info("Found legacy 'minidb' database and converting it to 'sqlite3' and new schema. "
                     "Package 'minidb' needs to be installed for the conversion.")
@@ -685,7 +686,7 @@ class CacheSQLite3Storage(CacheStorage):
 
 
 class CacheRedisStorage(CacheStorage):
-    def __init__(self, filename):
+    def __init__(self, filename: str) -> None:
         super().__init__(filename)
 
         if redis is None:
@@ -694,20 +695,20 @@ class CacheRedisStorage(CacheStorage):
         self.db = redis.from_url(filename)
 
     @staticmethod
-    def _make_key(guid):
+    def _make_key(guid: str) -> str:
         return 'guid:' + guid
 
-    def close(self):
+    def close(self) -> None:
         self.db.connection_pool.disconnect()
         self.db = None
 
-    def get_guids(self):
+    def get_guids(self) -> List[str]:
         guids = []
         for guid in self.db.keys(b'guid:*'):
             guids.append(str(guid[len('guid:'):]))
         return guids
 
-    def load(self, guid):
+    def load(self, guid: str) -> (Union[str, None], Union[float, None], int, Union[str, None]):
         key = self._make_key(guid)
         data = self.db.lindex(key, 0)
 
@@ -751,5 +752,5 @@ class CacheRedisStorage(CacheStorage):
         if self.db.ltrim(key, 0, 0):
             return i - self.db.llen(key)
 
-    def rollback(self, timestamp: float) -> None:
+    def rollback(self, timestamp: float) -> NotImplementedError:
         raise NotImplementedError("'redis' databases cannot be rolled back as new snapshots overwrite old ones")

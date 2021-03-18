@@ -57,7 +57,6 @@ def test_edit_hooks():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'edit_hooks', False)
-    assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code is None
 
 
@@ -67,7 +66,6 @@ def test_show_features():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'features', False)
-    assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code is None
 
 
@@ -77,7 +75,6 @@ def test_list_jobs():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'list', False)
-    assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code is None
 
 
@@ -97,7 +94,6 @@ def test_test_job():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'test_job', None)
-    assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code is None
 
 
@@ -107,7 +103,6 @@ def test_test_diff():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'test_diff', None)
-    assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 1
 
 
@@ -117,7 +112,6 @@ def test_list_error_jobs():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'errors', False)
-    assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code is None
 
 
@@ -132,7 +126,6 @@ def test_check_edit_config():
         urlwatch_command.handle_actions()
     urlwatch_command.urlwatcher.close()
     setattr(command_config, 'edit', False)
-    assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code is None
     #
     # urlwatch_command = UrlwatchCommand(urlwatcher)

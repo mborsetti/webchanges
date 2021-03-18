@@ -388,7 +388,7 @@ class BrowserJob(Job):
 
     @staticmethod
     def current_platform() -> str:
-        """Get current platform name by short string.
+        """Get current platform name by short string as used by Pyppeteer for downloading Chromium.
         Originally from pyppeteer.chromium_downloader"""
         if sys.platform.startswith('linux'):
             return 'linux'

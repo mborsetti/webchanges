@@ -48,6 +48,7 @@ one of many other supported services if one is detected. The notification includ
 a summary of what has changed. This project is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as suggested by
 its author to optimize it for HTML.
 
+
 Installation
 ============
 `webchanges` |pypi_version| is available on `PyPI <https://pypi.org/project/webchanges/>`__ for |support| (Python
@@ -56,6 +57,7 @@ versions are supported for 3 years after being obsoleted by a new major release)
    pip install webchanges
 
 Optional dependencies may be needed; see `here <https://webchanges.readthedocs.io/en/stable/dependencies.html>`__.
+
 
 Documentation
 =============
@@ -66,6 +68,7 @@ Code
 |issues| |CI| |coverage| |coveralls|
 
 The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
+
 
 Quick Start
 ============
@@ -88,6 +91,7 @@ We welcome any contribution, e.g. documentation, bug reports, new features, etc.
 More information for developers and documenters is `here
 <https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__, and our wishlist is `here
 <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__.
+
 
 License
 =======
@@ -117,8 +121,7 @@ You can seamlessly upgrade from `urlwatch` 2.22 (see `here
   which makes it easier to track content that was added without the distractions of the content that was deleted
 * Better documentation
 * Many many other additions, refinements and fixes (see `detailed information
-  <https://webchanges.readthedocs.io/en/stable/migration.html#detailed-information>`__ and `changelog
-  <https://github.com/mborsetti/webchanges/blob/main/CHANGELOG.rst>`__)
+  <https://webchanges.readthedocs.io/en/stable/migration.html#detailed-information>`__)
 
 Examples:
 
