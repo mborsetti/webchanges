@@ -48,18 +48,16 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-#        os: [ubuntu-latest, macOS-latest]  # TODO windows-latest: pytest crashing on 07-feb-21
-        # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
-#        python-version: ['3.9', '3.8', '3.7', '3.6']
-        os: [windows-latest]
-        python-version: ['3.9']
         include:
 #        - os: ubuntu-latest
 #          pipcachepath: ~/.cache/pip
 #        - os: macos-latest
 #          pipcachepath: ~/Library/Caches/pip
-        - os: windows-latest
+        - os: windows-latest  # TODO windows-latest: pytest crashing on 07-feb-21
           pipcachepath: ~\AppData\Local\pip\Cache
+        # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
+#        python-version: ['3.9', '3.8', '3.7', '3.6']
+        python-version: ['3.9']
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
