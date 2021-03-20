@@ -121,7 +121,7 @@ jobs:
           python -m pip install -U coveralls -r tests/requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject
 
       - name: Run tests (Linux/MacOS)
-        if: runner.os == 'Linux') || runner.os == 'macOS'
+        if: runner.os == 'Linux' || runner.os == 'macOS'
         run:
           python -m pytest -v
         env:
