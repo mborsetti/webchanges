@@ -5,6 +5,7 @@ import shutil
 import sys
 import timeit
 import traceback
+from typing import Optional, Union
 
 import requests
 
@@ -12,6 +13,7 @@ from .filters import FilterBase
 from .handler import JobState, Report
 from .jobs import JobBase, UrlJob
 from .mailer import smtp_have_password, smtp_set_password
+from .main import Urlwatch
 from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from .util import edit_file, import_module_from_source
 from .worker import run_parallel
@@ -20,20 +22,20 @@ logger = logging.getLogger(__name__)
 
 
 class UrlwatchCommand:
-    def __init__(self, urlwatcher):
 
+    def __init__(self, urlwatcher: Urlwatch) -> None:
         self.urlwatcher = urlwatcher
         self.urlwatch_config = urlwatcher.urlwatch_config
 
-    def edit_hooks(self):
+    def edit_hooks(self) -> Optional[int]:
         fn_base, fn_ext = os.path.splitext(self.urlwatch_config.hooks)
         hooks_edit = f'{fn_base}.edit{fn_ext}'
         try:
             if os.path.exists(self.urlwatch_config.hooks):
                 shutil.copy(self.urlwatch_config.hooks, hooks_edit)
-            elif self.urlwatch_config.hooks_py_example is not None and os.path.exists(
-                    self.urlwatch_config.hooks_py_example):
-                shutil.copy(self.urlwatch_config.hooks_py_example, hooks_edit)
+            # elif self.urlwatch_config.hooks_py_example is not None and os.path.exists(
+            #         self.urlwatch_config.hooks_py_example):
+            #     shutil.copy(self.urlwatch_config.hooks_py_example, hooks_edit)
             edit_file(hooks_edit)
             import_module_from_source('hooks', hooks_edit)
             os.replace(hooks_edit, self.urlwatch_config.hooks)
@@ -50,7 +52,8 @@ class UrlwatchCommand:
             print(f'Your changes have been saved in {hooks_edit}')
             return 1
 
-    def show_features(self):
+    @staticmethod
+    def show_features() -> None:
         print()
         print('Supported jobs:\n')
         print(JobBase.job_documentation())
@@ -62,7 +65,7 @@ class UrlwatchCommand:
         print(ReporterBase.reporter_documentation())
         print()
 
-    def list_jobs(self):
+    def list_jobs(self) -> None:
         for idx, job in enumerate(self.urlwatcher.jobs):
             if self.urlwatch_config.verbose:
                 print(f'{idx + 1}: {repr(job)}')
@@ -74,7 +77,7 @@ class UrlwatchCommand:
                 else:
                     print(f'{idx + 1}: {pretty_name}')
 
-    def _find_job(self, query):
+    def _find_job(self, query: Union[str, int]) -> Optional[JobBase]:
         try:
             index = int(query)
             if index <= 0:
@@ -86,14 +89,14 @@ class UrlwatchCommand:
         except ValueError:
             return next((job for job in self.urlwatcher.jobs if job.get_location() == query), None)
 
-    def _get_job(self, id):
+    def _get_job(self, id: int) -> JobBase:
         job = self._find_job(id)
         if job is None:
             print(f'Not found: {id!r}')
             raise SystemExit(1)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
-    def test_job(self, id):
+    def test_job(self, id: int) -> None:
         job = self._get_job(id)
 
         if isinstance(job, UrlJob):
@@ -115,7 +118,7 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
-    def test_diff(self, id):
+    def test_diff(self, id: int) -> Optional[int]:
         job = self._get_job(id)
 
         history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid(), 10)
@@ -135,7 +138,7 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
-    def list_error_jobs(self):
+    def list_error_jobs(self) -> None:
         start = timeit.default_timer()
         print(f"Jobs (if any) with errors or returning no data after filtering in\n'{self.urlwatch_config.jobs}':\n"
               f'*list may be out of order\n')
@@ -170,7 +173,7 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
 
-    def modify_urls(self):
+    def modify_urls(self) -> None:
         save = True
         if self.urlwatch_config.delete is not None:
             job = self._find_job(self.urlwatch_config.delete)
@@ -197,7 +200,7 @@ class UrlwatchCommand:
         if save:
             self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
-    def handle_actions(self):
+    def handle_actions(self) -> None:
         if self.urlwatch_config.features:
             sys.exit(self.show_features())
         if self.urlwatch_config.gc_cache:
@@ -227,11 +230,11 @@ class UrlwatchCommand:
         if self.urlwatch_config.add is not None or self.urlwatch_config.delete is not None:
             sys.exit(self.modify_urls())
 
-    def check_edit_config(self):
+    def check_edit_config(self) -> None:
         if self.urlwatch_config.edit_config:
             sys.exit(self.urlwatcher.config_storage.edit())
 
-    def check_telegram_chats(self):
+    def check_telegram_chats(self) -> None:
         if self.urlwatch_config.telegram_chats:
             config = self.urlwatcher.config_storage.config['report'].get('telegram', None)
             if not config:
@@ -268,67 +271,67 @@ class UrlwatchCommand:
             print(f"\nChat up your bot here: https://t.me/{info['result']['username']}")
             sys.exit(0)
 
-    def check_test_reporter(self):
+    def check_test_reporter(self) -> None:
         name = self.urlwatch_config.test_reporter
         if name is None:
             return
 
-            if name not in ReporterBase.__subclasses__:
-                print(f'No such reporter: {name}')
-                print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
-                sys.exit(1)
+        if name not in ReporterBase.__subclasses__:
+            print(f'No such reporter: {name}')
+            print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
+            sys.exit(1)
 
-            cfg = self.urlwatcher.config_storage.config['report'].get(name, {'enabled': False})
-            if not cfg.get('enabled', False):
-                print(f'Reporter is not enabled/configured: {name}')
-                print(f'Use {sys.argv[0]} --edit-config to configure reporters')
-                sys.exit(1)
+        cfg = self.urlwatcher.config_storage.config['report'].get(name, {'enabled': False})
+        if not cfg.get('enabled', False):
+            print(f'Reporter is not enabled/configured: {name}')
+            print(f'Use {sys.argv[0]} --edit-config to configure reporters')
+            sys.exit(1)
 
-            report = Report(self.urlwatcher)
+        report = Report(self.urlwatcher)
 
-            def build_job(name, url, old, new):
-                job = JobBase.unserialize({'name': name, 'url': url})
+        def build_job(name, url, old, new):
+            job = JobBase.unserialize({'name': name, 'url': url})
 
-                # Can pass in None as cache_storage, as we are not
-                # going to load or save the job state for testing;
-                # also no need to use it as context manager, since
-                # no processing is called on the job
-                job_state = JobState(None, job)
+            # Can pass in None as cache_storage, as we are not
+            # going to load or save the job state for testing;
+            # also no need to use it as context manager, since
+            # no processing is called on the job
+            job_state = JobState(None, job)
 
-                job_state.old_data = old
-                job_state.new_data = new
+            job_state.old_data = old
+            job_state.new_data = new
 
-                return job_state
+            return job_state
 
-            def set_error(job_state, message):
-                try:
-                    raise ValueError(message)
-                except ValueError as e:
-                    job_state.exception = e
-                    job_state.traceback = job_state.job.format_error(e, traceback.format_exc())
+        def set_error(job_state, message):
+            try:
+                raise ValueError(message)
+            except ValueError as e:
+                job_state.exception = e
+                job_state.traceback = job_state.job.format_error(e, traceback.format_exc())
 
-                return job_state
+            return job_state
 
-            report.new(build_job('Newly Added', 'http://example.com/new', '', ''))
-            report.changed(build_job('Something Changed', 'http://example.com/changed', """
-            Unchanged Line
-            Previous Content
-            Another Unchanged Line
-            """, """
-            Unchanged Line
-            Updated Content
-            Another Unchanged Line
-            """))
-            report.unchanged(build_job('Same As Before', 'http://example.com/unchanged',
-                                       'Same Old, Same Old\n',
-                                       'Same Old, Same Old\n'))
-            report.error(set_error(build_job('Error Reporting', 'http://example.com/error', '', ''), 'Oh Noes!'))
+        report.new(build_job('Newly Added', 'http://example.com/new', '', ''))
+        report.changed(build_job('Something Changed', 'http://example.com/changed', """
+        Unchanged Line
+        Previous Content
+        Another Unchanged Line
+        """, """
+        Unchanged Line
+        Updated Content
+        Another Unchanged Line
+        """))
+        report.unchanged(build_job('Same As Before', 'http://example.com/unchanged',
+                                   'Same Old, Same Old\n',
+                                   'Same Old, Same Old\n'))
+        report.error(set_error(build_job('Error Reporting', 'http://example.com/error', '', ''), 'Oh Noes!'))
 
-            report.finish_one(name)
+        report.finish_one(name)
 
-            sys.exit(0)
+        sys.exit(0)
 
-    def check_smtp_login(self):
+    def check_smtp_login(self) -> None:
         if self.urlwatch_config.smtp_login:
             config = self.urlwatcher.config_storage.config['report']['email']
             smtp_config = config['smtp']
@@ -376,7 +379,7 @@ class UrlwatchCommand:
 
             sys.exit(0)
 
-    def check_xmpp_login(self):
+    def check_xmpp_login(self) -> None:
         if self.urlwatch_config.xmpp_login:
             xmpp_config = self.urlwatcher.config_storage.config['report']['xmpp']
 
@@ -413,7 +416,7 @@ class UrlwatchCommand:
 
             sys.exit(0)
 
-    def run(self):
+    def run(self) -> None:
         self.check_edit_config()
         self.check_smtp_login()
         self.check_telegram_chats()

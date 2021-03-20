@@ -8,7 +8,7 @@ import stat
 import threading
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, Hashable, Iterator, List, Tuple, Type, Union
+from typing import Any, Dict, Hashable, Iterable, Iterator, List, Optional, Tuple, Type, Union
 
 import msgpack
 
@@ -27,7 +27,7 @@ import yaml
 import webchanges as project
 
 from .filters import FilterBase
-from .jobs import Job, JobBase, ShellJob, UrlJob
+from .jobs import JobBase, ShellJob, UrlJob
 from .util import edit_file
 
 logger = logging.getLogger(__name__)
@@ -193,7 +193,7 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
     def parse(cls, *args) -> Iterator:
         ...
 
-    def edit(self, example_file: Union[str, None] = None) -> int:
+    def edit(self, example_file: Optional[str] = None) -> int:
         fn_base, fn_ext = os.path.splitext(self.filename)
         file_edit = fn_base + '.edit' + fn_ext
 
@@ -292,7 +292,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
 
 class BaseTxtFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
     @classmethod
-    def parse(cls, *args) -> Iterator[Type[Job]]:
+    def parse(cls, *args) -> Iterator[Type[JobBase]]:
         filename = args[0]
         if filename is not None and os.path.exists(filename):
             with open(filename) as fp:
@@ -333,7 +333,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
 class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
     @classmethod
-    def parse(cls, *args) -> Iterator[Type[Job]]:
+    def parse(cls, *args) -> Iterator[JobBase]:
         filename = args[0]
         if filename is not None and os.path.exists(filename):
             with open(filename) as fp:
@@ -348,7 +348,7 @@ class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
             yaml.safe_dump_all([job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False,
                                allow_unicode=True)
 
-    def load(self, *args) -> Iterator[Type[Job]]:
+    def load(self, *args) -> Iterator[JobBase]:
         with open(self.filename) as fp:
             return [JobBase.unserialize(job) for job in yaml.safe_load_all(fp) if job is not None]
 
@@ -363,7 +363,11 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def load(self, guid: str) -> (Union[str, None], Union[float, None], Union[int, None], Union[str, None]):
+    def load(self, guid: str) -> (Optional[str], Optional[float], Optional[int], Optional[str]):
+        ...
+
+    @abstractmethod
+    def get_history_data(self, guid: str, count: int = 1) -> Dict[str, float]:
         ...
 
     @abstractmethod
@@ -375,7 +379,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def clean(self, guid: str) -> Union[int, None]:
+    def clean(self, guid: str) -> Optional[int]:
         ...
 
     @abstractmethod
@@ -391,13 +395,13 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         for guid, data, timestamp, tries, etag in entries:
             self.save(guid, data, timestamp, tries, etag)
 
-    def gc(self, known_guids: List[str]) -> None:
+    def gc(self, known_guids: Iterable[str]) -> None:
         for guid in set(self.get_guids()) - set(known_guids):
             print(f'Deleting: {guid} (no longer being tracked)')
             self.delete(guid)
         self.clean_cache(known_guids)
 
-    def clean_cache(self, known_guids: List[str]) -> None:
+    def clean_cache(self, known_guids: Iterable[str]) -> None:
         if hasattr(self, 'clean_all'):
             count = self.clean_all()
             if count:
@@ -436,7 +440,7 @@ class CacheDirStorage(CacheStorage):
     def get_guids(self) -> List[str]:
         return os.listdir(self.filename)
 
-    def load(self, guid: str) -> (Union[str, None], Union[float, None], int, Union[str, None]):
+    def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
         filename = self._get_filename(guid)
         if not os.path.exists(filename):
             return None, None, 0, None
@@ -451,6 +455,10 @@ class CacheDirStorage(CacheStorage):
         timestamp = os.stat(filename)[stat.ST_MTIME]
 
         return data, timestamp, None, None
+
+    def get_history_data(self, guid: str, count: int = 1) -> Dict[str, float]:
+        """We only store the latest version, no history data"""
+        return {}
 
     def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
         # Timestamp is not saved as is read from the file's timestamp; ETag is ignored
@@ -536,7 +544,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.cur.row_factory = None
         return guids
 
-    def load(self, guid: str) -> (Union[str, None], Union[float, None], int, Union[str, None]):  # TODO handle NoneType
+    def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):  # TODO handle NoneType
         """return the most recent entry matching a 'guid'
 
         :param guid: The guid
@@ -708,7 +716,7 @@ class CacheRedisStorage(CacheStorage):
             guids.append(str(guid[len('guid:'):]))
         return guids
 
-    def load(self, guid: str) -> (Union[str, None], Union[float, None], int, Union[str, None]):
+    def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
         key = self._make_key(guid)
         data = self.db.lindex(key, 0)
 
@@ -752,5 +760,5 @@ class CacheRedisStorage(CacheStorage):
         if self.db.ltrim(key, 0, 0):
             return i - self.db.llen(key)
 
-    def rollback(self, timestamp: float) -> NotImplementedError:
-        raise NotImplementedError("'redis' databases cannot be rolled back as new snapshots overwrite old ones")
+    def rollback(self, timestamp: float) -> None:
+        raise NotImplementedError("Rolling back of 'redis' databases is not supported")

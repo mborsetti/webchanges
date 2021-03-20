@@ -2,7 +2,7 @@
 For compatibility with sys.version_info < (3, 7)
 Runs Pyppeteer
 Not used otherwise (upgraded to using asyncio.run from within BrowserJob class)
-Not included in testing coverage
+Not included in testing coverage and not type hinted
 """
 
 import asyncio

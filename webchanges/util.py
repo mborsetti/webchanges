@@ -7,20 +7,21 @@ import re
 import shlex
 import subprocess
 import sys
-import typing
-from typing import Callable, Tuple, Union
+from types import ModuleType
+from typing import Callable, Iterable, List, Match, Tuple, Type, TypeVar, Union
 
 logger = logging.getLogger(__name__)
 
 
 class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class"""
+    T = TypeVar('T')
 
     @staticmethod
-    def sorted_by_kind(cls):
+    def sorted_by_kind(cls: T) -> List[Type[T]]:
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values())]
 
-    def __init__(cls, name, bases, namespace):
+    def __init__(cls, name: str, bases: Tuple[type], namespace: dict) -> None:
         for base in bases:
             if base == object:
                 continue
@@ -54,7 +55,7 @@ class TrackSubClasses(type):
         super().__init__(name, bases, namespace)
 
 
-def edit_file(filename):
+def edit_file(filename: str) -> None:
     """Opens the editor to edit the file"""
     editor = os.environ.get('EDITOR', None)
     if not editor:
@@ -69,7 +70,7 @@ def edit_file(filename):
     subprocess.run(shlex.split(editor) + [filename], check=True)
 
 
-def import_module_from_source(module_name, source_path):
+def import_module_from_source(module_name: str, source_path: str) -> ModuleType:
     loader = importlib.machinery.SourceFileLoader(module_name, source_path)
     spec = importlib.util.spec_from_file_location(module_name, source_path, loader=loader)
     module = importlib.util.module_from_spec(spec)
@@ -78,7 +79,7 @@ def import_module_from_source(module_name, source_path):
     return module
 
 
-def chunk_string(string, length, *, numbering=False):
+def chunk_string(string: str, length: int, *, numbering: bool = False) -> Iterable[str]:
     """Chunks string"""
     if len(string) <= length:
         return [string]
@@ -148,7 +149,7 @@ def linkify(
     if extra_params and not callable(extra_params):
         extra_params = ' ' + extra_params.strip()
 
-    def make_link(m: typing.Match) -> str:
+    def make_link(m: Match) -> str:
         url = m.group(1)
         proto = m.group(2)
         if require_protocol and not proto:

@@ -26,7 +26,7 @@ from .storage import CacheDirStorage, CacheRedisStorage, CacheSQLite3Storage, Jo
 
 
 project_name = __package__
-(prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
+prefix, bindir = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 # directory where the config, jobs and hooks files are located
 if os.name != 'nt':

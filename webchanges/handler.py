@@ -8,10 +8,16 @@ import tempfile
 import time
 import timeit
 import traceback
+from types import TracebackType
+from typing import Any, Collection, Iterable, TYPE_CHECKING, Type, Union
 
 from .filters import FilterBase
 from .jobs import NotModifiedError
 from .reporters import ReporterBase
+
+# https://stackoverflow.com/questions/39740632
+if TYPE_CHECKING:
+    from .main import Urlwatch
 
 try:
     from diff_match_patch import diff_match_patch
@@ -23,23 +29,26 @@ logger = logging.getLogger(__name__)
 
 
 class JobState(object):
-    def __init__(self, cache_storage, job):
+    cache_storage = None
+    job = None
+    verb = None
+    old_data = None
+    new_data = None
+    history_data = {}
+    timestamp = None
+    current_timestamp = None
+    exception = None
+    traceback = None
+    tries = 0
+    etag = None
+    error_ignored = False
+
+    def __init__(self, cache_storage, job) -> None:
         self.cache_storage = cache_storage
         self.job = job
-        self.verb = None
-        self.old_data = None
-        self.new_data = None
-        self.history_data = {}
-        self.timestamp = None
-        self.current_timestamp = None
-        self.exception = None
-        self.traceback = None
-        self.tries = 0
-        self.etag = None
-        self.error_ignored = False
         self._generated_diff = None
 
-    def __enter__(self):
+    def __enter__(self) -> 'JobState':
         try:
             self.job.main_thread_enter()
         except Exception as ex:
@@ -49,14 +58,14 @@ class JobState(object):
 
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: type, exc_value: Any, traceback: TracebackType) -> None:
         try:
             self.job.main_thread_exit()
         except Exception:
             # We don't want exceptions from releasing resources to override job run results
             logger.warning(f'Exception while releasing resources for job: {self.job!r}', exc_info=True)
 
-    def load(self):
+    def load(self) -> None:
         guid = self.job.get_guid()
         self.old_data, self.timestamp, self.tries, self.etag = self.cache_storage.load(guid)
         if self.tries is None:
@@ -64,14 +73,14 @@ class JobState(object):
         if self.job.compared_versions and self.job.compared_versions > 1:
             self.history_data = self.cache_storage.get_history_data(guid, self.job.compared_versions)
 
-    def save(self):
+    def save(self) -> None:
         if self.new_data is None and self.exception is not None:
             # If no new data has been retrieved due to an exception, use the old job data
             self.new_data = self.old_data
 
         self.cache_storage.save(self.job.get_guid(), self.new_data, time.time(), self.tries, self.etag)
 
-    def process(self):
+    def process(self) -> 'JobState':
         logger.info(f'Processing: {self.job}')
 
         if self.exception:
@@ -110,7 +119,7 @@ class JobState(object):
 
         return self
 
-    def get_diff_match_patch(self):
+    def get_diff_match_patch(self) -> str:
         """WORK IN PROGRESS use of diff_match_patch library"""
         if self._generated_diff_match_patch is None:
             if diff_match_patch is None:
@@ -127,7 +136,7 @@ class JobState(object):
 
         return self._generated_diff_match_patch
 
-    def get_diff(self):
+    def get_diff(self) -> str:
         if self._generated_diff is None:
             self._generated_diff = self._generate_diff()
             # Apply any specified diff filters
@@ -136,7 +145,7 @@ class JobState(object):
 
         return self._generated_diff
 
-    def _generate_diff(self):
+    def _generate_diff(self) -> Union[str, bool, None]:
         if self.job.diff_tool is not None:
             with tempfile.TemporaryDirectory() as tmpdir:
                 old_file_path = os.path.join(tmpdir, 'old_file')
@@ -198,44 +207,44 @@ class JobState(object):
 
 
 class Report(object):
-    def __init__(self, urlwatch_config):
+    def __init__(self, urlwatch_config: 'Urlwatch') -> None:
         self.config = urlwatch_config.config_storage.config
 
         self.job_states = []
         self.start = timeit.default_timer()
 
-    def _result(self, verb, job_state):
+    def _result(self, verb: str, job_state: JobState) -> None:
         if job_state.exception is not None:
             logger.debug(f'Got exception while processing {job_state.job!r}', exc_info=job_state.exception)
 
         job_state.verb = verb
         self.job_states.append(job_state)
 
-    def new(self, job_state):
+    def new(self, job_state: JobState) -> None:
         self._result('new', job_state)
 
-    def changed(self, job_state):
+    def changed(self, job_state: JobState) -> None:
         self._result('changed', job_state)
 
-    def unchanged(self, job_state):
+    def unchanged(self, job_state: JobState) -> None:
         self._result('unchanged', job_state)
 
-    def error(self, job_state):
+    def error(self, job_state: JobState) -> None:
         self._result('error', job_state)
 
-    def get_filtered_job_states(self, job_states):
+    def get_filtered_job_states(self, job_states: Collection[Type[JobState]]) -> Iterable[JobState]:
         for job_state in job_states:
             if not any(job_state.verb == verb and not self.config['display'][verb]
                        for verb in ('unchanged', 'new', 'error')) and job_state.verb != 'changed,no_report':
                 yield job_state
 
-    def finish(self):
+    def finish(self) -> None:
         end = timeit.default_timer()
         duration = (end - self.start)
 
         ReporterBase.submit_all(self, self.job_states, duration)
 
-    def finish_one(self, name):
+    def finish_one(self, name: str) -> None:
         end = timeit.default_timer()
         duration = (end - self.start)
 

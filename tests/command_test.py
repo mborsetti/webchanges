@@ -29,11 +29,6 @@ cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = JobsYaml(jobs_file)
 command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
                                cache_file, verbose=False)
-for attrib in ('features', 'gc_cache', 'clean_cache', 'edit', 'edit_hooks', 'errors',
-               'list', 'add', 'edit_config'):
-    setattr(command_config, attrib, False)
-for attrib in ('test_job', 'test_diff', 'add', 'delete', 'rollback_cache'):
-    setattr(command_config, attrib, None)
 urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
 
 editor = os.getenv('EDITOR')
@@ -146,8 +141,11 @@ def test_check_telegram_chats():
 
 def test_check_test_reporter():
     urlwatch_command = UrlwatchCommand(urlwatcher)
-    setattr(command_config, 'test_reporter', True)
-    assert not urlwatch_command.check_test_reporter()
+    setattr(command_config, 'test_reporter', 'stdout')
+    try:
+        urlwatch_command.check_test_reporter()
+    except SystemExit as e:
+        assert e.code == 0
 
 
 def test_check_smtp_login():

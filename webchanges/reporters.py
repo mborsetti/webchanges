@@ -11,7 +11,7 @@ import re
 import sys
 import time
 from math import floor, log10
-from typing import Generator
+from typing import Collection, Iterable, List, Optional, TYPE_CHECKING, Type, Union
 from warnings import warn
 
 import requests
@@ -20,6 +20,11 @@ from markdown2 import Markdown
 import webchanges as project
 from .mailer import SMTPMailer, SendmailMailer
 from .util import TrackSubClasses, chunk_string, linkify
+
+# https://stackoverflow.com/questions/39740632
+if TYPE_CHECKING:
+    from .handler import JobState, Report
+    from .jobs import JobBase
 
 try:
     import aioxmpp
@@ -58,13 +63,14 @@ logger = logging.getLogger(__name__)
 class ReporterBase(object, metaclass=TrackSubClasses):
     __subclasses__ = {}
 
-    def __init__(self, report, config, job_states, duration):
+    def __init__(self, report: 'Report', config: dict, job_states: Collection[Type['JobState']],
+                 duration: float) -> None:
         self.report = report
         self.config = config
         self.job_states = job_states
         self.duration = duration
 
-    def convert(self, othercls):
+    def convert(self, othercls: Type['ReporterBase']) -> 'ReporterBase':
         if hasattr(othercls, '__kind__'):
             config = self.report.config['report'][othercls.__kind__]
         else:
@@ -73,14 +79,15 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         return othercls(self.report, config, self.job_states, self.duration)
 
     @classmethod
-    def reporter_documentation(cls):
+    def reporter_documentation(cls) -> str:
         result = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
             result.extend((f'  * {sc.__kind__} - {sc.__doc__}',))
         return '\n'.join(result)
 
     @classmethod
-    def submit_one(cls, name, report, job_states, duration):
+    def submit_one(cls, name: str, report: 'Report', job_states: Collection[Type['JobState']],
+                   duration: float) -> None:
         subclass = cls.__subclasses__[name]
         cfg = report.config['report'].get(name, {'enabled': False})
         if cfg['enabled']:
@@ -89,7 +96,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
             raise ValueError(f'Reporter not enabled: {name}')
 
     @classmethod
-    def submit_all(cls, report, job_states, duration):
+    def submit_all(cls, report: 'Report', job_states: Collection[Type['JobState']], duration: float) -> None:
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
             cfg = report.config['report'].get(name, {'enabled': False})
@@ -101,15 +108,15 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         if not any_enabled:
             logger.warning('No reporters enabled.')
 
-    def submit(self):
+    def submit(self) -> None:
         raise NotImplementedError()
 
 
 class HtmlReporter(ReporterBase):
-    def submit(self) -> Generator[str, None, None]:
+    def submit(self) -> Iterable[str]:
         yield from self._parts()
 
-    def _parts(self) -> Generator[str, None, None]:
+    def _parts(self) -> Iterable[str]:
         """generator yielding the HTML; called by submit. Calls _format_content"""
         cfg = self.report.config['report']['html']
 
@@ -150,7 +157,7 @@ class HtmlReporter(ReporterBase):
             </body>
             </html>""")
 
-    def _diff_to_html(self, diff: str, job) -> Generator[str, None, None]:
+    def _diff_to_html(self, diff: str, job: Type['JobBase']) -> Iterable[str]:
         """generator yielding the HTML-formatted unified diff; called by _format_content"""
         if job.diff_tool and job.diff_tool.startswith('wdiff'):
             # wdiff colorization
@@ -225,7 +232,7 @@ class HtmlReporter(ReporterBase):
                         yield f'<tr{style}><td>{linkify(line[1:])}</td></tr>'
             yield '</table>'
 
-    def _format_content(self, job_state, difftype: str) -> str:
+    def _format_content(self, job_state: 'JobState', difftype: str) -> Optional[str]:
         """generator yielding the HTML for a job; called by _parts. Calls _diff_to_html"""
         if job_state.verb == 'error':
             return f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
@@ -263,7 +270,7 @@ class HtmlReporter(ReporterBase):
 
 
 class TextReporter(ReporterBase):
-    def submit(self):
+    def submit(self) -> Optional[Iterable[str]]:
         cfg = self.report.config['report']['text']
         line_length = cfg['line_length']
         show_details = cfg['details']
@@ -303,7 +310,7 @@ class TextReporter(ReporterBase):
             yield (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
                    f' seconds with {project.__project_name__} {project.__version__}')
 
-    def _format_content(self, job_state):
+    def _format_content(self, job_state: 'JobState') -> Optional[str]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -315,7 +322,7 @@ class TextReporter(ReporterBase):
 
         return job_state.get_diff()
 
-    def _format_output(self, job_state, line_length):
+    def _format_output(self, job_state: 'JobState', line_length: int) -> (List[str], List[str]):
         summary_part = []
         details_part = []
 
@@ -329,7 +336,7 @@ class TextReporter(ReporterBase):
         content = self._format_content(job_state)
 
         if job_state.verb == 'changed,no_report':
-            return '', ''
+            return [], []
 
         else:
             summary_part.append(pretty_summary)
@@ -347,7 +354,7 @@ class TextReporter(ReporterBase):
 
 
 class MarkdownReporter(ReporterBase):
-    def submit(self, max_length=None):
+    def submit(self, max_length: int = None) -> Optional[Iterable[str]]:
         cfg = self.report.config['report']['markdown']
         show_details = cfg['details']
         show_footer = cfg['footer']
@@ -402,7 +409,8 @@ class MarkdownReporter(ReporterBase):
             yield from footer
 
     @classmethod
-    def _render(cls, max_length, summary=None, details=None, footer=None):
+    def _render(cls, max_length: int, summary: Optional[List[str]] = None, details: Optional[List[str]] = None,
+                footer: Optional[List[str]] = None) -> (bool, str, str, str):
         """Render the report components, trimming them if the available length is insufficient.
         Returns a tuple (trimmed, summary, details, footer).
         The first element of the tuple indicates whether any part of the report
@@ -482,7 +490,7 @@ class MarkdownReporter(ReporterBase):
                     return (details_trimmed, summary, trimmed_details, footer)
 
     @staticmethod
-    def _format_details_body(s, max_length):
+    def _format_details_body(s: str, max_length: int) -> (bool, str):
         wrapper_length = len('```diff\n\n```')
 
         # Message to print when the diff is too long.
@@ -504,7 +512,7 @@ class MarkdownReporter(ReporterBase):
 
             return True, '{}\n```diff\n{}\n```'.format(trim_message, s)
 
-    def _format_content(self, job_state):
+    def _format_content(self, job_state: 'JobState') -> Optional[str]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -516,7 +524,7 @@ class MarkdownReporter(ReporterBase):
 
         return job_state.get_diff()
 
-    def _format_output(self, job_state):
+    def _format_output(self, job_state: 'JobState') -> (List[str], List[str]):
         summary_part = []
         details_part = []
 
@@ -530,7 +538,7 @@ class MarkdownReporter(ReporterBase):
         content = self._format_content(job_state)
 
         if job_state.verb == 'changed,no_report':
-            return '', ''
+            return [], []
 
         else:
             summary_part.append(pretty_summary)
@@ -546,25 +554,25 @@ class StdoutReporter(TextReporter):
 
     __kind__ = 'stdout'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._has_color = sys.stdout.isatty() and self.config.get('color', False)
 
-    def _incolor(self, color_id, s):
+    def _incolor(self, color_id: int, s: str) -> str:
         if self._has_color:
             return f'\033[9{color_id}m{s}\033[0m'
         return s
 
-    def _red(self, s):
+    def _red(self, s: str) -> str:
         return self._incolor(1, s)
 
-    def _green(self, s):
+    def _green(self, s: str) -> str:
         return self._incolor(2, s)
 
-    def _yellow(self, s):
+    def _yellow(self, s: str) -> str:
         return self._incolor(3, s)
 
-    def _blue(self, s):
+    def _blue(self, s: str) -> str:
         return self._incolor(4, s)
 
     def _get_print(self):
@@ -611,7 +619,7 @@ class EMailReporter(TextReporter):
 
     __kind__ = 'email'
 
-    def submit(self):
+    def submit(self) -> None:
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
 
         subject_args = {
@@ -650,7 +658,7 @@ class IFTTTReport(TextReporter):
 
     __kind__ = 'ifttt'
 
-    def submit(self):
+    def submit(self) -> None:
         webhook_url = 'https://maker.ifttt.com/trigger/{event}/with/key/{key}'.format(**self.config)
         for job_state in self.report.get_filtered_job_states(self.job_states):
             pretty_name = job_state.job.pretty_name()
@@ -665,13 +673,13 @@ class IFTTTReport(TextReporter):
 class WebServiceReporter(TextReporter):
     MAX_LENGTH = 1024
 
-    def web_service_get(self):
+    def web_service_get(self) -> None:
         raise NotImplementedError
 
-    def web_service_submit(self, service, title, body):
+    def web_service_submit(self, service, title, body) -> None:
         raise NotImplementedError
 
-    def submit(self):
+    def submit(self) -> None:
         body_text = '\n'.join(super().submit())
 
         if not body_text:
@@ -696,14 +704,14 @@ class PushoverReport(WebServiceReporter):
 
     __kind__ = 'pushover'
 
-    def web_service_get(self):
+    def web_service_get(self) -> 'chump.Application':
         if chump is None:
             raise ImportError('Python module "chump" not installed')
 
         app = chump.Application(self.config['app'])
         return app.get_user(self.config['user'])
 
-    def web_service_submit(self, service, title, body):
+    def web_service_submit(self, service: 'chump.Application', title: str, body: str):
         sound = self.config['sound']
         # If device is the empty string or not specified at all, use None to send to all devices
         # (see https://github.com/thp/urlwatch/issues/372)
@@ -725,13 +733,13 @@ class PushbulletReport(WebServiceReporter):
 
     __kind__ = 'pushbullet'
 
-    def web_service_get(self):
+    def web_service_get(self) -> str:
         if Pushbullet is None:
             raise ImportError('Python module "pushbullet" not installed')
 
         return Pushbullet(self.config['api_key'])
 
-    def web_service_submit(self, service, title, body):
+    def web_service_submit(self, service: 'Pushbullet', title: str, body: str):
         service.push_note(title, body)
 
 
@@ -740,7 +748,7 @@ class MailGunReporter(TextReporter):
 
     __kind__ = 'mailgun'
 
-    def submit(self):
+    def submit(self) -> Optional[requests.Response]:
         region = self.config.get('region', '')
         domain = self.config['domain']
         api_key = self.config['api_key']
@@ -798,7 +806,7 @@ class TelegramReporter(TextReporter):
 
     __kind__ = 'telegram'
 
-    def submit(self):
+    def submit(self) -> Optional[requests.Response]:
 
         bot_token = self.config['bot_token']
         chat_ids = self.config['chat_id']
@@ -819,7 +827,7 @@ class TelegramReporter(TextReporter):
 
         return result
 
-    def submit_to_telegram(self, bot_token, chat_id, text):
+    def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str):
         logger.debug(f"Sending telegram request to chat id: '{chat_id}'")
         result = requests.post(
             f'https://api.telegram.org/bot{bot_token}/sendMessage',
@@ -836,7 +844,7 @@ class TelegramReporter(TextReporter):
                 f'Failed to parse telegram response. HTTP status code: {result.status_code}, content: {result.content}')
         return result
 
-    def chunkstring(self, string, length):
+    def chunkstring(self, string: str, length: int):
         return (string[0 + i:length + i] for i in range(0, len(string), length))
 
 
@@ -845,12 +853,12 @@ class WebhookReporter(TextReporter):
 
     __kind__ = 'webhook'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
         self.max_length = self.config.get('max_message_length', default_max_length)
 
-    def submit(self):
+    def submit(self) -> Optional[requests.Response]:
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
@@ -866,7 +874,7 @@ class WebhookReporter(TextReporter):
 
         return result
 
-    def submit_to_webhook(self, webhook_url, text):
+    def submit_to_webhook(self, webhook_url: str, text: str) -> Optional[requests.Response]:
         logger.debug(f'Sending request to webhook with text:{text}')
         post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
@@ -886,7 +894,7 @@ class SlackReporter(WebhookReporter):
 
     __kind__ = 'slack'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         warn("'slack' reporter is deprecated; replace with 'webhook' (same exact keys)", DeprecationWarning)
         super().__init__(*args, **kwargs)
 
@@ -896,12 +904,12 @@ class WebhookMarkdownReporter(MarkdownReporter):
 
     __kind__ = 'webhook_markdown'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
         self.max_length = self.config.get('max_message_length', default_max_length)
 
-    def submit(self):
+    def submit(self, max_length: int = None) -> Optional[requests.Response]:
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
@@ -917,7 +925,7 @@ class WebhookMarkdownReporter(MarkdownReporter):
 
         return result
 
-    def submit_to_webhook(self, webhook_url, text):
+    def submit_to_webhook(self, webhook_url: str, text: str) -> Optional[requests.Response]:
         logger.debug(f'Sending request to webhook with text:{text}')
         post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
@@ -938,7 +946,7 @@ class MatrixReporter(MarkdownReporter):
 
     __kind__ = 'matrix'
 
-    def submit(self):
+    def submit(self, max_length: int = None) -> None:
         if matrix_client is None:
             raise ImportError('Python module "matrix_client" not installed')
 
@@ -974,7 +982,7 @@ class XMPPReporter(TextReporter):
 
     __kind__ = 'xmpp'
 
-    def submit(self):
+    def submit(self) -> None:
 
         sender = self.config['sender']
         recipient = self.config['recipient']
@@ -996,7 +1004,7 @@ class BrowserReporter(HtmlReporter):
 
     __kind__ = 'browser'
 
-    def submit(self):
+    def submit(self) -> None:
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
 
         if not filtered_job_states:
@@ -1024,7 +1032,8 @@ class BrowserReporter(HtmlReporter):
 
 
 class XMPP(object):
-    def __init__(self, sender, recipient, insecure_password=None):
+
+    def __init__(self, sender: str, recipient: str, insecure_password: str = None) -> None:
         if aioxmpp is None:
             raise ImportError('Python package "aioxmpp" is not installed; cannot use the "xmpp" reporter')
 
@@ -1032,7 +1041,7 @@ class XMPP(object):
         self.recipient = recipient
         self.insecure_password = insecure_password
 
-    async def send(self, chunk):
+    async def send(self, chunk: str) -> None:
         if self.insecure_password:
             password = self.insecure_password
         elif keyring is not None:
@@ -1049,20 +1058,20 @@ class XMPP(object):
         recipient_jid = aioxmpp.JID.fromstr(self.recipient)
 
         async with client.connected() as stream:
-            msg = aioxmpp.Message(to=recipient_jid, type_=aioxmpp.MessageType.CHAT,)
+            msg = aioxmpp.Message(to=recipient_jid, type_=aioxmpp.MessageType.CHAT, )
             msg.body[None] = chunk
 
             await stream.send_and_wait_for_sent(msg)
 
 
-def xmpp_have_password(sender):
+def xmpp_have_password(sender) -> bool:
     if keyring is None:
         raise ImportError('Python package "keyring" is non installed - service unsupported')
 
     return keyring.get_password('urlwatch_xmpp', sender) is not None
 
 
-def xmpp_set_password(sender):
+def xmpp_set_password(sender) -> None:
     """ Set the keyring password for the XMPP connection. Interactive."""
     if keyring is None:
         raise ImportError('Python package "keyring" is non installed - service unsupported')

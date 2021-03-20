@@ -9,7 +9,7 @@ Having it into a standalone module allows running the program without having the
 """
 
 import os
-from typing import Iterator, Union
+from typing import Iterator, Optional
 
 from .storage import CacheStorage
 
@@ -48,7 +48,7 @@ class CacheMiniDBStorage(CacheStorage):
     def get_guids(self) -> Iterator[str]:
         return (guid for guid, in self.CacheEntry.query(self.db, minidb.Function('distinct', self.CacheEntry.c.guid)))
 
-    def load(self, guid: str) -> (Union[str, None], Union[float, None], int, Union[str, None]):
+    def load(self, guid: str) -> (Optional[str], Optional[float], Optional[int], Optional[str]):
         for data, timestamp, tries, etag in self.CacheEntry.query(
                 self.db,
                 self.CacheEntry.c.data // self.CacheEntry.c.timestamp // self.CacheEntry.c.tries
@@ -74,7 +74,7 @@ class CacheMiniDBStorage(CacheStorage):
                     break
         return history
 
-    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Union[str, None] = None) -> None:
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str] = None) -> None:
         self.db.save(self.CacheEntry(guid=guid, timestamp=timestamp, data=data, tries=tries, etag=etag))
         self.db.commit()
 
@@ -92,5 +92,5 @@ class CacheMiniDBStorage(CacheStorage):
             self.db.commit()
             return result
 
-    def rollback(self, timestamp: float) -> NotImplementedError:
+    def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("Rolling back of legacy 'minidb' databases is not supported")

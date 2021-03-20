@@ -1,14 +1,14 @@
 """Command-line configuration. For program config files, see storage.py"""
 
 import argparse
-import os.path
 
 import webchanges as project
 
 
 class BaseConfig(object):
 
-    def __init__(self, project_name, config_dir, config, jobs, cache, hooks, verbose):
+    def __init__(self, project_name: str, config_dir: str, config: str, jobs: str, cache: str, hooks: str,
+                 verbose: bool) -> None:
         self.project_name = project_name
         self.config_dir = config_dir
         self.config = config
@@ -16,28 +16,48 @@ class BaseConfig(object):
         self.cache = cache
         self.hooks = hooks
         self.verbose = verbose
+        self.list = False
+        self.test_job = None
+        self.test_diff = None
+        self.errors = False
+        self.add = None
+        self.delete = None
+        self.test_reporter = None
+        self.smtp_login = False
+        self.telegram_chats = False
+        self.xmpp_login = False
+        self.edit = False
+        self.edit_config = False
+        self.edit_hooks = False
+        self.gc_cache = False
+        self.clean_cache = False
+        self.rollback_cache = None
+        self.database_engine = False
+        self.features = False
 
 
 class CommandConfig(BaseConfig):
 
-    def __init__(self, project_name, config_dir, bindir, prefix, config, jobs, hooks, cache, verbose):
+    def __init__(self, project_name: str, config_dir: str, bindir: str, prefix: str, config: str, jobs: str, hooks: str,
+                 cache: str, verbose: bool) -> None:
         super().__init__(project_name, config_dir, config, jobs, cache, hooks, verbose)
         self.bindir = bindir
         self.prefix = prefix
+        self.config_storage = None
 
-        if self.bindir == 'bin':
-            # Installed system-wide
-            self.examples_dir = os.path.join(prefix, 'share', self.project_name, 'examples')
-        else:
-            # Assume we are not yet installed
-            self.examples_dir = os.path.join(prefix, bindir, 'share', self.project_name, 'examples')
-
+        # if self.bindir == 'bin':
+        #     # Installed system-wide
+        #     self.examples_dir = os.path.join(prefix, 'share', self.project_name, 'examples')
+        # else:
+        #     # Assume we are not yet installed
+        #     self.examples_dir = os.path.join(prefix, bindir, 'share', self.project_name, 'examples')
+        #
         # self.urls_yaml_example = os.path.join(self.examples_dir, 'jobs-example.yaml')
         # self.hooks_py_example = os.path.join(self.examples_dir, 'hooks.rst')
 
         self.parse_args()
 
-    def parse_args(self):
+    def parse_args(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(description=project.__doc__.replace('\n\n', '--par--').replace('\n', ' ')
                                          .replace('--par--', '\n\n'),
                                          formatter_class=argparse.RawDescriptionHelpFormatter)

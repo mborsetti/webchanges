@@ -7,6 +7,8 @@ import re
 import subprocess
 import sys
 import textwrap
+from types import TracebackType
+from typing import Any, AnyStr, Dict, Optional, TYPE_CHECKING, Type
 from urllib.parse import urlsplit
 
 import requests
@@ -16,6 +18,10 @@ import webchanges as project
 from .filters import FilterBase
 from .util import TrackSubClasses
 
+# https://stackoverflow.com/questions/39740632
+if TYPE_CHECKING:
+    from .handler import JobState
+
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
@@ -24,11 +30,11 @@ logger = logging.getLogger(__name__)
 class ShellError(Exception):
     """Exception for shell commands with non-zero exit code"""
 
-    def __init__(self, result):
+    def __init__(self, result) -> None:
         Exception.__init__(self)
         self.result = result
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.__class__.__name__}: Exit status {self.result}'
 
 
@@ -43,7 +49,48 @@ class JobBase(object, metaclass=TrackSubClasses):
     __required__ = ()
     __optional__ = ()
 
-    def __init__(self, **kwargs):
+    # PyCharm IDE compatibility
+    __kind__ = ''
+    name = ''
+    note = ''
+    filter = ''
+    max_tries = ''
+    diff_tool = ''
+    additions_only = ''
+    deletions_only = ''
+    contextlines = ''
+    compared_versions = ''
+    is_markdown = ''
+    markdown_padded_tables = ''
+    diff_filter = ''
+    url = ''
+    cookies = ''
+    data = ''
+    method = ''
+    ssl_no_verify = ''
+    ignore_cached = ''
+    http_proxy = ''
+    https_proxy = ''
+    headers = ''
+    ignore_connection_errors = ''
+    ignore_http_error_codes = ''
+    encoding = ''
+    timeout = ''
+    ignore_timeout_errors = ''
+    ignore_too_many_redirects = ''
+    user_visible_url = ''
+    use_browser = ''
+    chromium_revision = ''
+    user_data_dir = ''
+    switches = ''
+    wait_until = ''
+    wait_for = ''
+    wait_for_navigation = ''
+    block_elements = ''
+    navigate = ''
+    command = ''
+
+    def __init__(self, **kwargs) -> None:
         # Set optional keys to None
         for k in self.__optional__:
             if k not in kwargs:
@@ -68,7 +115,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         #     logger.warning("'kind: browser' is deprecated: replace with 'use_browser: true'")
 
     @classmethod
-    def job_documentation(cls):
+    def job_documentation(cls) -> str:
         result = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
             if sc.__doc__:
@@ -83,19 +130,19 @@ class JobBase(object, metaclass=TrackSubClasses):
             result.append('')
         return '\n'.join(result)
 
-    def get_location(self):
+    def get_location(self) -> Optional[str]:
         raise NotImplementedError()
 
-    def pretty_name(self):
+    def pretty_name(self) -> Optional[str]:
         raise NotImplementedError()
 
-    def serialize(self):
+    def serialize(self) -> dict:
         d = {'kind': self.__kind__}
         d.update(self.to_dict())
         return d
 
     @classmethod
-    def unserialize(cls, data):
+    def unserialize(cls, data: dict) -> 'JobBase':
         if 'kind' not in data:
             # Try to auto-detect the kind of job based on the available keys
             kinds = [subclass.__kind__ for subclass in list(cls.__subclasses__.values())
@@ -121,24 +168,24 @@ class JobBase(object, metaclass=TrackSubClasses):
 
         return cls.__subclasses__[kind].from_dict(data)
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {k: getattr(self, k) for keys in (self.__required__, self.__optional__) for k in keys
                 if getattr(self, k) is not None}
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data: dict) -> 'JobBase':
         return cls(**{k: v for k, v in list(data.items()) if k in cls.__required__ or k in cls.__optional__})
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
-    def _set_defaults(self, defaults):
+    def _set_defaults(self, defaults) -> None:
         if isinstance(defaults, dict):
             for key, value in defaults.items():
                 if key in self.__optional__ and getattr(self, key) is None:
                     setattr(self, key, value)
 
-    def with_defaults(self, config):
+    def with_defaults(self, config: dict) -> 'JobBase':
         new_job = JobBase.unserialize(self.serialize())
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
@@ -146,27 +193,27 @@ class JobBase(object, metaclass=TrackSubClasses):
             new_job._set_defaults(cfg.get('all'))
         return new_job
 
-    def get_guid(self):
+    def get_guid(self) -> str:
         location = self.get_location()
         sha_hash = hashlib.new('sha1')
         sha_hash.update(location.encode())
         return sha_hash.hexdigest()
 
-    def retrieve(self, job_state):
+    def retrieve(self, job_state) -> NotImplementedError:
         raise NotImplementedError()
 
-    def main_thread_enter(self):
+    def main_thread_enter(self) -> None:
         """Called from the main thread before running the job"""
         ...
 
-    def main_thread_exit(self):
+    def main_thread_exit(self) -> None:
         """Called from the main thread after running the job"""
         ...
 
-    def format_error(self, exception, tb):
+    def format_error(self, exception: Exception, tb: TracebackType) -> TracebackType:
         return tb
 
-    def ignore_error(self, exception):
+    def ignore_error(self, exception) -> bool:
         return False
 
 
@@ -175,7 +222,7 @@ class Job(JobBase):
     __optional__ = ('name', 'note', 'filter', 'max_tries', 'diff_tool', 'additions_only', 'deletions_only',
                     'contextlines', 'compared_versions', 'is_markdown', 'markdown_padded_tables', 'diff_filter')
 
-    def pretty_name(self):
+    def pretty_name(self) -> str:
         return self.name or self.get_location()
 
 
@@ -191,10 +238,10 @@ class UrlJob(Job):
 
     CHARSET_RE = re.compile('text/(html|plain); charset=([^;]*)')
 
-    def get_location(self):
+    def get_location(self) -> str:
         return self.user_visible_url or self.url
 
-    def retrieve(self, job_state):
+    def retrieve(self, job_state: 'JobState') -> AnyStr:
         headers = {
             'User-agent': project.__user_agent__,
         }
@@ -300,7 +347,7 @@ class UrlJob(Job):
 
         return response.text
 
-    def add_custom_headers(self, headers):
+    def add_custom_headers(self, headers: Dict[str, Any]) -> None:
         """
         Adds custom request headers from the job list (URLs) to the pre-filled dictionary `headers`.
         Pre-filled values of conflicting header keys (case-insensitive) are overwritten by custom value.
@@ -310,13 +357,13 @@ class UrlJob(Job):
             headers.pop(header, None)
         headers.update(self.headers)
 
-    def format_error(self, exception, tb):
+    def format_error(self, exception: Exception, tb: str) -> str:
         if isinstance(exception, requests.exceptions.RequestException):
             # Instead of a full traceback, just show the HTTP error
             return str(exception)
         return tb
 
-    def ignore_error(self, exception):
+    def ignore_error(self, exception: Exception) -> bool:
         if isinstance(exception, requests.exceptions.ConnectionError) and self.ignore_connection_errors:
             return True
         if isinstance(exception, requests.exceptions.Timeout) and self.ignore_timeout_errors:
@@ -353,12 +400,12 @@ class BrowserJob(Job):
         'mac': 843846,
     }
 
-    def get_location(self):
+    def get_location(self) -> str:
         if not self.url and self.navigate:
             logger.warning("'navigate:' key is deprecated. Replace with 'url:' and 'use_browser: true")
         return self.user_visible_url or self.url or self.navigate
 
-    def main_thread_enter(self):
+    def main_thread_enter(self) -> None:
         if sys.version_info < (3, 7):
             # check if proxy is being used
             from .browser import BrowserContext, get_proxy
@@ -367,11 +414,11 @@ class BrowserJob(Job):
             self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_http_error_codes,
                                       self.user_data_dir, self.switches)
 
-    def main_thread_exit(self):
+    def main_thread_exit(self) -> None:
         if sys.version_info < (3, 7):
             self.ctx.close()
 
-    def retrieve(self, job_state):
+    def retrieve(self, job_state) -> str:
         if sys.version_info < (3, 7):
             response = self.ctx.process(self.url, self.headers, self.cookies, self.timeout, self.proxy_username,
                                         self.proxy_password, self.wait_until, self.wait_for, self.wait_for_navigation)
@@ -400,7 +447,7 @@ class BrowserJob(Job):
             return 'win32'
         raise OSError('Platform unsupported by Pyppeteer (use_browser: true): ' + sys.platform)
 
-    async def _retrieve(self):
+    async def _retrieve(self) -> str:
         # launch browser
         if not self.chromium_revision:
             self.chromium_revision = self.DEFAULT_CHROMIUM_REVISION
@@ -424,21 +471,18 @@ class BrowserJob(Job):
             from pyppeteer import launch  # must be imported after setting os.environ variables
         except ImportError:
             raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
-                              f' ( {self.job.get_location()} )')
+                              f' ( {self.get_location()} )')
 
         args = []
+        proxy = ''
         if self.http_proxy or self.https_proxy:
             if urlsplit(self.url).scheme == 'http':
                 proxy = self.http_proxy
             elif urlsplit(self.url).scheme == 'https':
                 proxy = self.https_proxy
-            else:
-                proxy = ''
             if proxy:
                 proxy_server = f'{urlsplit(proxy).scheme}://{urlsplit(proxy).hostname}' + (
                     f':{urlsplit(proxy).port}' if urlsplit(proxy).port else '')
-                proxy_username = str(urlsplit(proxy).username) if urlsplit(proxy).username else ''
-                proxy_password = str(urlsplit(proxy).password) if urlsplit(proxy).password else ''
                 args.append(f'--proxy-server={proxy_server}')
         if self.user_data_dir:
             args.append(f'--user-data-dir={os.path.expanduser(os.path.expandvars(self.user_data_dir))}')
@@ -461,8 +505,11 @@ class BrowserJob(Job):
             await page.setExtraHTTPHeaders(self.headers)
         if self.cookies:
             await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
-        if (self.http_proxy or self.https_proxy) and (proxy_username or proxy_password):
-            await page.authenticate({'username': proxy_username, 'password': proxy_password})
+        if (self.http_proxy or self.https_proxy):
+            proxy_username = urlsplit(proxy).username if urlsplit(proxy).username else ''
+            proxy_password = urlsplit(proxy).password if urlsplit(proxy).password else ''
+            if proxy_username or proxy_password:
+                await page.authenticate({'username': proxy_username, 'password': proxy_password})
         options = {}
         if self.timeout:
             options['timeout'] = self.timeout * 1000
@@ -530,10 +577,10 @@ class ShellJob(Job):
     __required__ = ('command',)
     __optional__ = ()
 
-    def get_location(self):
+    def get_location(self) -> str:
         return self.command
 
-    def retrieve(self, job_state):
+    def retrieve(self, job_state: Type['JobState']) -> AnyStr:
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         if sys.version_info < (3, 7):
             process = subprocess.run(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,

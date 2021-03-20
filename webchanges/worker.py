@@ -3,20 +3,25 @@ import contextlib
 import difflib
 import logging
 import os
+from typing import Callable, Iterable, Optional, TYPE_CHECKING
 
 from .handler import JobState
 from .jobs import BrowserJob, NotModifiedError
 
+# https://stackoverflow.com/questions/39740632
+if TYPE_CHECKING:
+    from .main import Urlwatch
+
 logger = logging.getLogger(__name__)
 
 
-def run_parallel(func, items, max_workers=None):
+def run_parallel(func: Callable, items: Iterable, max_workers: Optional[int] = None):
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         for result in executor.map(func, items):
             yield result
 
 
-def run_jobs(urlwatcher):
+def run_jobs(urlwatcher: 'Urlwatch') -> None:
     cache_storage = urlwatcher.cache_storage
     jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs]
     report = urlwatcher.report
