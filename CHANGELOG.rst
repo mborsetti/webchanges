@@ -34,10 +34,11 @@ Version 3.2.4.post0
 ===================
 Unreleased
 
-Intenal
--------
-* Replaced atomic_rename custom fuction with Python bult-in `os.replace()
+Internal
+--------
+* Replaced custom atomic_rename function with Python bult-in `os.replace()
   <https://docs.python.org/3/library/os.html#os.replace>`__ which was new in version 3.3 and does the same thing
+* Type hinting of the entire code
 
 
 Version 3.2.4

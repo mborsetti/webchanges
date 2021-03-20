@@ -2,9 +2,8 @@
 - [ ] Add more tests
   - [ ] Increase line coverage
 - [ ] Document code
-  - [ ] Type hinting
   - [ ] Docstrings
-  - [ ] Make autodoc work!
+  - [ ] Make autodoc work
 - [ ] Database grows to infinity! (and it's not even documented!)
 - [ ] Update database only if all reporters run successfully without errors
   - [ ] Or queue failed (undelivered) reports?
@@ -12,4 +11,4 @@
   - [ ] If the retrieved data were only saved to the database after it was output, this way of missing diffs would 
         be prevented
   - [ ] Provide a convenient way to show past diffs that might have been missed due to exceptions or user error
-- [ ] Remove --add JOB and --delete JOB code
+- [ ] Consider removing --add JOB and --delete JOB code
