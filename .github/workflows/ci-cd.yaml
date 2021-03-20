@@ -54,10 +54,10 @@ jobs:
         os: [windows-latest]
         python-version: ['3.9']
         include:
-        - os: ubuntu-latest
-          pipcachepath: ~/.cache/pip
-        - os: macos-latest
-          pipcachepath: ~/Library/Caches/pip
+#        - os: ubuntu-latest
+#          pipcachepath: ~/.cache/pip
+#        - os: macos-latest
+#          pipcachepath: ~/Library/Caches/pip
         - os: windows-latest
           pipcachepath: ~\AppData\Local\pip\Cache
 
@@ -80,13 +80,11 @@ jobs:
       - name: Cache pip
         uses: actions/cache@main
         with:
-          # This path is specific to Ubuntu
           path: ${{ matrix.pipcachepath }}
           # Look to see if there is a cache hit for the corresponding requirements file
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-${{ runner.python-version }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
-            ${{ runner.os }}-
+            ${{ runner.os }}-${{ runner.python-version }}-pip-
 
       - name: Install dependencies
         # do full install and testing of pdf2text and ocr only on latest Python version
