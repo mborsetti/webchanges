@@ -49,16 +49,17 @@ jobs:
     strategy:
       matrix:
         include:
-#        - os: ubuntu-latest
-#          pipcachepath: ~/.cache/pip
-#        - os: macos-latest
-#          pipcachepath: ~/Library/Caches/pip
-        - os: windows-latest  # TODO windows-latest: pytest crashing on 07-feb-21
-          pipcachepath: ~\AppData\Local\pip\Cache
-        # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
-#        python-version: ['3.9', '3.8', '3.7', '3.6']
-        python-version: ['3.9']
+        - os: ubuntu-latest
+          pipcachepath: ~/.cache/pip
+        - os: macos-latest
+          pipcachepath: ~/Library/Caches/pip
+#        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 20-mar-21
+#                              # https://github.com/pytest-dev/pytest/discussions/6349
+#          pipcachepath: ~\AppData\Local\pip\Cache
 
+        # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
+        python-version: ['3.9', '3.8', '3.7', '3.6']
+#        python-version: ['3.9']
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
 
@@ -80,54 +81,54 @@ jobs:
         with:
           path: ${{ matrix.pipcachepath }}
           # Look to see if there is a cache hit for the corresponding requirements file
-          key: ${{ runner.os }}-${{ runner.python-version }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ runner.python-version }}-pip-
+            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+
+      - name: Install  pdf2text and ocr dependencies (Linux)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.9' && runner.os == 'Linux'
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
+          python -m pip install -U pdftotext Pillow pytesseract
+
+      - name: Install pdf2text and ocr dependencies (macOS)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.9' && runner.os == 'macOS'
+        run: |
+          brew install pkg-config poppler python tesseract
+          python -m pip install -U pdftotext Pillow pytesseract
+
+      - name: Install pdf2text and ocr dependencies (Windows)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.9' && runner.os == 'Windows'
+        run: |
+          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe --output Miniconda3-latest-Windows-x86_64.exe
+          start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
+          del Miniconda3-latest-Windows-x86_64.exe /y
+          conda install -y -c conda-forge poppler
+          curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
+          start /wait "" tesseract-setup.exe /S
+          del tesseract-setup /y
+          python -m pip install -U pdftotext Pillow pytesseract
 
       - name: Install dependencies
-        # do full install and testing of pdf2text and ocr only on latest Python version
         # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path
         run: |
-          if [ $(python3 -c "import sys; print(sys.version_info.minor)") == 9 ]; then
-            if [ "$RUNNER_OS" == "Linux" ]; then
-              sudo apt-get -y update
-              sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
-              CICD_PIPINSTALL="pdftotext Pillow pytesseract"
-            elif [ "$RUNNER_OS" == "macOS" ]; then
-              brew install pkg-config poppler python tesseract
-              CICD_PIPINSTALL="pdftotext Pillow pytesseract"
-            # elif [ "$RUNNER_OS" == "Windows" ]; then
-            #    curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe --output Miniconda3-latest-Windows-x86_64.exe
-            #    start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
-            #    del Miniconda3-latest-Windows-x86_64.exe /y
-            #    conda install -y -c conda-forge poppler
-            #    curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
-            #    start /wait "" tesseract-setup.exe /S
-            #    del tesseract-setup /y
-            #    CICD_PIPINSTALL="pdftotext Pillow pytesseract"
-            fi
-          fi
           python -m pip install -U pip setuptools wheel
           python -m pip install -e .
-          python -m pip install -U coveralls -r tests/requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject $CICD_PIPINSTALL
-        shell: bash
+          python -m pip install -U coveralls -r tests/requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject
 
-      - name: Run tests (Linux)
-        if: startsWith(runner.os, 'Linux')
-        run:
-          python -m pytest -v
-        env:
-          PYTHONUTF8: 1
-
-      - name: Run tests (macOS)
-        if: startsWith(runner.os, 'macOS')
+      - name: Run tests (Linux/MacOS)
+        if: runner.os == 'Linux') || runner.os == 'macOS'
         run:
           python -m pytest -v
         env:
           PYTHONUTF8: 1
 
       - name: Run tests (Windows)
-        if: startsWith(runner.os, 'Windows')
+        if: runner.os == 'Windows'
         run:
           # workaround for Windows fatal exception: access violation
           python -m pytest -v -p no:faulthandler
