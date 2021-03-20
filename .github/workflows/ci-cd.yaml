@@ -53,6 +53,13 @@ jobs:
 #        python-version: ['3.9', '3.8', '3.7', '3.6']
         os: [windows-latest]
         python-version: ['3.9']
+        include:
+        - os: ubuntu-latest
+          pipcachepath: ~/.cache/pip
+        - os: macos-latest
+          pipcachepath: ~/Library/Caches/pip
+        - os: windows-latest
+          pipcachepath: ~\AppData\Local\pip\Cache
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
@@ -67,6 +74,19 @@ jobs:
         uses: actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
+
+      # Cache and reuse dependencies between runs
+      # https://docs.github.com/en/actions/guides/building-and-testing-python#caching-dependencies
+      - name: Cache pip
+        uses: actions/cache@main
+        with:
+          # This path is specific to Ubuntu
+          path: ${{ matrix.pipcachepath }}
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
 
       - name: Install dependencies
         # do full install and testing of pdf2text and ocr only on latest Python version
@@ -96,15 +116,25 @@ jobs:
           python -m pip install -U coveralls -r tests/requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject $CICD_PIPINSTALL
         shell: bash
 
-      - name: Run tests
-        # workaround for Windows fatal exception: access violation
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-              python -m pytest -v -p no:faulthandler
-          else
-              python -m pytest -v
-          fi
-        shell: bash
+      - name: Run tests (Linux)
+        if: startsWith(runner.os, 'Linux')
+        run:
+          python -m pytest -v
+        env:
+          PYTHONUTF8: 1
+
+      - name: Run tests (macOS)
+        if: startsWith(runner.os, 'macOS')
+        run:
+          python -m pytest -v
+        env:
+          PYTHONUTF8: 1
+
+      - name: Run tests (Windows)
+        if: startsWith(runner.os, 'Windows')
+        run:
+          # workaround for Windows fatal exception: access violation
+          python -m pytest -v -p no:faulthandler
         env:
           PYTHONUTF8: 1
 
