@@ -15,7 +15,8 @@ Everyone is welcomed to contribute: there's even a `wish list
 If you can contribute with a pull request, please do so. If not, open an issue `here
 <https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.
 
-Please make your contributions to the `unrealeased <https://github.com/mborsetti/webchanges/tree/unreleased>`__ branch.
+Please make your contributions to the `unrealeased <https://github.com/mborsetti/webchanges/tree/unreleased>`__ branch
+and make sure that write a test for it (no decrase in coverage).
 
 Documentation
 -------------
@@ -25,8 +26,8 @@ especially if you're new! It is written in reStructuredText for Sphinx, and you 
 
 Code
 ----
-Inline code docstrings (sorely needed!), additional test coverage (also needed!), type hinting, bug fixes, extension of
-existing functionality, new functionalities, and much more are always welcomed.
+Inline code docstrings (sorely needed!), additional test coverage (also needed!), bug fixes, extension of existing
+functionality, new functionalities, and much more are always welcomed.
 
 Please keep in mind PEP-20's `Zen of Python <https://www.python.org/dev/peps/pep-0020/>`__ when writing code:
 

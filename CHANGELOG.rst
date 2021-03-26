@@ -33,7 +33,7 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
 
 Version 3.2.5.rc1
 ===================
-Unreleased
+2021-03-21
 
 Changed
 --------
