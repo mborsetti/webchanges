@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -U pip wheel
-          python -m pip install -U -r docs/requirements.txt
+          python -m pip install -U -r requirements.txt -r docs/requirements.txt
 
       # Run pre-commit cache per https://github.com/pre-commit/action
       - name: Run pre-commit
