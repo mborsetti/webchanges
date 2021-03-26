@@ -11,10 +11,11 @@ See https://docs.readthedocs.io/en/stable/guides/adding-custom-css.html#overridi
   text-decoration: underline;
 }
 .additions {
-  background-color: #e6ffed;
+  background-color: #d1ffd1;
+  color: #082b08;
 }
 .deletions {
-  background-color: #ffeef0;
-  color: #cb2431;
+  background-color: #fff0f0;
+  color: #9c1c1c;
   text-decoration: line-through;
 }

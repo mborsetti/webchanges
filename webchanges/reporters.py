@@ -117,7 +117,7 @@ class HtmlReporter(ReporterBase):
         yield from self._parts()
 
     def _parts(self) -> Iterable[str]:
-        """generator yielding the HTML; called by submit. Calls _format_content"""
+        """Generator yielding the HTML; called by submit. Calls _format_content."""
         cfg = self.report.config['report']['html']
 
         yield f"""
@@ -158,15 +158,15 @@ class HtmlReporter(ReporterBase):
             </html>""")
 
     def _diff_to_html(self, diff: str, job: Type['JobBase']) -> Iterable[str]:
-        """generator yielding the HTML-formatted unified diff; called by _format_content"""
+        """Generator yielding the HTML-formatted unified diff; called by _format_content."""
         if job.diff_tool and job.diff_tool.startswith('wdiff'):
             # wdiff colorization
             yield '<span style="font-family:monospace;white-space:pre-wrap">'
             diff = html.escape(diff)
-            diff = re.sub(r'[{][+].*?[+][}]', lambda x: f'<span style="background-color:#e6ffed">{x.group(0)}</span>',
-                          diff, flags=re.DOTALL)
+            diff = re.sub(r'[{][+].*?[+][}]', lambda x: f'<span style="background-color:#d1ffd1;color:#082b08">'
+                                                        f'{x.group(0)}</span>', diff, flags=re.DOTALL)
             diff = re.sub(r'[\[][-].*?[-][]]', lambda x: (
-                f'<span style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through">{x.group(0)}'
+                f'<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">{x.group(0)}'
                 f'</span>'), diff, flags=re.DOTALL)
             yield diff
             yield '</span>'
@@ -209,14 +209,18 @@ class HtmlReporter(ReporterBase):
             else:
                 yield '<table style="border-collapse:collapse;font-family:monospace">'
 
+            # colors (survive email client in dark mode; contrast ratio https://contrast-ratio.com/ > 7 - AAA level):
+            # dark green HSL 120°,  70%, 10% #082b08 on light green HSL 120°, 100%, 91% #d1ffd1
+            # dark red   HSL   0°,  70%, 36% #9c1c1c on light red   HSL   0°, 100%, 97% #fff0f0
+            # background colors have same relative luminance (.897-.899)
             for i, line in enumerate(diff.splitlines()):
                 if line[0] == '+':
-                    style = ' style="background-color:#e6ffed"' if i > 1 else ' style="color:green"'
+                    style = ' style="background-color:#d1ffd1;color:#082b08"' if i > 1 else ' style="color:darkgreen"'
                 elif line[0] == '-':
-                    style = (' style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through"' if i > 1
-                             else ' style="color:#cb2431"')
+                    style = (' style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through"' if i > 1
+                             else ' style="color:darkred"')
                 elif line[0] == '@':  # unified_diff section header
-                    style = ' style="background-color:#fafbfc"'
+                    style = ' style="background-color:#fbfbfb"'
                 elif line[0] == '/':  # informational header added by webchanges
                     style = ' style="background-color:lightyellow"'
                 else:
@@ -233,7 +237,7 @@ class HtmlReporter(ReporterBase):
             yield '</table>'
 
     def _format_content(self, job_state: 'JobState', difftype: str) -> Optional[str]:
-        """generator yielding the HTML for a job; called by _parts. Calls _diff_to_html"""
+        """Generator yielding the HTML for a job; called by _parts. Calls _diff_to_html."""
         if job_state.verb == 'error':
             return f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
 
@@ -412,7 +416,9 @@ class MarkdownReporter(ReporterBase):
     def _render(cls, max_length: int, summary: Optional[List[str]] = None, details: Optional[List[str]] = None,
                 footer: Optional[List[str]] = None) -> (bool, str, str, str):
         """Render the report components, trimming them if the available length is insufficient.
+
         Returns a tuple (trimmed, summary, details, footer).
+
         The first element of the tuple indicates whether any part of the report
         was omitted due to message length. The other elements are the
         potentially trimmed report components.
@@ -550,7 +556,7 @@ class MarkdownReporter(ReporterBase):
 
 
 class StdoutReporter(TextReporter):
-    """Print summary on stdout (the console)"""
+    """Print summary on stdout (the console)."""
 
     __kind__ = 'stdout'
 
@@ -615,7 +621,7 @@ class StdoutReporter(TextReporter):
 
 
 class EMailReporter(TextReporter):
-    """Send summary via e-mail (including SMTP)"""
+    """Send summary via e-mail (including SMTP)."""
 
     __kind__ = 'email'
 
@@ -654,7 +660,7 @@ class EMailReporter(TextReporter):
 
 
 class IFTTTReport(TextReporter):
-    """Send summary via IFTTT"""
+    """Send summary via IFTTT."""
 
     __kind__ = 'ifttt'
 
@@ -700,7 +706,7 @@ class WebServiceReporter(TextReporter):
 
 
 class PushoverReport(WebServiceReporter):
-    """Send summary via pushover.net"""
+    """Send summary via pushover.net."""
 
     __kind__ = 'pushover'
 
@@ -729,7 +735,7 @@ class PushoverReport(WebServiceReporter):
 
 
 class PushbulletReport(WebServiceReporter):
-    """Send summary via pushbullet.com"""
+    """Send summary via pushbullet.com."""
 
     __kind__ = 'pushbullet'
 
@@ -744,7 +750,7 @@ class PushbulletReport(WebServiceReporter):
 
 
 class MailGunReporter(TextReporter):
-    """Send e-mail via the Mailgun service"""
+    """Send e-mail via the Mailgun service."""
 
     __kind__ = 'mailgun'
 
@@ -801,7 +807,7 @@ class MailGunReporter(TextReporter):
 
 
 class TelegramReporter(TextReporter):
-    """Send a message using Telegram"""
+    """Send a message using Telegram."""
     MAX_LENGTH = 4096
 
     __kind__ = 'telegram'
@@ -849,7 +855,7 @@ class TelegramReporter(TextReporter):
 
 
 class WebhookReporter(TextReporter):
-    """Send a text message to a webhook such as Slack or Discord channel"""
+    """Send a text message to a webhook such as Slack or Discord channel."""
 
     __kind__ = 'webhook'
 
@@ -890,7 +896,7 @@ class WebhookReporter(TextReporter):
 
 
 class SlackReporter(WebhookReporter):
-    """Deprecated; use webhook instead"""
+    """Deprecated; use webhook instead."""
 
     __kind__ = 'slack'
 
@@ -900,7 +906,7 @@ class SlackReporter(WebhookReporter):
 
 
 class WebhookMarkdownReporter(MarkdownReporter):
-    """Send a Markdown message to a webhook such as a Mattermost channel"""
+    """Send a Markdown message to a webhook such as a Mattermost channel."""
 
     __kind__ = 'webhook_markdown'
 
@@ -941,7 +947,7 @@ class WebhookMarkdownReporter(MarkdownReporter):
 
 
 class MatrixReporter(MarkdownReporter):
-    """Send a message to a room using the Matrix protocol"""
+    """Send a message to a room using the Matrix protocol."""
     MAX_LENGTH = 16384
 
     __kind__ = 'matrix'
@@ -977,7 +983,7 @@ class MatrixReporter(MarkdownReporter):
 
 
 class XMPPReporter(TextReporter):
-    """Send a message using the XMPP Protocol"""
+    """Send a message using the XMPP Protocol."""
     MAX_LENGTH = 262144
 
     __kind__ = 'xmpp'
@@ -1000,7 +1006,7 @@ class XMPPReporter(TextReporter):
 
 
 class BrowserReporter(HtmlReporter):
-    """Display HTML summary using the default web browser"""
+    """Display HTML summary using the default web browser."""
 
     __kind__ = 'browser'
 
@@ -1072,7 +1078,7 @@ def xmpp_have_password(sender) -> bool:
 
 
 def xmpp_set_password(sender) -> None:
-    """ Set the keyring password for the XMPP connection. Interactive."""
+    """Set the keyring password for the XMPP connection. Interactive."""
     if keyring is None:
         raise ImportError('Python package "keyring" is non installed - service unsupported')
 

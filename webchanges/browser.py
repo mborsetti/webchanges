@@ -1,8 +1,8 @@
 """
-For compatibility with sys.version_info < (3, 7)
-Runs Pyppeteer
-Not used otherwise (upgraded to using asyncio.run from within BrowserJob class)
-Not included in testing coverage and not type hinted
+Legacy code retained to run Pyppeteer with sys.version_info < (3, 7). It is not used if Python >= 3.7 as the BrowserJob
+class will run Pyppeteer from within using asyncio.run.
+
+This module is not included in testing coverage and is not type hinted.
 """
 
 import asyncio
@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 def get_proxy(url, http_proxy, https_proxy):
-    """Returns proxy to be used and username + password"""
     # check if proxy is being used
     if urlsplit(url).scheme == 'http':
         proxy = http_proxy
@@ -47,8 +46,6 @@ class BrowserLoop(object):
 
     @staticmethod
     def current_platform() -> str:
-        """Get current platform name by short string.
-        Originally from pyppeteer.chromium_downloader"""
         if sys.platform.startswith('linux'):
             return 'linux'
         elif sys.platform.startswith('darwin'):

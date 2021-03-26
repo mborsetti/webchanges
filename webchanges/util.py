@@ -122,29 +122,21 @@ def linkify(
     shorten: bool = False,
     extra_params: Union[str, Callable[[str], str]] = '',
     require_protocol: bool = False,
-    permitted_protocols: Tuple[str] = ('http', 'https', 'mailto',),
+    permitted_protocols: Tuple[str] = ('http', 'https', 'mailto',)
 ) -> str:
     """Converts plain text into HTML with links.
-    For example: ``linkify("Hello http://tornadoweb.org!")`` would return
-    ``Hello <a href="http://tornadoweb.org">http://tornadoweb.org</a>!``
-    Parameters:
-    * ``shorten``: Long urls will be shortened for display.
-    * ``extra_params``: Extra text to include in the link tag, or a callable
-      taking the link as an argument and returning the extra text
-      e.g. ``linkify(text, extra_params='rel="nofollow" class="external"')``,
-      or::
-          def extra_params_cb(url):
-              if url.startswith("http://example.com"):
-                  return 'class="internal"'
-              else:
-                  return 'class="external" rel="nofollow"'
-          linkify(text, extra_params=extra_params_cb)
-    * ``require_protocol``: Only linkify urls which include a protocol. If
-      this is False, urls such as www.facebook.com will also be linkified.
-    * ``permitted_protocols``: Tuple (or set) of protocols which should be
-      linkified, e.g. ``linkify(text, permitted_protocols=("http", "ftp",
-      "mailto"))``. It is very unsafe to include protocols such as
-      ``javascript``.
+
+    For example linkify("Hello http://tornadoweb.org!") would return 'Hello
+        <a href="http://tornadoweb.org">http://tornadoweb.org</a>!'.
+
+    :parameter text: The text to linkify
+    :parameter shorten: Long urls will be shortened for display.
+    :parameter extra_params: Extra text to include in the link tag, or a callable taking the link as an argument and
+        returning the extra text, e.g. linkify(text, extra_params='rel="nofollow" class="external"')
+    :parameter require_protocol: Only linkify urls which include a protocol; if this is False, urls such as
+        www.facebook.com will also be linkified
+    :parameter permitted_protocols: Tuple (or set) of protocols which should be linkified, e.g. linkify(text,
+        permitted_protocols=("http", "ftp", "mailto")); it is very unsafe to include protocols such as javascript.
     """
     if extra_params and not callable(extra_params):
         extra_params = ' ' + extra_params.strip()

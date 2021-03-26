@@ -1,4 +1,5 @@
-name: Sample webchanges job list used by command_test.py
+kind: shell
 command: echo test
+name: Sample webchanges job list used by command_test.py
 filter:
-  - keep_lines_containing: test
+- keep_lines_containing: test

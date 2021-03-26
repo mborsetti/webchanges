@@ -484,15 +484,15 @@ class CacheSQLite3Storage(CacheStorage):
     and the msgpack package.
 
     The database contains the 'webchanges' table with the following columns:
+
     * uuid: unique hash of the "location", i.e. the URL; indexed
     * timestamp: the Unix timestamp of when then the snapshot was taken
     * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
+
     """
     def __init__(self, filename: str) -> None:
-        """Opens the database file and, if new, creates a table and index
-
-        :param filename: The full filename of the database file
-        """
+        """:param filename: The full filename of the database file"""
+        # Opens the database file and, if new, creates a table and index
         super().__init__(filename)
 
         dirname = os.path.dirname(filename)
@@ -526,7 +526,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.migrate_from_minidb(minidb_filename)
 
     def close(self) -> None:
-        """Cleans up the database and closes the connection to it"""
+        """Cleans up the database and closes the connection to it."""
         with self.lock:
             self.db.execute('VACUUM')
             self.db.close()
@@ -534,7 +534,7 @@ class CacheSQLite3Storage(CacheStorage):
         del self.cur
 
     def get_guids(self) -> List[str]:
-        """Lists the unique 'guid's contained in the database
+        """Lists the unique 'guid's contained in the database.
 
         :returns: A list of guids
         """
@@ -545,16 +545,16 @@ class CacheSQLite3Storage(CacheStorage):
         return guids
 
     def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):  # TODO handle NoneType
-        """return the most recent entry matching a 'guid'
+        """Return the most recent entry matching a 'guid'.
 
         :param guid: The guid
 
         :returns: A tuple (data, timestamp, tries, etag)
             WHERE
-            data is the data
-            timestamp is the timestamp
-            tries is the number of tries
-            etag is the ETag
+            data is the data;
+            timestamp is the timestamp;
+            tries is the number of tries;
+            etag is the ETag.
         """
         with self.lock:
             row = self.cur.execute('SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? '
@@ -567,15 +567,15 @@ class CacheSQLite3Storage(CacheStorage):
         return None, None, 0, None
 
     def get_history_data(self, guid: str, count: int = 1) -> Dict[str, float]:
-        """Return some data from the last 'count' entries matching a 'guid'
+        """Return some data from the last 'count' entries matching a 'guid'.
 
         :param guid: The guid
         :param count: The maximum number of entries to return
 
         :returns: A dict (key: value)
             WHERE
-            key is the data
-            value is the timestamp
+            key is the data;
+            value is the timestamp.
         """
         history = {}
         if count < 1:
@@ -595,7 +595,7 @@ class CacheSQLite3Storage(CacheStorage):
         return history
 
     def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
-        """Save the data from a job
+        """Save the data from a job.
 
         :param guid: The guid
         :param data: The data
@@ -614,7 +614,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
 
     def delete(self, guid: str) -> None:
-        """Delete all entries matching a 'guid'
+        """Delete all entries matching a 'guid'.
 
         :param guid: The guid
         """
@@ -623,8 +623,8 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
-        """For the given 'guid', keep only the latest 'keep_entries' entries and delete all other (older) ones
-        Use clean_all() if you want to remove all older entries
+        """For the given 'guid', keep only the latest 'keep_entries' entries and delete all other (older) ones.
+        Use clean_all() if you want to remove all older entries.
 
         :param guid: The guid
         :param keep_entries: Number of entries to keep after deletion
@@ -645,7 +645,7 @@ class CacheSQLite3Storage(CacheStorage):
         return num_del
 
     def clean_all(self) -> int:
-        """Delete all older entries for each 'guid' (keep only last one)
+        """Delete all older entries for each 'guid' (keep only last one).
 
         :returns: Number of records deleted
         """
@@ -661,7 +661,9 @@ class CacheSQLite3Storage(CacheStorage):
         return num_del
 
     def rollback(self, timestamp: float) -> int:
-        """Rollback database to timestamp
+        """Rollback database to timestamp.
+
+        :param timestamp: The timestamp
 
         :returns: Number of records deleted
         """

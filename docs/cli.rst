@@ -16,34 +16,35 @@ Command line switches
                           read job list (URLs) from FILE
     --config FILE         read configuration from FILE
     --hooks FILE          use FILE as hooks.py module
-    --cache FILE          use FILE as a cache (snapshots database), alternatively can accept a redis URI
+    --cache FILE          use FILE as a cache (snapshots database) or directory, alternatively can accept a redis URI
 
   job management:
     --list                list jobs
-    --test JOB, --test-filter JOB
-                          test filter output of job by location or index
-    --test-diff JOB, --test-diff-filter JOB
-                          test diff filter output of job by location or index (needs at least 2
-                          snapshots)
     --errors              list jobs with errors or no data captured
-    --add JOB             add job (key1=value1,key2=value2,...) (obsolete; use --edit)
-    --delete JOB          delete job by location or index (obsolete; use --edit)
+    --test JOB, --test-filter JOB
+                          test a job (by index or URL/command) and show filtered output
+    --test-diff JOB, --test-diff-filter JOB
+                          show up to 10 diffs from saved snapshots (by URL/command or index)
+    --add JOB             add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from jobs file; use
+                          --edit instead!
+    --delete JOB          delete job by URL/command or index number. WARNING: all remarks are deleted from jobs file;
+                          use --edit instead!
 
   reporters:
     --test-reporter REPORTER
                           send a test notification
-    --smtp-login          check SMTP login
+    --smtp-login          enter or check password for SMTP email (stored in keyring)
     --telegram-chats      list telegram chats the bot is joined to
-    --xmpp-login          enter password for XMPP (store in keyring)
+    --xmpp-login          enter or check password for XMPP (stored in keyring)
 
   launch editor ($EDITOR/$VISUAL):
-    --edit                edit URL/job list
+    --edit                edit job (URL/command) list
     --edit-config         edit configuration file
     --edit-hooks          edit hooks script
 
   miscellaneous:
-    --gc-cache            garbage collect the cache database by removing old snapshots plus all data of
-                          jobs not in the jobs file
+    --gc-cache            garbage collect the cache database by removing old snapshots plus all data of jobs not in
+                          the jobs file
     --clean-cache         remove old snapshots from the cache database
     --rollback-cache TIMESTAMP
                           delete recent snapshots > timestamp; backup the database before using!
@@ -52,11 +53,27 @@ Command line switches
     --features            list supported job types, filters and reporters
 
 
+Check for potential errors
+--------------------------
+Running `webchanges` with the ``--error`` switch will run all jobs and report those who result in an error and alert you
+of any that, after filtering, return no data (as this may not be by design but due to, for example, changes in the
+monitored resource that went unnoticed).  No snapshots are saved from this run.
+
+Test the running of a job
+-------------------------
+You can test a job and its filter by using the switch ``--test`` followed by the job index number (from ``--list``) or
+its URL/command; `webchanges` will display the filtered output.  This allows to easily test changes in filters.
+
+Show diff from saved snapshots
+------------------------------
+You can use ``--test-diff`` followed by the job index number (from ``--list``) or its URL/command to display diffs from
+snapshots that have been saved (up to 10; obviously a minimum of 2 saved snapshots are required).  This allows you to
+test the effect of a diff filter.
+
 .. _rollback-cache:
 
 Rollback the database
 ---------------------
-
 You can rollback the snapshots database to an earlier time by running `webchanges` with the ``--rollback-cache`` switch
 followed by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating the point in time you want to go
 back to. Useful when you missed notifications or they got lost: rollback the database to the time of the last good
@@ -79,7 +96,6 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 
 Select a database engine
 -------------------------
-
 Default
 ~~~~~~~
 The requirement for the ``minidb`` Python package has been removed in version 3.2 and the database system has migrated

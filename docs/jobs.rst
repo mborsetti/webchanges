@@ -151,7 +151,7 @@ For all ``url`` jobs:
 - ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`). `Added in version 3.0:` works for
   all ``url`` jobs.
 - ``headers``: Headers to send along with the request (a dict). `Added in version 3.0:` works for all ``url`` jobs.
-- ``http_proxy``: Proxy server to use for HTTP requests (e.g. "http://username:password@proxy.com:8080"). `Added in
+- ``http_proxy``: Proxy server to use for HTTP requests (e.g. \http://username:password@proxy.com:8080). `Added in
   version 3.0:` works for all ``url`` jobs.
 - ``https_proxy``: Proxy server to use for HTTPS requests. `Added in version 3.0:` works for all ``url`` jobs.
 - ``timeout``: Override the default timeout, in seconds (see :ref:`here <timeout>`). `Added in version 3.0:` works for
@@ -178,8 +178,8 @@ For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 For ``url`` jobs that have ``use_browser: true``:
 
 - ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here <chromium_revision>`).
-  `New in version 3.0.`  This can be different for different OSs, in which case is a list of one or more of the
-  following keys: ``linux``, ``mac``, ``win32`` and ``win64``. `Added in version 3.1:` keys for different OSs.
+  This can be different for different OSs, in which case is a list of one or more of the following keys: ``linux``,
+  ``mac``, ``win32`` and ``win64``. `New in version 3.0.` `Added in version 3.1:` keys for different OSs.
 - ``ignore_https_errors``: Ignore HTTPs errors (true/false). `New in version 3.0.`
 - ``user_data_dir``: A path to a pre-existing user directory that Chromium should be using. `New in version 3.0.`
 - ``switches``: Additional command line `switch(es) for Chromium
@@ -191,7 +191,7 @@ For ``url`` jobs that have ``use_browser: true``:
 - ``wait_for_navigation``: Wait until navigation lands on a URL starting with this text (e.g. due to redirects); helps
   to avoid the ``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation``
   error. If ``wait_for`` is also used, ``wait_for_navigation`` is applied first. Cannot be used with ``block_elements``.
-  `New in version 3.2.`.
+  `New in version 3.2.`
 - ``wait_for``: Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath
   string is matched, before getting the HTML content (see `documentation
   <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds). If
@@ -203,7 +203,7 @@ For ``url`` jobs that have ``use_browser: true``:
   :ref:`here <pyppeteer_block_elements>`. `New in version 3.2.`
 - Setting the system environment variable ``PYPPETEER_NO_PROGRESS_BAR`` to true will prevent showing a download
   progress bar if Pyppeteer needs to be downloaded; however, this will cause a `crash
-  <https://github.com/pyppeteer/pyppeteer/pull/224>`__ in Pyppetter <= 0.2.25
+  <https://github.com/pyppeteer/pyppeteer/pull/224>`__ in Pyppetter ≤ 0.2.25
 
 Known issues
 """"""""""""

@@ -8,18 +8,18 @@ from webchanges.reporters import HtmlReporter
 from webchanges.storage import DEFAULT_CONFIG
 
 DIFFTOHTMLTESTDATA = [
-    ('+Added line', '<tr style="background-color:#e6ffed"><td>Added line</td></tr>'),
-    ('-Deleted line', '<tr style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through">'
+    ('+Added line', '<tr style="background-color:#d1ffd1;color:#082b08"><td>Added line</td></tr>'),
+    ('-Deleted line', '<tr style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">'
                       '<td>Deleted line</td></tr>'),
     # Changes line
-    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fafbfc"><td style="font-family:monospace">@@ -1,1 +1,1 @@'
+    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fbfbfb"><td style="font-family:monospace">@@ -1,1 +1,1 @@'
                         '</td></tr>'),
     # Horizontal ruler is manually expanded since <hr> tag is used to separate jobs
-    ('+* * *', '<tr style="background-color:#e6ffed"><td>'
+    ('+* * *', '<tr style="background-color:#d1ffd1;color:#082b08"><td>'
                '--------------------------------------------------------------------------------</td></tr>'),
     ('+[Link](https://example.com)',
-        '<tr style="background-color:#e6ffed"><td><a style="font-family:inherit" rel="noopener" target="_blank" '
-        'href="https://example.com">Link</a></td></tr>'),
+        '<tr style="background-color:#d1ffd1;color:#082b08"><td><a style="font-family:inherit" rel="noopener" '
+        'target="_blank" href="https://example.com">Link</a></td></tr>'),
     (' ![Image](https://example.com/picture.png "picture")',
      '<tr><td><img style="max-width:100%;height:auto;max-height:100%" src="https://example.com/picture.png" alt="Image"'
      ' title="picture" /></td></tr>'),
@@ -54,7 +54,7 @@ def test_diff_to_html(inpt, out):
     inpt = '-fake head 1\n+fake head 2\n' + inpt
     job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': False})
     result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
-    assert result[246:-8] == out
+    assert result[250:-8] == out
 
 
 def test_diff_to_htm_padded_table():
@@ -62,7 +62,7 @@ def test_diff_to_htm_padded_table():
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
     job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': True})
     result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
-    assert result[246:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
+    assert result[250:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
                               'row |</span></td></tr>')
 
 
@@ -72,8 +72,8 @@ def test_diff_to_htm_wdiff():
     job = JobBase.unserialize({'url': '', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'})
     result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
     assert result == ('<span style="font-family:monospace;white-space:pre-wrap">'
-                      '<span style="background-color:#ffeef0;color:#cb2431;text-decoration:line-through">[-old-]</span>'
-                      '<span style="background-color:#e6ffed">{+new+}</span></span>')
+                      '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">[-old-]</span>'
+                      '<span style="background-color:#d1ffd1;color:#082b08">{+new+}</span></span>')
 
 
 @pytest.mark.parametrize('reporter', REPORTER)

@@ -4,12 +4,15 @@ import logging
 import os
 import sys
 
+import pkg_resources  # from setuptools
 import pytest
 import yaml
 
 from webchanges.filters import FilterBase
 
 logger = logging.getLogger(__name__)
+
+installed_packages = [pkg.key for pkg in pkg_resources.working_set]
 
 # https://stackoverflow.com/questions/31469707/
 if sys.version_info[0:2] == (3, 6) and os.name == 'nt':
@@ -19,15 +22,7 @@ if sys.version_info[0:2] == (3, 6) and os.name == 'nt':
 
 
 TESTDATA = [
-    # Legacy string-style filter definition conversion  DEPRECATED
-    # ('keep_lines_containing', [('keep_lines_containing', {})]),
-    # ('keep_lines_containing:foo', [('keep_lines_containing', {'text': 'foo'})]),
-    # ('beautify,keep_lines_containing:foo,html2text', [('beautify', {}), ('keep_lines_containing', {'text': 'foo'}),
-    #                                                   ('html2text', {})]),
-    # ('re.sub:.*', [('re.sub', {'pattern': '.*'})]),
-    # ('re.sub', [('re.sub', {})]),
-
-    # New dict-style filter definition normalization/mapping
+    # New dict-style filter definition to test normalization/mapping but nothing more
     ([{'keep_lines_containing': None}], [('keep_lines_containing', {})]),
     ([{'keep_lines_containing': {'re': 'bla'}}], [('keep_lines_containing', {'re': 'bla'})]),
     ([{'reverse': '\n\n'}], [('reverse', {'separator': '\n\n'})]),
@@ -60,10 +55,14 @@ def test_filters(test_name, test_data):
     result = data
     for filter_kind, subfilter in FilterBase.normalize_filter_list(filter):
         logger.info(f'filter kind: {filter_kind}, subfilter: {subfilter}')
+        if (filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
+                and 'beautifulsoup' not in installed_packages):
+            logger.warning(f"Skipping {test_name} since 'beautifulsoup' package is not installed")
+            return
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         if filtercls is None:
             raise ValueError('Unknown filter kind: {filter_kind}:{subfilter}')
-        result = filtercls(None, None).filter(result, subfilter)
+        result = filtercls(FakeJob(), None).filter(result, subfilter)
 
     logger.debug('Expected result:\n%s', expected_result)
     logger.debug('Actual result:\n%s', result)
@@ -102,3 +101,17 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it():
 
         # Check that outside the variable wasn't overwritten by the filter
         assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
+
+
+def test_deprecated_filters():
+    filtercls = FilterBase.__subclasses__.get('grep')
+    assert filtercls(FakeJob(), None).filter('a\nb', {'text': 'b'}) == 'b'
+
+    filtercls = FilterBase.__subclasses__.get('grepi')
+    assert filtercls(FakeJob(), None).filter('a\nb', {'text': 'b'}) == 'a'
+
+
+class FakeJob():
+
+    def get_location(self):
+        return ''

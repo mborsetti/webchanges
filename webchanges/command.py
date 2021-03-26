@@ -140,8 +140,7 @@ class UrlwatchCommand:
 
     def list_error_jobs(self) -> None:
         start = timeit.default_timer()
-        print(f"Jobs (if any) with errors or returning no data after filtering in\n'{self.urlwatch_config.jobs}':\n"
-              f'*list may be out of order\n')
+        print(f'Jobs, if any, with errors or returning no data after filtering in "{self.urlwatch_config.jobs}":\n')
         jobs = [job.with_defaults(self.urlwatcher.config_storage.config)
                 for job in self.urlwatcher.jobs]
         for idx, job in enumerate(jobs):
@@ -236,12 +235,12 @@ class UrlwatchCommand:
 
     def check_telegram_chats(self) -> None:
         if self.urlwatch_config.telegram_chats:
-            config = self.urlwatcher.config_storage.config['report'].get('telegram', None)
+            config = self.urlwatcher.config_storage.config['report'].get('telegram')
             if not config:
                 print('You need to configure telegram in your config first (see documentation)')
                 sys.exit(1)
 
-            bot_token = config.get('bot_token', None)
+            bot_token = config.get('bot_token')
             if not bot_token:
                 print('You need to set up your bot token first (see documentation)')
                 sys.exit(1)
@@ -355,7 +354,7 @@ class UrlwatchCommand:
                 print('Please configure the SMTP hostname in the config first.')
                 success = False
 
-            smtp_username = smtp_config.get('user', None) or config['from']
+            smtp_username = smtp_config.get('user') or config['from']
             if not smtp_username:
                 print('Please configure the SMTP user in the config first.')
                 success = False
@@ -416,7 +415,7 @@ class UrlwatchCommand:
 
             sys.exit(0)
 
-    def run(self) -> None:
+    def run(self) -> None:  # pragma: no cover
         self.check_edit_config()
         self.check_smtp_login()
         self.check_telegram_chats()

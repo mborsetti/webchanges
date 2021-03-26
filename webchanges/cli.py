@@ -61,7 +61,8 @@ def setup_logger(verbose: bool) -> None:
 
 
 def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cache_file: str) -> None:
-    """Check for config, jobs and hooks files from urlwatch 2.2 and migrate them (copy to new naming)"""
+    """Check for existence of legacy (urlwatch 2.2) config, jobs and hooks files and migrate them (i.e. make a copy to
+    new folder and or naming).  Original files are not deleted."""
     uw_urlwatch_dir = os.path.expanduser(os.path.join('~', '.' + 'urlwatch'))
     uw_config_file = os.path.join(uw_urlwatch_dir, 'urlwatch.yaml')
     uw_urls_file = os.path.join(uw_urlwatch_dir, 'urls.yaml')
@@ -77,7 +78,7 @@ def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cac
 
 
 def main() -> None:  # pragma: no cover
-    """The program's entry point"""
+    """The entry point"""
     # make sure that PendingDeprecationWarning are displayed from all modules (otherwise only those in __main__ are)
     warnings.filterwarnings('default', category=PendingDeprecationWarning)
 

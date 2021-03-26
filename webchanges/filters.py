@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+import warnings
 from abc import ABCMeta
 from enum import Enum
 from typing import Any, AnyStr, Dict, Iterator, List, TYPE_CHECKING, Tuple, Type, Union
@@ -186,7 +187,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
 
 class AutoMatchFilter(FilterBase):
-    """Automatically matches subclass filters with a given location"""
+    """Automatically matches subclass filters with a given location."""
     MATCH = None
 
     def match(self) -> bool:
@@ -200,7 +201,7 @@ class AutoMatchFilter(FilterBase):
 
 
 class RegexMatchFilter(FilterBase):
-    """Same as AutoMatchFilter but matching is done with regexes"""
+    """Same as AutoMatchFilter but matching is done with regexes."""
     MATCH = None
 
     def match(self) -> bool:
@@ -218,7 +219,7 @@ class RegexMatchFilter(FilterBase):
 
 
 class BeautifyFilter(FilterBase):
-    """Beautify HTML (requires Python package 'BeautifulSoup' and optionally 'jsbeautifier' and/or 'cssbeautifier')"""
+    """Beautify HTML (requires Python package 'BeautifulSoup' and optionally 'jsbeautifier' and/or 'cssbeautifier')."""
 
     __kind__ = 'beautify'
 
@@ -255,7 +256,7 @@ class BeautifyFilter(FilterBase):
 
 
 class Html2TextFilter(FilterBase):
-    """Convert HTML to Markdown text"""
+    """Convert HTML to Markdown text."""
 
     __kind__ = 'html2text'
 
@@ -268,18 +269,16 @@ class Html2TextFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         """
-        Convert a string consisting of HTML to plain text
-        for easy difference checking.
-
+        Convert a string consisting of HTML to plain text for easy difference checking.
         Method may be one of:
-         'html2text'      - (DEFAULT): Use html2text library to extract text (in Markdown) from html.
-                            options: https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options
-                            default options optimized as follows: parser.unicode_snob = True,
-                            parser.body_width = 0, parser.single_line_break = True, parser.ignore_images = True
-         'bs4'            - Use Beautiful Soup library to prettify the HTML
-                            options: "parser" only, bs4 supports "lxml", "html5lib", and "html.parser"
-                            https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use
-         'strip_tags'     - A simple regex-based HTML tag stripper
+        'html2text' (DEFAULT): Use html2text library to extract text (in Markdown) from html.
+        - options: https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options
+        - default options optimized as follows: parser.unicode_snob = True,
+        parser.body_width = 0, parser.single_line_break = True, parser.ignore_images = True
+        'bs4': Use Beautiful Soup library to prettify the HTML
+        - options: "parser" only, bs4 supports "lxml", "html5lib", and "html.parser"
+        - https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use
+        'strip_tags': A simple regex-based HTML tag stripper
         """
 
         # extract method and options from subfilter, defaulting to method html2text
@@ -336,7 +335,7 @@ class Html2TextFilter(FilterBase):
 
 
 class Pdf2TextFilter(FilterBase):
-    """Convert PDF to plaintext (requires Python package 'pdftotext' and its dependencies)"""
+    """Convert PDF to plaintext (requires Python package 'pdftotext' and its dependencies)."""
     # Dependency: pdftotext (https://github.com/jalan/pdftotext), itself based
     # on poppler (https://poppler.freedesktop.org/)
     # Note: check pdftotext website for OS-specific dependencies for install
@@ -362,7 +361,7 @@ class Pdf2TextFilter(FilterBase):
 
 
 class Ical2TextFilter(FilterBase):
-    """Convert iCalendar to plaintext (requires Python package 'vobject')"""
+    """Convert iCalendar to plaintext (requires Python package 'vobject')."""
 
     __kind__ = 'ical2text'
 
@@ -405,7 +404,7 @@ class Ical2TextFilter(FilterBase):
 
 
 class JsonFormatFilter(FilterBase):
-    """Convert to formatted JSON"""
+    """Convert to formatted JSON."""
 
     __kind__ = 'format-json'
 
@@ -425,7 +424,7 @@ class JsonFormatFilter(FilterBase):
 
 
 class XMLFormatFilter(FilterBase):
-    """Convert to formatted XML"""
+    """Convert to formatted XML."""
 
     __kind__ = 'format-xml'
 
@@ -443,7 +442,7 @@ class XMLFormatFilter(FilterBase):
 
 
 class KeepLinesFilter(FilterBase):
-    """Filter only lines matching a regular expression"""
+    """Filter only lines matching a regular expression."""
 
     __kind__ = 'keep_lines_containing'
 
@@ -465,7 +464,7 @@ class KeepLinesFilter(FilterBase):
 
 
 class GrepFilter(FilterBase):
-    """Deprecated; use keep_lines_containing instead"""
+    """Deprecated; use keep_lines_containing instead."""
 
     __kind__ = 'grep'
 
@@ -476,13 +475,14 @@ class GrepFilter(FilterBase):
     __default_subfilter__ = 're'
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
-        logger.warning(f"'grep' filter is deprecated; replace with 'keep_lines_containing' (+ 're' subfilter)"
-                       f' ( {self.job.get_location()} )', DeprecationWarning)
+        print(f'{self.job.get_location()}')
+        warnings.warn(f"'grep' filter is deprecated; replace with 'keep_lines_containing' (+ 're' subfilter)"
+                      f' ( {self.job.get_location()} )', DeprecationWarning)
         return KeepLinesFilter.filter(self, data, subfilter)
 
 
 class DeleteLinesFilter(FilterBase):
-    """Remove lines matching a regular expression"""
+    """Remove lines matching a regular expression."""
 
     __kind__ = 'delete_lines_containing'
 
@@ -504,7 +504,7 @@ class DeleteLinesFilter(FilterBase):
 
 
 class InverseGrepFilter(FilterBase):
-    """Deprecated; use delete_lines_containing instead"""
+    """Deprecated; use delete_lines_containing instead."""
 
     __kind__ = 'grepi'
 
@@ -515,13 +515,13 @@ class InverseGrepFilter(FilterBase):
     __default_subfilter__ = 're'
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
-        logger.warning(f"'grepi' filter is deprecated; replace with 'delete_lines_containing (+ 're' subfilter')"
-                       f' ( {self.job.get_location()} )', DeprecationWarning)
+        warnings.warn(f"'grepi' filter is deprecated; replace with 'delete_lines_containing (+ 're' subfilter')"
+                      f' ( {self.job.get_location()} )', DeprecationWarning)
         return DeleteLinesFilter.filter(self, data, subfilter)
 
 
 class StripFilter(FilterBase):
-    """Strip leading and trailing whitespace"""
+    """Strip leading and trailing whitespace."""
 
     __kind__ = 'strip'
 
@@ -532,7 +532,7 @@ class StripFilter(FilterBase):
 
 
 class StripEmptyLines(FilterBase):
-    """Strip leading and trailing whitespace"""
+    """Strip leading and trailing whitespace."""
 
     __kind__ = 'strip_empty_lines'
 
@@ -592,7 +592,7 @@ class ElementsBy(html.parser.HTMLParser, metaclass=ABCMeta):
 
 
 class GetElementById(FilterBase):
-    """Get an HTML element by its ID"""
+    """Get an HTML element by its ID."""
 
     __kind__ = 'element-by-id'
 
@@ -612,7 +612,7 @@ class GetElementById(FilterBase):
 
 
 class GetElementByClass(FilterBase):
-    """Get all HTML elements by class"""
+    """Get all HTML elements by class."""
 
     __kind__ = 'element-by-class'
 
@@ -632,7 +632,7 @@ class GetElementByClass(FilterBase):
 
 
 class GetElementByStyle(FilterBase):
-    """Get all HTML elements by style"""
+    """Get all HTML elements by style."""
 
     __kind__ = 'element-by-style'
 
@@ -672,7 +672,7 @@ class GetElementByTag(FilterBase):
 
 
 class Sha1Filter(FilterBase):
-    """Calculate the SHA-1 checksum of the content"""
+    """Calculate the SHA-1 checksum of the content."""
 
     __kind__ = 'sha1sum'
 
@@ -685,7 +685,7 @@ class Sha1Filter(FilterBase):
 
 
 class HexdumpFilter(FilterBase):
-    """Convert binary data to hex dump format"""
+    """Convert binary data to hex dump format."""
 
     __kind__ = 'hexdump'
 
@@ -830,7 +830,7 @@ LXML_PARSER_COMMON_SUBFILTERS = {
 
 
 class CssFilter(FilterBase):
-    """Filter XML/HTML using CSS selectors"""
+    """Filter XML/HTML using CSS selectors."""
 
     __kind__ = 'css'
 
@@ -848,7 +848,7 @@ class CssFilter(FilterBase):
 
 
 class XPathFilter(FilterBase):
-    """Filter XML/HTML using XPath expressions"""
+    """Filter XML/HTML using XPath expressions."""
 
     __kind__ = 'xpath'
 
@@ -866,7 +866,7 @@ class XPathFilter(FilterBase):
 
 
 class RegexSub(FilterBase):
-    """Replace text with regular expressions using Python's re.sub"""
+    """Replace text with regular expressions using Python's re.sub."""
 
     __kind__ = 're.sub'
 
@@ -886,7 +886,7 @@ class RegexSub(FilterBase):
 
 
 class SortFilter(FilterBase):
-    """Sort input items"""
+    """Sort input items."""
 
     __kind__ = 'sort'
 
@@ -904,7 +904,7 @@ class SortFilter(FilterBase):
 
 
 class ReverseFilter(FilterBase):
-    """Reverse input items"""
+    """Reverse sort input items."""
 
     __kind__ = 'reverse'
 
@@ -920,7 +920,7 @@ class ReverseFilter(FilterBase):
 
 
 class ShellPipeFilter(FilterBase):
-    """Filter using a shell command"""
+    """Filter using a shell command."""
 
     __kind__ = 'shellpipe'
 
@@ -958,7 +958,7 @@ class ShellPipeFilter(FilterBase):
 
 
 class OCRFilter(FilterBase):
-    """Convert text in images to plaintext (requires Python packages 'pytesseract' and 'Pillow')"""
+    """Convert text in images to plaintext (requires Python packages 'pytesseract' and 'Pillow')."""
 
     __kind__ = 'ocr'
     __uses_bytes__ = True

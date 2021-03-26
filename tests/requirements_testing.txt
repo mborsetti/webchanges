@@ -1,9 +1,9 @@
 coverage
 docutils
-minidb
 pre-commit
 pyppeteer
 pytest
 pytest-cov
+setuptools
 sphinx
 sphinx_rtd_theme

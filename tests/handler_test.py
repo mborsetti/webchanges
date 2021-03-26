@@ -4,6 +4,7 @@ import sys
 import tempfile
 import warnings
 
+import pkg_resources  # from setuptools
 import pytest
 
 from webchanges import __project_name__
@@ -11,8 +12,14 @@ from webchanges.config import BaseConfig
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, DEFAULT_CONFIG, JobsYaml, YamlConfigStorage
-from webchanges.storage_minidb import CacheMiniDBStorage
 from webchanges.util import import_module_from_source
+
+installed_packages = [pkg.key for pkg in pkg_resources.working_set]
+
+if 'minidb' in installed_packages:
+    from webchanges.storage_minidb import CacheMiniDBStorage
+
+minidb_required = pytest.mark.skipif('minidb' not in installed_packages, reason="requires 'minidb' package")
 
 pkgname = __project_name__
 root = os.path.join(os.path.dirname(__file__), f'../{pkgname}', '..')
@@ -98,6 +105,7 @@ def teardown_func():
                 os.remove(filename)
 
 
+@minidb_required
 def test_run_watcher_minidb():
     with teardown_func():
         # jobs_file = os.path.join(root, 'share', 'examples', 'jobs-example.yaml')
@@ -154,6 +162,7 @@ def test_unserialize_with_unknown_key():
         })
 
 
+@minidb_required
 def prepare_retry_test_minidb():
     jobs_file = os.path.join(here, 'data', 'invalid-url.yaml')
     config_file = os.path.join(here, 'data', 'config.yaml')
@@ -170,6 +179,7 @@ def prepare_retry_test_minidb():
     return urlwatcher, cache_storage
 
 
+@minidb_required
 def test_number_of_tries_in_cache_is_increased_minidb():
     with teardown_func():
         urlwatcher, cache_storage = prepare_retry_test_minidb()
@@ -190,6 +200,7 @@ def test_number_of_tries_in_cache_is_increased_minidb():
             cache_storage.close()
 
 
+@minidb_required
 def test_report_error_when_out_of_tries_minidb():
     with teardown_func():
         urlwatcher, cache_storage = prepare_retry_test_minidb()
@@ -207,6 +218,7 @@ def test_report_error_when_out_of_tries_minidb():
             cache_storage.close()
 
 
+@minidb_required
 def test_reset_tries_to_zero_when_successful_minidb():
     with teardown_func():
         urlwatcher, cache_storage = prepare_retry_test_minidb()

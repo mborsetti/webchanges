@@ -1,11 +1,12 @@
-"""Legacy minidb cache database
+"""Legacy minidb cache database.
 
-Code loaded only:
+Code is loaded only:
+
 * when reading databases created in version < 3.2.0
 * when running with the '--dababase-engine minidb' switch
 * testing (to be deprecated)
 
-Having it into a standalone module allows running the program without having the minidb package installed
+Having it into a standalone module allows running the program without having the minidb package installed.
 """
 
 import os
@@ -16,7 +17,9 @@ from .storage import CacheStorage
 try:
     import minidb
 except ImportError:
-    minidb = None
+    class minidb():
+        class Model():
+            pass
 
 
 class CacheMiniDBStorage(CacheStorage):
@@ -31,7 +34,7 @@ class CacheMiniDBStorage(CacheStorage):
     def __init__(self, filename) -> None:
         super().__init__(filename)
 
-        if minidb is None:
+        if isinstance(minidb, type):
             raise ImportError("Python package 'minidb' is missing")
 
         dirname = os.path.dirname(filename)

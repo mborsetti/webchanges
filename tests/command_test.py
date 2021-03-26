@@ -42,8 +42,8 @@ if visual:
 
 
 def test_migration():
-    """test migration of legacy urlwatch files"""
-    assert not migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file)
+    """test check for existence of legacy urlwatch 2.2 files in urlwatch dirdir """
+    assert migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file) is None
 
 
 def test_edit_hooks():
@@ -55,6 +55,18 @@ def test_edit_hooks():
     assert pytest_wrapped_e.value.code is None
 
 
+def test_edit_hooks_fail():
+    editor = os.getenv('EDITOR')
+    os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
+    setattr(command_config, 'edit_hooks', True)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'edit_hooks', False)
+    os.environ['EDITOR'] = editor
+    assert pytest_wrapped_e.value.code == 1
+
+
 def test_show_features():
     setattr(command_config, 'features', True)
     urlwatch_command = UrlwatchCommand(urlwatcher)
@@ -64,23 +76,50 @@ def test_show_features():
     assert pytest_wrapped_e.value.code is None
 
 
-def test_list_jobs():
+def test_list_jobs_verbose():
     setattr(command_config, 'list', True)
+    urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
+    urlwatcher.urlwatch_config.verbose = False
     urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'list', False)
+    urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
+    assert pytest_wrapped_e.value.code is None
+
+
+def test_list_jobs_not_verbose():
+    setattr(command_config, 'list', True)
+    urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
+    urlwatcher.urlwatch_config.verbose = False
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'list', False)
+    urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     assert pytest_wrapped_e.value.code is None
 
 
 def test__find_job():
     urlwatch_command = UrlwatchCommand(urlwatcher)
-    assert not urlwatch_command._find_job('https://example.com/')
+    assert urlwatch_command._find_job('https://example.com/') is None
+
+
+def test__find_job_index_error():
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    assert urlwatch_command._find_job(100) is None
 
 
 def test__get_job():
     urlwatch_command = UrlwatchCommand(urlwatcher)
-    assert 'echo test' == urlwatch_command._get_job(1).get_location()
+    assert urlwatch_command._get_job(1).get_location() == 'echo test'
+
+
+def test__get_job_index_error():
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command._get_job(100).get_location()
+    assert pytest_wrapped_e.value.code == 1
 
 
 def test_test_job():
@@ -110,22 +149,68 @@ def test_list_error_jobs():
     assert pytest_wrapped_e.value.code is None
 
 
-# def test_modify_urls():
-#     pass
-
-
-def test_check_edit_config():
-    setattr(command_config, 'edit', True)
+def test_modify_urls():
+    setattr(command_config, 'add', 'url=https://www.example.com/#test_modify_urls')
     urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    urlwatch_command.urlwatcher.close()
-    setattr(command_config, 'edit', False)
+    setattr(command_config, 'add', None)
     assert pytest_wrapped_e.value.code is None
-    #
-    # urlwatch_command = UrlwatchCommand(urlwatcher)
-    # assert not urlwatch_command.check_edit_config()
-    # urlwatch_command.urlwatcher.close()
+    setattr(command_config, 'delete', 'https://www.example.com/#test_modify_urls')
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'delete', None)
+    assert pytest_wrapped_e.value.code is None
+
+
+def test_gc_cache():
+    setattr(command_config, 'gc_cache', True)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'gc_cache', False)
+    assert pytest_wrapped_e.value.code == 0
+
+
+def test_clean_cache():
+    setattr(command_config, 'clean_cache', True)
+    urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'clean_cache', False)
+    assert pytest_wrapped_e.value.code == 0
+
+
+def test_rollback_cache():
+    setattr(command_config, 'rollback_cache', True)
+    urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'rollback_cache', False)
+    assert pytest_wrapped_e.value.code == 0
+
+
+def test_check_edit_config():
+    setattr(command_config, 'edit_config', True)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.check_edit_config()
+    setattr(command_config, 'edit_config', False)
+    assert pytest_wrapped_e.value.code is None
+
+
+def test_check_edit_config_fail():
+    editor = os.getenv('EDITOR')
+    os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
+    setattr(command_config, 'edit_config', True)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(OSError) as pytest_wrapped_e:
+        urlwatch_command.check_edit_config()
+    setattr(command_config, 'edit_config', False)
+    os.environ['EDITOR'] = editor
+    assert 'pytest: ' in str(pytest_wrapped_e.value)
 
 
 def test_check_telegram_chats():
@@ -133,19 +218,17 @@ def test_check_telegram_chats():
     setattr(command_config, 'telegram_chats', False)
     assert not urlwatch_command.check_telegram_chats()
     setattr(command_config, 'telegram_chats', True)
-    try:
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.check_telegram_chats()
-    except SystemExit as e:
-        assert e.code == 1
+    assert pytest_wrapped_e.value.code == 1
 
 
 def test_check_test_reporter():
     urlwatch_command = UrlwatchCommand(urlwatcher)
     setattr(command_config, 'test_reporter', 'stdout')
-    try:
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.check_test_reporter()
-    except SystemExit as e:
-        assert e.code == 0
+    assert pytest_wrapped_e.value.code == 0
 
 
 def test_check_smtp_login():
@@ -153,10 +236,9 @@ def test_check_smtp_login():
     setattr(command_config, 'smtp_login', False)
     assert not urlwatch_command.check_smtp_login()
     setattr(command_config, 'smtp_login', True)
-    try:
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.check_smtp_login()
-    except SystemExit as e:
-        assert e.code == 1
+    assert pytest_wrapped_e.value.code == 1
 
 
 def test_check_xmpp_login():
@@ -164,10 +246,9 @@ def test_check_xmpp_login():
     setattr(command_config, 'xmpp_login', False)
     assert not urlwatch_command.check_xmpp_login()
     setattr(command_config, 'xmpp_login', True)
-    try:
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.check_xmpp_login()
-    except SystemExit as e:
-        assert e.code == 1
+    assert pytest_wrapped_e.value.code == 1
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -178,7 +259,15 @@ def cleanup(request):
             os.environ['EDITOR'] = editor
         if visual:
             os.environ['VISUAL'] = visual
-        for filename in (cache_file,):
+        try:
+            urlwatcher.close()
+        except AttributeError:
+            pass
+        fn_base, fn_ext = os.path.splitext(config_file)
+        config_edit = f'{fn_base}.edit{fn_ext}'
+        fn_base, fn_ext = os.path.splitext(hooks_file)
+        hooks_edit = f'{fn_base}.edit{fn_ext}'
+        for filename in (cache_file, config_edit, hooks_edit):
             if os.path.exists(filename):
                 os.remove(filename)
 

@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class ShellError(Exception):
-    """Exception for shell commands with non-zero exit code"""
+    """Exception for shell commands with non-zero exit code."""
 
     def __init__(self, result) -> None:
         Exception.__init__(self)
@@ -39,7 +39,7 @@ class ShellError(Exception):
 
 
 class NotModifiedError(Exception):
-    """Exception raised on HTTP 304 responses"""
+    """Exception raised on HTTP 304 responses."""
     ...
 
 
@@ -227,7 +227,7 @@ class Job(JobBase):
 
 
 class UrlJob(Job):
-    """Retrieve a URL from a web server"""
+    """Retrieve a URL from a web server."""
 
     __kind__ = 'url'
 
@@ -384,7 +384,7 @@ class UrlJob(Job):
 
 
 class BrowserJob(Job):
-    """Retrieve a URL, emulating a real web browser (use_browser: true)"""
+    """Retrieve a URL, emulating a real web browser (use_browser: true)."""
 
     __kind__ = 'browser'
 
@@ -436,7 +436,7 @@ class BrowserJob(Job):
     @staticmethod
     def current_platform() -> str:
         """Get current platform name by short string as used by Pyppeteer for downloading Chromium.
-        Originally from pyppeteer.chromium_downloader"""
+        Originally from pyppeteer.chromium_downloader."""
         if sys.platform.startswith('linux'):
             return 'linux'
         elif sys.platform.startswith('darwin'):
@@ -570,7 +570,7 @@ class BrowserJob(Job):
 
 
 class ShellJob(Job):
-    """Run a shell command and get its standard output"""
+    """Run a shell command and get its standard output."""
 
     __kind__ = 'shell'
 

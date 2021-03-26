@@ -337,3 +337,34 @@ re_sub_multiline:
     One Line
 
     Another Line
+html2text_bs4:
+  filter:
+    - html2text:
+        method: bs4
+        parser: html.parser
+  data: |-
+    <html><body>This is some text</body></html>
+  expected_result: |-
+    This is some text
+deprecated_grep:
+  filter:
+    - grep: blue
+  data: |
+      The rose is red;
+      the violet's blue.
+      Sugar is sweet,
+      and so are you.
+  expected_result: |-
+      the violet's blue.
+deprecated_grepi:
+  filter:
+    - grepi: blue
+  data: |
+      The rose is red;
+      the violet's blue.
+      Sugar is sweet,
+      and so are you.
+  expected_result: |-
+      The rose is red;
+      Sugar is sweet,
+      and so are you.

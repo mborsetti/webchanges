@@ -53,9 +53,13 @@ jobs:
 #        python-version: ['3.9']
         include:
         - os: ubuntu-latest
-          pipcachepath: ~/.cache/pip
+          pipcachepath: |
+            ~/.cache/pip
+            /var/cache/apt/archives
         - os: macos-latest
-          pipcachepath: ~/Library/Caches/pip
+          pipcachepath: |
+            ~/Library/Caches/pip
+            ~/Library/Caches/Homebrew
 #        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 20-mar-21
 #                              # https://github.com/pytest-dev/pytest/discussions/6349
 #          pipcachepath: ~\AppData\Local\pip\Cache
@@ -77,7 +81,7 @@ jobs:
 
       # Cache and reuse dependencies between runs
       # https://docs.github.com/en/actions/guides/building-and-testing-python#caching-dependencies
-      - name: Cache pip
+      - name: Cache
         uses: actions/cache@main
         with:
           path: ${{ matrix.pipcachepath }}
@@ -86,7 +90,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.python-version }}-pip-
 
-      - name: Install  pdf2text and ocr dependencies (Linux)
+      - name: Install pdf2text and ocr dependencies (Linux Python 3.9)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'Linux'
         run: |
@@ -94,14 +98,14 @@ jobs:
           sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
           python -m pip install -U pdftotext Pillow pytesseract
 
-      - name: Install pdf2text and ocr dependencies (macOS)
+      - name: Install pdf2text and ocr dependencies (macOS Python 3.9)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'macOS'
         run: |
           brew install pkg-config poppler python tesseract
           python -m pip install -U pdftotext Pillow pytesseract
 
-      - name: Install pdf2text and ocr dependencies (Windows)
+      - name: Install pdf2text and ocr dependencies (Windows Python 3.9)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'Windows'
         run: |

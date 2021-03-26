@@ -1,4 +1,4 @@
-"""Command-line configuration. For program config files, see storage.py"""
+"""Command-line configuration."""
 
 import argparse
 
@@ -58,6 +58,7 @@ class CommandConfig(BaseConfig):
         self.parse_args()
 
     def parse_args(self) -> argparse.ArgumentParser:
+        """Python arguments parser."""
         parser = argparse.ArgumentParser(description=project.__doc__.replace('\n\n', '--par--').replace('\n', ' ')
                                          .replace('--par--', '\n\n'),
                                          formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -74,15 +75,16 @@ class CommandConfig(BaseConfig):
                                                             'alternatively can accept a redis URI'), default=self.cache)
         group = parser.add_argument_group('job management')
         group.add_argument('--list', action='store_true', help='list jobs')
-        group.add_argument('--test', '--test-filter', dest='test_job', metavar='JOB',
-                           help='test job and its filter (by URL/command or index)')
-        group.add_argument('--test-diff', '--test-diff-filter', dest='test_diff', metavar='JOB',
-                           help="test job's diff filter (up to 10 historical snapshots) (by URL/command or index)")
         group.add_argument('--errors', action='store_true', help='list jobs with errors or no data captured')
-        group.add_argument('--add', metavar='JOB', help='add job (key1=value1,key2=value2,...) (obsolete; use --edit)')
+        group.add_argument('--test', '--test-filter', dest='test_job', metavar='JOB',
+                           help='test a job (by index or URL/command) and show filtered output')
+        group.add_argument('--test-diff', '--test-diff-filter', dest='test_diff', metavar='JOB',
+                           help='show up to 10 diffs from saved snapshots (by URL/command or index)')
+        group.add_argument('--add', metavar='JOB', help='add job (key1=value1,key2=value2,...). WARNING: all remarks '
+                                                        'are deleted from jobs file; use --edit instead!')
         group.add_argument('--delete', metavar='JOB',
-                           help='delete job by URL/command or index number. WARNING: all remarks are deleted from file '
-                                '(obsolete; use --edit)')
+                           help='delete job by URL/command or index number. WARNING: all remarks are deleted from jobs '
+                                'file; use --edit instead!')
 
         group = parser.add_argument_group('reporters')
         group.add_argument('--test-reporter', metavar='REPORTER', help='send a test notification')

@@ -17,34 +17,34 @@ Upgrading from urlwatch
 `webchanges` |version| is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as suggested by its author to
 optimize it for HTML, and is backward-compatible with `urlwatch 2.22`'s job and configuration files.
 
-Upgrading from a `urlwatch` 2.22 setup is automatic (see more below), and in addition to the visual improvements listed
+Upgrading from a `urlwatch` 2.22 setup is automatic (see more below) and, in addition to the visual improvements listed
 in the :ref:`introduction <introduction>`, it also implements:
 
 * An upgrade in Pyppeteer-based browsing to render JavaScript that includes:
 
   * using the same browser engine powering Chrome 89
-  * using Python's built-in ``asyncio.run()`` to manage the asyncio event loop, finalizing asynchronous generators, and
-    closing the threadpool instead of legacy custom code managing to increase reliability (only if running **Python
+  * increased reliability by using Python's built-in ``asyncio.run()`` to manage the asyncio event loop, finalizing
+    asynchronous generators, and closing the threadpool instead of legacy custom code (only if running **Python
     3.7** or higher)
   * reduction in concurrency for higher stability
   * new directives allowing much more flexibility and control: ``chromium_revision``, ``switches``, ``wait_until``,
     ``ignore_https_errors``, ``wait_for_navigate``, ``wait_for``, ``user_data_dir``, ``block_elements``, ``cookies``,
     ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
-  removes the need for a dependency
+  removes the need for a package dependency
 * The use of the webpage's title as a job ``name`` if one isn't provided and the ability to add a job ``note`` in the
   report
 * The optimization of the default settings of the ``html2text`` filter for web content
-* A new ``--errors`` command line switch to show any jobs that error out or have empty responses after filters are
-  applied
+* A new ``--errors`` command line switch to help catching any problems by showing any jobs that error out or have empty
+  responses after filters are applied
 * The support of Unicode throughout, including in filters and in the YAML files containing jobs and configuration
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
   the new subdirective ``sort_keys``
-* An 11 percentage point increase in code testing coverage, completely new continuous integration (CI) and
-  continuous delivery (CD) pipeline, and testing on both Ubuntu **and** macOS (Windows 10 x64 to come) to
-  increase reliability of new releases
-* The support for Python 3.9
-* A vast improvements in documentation and error text
+* A 17 percentage point increase in code testing coverage, completely new continuous integration (CI) and
+  continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to come)
+  to increase reliability of new releases
+* The support of Python 3.9
+* A vast improvement in documentation and error text
 
 How-to
 ------
@@ -78,7 +78,7 @@ this: (see `here <https://github.com/thp/urlwatch/pull/600#issuecomment-75394467
 
 Deprecations
 ------------
-Of the changes (see below), the following are deprecations. While they will be removed in a future release, they
+Of the changes (see further below), the following are deprecations. While they will be removed in a future release, they
 are still working:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
@@ -182,9 +182,10 @@ Everything, except using ``lynx`` instead of the internal ``html2text`` filter, 
 * Using flake8 to check PEP-8 compliance and more
 * Using coverage to check unit testing coverage
 * Unicode is supported throughout, including in filters and YAML files containing jobs and configuration
-* A 10 percentage point increase in code testing coverage, a completely new continuous integration (CI) and continuous
-  delivery (CD) pipeline, and testing on both Ubuntu **and** macOS (Windows 10 x64 to come) increases reliability
-* A vast improvements in documentation and error text
+* A 17 percentage point increase in code testing coverage, a completely new continuous integration (CI) and continuous
+  delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to come) increase
+  reliability
+* A vast improvement in documentation and error text
 * The support for Python 3.9
 
 Fixed
@@ -198,4 +199,5 @@ Relative to `urlwatch` 2.22:
 * The presence of the ``data`` directive in a job would force the method to POST, impeding the ability to do PUTs
 * ``format-json`` filter from unexpectedly reordered contents of dictionaries; it no longer does that, but a new
   subdirective ``sort_keys`` allows you to set it to do so
-* Various system errors and freezes when running ``url`` jobs with ``use_browser: true`` (formerly ``navigate`` jobs)
+* Fixed various system errors and freezes when running ``url`` jobs with ``use_browser: true`` (formerly ``navigate``
+  jobs)

@@ -1,4 +1,5 @@
 - [ ] Smart "just works for the web" philosophy automatically applies correct filters for monitoring webpages
+- [ ] Switch to `defusedxml` if possible to prevent XML attacks 
 - [ ] Add more tests
   - [ ] Increase line coverage
 - [ ] Document code
@@ -11,4 +12,4 @@
   - [ ] If the retrieved data were only saved to the database after it was output, this way of missing diffs would 
         be prevented
   - [ ] Provide a convenient way to show past diffs that might have been missed due to exceptions or user error
-- [ ] Consider removing --add JOB and --delete JOB code
+- [ ] Figure out what to do with `--add JOB` and `--delete JOB`

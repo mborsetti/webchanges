@@ -66,7 +66,7 @@ repos:
 #        description: Forces replacing of line ending by the UNIX 'lf' character
 #        note: switched to using gitattributes https://git-scm.com/docs/gitattributes
       - id: name-tests-test
-        description: Assert that files in tests/ end in _test.py
+        description: Assert that Python files in tests/ end in _test.py
 #      - id: no-commit-to-branch
 #        description: Protect specific branches from direct checkins.
 #      - id: pretty-format-json
@@ -124,10 +124,18 @@ repos:
 #      - id: rstcheck
 #        name: Check *.rst syntax (rstcheck)
 
+#  - repo: local
+#    hooks:
+#      - id: python -m sphinx.apidoc
+#        name: Build autodoc API subdirectory (sphinx-apidoc)
+#        entry: sphinx-apidoc
+#        args: [-f, -e, -T, -o, docs\_api, webchanges]
+#        language: system
+
   - repo: local
     hooks:
       - id: sphinx-build
-        name: Check documentation (sphinx-build)
+        name: Check documentation build (sphinx-build)
         entry: python -m sphinx.cmd.build
         args: [-a, -E, -W, docs, docs/_build]
         language: system

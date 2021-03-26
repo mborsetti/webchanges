@@ -4,6 +4,8 @@
    and check the html generated.
    Tutorial at https://sphinx-tutorial.readthedocs.io/start/
 
+.. to rebuild the API autodoc run $ sphinx-apidoc -f -e -T -o docs\_api webchanges
+
 
 .. highlight:: none
 
@@ -20,7 +22,6 @@ Documentation table of contents
 
    Overview <self>
    introduction
-   yaml_syntax
 
 .. toctree::
    :maxdepth: 1
@@ -32,14 +33,15 @@ Documentation table of contents
    diff_filters
    reports
    reporters
+   cli
    dependencies
+   yaml_syntax
 
 .. toctree::
    :maxdepth: 1
    :caption: Advanced
 
    advanced
-   cli
    hooks
 
 .. toctree::
@@ -55,11 +57,9 @@ Documentation table of contents
    contributing
    changelog
 
-..
-   Lots of work required to make autosummary work so commented it out
-   autosummary
-   :toctree: _autosummary
-   :caption: Code autodoc
-   :recursive:
-..
-   webchanges
+.. to rebuild the API autodoc run $ sphinx-apidoc -f -e -T -o docs\_api webchanges
+
+.. toctree::
+   :caption: API Reference
+
+   _api/webchanges
