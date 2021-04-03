@@ -24,7 +24,6 @@ try:
 except ImportError:
     diff_match_patch = None
 
-
 logger = logging.getLogger(__name__)
 
 

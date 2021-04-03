@@ -31,6 +31,11 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals for changes that don't affect users.
 
 
+Version 3.2.6.post0
+====================
+Unreleased
+
+
 Version 3.2.6
 ===================
 2021-03-21
@@ -45,7 +50,7 @@ Internal
 * Replaced custom atomic_rename function with built-in `os.replace()
   <https://docs.python.org/3/library/os.html#os.replace>`__ (new in Python 3.3) that does the same thing
 * Added type hinting to the entire code
-* Added new tests, increasing coverage to 57%
+* Added new tests, increasing coverage to 61%
 * GitHub Actions CI now runs faster as it's set to cache required packages from prior runs
 
 Known issues

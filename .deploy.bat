@@ -3,9 +3,10 @@
 REM Windows batch file to deploy new release
 
 REM Always work from the unreleased branch:
-REM 1) create a rc and push (upload) it. Ensure CI works
-REM 2) update bumpversion.cfg to ensure that it has the correct substitution bits
-REM 3) run this file!
+REM 1) create a rc version (e.g. bump2version prekind)
+REM 2) push (upload) it. Ensure CI works
+REM 3) update bumpversion.cfg to ensure that it has the correct substitution bits
+REM 4) run this file!
 
 set "project=%~dp0"
 set "project=%project:~0,-1%"
@@ -28,7 +29,10 @@ if %r% EQU n exit /b
 set /p r=Did you copy the release info from CHANGELOG.rst to RELEASE.rst? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
-set /p v=Do you want to bump by a major, minor or patch version? [minor] || set v=minor
+set /p r=Did you commit all files (other than those modified by bump2version)? [N/y] || set r=n
+if %r% EQU N r=n
+if %r% EQU n exit /b
+set /p v=Do you want to bump by prekind (i.e. from rc) or major, minor or patch version? [prekind] || set v=prekind
 echo.
 bump2version --verbose --allow-dirty --dry-run --commit --tag --no-sign-tags %v%
 if NOT ["%errorlevel%"]==["0"] (

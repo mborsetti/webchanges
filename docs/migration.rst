@@ -35,12 +35,12 @@ in the :ref:`introduction <introduction>`, it also implements:
 * The use of the webpage's title as a job ``name`` if one isn't provided and the ability to add a job ``note`` in the
   report
 * The optimization of the default settings of the ``html2text`` filter for web content
-* A new ``--errors`` command line switch to help catching any problems by showing any jobs that error out or have empty
+* A new ``--errors`` command line argument to help catching any problems by showing any jobs that error out or have empty
   responses after filters are applied
 * The support of Unicode throughout, including in filters and in the YAML files containing jobs and configuration
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
   the new subdirective ``sort_keys``
-* A 17 percentage point increase in code testing coverage, completely new continuous integration (CI) and
+* A 19 percentage point increase in code testing coverage (to 61%), completely new continuous integration (CI) and
   continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to come)
   to increase reliability of new releases
 * The support of Python 3.9
@@ -90,8 +90,8 @@ are still working:
 * Method ``re`` of filter ``html2text`` is renamed to ``strip_tags``
 * Filter ``grep`` is renamed to ``keep_lines_containing``
 * Filter ``grepi`` is renamed to ``delete_lines_containing``
-* Command line ``--test-filter`` switch is renamed to ``--test``
-* Command line ``--test-diff-filter`` switch is renamed to ``--test-diff``
+* Command line ``--test-filter`` argument is renamed to ``--test``
+* Command line ``--test-diff-filter`` argument is renamed to ``--test-diff``
 
 Also be aware that:
 
@@ -141,24 +141,24 @@ Everything, except using ``lynx`` instead of the internal ``html2text`` filter, 
   warning
 * The ``grep`` filter has been renamed ``keep_lines_containing``, the old name deprecated and will trigger a warning; it
   will be removed in a future release
-* The ``grepi`` filter has been renamed ``delete_lines_containing``, the old name deprecated and will trigger a warning; it
-  will be removed in a future release
+* The ``grepi`` filter has been renamed ``delete_lines_containing``, the old name deprecated and will trigger a warning;
+  it will be removed in a future release
 * Both the ``keep_lines_containing`` and ``delete_lines_containing`` accept ``text`` (default) in addition to ``re``
   (regular expressions)
-* ``--test`` command line switch is used to test a job (formerly ``--test-filter``, deprecated and will be removed in
+* ``--test`` command line argument is used to test a job (formerly ``--test-filter``, deprecated and will be removed in
   a future release)
-* ``--test-diff`` command line switch is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated and will
-  be removed in a future release)
-* A new ``--errors`` command line switch will let you know what jobs error out or have empty responses after filters are
-  applied
-* ``-V`` command line switch added as an alias to ``--version``
+* ``--test-diff`` command line argument is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated and
+  will be removed in a future release)
+* A new ``--errors`` command line argument will let you know what jobs error out or have empty responses after filters
+  are applied
+* ``-V`` command line argument added as an alias to ``--version``
 * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
   the current directory, `webchanges` now looks for it in the default configuration directory
 * If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' suffix, `webchanges` now also looks for one
   with such a suffix
 * In Windows, ``--edit`` defaults to using built-in notepad.exe if either the %EDITOR% or %VISUAL% environment variable
   is not set
-* When using ``--job`` command line switch, if there's no file by that name in the specified directory will look in
+* When using ``--job`` command line argument, if there's no file by that name in the specified directory will look in
   the default one before giving up.
 * The use of the ``kind`` directive in ``jobs.yaml`` configuration files has been deprecated (but is, for now, still
   used internally); it will be removed in a future release
@@ -182,9 +182,9 @@ Everything, except using ``lynx`` instead of the internal ``html2text`` filter, 
 * Using flake8 to check PEP-8 compliance and more
 * Using coverage to check unit testing coverage
 * Unicode is supported throughout, including in filters and YAML files containing jobs and configuration
-* A 17 percentage point increase in code testing coverage, a completely new continuous integration (CI) and continuous
-  delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to come) increase
-  reliability
+* A 19 percentage point increase in code testing coverage (to 61%), a completely new continuous integration (CI) and
+  continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to come)
+  increase reliability of releases
 * A vast improvement in documentation and error text
 * The support for Python 3.9
 

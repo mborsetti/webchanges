@@ -99,7 +99,7 @@ class CommandConfig(BaseConfig):
         group.add_argument('--edit-config', action='store_true', help='edit configuration file')
         group.add_argument('--edit-hooks', action='store_true', help='edit hooks script')
 
-        group = parser.add_argument_group('miscellaneous')
+        group = parser.add_argument_group('database')
         group.add_argument('--gc-cache', action='store_true',
                            help='garbage collect the cache database by removing old snapshots plus all data of jobs'
                                 ' not in the jobs file')
@@ -108,6 +108,8 @@ class CommandConfig(BaseConfig):
                            help='delete recent snapshots > timestamp; backup the database before using!')
         group.add_argument('--database-engine', choices=['sqlite3', 'redis', 'minidb', 'textfiles'], default='sqlite3',
                            help='database engine to use (default: %(default)s unless redis URI in --cache)')
+
+        group = parser.add_argument_group('miscellaneous')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
 
         # workaround for avoiding triggering error when invoked by pytest

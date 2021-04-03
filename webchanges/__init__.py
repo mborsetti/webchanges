@@ -14,7 +14,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * PATCH version when you make backwards compatible bug fixes
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.2.6'
+__version__ = '3.2.6.post0'
 __min_python_version__ = (3, 6)  # minimum version of Python required to run
 __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'

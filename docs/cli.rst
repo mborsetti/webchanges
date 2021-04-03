@@ -1,8 +1,10 @@
 .. _command_line:
 
-=====================
-Command line switches
-=====================
+======================
+Command line arguments
+======================
+
+.. code block to column 105 only; beyond has horizontal scroll bar
 
 .. code-block::
 
@@ -16,7 +18,8 @@ Command line switches
                           read job list (URLs) from FILE
     --config FILE         read configuration from FILE
     --hooks FILE          use FILE as hooks.py module
-    --cache FILE          use FILE as a cache (snapshots database) or directory, alternatively can accept a redis URI
+    --cache FILE          use FILE as a cache (snapshots database) or directory, alternatively can
+                          accept a redis URI
 
   job management:
     --list                list jobs
@@ -25,10 +28,10 @@ Command line switches
                           test a job (by index or URL/command) and show filtered output
     --test-diff JOB, --test-diff-filter JOB
                           show up to 10 diffs from saved snapshots (by URL/command or index)
-    --add JOB             add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from jobs file; use
-                          --edit instead!
-    --delete JOB          delete job by URL/command or index number. WARNING: all remarks are deleted from jobs file;
-                          use --edit instead!
+    --add JOB             add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from
+                          jobs file; use --edit instead!
+    --delete JOB          delete job by URL/command or index number. WARNING: all remarks are deleted
+                          from jobs file; use --edit instead!
 
   reporters:
     --test-reporter REPORTER
@@ -42,26 +45,28 @@ Command line switches
     --edit-config         edit configuration file
     --edit-hooks          edit hooks script
 
-  miscellaneous:
-    --gc-cache            garbage collect the cache database by removing old snapshots plus all data of jobs not in
-                          the jobs file
+  database:
+    --gc-cache            garbage collect the cache database by removing old snapshots plus all data of
+                          jobs not in the jobs file
     --clean-cache         remove old snapshots from the cache database
     --rollback-cache TIMESTAMP
                           delete recent snapshots > timestamp; backup the database before using!
     --database-engine {sqlite3,redis,minidb,textfiles}
                           database engine to use (default: sqlite3 unless redis URI in --cache)
+
+  miscellaneous:
     --features            list supported job types, filters and reporters
 
 
 Check for potential errors
 --------------------------
-Running `webchanges` with the ``--error`` switch will run all jobs and report those who result in an error and alert you
-of any that, after filtering, return no data (as this may not be by design but due to, for example, changes in the
-monitored resource that went unnoticed).  No snapshots are saved from this run.
+You can see all jobs that result in an error or who, after filtering, return no data by running `webchanges` with the
+``--error`` argument. This can help with detecting jobs that may no longer be monitoring resources as expected.  No
+snapshots are saved from this run.
 
 Test the running of a job
 -------------------------
-You can test a job and its filter by using the switch ``--test`` followed by the job index number (from ``--list``) or
+You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
 its URL/command; `webchanges` will display the filtered output.  This allows to easily test changes in filters.
 
 Show diff from saved snapshots
@@ -74,10 +79,10 @@ test the effect of a diff filter.
 
 Rollback the database
 ---------------------
-You can rollback the snapshots database to an earlier time by running `webchanges` with the ``--rollback-cache`` switch
-followed by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating the point in time you want to go
-back to. Useful when you missed notifications or they got lost: rollback the database to the time of the last good
-report, then run `webchanges` again to get a new report with the differences since that time.
+You can rollback the snapshots database to an earlier time by running `webchanges` with the ``--rollback-cache``
+argument followed by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating the point in time you
+want to go back to. Useful when you missed notifications or they got lost: rollback the database to the time of the last
+good report, then run `webchanges` again to get a new report with the differences since that time.
 
 You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
 <https://www.unixtimestamp.com/>`__
@@ -107,7 +112,7 @@ for manual deletion.
 
 Redis
 ~~~~~
-To use Redis as a database (cache) backend, simply specify a redis URI in the ``--cache switch``:
+To use Redis as a database (cache) backend, simply specify a redis URI in the ``--cache`` argument:
 
 .. code-block:: bash
 
@@ -125,7 +130,7 @@ To have the latest snapshot of each job saved as a separate text file instead of
 minidb (legacy)
 ~~~~~~~~~~~~~~~
 To use the minidb-based database structure used in prior versions and in `urlwatch` 2, launch `webchanges` with the
-command line switch ``--cache-engine minidb``. The ``minidib`` Python package must be installed for this to work.
+command line argument ``--cache-engine minidb``. The ``minidib`` Python package must be installed for this to work.
 
 
 `New in version 3.2.`
