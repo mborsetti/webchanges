@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Module containing the entry point"""
+"""Module containing the entry point."""
 
 # See config module for the actual CLI arguments
 

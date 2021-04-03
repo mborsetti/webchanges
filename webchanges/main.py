@@ -1,4 +1,7 @@
-# for the entrypoint, see cli.py
+"""The main class.
+
+For the entrypoint, see cli.py
+"""
 
 import logging
 import os

@@ -1,6 +1,6 @@
 """
-Legacy code retained to run Pyppeteer with sys.version_info < (3, 7). It is not used if Python >= 3.7 as the BrowserJob
-class will run Pyppeteer from within using asyncio.run.
+Legacy code retained to run Pyppeteer if Python < 3.7; not used otherwise as with Python >= 3.7 the BrowserJob class
+will use asyncio.run to run Pyppeteer from within.
 
 This module is not included in testing coverage and is not type hinted.
 """

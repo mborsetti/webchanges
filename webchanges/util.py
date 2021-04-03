@@ -1,3 +1,5 @@
+"""A few utilities used elsewhere."""
+
 import html
 import importlib.machinery
 import importlib.util

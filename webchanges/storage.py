@@ -1,3 +1,5 @@
+"""Handles all storage: job files, config files, hooks file, and cache database engines"""
+
 import copy
 import getpass
 import logging

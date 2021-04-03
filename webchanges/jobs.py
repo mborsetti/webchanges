@@ -1,3 +1,5 @@
+"""Jobs."""
+
 import asyncio
 import email.utils
 import hashlib
@@ -8,7 +10,7 @@ import subprocess
 import sys
 import textwrap
 from types import TracebackType
-from typing import Any, AnyStr, Dict, Optional, TYPE_CHECKING, Type
+from typing import Any, AnyStr, Dict, List, Optional, TYPE_CHECKING, Tuple, Type, Union
 from urllib.parse import urlsplit
 
 import requests
@@ -44,51 +46,54 @@ class NotModifiedError(Exception):
 
 
 class JobBase(object, metaclass=TrackSubClasses):
-    __subclasses__ = {}
+    __subclasses__: dict = {}
 
-    __required__ = ()
-    __optional__ = ()
+    __required__: Tuple[str] = ()
+    __optional__: Tuple[str] = ()
 
     # PyCharm IDE compatibility
-    __kind__ = ''
-    name = ''
-    note = ''
-    filter = ''
-    max_tries = ''
-    diff_tool = ''
-    additions_only = ''
-    deletions_only = ''
-    contextlines = ''
-    compared_versions = ''
-    is_markdown = ''
-    markdown_padded_tables = ''
-    diff_filter = ''
-    url = ''
-    cookies = ''
-    data = ''
-    method = ''
-    ssl_no_verify = ''
-    ignore_cached = ''
-    http_proxy = ''
-    https_proxy = ''
-    headers = ''
-    ignore_connection_errors = ''
-    ignore_http_error_codes = ''
-    encoding = ''
-    timeout = ''
-    ignore_timeout_errors = ''
-    ignore_too_many_redirects = ''
-    user_visible_url = ''
-    use_browser = ''
-    chromium_revision = ''
-    user_data_dir = ''
-    switches = ''
-    wait_until = ''
-    wait_for = ''
-    wait_for_navigation = ''
-    block_elements = ''
-    navigate = ''
-    command = ''
+    __kind__: str = ''
+    name: str = ''
+    note: str = ''
+    filter: Union[str, List[Union[str, Dict[str, Any]]]] = ''
+    max_tries: int = 0
+    diff_tool: str = ''
+    additions_only: bool = False
+    deletions_only: bool = False
+    contextlines: int = 0
+    compared_versions: int = 0
+    is_markdown: bool = False
+    markdown_padded_tables: bool = False
+    diff_filter: str = ''
+    url: str = ''
+    cookies: Dict[str, str] = {}
+    data: AnyStr = ''
+    method: str = ''
+    ssl_no_verify: bool = False
+    ignore_cached: bool = False
+    http_proxy: str = ''
+    https_proxy: str = ''
+    headers: Dict[str, str] = {}
+    ignore_connection_errors: bool = False
+    ignore_http_error_codes: bool = False
+    encoding: str = ''
+    timeout: int = 0
+    ignore_timeout_errors: bool = False
+    ignore_too_many_redirects: bool = False
+    user_visible_url: str = ''
+    use_browser: bool = False
+    chromium_revision: Union[Dict[str, Union[str, int]], Union[str, int]] = {}
+    user_data_dir: str = ''
+    switches: List[str] = ''
+    wait_until: str = ''
+    wait_for: Union[int, str] = 0
+    wait_for_navigation: Union[str, Tuple[str, ...]] = ''
+    block_elements: list = ''
+    navigate: str = ''
+    command: str = ''
+    proxy_username: str = ''
+    proxy_password: str = ''
+    ctx = None  # Python 3.7
 
     def __init__(self, **kwargs) -> None:
         # Set optional keys to None
@@ -199,7 +204,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         sha_hash.update(location.encode())
         return sha_hash.hexdigest()
 
-    def retrieve(self, job_state) -> NotImplementedError:
+    def retrieve(self, job_state) -> AnyStr:
         raise NotImplementedError()
 
     def main_thread_enter(self) -> None:
@@ -505,7 +510,7 @@ class BrowserJob(Job):
             await page.setExtraHTTPHeaders(self.headers)
         if self.cookies:
             await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
-        if (self.http_proxy or self.https_proxy):
+        if self.http_proxy or self.https_proxy:
             proxy_username = urlsplit(proxy).username if urlsplit(proxy).username else ''
             proxy_password = urlsplit(proxy).password if urlsplit(proxy).password else ''
             if proxy_username or proxy_password:

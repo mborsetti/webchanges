@@ -1,3 +1,5 @@
+"""Runs reports."""
+
 import asyncio
 import difflib
 import email.utils

@@ -1,3 +1,5 @@
+"""Handles the running of jobs and, afterwards, of the reports."""
+
 import difflib
 import email.utils
 import logging
@@ -12,17 +14,14 @@ from types import TracebackType
 from typing import Any, Collection, Iterable, TYPE_CHECKING, Type, Union
 
 from .filters import FilterBase
-from .jobs import NotModifiedError
+from .jobs import Job, NotModifiedError
 from .reporters import ReporterBase
+from .storage import CacheStorage
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from .main import Urlwatch
 
-try:
-    from diff_match_patch import diff_match_patch
-except ImportError:
-    diff_match_patch = None
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +41,7 @@ class JobState(object):
     etag = None
     error_ignored = False
 
-    def __init__(self, cache_storage, job) -> None:
+    def __init__(self, cache_storage: CacheStorage, job: Job) -> None:
         self.cache_storage = cache_storage
         self.job = job
         self._generated_diff = None
@@ -117,23 +116,6 @@ class JobState(object):
                 logger.debug(f'Increasing number of tries to {self.tries} for {self.job}')
 
         return self
-
-    def get_diff_match_patch(self) -> str:
-        """WORK IN PROGRESS use of diff_match_patch library"""
-        if self._generated_diff_match_patch is None:
-            if diff_match_patch is None:
-                raise ImportError('Python package "diff_match_patch" is not installed')
-
-            dmp = diff_match_patch()
-            diff = dmp.diff_main(self.old_data, self.new_data)
-            self._generated_diff_match_patch = dmp.diff_cleanupSemantic(diff)
-
-            # Apply any specified diff filters
-            for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.diff_filter):
-                self._generated_diff_match_patch = FilterBase.process(filter_kind, subfilter, self,
-                                                                      self._generated_diff_match_patch)
-
-        return self._generated_diff_match_patch
 
     def get_diff(self) -> str:
         if self._generated_diff is None:

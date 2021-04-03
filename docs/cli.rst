@@ -58,22 +58,22 @@ Command line arguments
     --features            list supported job types, filters and reporters
 
 
-Check for potential errors
---------------------------
-You can see all jobs that result in an error or who, after filtering, return no data by running `webchanges` with the
-``--error`` argument. This can help with detecting jobs that may no longer be monitoring resources as expected.  No
-snapshots are saved from this run.
+Show errors and no-data jobs
+----------------------------
+You can run all jobs and see those that result in an error or who, after filtering, return no data, by running
+`webchanges` with the ``--error`` argument. This can help with detecting jobs that may no longer be monitoring resources
+as expected. No snapshots are saved from this run.
 
-Test the running of a job
--------------------------
+Test run a job
+--------------
 You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
-its URL/command; `webchanges` will display the filtered output.  This allows to easily test changes in filters.
+its URL/command; `webchanges` will display the filtered output. This allows to easily test changes in filters.
 
 Show diff from saved snapshots
 ------------------------------
-You can use ``--test-diff`` followed by the job index number (from ``--list``) or its URL/command to display diffs from
-snapshots that have been saved (up to 10; obviously a minimum of 2 saved snapshots are required).  This allows you to
-test the effect of a diff filter.
+You can use the argument ``--test-diff`` followed by the job index number (from ``--list``) or its URL/command to
+display diffs from snapshots that have been saved (up to 10); obviously a minimum of 2 saved snapshots are required.
+This allows you to test the effect of a diff filter or see previous changes.
 
 .. _rollback-cache:
 

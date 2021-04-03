@@ -1,3 +1,5 @@
+"""Filters."""
+
 import hashlib
 import html.parser
 import io

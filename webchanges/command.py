@@ -1,3 +1,5 @@
+"""Take actions from command line arguments."""
+
 import contextlib
 import logging
 import os.path

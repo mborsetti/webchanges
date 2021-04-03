@@ -1,8 +1,10 @@
-import concurrent.futures
-import contextlib
+"""The worker that runs jobs in parallel."""
+
 import difflib
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from typing import Callable, Iterable, Optional, TYPE_CHECKING
 
 from .handler import JobState
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_parallel(func: Callable, items: Iterable, max_workers: Optional[int] = None):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for result in executor.map(func, items):
             yield result
 
@@ -27,12 +29,14 @@ def run_jobs(urlwatcher: 'Urlwatch') -> None:
     report = urlwatcher.report
 
     logger.debug(f'Processing {len(jobs)} jobs')
-    with contextlib.ExitStack() as exit_stack:
+    with ExitStack() as stack:
         max_workers = min(32, os.cpu_count()) if any(type(job) == BrowserJob for job in jobs) else None
         logger.debug(f'Max_workers set to {max_workers}')
-        for job_state in run_parallel(lambda job_state: job_state.process(),
-                                      (exit_stack.enter_context(JobState(cache_storage, job)) for job in jobs),
-                                      max_workers=max_workers):
+        for job_state in run_parallel(
+            lambda job_state: job_state.process(),
+            (stack.enter_context(JobState(cache_storage, job)) for job in jobs),
+            max_workers=max_workers
+        ):
             logger.debug(f'Job finished: {job_state.job}')
 
             if not job_state.job.max_tries:

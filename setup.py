@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-# this is run by pip or Docker to install the project
+"""Run by setuptools to build and distribute as a Python package wheel"""
+
 import re
 import sys
 
 from setuptools import setup
 
 import webchanges as project
-
-# from build_manpage import build_manpage
 
 if sys.version_info < project.__min_python_version__:
     sys.exit(f'{project.__project_name__} requires Python version '

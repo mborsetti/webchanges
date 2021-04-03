@@ -1,11 +1,13 @@
 """Command-line configuration."""
 
 import argparse
+from typing import Optional
 
 import webchanges as project
 
 
 class BaseConfig(object):
+    """Base configuration class"""
 
     def __init__(self, project_name: str, config_dir: str, config: str, jobs: str, cache: str, hooks: str,
                  verbose: bool) -> None:
@@ -16,27 +18,28 @@ class BaseConfig(object):
         self.cache = cache
         self.hooks = hooks
         self.verbose = verbose
-        self.list = False
-        self.test_job = None
-        self.test_diff = None
-        self.errors = False
-        self.add = None
-        self.delete = None
-        self.test_reporter = None
-        self.smtp_login = False
-        self.telegram_chats = False
-        self.xmpp_login = False
-        self.edit = False
-        self.edit_config = False
-        self.edit_hooks = False
-        self.gc_cache = False
-        self.clean_cache = False
-        self.rollback_cache = None
-        self.database_engine = False
-        self.features = False
+        self.list: bool = False
+        self.test_job: Optional[str] = None
+        self.test_diff: Optional[str] = None
+        self.errors: bool = False
+        self.add: Optional[str] = None
+        self.delete: Optional[str] = None
+        self.test_reporter: Optional[str] = None
+        self.smtp_login: bool = False
+        self.telegram_chats: bool = False
+        self.xmpp_login: bool = False
+        self.edit: bool = False
+        self.edit_config: bool = False
+        self.edit_hooks: bool = False
+        self.gc_cache: bool = False
+        self.clean_cache: bool = False
+        self.rollback_cache: Optional[str] = None
+        self.database_engine: str = 'sqlite3'
+        self.features: bool = False
 
 
 class CommandConfig(BaseConfig):
+    """Command line arguments configuration"""
 
     def __init__(self, project_name: str, config_dir: str, bindir: str, prefix: str, config: str, jobs: str, hooks: str,
                  cache: str, verbose: bool) -> None:
