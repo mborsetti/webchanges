@@ -18,6 +18,7 @@ TESTDATA = [
       'method': 'GET',
       'ssl_no_verify': False,
       'ignore_cached': True,
+      'no_redirects': True,
       'encoding': 'ascii',  # required for testing Python 3.6 in Windows as it has a tendency of erroring on cp1252
       'ignore_connection_errors': False,
       'ignore_http_error_codes': 200,

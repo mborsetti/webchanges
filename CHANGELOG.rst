@@ -37,7 +37,7 @@ Unreleased
 
 Added
 -----
-* Job directive (for ``url`` jobs) ``no_redirect``: disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection
+* Job directive (for ``url`` jobs) ``no_redirects``: disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection
   (true/false). Suggested by `snowman <https://github.com/snowman>`__ upstream `here
   <https://github.com/thp/urlwatch/issues/635>`__.
 
