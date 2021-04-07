@@ -1,6 +1,6 @@
 """Reads code in the filters.rst (help) documents and runs tests against the data in the data/doc_filer_testadata.yaml
 file"""
-import importlib
+import importlib.util
 import logging
 import os
 

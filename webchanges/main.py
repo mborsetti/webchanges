@@ -6,7 +6,7 @@ For the entrypoint, see cli.py
 import logging
 import os
 
-from .config import CommandConfig
+from .config import BaseConfig
 from .handler import Report
 from .storage import CacheStorage, JobsYaml, YamlConfigStorage
 from .util import import_module_from_source
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class Urlwatch(object):
 
-    def __init__(self, urlwatch_config: CommandConfig, config_storage: YamlConfigStorage,
+    def __init__(self, urlwatch_config: BaseConfig, config_storage: YamlConfigStorage,
                  cache_storage: CacheStorage, jobs_storage: JobsYaml) -> None:
 
         self.urlwatch_config = urlwatch_config

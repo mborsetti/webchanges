@@ -185,7 +185,7 @@ class BaseFileStorage(BaseStorage, metaclass=ABCMeta):
 
 
 class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename) -> None:
+    def __init__(self, filename: Optional[str]) -> None:
         super().__init__(filename)
         self.config = {}
         self.load()
@@ -335,7 +335,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
 class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
     @classmethod
-    def parse(cls, *args) -> Iterator[JobBase]:
+    def parse(cls, *args) -> List[JobBase]:
         filename = args[0]
         if filename is not None and os.path.exists(filename):
             with open(filename) as fp:
@@ -350,7 +350,7 @@ class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
             yaml.safe_dump_all([job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False,
                                allow_unicode=True)
 
-    def load(self, *args) -> Iterator[JobBase]:
+    def load(self, *args) -> List[JobBase]:
         with open(self.filename) as fp:
             return [JobBase.unserialize(job) for job in yaml.safe_load_all(fp) if job is not None]
 
@@ -361,7 +361,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def get_guids(self) -> Iterator[str]:
+    def get_guids(self) -> List[str]:
         ...
 
     @abstractmethod
