@@ -9,8 +9,8 @@ to the data once retrieved.
 The list of jobs to run are contained in the configuration file ``jobs.yaml``, a text file editable using any text
 editor or with the command ``webchanges --edit``.
 
-While optional, it is recommended that each job starts with a ``name`` entry.  If omitted and the data monitored is
-HTML, `webchanges` will automatically use the pages' title for a name.
+While optional, it is recommended that each job starts with a ``name`` entry. If omitted and the data monitored is
+HTML or XML, `webchanges` will automatically use the pages' title (up to 60 characters) for a name.
 
 .. code-block:: yaml
 
@@ -148,6 +148,7 @@ Optional directives
 For all ``url`` jobs:
 
 - ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
+- ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
 - ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`). `Added in version 3.0:` works for
   all ``url`` jobs.
 - ``headers``: Headers to send along with the request (a dict). `Added in version 3.0:` works for all ``url`` jobs.
@@ -258,8 +259,9 @@ Optional directives (for all job types)
 ---------------------------------------
 These optional directives apply to all job types:
 
-- ``name``: Human-readable name/label of the job (if not specified: if content is HTML, the title; otherwise the URL or
-  command). `New in version 3.0:` auto-detect from HTML.
+- ``name``: Human-readable name/label of the job (if not specified and the job is ``url`` and the content is HTML or
+  XML, the title (up to 60 characters) will be used; otherwise the URL or command). `New in version 3.0:` auto-detect
+  from HTML or XML.
 - ``max_tries``: Number of consecutive times the job has to fail before reporting an error (default: 1); see
   :ref:`below <max_tries>`
 - ``diff_tool``: Command to an external tool for generating diff text. See example usage :ref:`here <word_based_differ>`

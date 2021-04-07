@@ -42,10 +42,15 @@ Added
   <https://github.com/thp/urlwatch/issues/635>`__.
 * Alert when the job file contains unrecognized directives (e.g. typo)
 
+Changed
+--------
+* When the directive ``name`` is not used in a ``url`` job and a title is found on the page and is used for a name, it
+  is now truncated to 60 characters
+
 Fixed
 -----
 * ``use_browser: false`` was not being interpreted correctly
-* Load jobs file (e.g. ``jobs.yaml``) only once
+* Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
 
 
 Version 3.2.6

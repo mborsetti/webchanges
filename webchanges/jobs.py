@@ -357,11 +357,11 @@ class UrlJob(Job):
             # whatever the chardet library detects it to be
             response.encoding = response.apparent_encoding
 
-        # if no name is given, set it to the title of the page if found in HTML/XML
+        # if no name is given, set it to the title element if found in HTML or XML truncated to 60 characters
         if not self.name:
-            title = re.findall(r'<title.*?>(.+?)</title>', response.text)
+            title = re.search(r'<title.*?>(.+?)</title>', response.text)
             if title:
-                self.name = title[0]
+                self.name = title.group(1)[:60]
 
         return response.text
 
