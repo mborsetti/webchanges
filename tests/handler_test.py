@@ -1,10 +1,10 @@
 import contextlib
+import importlib
 import os
 import sys
 import tempfile
 import warnings
 
-import pkg_resources  # from setuptools
 import pytest
 
 from webchanges import __project_name__
@@ -14,12 +14,12 @@ from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, DEFAULT_CONFIG, JobsYaml, YamlConfigStorage
 from webchanges.util import import_module_from_source
 
-installed_packages = [pkg.key for pkg in pkg_resources.working_set]
+minidb_is_installed = importlib.util.find_spec('minidb') is not None
 
-if 'minidb' in installed_packages:
+if minidb_is_installed:
     from webchanges.storage_minidb import CacheMiniDBStorage
 
-minidb_required = pytest.mark.skipif('minidb' not in installed_packages, reason="requires 'minidb' package")
+minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
 
 pkgname = __project_name__
 root = os.path.join(os.path.dirname(__file__), f'../{pkgname}', '..')

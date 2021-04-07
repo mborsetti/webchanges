@@ -1,5 +1,6 @@
 """Reads code in the filters.rst (help) documents and runs tests against the data in the data/doc_filer_testadata.yaml
 file"""
+import importlib
 import logging
 import os
 
@@ -8,7 +9,6 @@ import docutils.nodes
 import docutils.parsers.rst
 import docutils.utils
 import html2text
-import pkg_resources  # from setuptools
 import pytest
 import yaml
 
@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 root = os.path.join(os.path.dirname(__file__), '../webchanges', '..')
 here = os.path.dirname(__file__)
 
-installed_packages = [pkg.key for pkg in pkg_resources.working_set]
+pdftotext_is_installed = importlib.util.find_spec('pdftotext') is not None
+pytesseract_is_installed = importlib.util.find_spec('pytesseract') is not None
+vobject_is_installed = importlib.util.find_spec('vobject') is not None
 
 
 # https://stackoverflow.com/a/48719723/1047040
@@ -90,13 +92,13 @@ def test_url(url, job):
 
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job['filter']):
             # skip if package is not installed
-            if filter_kind == 'pdf2text' and 'pdftotext' not in installed_packages:
+            if filter_kind == 'pdf2text' and not pdftotext_is_installed:
                 logger.warning(f"Skipping {url} since 'pdftotext' package is not installed")
                 return
-            elif filter_kind == 'ocr' and 'pytesseract' not in installed_packages:
+            elif filter_kind == 'ocr' and not pytesseract_is_installed:
                 logger.warning(f"Skipping {url} since 'pytesseract' package is not installed")
                 return
-            elif filter_kind == 'ical2text' and 'vobject' not in installed_packages:
+            elif filter_kind == 'ical2text' and not vobject_is_installed:
                 logger.warning(f"Skipping {url} since 'vobject' package is not installed")
                 return
             filtercls = FilterBase.__subclasses__[filter_kind]

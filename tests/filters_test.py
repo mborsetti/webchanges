@@ -1,10 +1,10 @@
 """tests filters based on a set of patterns"""
 
+import importlib
 import logging
 import os
 import sys
 
-import pkg_resources  # from setuptools
 import pytest
 import yaml
 
@@ -12,7 +12,7 @@ from webchanges.filters import FilterBase
 
 logger = logging.getLogger(__name__)
 
-installed_packages = [pkg.key for pkg in pkg_resources.working_set]
+beautifulsoup_is_installed = importlib.util.find_spec('beautifulsoup') is not None
 
 # https://stackoverflow.com/questions/31469707/
 if sys.version_info[0:2] == (3, 6) and os.name == 'nt':
@@ -56,7 +56,7 @@ def test_filters(test_name, test_data):
     for filter_kind, subfilter in FilterBase.normalize_filter_list(filter):
         logger.info(f'filter kind: {filter_kind}, subfilter: {subfilter}')
         if (filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
-                and 'beautifulsoup' not in installed_packages):
+                and not beautifulsoup_is_installed):
             logger.warning(f"Skipping {test_name} since 'beautifulsoup' package is not installed")
             return
         filtercls = FilterBase.__subclasses__.get(filter_kind)
