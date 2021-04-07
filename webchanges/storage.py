@@ -188,7 +188,8 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
     def __init__(self, filename: Optional[str]) -> None:
         super().__init__(filename)
         self.config = {}
-        self.load()
+        if not isinstance(self, JobsBaseFileStorage):
+            self.load()
 
     @classmethod
     @abstractmethod
@@ -238,7 +239,7 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
 
 
 class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename) -> None:
+    def __init__(self, filename: str) -> None:
         super().__init__(filename)
         self.filename = filename
 
@@ -268,7 +269,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
     def load_secure(self) -> Union[list, bool]:
         jobs = self.load()
 
-        def is_shell_job(job):
+        def is_shell_job(job: JobBase) -> bool:
             if isinstance(job, ShellJob):
                 return True
 
@@ -428,7 +429,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
 
 class CacheDirStorage(CacheStorage):
     """Stores the information in individual files in a directory 'filename'"""
-    def __init__(self, filename) -> None:
+    def __init__(self, filename: str) -> None:
         super().__init__(filename)
         if not os.path.exists(filename):
             os.makedirs(filename)
@@ -730,7 +731,7 @@ class CacheRedisStorage(CacheStorage):
 
         return None, None, 0, None
 
-    def get_history_data(self, guid, count=1):
+    def get_history_data(self, guid: str, count: int = 1):
         history = {}
         if count < 1:
             return history
@@ -746,7 +747,7 @@ class CacheRedisStorage(CacheStorage):
                         break
         return history
 
-    def save(self, guid, data, timestamp, tries, etag):
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
         r = {
             'data': data,
             'timestamp': timestamp,
@@ -755,10 +756,10 @@ class CacheRedisStorage(CacheStorage):
         }
         self.db.lpush(self._make_key(guid), msgpack.packb(r))
 
-    def delete(self, guid):
+    def delete(self, guid: str) -> None:
         self.db.delete(self._make_key(guid))
 
-    def clean(self, guid):
+    def clean(self, guid: str) -> int:
         key = self._make_key(guid)
         i = self.db.llen(key)
         if self.db.ltrim(key, 0, 0):

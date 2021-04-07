@@ -45,6 +45,7 @@ Added
 Fixed
 -----
 * ``use_browser: false`` was not being interpreted correctly
+* Load jobs file (e.g. ``jobs.yaml``) only once
 
 
 Version 3.2.6
