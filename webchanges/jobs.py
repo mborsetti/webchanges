@@ -155,6 +155,8 @@ class JobBase(object, metaclass=TrackSubClasses):
     def unserialize(cls, data: dict) -> 'JobBase':
         if 'kind' not in data:
             # Try to auto-detect the kind of job based on the available keys
+            if data.get('use_browser') is False:
+                del data['use_browser']
             kinds = [subclass.__kind__ for subclass in list(cls.__subclasses__.values())
                      if all(required in data for required in subclass.__required__) and not any(
                      key not in subclass.__required__ and key not in subclass.__optional__ for key in data)]

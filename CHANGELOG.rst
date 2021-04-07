@@ -41,6 +41,11 @@ Added
   (true/false). Suggested by `snowman <https://github.com/snowman>`__ upstream `here
   <https://github.com/thp/urlwatch/issues/635>`__.
 
+Fixed
+-----
+* ``use_browser: false`` was not being interpreted correctly
+
+
 Version 3.2.6
 ===================
 2021-03-21
