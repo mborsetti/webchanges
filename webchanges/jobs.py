@@ -114,7 +114,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         # Fail if any required keys are not provided
         for k in self.__required__:
             if k not in kwargs:
-                raise ValueError(f'Required field {k} missing: {kwargs!r}')
+                raise ValueError(f"Required directive '{k}' missing: '{kwargs!r}'")
 
         for k, v in list(kwargs.items()):
             setattr(self, k, v)
@@ -172,7 +172,7 @@ class JobBase(object, metaclass=TrackSubClasses):
                     kind = 'shell'
                 else:
                     raise ValueError(
-                        f"Parameters don't match a job type; check for errors/typos/text escaping:\n{data!r}")
+                        f"Directives don't match a job type; check for errors/typos/text escaping:\n{data!r}")
             else:
                 raise ValueError(f'Multiple kinds of jobs match {data!r}: {kinds!r}')
         else:
@@ -186,7 +186,11 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def from_dict(cls, data: dict) -> 'JobBase':
-        return cls(**{k: v for k, v in list(data.items()) if k in cls.__required__ or k in cls.__optional__})
+        data.pop('kind', None)
+        for k, v in list(data.items()):
+            if k not in (cls.__required__ + cls.__optional__):
+                logger.error(f"Job directive '{k}' is unrecognized and is being skipped; check documentation")
+        return cls(**{k: v for k, v in list(data.items()) if k in (cls.__required__ + cls.__optional__)})
 
     def __repr__(self) -> str:
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
