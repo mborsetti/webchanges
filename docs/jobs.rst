@@ -167,6 +167,7 @@ For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 - ``data``: HTTP data (defaults request method to ``POST`` and `Content-type
   <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header to
   ``application/x-www-form-urlencoded``)
+- ``no_redirects``: Disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection (true/false). `New in version 3.2.7`
 - ``ssl_no_verify``: Do not verify SSL certificates (true/false) (see :ref:`here <ssl_no_verify>`)
 - ``ignore_cached``: Do not use cache control (ETag/Last-Modified) values (true/false)
 - ``encoding``: Override the character encoding from the server (see :ref:`here <encoding>`)

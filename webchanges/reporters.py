@@ -165,11 +165,13 @@ class HtmlReporter(ReporterBase):
             # wdiff colorization
             yield '<span style="font-family:monospace;white-space:pre-wrap">'
             diff = html.escape(diff)
-            diff = re.sub(r'[{][+].*?[+][}]', lambda x: f'<span style="background-color:#d1ffd1;color:#082b08">'
-                                                        f'{x.group(0)}</span>', diff, flags=re.DOTALL)
-            diff = re.sub(r'[\[][-].*?[-][]]', lambda x: (
-                f'<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">{x.group(0)}'
-                f'</span>'), diff, flags=re.DOTALL)
+            diff = re.sub(r'[{][+].*?[+][}]',
+                          lambda x: f'<span style="background-color:#d1ffd1;color:#082b08">{x.group(0)}</span>',
+                          diff, flags=re.DOTALL)
+            diff = re.sub(r'[\[][-].*?[-][]]',
+                          lambda x: (f'<span style="background-color:#fff0f0;color:#9c1c1c;'
+                                     f'text-decoration:line-through">{x.group(0)}</span>'),
+                          diff, flags=re.DOTALL)
             yield diff
             yield '</span>'
         else:
@@ -312,7 +314,7 @@ class TextReporter(ReporterBase):
             yield from details
 
         if summary and show_footer:
-            duration = round(self.duration, max(0, 1 - int(floor(log10(self.duration)))))
+            duration = round(self.duration, max(0, 1 - floor(log10(self.duration))))
             yield (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
                    f' seconds with {project.__project_name__} {project.__version__}')
 
@@ -384,7 +386,7 @@ class MarkdownReporter(ReporterBase):
             details.extend(details_part)
 
         if summary and show_footer:
-            duration = round(self.duration, max(0, 1 - int(floor(log10(self.duration)))))
+            duration = round(self.duration, max(0, 1 - floor(log10(self.duration))))
             footer = (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in"
                       f' {duration} seconds with {project.__project_name__} {project.__version__}')
         else:

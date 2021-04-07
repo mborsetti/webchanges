@@ -1,6 +1,7 @@
 .. **** IMPORTANT ****
-   All code examples here need to have a unique URL that maps to an entry in the file
-   test/data/filter_documentation_testdata.yaml. This will be used by testing to ensure that all examples work.
+   All code examples here are automatically tested. As such, each example needs to have a unique URL.
+   This URL also needs to be added to the file along with the "before" and "after" data that will be used for testing.
+   This ensures that all examples work now and in the future.
 
 .. _filters:
 

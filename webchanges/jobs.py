@@ -53,46 +53,51 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     # PyCharm IDE compatibility
     __kind__: str = ''
-    name: str = ''
-    note: str = ''
-    filter: Union[str, List[Union[str, Dict[str, Any]]]] = ''
-    max_tries: int = 0
-    diff_tool: str = ''
-    additions_only: bool = False
-    deletions_only: bool = False
-    contextlines: int = 0
-    compared_versions: int = 0
-    is_markdown: bool = False
-    markdown_padded_tables: bool = False
-    diff_filter: str = ''
+
     url: str = ''
-    cookies: Dict[str, str] = {}
-    data: AnyStr = ''
-    method: str = ''
-    ssl_no_verify: bool = False
-    ignore_cached: bool = False
-    http_proxy: str = ''
-    https_proxy: str = ''
-    headers: Dict[str, str] = {}
-    ignore_connection_errors: bool = False
-    ignore_http_error_codes: bool = False
-    encoding: str = ''
-    timeout: int = 0
-    ignore_timeout_errors: bool = False
-    ignore_too_many_redirects: bool = False
-    user_visible_url: str = ''
-    use_browser: bool = False
+    command: str = ''
+    use_browser: Optional[bool] = False
+
+    additions_only: Optional[bool] = False
+    block_elements: list = []
     chromium_revision: Union[Dict[str, Union[str, int]], Union[str, int]] = {}
+    compared_versions: Optional[int] = 0
+    contextlines: Optional[int] = 0
+    cookies: Optional[Dict[str, str]] = {}
+    data: Optional[AnyStr] = ''
+    deletions_only: Optional[bool] = False
+    diff_filter: Optional[str] = ''
+    diff_tool: Optional[str] = ''
+    encoding: Optional[str] = ''
+    filter: Union[str, List[Union[str, Dict[str, Any]]]] = ''
+    headers: Optional[Dict[str, str]] = {}
+    http_proxy: Optional[str] = ''
+    https_proxy: Optional[str] = ''
+    ignore_cached: Optional[bool] = False
+    ignore_connection_errors: Optional[bool] = False
+    ignore_http_error_codes: Optional[bool] = False
+    ignore_timeout_errors: Optional[bool] = False
+    ignore_too_many_redirects: Optional[bool] = False
+    is_markdown: Optional[bool] = False
+    markdown_padded_tables: Optional[bool] = False
+    max_tries: Optional[int] = 0
+    method: Optional[str] = ''
+    name: Optional[str] = ''
+    navigate: str = ''
+    no_redirects: Optional[bool] = False
+    note: Optional[str] = ''
+    ssl_no_verify: Optional[bool] = False
+    switches: List[str] = []
+    timeout: Optional[int] = 0
     user_data_dir: str = ''
-    switches: List[str] = ''
-    wait_until: str = ''
+    user_visible_url: Optional[str] = ''
     wait_for: Union[int, str] = 0
     wait_for_navigation: Union[str, Tuple[str, ...]] = ''
-    block_elements: list = ''
-    navigate: str = ''
-    command: str = ''
+    wait_until: str = ''
+
     proxy_username: str = ''
     proxy_password: str = ''
+
     ctx = None  # Python 3.7
 
     def __init__(self, **kwargs) -> None:
@@ -239,7 +244,7 @@ class UrlJob(Job):
     __required__ = ('url',)
     __optional__ = ('cookies', 'data', 'method', 'ssl_no_verify', 'ignore_cached', 'http_proxy', 'https_proxy',
                     'headers', 'ignore_connection_errors', 'ignore_http_error_codes', 'encoding', 'timeout',
-                    'ignore_timeout_errors', 'ignore_too_many_redirects', 'user_visible_url')
+                    'ignore_timeout_errors', 'ignore_too_many_redirects', 'user_visible_url', 'no_redirects')
 
     CHARSET_RE = re.compile('text/(html|plain); charset=([^;]*)')
 
@@ -270,6 +275,7 @@ class UrlJob(Job):
 
         if self.method is None:
             self.method = 'GET'
+
         if self.data is not None:
             if self.method is None:
                 self.method = 'POST'
@@ -306,6 +312,7 @@ class UrlJob(Job):
                                     headers=headers,
                                     cookies=self.cookies,
                                     timeout=timeout,
+                                    allow_redirects=(not self.no_redirects),
                                     proxies=proxies,
                                     verify=(not self.ssl_no_verify))
 
