@@ -144,6 +144,13 @@ DEFAULT_CONFIG = {
             'sender': '',
             'recipient': '',
         },
+        'prowl': {
+            'enabled': False,
+            'api_key': '',
+            'priority': 0,
+            'application': '',
+            'subject': '{count} changes: {jobs}'
+        },
     },
 
     'job_defaults': {  # default settings for jobs

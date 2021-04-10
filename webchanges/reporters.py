@@ -1088,3 +1088,64 @@ def xmpp_set_password(sender) -> None:
 
     password = getpass.getpass(prompt=f'Enter password for {sender}: ')
     keyring.set_password('urlwatch_xmpp', sender, password)
+
+
+class ProwlReporter(TextReporter):
+    """Send a detailed notification via prowlapp.com."""
+    # contributed by nitz https://github.com/thp/urlwatch/pull/633
+
+    __kind__ = 'prowl'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def submit(self):
+        api_add = 'https://api.prowlapp.com/publicapi/add'
+
+        text = '\n'.join(super().submit())
+
+        if not text:
+            logger.debug('Not calling Prowl API (no changes)')
+            return
+
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        subject_args = {
+            'count': len(filtered_job_states),
+            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
+        }
+
+        # 'subject' used in the config file, but the API
+        # uses what might be called the subject as the 'event'
+        event = self.config['subject'].format(**subject_args)
+
+        # 'application' is prepended to the message in prowl,
+        # to show the source of the notification. this too,
+        # is user configurable, and may reference subject args
+        application = self.config.get('application')
+        if application is not None:
+            application = application.format(**subject_args)
+        else:
+            application = f'{project.__project_name__} v{project.__version__}'
+
+        # build the data to post
+        post_data = {
+            'event': event[:1024],
+            'description': text[:10000],
+            'application': application[:256],
+            'apikey': self.config['api_key'],
+            'priority': self.config['priority']
+        }
+
+        # all set up, add the notification!
+        result = requests.post(api_add, data=post_data)
+
+        try:
+            if result.status_code in (requests.codes.ok, requests.codes.no_content):
+                logger.info('Prowl response: ok')
+            else:
+                logger.error(f'Prowl error: {result.text}')
+        except ValueError:
+            logger.error(f'Failed to parse Prowl response. HTTP status code: {result.status_code}, '
+                         f'content: {result.content}')
+
+        return result

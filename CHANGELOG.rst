@@ -41,6 +41,8 @@ Added
   (true/false). Suggested by `snowman <https://github.com/snowman>`__ upstream `here
   <https://github.com/thp/urlwatch/issues/635>`__.
 * Alert when the job file contains unrecognized directives (e.g. typo)
+* New reporter ``prowl`` for the `Prowl <https://prowlapp.com>` push notification client for iOS (only). contributed by
+  `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
 
 Changed
 --------

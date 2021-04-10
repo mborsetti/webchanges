@@ -41,6 +41,7 @@ At the moment, the following reporters are available
 * :ref:`ifttt`: Send summary via IFTTT
 * :ref:`matrix`: Send a message to a room using the Matrix protocol
 * :ref:`mailgun`: Send email via the Mailgun service
+* :ref:`prowl`: Send a message via prowlapp.com
 
 .. To convert the "webchanges --features" output, use:
    webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
@@ -498,3 +499,38 @@ If using a keychain to store the password, you also need to:
 .. code-block:: bash
 
    pip install --upgrade webchanges[safe_password]
+
+
+
+.. _prowl:
+
+Prowl
+-----
+
+You can have notifications sent to you through the `Prowl <https://www.prowlapp.com>`__ push notification service to
+receive the notification on iOS (only).
+
+To achieve this, you should register a new Prowl account, and have the Prowl application installed on your iOS device.
+
+To create an API key:
+
+1. Log into the Prowl website at https://www.prowlapp.com/api_settings.php
+2. If needed, navigate to the "API Keys" tab.
+3. Scroll to the "Generate a new API key" section.
+4. Give the key a note that will remind you you've used it for this service.
+5. Press "Generate Key".
+6. Copy the resulting key.
+
+Here is a sample configuration:
+
+.. code:: yaml
+
+   prowl:
+     enabled: true
+     api_key: '<your api key here>'
+     priority: 2
+     application: 'webchanges example'
+     subject: '{count} changes: {jobs}'
+
+The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
+shown as the source of the event in the Prowl App.
