@@ -1,2 +1,2 @@
-name: "storage test"
-command: "date -Ins"
+name: "changing output for storage test"
+command: "perl -MTime::HiRes -e 'printf \"%f\n\",Time::HiRes::time()'"
