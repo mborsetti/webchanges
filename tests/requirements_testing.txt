@@ -1,6 +1,7 @@
 coverage
 docutils
 jq;os_name!="nt"
+minidb
 pre-commit
 pyppeteer
 pytest

@@ -394,7 +394,7 @@ def test_clean_sqlite3():
             # use an url that changes
             job = urlwatcher.jobs[0]
             if os.name == 'nt':
-                job.command = 'echo %TIME%'
+                job.command = 'echo %time%'
             guid = job.get_guid()
 
             # run once
@@ -416,7 +416,7 @@ def test_clean_sqlite3():
             cache_storage.close()
 
 
-def test_clean_all_sqlite3():
+def test_clean_all_and_delete_sqlite3():
     with teardown_func():
         urlwatcher, cache_storage = prepare_storage_test_sqlite3()
         try:
@@ -438,8 +438,14 @@ def test_clean_all_sqlite3():
             history = cache_storage.get_history_data(guid)
             assert len(history) == 2
 
+            # clean all
             cache_storage.clean_all()
             history = cache_storage.get_history_data(guid)
             assert len(history) == 1
+
+            # delete guid
+            cache_storage.delete(guid)
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 0
         finally:
             cache_storage.close()
