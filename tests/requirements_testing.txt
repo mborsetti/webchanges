@@ -1,5 +1,6 @@
 coverage
 docutils
+jq;os_name!="nt"
 pre-commit
 pyppeteer
 pytest

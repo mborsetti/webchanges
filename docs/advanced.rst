@@ -147,7 +147,7 @@ Since the output of ``date`` changes every second, this job should produce a rep
 Selecting items from a JSON dictionary
 --------------------------------------
 If you are watching JSON-encoded dictionary data but are only interested in the data contained in (a) certain key(s),
-you can use a Python command to easily extract it:
+you can use the :ref:`jq` filter (Linux/MacOS only) or a Python command to easily extract it:
 
 
 .. code-block:: yaml
@@ -158,8 +158,8 @@ you can use a Python command to easily extract it:
 
 
 Escaping is a bit complex: for example, ``"`` inside the Python code becomes ``\\\"`` and ``\n`` becomes ``\\n``
--- and so on -- due to being inside a double quoted shell string inside a double quoted YAML string). The example below
-combines both escaping and signaling to the downstream html reporter that its output is in Markdown:
+-- and so on -- due to being inside a double quoted shell string inside a double quoted YAML string. The example below
+shows how to use escaping as well as letting know the downstream html reporter that the data is in Markdown:
 
 .. code-block:: yaml
 
@@ -176,9 +176,10 @@ Watching changes on .onion (Tor) pages
 --------------------------------------
 Since pages on the `Tor Network <https://www.torproject.org>`__ are not accessible via public DNS and TCP, you need to
 either configure a Tor client as HTTP/HTTPS proxy or use the ``torify(1)`` tool from the ``tor`` package (``apt install
-tor`` on Debian or Ubuntu,``brew install tor`` on macOS). Setting up Tor is out of scope for this document. On a
-properly set up Tor installation, one can just prefix the ``webchanges`` command with the ``torify`` wrapper to access
-.onion pages:
+tor`` on Debian or Ubuntu, ``brew install tor`` on macOS). Setting up Tor is out of scope for this document.
+
+On a properly set up Tor installation, one can just prefix the ``webchanges`` command with the ``torify`` wrapper to
+access .onion pages:
 
 .. code-block:: bash
 
@@ -204,7 +205,7 @@ If you want to be notified of new events on a public Facebook page, you can use 
    comparison_filter: additions
 
 
-Watching Github releases and Gitlab tags
+Watching GitHub releases and GitLab tags
 ----------------------------------------
 This is an example how to watch the GitHub “releases” page for a given project for the latest release version, to be
 notified of new releases:
@@ -216,7 +217,7 @@ notified of new releases:
      - xpath: (//div[contains(@class,"release-timeline-tags")]//h4)[1]/a
      - html2text:
 
-This is the corresponding version for Gitlab tags:
+This is the corresponding version for GitLab tags:
 
 .. code-block:: yaml
 

@@ -30,21 +30,25 @@ like this::
 |                         | * `jsbeautifier <https://pypi.org/project/jsbeautifier/>`__ [#f2]_      |
 |                         | * `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ [#f3]_    |
 +-------------------------+-------------------------------------------------------------------------+
-| ``pdf2text`` filter     | * `pdftotext <https://github.com/jalan/pdftotext>`__                    |
-|                         | * Note: you will also have to **separately install** OS-specific        |
-|                         |   dependencies [#f4]_                                                   |
+| ``ical2text`` filter    | * `vobject <https://eventable.github.io/vobject/>`__                    |
++-------------------------+-------------------------------------------------------------------------+
+| ``jq`` filter           | * `jq <https://github.com/mwilliamson/jq.py>`__                         |
+|                         | * **Only available for Linux and MacOS** (Windows installation is       |
+|                         |   incomplete)                                                           |
 +-------------------------+-------------------------------------------------------------------------+
 | ``ocr`` filter          | * `pytesseract <https://github.com/madmaze/pytesseract>`__              |
 |                         |   Note: requires Tesseract to be **separately installed** [#f5]_        |
 |                         | * `Pillow <https://python-pillow.org>`__                                |
 +-------------------------+-------------------------------------------------------------------------+
-| ``ical2text`` filter    | * `vobject <https://eventable.github.io/vobject/>`__                    |
+| ``pdf2text`` filter     | * `pdftotext <https://github.com/jalan/pdftotext>`__                    |
+|                         | * Note: you will also have to **separately install** OS-specific        |
+|                         |   dependencies [#f4]_                                                   |
 +-------------------------+-------------------------------------------------------------------------+
-| ``pushover`` reporter   | * `chump <https://github.com/karanlyons/chump/>`__                      |
+| ``matrix`` reporter     | * `matrix_client <https://github.com/matrix-org/matrix-python-sdk>`__   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``pushbullet`` reporter | * `pushbullet.py <https://github.com/randomchars/pushbullet.py>`__      |
 +-------------------------+-------------------------------------------------------------------------+
-| ``matrix`` reporter     | * `matrix_client <https://github.com/matrix-org/matrix-python-sdk>`__   |
+| ``pushover`` reporter   | * `chump <https://github.com/karanlyons/chump/>`__                      |
 +-------------------------+-------------------------------------------------------------------------+
 | ``xmpp`` reporter       | * `aioxmpp <https://github.com/horazont/aioxmpp>`__                     |
 +-------------------------+-------------------------------------------------------------------------+

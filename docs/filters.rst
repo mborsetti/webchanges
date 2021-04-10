@@ -57,9 +57,10 @@ At the moment, the following filters are available:
 
   - :ref:`ocr`: Extract text from images
 
-* To make JSON more readable:
+* To filter and/or make JSON more readable:
 
   - :ref:`format-json`: Reformat (pretty-print) JSON
+  - :ref:`jq`: Filter JSON
 
 * To make XML more readable:
 
@@ -458,10 +459,47 @@ Optional sub-directives
   representation (default: 4)
 * ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false)
 
-Advanced tip
-""""""""""""
-Python programmers can use an advanced technique to select only certain elements of the JSON object; see
+
+
+.. _jq:
+
+jq
+--
+
+Linux/MacOS only
+""""""""""""""""
+
+The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight JSON processor.
+It is currently available only for Linux (most flavors) and MacOS only.  See :ref:`below <filtering_json>` for a
+Python-based cross-platform way of selecting JSON.
+
+.. code-block:: yaml
+
+   url: https://example.net/jobs.json
+   filter:
+      - jq: '.[].title'
+
+Supports aggregations, selections, and the built-in operators like ``length``.
+
+For more information on the operations permitted, see the `jq Manual <https://stedolan.github.io/jq/manual/>`__.
+
+Required packages
+^^^^^^^^^^^^^^^^^
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
+
+.. code-block:: yaml
+
+   pip install --upgrade webchanges[jq]
+
+
+.. _filtering_json:
+
+Filtering JSON on Windows or without ``jq``
+"""""""""""""""""""""""""""""""""""""""""""
+Python programmers on all OSs can use an advanced technique to select only certain elements of the JSON object; see
 :ref:`json_dict`.
+
 
 .. _format-xml:
 

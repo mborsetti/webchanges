@@ -33,14 +33,19 @@ except ImportError:
     BeautifulSoup = None
 
 try:
-    import jsbeautifier
-except ImportError:
-    jsbeautifier = None
-
-try:
     import cssbeautifier
 except ImportError:
     cssbeautifier = None
+
+try:
+    import jq
+except ImportError:
+    jq = None
+
+try:
+    import jsbeautifier
+except ImportError:
+    jsbeautifier = None
 
 try:
     import pdftotext
@@ -48,9 +53,9 @@ except ImportError:
     pdftotext = None
 
 try:
-    import vobject
+    from PIL import Image
 except ImportError:
-    vobject = None
+    Image = None
 
 try:
     import pytesseract
@@ -58,9 +63,9 @@ except ImportError:
     pytesseract = None
 
 try:
-    from PIL import Image
+    import vobject
 except ImportError:
-    Image = None
+    vobject = None
 
 
 logger = logging.getLogger(__name__)
@@ -229,8 +234,8 @@ class BeautifyFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if BeautifulSoup is None:
-            raise ImportError(f"Python package 'BeautifulSoup' is not installed; cannot use the 'beautify' filter"
-                              f' ( {self.job.get_location()} )')
+            raise ImportError(f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}' "
+                              f'filter ( {self.job.get_location()} )')
 
         soup = BeautifulSoup(data, features='lxml')
 
@@ -314,8 +319,8 @@ class Html2TextFilter(FilterBase):
 
         elif method == 'bs4':
             if BeautifulSoup is None:
-                raise ImportError(f'Python package "BeautifulSoup" is not installed; cannot use the "html2text: bs4"'
-                                  f' filter ( {self.job.get_location()} )')
+                raise ImportError(f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}: "
+                                  f"{method}' filter ( {self.job.get_location()} )")
 
             parser = options.pop('parser', 'lxml')
             soup = BeautifulSoup(data, parser)
@@ -979,11 +984,40 @@ class OCRFilter(FilterBase):
         timeout = int(subfilter.get('timeout', 10))
 
         if pytesseract is None:
-            raise ImportError(f"Python package 'pytesseract' is not installed; cannot use the 'ocr' filter"
+            raise ImportError(f"Python package 'pytesseract' is not installed; cannot use the '{self.__kind__}' filter"
                               f' ( {self.job.get_location()} )')
 
         if Image is None:
-            raise ImportError(f"Python package 'Pillow' is not installed; cannot use the 'ocr' filter"
+            raise ImportError(f"Python package 'Pillow' is not installed; cannot use the '{self.__kind__}' filter"
                               f' ( {self.job.get_location()} )')
 
         return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip()
+
+
+class JQFilter(FilterBase):
+    """Parse, transform, and extract data from json as text using `jq`."""
+    # contributed by robgmills https://github.com/thp/urlwatch/pull/626
+
+    __kind__ = 'jq'
+
+    __supported_subfilters__ = {
+        'query': 'jq query function to execute on data',
+    }
+
+    __default_subfilter__ = 'query'
+
+    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
+
+        if jq is None:
+            raise ImportError(f"Python package 'jq' is not installed; cannot use the '{self.__kind__}' filter"
+                              f' ( {self.job.get_location()} )')
+
+        try:
+            jsondata = json.loads(data)
+        except ValueError:
+            raise ValueError('The url response contained invalid JSON')
+
+        if 'query' not in subfilter:
+            raise ValueError(f'{self.__kind__} filter needs a query')
+
+        return jq.text(subfilter['query'], jsondata)
