@@ -503,8 +503,7 @@ https://example.net/jobs.json:
         "company": "Initech"
       }
     ]
-  output: |
+  output: |-
       "Senior Data Scientist"
       "Python Developer"
       "TPS Report Analyst"
-...
