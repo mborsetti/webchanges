@@ -35,14 +35,24 @@ Version 3.2.6.post0
 ====================
 Unreleased
 
+⚠ Breaking Changes
+------------------
+* Fixed the issue of the database growing unbounded to infinity if running in Python 3.7 or higher and using the new,
+  default, ``sqlite3`` database engine.  By default only 4 snapshots are kept, and older ones are purged after every
+  run.  Run with ``--max-snapshots 0`` command line argument to keep the existing behavior, or with the number of
+  snapshots you want to retain if different than the default of 4.
+
 Added
 -----
+* ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults to
+  4. If set to 0, and unlimited number of snapshots will be kept. Only applies to Python 3.7 or higher and only works if
+  the default ``sqlite3`` database is being used.
 * Job directive (for ``url`` jobs) ``no_redirects``: disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection
   (true/false). Suggested by `snowman <https://github.com/snowman>`__ upstream `here
   <https://github.com/thp/urlwatch/issues/635>`__.
-* Alert when the job file contains unrecognized directives (e.g. typo)
-* New reporter ``prowl`` for the `Prowl <https://prowlapp.com>` push notification client for iOS (only). Contributed by
-  `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
+* User alerting when the job file contains unrecognized directives (e.g. typo)
+* New reporter ``prowl`` for the `Prowl <https://prowlapp.com>`__ push notification client for iOS (only). Contributed
+  by `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
 * New filter ``jq`` to parse, transform, and extract JSON data. Contributed by
   `robgmills <https://github.com/robgmills>`__ upstream in PR `626 <https://github.com/thp/urlwatch/pull/626>`__.
 
@@ -50,11 +60,24 @@ Changed
 --------
 * When the directive ``name`` is not used in a ``url`` job and a title is found on the page and is used for a name, it
   is now truncated to 60 characters
+* ``--test-diff`` command line argument is no longer limited to displaying the last 10 snapshots
 
 Fixed
 -----
+* Diff data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a reporter:
+  the permanent database is updated only at the very end (after reports are sent)
 * ``use_browser: false`` was not being interpreted correctly
 * Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
+
+Known issues
+------------
+* ``url`` jobs with ``use_browser: true`` (i.e. using Pyppeteer) will at times display the below error message in stdout
+  (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed in the
+  future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+
+  ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
+  ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
+  ``Future exception was never retrieved``
 
 
 Version 3.2.6

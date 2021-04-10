@@ -35,6 +35,7 @@ class BaseConfig(object):
         self.clean_cache: bool = False
         self.rollback_cache: Optional[str] = None
         self.database_engine: str = 'sqlite3'
+        self.max_snapshots: int = 4
         self.features: bool = False
 
 
@@ -107,10 +108,14 @@ class CommandConfig(BaseConfig):
                            help='garbage collect the cache database by removing old snapshots plus all data of jobs'
                                 ' not in the jobs file')
         group.add_argument('--clean-cache', action='store_true', help='remove old snapshots from the cache database')
-        group.add_argument('--rollback-cache', metavar='TIMESTAMP', type=int,
-                           help='delete recent snapshots > timestamp; backup the database before using!')
+        group.add_argument('--rollback-cache', type=int,
+                           help='delete recent snapshots > timestamp; backup the database before using!',
+                           metavar='TIMESTAMP')
         group.add_argument('--database-engine', choices=['sqlite3', 'redis', 'minidb', 'textfiles'], default='sqlite3',
                            help='database engine to use (default: %(default)s unless redis URI in --cache)')
+        group.add_argument('--max-snapshots', default=4, type=int,
+                           help='maximum number of snapshots to retain in sqlite3 database (default: %(default)s) '
+                                '(Python 3.7 or higher)', metavar='NUM_SNAPSHOTS')
 
         group = parser.add_argument_group('miscellaneous')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')

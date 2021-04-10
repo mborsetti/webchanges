@@ -53,6 +53,8 @@ Command line arguments
                           delete recent snapshots > timestamp; backup the database before using!
     --database-engine {sqlite3,redis,minidb,textfiles}
                           database engine to use (default: sqlite3 unless redis URI in --cache)
+    --max-snapshots NUM_SNAPSHOTS
+                          maximum number of snapshots to retain in sqlite3 database (default: 4) (Python 3.7 or higher)
 
   miscellaneous:
     --features            list supported job types, filters and reporters
@@ -69,11 +71,15 @@ Test run a job
 You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
 its URL/command; `webchanges` will display the filtered output. This allows to easily test changes in filters.
 
+.. _test-diff:
+
 Show diff from saved snapshots
 ------------------------------
 You can use the argument ``--test-diff`` followed by the job index number (from ``--list``) or its URL/command to
-display diffs from snapshots that have been saved (up to 10); obviously a minimum of 2 saved snapshots are required.
-This allows you to test the effect of a diff filter or see previous changes.
+display diffs from snapshots that have been saved; obviously a minimum of 2 saved snapshots are required. This allows
+you to test the effect of a diff filter or see previous changes.
+
+`Changed in version 3.3: removed the limit of 10 diff being displayed`
 
 .. _rollback-cache:
 
@@ -101,8 +107,8 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 
 Select a database engine
 -------------------------
-Default
-~~~~~~~
+Default (``sqlite3``)
+~~~~~~~~~~~~~~~~~~~~~
 The requirement for the ``minidb`` Python package has been removed in version 3.2 and the database system has migrated
 to one that relies on the built-in ``sqlite3``, is more efficient due to indexing, creates smaller files due to data
 compression with `msgpack <https://msgpack.org/index.html>`__, and provides additional functionality.
@@ -134,3 +140,26 @@ command line argument ``--cache-engine minidb``. The ``minidib`` Python package 
 
 
 `New in version 3.2.`
+
+
+
+.. _max-snapshots:
+
+Maximum number of snapshots to save
+-----------------------------------
+(Python 3.7 or higher only)
+
+Each time you run `webchanges`, it captures the data downloaded from the URL (or the output of the command specified)
+and saves it, after applying filters, to a database for future comparison.  By default (and when using the default
+``sqlite3`` database engine) the last 4 snapshots are kept but this number can be changed with the
+``--max-snapshots`` command line argument.  If it is set to 0, all snapshots are retained (no deletion of old snapshots
+will take place).
+
+Tip: changes between old snapshots can be redisplayed with the ``--test-diff`` command line argument (see
+:ref:`here <test-diff>`).
+
+Note that databases with ``redis`` or ``minidb`` database engines, or when running Python 3.6., will always retain all
+snapshots (and grow to infinity), while with ``textfiles`` only the last snapshot is kept.
+
+
+`New in version 3.3.`

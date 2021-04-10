@@ -20,6 +20,7 @@ if minidb_is_installed:
     from webchanges.storage_minidb import CacheMiniDBStorage
 
 minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
+py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
 
 pkgname = __project_name__
 root = os.path.join(os.path.dirname(__file__), f'../{pkgname}', '..')
@@ -267,14 +268,19 @@ def test_number_of_tries_in_cache_is_increased_sqlite3():
         urlwatcher, cache_storage = prepare_retry_test_sqlite3()
         try:
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            guid = job.get_guid()
+            old_data, timestamp, tries, etag = cache_storage.load(guid)
+
             assert tries == 0
 
             urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
             urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
 
-            job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(guid)
 
             assert tries == 2
             assert urlwatcher.report.job_states[-1].verb == 'error'
@@ -287,11 +293,16 @@ def test_report_error_when_out_of_tries_sqlite3():
         urlwatcher, cache_storage = prepare_retry_test_sqlite3()
         try:
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            guid = job.get_guid()
+            old_data, timestamp, tries, etag = cache_storage.load(guid)
             assert tries == 0
 
             urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
             urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
 
             report = urlwatcher.report
             assert report.job_states[-1].verb == 'error'
@@ -304,23 +315,131 @@ def test_reset_tries_to_zero_when_successful_sqlite3():
         urlwatcher, cache_storage = prepare_retry_test_sqlite3()
         try:
             job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            guid = job.get_guid()
+            old_data, timestamp, tries, etag = cache_storage.load(guid)
             assert tries == 0
 
             urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
 
-            job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(guid)
             assert tries == 1
 
             # use an url that definitely exists
             job = urlwatcher.jobs[0]
             job.url = 'file://' + os.path.join(here, 'data', 'jobs.yaml')
+            guid = job.get_guid()
 
             urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
 
-            job = urlwatcher.jobs[0]
-            old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+            old_data, timestamp, tries, etag = cache_storage.load(guid)
             assert tries == 0
+        finally:
+            cache_storage.close()
+
+
+def prepare_storage_test_sqlite3():
+    jobs_file = os.path.join(here, 'data', 'jobs-storage-test.yaml')
+    config_file = os.path.join(here, 'data', 'config.yaml')
+    cache_file = os.path.join(here, 'data', 'cache.db')
+    hooks_file = ''
+
+    config_storage = YamlConfigStorage(config_file)
+    cache_storage = CacheSQLite3Storage(cache_file)
+    jobs_storage = JobsYaml(jobs_file)
+
+    urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+
+    return urlwatcher, cache_storage
+
+
+@py37_required
+def test_keep_latest_sqlite3():
+    with teardown_func():
+        urlwatcher, cache_storage = prepare_storage_test_sqlite3()
+        try:
+            # use an url that changes
+            job = urlwatcher.jobs[0]
+            if os.name == 'nt':
+                job.command = 'echo %TIME%'
+            guid = job.get_guid()
+
+            # run once
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
+
+            # run twice
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 2
+
+            cache_storage.keep_latest(1)
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 1
+        finally:
+            cache_storage.close()
+
+
+def test_clean_sqlite3():
+    with teardown_func():
+        urlwatcher, cache_storage = prepare_storage_test_sqlite3()
+        try:
+            # use an url that changes
+            job = urlwatcher.jobs[0]
+            if os.name == 'nt':
+                job.command = 'echo %TIME%'
+            guid = job.get_guid()
+
+            # run once
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
+
+            # run twice
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 2
+
+            cache_storage.clean(guid, 1)
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 1
+        finally:
+            cache_storage.close()
+
+
+def test_clean_all_sqlite3():
+    with teardown_func():
+        urlwatcher, cache_storage = prepare_storage_test_sqlite3()
+        try:
+            # use an url that changes
+            job = urlwatcher.jobs[0]
+            if os.name == 'nt':
+                job.command = 'echo %TIME%'
+            guid = job.get_guid()
+
+            # run once
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
+
+            # run twice
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 2
+
+            cache_storage.clean_all()
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 1
         finally:
             cache_storage.close()

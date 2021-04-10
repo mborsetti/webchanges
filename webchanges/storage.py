@@ -7,6 +7,7 @@ import os
 import shutil
 import sqlite3
 import stat
+import sys
 import threading
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
@@ -377,7 +378,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def get_history_data(self, guid: str, count: int = 1) -> Dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         ...
 
     @abstractmethod
@@ -466,7 +467,7 @@ class CacheDirStorage(CacheStorage):
 
         return data, timestamp, None, None
 
-    def get_history_data(self, guid: str, count: int = 1) -> Dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         """We only store the latest version, no history data"""
         return {}
 
@@ -500,14 +501,22 @@ class CacheSQLite3Storage(CacheStorage):
     * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
 
     """
-    def __init__(self, filename: str) -> None:
-        """:param filename: The full filename of the database file"""
-        # Opens the database file and, if new, creates a table and index
+    def __init__(self, filename: str, max_snapshots: int = 4) -> None:
+        """Opens the database file and, if new, creates a table and index.
+
+        :param filename: The full filename of the database file
+        :param max_snapshots: The maximum number of snapshots to retain for each job
+        """
+
+        self.max_snapshots = max_snapshots
+
+        logger.debug(f'Opening main sqlite3 database file {filename}')
         super().__init__(filename)
 
         dirname = os.path.dirname(filename)
         if dirname and not os.path.isdir(dirname):
             os.makedirs(dirname)
+        fn_base, fn_ext = os.path.splitext(filename)
         # if os.path.isfile(filename):
         #     import shutil
         #     _ = shutil.copy2(filename, f'{filename}.{int(time.time())}.bak')
@@ -517,31 +526,82 @@ class CacheSQLite3Storage(CacheStorage):
 
         self.db = sqlite3.connect(filename, check_same_thread=False)
         self.cur = self.db.cursor()
-        tables = self.cur.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
+        tables = self._execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
         if tables == ('CacheEntry',):
+            logger.debug("Found legacy 'minidb' database to convert")
             # found a minidb legacy database; rename it for migration and create new one
             self.db.close()
-            fn_base, fn_ext = os.path.splitext(filename)
             minidb_filename = f'{fn_base}_minidb{fn_ext}'
             os.replace(filename, minidb_filename)
             self.db = sqlite3.connect(filename, check_same_thread=False)
             self.cur = self.db.cursor()
         if tables != ('webchanges',):
             # not yet initialized
-            self.cur.execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
-            self.cur.execute('CREATE INDEX idx_uuid ON webchanges (uuid)')
+            logger.debug('Initializing database')
+            self._execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
+            self._execute('CREATE INDEX idx_uuid_time ON webchanges(uuid, timestamp)')
             self.db.commit()
         if tables == ('CacheEntry',):
             # migrate the minidb legacy database renamed above
             self.migrate_from_minidb(minidb_filename)
 
+        # create temporary file for writing (fault tolerant)
+        self.temp_filename = f'{fn_base}_tmp{fn_ext}'
+        if os.path.exists(self.temp_filename):
+            os.remove(self.temp_filename)
+        logger.debug(f'Creating temp sqlite3 database file {self.temp_filename}')
+        self.temp_lock = threading.RLock()
+        self.temp_db = sqlite3.connect(self.temp_filename, check_same_thread=False)
+        self.temp_cur = self.temp_db.cursor()
+        self._temp_execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
+        self.temp_db.commit()
+
+    def _execute(self, sql: str, args: Optional[tuple] = None) -> sqlite3.Cursor:
+        """Execute SQL command on main database"""
+        if args is None:
+            logger.debug(f"Executing (main) '{sql}'")
+            return self.cur.execute(sql)
+        else:
+            logger.debug(f"Executing (main) '{sql}' with {args}")
+            return self.cur.execute(sql, args)
+
+    def _temp_execute(self, sql: str, args: Optional[tuple] = None) -> sqlite3.Cursor:
+        """Execute SQL command on temp database"""
+        if args is None:
+            logger.debug(f"Executing (temp) '{sql}'")
+            return self.temp_cur.execute(sql)
+        else:
+            logger.debug(f"Executing (temp) '{sql}' with {args[:2]}...")
+            return self.temp_cur.execute(sql, args)
+
     def close(self) -> None:
         """Cleans up the database and closes the connection to it."""
-        with self.lock:
-            self.db.execute('VACUUM')
-            self.db.close()
+        logger.debug('Saving session data to permanent sqlite3 database')
+        with self.temp_lock:
+            self.temp_cur.execute('SELECT * FROM webchanges')
+            with self.lock:
+                for row in self.temp_cur:
+                    self.cur.execute('INSERT INTO webchanges VALUES (?, ?, ?)', row)
+                logger.debug(f'Wrote {self.temp_cur.lastrowid} new entries in permanent database')
+                logger.debug('Cleaning up the sqlite3 database and closing the connection')
+                if self.max_snapshots:
+                    num_del = self.keep_latest(self.max_snapshots)
+                    logger.debug(f'Keeping no more than {self.max_snapshots} snapshots per job: '
+                                 f'purged {num_del} older entries')
+                else:
+                    self.db.commit()
+                self._execute('VACUUM')
+                self.db.close()
+            self.temp_db.close()
+            logger.debug(f'Deleting temp sqlite3 database file {self.temp_filename}')
+            if os.path.exists(self.temp_filename):
+                os.remove(self.temp_filename)
+        del self.temp_db
+        del self.temp_cur
+        del self.temp_lock
         del self.db
         del self.cur
+        del self.lock
 
     def get_guids(self) -> List[str]:
         """Lists the unique 'guid's contained in the database.
@@ -550,11 +610,11 @@ class CacheSQLite3Storage(CacheStorage):
         """
         with self.lock:
             self.cur.row_factory = lambda cursor, row: row[0]
-            guids = self.cur.execute('SELECT DISTINCT uuid FROM webchanges').fetchall()
+            guids = self._execute('SELECT DISTINCT uuid FROM webchanges').fetchall()
             self.cur.row_factory = None
         return guids
 
-    def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):  # TODO handle NoneType
+    def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
         """Return the most recent entry matching a 'guid'.
 
         :param guid: The guid
@@ -567,8 +627,8 @@ class CacheSQLite3Storage(CacheStorage):
             etag is the ETag.
         """
         with self.lock:
-            row = self.cur.execute('SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? '
-                                   'ORDER BY timestamp DESC LIMIT 1', (guid,)).fetchone()
+            row = self._execute('SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? '
+                                'ORDER BY timestamp DESC LIMIT 1', (guid,)).fetchone()
         if row:
             msgpack_data, timestamp = row
             r = msgpack.unpackb(msgpack_data)
@@ -576,11 +636,11 @@ class CacheSQLite3Storage(CacheStorage):
 
         return None, None, 0, None
 
-    def get_history_data(self, guid: str, count: int = 1) -> Dict[str, float]:
-        """Return some data from the last 'count' entries matching a 'guid'.
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
+        """Return data and timestamp from the last 'count' (None = all) entries matching a 'guid'.
 
         :param guid: The guid
-        :param count: The maximum number of entries to return
+        :param count: The maximum number of entries to return; if None return all
 
         :returns: A dict (key: value)
             WHERE
@@ -588,19 +648,19 @@ class CacheSQLite3Storage(CacheStorage):
             value is the timestamp.
         """
         history = {}
-        if count < 1:
+        if isinstance(count, int) and count < 1:
             return history
 
         with self.lock:
-            rows = self.cur.execute('SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? '
-                                    'ORDER BY timestamp DESC', (guid,)).fetchall()
+            rows = self._execute('SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? '
+                                 'ORDER BY timestamp DESC', (guid,)).fetchall()
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
                 if not r['t']:
                     if r['d'] not in history:
                         history[r['d']] = timestamp
-                        if len(history) >= count:
+                        if count and len(history) >= count:
                             break
         return history
 
@@ -619,9 +679,9 @@ class CacheSQLite3Storage(CacheStorage):
             'e': etag,
         }
         msgpack_data = msgpack.packb(c)
-        with self.lock:
-            self.cur.execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
-            self.db.commit()
+        with self.temp_lock:
+            self._temp_execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
+            self.temp_db.commit()
 
     def delete(self, guid: str) -> None:
         """Delete all entries matching a 'guid'.
@@ -629,7 +689,7 @@ class CacheSQLite3Storage(CacheStorage):
         :param guid: The guid
         """
         with self.lock:
-            self.cur.execute('DELETE FROM webchanges WHERE uuid = ?', (guid,))
+            self._execute('DELETE FROM webchanges WHERE uuid = ?', (guid,))
             self.db.commit()
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
@@ -642,15 +702,14 @@ class CacheSQLite3Storage(CacheStorage):
         :returns: Number of records deleted
         """
         with self.lock:
-            self.cur.execute('''
-                DELETE FROM webchanges
-                WHERE ROWID IN (
-                    SELECT ROWID FROM webchanges
-                    WHERE uuid = ?
-                    ORDER BY timestamp DESC
-                    LIMIT -1 OFFSET ?
-                )''', (guid, keep_entries))
-            num_del = self.cur.execute('SELECT changes()').fetchone()[0]
+            self._execute('DELETE FROM webchanges '
+                          'WHERE ROWID IN ( '
+                          '    SELECT ROWID FROM webchanges '
+                          '    WHERE uuid = ? '
+                          '    ORDER BY timestamp DESC '
+                          '    LIMIT -1 OFFSET ? '
+                          ')', (guid, keep_entries))
+            num_del = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
         return num_del
 
@@ -660,13 +719,39 @@ class CacheSQLite3Storage(CacheStorage):
         :returns: Number of records deleted
         """
         with self.lock:
-            self.cur.execute('''
-                DELETE FROM webchanges
-                WHERE EXISTS (
-                    SELECT 1 FROM webchanges w
-                    WHERE w.uuid = webchanges.uuid AND w.timestamp < webchanges.timestamp
-                )''')
-            num_del = self.cur.execute('SELECT changes()').fetchone()[0]
+            self._execute('DELETE FROM webchanges '
+                          'WHERE EXISTS ( '
+                          '    SELECT 1 FROM webchanges w '
+                          '    WHERE w.uuid = webchanges.uuid AND w.timestamp < webchanges.timestamp '
+                          ')')
+            num_del = self._execute('SELECT changes()').fetchone()[0]
+            self.db.commit()
+        return num_del
+
+    def keep_latest(self, keep_entries: int = 1) -> int:
+        """Delete all older entries keeping only the 'keep_num' per guid
+
+        :param keep_entries: Number of entries to keep after deletion
+
+        :returns: Number of records deleted
+        """
+        if sys.version_info < (3, 7):
+            self.db.commit()
+            return 0
+
+        with self.lock:
+            self._execute('WITH '
+                          'cte AS ( SELECT uuid, timestamp, ROW_NUMBER() OVER ( PARTITION BY uuid '
+                          '                                                     ORDER BY timestamp DESC ) rn '
+                          '         FROM webchanges ) '
+                          'DELETE '
+                          'FROM webchanges '
+                          'WHERE EXISTS ( SELECT 1 '
+                          '               FROM cte '
+                          '               WHERE webchanges.uuid = cte.uuid '
+                          '                 AND webchanges.timestamp = cte.timestamp '
+                          '                 AND cte.rn > ? );', (keep_entries,))
+            num_del = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
         return num_del
 
@@ -678,13 +763,13 @@ class CacheSQLite3Storage(CacheStorage):
         :returns: Number of records deleted
         """
         with self.lock:
-            self.cur.execute('''
+            self._execute('''
                 DELETE FROM webchanges
                 WHERE EXISTS (
                      SELECT 1 FROM webchanges w
                      WHERE w.uuid = webchanges.uuid AND webchanges.timestamp > ? AND w.timestamp > ?
                 )''', (timestamp, timestamp))
-            num_del = self.cur.execute('SELECT changes()').fetchone()[0]
+            num_del = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
         return num_del
 
@@ -738,9 +823,9 @@ class CacheRedisStorage(CacheStorage):
 
         return None, None, 0, None
 
-    def get_history_data(self, guid: str, count: int = 1):
+    def get_history_data(self, guid: str, count: Optional[int] = None):
         history = {}
-        if count < 1:
+        if isinstance(count, int) and count < 1:
             return history
 
         key = self._make_key(guid)
@@ -750,7 +835,7 @@ class CacheRedisStorage(CacheStorage):
             if c['tries'] == 0 or c['tries'] is None:
                 if c['data'] not in history:
                     history[c['data']] = c['timestamp']
-                    if len(history) >= count:
+                    if count and len(history) >= count:
                         break
         return history
 

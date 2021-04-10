@@ -10,7 +10,7 @@ Having it into a standalone module allows running the program without having the
 """
 
 import os
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional
 
 from .storage import CacheStorage
 
@@ -62,9 +62,9 @@ class CacheMiniDBStorage(CacheStorage):
 
         return None, None, 0, None
 
-    def get_history_data(self, guid: str, count: int = 1):
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         history = {}
-        if count < 1:
+        if isinstance(count, int) and count < 1:
             return history
         for data, timestamp in self.CacheEntry.query(
                 self.db, self.CacheEntry.c.data // self.CacheEntry.c.timestamp,
@@ -73,7 +73,7 @@ class CacheMiniDBStorage(CacheStorage):
                 & ((self.CacheEntry.c.tries == 0) | (self.CacheEntry.c.tries is None))):
             if data not in history:
                 history[data] = timestamp
-                if len(history) >= count:
+                if count and len(history) >= count:
                     break
         return history
 

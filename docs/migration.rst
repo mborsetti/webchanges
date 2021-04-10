@@ -37,6 +37,9 @@ in the :ref:`introduction <introduction>`, it also implements:
 * The optimization of the default settings of the ``html2text`` filter for web content
 * A new ``--errors`` command line argument to help catching any problems by showing any jobs that error out or have empty
   responses after filters are applied
+* A database that no longer infinitely grows in size
+* Diff data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a reporter:
+  the permanent database is updated only at the very end (after reports are sent)
 * The support of Unicode throughout, including in filters and in the YAML files containing jobs and configuration
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
   the new subdirective ``sort_keys``
@@ -114,6 +117,10 @@ Relative to `urlwatch` 2.22:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
   default method instead or construct a custom ``shellpipe``
+* Fixed the issue of the database growing unbounded to infinity if running in Python 3.7 or higher and using the new,
+  default, ``sqlite3`` database engine.  By default only 4 snapshots are kept, and older ones are purged after every
+  run.  Run with ``--max-snapshots 0`` command line argument to keep the existing behavior, or with the number of
+  snapshots you want to retain if different than the default of 4.
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -178,6 +185,16 @@ Everything, except using ``lynx`` instead of the internal ``html2text`` filter, 
   <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__
 * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
   <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__
+* User alerting when the job file contains unrecognized directives (e.g. typo)
+* Diff data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a reporter:
+  the permanent database is updated only at the very end (after reports are sent)
+* ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults to
+  4. If set to 0, and unlimited number of snapshots will be kept. Only applies to Python 3.7 or higher and only works if
+  the default ``sqlite3`` database is being used.
+* ``--test-diff`` command line argument is no longer limited to displaying the last 10 snapshots
+* Job directive (for ``url`` jobs) ``no_redirects``: disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection
+  (true/false). Suggested by `snowman <https://github.com/snowman>`__ upstream `here
+  <https://github.com/thp/urlwatch/issues/635>`__.
 * Reports' elapsed time now always has at least 2 significant digits
 * Using flake8 to check PEP-8 compliance and more
 * Using coverage to check unit testing coverage
@@ -185,6 +202,7 @@ Everything, except using ``lynx`` instead of the internal ``html2text`` filter, 
 * A 19 percentage point increase in code testing coverage (to 61%), a completely new continuous integration (CI) and
   continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to come)
   increase reliability of releases
+* Added type hinting to the entire code
 * A vast improvement in documentation and error text
 * The support for Python 3.9
 
@@ -192,6 +210,8 @@ Fixed
 ~~~~~
 Relative to `urlwatch` 2.22:
 
+* Diff data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a reporter:
+  the permanent database is updated only at the very end (after reports are sent)
 * The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
 * HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
@@ -201,3 +221,14 @@ Relative to `urlwatch` 2.22:
   subdirective ``sort_keys`` allows you to set it to do so
 * Fixed various system errors and freezes when running ``url`` jobs with ``use_browser: true`` (formerly ``navigate``
   jobs)
+* Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
+
+Known issues
+~~~~~~~~~~~~
+* ``url`` jobs with ``use_browser: true`` (i.e. using Pyppeteer) will at times display the below error message in stdout
+  (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed in the
+  future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+
+  ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
+  ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
+  ``Future exception was never retrieved``

@@ -8,9 +8,11 @@ import pytest
 
 from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, JobBase
-from webchanges.storage import CacheSQLite3Storage
+from webchanges.storage import CacheDirStorage
 
 logger = logging.getLogger(__name__)
+
+here = os.path.dirname(__file__)
 
 TESTDATA = [
     ({'url': 'https://www.google.com/',
@@ -41,7 +43,7 @@ TESTDATA = [
      'test'),
 ]
 
-cache_storage = CacheSQLite3Storage('')
+cache_storage = CacheDirStorage(os.path.join(here, 'data'))
 
 
 @pytest.mark.parametrize('input_job, output', TESTDATA)

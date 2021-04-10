@@ -123,7 +123,7 @@ class UrlwatchCommand:
     def test_diff(self, id: int) -> Optional[int]:
         job = self._get_job(id)
 
-        history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid(), 10)
+        history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid())
         history_data = sorted(history_data.items(), key=lambda kv: kv[1])
 
         if len(history_data) < 2:

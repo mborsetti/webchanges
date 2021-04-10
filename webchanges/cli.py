@@ -141,7 +141,7 @@ def main() -> None:  # pragma: no cover
 
     # setup database API
     if command_config.database_engine == 'sqlite3':
-        cache_storage = CacheSQLite3Storage(command_config.cache)  # storage.py
+        cache_storage = CacheSQLite3Storage(command_config.cache, command_config.max_snapshots)  # storage.py
     elif any(command_config.cache.startswith(prefix) for prefix in ('redis://', 'rediss://')):
         cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
     elif command_config.database_engine == 'redis':
