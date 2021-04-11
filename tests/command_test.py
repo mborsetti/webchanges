@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from webchanges import __project_name__
+from webchanges import __project_name__ as project_name
 from webchanges.cli import migrate_from_urlwatch
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 here = os.path.dirname(__file__)
 
-project_name = __project_name__
 config_dir = os.path.join(here, 'data')
 prefix, bindir = os.path.split(config_dir)
 config_file = os.path.join(here, 'data', 'config.yaml')

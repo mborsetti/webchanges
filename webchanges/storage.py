@@ -1,4 +1,4 @@
-"""Handles all storage: job files, config files, hooks file, and cache database engines"""
+"""Handles all storage: job files, config files, hooks file, and cache database engines."""
 
 import copy
 import getpass
@@ -8,6 +8,7 @@ import shutil
 import sqlite3
 import stat
 import sys
+import tempfile
 import threading
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
@@ -398,13 +399,21 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         ...
 
     def backup(self) -> Iterator[Tuple[str, str, float, int, str]]:
+        """Return the most recent entry for each 'guid'.
+
+        :returns: An generator of tuples, each consisting of (guid, data, timestamp, tries, etag)
+        """
         for guid in self.get_guids():
             data, timestamp, tries, etag = self.load(guid)
             yield guid, data, timestamp, tries, etag
 
     def restore(self, entries: Iterator[Tuple[str, str, float, int, str]]) -> None:
+        """Save multiple entries into the database.
+
+        :param entries: An iterator of tuples WHERE each consists of (guid, data, timestamp, tries, etag)
+        """
         for guid, data, timestamp, tries, etag in entries:
-            self.save(guid, data, timestamp, tries, etag)
+            self.save(guid, data, timestamp, tries, etag, temporary=False)
 
     def gc(self, known_guids: Iterable[str]) -> None:
         for guid in set(self.get_guids()) - set(known_guids):
@@ -413,6 +422,13 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         self.clean_cache(known_guids)
 
     def clean_cache(self, known_guids: Iterable[str]) -> None:
+        """Convenience function to clean the cache.
+
+        If self.clean_all is present, runs clean_all(). Otherwise runs clean() on all known_guids, one at a time.
+        Prints the number of snapshots deleted
+
+        :param known_guids: An iterable of guids
+        """
         if hasattr(self, 'clean_all'):
             count = self.clean_all()
             if count:
@@ -424,6 +440,11 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
                     print(f'Deleted {count} old snapshots of {guid}')
 
     def rollback_cache(self, timestamp: float) -> None:
+        """Calls rollback() and prints out the result.
+
+        :param timestamp: The timestamp
+        """
+
         count = self.rollback(timestamp)
         try:
             timestamp_date = datetime.fromtimestamp(timestamp).astimezone().isoformat()
@@ -491,13 +512,16 @@ class CacheDirStorage(CacheStorage):
 
 class CacheSQLite3Storage(CacheStorage):
     """
-    Handles storage of the snapshot in a SQLite database in the 'filename' file using Python's built-in sqlite3 module
+    Handles storage of the snapshot as a SQLite database in the 'filename' file using Python's built-in sqlite3 module
     and the msgpack package.
+
+    A temporary database is created during run, and is written to the permanent one using the 'close()' function, which
+    is called at the end of program execution.
 
     The database contains the 'webchanges' table with the following columns:
 
     * uuid: unique hash of the "location", i.e. the URL; indexed
-    * timestamp: the Unix timestamp of when then the snapshot was taken
+    * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
     * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
 
     """
@@ -505,7 +529,7 @@ class CacheSQLite3Storage(CacheStorage):
         """Opens the database file and, if new, creates a table and index.
 
         :param filename: The full filename of the database file
-        :param max_snapshots: The maximum number of snapshots to retain for each job
+        :param max_snapshots: The maximum number of snapshots to retain in the database for each job ('guid')
         """
 
         self.max_snapshots = max_snapshots
@@ -546,9 +570,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.migrate_from_minidb(minidb_filename)
 
         # create temporary file for writing (fault tolerant)
-        self.temp_filename = f'{fn_base}_tmp{fn_ext}'
-        if os.path.exists(self.temp_filename):
-            os.remove(self.temp_filename)
+        self.temp_filename = tempfile.NamedTemporaryFile().name
         logger.debug(f'Creating temp sqlite3 database file {self.temp_filename}')
         self.temp_lock = threading.RLock()
         self.temp_db = sqlite3.connect(self.temp_filename, check_same_thread=False)
@@ -575,7 +597,8 @@ class CacheSQLite3Storage(CacheStorage):
             return self.temp_cur.execute(sql, args)
 
     def close(self) -> None:
-        """Cleans up the database and closes the connection to it."""
+        """Writes the temporary database to the permanent one, purges old entries if required, and closes all database
+        connections."""
         logger.debug('Saving session data to permanent sqlite3 database')
         with self.temp_lock:
             self.temp_cur.execute('SELECT * FROM webchanges')
@@ -592,9 +615,10 @@ class CacheSQLite3Storage(CacheStorage):
                     self.db.commit()
                 self._execute('VACUUM')
                 self.db.close()
+                logger.debug(f'Closed main sqlite3 database file {self.filename}')
             self.temp_db.close()
-            logger.debug(f'Deleting temp sqlite3 database file {self.temp_filename}')
             if os.path.exists(self.temp_filename):
+                logger.debug(f'Deleting temp sqlite3 database file {self.temp_filename}')
                 os.remove(self.temp_filename)
         del self.temp_db
         del self.temp_cur
@@ -664,14 +688,18 @@ class CacheSQLite3Storage(CacheStorage):
                             break
         return history
 
-    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str, temporary: bool = True) -> None:
         """Save the data from a job.
+
+        By default it is saved into the temporary database.  Call close() to tranfer the contents of the temporary
+        database to the permament one.
 
         :param guid: The guid
         :param data: The data
         :param timestamp: The timestamp
         :param tries: The number of tries
         :param etag: The ETag
+        :param temporary: If true, saved to temporary database (default)
         """
         c = {
             'd': data,
@@ -679,9 +707,14 @@ class CacheSQLite3Storage(CacheStorage):
             'e': etag,
         }
         msgpack_data = msgpack.packb(c)
-        with self.temp_lock:
-            self._temp_execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
-            self.temp_db.commit()
+        if temporary:
+            with self.temp_lock:
+                self._temp_execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
+                self.temp_db.commit()
+        else:
+            with self.lock:
+                self._execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
+                self.db.commit()
 
     def delete(self, guid: str) -> None:
         """Delete all entries matching a 'guid'.
@@ -729,7 +762,8 @@ class CacheSQLite3Storage(CacheStorage):
         return num_del
 
     def keep_latest(self, keep_entries: int = 1) -> int:
-        """Delete all older entries keeping only the 'keep_num' per guid
+        """Delete all older entries keeping only the 'keep_num' per guid.
+        Only works for Python => 3.7; does nothing otherwise.
 
         :param keep_entries: Number of entries to keep after deletion
 
@@ -781,9 +815,7 @@ class CacheSQLite3Storage(CacheStorage):
         from .storage_minidb import CacheMiniDBStorage
 
         legacy_db = CacheMiniDBStorage(filename)
-        for guid in legacy_db.get_guids():
-            data, timestamp, tries, etag = legacy_db.load(guid)
-            self.save(guid, data, timestamp, tries, etag)
+        self.restore(legacy_db.backup())
         legacy_db.close()
         print(f'Database upgrade finished; the following backup file can be safely deleted: {filename}')
         print("and the 'minidb' package can be removed (unless used by another program): $ pip uninstall minidb")
