@@ -1,6 +1,6 @@
 # Test cases for filters.rst used by docs_filters_test.py
 # Each heading is a unique url: in the filter.rst examples
-# Ensure you use a Unicode character (e.g. ™) in your example (both input and output) to test that too!
+# Ensure you use a Unicode character (e.g. ™ / &trade) in your example (both input and output) to test that too!
 https://example.org/idtest.html:
   input: |-
     <html>
@@ -59,7 +59,7 @@ https://example.com/html2text.html:
     <body>
       <section role="main">
       <table>
-      <tr><th>Date</th><th>#Sales™</th></tr>
+      <tr><th>Date</th><th>#Sales&trade</th></tr>
       <tr><td>Monday, 3 February 2020</td><td>10,000</td></tr>
       <tr><td>Tu, 3 Mar</td><td>20,000</td></tr>
       </table>
@@ -509,7 +509,7 @@ https://example.net/css-skip-maxitems.html:
 https://example.net/shellpipe.html:
   input: |
   output: TEST
-https://example.net/jobs.json:
+https://example.net/jq-ascii.json:
   input: |
     [
       {
@@ -521,14 +521,14 @@ https://example.net/jobs.json:
         "company": "Tack-trest"
       },
       {
-        "title": "TPS™ Report Analyst",
+        "title": "TPS Report Analyst",
         "company": "Initech"
       }
     ]
   output: |-
       "Senior Data Scientist"
       "Python Developer"
-      "TPS™ Report Analyst"
+      "TPS Report Analyst"
 https://example.com/format_xml.xml:
   input: |
       <?xml version="1.0" ?>

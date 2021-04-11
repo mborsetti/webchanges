@@ -59,8 +59,8 @@ At the moment, the following filters are available:
 
 * To filter and/or make JSON more readable:
 
+  - :ref:`jq`: Filter ASCII JSON
   - :ref:`format-json`: Reformat (pretty-print) JSON
-  - :ref:`jq`: Filter JSON
 
 * To make XML more readable:
 
@@ -486,12 +486,13 @@ Linux/MacOS only
 """"""""""""""""
 
 The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight JSON processor.
-It is currently available only for Linux (most flavors) and MacOS only.  See :ref:`below <filtering_json>` for a
-Python-based cross-platform way of selecting JSON.
+It is currently available only for Linux (most flavors) and MacOS only and only processes ASCII characters (e.g. ``™``
+will be turned into the string ``\u2122``). See :ref:`below <filtering_json>` for a Python-based cross-platform way of
+selecting JSON that also supports Unicode.
 
 .. code-block:: yaml
 
-   url: https://example.net/jobs.json
+   url: https://example.net/jq-ascii.json
    filter:
       - jq: '.[].title'
 
