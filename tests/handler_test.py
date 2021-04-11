@@ -76,7 +76,7 @@ def test_load_jobs_yaml():
 
 
 def test_load_hooks_py():
-    hooks_file = os.path.join(here, 'data', 'hooks.py')
+    hooks_file = os.path.join(here, 'data', 'hooks_test.py')
     if os.path.exists(hooks_file):
         import_module_from_source('hooks', hooks_file)
     else:

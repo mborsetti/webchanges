@@ -21,7 +21,7 @@ prefix, bindir = os.path.split(config_dir)
 config_file = os.path.join(here, 'data', 'config.yaml')
 jobs_file = os.path.join(here, 'data', 'jobs-echo_test.yaml')
 cache_file = os.path.join(here, 'data', 'cache.db')
-hooks_file = os.path.join(here, 'data', 'hooks.py')
+hooks_file = os.path.join(here, 'data', 'hooks_test.py')
 
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)
