@@ -67,7 +67,7 @@ report:
     from_mail: ''
     from_name: ''
     to: ''
-    subject: '{count} changes: {jobs}'
+    subject: '[webchanges] {count} changes: {jobs}'
   ifttt:
     enabled: false
     key: ''
@@ -76,6 +76,13 @@ report:
     enabled: false
     sender: ''
     recipient: ''
+  prowl:
+    enabled: false
+    api_key: ''
+    priority: 0
+    application: ''
+    subject: '[webchanges] {count} changes: {jobs}'
+
 job_defaults:
   all: {}
   url: {}

@@ -19,9 +19,9 @@ here = os.path.dirname(__file__)
 config_dir = os.path.join(here, 'data')
 prefix, bindir = os.path.split(config_dir)
 config_file = os.path.join(here, 'data', 'config.yaml')
-jobs_file = os.path.join(here, 'data', 'command_jobs.yaml')
+jobs_file = os.path.join(here, 'data', 'jobs-echo_test.yaml')
 cache_file = os.path.join(here, 'data', 'cache.db')
-hooks_file = os.path.join(here, 'data', 'hooks_test.py')
+hooks_file = os.path.join(here, 'data', 'hooks.py')
 
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)
@@ -66,12 +66,14 @@ def test_edit_hooks_fail():
     assert pytest_wrapped_e.value.code == 1
 
 
-def test_show_features():
+def test_show_features_and_verbose():
     setattr(command_config, 'features', True)
+    setattr(command_config, 'verbose', True)
     urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'features', False)
+    setattr(command_config, 'verbose', False)
     assert pytest_wrapped_e.value.code is None
 
 
@@ -131,12 +133,43 @@ def test_test_job():
 
 
 def test_test_diff():
-    setattr(command_config, 'test_diff', 1)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
+    jobs_file2 = os.path.join(here, 'data', 'jobs-time.yaml')
+    jobs_storage2 = JobsYaml(jobs_file2)
+    command_config2 = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file2, hooks_file,
+                                    cache_file, verbose=False)
+    urlwatcher2 = Urlwatch(command_config2, config_storage, cache_storage, jobs_storage2)  # main.py
+
+    setattr(command_config2, 'test_diff', 1)
+    urlwatch_command = UrlwatchCommand(urlwatcher2)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config, 'test_diff', None)
+    setattr(command_config2, 'test_diff', None)
     assert pytest_wrapped_e.value.code == 1
+
+    job = urlwatcher2.jobs[0]
+    if os.name == 'nt':
+        job.command = 'echo %time%'
+    job.filter = []
+    guid = job.get_guid()
+
+    # run once
+    urlwatcher2.run_jobs()
+    cache_storage.close()
+    cache_storage.__init__(cache_file)
+
+    # run twice
+    urlwatcher2.run_jobs()
+    cache_storage.close()
+    cache_storage.__init__(cache_file)
+    history = cache_storage.get_history_data(guid)
+    assert len(history) == 2
+
+    setattr(command_config2, 'test_diff', 1)
+    urlwatch_command = UrlwatchCommand(urlwatcher2)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config2, 'test_diff', None)
+    assert pytest_wrapped_e.value.code is None
 
 
 def test_list_error_jobs():

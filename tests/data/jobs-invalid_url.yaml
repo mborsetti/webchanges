@@ -1,0 +1,3 @@
+name: Invalid url used in hander_test.py
+url: https://invalid
+max_tries: 2

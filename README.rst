@@ -65,7 +65,7 @@ The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io
 
 Code
 ====
-|issues| |CI| |coverage| |coveralls|
+|issues| |CI| |coveralls|
 
 The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 

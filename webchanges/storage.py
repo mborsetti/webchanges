@@ -71,7 +71,7 @@ DEFAULT_CONFIG = {
 
         'browser': {  # the system's default browser
             'enabled': False,
-            'title': f'[{project.__project_name__}] {{count}} changes: {{jobs}}'
+            'title': f'[{project.__project_name__}] {{count}} changes: {{jobs}}',
         },
 
         'email': {  # email (except mailgun)
@@ -134,7 +134,7 @@ DEFAULT_CONFIG = {
             'from_mail': '',
             'from_name': '',
             'to': '',
-            'subject': '{count} changes: {jobs}'
+            'subject': f'[{project.__project_name__}] {{count}} changes: {{jobs}}',
         },
         'ifttt': {
             'enabled': False,
@@ -151,7 +151,7 @@ DEFAULT_CONFIG = {
             'api_key': '',
             'priority': 0,
             'application': '',
-            'subject': '{count} changes: {jobs}'
+            'subject': f'[{project.__project_name__}] {{count}} changes: {{jobs}}',
         },
     },
 

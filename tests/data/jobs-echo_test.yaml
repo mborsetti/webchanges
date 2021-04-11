@@ -1,0 +1,4 @@
+kind: shell
+command: echo test
+name: Sample webchanges job used by command_test.py
+filter: []

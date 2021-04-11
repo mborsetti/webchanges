@@ -42,7 +42,7 @@ def teardown_func():
 
 
 def prepare_storage_test(config_args={}):
-    jobs_file = os.path.join(here, 'data', 'jobs-storage-test.yaml')
+    jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
     config_file = os.path.join(here, 'data', 'config.yaml')
     cache_file = os.path.join(here, 'data', 'cache.db')
     hooks_file = ''
@@ -67,7 +67,7 @@ def test_keep_latest():
             # use an url that changes
             job = urlwatcher.jobs[0]
             if os.name == 'nt':
-                job.command = 'echo %TIME%'
+                job.command = 'echo %time%'
             guid = job.get_guid()
 
             # run once
@@ -239,3 +239,61 @@ def test_migrate_urlwatch_legacy_db():
             fn_base, fn_ext = os.path.splitext(temp_cache_file)
             minidb_file = f'{fn_base}_minidb{fn_ext}'
             os.remove(minidb_file)
+
+
+# Legacy testing
+
+@minidb_required
+def prepare_storage_test_minidb(config_args={}):
+    from webchanges.storage_minidb import CacheMiniDBStorage
+
+    jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
+    config_file = os.path.join(here, 'data', 'config.yaml')
+    cache_file = os.path.join(here, 'data', 'cache.db')
+    hooks_file = ''
+
+    config_storage = YamlConfigStorage(config_file)
+    cache_storage = CacheMiniDBStorage(cache_file)
+    jobs_storage = JobsYaml(jobs_file)
+
+    urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
+    for k, v in config_args.items():
+        setattr(urlwatch_config, k, v)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+
+    return urlwatcher, cache_storage
+
+
+@minidb_required
+def test_clean_and_history_data_minidb():
+    with teardown_func():
+        urlwatcher, cache_storage = prepare_storage_test_minidb()
+        try:
+            # use an url that changes
+            job = urlwatcher.jobs[0]
+            if os.name == 'nt':
+                job.command = 'echo %time%'
+            guid = job.get_guid()
+
+            # run once
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
+
+            # run twice
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(os.path.join(here, 'data', 'cache.db'))
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 2
+
+            # clean
+            cache_storage.clean(guid)
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 1
+
+            # get history with zero count
+            history = cache_storage.get_history_data(guid, count=0)
+            assert history == {}
+        finally:
+            cache_storage.close()

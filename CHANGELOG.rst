@@ -31,7 +31,7 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals for changes that don't affect users.
 
 
-Version 3.2.6.post0
+Version 3.3.0.rc0
 ====================
 Unreleased
 
