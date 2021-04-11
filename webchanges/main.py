@@ -1,6 +1,6 @@
 """The main class.
 
-For the entrypoint, see cli.py
+For the entrypoint, see cli.py.
 """
 
 import logging

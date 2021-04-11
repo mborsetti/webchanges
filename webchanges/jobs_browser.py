@@ -3,6 +3,8 @@ Legacy code retained to run Pyppeteer if Python < 3.7; not used otherwise as wit
 will use asyncio.run to run Pyppeteer from within.
 
 This module is not included in testing coverage and is not type hinted.
+
+This module will be dropped when Python 3.6 support ends.
 """
 
 import asyncio
@@ -177,7 +179,7 @@ def main():
     import json
 
     # headers and cookies get passed as JSON; make sure to escape the double quotes, e.g.
-    # browser.py --cookies {\"test\":\"test\"} or whatever works with the shell you're using
+    # jobs_browser.py --cookies {\"test\":\"test\"} or whatever works with the shell you're using
     parser = argparse.ArgumentParser(description='Browser handler')
     parser.add_argument('url', help='URL to retrieve')
     parser.add_argument('-v', '--verbose', action='store_true', help='show debug output')

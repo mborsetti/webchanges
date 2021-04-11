@@ -35,15 +35,15 @@ in the :ref:`introduction <introduction>`, it also implements:
 * The use of the webpage's title as a job ``name`` if one isn't provided and the ability to add a job ``note`` in the
   report
 * The optimization of the default settings of the ``html2text`` filter for web content
-* A new ``--errors`` command line argument to help catching any problems by showing any jobs that error out or have empty
-  responses after filters are applied
+* A new ``--errors`` command line argument to help catching any problems by showing any jobs that error out or have
+  empty responses after filters are applied
 * A database that no longer infinitely grows in size
 * Diff data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a reporter:
   the permanent database is updated only at the very end (after reports are sent)
 * The support of Unicode throughout, including in filters and in the YAML files containing jobs and configuration
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
   the new subdirective ``sort_keys``
-* A 19 percentage point increase in code testing coverage (to 61%), completely new continuous integration (CI) and
+* A 21 percentage point increase in code testing coverage (to 63%), completely new continuous integration (CI) and
   continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to come)
   to increase reliability of new releases
 * The support of Python 3.9
@@ -199,7 +199,7 @@ Everything, except using ``lynx`` instead of the internal ``html2text`` filter, 
 * Using flake8 to check PEP-8 compliance and more
 * Using coverage to check unit testing coverage
 * Unicode is supported throughout, including in filters and YAML files containing jobs and configuration
-* A 19 percentage point increase in code testing coverage (to 61%), a completely new continuous integration (CI) and
+* A 21 percentage point increase in code testing coverage (to 63%), a completely new continuous integration (CI) and
   continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to come)
   increase reliability of releases
 * Added type hinting to the entire code

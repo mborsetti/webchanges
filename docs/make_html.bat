@@ -22,7 +22,7 @@ if errorlevel 9009 (
 	exit /b 1
 )
 
-%SPHINXBUILD% -M html %SOURCEDIR% %BUILDDIR% -E -W -v %SPHINXOPTS% %O%
+%SPHINXBUILD% -b html %SOURCEDIR% %BUILDDIR% -E -W -v %SPHINXOPTS% %O%
 echo %errorlevel%
 
 if %errorlevel% equ 0 start "" "file://%~dp0_build\html\index.html"

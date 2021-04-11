@@ -50,7 +50,7 @@ logger = logging.getLogger(project_name)
 
 
 def setup_logger(verbose: bool) -> None:
-    """Set up the logger"""
+    """Set up the logger."""
     if verbose:
         root_logger = logging.getLogger('')
         console = logging.StreamHandler()
@@ -78,7 +78,7 @@ def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cac
 
 
 def main() -> None:  # pragma: no cover
-    """The entry point"""
+    """The entry point."""
     # make sure that PendingDeprecationWarning are displayed from all modules (otherwise only those in __main__ are)
     warnings.filterwarnings('default', category=PendingDeprecationWarning)
 

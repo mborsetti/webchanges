@@ -71,8 +71,8 @@ You can specify a boolean value (true/false) in several forms::
     likes_emacs: TRUE
     uses_cvs: false
 
-However, please use lowercase ``true`` or ``false`` for boolean values in dictionaries as these are the default syntax for
-tools like yamllint.
+However, please use lowercase ``true`` or ``false`` for boolean values in dictionaries as these are the default syntax
+for tools like yamllint.
 
 Values can span multiple lines using ``|`` or ``>``.  Spanning multiple lines using a "Literal Block Scalar" ``|`` will
 include the newlines and any trailing spaces.

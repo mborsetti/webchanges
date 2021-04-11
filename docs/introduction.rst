@@ -88,7 +88,8 @@ Finally, you have a choice of many and many options to finely control the data a
 Once you have collected the output, you may transform it to increase its utility. You use the ``filter`` directive to
 activate one or more :ref:`filters <filters>` to:
 
-* select HTML or (XML): ``css``, ``xpath``, ``element-by-class``, ``element-by-id``, ``element-by-style``, ``element-by-tag``
+* select HTML or (XML): ``css``, ``xpath``, ``element-by-class``, ``element-by-id``, ``element-by-style``,
+  ``element-by-tag``
 * extract text from HTML: ``html2text``
 * make HTML more readable: ``beautify``
 * extract text from PDF: ``pdf2text``

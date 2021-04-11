@@ -163,3 +163,8 @@ snapshots (and grow to infinity), while with ``textfiles`` only the last snapsho
 
 
 `New in version 3.3.`
+
+
+.. todo::
+    This part of documentation needs your help!
+    Please consider :ref:`contributing <contributing>` a pull request to update this.

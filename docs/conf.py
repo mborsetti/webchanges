@@ -54,6 +54,7 @@ extensions = [
     'sphinx.ext.autosummary',
     # 'sphinx.ext.doctest',
     # 'sphinx.ext.mathjax',
+    'sphinx.ext.todo',
     # 'sphinx.ext.viewcode',
     # 'sphinxcontrib.httpdomain',
     'sphinx_rtd_theme',
@@ -88,6 +89,8 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+# If true, `to do` and `todoList` produce output, else they produce nothing.
+todo_include_todos = True
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -138,7 +141,11 @@ html_static_path = ['_static']
 #
 # html_sidebars = {}
 
+# -- Options for autodoc  ----------------------------------------------------
 
-autodoc_mock_imports = ['']
 autoclass_content = 'both'
+autodoc_default_options = {'inherited-members': True}
+autodoc_inherit_docstrings = True
+autodoc_member_order = 'groupwise'
+autodoc_mock_imports = ['']
 autosummary_generate = True

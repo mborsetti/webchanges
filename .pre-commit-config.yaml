@@ -93,10 +93,10 @@ repos:
         description: Enforce that python3.6+ type annotations are used instead of type comments
 #      - id: rst-backticks
 #        description: Detect common mistake of using single backticks when writing rst
-      - id: rst-directive-colons
-        description: Detect mistake of rst directive not ending with double colon
-      - id: rst-inline-touching-normal
-        description: Detect mistake of inline code touching normal text in rst
+#      - id: rst-directive-colons
+#        description: Detect mistake of rst directive not ending with double colon
+#      - id: rst-inline-touching-normal
+#        description: Detect mistake of inline code touching normal text in rst
       - id: text-unicode-replacement-char
         description: Forbid files which have a UTF-8 Unicode replacement character
 
@@ -107,13 +107,21 @@ repos:
 #      - id: black
 #        language_version: python3
 
-  - repo: https://gitlab.com/pycqa/flake8
+  - repo: https://github.com/pycqa/flake8
     rev: 3.9.0
     hooks:
       - id: flake8
         name: Check for errors, style, and over-complexity (flake8)
-        description: Linter
+        description: Code linter
 #        additional_dependencies: [flake8-import-order]  # conflicts with PyCharm's Optimize imports
+
+  - repo: https://github.com/pycqa/doc8
+    rev: 0.9.0a1
+    hooks:
+      - id: doc8
+        args: [--max-line-length, '120']
+        name: Check for style in rst documentation (doc8)
+        description: Documentation linter
 
 #  NOT using this because it fails (and no support for Python > 3.6!)
 #  - repo: https://github.com/myint/rstcheck

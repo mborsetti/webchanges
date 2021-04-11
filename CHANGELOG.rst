@@ -69,6 +69,12 @@ Fixed
 * ``use_browser: false`` was not being interpreted correctly
 * Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
 
+Internals
+---------
+* Additional testing and logging to ``sqlite3`` database engine, increasing overall code coverage to 63%
+* Pre-commit documentation linting using ``doc8``
+* Renamed legacy module browser.py to jobs_browser.py for documentation clarity
+
 Known issues
 ------------
 * ``url`` jobs with ``use_browser: true`` (i.e. using Pyppeteer) will at times display the below error message in stdout

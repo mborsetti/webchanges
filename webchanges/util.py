@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class TrackSubClasses(type):
-    """A metaclass that stores subclass name-to-class mappings in the base class"""
+    """A metaclass that stores subclass name-to-class mappings in the base class."""
     T = TypeVar('T')
 
     @staticmethod
@@ -60,7 +60,7 @@ class TrackSubClasses(type):
 
 
 def edit_file(filename: str) -> None:
-    """Opens the editor to edit the file"""
+    """Opens the editor to edit the file."""
     editor = os.environ.get('EDITOR', None)
     if not editor:
         editor = os.environ.get('VISUAL', None)
@@ -84,7 +84,7 @@ def import_module_from_source(module_name: str, source_path: str) -> ModuleType:
 
 
 def chunk_string(string: str, length: int, *, numbering: bool = False) -> Iterable[str]:
-    """Chunks string"""
+    """Chunks a string."""
     if len(string) <= length:
         return [string]
 
@@ -131,7 +131,7 @@ def linkify(
     """Converts plain text into HTML with links.
 
     For example linkify("Hello http://tornadoweb.org!") would return 'Hello
-        <a href="http://tornadoweb.org">http://tornadoweb.org</a>!'.
+    <a href="http://tornadoweb.org">http://tornadoweb.org</a>!'.
 
     :parameter text: The text to linkify
     :parameter shorten: Long urls will be shortened for display.

@@ -7,7 +7,7 @@ import webchanges as project
 
 
 class BaseConfig(object):
-    """Base configuration class"""
+    """Base configuration class."""
 
     def __init__(self, project_name: str, config_dir: str, config: str, jobs: str, cache: str, hooks: str,
                  verbose: bool) -> None:
@@ -40,7 +40,7 @@ class BaseConfig(object):
 
 
 class CommandConfig(BaseConfig):
-    """Command line arguments configuration"""
+    """Command line arguments configuration."""
 
     def __init__(self, project_name: str, config_dir: str, bindir: str, prefix: str, config: str, jobs: str, hooks: str,
                  cache: str, verbose: bool) -> None:

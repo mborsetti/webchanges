@@ -1,4 +1,4 @@
-"""Check web (or commands) for changes since last run and notify
+"""Check web (or commands) for changes since last run and notify.
 
 `webchanges` checks web content (or the output of local commands) for changes and shows or notifies you via e-mail or
 one of many other supported services if any change is detected. The notification includes the changed URL (or command)

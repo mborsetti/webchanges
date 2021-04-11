@@ -39,9 +39,9 @@ content "scrolls" away.
 Because lines that are modified generate both a deleted and an added line by the diff, this filter always displays
 modified lines.
 
-As a safeguard, ``additions_only: true`` will display a warning (and all lines deleted) when the size of the source shrinks
-by 75% or more, as this could be due to changes in where or how the information is published (requiring the job to
-be reconfigured to continue monitoring the relevant information).
+As a safeguard, ``additions_only: true`` will display a warning (and all lines deleted) when the size of the source
+shrinks by 75% or more, as this could be due to changes in where or how the information is published (requiring the job
+to be reconfigured to continue monitoring the relevant information).
 
 Example:
 
@@ -58,7 +58,7 @@ Output:
 
 or (text):
 
-.. code-block:: none
+.. code-block::
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#add_only
@@ -84,7 +84,7 @@ Output:
 
 or (text):
 
-.. code-block:: none
+.. code-block::
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#add_only2
@@ -99,8 +99,8 @@ or (text):
    -[More information...](https://www.iana.org/domains/example)
    ---------------------------------------------------------------------------
 
-Note: When using ``additions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
-this can be changed by specifying the key with the desired value in the job.
+Note: When using ``additions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
+course, this can be changed by specifying the key with the desired value in the job.
 
 `New in Version 3.0`
 
@@ -109,8 +109,8 @@ this can be changed by specifying the key with the desired value in the job.
 
 deletions_only
 --------------
-The ``deletions_only: true`` directive causes the report for that source to contain only lines that are deleted by the diff (no
-additions).
+The ``deletions_only: true`` directive causes the report for that source to contain only lines that are deleted by the
+diff (no additions).
 
 Example:
 
@@ -127,7 +127,7 @@ Output:
 
 or (text):
 
-.. code-block:: none
+.. code-block::
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#del_only
@@ -138,8 +138,8 @@ or (text):
    @@ -1,2 +1,2 @@
    -This is a line that has been deleted or changed
 
-Note: When using ``deletions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of course,
-this can be changed by specifying the key with the desired value in the job.
+Note: When using ``deletions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
+course, this can be changed by specifying the key with the desired value in the job.
 
 `New in Version 3.0`
 
@@ -161,7 +161,7 @@ Example:
 
 Output:
 
-.. code-block:: none
+.. code-block::
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#lots_of_contextlines
@@ -190,7 +190,7 @@ Example (default):
 
 Output:
 
-.. code-block:: none
+.. code-block::
 
    ---------------------------------------------------------------------------
    CHANGED: https://example.com/#default_contextlines
