@@ -1,15 +1,18 @@
+# Test cases for filters.rst used by docs_filters_test.py
+# Each heading is a unique url: in the filter.rst examples
+# Ensure you use a Unicode character (e.g. ™) in your example (both input and output) to test that too!
 https://example.org/idtest.html:
   input: |-
     <html>
     <body>
       <h1>ID Test</h1>
       <p>Foo.</p>
-      <div id="something">Only this element.</div>
+      <div id="something">Only this™ element.</div>
       <p>And no other element.</p>
     </body>
     </html>
   output: |-
-    <div id="something">Only this element.</div>
+    <div id="something">Only this™ element.</div>
 https://example.org/idtest_2.html:
   input: |-
     <html>
@@ -18,40 +21,52 @@ https://example.org/idtest_2.html:
       <p>Foo.</p>
       <div id="outer_container">
       <p>Bar.</p>
-      <div id="something_inside">Only this element.</div>
+      <div id="something_inside">Only this™ element.</div>
       <p>And no other element.</p>
       </div>
       <p>Even outside.</p>
     </body>
     </html>
   output: |-
-    <div id="something_inside">Only this element.</div>
+    <div id="something_inside">Only this™ element.</div>
 https://example.net/id2text.html:
   input: |-
     <html>
     <body>
       <h1>ID Test</h1>
       <p>Foo.</p>
-      <div id="something">Only this element, only the text.</div>
+      <div id="something">Only this™ element, only the text.</div>
       <p>And no other element.</p>
     </body>
     </html>
   output: |
-    Only this element, only the text.
+    Only this™ element, only the text.
+https://example.org/styletest.html:
+  input: |-
+    <html>
+    <body>
+      <h1>ID Test</h1>
+      <p>Foo.</p>
+      <div style="something">Only this™ element.</div>
+      <p>And no other element.</p>
+    </body>
+    </html>
+  output: |-
+    <div style="something">Only this™ element.</div>
 https://example.com/html2text.html:
   input: |-
     <html>
     <body>
       <section role="main">
       <table>
-      <tr><th>Date</th><th>#Sales</th></tr>
+      <tr><th>Date</th><th>#Sales™</th></tr>
       <tr><td>Monday, 3 February 2020</td><td>10,000</td></tr>
       <tr><td>Tu, 3 Mar</td><td>20,000</td></tr>
       </table>
     </section>
     </body>
     </html>
-  output: "Date                    | #Sales \n------------------------|--------\nMonday, 3 February 2020 | 10,000 \nTu, 3 Mar               | 20,000 \n\n\n"
+  output: "Date                    | #Sales™ \n------------------------|--------\nMonday, 3 February 2020 | 10,000 \nTu, 3 Mar               | 20,000 \n\n\n"
 # The below is for when html2text > 2020.1.16 (fixes included)
 #  output: |-
 #    | Date                    | #Sales |
@@ -64,11 +79,11 @@ https://example.com/cal.ics:
     VERSION:2.0
     CALSCALE:GREGORIAN
     BEGIN:VEVENT
-    SUMMARY:Access-A-Ride Pickup
+    SUMMARY:Access-A-Ride™ Pickup
     DTSTART;TZID=America/New_York:20130802T103400
     DTEND;TZID=America/New_York:20130802T110400
     LOCATION:1000 Broadway Ave.\, Brooklyn
-    DESCRIPTION: Access-A-Ride trip to 900 Jay St.\, Brooklyn
+    DESCRIPTION: Access-A-Ride™ trip to 900 Jay St.\, Brooklyn
     STATUS:CONFIRMED
     SEQUENCE:3
     BEGIN:VALARM
@@ -78,11 +93,11 @@ https://example.com/cal.ics:
     END:VALARM
     END:VEVENT
     BEGIN:VEVENT
-    SUMMARY:Access-A-Ride Pickup
+    SUMMARY:Access-A-Ride™ Pickup
     DTSTART;TZID=America/New_York:20130802T200000
     DTEND;TZID=America/New_York:20130802T203000
     LOCATION:900 Jay St.\, Brooklyn
-    DESCRIPTION: Access-A-Ride trip to 1000 Broadway Ave.\, Brooklyn
+    DESCRIPTION: Access-A-Ride™ trip to 1000 Broadway Ave.\, Brooklyn
     STATUS:CONFIRMED
     SEQUENCE:3
     BEGIN:VALARM
@@ -93,8 +108,8 @@ https://example.com/cal.ics:
     END:VEVENT
     END:VCALENDAR
   output: |-
-    2013-08-02 10:34 -- 2013-08-02 11:04: Access-A-Ride Pickup
-    2013-08-02 20:00 -- 2013-08-02 20:30: Access-A-Ride Pickup
+    2013-08-02 10:34 -- 2013-08-02 11:04: Access-A-Ride™ Pickup
+    2013-08-02 20:00 -- 2013-08-02 20:30: Access-A-Ride™ Pickup
 https://example.com/sha.html:
   input: |-
     <html>
@@ -117,63 +132,70 @@ https://example.com/keep_lines_containing.html:
 https://example.com/keep_lines_containing_re.txt:
   input: |-
     error 1
-    ERROR 2
+    ERROR 2™
     Good
     Error 3
   output: |-
     error 1
-    ERROR 2
+    ERROR 2™
     Error 3
 https://example.com/delete_lines_containing.txt:
   input: |-
-    abc
+    abc™
     def
     xyz
     this sentence has xyz in it
     wordxyzlicious
   output: |-
-    abc
+    abc™
     def
 https://example.com/delete_lines_containing_re.txt:
   input: |-
     warning 1
     WARNING 2
-    Good
+    Good™
     Warning 3
   output: |-
-    Good
+    Good™
 https://example.com/re_sub.html:
   input: |-
-    <h1>This is a test</h1>
+    <h1>This is a test™</h1>
     <a href="https://example.com/re_sub.html">Here!</a>
     This is text referring to h1
   output: |-
-    HEADING 1: This is a test<END OF TAG h1>
+    HEADING 1: This is a test™<END OF TAG h1>
     <a>Here!<END OF TAG a>
     This is text referring to h1
 https://example.com/re_sub_group.html:
   input: |-
-    <h1>This is a test</h1>
+    <h1>This is a test™</h1>
     <div>Page generated in 1.2 milliseconds.</div>
   output: |
-    # This is a test
+    # This is a test™
     Page generated in X milliseconds.
 https://example.com/strip.html:
   input: |
-    This paragraph ends with a newline
+    This paragraph™ ends with a newline
   output: |-
-    This paragraph ends with a newline
+    This paragraph™ ends with a newline
+https://example.com/strip_each_line.html:
+  input: |
+    This line™ ends with a space
+    This one too!
+  output: |-
+    This line™ ends with a space
+    This one too!
 https://example.net/version.html:
   input: |-
     <html>
     <body>
       <h1>Software Release Page</h1>
       <p>This is the software page of the bar tool.</p>
-      <p>Current version: 1.2.3</p>
+      <p>Current™ version: 1.2.3</p>
       <p>There might be some other information here, too.</p>
     </body>
     </html>
-  output: "Current version: 1.2.3"
+  output: "Current™ version: 1.2.3"
 https://example.org/bodytag.html:
   input: |-
     <html>
@@ -181,13 +203,13 @@ https://example.org/bodytag.html:
     <title>I Sing The Body Electric</title>
     </head>
     <body>
-      <marquee>The Body Tag</marquee>
+      <marquee>The Body™ Tag</marquee>
       <p>Indeed, just the body tag.</p>
     </body>
     </html>
   output: |-
     <body>
-      <marquee>The Body Tag</marquee>
+      <marquee>The Body™ Tag</marquee>
       <p>Indeed, just the body tag.</p>
     </body>
 https://example.net/xpath.html:
@@ -197,13 +219,13 @@ https://example.net/xpath.html:
     <title>Oh My HTML4</title>
     </head>
     <body>
-      <marquee>Just Below The Body Tag</marquee>
+      <marquee>Just Below The Body™ Tag</marquee>
       <p>Indeed, just BELOW the body tag. <marquee>Not this one.</marquee></p>
       <marquee>But there is more</marquee>
     </body>
     </html>
   output: |-
-    <marquee>Just Below The Body Tag</marquee>
+    <marquee>Just Below The Body™ Tag</marquee>
     <marquee>But there is more</marquee>
 https://example.net/css.html:
   input: |-
@@ -217,7 +239,7 @@ https://example.net/css.html:
       </ul>
       <h2>More</h2>
       <ul id="groceries">
-        <li class="unchecked">Milk</li>
+        <li class="unchecked">Milk™</li>
         <li>Honey</li>
         <li class="unchecked">Bread</li>
         <li>Butter</li>
@@ -225,13 +247,13 @@ https://example.net/css.html:
     </body>
     </html>
   output: |-
-    <li class="unchecked">Milk</li>
+    <li class="unchecked">Milk™</li>
     <li class="unchecked">Bread</li>
 https://example.com/blog/xpath-index.rss:
   input: |-
     <rss>
       <item>
-        <title>Fancy</title>
+        <title>Fancy™</title>
         <pubDate>2020-07-11</pubDate>
         <description>Bla bla bla</description>
       </item>
@@ -243,7 +265,7 @@ https://example.com/blog/xpath-index.rss:
       </item>
     </rss>
   output: |-
-    Fancy
+    Fancy™
     2020-07-11
     Pants
     2020-07-12
@@ -251,7 +273,7 @@ https://example.com/blog/css-index.rss:
   input: |-
     <rss>
       <item>
-        <title>Fancy</title>
+        <title>Fancy™</title>
         <pubDate>2020-07-11</pubDate>
         <description>Bla bla bla</description>
       </item>
@@ -263,7 +285,7 @@ https://example.com/blog/css-index.rss:
       </item>
     </rss>
   output: |-
-    Fancy
+    Fancy™
     2020-07-11
     Pants
     2020-07-12
@@ -276,7 +298,7 @@ https://example.net/feed/xpath-namespace.xml:
         <description>The latest from some page</description>
         <language>en</language>
         <item>
-          <title>How Mysterious Protest Messages Have Filled the Skies</title>
+          <title>How Mysterious™ Protest Messages Have Filled the Skies</title>
           <pubDate>Fri, 10 Jul 2020 20:37:00 +0000</pubDate>
           <description>Hello World From Testing Data</description>
           <media:keywords>protests</media:keywords>
@@ -296,23 +318,23 @@ https://example.org/feed/css-namespace.xml:
           <title>How Mysterious Protest Messages Have Filled the Skies</title>
           <pubDate>Fri, 10 Jul 2020 20:37:00 +0000</pubDate>
           <description>Hello World From Testing Data</description>
-          <media:keywords>stylesheets</media:keywords>
+          <media:keywords>stylesheets™</media:keywords>
         </item>
       </channel>
     </rss>
   output: |
-    stylesheets
+    stylesheets™
 https://example.org/css-exclude.html:
   input: |-
     <html>
     <body>
-      <h1>A page in a book</h1>
+      <h1>A page™ in a book</h1>
       <p>And some paragraph, too. <a href="http://example.net/">Also check out example.net!</a></p>
     </body>
     </html>
   output: |-
     <body>
-      <h1>A page in a book</h1>
+      <h1>A page™ in a book</h1>
       <p>And some paragraph, too. </p>
     </body>
 https://example.net/pdf-test.pdf:
@@ -325,18 +347,18 @@ https://example.net/sorting.txt:
   input: |-
     A
     B
-    D
+    D™
     E
     C
   output: |-
     A
     B
     C
-    D
+    D™
     E
 https://example.org/paragraphs.txt:
   input: |-
-    A sometimes sortable
+    A sometimes™ sortable
     paragraph document.
 
     Could be the thing
@@ -345,7 +367,7 @@ https://example.org/paragraphs.txt:
     But does it get
     sorted correctly?
   output: |-
-    A sometimes sortable
+    A sometimes™ sortable
     paragraph document.
 
     But does it get
@@ -354,22 +376,22 @@ https://example.org/paragraphs.txt:
     Could be the thing
     we use for testing.
 https://example.org/sort-reverse-percent.txt:
-  input: 'C%B%A%D%E%F'
-  output: 'F%E%D%C%B%A'
+  input: 'C%B%A%D%E%F%™'
+  output: '™%F%E%D%C%B%A'
 https://example.com/reverse-lines.txt:
   input: |-
     Mercury
     Venus
     Earth
-    Mars
+    Mars™
   output: |-
-    Mars
+    Mars™
     Earth
     Venus
     Mercury
 https://example.net/reverse-separator.txt:
-  input: "1|4|2|3"
-  output: "3|2|4|1"
+  input: "1|4|2|3|™"
+  output: "™|3|2|4|1"
 https://example.org/reverse-paragraphs.txt:
   input: |-
     When there are multiple
@@ -379,10 +401,10 @@ https://example.org/reverse-paragraphs.txt:
     ordering in a test.
 
     What do you think would
-    the result look like?
+    the result look like™?
   output: |-
     What do you think would
-    the result look like?
+    the result look like™?
 
     And we reverse their
     ordering in a test.
@@ -394,41 +416,41 @@ https://github.com/user/project/releases:
     <div class="release-timeline-tags release-entry">
       <h4 class="flex-auto min-width-0 pr-2 pb-1 commit-title">
         <a href="/user/project/releases/tag/2.18">
-          2.18
+          2.18™
         </a>
       </h4>
     </div>
   output: |-
-    2.18
+    2.18™
 https://example.com/regex-substitute.html:
   input: |-
     <div>
-      <h1>Welcome to this webpage</h1>
+      <h1>Welcome to this™ webpage</h1>
       <a href="http://example.com/">Some Link</a>
     </div>
   output: |-
     <div>
-      HEADING 1: Welcome to this webpage<END OF TAG h1>
+      HEADING 1: Welcome to this™ webpage<END OF TAG h1>
       <a>Some Link<END OF TAG a>
     <END OF TAG div>
 https://example.net/shellpipe-grep.txt:
   input: |-
     <h1>Welcome to our price watching page!</h1>
-    <p>Hello.</p> The current Price: <SPAN>42 USD</SPAN> is this.
+    <p>Hello.</p> The current Price: <SPAN>42 USD™</SPAN> is this.
     <em>Can the shellpipe filter deal with this properly?
   output: |
-    Price: <SPAN>42 USD</SPAN>
+    Price: <SPAN>42 USD™</SPAN>
 https://example.org/shellpipe-multiline.txt:
   input: |
     Welcome to the lottery webpage.
-    The numbers for 2020-07-11 are:
+    The numbers™ for 2020-07-11 are:
 
        4, 8, 15, 16, 23 and 42
 
     The next draw is on 2020-07-13.
     Thank you for visiting the lottery webpage.
   output: |
-    The numbers for 2020-07-11 are:
+    The numbers™ for 2020-07-11 are:
 
        4, 8, 15, 16, 23 and 42
 
@@ -436,26 +458,26 @@ https://example.org/shellpipe-multiline.txt:
     Input lines: 7
 https://example.net/shellpipe-awk-oneliner.txt:
   input: |
-    Hello
+    Hello™
     World
     How
     Are
     You
   output: |
-    1 Hello
+    1 Hello™
     2 World
     3 How
     4 Are
     5 You
 https://example.com/leading-spaces.txt:
   input: |
-    A document
+    A document™
       with some indentation
     and sometimes
       	  with tabs mixed in
       gets converted.
   output: |
-    A document
+    A document™
     with some indentation
     and sometimes
     with tabs mixed in
@@ -477,13 +499,13 @@ https://example.net/css-skip-maxitems.html:
   input: |-
     <body>
       <div class="cpu">486</div>
-      <div class="cpu">Pentium</div>
-      <div class="cpu">Pentium MMX</div>
-      <div class="cpu">Pentium Pro</div>
+      <div class="cpu">Pentium™</div>
+      <div class="cpu">Pentium™ MMX</div>
+      <div class="cpu">Pentium™ Pro</div>
     </body>
   output: |-
-    <div class="cpu">Pentium</div>
-    <div class="cpu">Pentium MMX</div>
+    <div class="cpu">Pentium™</div>
+    <div class="cpu">Pentium™ MMX</div>
 https://example.net/shellpipe.html:
   input: |
   output: TEST
@@ -499,11 +521,57 @@ https://example.net/jobs.json:
         "company": "Tack-trest"
       },
       {
-        "title": "TPS Report Analyst",
+        "title": "TPS™ Report Analyst",
         "company": "Initech"
       }
     ]
   output: |-
       "Senior Data Scientist"
       "Python Developer"
-      "TPS Report Analyst"
+      "TPS™ Report Analyst"
+https://example.com/format_xml.xml:
+  input: |
+      <?xml version="1.0" ?>
+      <issues><issue><id>1</id><title>Coffee maker</title><details>Coffee maker™ is broken.</details></issue></issues>
+  output: |
+    <issues>
+      <issue>
+        <id>1</id>
+        <title>Coffee maker</title>
+        <details>Coffee maker™ is broken.</details>
+      </issue>
+    </issues>
+https://example.com/pretty_xml.xml:
+  input: |
+      <?xml version="1.0" ?>
+      <issues><issue><id>1</id><title>Coffee maker</title><details>Coffee maker™ is broken.</details></issue></issues>
+  output: |
+    <?xml version="1.0" ?>
+    <issues>
+      <issue>
+        <id>1</id>
+        <title>Coffee maker</title>
+        <details>Coffee maker™ is broken.</details>
+      </issue>
+    </issues>
+https://example.net/beautify.html:
+  input: |
+    <!DOCTYPE html>
+    <html itemscope="" itemtype="http://schema.org/WebPage" lang="en-US">
+    <head><meta charset="UTF-8"><meta content="origin" name="referrer">
+    <style data-iml="1618111006770">.L3eUgb{display:flex;flex-direction:column;height:100%}</style>
+    </head><body>test™</body></html>
+  output: |
+    <!DOCTYPE html>
+    <html itemscope="" itemtype="http://schema.org/WebPage" lang="en-US">
+     <head>
+      <meta charset="utf-8"/>
+      <meta content="origin" name="referrer"/>
+      <style data-iml="1618111006770">
+       .L3eUgb{display:flex;flex-direction:column;height:100%}
+      </style>
+     </head>
+     <body>
+      test™
+     </body>
+    </html>

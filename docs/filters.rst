@@ -64,7 +64,8 @@ At the moment, the following filters are available:
 
 * To make XML more readable:
 
-  - :ref:`format-xml`: Reformat (pretty-print) XML
+  - :ref:`format-xml`: Reformat (pretty-print) XML (using lxml.etree)
+  - :ref:`pretty-xml`: Reformat (pretty-print) XML (using Python's xml.minidom)
 
 * To make iCal more readable:
 
@@ -270,6 +271,13 @@ To make the output human-friendly you can chain html2text on the result:
      - html2text:
 
 
+To extract ``<div style="something">.../<div>`` from a page:
+
+.. code-block:: yaml
+
+   url: https://example.org/styletest.html
+   filter:
+     - element-by-style: something
 
 .. _html2text:
 
@@ -304,6 +312,7 @@ Note: If the content has tables, adding the sub-directive `pad_tables: true` *ma
     filter:
       - xpath: '//section[@role="main"]'
       - html2text:
+          method: bs4
           pad_tables: true
 
 Optional sub-directives
@@ -357,6 +366,13 @@ beautify
 This filter uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
 <https://pypi.org/project/jsbeautifier/>`__ and `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ Python
 packages to reformat the HTML in a document to make it more readable (keeping it as HTML).
+
+.. code-block:: yaml
+
+   url: https://example.net/beautify.html
+   filter:
+     - beautify
+
 
 Required packages
 """""""""""""""""
@@ -493,6 +509,7 @@ follows:
    pip install --upgrade webchanges[jq]
 
 
+
 .. _filtering_json:
 
 Filtering JSON on Windows or without ``jq``
@@ -501,14 +518,42 @@ Python programmers on all OSs can use an advanced technique to select only certa
 :ref:`json_dict`.
 
 
+
 .. _format-xml:
 
 format-xml
 ----------
 This filter deserializes an XML object and reformats it using the `lxml <https://lxml.de>`__ Python package's
-etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ option.
+etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ function.
+
+.. code-block:: yaml
+
+   name: "reformat XML using lxml's etree.tostring"
+   url: https://example.com/format_xml.xml
+   filter:
+     - format-xml:
+
 
 `New in version 3.0.`
+
+
+
+.. _pretty-xml:
+
+pretty-xml
+----------
+This filter deserializes an XML object and pretty-prints it using Python's xml.dom.minidom `toprettyxml
+<https://docs.python.org/3/library/xml.dom.minidom.html#xml.dom.minidom.Node.toprettyxml>`__ function.
+
+.. code-block:: yaml
+
+   name: "reformat XML using Python's xml.dom.minidom toprettyxml function"
+   url: https://example.com/pretty_xml.xml
+   filter:
+     - pretty-xml:
+
+
+`New in version 3.3.`
 
 
 
@@ -703,7 +748,7 @@ Optional sub-directives
 strip
 -----
 This filter removes leading and trailing whitespace.  Unlike many other filters, this filter is applied to the entire
-document and is **not** applied line-by line.
+document and is **not** applied line-by line (use :ref:`strip_each_line`)
 
 .. code-block:: yaml
 
@@ -711,6 +756,25 @@ document and is **not** applied line-by line.
    url: https://example.com/strip.html
    filter:
      - strip:
+
+
+
+.. _strip_each_line:
+
+strip_each_line
+---------------
+This filter removes leading and trailing whitespace.  Unlike many other filters, this filter is applied to the entire
+document and is **not** applied line-by line.
+
+.. code-block:: yaml
+
+   name: "Stripping leading and trailing whitespace test"
+   url: https://example.com/strip_each_line.html
+   filter:
+     - strip:
+
+
+`New in version 3.3.`
 
 
 .. _sort:

@@ -37,30 +37,31 @@ Unreleased
 
 ⚠ Breaking Changes
 ------------------
-* Fixed the issue of the database growing unbounded to infinity if running in Python 3.7 or higher and using the new,
-  default, ``sqlite3`` database engine.  By default only 4 snapshots are kept, and older ones are purged after every
-  run.  Run with ``--max-snapshots 0`` command line argument to keep the existing behavior, or with the number of
-  snapshots you want to retain if different than the default of 4.
+* Fixed the database from growing unbounded to infinity, but only when running in Python 3.7 or higher and using the
+  new, default, ``sqlite3`` database engine. By default (if running in Python 3.7 or higher) now only 4 snapshots are
+  kept, and older ones are purged after every run; this number is selectable with the new ``--max-snapshots`` command
+  line argument. To keep the existing behavior run with the ``--max-snapshots 0`` command line argument.
 
 Added
 -----
 * ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults to
   4. If set to 0, and unlimited number of snapshots will be kept. Only applies to Python 3.7 or higher and only works if
   the default ``sqlite3`` database is being used.
-* Job directive (for ``url`` jobs) ``no_redirects``: disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection
+* ``no_redirects`` job directive (for ``url`` jobs) to disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection
   (true/false). Suggested by `snowman <https://github.com/snowman>`__ upstream `here
   <https://github.com/thp/urlwatch/issues/635>`__.
-* User alerting when the job file contains unrecognized directives (e.g. typo)
-* New reporter ``prowl`` for the `Prowl <https://prowlapp.com>`__ push notification client for iOS (only). Contributed
+* Reporter ``prowl`` for the `Prowl <https://prowlapp.com>`__ push notification client for iOS (only). Contributed
   by `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
-* New filter ``jq`` to parse, transform, and extract JSON data. Contributed by
+* Filter ``jq`` to parse, transform, and extract JSON data. Contributed by
   `robgmills <https://github.com/robgmills>`__ upstream in PR `626 <https://github.com/thp/urlwatch/pull/626>`__.
+* Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with `urlwatch` 2.23)
+* Alert user when the jobs file contains unrecognized directives (e.g. typo)
 
 Changed
 --------
-* When the directive ``name`` is not used in a ``url`` job and a title is found on the page and is used for a name, it
-  is now truncated to 60 characters
-* ``--test-diff`` command line argument is no longer limited to displaying the last 10 snapshots
+* Name truncated to 60 characters when derived from the title of a page (no directive ``name`` is found) in a ``url``
+  job
+* ``--test-diff`` command line argument displays all saved snapshots (no longer limited to 10)
 
 Fixed
 -----
@@ -71,9 +72,10 @@ Fixed
 
 Internals
 ---------
-* Additional testing and logging to ``sqlite3`` database engine, increasing overall code coverage to 63%
+* Additional testing increasing overall code coverage to 63%
+* Added logging to ``sqlite3`` database engine
 * Pre-commit documentation linting using ``doc8``
-* Renamed legacy module browser.py to jobs_browser.py for documentation clarity
+* Renamed legacy module browser.py to jobs_browser.py for clarity
 
 Known issues
 ------------

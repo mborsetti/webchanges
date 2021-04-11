@@ -14,6 +14,7 @@ import warnings
 from abc import ABCMeta
 from enum import Enum
 from typing import Any, AnyStr, Dict, Iterator, List, TYPE_CHECKING, Tuple, Type, Union
+from xml.dom import minidom
 
 import html2text
 import yaml
@@ -431,7 +432,7 @@ class JsonFormatFilter(FilterBase):
 
 
 class XMLFormatFilter(FilterBase):
-    """Convert to formatted XML."""
+    """Convert to formatted XML using lxml.etree."""
 
     __kind__ = 'format-xml'
 
@@ -446,6 +447,22 @@ class XMLFormatFilter(FilterBase):
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         parsed_xml = etree.XML(data)
         return etree.tostring(parsed_xml, encoding='unicode', pretty_print=True)
+
+
+class PrettyXMLFilter(FilterBase):
+    """Pretty-print XML using built-in xml.minidom."""
+
+    __kind__ = 'pretty-xml'
+
+    __supported_subfilters__ = {
+        'indentation': 'Indentation level for pretty-printing',
+    }
+
+    __default_subfilter__ = 'indentation'
+
+    def filter(self, data, subfilter):
+        indentation = int(subfilter.get('indentation', 2))
+        return minidom.parseString(data).toprettyxml(indent=' ' * indentation)
 
 
 class KeepLinesFilter(FilterBase):
@@ -538,10 +555,10 @@ class StripFilter(FilterBase):
         return data.strip()
 
 
-class StripEmptyLines(FilterBase):
-    """Strip leading and trailing whitespace."""
+class StripEachLineFilter(FilterBase):
+    """Strip leading and trailing whitespace from each line."""
 
-    __kind__ = 'strip_empty_lines'
+    __kind__ = 'strip_each_line'
 
     __no_subfilter__ = True
 

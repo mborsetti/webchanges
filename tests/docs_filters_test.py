@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 root = os.path.join(os.path.dirname(__file__), '../webchanges', '..')
 here = os.path.dirname(__file__)
 
+beautifulsoup_is_installed = importlib.util.find_spec('beautifulsoup') is not None
 jq_is_installed = importlib.util.find_spec('jq') is not None
 pdftotext_is_installed = importlib.util.find_spec('pdftotext') is not None
 pytesseract_is_installed = importlib.util.find_spec('pytesseract') is not None
@@ -93,6 +94,10 @@ def test_url(url, job):
 
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job['filter']):
             # skip if package is not installed
+            if (filter_kind == 'beautify' or (filter_kind == 'html2text' and subfilter.get('method') == 'bs4')
+                    and not beautifulsoup_is_installed):
+                logger.warning(f"Skipping {url} since 'beautifulsoup' package is not installed")
+                return
             if filter_kind == 'ical2text' and not vobject_is_installed:
                 logger.warning(f"Skipping {url} since 'vobject' package is not installed")
                 return
