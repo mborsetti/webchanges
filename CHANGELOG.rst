@@ -72,6 +72,8 @@ Fixed
 
 Internals
 ---------
+* Upgraded email construction from using ``email.mime`` (obsolete) to `email.message.EmailMessage
+  <https://docs.python.org/3/library/email.message.html#email.message.EmailMessage>`__
 * Additional testing increasing overall code coverage by an additional 3 percentage points to 64%
 * Added logging to ``sqlite3`` database engine
 * Pre-commit documentation linting using ``doc8``

@@ -1,13 +1,12 @@
 """Email handler."""
 
-import email.mime.multipart
-import email.mime.text
-import email.utils
 import getpass
 import logging
 import smtplib
 import subprocess
-from typing import Any, Optional, Union
+from email import policy
+from email.message import EmailMessage
+from typing import Optional, Union
 
 try:
     import keyring
@@ -18,30 +17,27 @@ logger = logging.getLogger(__name__)
 
 
 class Mailer(object):
-    def send(self, msg: Any) -> None:
+    def send(self, msg: Union[EmailMessage]) -> None:
         raise NotImplementedError
 
     @staticmethod
-    def msg_plain(from_email: str, to_email: str, subject: str, body: str) -> email.mime.text.MIMEText:
-        msg = email.mime.text.MIMEText(body, 'plain', 'utf-8')
-        msg['Subject'] = subject
-        msg['From'] = from_email
-        msg['To'] = to_email
-        msg['Date'] = email.utils.formatdate()
+    def msg(from_email: str, to_email: str, subject: str, text_body: str, html_body: Optional[str] = None
+            ) -> EmailMessage:
+        """Create an Email object for a message
 
-        return msg
-
-    @staticmethod
-    def msg_html(from_email: str, to_email: str, subject: str, body_text: str,
-                 body_html: str) -> email.mime.multipart.MIMEMultipart:
-        msg = email.mime.multipart.MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = from_email
-        msg['To'] = to_email
-        msg['Date'] = email.utils.formatdate()
-
-        msg.attach(email.mime.text.MIMEText(body_text, 'plain', 'utf-8'))
-        msg.attach(email.mime.text.MIMEText(body_html, 'html', 'utf-8'))
+        :param from_email: The 'from' email address
+        :param to_email: The 'to' email address
+        :param subject: The 'subject' of the email
+        :param text_body: The body in text format
+        :param html_body: The body in html format (optional)
+        """
+        msg = EmailMessage(policy=policy.SMTPUTF8)
+        msg['from'] = from_email
+        msg['to'] = to_email
+        msg['subject'] = subject
+        msg.set_content(text_body, subtype='plain')
+        if html_body is not None:
+            msg.add_alternative(html_body, subtype='html')
 
         return msg
 
@@ -56,13 +52,7 @@ class SMTPMailer(Mailer):
         self.auth = auth
         self.insecure_password = insecure_password
 
-    def send(self, msg: Union[email.mime.text.MIMEText, email.mime.multipart.MIMEMultipart]) -> None:
-        s = smtplib.SMTP(self.smtp_server, self.smtp_port)
-        s.ehlo()
-
-        if self.tls:
-            s.starttls()
-
+    def send(self, msg: Union[EmailMessage]) -> None:
         if self.auth:
             if self.insecure_password:
                 passwd = self.insecure_password
@@ -72,17 +62,21 @@ class SMTPMailer(Mailer):
                     raise ValueError(f'No password available in keyring for {self.smtp_server} {self.smtp_user}')
             else:
                 raise ValueError(f'No password available for {self.smtp_server} {self.smtp_user}')
-            s.login(self.smtp_user, passwd)
 
-        s.sendmail(msg['From'], msg['To'].split(','), msg.as_string())
-        s.quit()
+        with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            server.ehlo()
+            if self.tls:
+                server.starttls()
+            if self.auth:
+                server.login(self.smtp_user, passwd)
+            server.send_message(msg)
 
 
 class SendmailMailer(Mailer):
     def __init__(self, sendmail_path: str) -> None:
         self.sendmail_path = sendmail_path
 
-    def send(self, msg: Union[email.mime.text.MIMEText, email.mime.multipart.MIMEMultipart]) -> None:
+    def send(self, msg: Union[EmailMessage]) -> None:
         # Python 3.7
         # p = subprocess.run([self.sendmail_path, '-oi', msg['To']], input=msg.as_string(), capture_output=True,
         #                    text=True)
@@ -93,11 +87,15 @@ class SendmailMailer(Mailer):
 
 
 def smtp_have_password(smtp_server: str, from_email: str) -> bool:
+    """Check whether the keyring password is set for the email service."""
+    if keyring is None:
+        return False
+
     return keyring.get_password(smtp_server, from_email) is not None
 
 
 def smtp_set_password(smtp_server: str, from_email: str) -> None:
-    """ Set the keyring password for the mail connection. Interactive."""
+    """Set the keyring password for the email service. Interactive."""
     if keyring is None:
         raise ImportError('keyring module missing - service unsupported')
 

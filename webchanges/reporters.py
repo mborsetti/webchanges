@@ -20,13 +20,13 @@ import requests
 from markdown2 import Markdown
 
 import webchanges as project
+from .jobs import Job
 from .mailer import SMTPMailer, SendmailMailer
 from .util import TrackSubClasses, chunk_string, linkify
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from .handler import JobState, Report
-    from .jobs import JobBase
 
 try:
     import aioxmpp
@@ -144,7 +144,7 @@ class HtmlReporter(ReporterBase):
                 else:
                     yield f'<h3>{job_state.verb.title()}: {html.escape(job_state.job.get_location())}</h3>'
                 if hasattr(job_state.job, 'note') and job_state.job.note:
-                    yield (f'<h4>{html.escape(job_state.job.note)}</h4>')
+                    yield f'<h4>{html.escape(job_state.job.note)}</h4>'
                 yield content
 
                 yield '<hr>'
@@ -159,7 +159,8 @@ class HtmlReporter(ReporterBase):
             </body>
             </html>""")
 
-    def _diff_to_html(self, diff: str, job: Type['JobBase']) -> Iterable[str]:
+    @staticmethod
+    def _diff_to_html(diff: str, job: Job) -> Iterable[str]:
         """Generator yielding the HTML-formatted unified diff; called by _format_content."""
         if job.diff_tool and job.diff_tool.startswith('wdiff'):
             # wdiff colorization
@@ -643,6 +644,7 @@ class EMailReporter(TextReporter):
         if not body_text:
             logger.debug('Not sending e-mail (no changes)')
             return
+
         if self.config['method'] == 'smtp':
             smtp_user = self.config['smtp'].get('user', None) or self.config['from']
             use_auth = self.config['smtp'].get('auth', False)
@@ -656,9 +658,9 @@ class EMailReporter(TextReporter):
 
         if self.config['html']:
             body_html = '\n'.join(self.convert(HtmlReporter).submit())
-            msg = mailer.msg_html(self.config['from'], self.config['to'], subject, body_text, body_html)
+            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html)
         else:
-            msg = mailer.msg_plain(self.config['from'], self.config['to'], subject, body_text)
+            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text)
 
         mailer.send(msg)
 

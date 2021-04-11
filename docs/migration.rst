@@ -211,6 +211,8 @@ Relative to `urlwatch` 2.23:
     Pyppeteer)
   * Replaced custom atomic_rename function with built-in `os.replace()
     <https://docs.python.org/3/library/os.html#os.replace>`__ (new in Python 3.3) that does the same thing
+  * Upgraded email construction from using ``email.mime`` (obsolete) to `email.message.EmailMessage
+    <https://docs.python.org/3/library/email.message.html#email.message.EmailMessage>`__
   * Reports' elapsed time now always has at least 2 significant digits
   * Unicode is supported throughout, including in filters and YAML files containing jobs and configuration
   * A 22 percentage point increase in code testing coverage (to 64%), a completely new continuous integration (CI) and
