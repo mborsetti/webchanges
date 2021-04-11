@@ -772,7 +772,7 @@ document and is **not** applied line-by line.
    name: "Stripping leading and trailing whitespace test"
    url: https://example.com/strip_each_line.html
    filter:
-     - strip:
+     - strip_each_line:
 
 
 `New in version 3.3.`

@@ -563,7 +563,7 @@ class StripEachLineFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
-        return '\n'.join([line for line in data.splitlines() if line.strip()])
+        return '\n'.join([line.strip() for line in data.splitlines()])
 
 
 class FilterBy(Enum):

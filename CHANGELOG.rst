@@ -40,7 +40,7 @@ Unreleased
 * Fixed the database from growing unbounded to infinity, but only when running in Python 3.7 or higher and using the
   new, default, ``sqlite3`` database engine. By default (if running in Python 3.7 or higher) now only 4 snapshots are
   kept, and older ones are purged after every run; this number is selectable with the new ``--max-snapshots`` command
-  line argument. To keep the existing behavior run with the ``--max-snapshots 0`` command line argument.
+  line argument. To keep the existing grow-to-infinity behavior run with ``--max-snapshots 0``.
 
 Added
 -----
@@ -59,8 +59,8 @@ Added
 
 Changed
 --------
-* Name truncated to 60 characters when derived from the title of a page (no directive ``name`` is found) in a ``url``
-  job
+* Job name is truncated to 60 characters when derived from the title of a page (no directive ``name`` is found) in a
+  ``url`` job
 * ``--test-diff`` command line argument displays all saved snapshots (no longer limited to 10)
 
 Fixed
@@ -72,7 +72,7 @@ Fixed
 
 Internals
 ---------
-* Additional testing increasing overall code coverage to 63%
+* Additional testing increasing overall code coverage by an additional 3 percentage points to 64%
 * Added logging to ``sqlite3`` database engine
 * Pre-commit documentation linting using ``doc8``
 * Renamed legacy module browser.py to jobs_browser.py for clarity
@@ -128,10 +128,10 @@ Added
 * Job directive ``wait_for_navigation`` for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer): wait for
   navigation to reach a URL starting with the specified one before extracting content. Useful when the URL redirects
   elsewhere before displaying content you're interested in and Pyppeteer would capture the intermediate page.
-* Command line switch ``--rollback-cache TIMESTAMP``: rollback the snapshot database to a previous time, useful when
+* command line argument ``--rollback-cache TIMESTAMP``: rollback the snapshot database to a previous time, useful when
   you miss notifications; see `here <https://webchanges.readthedocs.io/en/stable/cli.html#rollback-cache>`__. Does not
   work with database engine ``minidb`` or ``textfiles``.
-* Command line switch ``--cache-engine ENGINE``: specify ``minidb`` to continue using the database structure used
+* command line argument ``--cache-engine ENGINE``: specify ``minidb`` to continue using the database structure used
   in prior versions and `urlwatch` 2.  New default ``sqlite3`` creates a smaller database due to data compression with
   `msgpack <https://msgpack.org/index.html>`__ and offers additional features; migration from old minidb database is
   done automatically and the old database preserved for manual deletion.
@@ -153,7 +153,7 @@ Changes
   the number of available CPUs instead of the `default
   <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`__ to avoid
   instability due to Pyppeteer's high usage of CPU
-* Default configuration now specifies the use of Chromium revisions equivalent to Chrome 89.0.4389.72 827102
+* Default configuration now specifies the use of Chromium revisions equivalent to Chrome 89.0.4389.72
   for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer) to increase stability. Note: if you already have a
   configuration file and want to upgrade to this version, see `here
   <https://webchanges.readthedocs.io/en/stable/advanced.html#using-a-chromium-revision-matching-a-google-chrome-chromium-release>`__.
@@ -333,7 +333,7 @@ Relative to `urlwatch` 2.21:
 * Can set the user directory for the Chromium browser with ``user_data_dir``
 * Chromium can be directed to ignore HTTPs errors with ``ignore_https_errors``
 * Chromium can be directed as to when to consider a page loaded with ``wait_until``
-* Additional command line switches can be passed to Chromium with ``switches``
+* Additional command line arguments can be passed to Chromium with ``switches``
 * New report filters ``additions_only`` and ``deletions_only`` allow to track only content that was added (or
   deleted) from the source
 * Support for Python 3.9
@@ -370,17 +370,17 @@ Relative to `urlwatch` 2.21:
   will be removed in a future release
 * Both the ``keep_lines_containing`` and ``delete_lines_containing`` accept ``text`` (default) in addition to ``re``
   (regular expressions)
-* ``--test`` command line switch is used to test a job (formerly ``--test-filter``, deprecated and will be removed in
+* ``--test`` command line argument is used to test a job (formerly ``--test-filter``, deprecated and will be removed in
   a future release)
-* ``--test-diff`` command line switch is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated and will
-  be removed in a future release)
-* ``-V`` command line switch added as an alias to ``--version``
+* ``--test-diff`` command line argument is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated and
+  will be removed in a future release)
+* ``-V`` command line argument added as an alias to ``--version``
 * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
   the current directory, `webchanges` now looks for it in the default configuration directory
 * If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' suffix, `webchanges` now looks for one with
   such a suffix
 * In Windows, ``--edit`` defaults to using built-in notepad.exe if %EDITOR% or %VISUAL% are not set
-* When using ``--job`` command line switch, if there's no file by that name in the specified directory will look in
+* When using ``--job`` command line argument, if there's no file by that name in the specified directory will look in
   the default one before giving up.
 * The use of the ``kind`` directive in ``jobs.yaml`` configuration files has been deprecated (but is, for now, still
   used internally); it will be removed in a future release

@@ -105,7 +105,7 @@ Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but in
 Improvements from `urlwatch`
 ============================
 
-You can seamlessly upgrade from `urlwatch` 2.22 (see `here
+You can seamlessly upgrade from `urlwatch` 2.23 (see `here
 <https://webchanges.readthedocs.io/en/stable/migration.html>`__) and benefit from these HTML-focused improvements:
 
 * Links are `clickable <https://pypi.org/project/webchanges/>`__!
@@ -120,6 +120,7 @@ You can seamlessly upgrade from `urlwatch` 2.22 (see `here
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
   which makes it easier to track content that was added without the distractions of the content that was deleted
 * Better documentation
+* More reliability and stability, including a 22 percentage point increase in testing coverage
 * Many many other additions, refinements and fixes (see `detailed information
   <https://webchanges.readthedocs.io/en/stable/migration.html#detailed-information>`__)
 

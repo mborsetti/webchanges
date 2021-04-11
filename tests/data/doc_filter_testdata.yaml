@@ -174,17 +174,14 @@ https://example.com/re_sub_group.html:
     # This is a test™
     Page generated in X milliseconds.
 https://example.com/strip.html:
-  input: |
-    This paragraph™ ends with a newline
+  input: "This paragraph™ ends with a space "
   output: |-
-    This paragraph™ ends with a newline
+    This paragraph™ ends with a space
 https://example.com/strip_each_line.html:
-  input: |
-    This line™ ends with a space
-    This one too!
+  input: "This line™ ends with a space \n This one starts with one as well! "
   output: |-
     This line™ ends with a space
-    This one too!
+    This one starts with one as well!
 https://example.net/version.html:
   input: |-
     <html>
