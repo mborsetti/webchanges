@@ -2,11 +2,14 @@
 
 REM Windows batch file to deploy new release
 
-REM Always work from the unreleased branch:
+REM To deploy (always work from the unreleased branch):
 REM 1) create a rc version (e.g. bump2version prekind)
 REM 2) push (upload) it. Ensure CI works
 REM 3) update bumpversion.cfg to ensure that it has the correct substitution bits
 REM 4) run this file!
+
+REM To bump version from x.x.x.rc0 onwards:
+REM > bump2version --verbose --allow-dirty --no-commit --no-tag pre --dry-run
 
 set "project=%~dp0"
 set "project=%project:~0,-1%"

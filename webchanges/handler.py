@@ -11,10 +11,10 @@ import time
 import timeit
 import traceback
 from types import TracebackType
-from typing import Any, Collection, Iterable, TYPE_CHECKING, Type, Union
+from typing import Collection, Iterable, Optional, TYPE_CHECKING, Type, Union
 
 from .filters import FilterBase
-from .jobs import Job, NotModifiedError
+from .jobs import JobBase, NotModifiedError
 from .reporters import ReporterBase
 from .storage import CacheStorage
 
@@ -41,7 +41,7 @@ class JobState(object):
     etag = None
     error_ignored = False
 
-    def __init__(self, cache_storage: CacheStorage, job: Job) -> None:
+    def __init__(self, cache_storage: Optional[CacheStorage], job: JobBase) -> None:
         self.cache_storage = cache_storage
         self.job = job
         self._generated_diff = None
@@ -56,7 +56,8 @@ class JobState(object):
 
         return self
 
-    def __exit__(self, exc_type: type, exc_value: Any, traceback: TracebackType) -> None:
+    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_value: Optional[BaseException],
+                 traceback: Optional[TracebackType]) -> None:
         try:
             self.job.main_thread_exit()
         except Exception:

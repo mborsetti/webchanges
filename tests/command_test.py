@@ -10,7 +10,7 @@ from webchanges.cli import migrate_from_urlwatch
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, JobsYaml, YamlConfigStorage
+from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ hooks_file = os.path.join(here, 'data', 'hooks_test.py')
 
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)
-jobs_storage = JobsYaml(jobs_file)
+jobs_storage = YamlJobsStorage(jobs_file)
 command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
                                cache_file, verbose=False)
 urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
@@ -134,7 +134,7 @@ def test_test_job():
 
 def test_test_diff():
     jobs_file2 = os.path.join(here, 'data', 'jobs-time.yaml')
-    jobs_storage2 = JobsYaml(jobs_file2)
+    jobs_storage2 = YamlJobsStorage(jobs_file2)
     command_config2 = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file2, hooks_file,
                                     cache_file, verbose=False)
     urlwatcher2 = Urlwatch(command_config2, config_storage, cache_storage, jobs_storage2)  # main.py

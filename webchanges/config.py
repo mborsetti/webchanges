@@ -33,7 +33,7 @@ class BaseConfig(object):
         self.edit_hooks: bool = False
         self.gc_cache: bool = False
         self.clean_cache: bool = False
-        self.rollback_cache: Optional[str] = None
+        self.rollback_cache: Optional[int] = None
         self.database_engine: str = 'sqlite3'
         self.max_snapshots: int = 4
         self.features: bool = False

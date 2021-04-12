@@ -21,31 +21,31 @@ The unreleased versions can be installed as follows (`git
 Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__.
 
 .. Categories used (in order):
-   ⚠ Breaking Changes for changes that break existing functionality.
-   Added for new features.
-   Changed for changes in existing functionality.
-   Deprecated for soon-to-be removed features.
-   Removed for now removed features.
-   Fixed for any bug fixes.
-   Security in case of vulnerabilities.
-   Internals for changes that don't affect users.
+   ⚠ Breaking Changes, for changes that break existing functionality. [minor revision or, if to API, major revision]
+   Added, for new features. [triggers a minor revision]
+   Changed, for changes in existing functionality. [triggers a minor revision or, if to API, major revision]
+   Deprecated, for soon-to-be removed features.
+   Removed, for now removed features. [if to API, triggers a major revision].
+   Fixed, for any bug fixes. [triggers a minor patch]
+   Security, in case of vulnerabilities. [triggers a minor patch]
+   Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.3.0.rc0
+Version 3.3.0.rc1
 ====================
 Unreleased
 
 ⚠ Breaking Changes
 ------------------
-* Fixed the database from growing unbounded to infinity, but only when running in Python 3.7 or higher and using the
-  new, default, ``sqlite3`` database engine. By default (if running in Python 3.7 or higher) now only 4 snapshots are
-  kept, and older ones are purged after every run; this number is selectable with the new ``--max-snapshots`` command
-  line argument. To keep the existing grow-to-infinity behavior run with ``--max-snapshots 0``.
+* Fixed the database from growing unbounded to infinity. Fix only works when running in Python 3.7 or higher and using
+  the new, default, ``sqlite3`` database engine. In this scenario only the latest 4 snapshots are kept, and older ones
+  are purged after every run; the number is selectable with the new ``--max-snapshots`` command line argument. To keep
+  the existing grow-to-infinity behavior, run `webchanges` with ``--max-snapshots 0``.
 
 Added
 -----
 * ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults to
-  4. If set to 0, and unlimited number of snapshots will be kept. Only applies to Python 3.7 or higher and only works if
+  4. If set to 0 an unlimited number of snapshots will be kept. Only applies to Python 3.7 or higher and only works if
   the default ``sqlite3`` database is being used.
 * ``no_redirects`` job directive (for ``url`` jobs) to disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection
   (true/false). Suggested by `snowman <https://github.com/snowman>`__ upstream `here
@@ -59,25 +59,29 @@ Added
 
 Changed
 --------
-* Job name is truncated to 60 characters when derived from the title of a page (no directive ``name`` is found) in a
-  ``url`` job
+* Job name is truncated to 60 characters when derived from the title of a page (no directive ``name`` is found in a
+  ``url`` job)
 * ``--test-diff`` command line argument displays all saved snapshots (no longer limited to 10)
 
 Fixed
 -----
-* Diff data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a reporter:
-  the permanent database is updated only at the very end (after reports are sent)
+* Diff (change) data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error in reporting:
+  the permanent database is updated only at the very end (after reports are dispatched)
 * ``use_browser: false`` was not being interpreted correctly
 * Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
 
 Internals
 ---------
-* Upgraded email construction from using ``email.mime`` (obsolete) to `email.message.EmailMessage
-  <https://docs.python.org/3/library/email.message.html#email.message.EmailMessage>`__
-* Additional testing increasing overall code coverage by an additional 3 percentage points to 64%
-* Added logging to ``sqlite3`` database engine
+* Database ``sqlite3`` engine now saves new snapshots to a temporary database, which is copied over to the permanent one
+  at execution end (i.e. database.close())
+* Upgraded SMTP email message internals to use Python's `email.message.EmailMessage
+  <https://docs.python.org/3/library/email.message.html#email.message.EmailMessage>`__ instead of ``email.mime``
+  (obsolete)
 * Pre-commit documentation linting using ``doc8``
+* Added logging to ``sqlite3`` database engine
+* Additional testing increasing overall code coverage by an additional 4 percentage points to 65%
 * Renamed legacy module browser.py to jobs_browser.py for clarity
+* Renamed class JobsYaml to YamlJobsStorage for consistency and clarity
 
 Known issues
 ------------

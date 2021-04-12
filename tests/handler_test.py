@@ -11,7 +11,7 @@ from webchanges import __project_name__ as pkgname
 from webchanges.config import BaseConfig
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, DEFAULT_CONFIG, JobsYaml, YamlConfigStorage
+from webchanges.storage import CacheSQLite3Storage, DEFAULT_CONFIG, YamlConfigStorage, YamlJobsStorage
 from webchanges.util import import_module_from_source
 
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
@@ -43,10 +43,10 @@ def test_save_load_jobs():
     # tempfile.NamedTemporaryFile() doesn't work on Windows
     # because the returned file object cannot be opened again
     fd, name = tempfile.mkstemp()
-    JobsYaml(name).save(jobs)
-    jobs2 = JobsYaml(name).load()
+    YamlJobsStorage(name).save(jobs)
+    jobs2 = YamlJobsStorage(name).load()
     os.chmod(name, 0o777)
-    jobs3 = JobsYaml(name).load_secure()
+    jobs3 = YamlJobsStorage(name).load_secure()
     os.close(fd)
     os.remove(name)
 
@@ -70,7 +70,7 @@ def test_load_config_yaml():
 def test_load_jobs_yaml():
     jobs_file = os.path.join(here, 'data', 'jobs.yaml')
     if os.path.exists(jobs_file):
-        assert len(JobsYaml(jobs_file).load_secure()) > 0
+        assert len(YamlJobsStorage(jobs_file).load_secure()) > 0
     else:
         warnings.warn(f'{jobs_file} not found', UserWarning)
 
@@ -114,7 +114,7 @@ def test_run_watcher_minidb():
         hooks_file = ''
 
         config_storage = YamlConfigStorage(config_file)
-        jobs_storage = JobsYaml(jobs_file)
+        jobs_storage = YamlJobsStorage(jobs_file)
         cache_storage = CacheMiniDBStorage(cache_file)
         try:
             urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
@@ -134,7 +134,7 @@ def test_run_watcher_sqlite3():
         hooks_file = ''
 
         config_storage = YamlConfigStorage(config_file)
-        jobs_storage = JobsYaml(jobs_file)
+        jobs_storage = YamlJobsStorage(jobs_file)
         cache_storage = CacheSQLite3Storage(cache_file)
         try:
             urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
@@ -169,7 +169,7 @@ def prepare_retry_test_sqlite3():
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheSQLite3Storage(cache_file)
-    jobs_storage = JobsYaml(jobs_file)
+    jobs_storage = YamlJobsStorage(jobs_file)
 
     urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
@@ -264,7 +264,7 @@ def prepare_retry_test_minidb():
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheMiniDBStorage(cache_file)
-    jobs_storage = JobsYaml(jobs_file)
+    jobs_storage = YamlJobsStorage(jobs_file)
 
     urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)

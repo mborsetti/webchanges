@@ -49,8 +49,9 @@ Upgrading from a `urlwatch` 2.23 setup is automatic (see more below), and gives 
 * The support of Unicode throughout, including in filters and in the YAML files containing jobs and configuration
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
   the new subdirective ``sort_keys``
-* Diffs are no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a reporter
-* More reliable releases due to a 22 percentage point increase in code testing coverage (to 64%), completely new
+* Diffs (changes) are no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a
+  reporter
+* More reliable releases due to a 23 percentage point increase in code testing coverage (to 65%), completely new
   continuous integration (CI) and continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu
   **and** macOS (with Windows 10 x64 to come)
 * Support of Python 3.9
@@ -215,7 +216,7 @@ Relative to `urlwatch` 2.23:
     <https://docs.python.org/3/library/email.message.html#email.message.EmailMessage>`__
   * Reports' elapsed time now always has at least 2 significant digits
   * Unicode is supported throughout, including in filters and YAML files containing jobs and configuration
-  * A 22 percentage point increase in code testing coverage (to 64%), a completely new continuous integration (CI) and
+  * A 23 percentage point increase in code testing coverage (to 65%), a completely new continuous integration (CI) and
     continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10 x64 to
     come) increase reliability of new releases
   * Using flake8 to check PEP-8 compliance and more
@@ -228,12 +229,12 @@ Fixed
 ~~~~~
 Relative to `urlwatch` 2.23:
 
-* Diff data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a reporter:
+* Diff (change) data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error in reporting:
   the permanent database is updated only at the very end (after reports are sent)
-* The database no longer grows unbounded to infinity (if running in Python 3.7 or higher and using the
-  new, default, ``sqlite3`` database engine). Only 4 snapshots are kept, and older ones are purged after every run; this
-  number is selectable with the new ``--max-snapshots`` command line argument. To keep the existing behavior run with
-  the ``--max-snapshots 0`` command line argument.
+* The database no longer grows unbounded to infinity. Fix only works when running in Python 3.7 or higher and using
+  the new, default, ``sqlite3`` database engine. In this scenario only the latest 4 snapshots are kept, and older ones
+  are purged after every run; the number is selectable with the new ``--max-snapshots`` command line argument. To keep
+  the existing grow-to-infinity behavior, run `webchanges` with ``--max-snapshots 0``.
 * The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
 * HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always

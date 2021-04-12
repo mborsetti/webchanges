@@ -138,7 +138,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
             # Legacy string-based filter list specification:
             # "filter1:param1,filter2,filter3,filter4:param4"
             filter_spec = [dict([filter_kind.split(':', 1)]) if ':' in filter_kind else filter_kind
-                           for filter_kind in filter_spec.split(',')]
+                           for filter_kind in old_filter_spec.split(',')]
 
             logger.warning(
                 f'String-based filter definitions ({old_filter_spec}) are deprecated, please convert to dict-style:\n\n'
@@ -477,7 +477,7 @@ class KeepLinesFilter(FilterBase):
 
     __default_subfilter__ = 'text'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
+    def filter(self: Union['KeepLinesFilter', 'GrepFilter'], data: str, subfilter: Dict[str, Any]) -> str:
         if 'text' in subfilter:
             return '\n'.join(line for line in data.splitlines() if subfilter['text'] in line)
         if 're' in subfilter:
@@ -517,7 +517,7 @@ class DeleteLinesFilter(FilterBase):
 
     __default_subfilter__ = 'text'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
+    def filter(self: Union['DeleteLinesFilter', 'InverseGrepFilter'], data: str, subfilter: Dict[str, Any]) -> str:
         if 'text' in subfilter:
             return '\n'.join(line for line in data.splitlines() if subfilter['text'] not in line)
         if 're' in subfilter:
@@ -726,7 +726,8 @@ class LxmlParser():
     EXPR_NAMES = {'css': 'a CSS selector',
                   'xpath': 'an XPath expression'}
 
-    def __init__(self, filter_kind: str, subfilter: Dict[str, Any], expr_key: str) -> None:
+    def __init__(self: Union['LxmlParser', 'CssFilter', 'XPathFilter'], filter_kind: str, subfilter: Dict[str, Any],
+                 expr_key: str) -> None:
         self.filter_kind = filter_kind
         if expr_key not in subfilter:
             raise ValueError(f'Need {self.EXPR_NAMES[filter_kind]} for filtering ( {self.job.get_location()} )')

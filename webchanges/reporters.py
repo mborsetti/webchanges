@@ -20,7 +20,7 @@ import requests
 from markdown2 import Markdown
 
 import webchanges as project
-from .jobs import Job
+from .jobs import JobBase
 from .mailer import SMTPMailer, SendmailMailer
 from .util import TrackSubClasses, chunk_string, linkify
 
@@ -160,7 +160,7 @@ class HtmlReporter(ReporterBase):
             </html>""")
 
     @staticmethod
-    def _diff_to_html(diff: str, job: Job) -> Iterable[str]:
+    def _diff_to_html(diff: str, job: JobBase) -> Iterable[str]:
         """Generator yielding the HTML-formatted unified diff; called by _format_content."""
         if job.diff_tool and job.diff_tool.startswith('wdiff'):
             # wdiff colorization

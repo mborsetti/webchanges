@@ -343,7 +343,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             yaml.safe_dump(self.config, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 
-class JobsYaml(BaseYamlFileStorage, JobsBaseFileStorage):
+class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
     @classmethod
     def parse(cls, *args) -> List[JobBase]:
         filename = args[0]

@@ -91,14 +91,14 @@ class UrlwatchCommand:
         except ValueError:
             return next((job for job in self.urlwatcher.jobs if job.get_location() == query), None)
 
-    def _get_job(self, id: int) -> JobBase:
+    def _get_job(self, id: Union[str, int]) -> JobBase:
         job = self._find_job(id)
         if job is None:
             print(f'Not found: {id!r}')
             raise SystemExit(1)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
-    def test_job(self, id: int) -> None:
+    def test_job(self, id: str) -> None:
         job = self._get_job(id)
 
         if isinstance(job, UrlJob):
@@ -120,7 +120,7 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
-    def test_diff(self, id: int) -> Optional[int]:
+    def test_diff(self, id: str) -> Optional[int]:
         job = self._get_job(id)
 
         history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid())
@@ -150,9 +150,11 @@ class UrlwatchCommand:
             # Force re-retrieval of job, as we're testing for errors
             job.ignore_cached = True
         with contextlib.ExitStack() as exit_stack:
-            for job_state in (run_parallel(lambda job_state: job_state.process(),
-                                           (exit_stack.enter_context(JobState(self.urlwatcher.cache_storage, job))
-                                            for job in jobs))):
+            for job_state in (run_parallel(
+                lambda job_state: job_state.process(),
+                (exit_stack.enter_context(JobState(self.urlwatcher.cache_storage, job))  # type: ignore
+                 for job in jobs)
+            )):
                 if job_state.exception is not None:
                     print(f'{job_state.job.idx + 1: 3}: {job_state.exception.args[0]}')
                 elif len(job_state.new_data.strip()) == 0:

@@ -1,15 +1,16 @@
 import contextlib
-import importlib
+import importlib.util
 import os
 import shutil
 import sys
+from typing import Optional
 
 import pytest
 
 from webchanges import __project_name__ as pkgname
 from webchanges.config import BaseConfig
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, JobsYaml, YamlConfigStorage
+from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
 
@@ -41,7 +42,7 @@ def teardown_func():
                 os.remove(filename)
 
 
-def prepare_storage_test(config_args={}):
+def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, CacheSQLite3Storage):
     jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
     config_file = os.path.join(here, 'data', 'config.yaml')
     cache_file = os.path.join(here, 'data', 'cache.db')
@@ -49,11 +50,12 @@ def prepare_storage_test(config_args={}):
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheSQLite3Storage(cache_file)
-    jobs_storage = JobsYaml(jobs_file)
+    jobs_storage = YamlJobsStorage(jobs_file)
 
     urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
-    for k, v in config_args.items():
-        setattr(urlwatch_config, k, v)
+    if config_args:
+        for k, v in config_args.items():
+            setattr(urlwatch_config, k, v)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     return urlwatcher, cache_storage
@@ -254,7 +256,7 @@ def prepare_storage_test_minidb(config_args={}):
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheMiniDBStorage(cache_file)
-    jobs_storage = JobsYaml(jobs_file)
+    jobs_storage = YamlJobsStorage(jobs_file)
 
     urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
     for k, v in config_args.items():

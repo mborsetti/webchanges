@@ -8,7 +8,7 @@ import os
 
 from .config import BaseConfig
 from .handler import Report
-from .storage import CacheStorage, JobsYaml, YamlConfigStorage
+from .storage import CacheStorage, YamlConfigStorage, YamlJobsStorage
 from .util import import_module_from_source
 from .worker import run_jobs
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Urlwatch(object):
 
     def __init__(self, urlwatch_config: BaseConfig, config_storage: YamlConfigStorage,
-                 cache_storage: CacheStorage, jobs_storage: JobsYaml) -> None:
+                 cache_storage: CacheStorage, jobs_storage: YamlJobsStorage) -> None:
 
         self.urlwatch_config = urlwatch_config
 

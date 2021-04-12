@@ -10,6 +10,7 @@ import shutil
 import signal
 import sys
 import warnings
+from typing import Optional
 
 from appdirs import AppDirs
 
@@ -17,7 +18,7 @@ from . import __min_python_version__
 from .command import UrlwatchCommand
 from .config import CommandConfig
 from .main import Urlwatch
-from .storage import CacheDirStorage, CacheRedisStorage, CacheSQLite3Storage, JobsYaml, YamlConfigStorage
+from .storage import CacheDirStorage, CacheRedisStorage, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
 # Check if we are installed in the system already # Legacy for apt-get type of packaging
 # (prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -44,7 +45,7 @@ try:
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 except AttributeError:
     # Windows does not have signal.SIGPIPE
-    ...
+    pass
 
 logger = logging.getLogger(project_name)
 
@@ -60,8 +61,38 @@ def setup_logger(verbose: bool) -> None:
         root_logger.info('turning on verbose logging mode')
 
 
+def locate_storage_file(filename: str, default_dir: str, ext: Optional[str] = None) -> str:
+    """Searches for file as specified and in default directory; retry with 'ext' extension. Return full filename of
+    where found, or original filename if not found
+
+    :param filename: The filename
+    :param default_dir: Default storage directory
+    :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails
+
+    :returns: The filename, either original or with path where found
+    """
+    search_filenames = [filename]
+
+    # if exp is given, iterate both on raw filename and the filename with ext if different
+    if ext and os.path.splitext(filename)[1] != ext:
+        search_filenames.append(filename + ext)
+
+    for file in search_filenames:
+        # return if found
+        if os.path.isfile(file):
+            return file
+
+        # no directory specified: add default one
+        if file == os.path.basename(file):
+            new_file = os.path.join(default_dir, file)
+            if os.path.isfile(new_file):
+                return new_file
+
+    return filename
+
+
 def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cache_file: str) -> None:
-    """Check for existence of legacy (urlwatch 2.2) config, jobs and hooks files and migrate them (i.e. make a copy to
+    """Check for existence of legacy (urlwatch 2.23) config, jobs and hooks files and migrate them (i.e. make a copy to
     new folder and or naming).  Original files are not deleted."""
     uw_urlwatch_dir = os.path.expanduser(os.path.join('~', '.' + 'urlwatch'))
     uw_config_file = os.path.join(uw_urlwatch_dir, 'urlwatch.yaml')
@@ -107,34 +138,10 @@ def main() -> None:  # pragma: no cover
     # set up the logger
     setup_logger(command_config.verbose)
 
-    # check for directory of config files entered in cli
-    # TODO: make this legible!
-    if (not os.path.isfile(command_config.config)
-            and command_config.config == os.path.basename(command_config.config)
-            and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.config)))):
-        command_config.config = os.path.join(command_config.config_dir, os.path.basename(command_config.config))
-    if os.path.splitext(command_config.config)[1] != '.yaml':
-        if os.path.isfile(command_config.config + '.yaml'):
-            command_config.config += '.yaml'
-        elif (command_config.config == os.path.basename(command_config.config) and os.path.isfile(
-              os.path.join(command_config.config_dir, os.path.basename(command_config.config + '.yaml')))):
-            command_config.config = os.path.join(command_config.config_dir,
-                                                 os.path.basename(command_config.config + '.yaml'))
-    if (not os.path.isfile(command_config.jobs)
-            and command_config.jobs == os.path.basename(command_config.jobs)
-            and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.jobs)))):
-        command_config.jobs = os.path.join(command_config.config_dir, os.path.basename(command_config.jobs))
-    if os.path.splitext(command_config.jobs)[1] != '.yaml':
-        if os.path.isfile(command_config.jobs + '.yaml'):
-            command_config.jobs += '.yaml'
-        elif (command_config.jobs == os.path.basename(command_config.jobs) and os.path.isfile(
-              os.path.join(command_config.config_dir, os.path.basename(command_config.jobs + '.yaml')))):
-            command_config.jobs = os.path.join(command_config.config_dir,
-                                               os.path.basename(command_config.jobs + '.yaml'))
-    if (not os.path.isfile(command_config.hooks)
-            and command_config.hooks == os.path.basename(command_config.hooks)
-            and os.path.isfile(os.path.join(command_config.config_dir, os.path.basename(command_config.hooks)))):
-        command_config.hooks = os.path.join(command_config.config_dir, os.path.basename(command_config.hooks))
+    # check for location of config files entered in cli
+    command_config.config = locate_storage_file(command_config.config, command_config.config_dir, '.yaml')
+    command_config.jobs = locate_storage_file(command_config.jobs, command_config.config_dir, '.yaml')
+    command_config.hooks = locate_storage_file(command_config.hooks, command_config.config_dir, '.py')
 
     # setup config file API
     config_storage = YamlConfigStorage(command_config.config)  # storage.py
@@ -156,7 +163,7 @@ def main() -> None:  # pragma: no cover
         raise NotImplementedError(f'Database engine {command_config.database_engine} not implemented')
 
     # setup jobs file API
-    jobs_storage = JobsYaml(command_config.jobs)  # storage.py
+    jobs_storage = YamlJobsStorage(command_config.jobs)  # storage.py
 
     # setup urlwatch
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py

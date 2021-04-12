@@ -47,7 +47,7 @@ class BrowserLoop(object):
         self._loop_thread.start()
 
     @staticmethod
-    def current_platform() -> str:
+    def current_platform():
         if sys.platform.startswith('linux'):
             return 'linux'
         elif sys.platform.startswith('darwin'):
@@ -78,8 +78,7 @@ class BrowserLoop(object):
         try:
             import pyppeteer  # must be imported after setting os.environ variables
         except ImportError:
-            raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
-                              f' ( {self.job.get_location()} )')
+            raise ImportError('Python package pyppeteer is not installed; cannot use the "use_browser: true" directive')
 
         args = []
         if proxy_server:
@@ -90,8 +89,7 @@ class BrowserLoop(object):
             if isinstance(switches, str):
                 switches = switches.split(',')
             if not isinstance(switches, list):
-                raise TypeError(f"'switches' needs to be a string or list, not {type(switches)} "
-                                f'( {self.get_location()} )')
+                raise TypeError(f"'switches' needs to be a string or list, not {type(switches)} ")
             switches = [f"--{switch.lstrip('--')}" for switch in switches]
             args.extend(switches)
         browser = await pyppeteer.launch(ignoreHTTPSErrors=ignore_https_errors, args=args)
