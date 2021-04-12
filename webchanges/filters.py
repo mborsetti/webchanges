@@ -124,7 +124,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
                 allowed_keys = set(filtercls.__supported_subfilters__.keys())
                 unknown_keys = provided_keys.difference(allowed_keys)
                 if unknown_keys and '<any>' not in allowed_keys:
-                    raise ValueError(f'Filter "{filter_kind}" does not support subfilter(s): {unknown_keys} '
+                    raise ValueError(f'Filter {filter_kind} does not support subfilter(s): {unknown_keys} '
                                      f'(supported: {allowed_keys})')
 
             yield filter_kind, subfilter
@@ -339,7 +339,7 @@ class Html2TextFilter(FilterBase):
                          f' ( {self.job.get_location()} )')
 
         else:
-            raise ValueError(f'Unknown filter html2text method: {method!r} ( {self.job.get_location()} )')
+            raise ValueError(f'Unknown filter html2text method: {method} ( {self.job.get_location()} )')
 
 
 class Pdf2TextFilter(FilterBase):
@@ -628,7 +628,7 @@ class GetElementById(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'id' not in subfilter:
-            raise ValueError(f'Need an element ID for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The element-by-id filter needs an id for filtering ( {self.job.get_location()} )')
 
         element_by_id = ElementsBy(FilterBy.ATTRIBUTE, 'id', subfilter['id'])
         element_by_id.feed(data)
@@ -648,7 +648,7 @@ class GetElementByClass(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'class' not in subfilter:
-            raise ValueError(f'Need an element class for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The element-by-class filter needs a class for filtering ( {self.job.get_location()} )')
 
         element_by_class = ElementsBy(FilterBy.ATTRIBUTE, 'class', subfilter['class'])
         element_by_class.feed(data)
@@ -668,7 +668,7 @@ class GetElementByStyle(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'style' not in subfilter:
-            raise ValueError(f'Need an element style for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The element-by-style filter needs a style for filtering ( {self.job.get_location()} )')
 
         element_by_style = ElementsBy(FilterBy.ATTRIBUTE, 'style', subfilter['style'])
         element_by_style.feed(data)
@@ -688,7 +688,7 @@ class GetElementByTag(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'tag' not in subfilter:
-            raise ValueError(f'Need a tag for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The element-by-tag filter needs a tag for filtering ( {self.job.get_location()} )')
 
         element_by_tag = ElementsBy(FilterBy.TAG, subfilter['tag'])
         element_by_tag.feed(data)
@@ -730,7 +730,8 @@ class LxmlParser():
                  expr_key: str) -> None:
         self.filter_kind = filter_kind
         if expr_key not in subfilter:
-            raise ValueError(f'Need {self.EXPR_NAMES[filter_kind]} for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The {filter_kind} filter needs {self.EXPR_NAMES[filter_kind]} for filtering'
+                             f' ( {self.job.get_location()} )')
         self.expression = subfilter[expr_key]
         self.method = subfilter.get('method', 'html')
         self.exclude = subfilter.get('exclude')
@@ -738,7 +739,7 @@ class LxmlParser():
         self.skip = int(subfilter.get('skip', 0))
         self.maxitems = int(subfilter.get('maxitems', 0))
         if self.method not in ('html', 'xml'):
-            raise ValueError(f"{filter_kind} method must be 'html' or 'xml', got {self.method!r}"
+            raise ValueError(f"The {filter_kind} filter's method must be 'html' or 'xml', got {self.method}"
                              f' ( {self.job.get_location()} )')
         if self.method == 'html' and self.namespaces:
             raise ValueError(f"Namespace prefixes only supported with 'xml' method"
@@ -904,7 +905,7 @@ class RegexSub(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'pattern' not in subfilter:
-            raise ValueError(f'{self.__kind__} needs a pattern ( {self.job.get_location()} )')
+            raise ValueError(f'The re.sub filter needs a pattern ( {self.job.get_location()} )')
 
         # Default: Replace with empty string if no "repl" value is set
         return re.sub(subfilter['pattern'], subfilter.get('repl', ''), data)
@@ -957,7 +958,7 @@ class ShellPipeFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'command' not in subfilter:
-            raise ValueError(f'{self.__kind__} filter needs a command ( {self.job.get_location()} )')
+            raise ValueError(f'The shellpipe filter needs a command ( {self.job.get_location()} )')
 
         encoding = sys.getdefaultencoding()
 
@@ -1033,9 +1034,10 @@ class JQFilter(FilterBase):
         try:
             jsondata = json.loads(data)
         except ValueError:
-            raise ValueError('The url response contained invalid JSON')
+            raise ValueError(f'The jq filter needs valid JSON ( {self.job.get_location()} )')
 
         if 'query' not in subfilter:
-            raise ValueError(f'{self.__kind__} filter needs a query')
+            raise ValueError(f'The jq filter needs a query ( {self.job.get_location()} )')
 
-        return json.dumps(jq.first(subfilter['query'], jsondata), ensure_ascii=False)
+        # https://github.com/mwilliamson/jq.py/issues/59
+        return '\n'.join(json.dumps(v, ensure_ascii=False) for v in (jq.compile(subfilter['query'], jsondata)))
