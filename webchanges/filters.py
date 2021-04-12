@@ -1038,4 +1038,4 @@ class JQFilter(FilterBase):
         if 'query' not in subfilter:
             raise ValueError(f'{self.__kind__} filter needs a query')
 
-        return jq.text(subfilter['query'], jsondata)
+        return json.dumps(jq.first(subfilter['query'], jsondata), ensure_ascii=False)

@@ -52,8 +52,8 @@ Added
   <https://github.com/thp/urlwatch/issues/635>`__.
 * Reporter ``prowl`` for the `Prowl <https://prowlapp.com>`__ push notification client for iOS (only). Contributed
   by `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
-* Filter ``jq`` to parse, transform, and extract ASCII JSON data. Contributed by
-  `robgmills <https://github.com/robgmills>`__ upstream in PR `626 <https://github.com/thp/urlwatch/pull/626>`__.
+* Filter ``jq`` to parse, transform, and extract JSON data. Contributed by `robgmills
+  <https://github.com/robgmills>`__ upstream in PR `626 <https://github.com/thp/urlwatch/pull/626>`__.
 * Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with `urlwatch` 2.23)
 * Alert user when the jobs file contains unrecognized directives (e.g. typo)
 
@@ -266,7 +266,7 @@ Fixed
   when first used, but importing in Python is not (yet) thread-safe, so we cannot import new modules from the parallel
   worker threads reliably (# `559 <https://github.com/thp/urlwatch/issues/559>`__ upstream by `Scott MacVicar
   <https://github.com/scottmac>`__)
-* Write unicode-compatible YAML files
+* Write Unicode-compatible YAML files
 
 Internals
 ---------
@@ -419,7 +419,7 @@ Fixed
 -----
 Relative to `urlwatch` 2.21:
 
-* The ``html2text`` filter's ``html2text`` method defaults to unicode handling
+* The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
 * HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
   the first sub-directive)

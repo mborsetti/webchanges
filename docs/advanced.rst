@@ -147,7 +147,8 @@ Since the output of ``date`` changes every second, this job should produce a rep
 Selecting items from a JSON dictionary
 --------------------------------------
 If you are watching JSON-encoded dictionary data but are only interested in the data contained in (a) certain key(s),
-you can use the :ref:`jq` filter (Linux/MacOS only) or a Python command to easily extract it:
+you can use the :ref:`jq` filter (Linux/MacOS only) to extract it, or write a cross-platform Python command like the one
+below:
 
 
 .. code-block:: yaml
@@ -157,9 +158,9 @@ you can use the :ref:`jq` filter (Linux/MacOS only) or a Python command to easil
    shellpipe: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
 
 
-Escaping is a bit complex: for example, ``"`` inside the Python code becomes ``\\\"`` and ``\n`` becomes ``\\n``
--- and so on -- due to being inside a double quoted shell string inside a double quoted YAML string. The example below
-shows how to use escaping as well as letting know the downstream html reporter that the data is in Markdown:
+Escaping of the Python is a bit complex due to being inside a double quoted shell string inside a double quoted YAML
+string. For example, ``"`` code becomes ``\\\"`` and ``\n`` becomes ``\\n`` -- and so on. The example below provides
+seemingly complex escaping as well how to inform the downstream html reporter that the extracted data is in Markdown:
 
 .. code-block:: yaml
 
@@ -168,18 +169,19 @@ shows how to use escaping as well as letting know the downstream html reporter t
    shellpipe: "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\\\"[{v['Title']}]\\n({v['DownloadUrl']})\\\") for v in d['value']]\""
    is_markdown: true
 
-Please read the file permission restrictions in the filter's explanation :ref:`here <shellpipe>`.
+If running on Linux/MacOS, please read the file permission restrictions in the filter's explanation
+:ref:`here <shellpipe>`.
 
 
 
 Watching changes on .onion (Tor) pages
 --------------------------------------
 Since pages on the `Tor Network <https://www.torproject.org>`__ are not accessible via public DNS and TCP, you need to
-either configure a Tor client as HTTP/HTTPS proxy or use the ``torify(1)`` tool from the ``tor`` package (``apt install
-tor`` on Debian or Ubuntu, ``brew install tor`` on macOS). Setting up Tor is out of scope for this document.
+either configure a Tor client as an HTTP/HTTPS proxy or, in Linux/MacOS, use the `torify` tool from the `tor` package
+(installable using ``apt install tor`` on Debian or Ubuntu or ``brew install tor`` on macOS). Setting up Tor is out of
+scope for this document.
 
-On a properly set up Tor installation, one can just prefix the ``webchanges`` command with the ``torify`` wrapper to
-access .onion pages:
+If using `torify`, just prefix the `webchanges` command with the `torify` wrapper to access .onion pages:
 
 .. code-block:: bash
 
@@ -188,7 +190,7 @@ access .onion pages:
 
 Watching Facebook page events
 -----------------------------
-If you want to be notified of new events on a public Facebook page, you can use the following job pattern, replace
+If you want to be notified of new events on a public Facebook page, you can use the following job pattern; just replace
 ``PAGE`` with the name of the page (can be found by navigating to the events page on your browser):
 
 .. code-block:: yaml
@@ -386,7 +388,7 @@ You can now run a `webchanges` job defined like this:
 Speeding up ``use_browser: true`` jobs
 --------------------------------------
 
-⚠ Ignored if in Python Version 3.6
+⚠ Ignored if running in Python Version 3.6
 
 ⚠ Experimental: on certain sites this seems to totally freeze execution; test before use
 
