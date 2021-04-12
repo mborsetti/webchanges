@@ -1039,5 +1039,7 @@ class JQFilter(FilterBase):
         if 'query' not in subfilter:
             raise ValueError(f'The jq filter needs a query ( {self.job.get_location()} )')
 
-        # https://github.com/mwilliamson/jq.py/issues/59
-        return '\n'.join(json.dumps(v, ensure_ascii=False) for v in (jq.compile(subfilter['query'], jsondata)))
+        return jq.text(subfilter['query'], jsondata)
+        # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59
+        # however it aborts execution(!) during testing
+        # return '\n'.join(json.dumps(v, ensure_ascii=False) for v in (jq.compile(subfilter['query'], jsondata)))

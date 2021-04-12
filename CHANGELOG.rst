@@ -52,7 +52,7 @@ Added
   <https://github.com/thp/urlwatch/issues/635>`__.
 * Reporter ``prowl`` for the `Prowl <https://prowlapp.com>`__ push notification client for iOS (only). Contributed
   by `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
-* Filter ``jq`` to parse, transform, and extract JSON data. Contributed by `robgmills
+* Filter ``jq`` to parse, transform, and extract ASCII JSON data. Contributed by `robgmills
   <https://github.com/robgmills>`__ upstream in PR `626 <https://github.com/thp/urlwatch/pull/626>`__.
 * Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with `urlwatch` 2.23)
 * Alert user when the jobs file contains unrecognized directives (e.g. typo)

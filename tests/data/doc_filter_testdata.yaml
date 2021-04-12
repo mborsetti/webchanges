@@ -518,14 +518,14 @@ https://example.net/jq-ascii.json:
         "company": "Tack-trest"
       },
       {
-        "title": "TPS™ Report Analyst",
+        "title": "TPS Report Analyst",
         "company": "Initech"
       }
     ]
   output: |-
       "Senior Data Scientist"
       "Python Developer"
-      "TPS™ Report Analyst"
+      "TPS Report Analyst"
 https://example.com/format_xml.xml:
   input: |
       <?xml version="1.0" ?>

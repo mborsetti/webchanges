@@ -147,8 +147,8 @@ Since the output of ``date`` changes every second, this job should produce a rep
 Selecting items from a JSON dictionary
 --------------------------------------
 If you are watching JSON-encoded dictionary data but are only interested in the data contained in (a) certain key(s),
-you can use the :ref:`jq` filter (Linux/MacOS only) to extract it, or write a cross-platform Python command like the one
-below:
+you can use the :ref:`jq` filter (Linux/MacOS only, ASCII only) to extract it, or write a cross-platform Python command
+like the one below:
 
 
 .. code-block:: yaml

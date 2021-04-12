@@ -59,7 +59,7 @@ At the moment, the following filters are available:
 
 * To filter and/or make JSON more readable:
 
-  - :ref:`jq`: Filter JSON
+  - :ref:`jq`: Filter ASCII JSON
   - :ref:`format-json`: Reformat (pretty-print) JSON
 
 * To make XML more readable:
@@ -485,9 +485,9 @@ jq
 Linux/MacOS only
 """"""""""""""""
 
-The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight JSON processor.
-It is currently available only for Linux (most flavors) and MacOS (no Windows); see :ref:`below <filtering_json>` for a
-cross-platform way of selecting JSON.
+The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight ASCII JSON
+processor. It is currently available only for Linux (most flavors) and MacOS (no Windows) and does not handle Unicode;
+see :ref:`below <filtering_json>` for a cross-platform and Unicode-friendly way of selecting JSON.
 
 .. code-block:: yaml
 
