@@ -76,11 +76,12 @@ its URL/command; `webchanges` will display the filtered output. This allows to e
 
 Show diff from saved snapshots
 ------------------------------
-You can use the argument ``--test-diff`` followed by the job index number (from ``--list``) or its URL/command to
-display diffs from snapshots that have been saved; obviously a minimum of 2 saved snapshots are required. This allows
-you to test the effect of a diff filter or see previous changes.
+You can use the argument ``--test-diff`` followed by the job index number (from ``--list``) or its URL/command will
+display diffs and apply the :ref:`diff filters <diff_filters>` currently defined from all snapshots that have been
+saved; obviously a minimum of 2 saved snapshots are required. This allows you to test the effect of a diff filter and/or
+retrieve historical diffs (changes).
 
-`Changed in version 3.3: will now display more than 10 snapshots when present`
+`Changed in version 3.3: will now display all snapshots instead of only the latest 10`
 
 .. _rollback-cache:
 
@@ -148,22 +149,19 @@ command line argument ``--cache-engine minidb``. The ``minidib`` Python package 
 
 Maximum number of snapshots to save
 -----------------------------------
-(Python 3.7 or higher and default ``sqlite3`` database engine only)
-
-Each time you run `webchanges`, it captures the data downloaded from the URL (or the output of the command specified)
-and saves it, after applying filters, to a database for future comparison.  By default, when using the default
-``sqlite3`` database engine, only the last 4 snapshots are kept, but this number can be changed with the
-``--max-snapshots`` command line argument.  If it is set to 0, all snapshots are retained (no deletion of old snapshots
-will take place).
+Each time you run `webchanges` it captures the data downloaded from the URL (or the output of the command specified),
+applies filters, and saves the resulting snapshot to a database for future comparison.  By default¹ only the last 4
+snapshots are kept, but this number can be changed with the ``--max-snapshots`` command line argument.  If set to
+0, all snapshots are retained (the database will grow unbounded).
 
 Tip: changes (diffs) between old snapshots can be redisplayed with the ``--test-diff`` command line argument (see
 :ref:`here <test-diff>`).
 
-Note that databases with ``redis`` or ``minidb`` database engines, or when running Python 3.6., will always retain all
-snapshots (and grow to infinity), while with ``textfiles`` only the last snapshot is kept.
+¹ Note that when using ``redis`` or ``minidb`` database engines or when running Python 3.6 all snapshots will be kept,
+while when using the ``textfiles`` database engine only the last snapshot is kept.
 
 
-`New in version 3.3.`
+`New in version 3.3` for Python 3.7 or higher and default ``sqlite3`` database engine only.`
 
 
 .. todo::

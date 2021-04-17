@@ -50,20 +50,18 @@ except AttributeError:
 logger = logging.getLogger(project_name)
 
 
-def setup_logger(verbose: bool) -> None:
-    """Set up the logger."""
-    if verbose:
-        root_logger = logging.getLogger('')
-        console = logging.StreamHandler()
-        console.setFormatter(logging.Formatter('%(asctime)s %(module)s %(levelname)s: %(message)s'))
-        root_logger.addHandler(console)
-        root_logger.setLevel(logging.DEBUG)
-        root_logger.info('turning on verbose logging mode')
+def setup_logger_verbose() -> None:
+    """Set up the loggers for verbosity."""
+    root_logger = logging.getLogger('')
+    console = logging.StreamHandler()
+    console.setFormatter(logging.Formatter('%(asctime)s %(module)s %(levelname)s: %(message)s'))
+    root_logger.addHandler(console)
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.info('turning on verbose logging mode')
 
 
 def locate_storage_file(filename: str, default_dir: str, ext: Optional[str] = None) -> str:
-    """Searches for file as specified and in default directory; retry with 'ext' extension. Return full filename of
-    where found, or original filename if not found
+    """Searches for file as specified and in default directory; retry with 'ext' extension.
 
     :param filename: The filename
     :param default_dir: Default storage directory
@@ -135,8 +133,9 @@ def main() -> None:  # pragma: no cover
     command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
                                    cache_file, verbose=False)
 
-    # set up the logger
-    setup_logger(command_config.verbose)
+    # set up the logger to verbose if needed
+    if command_config.verbose:
+        setup_logger_verbose()
 
     # check for location of config files entered in cli
     command_config.config = locate_storage_file(command_config.config, command_config.config_dir, '.yaml')

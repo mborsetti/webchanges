@@ -204,15 +204,25 @@ string. In these cases just use quotes::
     non_boolean: "yes"
     other_string: "False"
 
-
 YAML converts certain strings into floating-point values, such as the string `1.0`. If you need to specify a version
 number (in a requirements.yml file, for example), you will need to quote the value if it looks like a floating-point
 value::
 
-  version: "1.0"
-
+    version: "1.0"
 
 URLs are always safe and don't need to be enclosed in quotes.
+
+
+According to the YAML specification, only ASCII characters can be used, but `urlwatch` supports Unicode. In case you
+care, under the standard special characters may be represented with a ``\u``-style escape sequence within
+double-quotes::
+
+   name: "\u00A9 Megaco"  # The copyright sign ©
+
+The below works fine in `urlwatch`:
+
+   name: "© Megaco"
+
 
 .. seealso::
 

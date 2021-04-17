@@ -513,10 +513,10 @@ follows:
 
 .. _filtering_json:
 
-Filtering JSON on Windows or without ``jq``
-"""""""""""""""""""""""""""""""""""""""""""
+Filtering JSON on Windows or containing Unicode or without ``jq``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Python programmers on all OSs can use an advanced technique to select only certain elements of the JSON object; see
-:ref:`json_dict`.
+:ref:`json_dict`. This method will preserve Unicode characters.
 
 
 
@@ -638,7 +638,8 @@ Examples:
      - keep_lines_containing:
          re: '(?i)error'
 
-Note: in regex ``(?i)`` is the inline flag for `case-insensitive matching <https://docs.python.org/3/library/re.html#re.I>`__.
+Note: in regex ``(?i)`` is the inline flag for `case-insensitive matching
+<https://docs.python.org/3/library/re.html#re.I>`__.
 
 Optional sub-directives
 """""""""""""""""""""""

@@ -14,7 +14,7 @@ import sys
 import threading
 from urllib.parse import urlsplit
 
-from .cli import setup_logger
+from .cli import setup_logger_verbose
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,8 @@ def main():
     parser.add_argument('--wait_for_navigation', help='wait until redirected to a URL starting with this text')
     args = parser.parse_args()
 
-    setup_logger(args.verbose)
+    if args.verbose:
+        setup_logger_verbose()
 
     proxy_server, proxy_username, proxy_password = get_proxy(args.url, args.http_proxy, args.https_proxy)
 

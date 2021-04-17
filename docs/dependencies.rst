@@ -64,9 +64,9 @@ like this::
 
 .. rubric:: Footnotes
 
-.. [#f1] Pyppeteer's OS-specific dependencies (only Linux requires them) are listed `here
+.. [#f1] `Pyppeteer`'s OS-specific dependencies (only Linux requires them) are listed `here
    <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch-on-unix>`__
-   (yes, it's a page from puppeteer, which is the project upon which pyppeteer is created).  A missing dependency is
+   (yes, it's a page from puppeteer, which is the project upon which `Pyppeteer` is created).  A missing dependency is
    often the cause of the error ``pyppeteer.errors.BrowserError: Browser closed unexpectedly``.  Also pay close
    attention to the documentation if you're running in `Docker
    <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#running-puppeteer-in-docker>`__ or other

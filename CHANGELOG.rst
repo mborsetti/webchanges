@@ -31,6 +31,11 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.4.0.post0
+====================
+Unreleased
+
+
 Version 3.4.0
 ====================
 2021-04-12
@@ -85,9 +90,9 @@ Internals
 
 Known issues
 ------------
-* ``url`` jobs with ``use_browser: true`` (i.e. using Pyppeteer) will at times display the below error message in stdout
-  (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed in the
-  future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
+  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
+  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
@@ -115,9 +120,9 @@ Known issues
 ------------
 * Discovered that upstream (legacy) `urlwatch` 2.22 code has the database growing to infinity; run ``webchanges
   --clean-cache`` periodically to discard old snapshots until this is addressed in a future release
-* ``url`` jobs with ``use_browser: true`` (i.e. using Pyppeteer) will at times display the below error message in stdout
-  (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed in the
-  future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
+  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
+  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
@@ -131,9 +136,9 @@ Version 3.2.4
 Added
 -----
 * Job directive ``note``: adds a freetext note appearing in the report after the job header
-* Job directive ``wait_for_navigation`` for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer): wait for
+* Job directive ``wait_for_navigation`` for URL jobs with ``use_browser: true`` (i.e. using `Pyppeteer`): wait for
   navigation to reach a URL starting with the specified one before extracting content. Useful when the URL redirects
-  elsewhere before displaying content you're interested in and Pyppeteer would capture the intermediate page.
+  elsewhere before displaying content you're interested in and `Pyppeteer` would capture the intermediate page.
 * command line argument ``--rollback-cache TIMESTAMP``: rollback the snapshot database to a previous time, useful when
   you miss notifications; see `here <https://webchanges.readthedocs.io/en/stable/cli.html#rollback-cache>`__. Does not
   work with database engine ``minidb`` or ``textfiles``.
@@ -141,7 +146,7 @@ Added
   in prior versions and `urlwatch` 2.  New default ``sqlite3`` creates a smaller database due to data compression with
   `msgpack <https://msgpack.org/index.html>`__ and offers additional features; migration from old minidb database is
   done automatically and the old database preserved for manual deletion.
-* Job directive ``block_elements`` for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer) (⚠ ignored in Python
+* Job directive ``block_elements`` for URL jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) (⚠ ignored in Python
   < 3.7) (experimental feature): specify `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (elements) to
   skip requesting (downloading) in order to speed up retrieval of the content; only resource types `supported by
@@ -155,12 +160,12 @@ Changes
   run this version. This has no effect on the ordinary use of the program other than reducing the number of historical
   results from ``--test-diffs`` util more snapshots are captured. To continue using the legacy database format, launch
   with ``database-engine minidb`` and ensure that the package ``minidb`` is installed.
-* If any jobs have ``use_browser: true`` (i.e. are using Pyppeteer), the maximum number of concurrent threads is set to
-  the number of available CPUs instead of the `default
+* If any jobs have ``use_browser: true`` (i.e. are using `Pyppeteer`), the maximum number of concurrent threads is set
+  to the number of available CPUs instead of the `default
   <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`__ to avoid
-  instability due to Pyppeteer's high usage of CPU
+  instability due to `Pyppeteer`'s high usage of CPU
 * Default configuration now specifies the use of Chromium revisions equivalent to Chrome 89.0.4389.72
-  for URL jobs with ``use_browser: true`` (i.e. using Pyppeteer) to increase stability. Note: if you already have a
+  for URL jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) to increase stability. Note: if you already have a
   configuration file and want to upgrade to this version, see `here
   <https://webchanges.readthedocs.io/en/stable/advanced.html#using-a-chromium-revision-matching-a-google-chrome-chromium-release>`__.
   The Chromium revisions used now are 'linux': 843831, 'win64': 843846, 'win32': 843832, and 'mac': 843846.
@@ -182,17 +187,17 @@ Internals
 * New command line argument ``--database-engine`` allows selecting engine and accepts ``sqlite3`` (default),
   ``minidb`` (legacy compatibility, requires package by the same name) and ``textfiles`` (creates a text file of the
   latest snapshot for each job)
-* When running in Python 3.7 or higher, jobs with ``use_browser: true`` (i.e. using Pyppeteer) are a bit more reliable
+* When running in Python 3.7 or higher, jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) are a bit more reliable
   as they are now launched using ``asyncio.run()``, and therefore Python takes care of managing the asyncio event loop,
   finalizing asynchronous generators, and closing the threadpool, tasks that previously were handled by custom code
 * 11 percentage point increase in code testing coverage, now also testing jobs that retrieve content from the internet
-  and (for Python 3.7 and up) use Pyppeteer
+  and (for Python 3.7 and up) use `Pyppeteer`
 
 Known issues
 ------------
-* ``url`` jobs with ``use_browser: true`` (i.e. using Pyppeteer) will at times display the below error message in stdout
-  (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed in the
-  future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
+  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
+  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
@@ -212,8 +217,8 @@ Version 3.1.0
 
 Added
 -----
-* Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. using Pyppeteer)
-  based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
+* Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. using
+  `Pyppeteer`) based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
 * If ``shellpipe`` filter returns an error it now shows the error text
 * Show deprecation warning if running on the lowest Python version supported (mentioning the 3 years support from the
   release date of the next major version)

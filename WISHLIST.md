@@ -4,12 +4,6 @@
   - [ ] Increase line coverage
 - [ ] Document code
   - [ ] Docstrings
-  - [ ] Make autodoc work
-- [ ] Database grows to infinity! (and it's not even documented!)
-- [ ] Update database only if all reporters run successfully without errors
-  - [ ] Or queue failed (undelivered) reports?
-- [ ] Improve handling of terminated execution (related)
-  - [ ] If the retrieved data were only saved to the database after it was output, this way of missing diffs would 
-        be prevented
-  - [ ] Provide a convenient way to show past diffs that might have been missed due to exceptions or user error
+- [ ] Considering queuing failed (undelivered) reports
 - [ ] Figure out what to do with `--add JOB` and `--delete JOB`
+- [ ] Simplify main Urlwatcher class

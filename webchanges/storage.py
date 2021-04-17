@@ -416,6 +416,11 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
             self.save(guid, data, timestamp, tries, etag, temporary=False)
 
     def gc(self, known_guids: Iterable[str]) -> None:
+        """Garbage collect the database: delete all guids not included in known_guids and keep only last snapshot for
+        the others.
+
+        :param known_guids: The guids to keep
+        """
         for guid in set(self.get_guids()) - set(known_guids):
             print(f'Deleting: {guid} (no longer being tracked)')
             self.delete(guid)
@@ -515,22 +520,22 @@ class CacheSQLite3Storage(CacheStorage):
     Handles storage of the snapshot as a SQLite database in the 'filename' file using Python's built-in sqlite3 module
     and the msgpack package.
 
-    A temporary database is created during run, and is written to the permanent one using the 'close()' function, which
-    is called at the end of program execution.
+    A temporary database is created by __init__ and will be written by the 'save()' function (unless temporaru=False).
+    This data will be written to the permanent one bythe 'close()' function, which is called at the end of program
+    execution.
 
     The database contains the 'webchanges' table with the following columns:
 
-    * uuid: unique hash of the "location", i.e. the URL; indexed
+    * guid: unique hash of the "location", i.e. the URL/command; indexed
     * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
     * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
-
     """
     def __init__(self, filename: str, max_snapshots: int = 4) -> None:
-        """Opens the database file and, if new, creates a table and index.
-
-        :param filename: The full filename of the database file
-        :param max_snapshots: The maximum number of snapshots to retain in the database for each job ('guid')
         """
+        :param filename: The full filename of the database file
+        :param max_snapshots: The maximum number of snapshots to retain in the database for each 'guid'
+        """
+        # Opens the database file and, if new, creates a table and index.
 
         self.max_snapshots = max_snapshots
 
@@ -726,8 +731,8 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
-        """For the given 'guid', keep only the latest 'keep_entries' entries and delete all other (older) ones.
-        Use clean_all() if you want to remove all older entries.
+        """For the given 'guid', keep only the latest 'keep_entries' number of entries and delete all other (older)
+        ones. To older entries from all guids, use clean_all() instead.
 
         :param guid: The guid
         :param keep_entries: Number of entries to keep after deletion
@@ -807,17 +812,22 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
         return num_del
 
-    def migrate_from_minidb(self, filename: str) -> None:
+    def migrate_from_minidb(self, minidb_filename: str) -> None:
+        """Migrate the data of a legacy minidb database to the current database.
+
+        :param minidb_filename: The filename of the legacy minidb database
+        """
+
         print("Found 'minidb' database and upgrading it to the new engine (note: only the last snapshot is retained).")
         logger.info("Found legacy 'minidb' database and converting it to 'sqlite3' and new schema. "
                     "Package 'minidb' needs to be installed for the conversion.")
 
         from .storage_minidb import CacheMiniDBStorage
 
-        legacy_db = CacheMiniDBStorage(filename)
+        legacy_db = CacheMiniDBStorage(minidb_filename)
         self.restore(legacy_db.backup())
         legacy_db.close()
-        print(f'Database upgrade finished; the following backup file can be safely deleted: {filename}')
+        print(f'Database upgrade finished; the following backup file can be safely deleted: {minidb_filename}')
         print("and the 'minidb' package can be removed (unless used by another program): $ pip uninstall minidb")
         print('-' * 80)
 

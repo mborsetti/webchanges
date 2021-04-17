@@ -56,7 +56,6 @@ versions are supported for 3 years after being obsoleted by a new major release)
 
    pip install webchanges
 
-Optional dependencies may be needed; see `here <https://webchanges.readthedocs.io/en/stable/dependencies.html>`__.
 
 
 Documentation
@@ -65,23 +64,25 @@ The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io
 
 Code
 ====
-|issues| |CI| |coveralls|
+|coveralls| |issues|
 
 The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 
 
 Quick Start
 ============
-#. Run ``webchanges --edit`` to customize your job list (this will create ``jobs.yaml`` and ``config.yaml``)
-#. Run ``webchanges --edit-config`` if you want to set up e-mail sending
+#. Run ``webchanges --edit`` to customize your `jobs <https://webchanges.readthedocs.io/en/stable/jobs.html>`__ list
+   (this will also create ``jobs.yaml`` and ``config.yaml``)
+#. Run ``webchanges --edit-config`` if you want to set up e.g. `e-mail sending
+   <https://webchanges.readthedocs.io/en/stable/reporters.html#smtp>`__
 
-``webchanges`` will check for changes every time you run it, but does not include a scheduler. We recommend using a
+`webchanges` checks for changes every time you run it, but does not include a scheduler. We recommend using a
 system scheduler to automatically run `webchanges` periodically:
 
-- In Linux, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for you. If you
-  have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__.
+- On Linux/MacOS, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for you; if
+  you have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__
 - On Windows, you can use the built-in `Windows Task Scheduler
-  <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.
+  <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__
 
 
 Contributing
@@ -111,7 +112,7 @@ You can seamlessly upgrade from `urlwatch` 2.23 (see `here
 * Links are `clickable <https://pypi.org/project/webchanges/>`__!
 * Formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and indentation is
   preserved
-* Uses color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines and long lines wrap
+* Uses color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines.,and long lines wrap
   around
 * HTML is rendered correctly by email clients who override stylesheets (e.g. Gmail)
 * Other legibility improvements

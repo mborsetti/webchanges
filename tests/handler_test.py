@@ -1,7 +1,6 @@
 import contextlib
 import importlib.util
 import os
-import sys
 import tempfile
 import warnings
 
@@ -20,7 +19,6 @@ if minidb_is_installed:
     from webchanges.storage_minidb import CacheMiniDBStorage
 
 minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
-py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
 
 root = os.path.join(os.path.dirname(__file__), f'../{pkgname}', '..')
 here = os.path.dirname(__file__)
@@ -104,6 +102,26 @@ def teardown_func():
                 os.remove(filename)
 
 
+def test_run_watcher_sqlite3():
+    with teardown_func():
+        # jobs_file = os.path.join(root, 'share', 'examples', 'jobs-example.yaml')
+        jobs_file = os.path.join(here, 'data', 'jobs.yaml')
+        config_file = os.path.join(here, 'data', 'config.yaml')
+        cache_file = os.path.join(here, 'data', 'cache.db')
+        hooks_file = ''
+
+        config_storage = YamlConfigStorage(config_file)
+        jobs_storage = YamlJobsStorage(jobs_file)
+        cache_storage = CacheSQLite3Storage(cache_file)
+        try:
+            urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
+
+            urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+            urlwatcher.run_jobs()
+        finally:
+            cache_storage.close()
+
+
 @minidb_required
 def test_run_watcher_minidb():
     with teardown_func():
@@ -116,26 +134,6 @@ def test_run_watcher_minidb():
         config_storage = YamlConfigStorage(config_file)
         jobs_storage = YamlJobsStorage(jobs_file)
         cache_storage = CacheMiniDBStorage(cache_file)
-        try:
-            urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
-
-            urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
-            urlwatcher.run_jobs()
-        finally:
-            cache_storage.close()
-
-
-def test_run_watcher_sqlite3():
-    with teardown_func():
-        # jobs_file = os.path.join(root, 'share', 'examples', 'jobs-example.yaml')
-        jobs_file = os.path.join(here, 'data', 'jobs.yaml')
-        config_file = os.path.join(here, 'data', 'config.yaml')
-        cache_file = os.path.join(here, 'data', 'cache.db')
-        hooks_file = ''
-
-        config_storage = YamlConfigStorage(config_file)
-        jobs_storage = YamlJobsStorage(jobs_file)
-        cache_storage = CacheSQLite3Storage(cache_file)
         try:
             urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
 

@@ -80,49 +80,58 @@ sub-directives
 SMTP
 ~~~~
 
-.. _smtp-login-with-keychain:
+Login with plaintext password
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+You can save a password in the ``insecure_password`` directive in the SMTP to enable unattended scheduled runs of
+`webchanges`. As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet
+for a throwaway account that is only used for sending these reports this might be a low-risk way to run unattended.
 
-SMTP login with keychain
-^^^^^^^^^^^^^^^^^^^^^^^^
-You can store your password securely on a keychain if you have one installed by running ``webchanges --smtp-login``;
-this also requires having the optional ``safe_password`` dependencies installed (see below).  However, be aware that
-the use of safe password and ``keyring`` won't allow you to run `webchanges` unattended (e.g. from a scheduler), so
-you can save the password in the ``insecure_password`` directive in the XMPP config instead:
+**Never ever use this method with your your primary email account!**  Seriously! Create a throw-away free email
+account just for sending out these emails; see below for an example on how to do so with :ref:`Gmail <gmail>`.
 
-.. code-block:: yaml
-
-   report:
-     email:
-       method: smtp
-         auth: true
-         insecure_password: 'this_is_my_secret_password'
-
-As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet for an
-account that only sends these reports this might be a low-risk way.
-
-**Never ever use this method with your your primary email account!**
-
-Seriously! Create a throw-away Gmail (or other) account just for sending out these emails!
+Example:
 
 .. code-block:: yaml
 
    report:
      email:
-       method: smtp
-         auth: true
-         insecure_password: 'this_is_my_secret_password'
+     enabled: true
+     from: 'webchanges <throwawayaccount@example.com>'  # (edit accordingly; don't use your primary account for this!!)
+     to: 'myself@example.com'  # The email address of where want to receive reports
+     subject: '[webchanges] {count} changes: {jobs}'
+     html: true
+     method: 'smtp'
+       host: 'smtp.example.com'
+       user: 'throwawayaccount@example.com'  # (edit accordingly; don't use your primary account for this!!)
+       port: 587
+       starttls: true
+       auth: true
+       insecure_password: 'this_is_my_secret_password'
 
 Once again, note that this makes it really easy for your password to be picked up by software running on your machine,
-by other users logged into the system and/or for the password to appear in log files accidentally.
+by other users logged into the system and/or for the password to appear in log files accidentally, so it's **insecure**.
+
+
+.. _smtp-login-with-keychain:
+
+Login with keyring
+^^^^^^^^^^^^^^^^^^^
+A secure way to store your password is to use a keyring by running ``webchanges --smtp-login`` after configuring your
+``host`` and ``user``; this requires installing the optional ``safe_password`` dependencies (see optional packages
+below). Be aware that the use of keyring won't allow you to run `webchanges` unattended (e.g. from a scheduler). If
+you're using a keychain, the ``insecure_password`` key is ignored and can be left blank.
+
 
 SMTP sub-directives
 ^^^^^^^^^^^^^^^^^^^
-* ``host``: The address of the smtp server
+* ``host``: The address of the SMTP server
 * ``port``: The port used to communicate with the server
-* ``starttls``: Whether the server uses TLS (secure)
+* ``starttls``: Whether the server uses SSL/TLS encryption (true/false)
 * ``auth``: Whether authentication via username/password is required (true/false)
 * ``user``: The username used to authenticate
-* ``insecure_password``: The password used to authenticate (if no ``keyring``)
+* ``insecure_password``: The password used to authenticate (if no keyring)
+
+.. _gmail:
 
 Gmail example
 ^^^^^^^^^^^^^
@@ -143,16 +152,17 @@ Then configure these directives as follows:
    report:
      email:
        enabled: true
-       from: your.username@gmail.com  # (edit accordingly; don't use your primary account for this!!)
-       to: your.destination@example.org  # The email address of where want to receive reports
-       subject: '{count} changes: {jobs}'
+       from: 'your.username@gmail.com'  # (edit accordingly; don't use your primary account for this!!)
+       to: 'your.destination@example.org'  # The email address of where want to receive reports
+       subject: '[webchanges] {count} changes: {jobs}'
        html: true
-       method: smtp
-         host: smtp.gmail.com
-         insecure_password: 'this_is_my_secret_password'
-         auth: true
+       method: 'smtp'
+         host: 'smtp.gmail.com'
+         user: 'your.username@gmail.com'  # (edit accordingly; don't use your primary account for this!!)
          port: 587
          starttls: true
+         auth: true
+         insecure_password: 'this_is_my_secret_password'
 
 Amazon Simple Email Service (SES) example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -193,11 +203,11 @@ Optional packages
 ~~~~~~~~~~~~~~~~~
 If using a keychain to store the password, you also need to:
 
-* Install the ``safe_password`` :ref:`optional package <optional_packages>` as per below,
+* Install the ``safe_password`` :ref:`optional package <optional_packages>` as per below
 * Install all the dependencies of the ``keyring`` package as per documentation `here
-  <https://pypi.org/project/keyring/>`_,
-* Configure the ``keyring`` package to use the keychain backend you're using in your system following the instructions
-  on the same page.
+  <https://pypi.org/project/keyring/>`_
+* Configure the ``keyring`` package to use the keychain backend being used in your system following the instructions
+  on the same page
 
 .. code-block:: bash
 

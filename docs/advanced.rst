@@ -286,10 +286,10 @@ need`, and clicking on "get downloads" for the one you want. At the top you will
 
 Be aware that the same Google Chrome / Chromium release may be based on a different Chromium revision on different OSs,
 and that not all Chromium revisions are available for all OS platforms (Linux_x64, Mac, Win and Win_x64). The full
-list of revisions available for download by Pyppeteer is at
+list of revisions available for download by `Pyppeteer` is at
 https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html.
 Specifying a release number that is not available for download is the cause of a ``zipfile.BadZipFile: File is not a zip
-file`` error from the Pyppeteer code.
+file`` error from the `Pyppeteer` code.
 
 Please note that every time you change the chromium_revision, a new download is initiated and the old version is kept
 on your system, using up space. If you no longer need it you need to delete it manually; the the directory where it is

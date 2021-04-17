@@ -43,7 +43,9 @@ repos:
       - id: debug-statements
         description: Check for debugger imports and py37+ breakpoint() calls in python source.
       - id: destroyed-symlinks
-        description: Detects symlinks which are changed to regular files with a content of a path which that symlink was pointing to
+        description: >-
+          Detects symlinks which are changed to regular files with a content of a path which that symlink was
+          pointing to
 #      - id: detect-aws-credentials
 #        description: Checks for the existence of AWS secrets that you have set up with the AWS CLI
 #      - id: detect-private-key
@@ -82,9 +84,13 @@ repos:
     rev: v1.8.0
     hooks:
       - id: python-check-blanket-noqa
-        description: "Enforce that noqa annotations always occur with specific codes. Sample annotations: # noqa: F401, # noqa: F401,W203"
+        description: >-
+          "Enforce that noqa annotations always occur with specific codes. Sample annotations: # noqa: F401, # noqa:
+          F401,W203"
       - id: python-check-mock-methods
-        description: Prevent common mistakes of assert mck.not_called(), assert mck.called_once_with(...) and mck.assert_called
+        description: >-
+          Prevent common mistakes of assert mck.not_called(), assert mck.called_once_with(...) and mck
+          .assert_called
       - id: python-no-eval
         description: A quick check for the eval() built-in function
       - id: python-no-log-warn
@@ -108,7 +114,7 @@ repos:
 #        language_version: python3
 
   - repo: https://github.com/pycqa/flake8
-    rev: 3.9.0
+    rev: 3.9.1
     hooks:
       - id: flake8
         name: Check for errors, style, and over-complexity (flake8)

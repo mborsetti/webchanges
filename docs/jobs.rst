@@ -3,25 +3,16 @@
 ====
 Jobs
 ====
-Jobs are made of the sources that `webchanges` can monitor and the instructions on transformations (filters) to apply
-to the data once retrieved.
+Each job contains the source of the data to be monitored (:ref:`URL <url>` or :ref:`command <command>`) and related
+directives, plus directives on transformations to apply to the data (ref:`filters <filters>`) once retrieved.
 
-The list of jobs to run are contained in the configuration file ``jobs.yaml``, a text file editable using any text
-editor or with the command ``webchanges --edit``.
-
-While optional, it is recommended that each job starts with a ``name`` entry. If omitted and the data monitored is
-HTML or XML, `webchanges` will automatically use the pages' title (up to 60 characters) for a name.
-
-.. code-block:: yaml
-
-   name: This is a human-readable name/label of the job
-   url: https://example.org/
-
+The list of jobs is contained in the configuration file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable
+using any text editor or with the command ``webchanges --edit``.
 
 **YAML tips**
 
 YAML has lots of idiosyncrasies that make it and finicky, and new users often have issues with it.  Here are some tips
-and things to look for when using YAML.
+and things to look for when using YAML.  A more comprehensive syntax explanation is :ref:`here <yaml_syntax>`.
 
 * Indentation: All indentation must be done with spaces (2 spaces is suggested); tabs are not recognized/allowed.
   Indentation is mandatory.
@@ -61,19 +52,24 @@ and things to look for when using YAML.
   library we use supports YAML 1.1, and our examples use "flow scalars").  URLs and XPaths are always safe and don't
   need to be enclosed in quotes.
 
-* According to YAML specification, only ASCII characters can be used. Within double-quotes, special characters may be
-  represented with a ``\u``-style escape sequence:
-
-.. code-block:: yaml
-
-   name: "\u00A9"  # The copyright sign ©
-
-
 For additional information on YAML, see the :ref:yaml_syntax and the references at the bottom of that page.
 
 **Multiple jobs**
 
 Multiple jobs are separated by a line containing three hyphens, i.e. ``---``.
+
+**Naming a job**
+
+While optional, it is recommended that each job starts with a ``name`` entry. If omitted and the data monitored is
+HTML or XML, `webchanges` will automatically use the pages' title (up to 60 characters) for a name.
+
+.. code-block:: yaml
+
+   name: This is a human-readable name/label of the job
+   url: https://example.org/
+
+
+.. _url:
 
 URL
 ---
@@ -118,23 +114,23 @@ Important notes for use_browser directive
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * The optional `Pyppeteer <https://github.com/pyppeteer/pyppeteer>`__ Python package must be installed; run
   ``pip install webchanges[use_browser]`` to install it
-* Additional OS-dependent dependencies may be required as well;
-  missing dependencies are often the cause of ``pyppeteer.errors.BrowserError:
-  Browser closed unexpectedly``; see `here
+* Additional OS-specific dependencies may be required as well (see :ref:`here <optional_packages>`);
+  missing dependencies are often the cause of the ``pyppeteer.errors.BrowserError:
+  Browser closed unexpectedly`` error; see `here
   <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`__
 * As this job type
   renders the page in a headless Chromium instance, it requires **massively more resources** and time than a simple
   ``url`` job; use it only on pages where omitting ``use_browser: true`` does not give the right results
-* **Pro tip**: in many instances you can get the data you want to watch from an API (URL) called by the site during page
-  loading instead of using ``use_browser: true`` on a page; monitor page load with a browser's Developer's Tools (e.g.
-  `Chrome DevTools   <https://developers.google.com/web/tools/chrome-devtools>`__) to see if this is the case
-* The first time you run a job with ``use_browser:true``, ``pyppeteer`` needs to download the `Chromium browser
+* **Pro tip**: in many instances you can get the data you want to monitor from an API (URL) called by the site during
+  page loading instead of using ``use_browser: true`` on a page; monitor page load with a browser's Developer's Tools
+  (e.g. `Chrome DevTools  <https://developers.google.com/web/tools/chrome-devtools>`__) to see if this is the case
+* The first time you run a job with ``use_browser:true``, `Pyppeteer` needs to download the `Chromium browser
   <https://www.chromium.org/getting-involved/download-chromium>`__ (~150 MiB) if it is not found on the system, and
   therefore it could take some time (and bandwidth); to avoid this, ensure that a suitable Chromium binary is
   pre-installed; one way to do this is to run ``pyppeteer-install``
-* At the moment, the Chromium version used by ``pyppeteer`` does not support ARM devices (e.g. Raspberry Pi) but only
+* At the moment, the Chromium version used by `Pyppeteer` does not support ARM devices (e.g. Raspberry Pi) but only
   supports Linux (x86_64), macOS (x86_64) and Windows (both x86 and x64); see `this issue
-  <https://github.com/pyppeteer/pyppeteer/issues/155>`__ in the Pyppeteer project.
+  <https://github.com/pyppeteer/pyppeteer/issues/155>`__ in the `Pyppeteer` project.
 * If you get ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error, see
   :ref:`here <pyppeteer_target_closed>` for a potential solution
 
@@ -204,19 +200,22 @@ For ``url`` jobs that have ``use_browser: true``:
   <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed. See
   :ref:`here <pyppeteer_block_elements>`. `New in version 3.2.`
 - Setting the system environment variable ``PYPPETEER_NO_PROGRESS_BAR`` to true will prevent showing a download
-  progress bar if Pyppeteer needs to be downloaded; however, this will cause a `crash
+  progress bar if `Pyppeteer` needs to be downloaded; however, this will cause a `crash
   <https://github.com/pyppeteer/pyppeteer/pull/224>`__ in Pyppetter ≤ 0.2.25
 
 Known issues
 """"""""""""
-* ``url`` jobs with ``use_browser: true`` (i.e. using Pyppeteer) will at times display the below error message in stdout
-  (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed in the
-  future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
+  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
+  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``Future exception was never retrieved``
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
 
+
+
+.. _command:
 
 Command
 -------
