@@ -37,7 +37,7 @@ if %r% EQU N r=n
 if %r% EQU n exit /b
 set /p v=Do you want to bump by prekind (i.e. from rc) or major, minor or patch version? [prekind] || set v=prekind
 echo.
-bump2version --verbose --allow-dirty --dry-run --commit --tag --no-sign-tags %v%
+bump2version --verbose --dry-run--commit --tag --no-sign-tags %v%
 if NOT ["%errorlevel%"]==["0"] (
     pause
     exit /b %errorlevel%

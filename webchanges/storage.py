@@ -606,30 +606,32 @@ class CacheSQLite3Storage(CacheStorage):
         connections."""
         logger.debug('Saving session data to permanent sqlite3 database')
         with self.temp_lock:
-            self.temp_cur.execute('SELECT * FROM webchanges')
-            with self.lock:
-                for row in self.temp_cur:
-                    self.cur.execute('INSERT INTO webchanges VALUES (?, ?, ?)', row)
-                logger.debug(f'Wrote {self.temp_cur.lastrowid} new entries in permanent database')
-                logger.debug('Cleaning up the sqlite3 database and closing the connection')
-                if self.max_snapshots:
-                    num_del = self.keep_latest(self.max_snapshots)
-                    logger.debug(f'Keeping no more than {self.max_snapshots} snapshots per job: '
-                                 f'purged {num_del} older entries')
-                else:
-                    self.db.commit()
-                self._execute('VACUUM')
-                self.db.close()
-                logger.debug(f'Closed main sqlite3 database file {self.filename}')
+            self.temp_db.commit()
             self.temp_db.close()
+        with self.lock:
+            self.cur.execute('ATTACH DATABASE ? AS temp_db', (self.temp_filename,))
+            self.cur.execute('INSERT INTO webchanges SELECT * FROM temp_db.webchanges')
+            logger.debug(f'Wrote {self.cur.rowcount} new snapshots to permanent sqlite3 database')
+            self.db.commit()
+            self.cur.execute('DETACH DATABASE temp_db')
             if os.path.exists(self.temp_filename):
                 logger.debug(f'Deleting temp sqlite3 database file {self.temp_filename}')
                 os.remove(self.temp_filename)
-        del self.temp_db
+            logger.debug('Cleaning up the sqlite3 database and closing the connection')
+            if self.max_snapshots:
+                num_del = self.keep_latest(self.max_snapshots)
+                logger.debug(f'Keeping no more than {self.max_snapshots} snapshots per job: '
+                             f'purged {num_del} older entries')
+            else:
+                self.db.commit()
+            self._execute('VACUUM')
+            self.db.close()
+            logger.debug(f'Closed main sqlite3 database file {self.filename}')
         del self.temp_cur
+        del self.temp_db
         del self.temp_lock
-        del self.db
         del self.cur
+        del self.db
         del self.lock
 
     def get_guids(self) -> List[str]:
@@ -715,7 +717,7 @@ class CacheSQLite3Storage(CacheStorage):
         if temporary:
             with self.temp_lock:
                 self._temp_execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
-                self.temp_db.commit()
+                # we do not commit to temporary as it's being used as write-only (we commit at the end)
         else:
             with self.lock:
                 self._execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
