@@ -14,7 +14,7 @@ import requests
 from .filters import FilterBase
 from .handler import JobState, Report
 from .jobs import JobBase, UrlJob
-from .mailer import smtp_have_password, smtp_set_password
+from .mailer import SMTPMailer, smtp_have_password, smtp_set_password
 from .main import Urlwatch
 from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from .util import edit_file, import_module_from_source
@@ -340,19 +340,20 @@ class UrlwatchCommand:
 
             success = True
 
-            if not config['enabled']:
+            if not config.get('enabled'):
                 print('Please enable e-mail reporting in the config first.')
                 success = False
 
-            if config['method'] != 'smtp':
+            if config.get('method') != 'smtp':
                 print('Please set the method to SMTP for the e-mail reporter.')
                 success = False
 
-            if not smtp_config['auth']:
+            smtp_auth = smtp_config.get('auth')
+            if not smtp_auth:
                 print('Authentication must be enabled for SMTP.')
                 success = False
 
-            smtp_hostname = smtp_config['host']
+            smtp_hostname = smtp_config.get('host')
             if not smtp_hostname:
                 print('Please configure the SMTP hostname in the config first.')
                 success = False
@@ -365,19 +366,23 @@ class UrlwatchCommand:
             if not success:
                 sys.exit(1)
 
-            if 'insecure_password' in smtp_config:
-                print('The SMTP password is already set in the config (key "insecure_password").')
-                sys.exit(0)
-
-            if smtp_have_password(smtp_hostname, smtp_username):
+            insecure_password = smtp_config.get('insecure_password')
+            if insecure_password:
+                print('The SMTP password is set in the config file (key "insecure_password")')
+            elif smtp_have_password(smtp_hostname, smtp_username):
                 message = f'Password for {smtp_username} / {smtp_hostname} already set, update? [y/N] '
-                if input(message).lower() != 'y':
+                if not input(message).lower().startswith('y'):
                     print('Password unchanged.')
-                    sys.exit(0)
+                else:
+                    smtp_set_password(smtp_hostname, smtp_username)
 
-            if success:
-                smtp_set_password(smtp_hostname, smtp_username)
-                # TODO: Actually verify that the login to the server works
+            smtp_port = smtp_config.get('port')
+            smtp_tls = smtp_config.get('starttls')
+
+            mailer = SMTPMailer(smtp_username, smtp_hostname, smtp_port, smtp_tls, smtp_auth, insecure_password)
+            print('Trying to log into the SMTP server...')
+            mailer.send(None)
+            print('Successfully logged into SMTP server')
 
             sys.exit(0)
 

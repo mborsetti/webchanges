@@ -12,8 +12,6 @@ Command line arguments
     -h, --help            show this help message and exit
     -V, --version         show program's version number and exit
     -v, --verbose         show debug output
-    --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                          level of logging output if -v is selected (default: DEBUG)
 
   override file defaults:
     --jobs FILE, --urls FILE
@@ -38,7 +36,8 @@ Command line arguments
   reporters:
     --test-reporter REPORTER
                           send a test notification
-    --smtp-login          enter or check password for SMTP email (stored in keyring)
+    --smtp-login          verify SMTP login credentials with server and, if stored in keyring, enter or
+                          check password
     --telegram-chats      list telegram chats the bot is joined to
     --xmpp-login          enter or check password for XMPP (stored in keyring)
 
@@ -61,6 +60,8 @@ Command line arguments
 
   miscellaneous:
     --features            list supported job types, filters and reporters
+    --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                          level of logging output if -v is selected (default: DEBUG)
 
 
 Show errors and no-data jobs

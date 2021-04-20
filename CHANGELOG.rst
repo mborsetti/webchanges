@@ -51,6 +51,7 @@ Changed
   <https://github.com/Fedora7>`__)
 * Diff-filter ``deletions_only`` will no longer report deletions that consist exclusively of deleted empty lines
 * The job's index number is included in error messages for clarity
+* ``--smtp-password`` now verifies that the credentials work with the SMTP server
 
 Fixed
 -----

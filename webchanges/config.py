@@ -70,8 +70,7 @@ class CommandConfig(BaseConfig):
         parser.add_argument('-V', '--version', action='version', version=f'{project.__project_name__}'
                                                                          f' {project.__version__}')
         parser.add_argument('-v', '--verbose', action='store_true', help='show logging output')
-        parser.add_argument('--log-level', default='DEBUG', choices=('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'),
-                            help='level of logging output if -v is selected (default: %(default)s)')
+
         group = parser.add_argument_group('override file defaults')
         group.add_argument('--jobs', '--urls', dest='jobs', metavar='FILE',
                            help='read job list (URLs) from FILE', default=self.jobs)
@@ -79,6 +78,7 @@ class CommandConfig(BaseConfig):
         group.add_argument('--hooks', metavar='FILE', help='use FILE as hooks.py module', default=self.hooks)
         group.add_argument('--cache', metavar='FILE', help=('use FILE as cache (snapshots database) or directory, '
                                                             'alternatively can accept a redis URI'), default=self.cache)
+
         group = parser.add_argument_group('job management')
         group.add_argument('--list', action='store_true', help='list jobs')
         group.add_argument('--errors', action='store_true', help='list jobs with errors or no data captured')
@@ -95,7 +95,8 @@ class CommandConfig(BaseConfig):
         group = parser.add_argument_group('reporters')
         group.add_argument('--test-reporter', metavar='REPORTER', help='send a test notification')
         group.add_argument('--smtp-login', action='store_true',
-                           help='enter or check password for SMTP email (stored in keyring)')
+                           help='verify SMTP login credentials with server and, if stored in keyring, enter or check '
+                                'password')
         group.add_argument('--telegram-chats', action='store_true', help='list telegram chats program is joined to')
         group.add_argument('--xmpp-login', action='store_true',
                            help='enter or check password for XMPP (stored in keyring)')
@@ -121,6 +122,8 @@ class CommandConfig(BaseConfig):
 
         group = parser.add_argument_group('miscellaneous')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
+        group.add_argument('--log-level', default='DEBUG', choices=('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'),
+                           help='level of logging output if -v is selected (default: %(default)s)')
 
         # workaround for avoiding triggering error when invoked by pytest
         if parser.prog != '_jb_pytest_runner.py':

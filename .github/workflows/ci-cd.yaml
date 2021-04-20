@@ -90,22 +90,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.python-version }}-pip-
 
-      - name: Install pdf2text and ocr dependencies (Linux Python 3.9)
+      - name: Install keyring, pdf2text and ocr dependencies (Linux Python 3.9)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'Linux'
         run: |
           sudo apt-get -y update
-          sudo apt-get -y install build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
-          python -m pip install -U pdftotext Pillow pytesseract
+          sudo apt-get -y install python-dbus build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
+          python -m pip install -U keyring pdftotext Pillow pytesseract
 
-      - name: Install pdf2text and ocr dependencies (macOS Python 3.9)
+      - name: Install keyring, pdf2text and ocr dependencies (macOS Python 3.9)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'macOS'
         run: |
           brew install pkg-config poppler python tesseract
-          python -m pip install -U pdftotext Pillow pytesseract
+          python -m pip install -U keyring pdftotext Pillow pytesseract
 
-      - name: Install pdf2text and ocr dependencies (Windows Python 3.9)
+      - name: Install keyring, pdf2text and ocr dependencies (Windows Python 3.9)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'Windows'
         run: |
@@ -116,14 +116,14 @@ jobs:
           curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
           start /wait "" tesseract-setup.exe /S
           del tesseract-setup /y
-          python -m pip install -U pdftotext Pillow pytesseract
+          python -m pip install -U keyring pdftotext Pillow pytesseract
 
       - name: Install dependencies
         # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path
         run: |
           python -m pip install -U pip setuptools wheel
           python -m pip install -e .
-          python -m pip install -U coveralls -r tests/requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier keyring matrix_client msgpack pushbullet.py pyppeteer redis vobject
+          python -m pip install -U coveralls -r tests/requirements_testing.txt aioxmpp beautifulsoup4 chump cssbeautifier jsbeautifier matrix_client msgpack pushbullet.py pyppeteer redis vobject
 
       - name: Run tests (Linux/MacOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
