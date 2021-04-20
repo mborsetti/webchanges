@@ -69,7 +69,7 @@ Internals
 * Each job now has a run-specific unique index_number, which is assigned sequentially when loading jobs, to use in
   errors and logs for clarity
 * Text to numbered lines used in certain reporters has been improved
-* More tests and cleanup of code and documentation
+* More tests and cleanup of code and documentation, but keyring testing had to be dropped
 
 Known issues
 ------------
