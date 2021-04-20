@@ -9,6 +9,8 @@ import re
 import shlex
 import subprocess
 import sys
+import textwrap
+from math import floor, log10
 from types import ModuleType
 from typing import Callable, Iterable, List, Match, Tuple, Type, TypeVar, Union
 
@@ -21,7 +23,7 @@ class TrackSubClasses(type):
 
     @staticmethod
     def sorted_by_kind(cls: T) -> List[Type[T]]:
-        return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values())]
+        return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
     def __init__(cls, name: str, bases: Tuple[type], namespace: dict) -> None:
         for base in bases:
@@ -75,6 +77,7 @@ def edit_file(filename: str) -> None:
 
 
 def import_module_from_source(module_name: str, source_path: str) -> ModuleType:
+    """Loads a module and executes it in its own namespace."""
     loader = importlib.machinery.SourceFileLoader(module_name, source_path)
     spec = importlib.util.spec_from_file_location(module_name, source_path, loader=loader)
     module = importlib.util.module_from_spec(spec)
@@ -83,33 +86,46 @@ def import_module_from_source(module_name: str, source_path: str) -> ModuleType:
     return module
 
 
-def chunk_string(string: str, length: int, *, numbering: bool = False) -> Iterable[str]:
-    """Chunks a string."""
-    if len(string) <= length:
-        return [string]
+def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[str]:
+    """Chunks a string.
 
-    if numbering:
-        # Subtract to fit numbering (FIXME: this breaks for > 9 chunks)
-        length -= len(' (0/0)')
-        parts = []
-        string = string.strip()
-        while string:
-            if len(string) <= length:
-                parts.append(string)
-                # noinspection PyUnusedLocal
-                string = ''
-                break
+    :param string: The string
+    :param length: The length of the chunked string
+    :param numbering: Whether to number each line on the right
 
-            idx = string.rfind(' ', 1, length + 1)
-            if idx == -1:
-                idx = string.rfind('\n', 1, length + 1)
-            if idx == -1:
-                idx = length
-            parts.append(string[:idx])
-            string = string[idx:].strip()
-        return (f'{part} ({i + 1}/{len(parts)})' for i, part in enumerate(parts))
+    :returns: a list of strings
+    """
+    if numbering and len(string) > length:
+        try:
+            text_length = length - 4 - 2
+            digits_try = (1 if text_length <= 0
+                          else floor(log10(len(string) / text_length)))  # initialization floor
+            digits_guess = digits_try + 1
+            while digits_guess > digits_try:
+                digits_try += 1
+                text_length = length - 4 - 2 * digits_try
+                if text_length <= 0:
+                    raise ValueError('Not enough space to chunkify string with line numbering (1)')
+                lines_guess = len(string) / (text_length)
+                digits_guess = floor(log10(lines_guess)) + 1
 
-    return (string[i:length + i].strip() for i in range(0, len(string), length))
+            chunks = textwrap.wrap(string, text_length)
+            actual_digits = floor(log10(len(chunks))) + 1
+            while actual_digits > digits_try:
+                digits_try += 1
+                text_length = length - 4 - 2 * digits_try
+                if text_length <= 0:
+                    raise ValueError('Not enough space to chunkify string with line numbering (2)')
+                chunks = textwrap.wrap(string, text_length)
+                actual_digits = floor(log10(len(chunks))) + 1
+
+            length = len(chunks)
+            return [line + ' (' + f'{{:{digits_try}d}}'.format(i + 1) + f'/{length})' for i, line in enumerate(chunks)]
+
+        except ValueError as e:
+            logger.error(f'{e}')
+
+    return textwrap.wrap(string, length)
 
 
 # Using regex from tornado library https://github.com/tornadoweb/tornado/blob/master/tornado/escape.py

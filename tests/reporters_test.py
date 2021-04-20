@@ -1,13 +1,23 @@
+"""Test reporting, primarily handling of diffs."""
+import importlib.util
+import logging
+import os
 import traceback
 
 import pytest
+from requests.exceptions import MissingSchema
 
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
 from webchanges.reporters import HtmlReporter
 from webchanges.storage import DEFAULT_CONFIG
 
-DIFFTOHTMLTESTDATA = [
+logger = logging.getLogger(__name__)
+
+matrix_is_installed = importlib.util.find_spec('matrix') is not None
+xmpp_is_installed = importlib.util.find_spec('xmpp') is not None
+
+DIFF_TO_HTML_TEST_DATA = [
     ('+Added line', '<tr style="background-color:#d1ffd1;color:#082b08"><td>Added line</td></tr>'),
     ('-Deleted line', '<tr style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">'
                       '<td>Deleted line</td></tr>'),
@@ -44,11 +54,11 @@ DIFFTOHTMLTESTDATA = [
     (' | table | row |', '<tr><td>| table | row |</td></tr>'),
 ]
 
+ALL_REPORTERS = [reporter for reporter, v in DEFAULT_CONFIG['report'].items()
+                 if reporter not in ('html', 'text', 'markdown')]
 
-REPORTER = [report for report, v in DEFAULT_CONFIG['report'].items() if v.get('enabled', False)]
 
-
-@pytest.mark.parametrize('inpt, out', DIFFTOHTMLTESTDATA)
+@pytest.mark.parametrize('inpt, out', DIFF_TO_HTML_TEST_DATA)
 def test_diff_to_html(inpt, out):
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
@@ -76,7 +86,7 @@ def test_diff_to_htm_wdiff():
                       '<span style="background-color:#d1ffd1;color:#082b08">{+new+}</span></span>')
 
 
-@pytest.mark.parametrize('reporter', REPORTER)
+@pytest.mark.parametrize('reporter', ALL_REPORTERS)
 def test_reporters(reporter):
     # command_config = CommandConfig('', '', '', '', '', '', '', '', verbose=False)
     # urlwatcher = Urlwatch('', '', '', '')
@@ -120,9 +130,30 @@ def test_reporters(reporter):
     Updated Content
     Another Unchanged Line
     """))
+    report.changed_no_report(build_job('Newly Added', 'https://example.com/changed_no_report', '', ''))
     report.unchanged(build_job('Same As Before', 'https://example.com/unchanged',
                                'Same Old, Same Old\n',
                                'Same Old, Same Old\n'))
-    report.error(set_error(build_job('Error Reporting', 'https://example.com/error', '', ''), 'Oh Noes!'))
+    report.error(set_error(build_job('Error Reporting', 'https://example.com/error', '', ''), 'Sample error text'))
 
-    report.finish_one(reporter)
+    if reporter == 'email':
+        with pytest.raises(ValueError) as pytest_wrapped_e:
+            report.finish_one(reporter, check_enabled=False)
+        assert str(pytest_wrapped_e.value) in ('No password available in keyring for localhost ',
+                                               'No password available for localhost ')
+    elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'xmpp', 'prowl'):
+        if reporter == 'matrix' and not matrix_is_installed:
+            logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
+            return
+        if reporter == 'xmpp' and not xmpp_is_installed:
+            logger.warning(f"Skipping {reporter} since 'xmpp' package is not installed")
+            return
+        with pytest.raises(RuntimeError) as pytest_wrapped_e:
+            report.finish_one(reporter, check_enabled=False)
+        assert reporter in str(pytest_wrapped_e.value).lower()
+    elif reporter in ('webhook', 'webhook_markdown'):
+        with pytest.raises(MissingSchema) as pytest_wrapped_e:
+            report.finish_one(reporter, check_enabled=False)
+        assert str(pytest_wrapped_e.value) == "Invalid URL '': No schema supplied. Perhaps you meant http://?"
+    elif reporter != 'browser' or 'PYCHARM_HOSTED' in os.environ:
+        report.finish_one(reporter, check_enabled=False)

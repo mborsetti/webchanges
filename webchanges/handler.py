@@ -11,7 +11,7 @@ import time
 import timeit
 import traceback
 from types import TracebackType
-from typing import Collection, Iterable, Optional, TYPE_CHECKING, Type, Union
+from typing import Collection, Dict, Iterable, Optional, TYPE_CHECKING, Type, Union
 
 from .filters import FilterBase
 from .jobs import JobBase, NotModifiedError
@@ -27,30 +27,31 @@ logger = logging.getLogger(__name__)
 
 
 class JobState(object):
-    cache_storage = None
-    job = None
-    verb = None
-    old_data = None
-    new_data = None
-    history_data = {}
-    timestamp = None
-    current_timestamp = None
-    exception = None
-    traceback = None
-    tries = 0
-    etag = None
-    error_ignored = False
+    cache_storage: CacheStorage = None
+    job: JobBase = None
+    verb: str = None
+    old_data: str = None
+    new_data: str = None
+    history_data: Dict[str, float] = {}
+    old_timestamp: float = None
+    new_timestamp: float = None
+    exception: Exception = None
+    traceback: str = None
+    tries: int = 0
+    old_etag: str = None
+    new_etag: str = None
+    error_ignored: bool = False
+    _generated_diff = None
 
     def __init__(self, cache_storage: Optional[CacheStorage], job: JobBase) -> None:
         self.cache_storage = cache_storage
         self.job = job
-        self._generated_diff = None
 
     def __enter__(self) -> 'JobState':
         try:
             self.job.main_thread_enter()
         except Exception as ex:
-            logger.info(f'Exception while creating resources for job: {self.job!r}', exc_info=True)
+            logger.info(f'Job {self.job.index_number}: Exception while creating resources for job', exc_info=True)
             self.exception = ex
             self.traceback = traceback.format_exc()
 
@@ -62,25 +63,24 @@ class JobState(object):
             self.job.main_thread_exit()
         except Exception:
             # We don't want exceptions from releasing resources to override job run results
-            logger.warning(f'Exception while releasing resources for job: {self.job!r}', exc_info=True)
+            logger.warning(f'Job {self.job.index_number}: Exception while releasing resources for job', exc_info=True)
 
     def load(self) -> None:
         guid = self.job.get_guid()
-        self.old_data, self.timestamp, self.tries, self.etag = self.cache_storage.load(guid)
-        if self.tries is None:
-            self.tries = 0
+        self.old_data, self.old_timestamp, self.tries, self.old_etag = self.cache_storage.load(guid)
         if self.job.compared_versions and self.job.compared_versions > 1:
             self.history_data = self.cache_storage.get_history_data(guid, self.job.compared_versions)
 
     def save(self) -> None:
         if self.new_data is None and self.exception is not None:
-            # If no new data has been retrieved due to an exception, use the old job data
+            # If no new data has been retrieved due to an exception, reuse the old job data
             self.new_data = self.old_data
+            self.new_etag = self.old_etag
 
-        self.cache_storage.save(self.job.get_guid(), self.new_data, time.time(), self.tries, self.etag)
+        self.cache_storage.save(self.job.get_guid(), self.new_data, self.new_timestamp, self.tries, self.new_etag)
 
     def process(self) -> 'JobState':
-        logger.info(f'Processing: {self.job}')
+        logger.info(f'Job {self.job.index_number}: Processing job {self.job}')
 
         if self.exception:
             return self
@@ -88,7 +88,9 @@ class JobState(object):
         try:
             try:
                 self.load()
-                data = self.job.retrieve(self)
+
+                self.new_timestamp = time.time()
+                data, self.new_etag = self.job.retrieve(self)
 
                 # Apply automatic filters first
                 data = FilterBase.auto_process(self, data)
@@ -106,7 +108,8 @@ class JobState(object):
                 self.error_ignored = self.job.ignore_error(e)
                 if not (self.error_ignored or isinstance(e, NotModifiedError)):
                     self.tries += 1
-                    logger.debug(f'Increasing number of tries to {self.tries} for {self.job}')
+                    logger.debug(f'Job {self.job.index_number}: Job ended with error; incrementing cumulative tries to '
+                                 f'{self.tries} ({str(e).strip()})')
         except Exception as e:
             # job failed its chance to handle error
             self.exception = e
@@ -114,7 +117,8 @@ class JobState(object):
             self.error_ignored = False
             if not isinstance(e, NotModifiedError):
                 self.tries += 1
-                logger.debug(f'Increasing number of tries to {self.tries} for {self.job}')
+                logger.debug(f'Job {self.job.index_number}: Job ended with error (internal handling failed); '
+                             f'incrementing cumulative tries to {self.tries} ({str(e).strip()})')
 
         return self
 
@@ -144,15 +148,15 @@ class JobState(object):
                     return False
                 elif proc.returncode == 1:
                     head = f'Using external diff tool "{self.job.diff_tool}"\n'
-                    head += f'Old: {email.utils.formatdate(self.timestamp, localtime=True)}\n'
-                    head += f'New: {email.utils.formatdate(time.time(), localtime=True)}\n'
+                    head += f'Old: {email.utils.formatdate(self.old_timestamp, localtime=True)}\n'
+                    head += f'New: {email.utils.formatdate(self.new_timestamp, localtime=True)}\n'
                     head += '-' * 36 + '\n'
                     return head + proc.stdout
                 else:
                     raise RuntimeError(proc.stderr) from subprocess.CalledProcessError(proc.returncode, cmdline)
 
-        timestamp_old = email.utils.formatdate(self.timestamp, localtime=True)
-        timestamp_new = email.utils.formatdate(self.current_timestamp or time.time(), localtime=True)
+        timestamp_old = email.utils.formatdate(self.old_timestamp, localtime=True)
+        timestamp_new = email.utils.formatdate(self.new_timestamp, localtime=True)
         if self.job.contextlines is not None:
             contextlines = self.job.contextlines
         else:
@@ -166,21 +170,21 @@ class JobState(object):
                         + diff[2:])
             else:
                 head = '...' + diff[0][3:]
-                diff = [dif for dif in diff if dif.startswith('+') or dif.startswith('@')]
-                diff = [dif for dif, dif2 in zip([''] + diff, diff + ['']) if
-                        not (dif.startswith('@') and dif2.startswith('@'))][1:]
+                diff = [line for line in diff if line.startswith('+') or line.startswith('@')]
+                diff = [line1 for line1, line2 in zip([''] + diff, diff + ['']) if
+                        not (line1.startswith('@') and line2.startswith('@'))][1:]
                 diff = diff[:-1] if diff[-1].startswith('@') else diff
-                if len(diff) == 1:
+                if len(diff) == 1 or len([line for line in diff if line.lstrip('+').rstrip()]) == 2:
                     self.verb = 'changed,no_report'
                     return
                 diff = [head, diff[0], '/**Comparison type: Additions only**'] + diff[1:]
         elif self.job.deletions_only:
             head = '...' + diff[1][3:]
-            diff = [dif for dif in diff if dif.startswith('-') or dif.startswith('@')]
-            diff = [dif for dif, dif2 in zip([''] + diff, diff + ['']) if
-                    not (dif.startswith('@') and dif2.startswith('@'))][1:]
+            diff = [line for line in diff if line.startswith('-') or line.startswith('@')]
+            diff = [line1 for line1, line2 in zip([''] + diff, diff + ['']) if
+                    not (line1.startswith('@') and line2.startswith('@'))][1:]
             diff = diff[:-1] if diff[-1].startswith('@') else diff
-            if len(diff) == 1:
+            if len(diff) == 1 or len([line for line in diff if line.lstrip('-').rstrip()]) == 2:
                 self.verb = 'changed,no_report'
                 return
             diff = [diff[0], head, '/**Comparison type: Deletions only**'] + diff[1:]
@@ -196,8 +200,9 @@ class Report(object):
         self.start = timeit.default_timer()
 
     def _result(self, verb: str, job_state: JobState) -> None:
-        if job_state.exception is not None:
-            logger.debug(f'Got exception while processing {job_state.job!r}', exc_info=job_state.exception)
+        if job_state.exception is not None and job_state.exception is not NotModifiedError:
+            logger.debug(f'Job {job_state.job.index_number}: Got exception while processing job {job_state.job}',
+                         exc_info=job_state.exception)
 
         job_state.verb = verb
         self.job_states.append(job_state)
@@ -208,6 +213,9 @@ class Report(object):
     def changed(self, job_state: JobState) -> None:
         self._result('changed', job_state)
 
+    def changed_no_report(self, job_state: JobState) -> None:
+        self._result('changed,no_report', job_state)
+
     def unchanged(self, job_state: JobState) -> None:
         self._result('unchanged', job_state)
 
@@ -215,6 +223,7 @@ class Report(object):
         self._result('error', job_state)
 
     def get_filtered_job_states(self, job_states: Collection[Type[JobState]]) -> Iterable[JobState]:
+        """Returns JobStates that have reportable changes per config['display']"""
         for job_state in job_states:
             if not any(job_state.verb == verb and not self.config['display'][verb]
                        for verb in ('unchanged', 'new', 'error')) and job_state.verb != 'changed,no_report':
@@ -226,8 +235,8 @@ class Report(object):
 
         ReporterBase.submit_all(self, self.job_states, duration)
 
-    def finish_one(self, name: str) -> None:
+    def finish_one(self, name: str, check_enabled: Optional[bool] = True) -> None:
         end = timeit.default_timer()
         duration = (end - self.start)
 
-        ReporterBase.submit_one(name, self, self.job_states, duration)
+        ReporterBase.submit_one(name, self, self.job_states, duration, check_enabled)

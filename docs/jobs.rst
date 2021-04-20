@@ -145,13 +145,13 @@ For all ``url`` jobs:
 
 - ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
 - ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
-- ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`). `Added in version 3.0:` works for
-  all ``url`` jobs.
-- ``headers``: Headers to send along with the request (a dict). `Added in version 3.0:` works for all ``url`` jobs.
-- ``http_proxy``: Proxy server to use for HTTP requests (e.g. \http://username:password@proxy.com:8080). `Added in
-  version 3.0:` works for all ``url`` jobs.
-- ``https_proxy``: Proxy server to use for HTTPS requests. `Added in version 3.0:` works for all ``url`` jobs.
-- ``timeout``: Override the default timeout, in seconds (see :ref:`here <timeout>`). `Added in version 3.0:` works for
+- ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`). `Changed in version 3.0:` Works
+  for all ``url`` jobs.
+- ``headers``: Headers to send along with the request (a dict). `Changed in version 3.0:` Works for all ``url`` jobs.
+- ``http_proxy``: Proxy server to use for HTTP requests (e.g. \http://username:password@proxy.com:8080). `Changed in
+  version 3.0:` Works for all ``url`` jobs.
+- ``https_proxy``: Proxy server to use for HTTPS requests. `Changed in version 3.0:` Works for all ``url`` jobs.
+- ``timeout``: Override the default timeout, in seconds (see :ref:`here <timeout>`). `Changed in version 3.0:` Works for
   all ``url`` jobs.
 - ``user_visible_url``: Use this text in reports (e.g. when watched URL is a REST API endpoint but you want to link to
   the webpage instead). `New in version 3.0.3.`
@@ -177,7 +177,7 @@ For ``url`` jobs that have ``use_browser: true``:
 
 - ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here <chromium_revision>`).
   This can be different for different OSs, in which case is a list of one or more of the following keys: ``linux``,
-  ``mac``, ``win32`` and ``win64``. `New in version 3.0.` `Added in version 3.1:` keys for different OSs.
+  ``mac``, ``win32`` and ``win64``. `New in version 3.0.` `Changed in version 3.1:` Added keys for different OSs.
 - ``ignore_https_errors``: Ignore HTTPs errors (true/false). `New in version 3.0.`
 - ``user_data_dir``: A path to a pre-existing user directory that Chromium should be using. `New in version 3.0.`
 - ``switches``: Additional command line `switch(es) for Chromium
@@ -259,8 +259,8 @@ Optional directives (for all job types)
 These optional directives apply to all job types:
 
 - ``name``: Human-readable name/label of the job (if not specified and the job is ``url`` and the content is HTML or
-  XML, the title (up to 60 characters) will be used; otherwise the URL or command). `New in version 3.0:` auto-detect
-  from HTML or XML.
+  XML, the title (up to 60 characters) will be used; otherwise the URL or command). `Changed in version 3.0:`
+  Added auto-detect from HTML or XML.
 - ``max_tries``: Number of consecutive times the job has to fail before reporting an error (default: 1); see
   :ref:`below <max_tries>`
 - ``diff_tool``: Command to an external tool for generating diff text. See example usage :ref:`here <word_based_differ>`

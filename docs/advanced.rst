@@ -385,8 +385,8 @@ You can now run a `webchanges` job defined like this:
 
 .. _pyppeteer_block_elements:
 
-Speeding up ``use_browser: true`` jobs
---------------------------------------
+Speeding up ``use_browser: true`` jobs with ``block_elements``
+--------------------------------------------------------------
 
 ⚠ Ignored if running in Python Version 3.6
 

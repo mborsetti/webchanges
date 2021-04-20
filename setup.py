@@ -53,7 +53,6 @@ SETUP = {
     'license': project.__license__,
     # below to include in sdist the files read above (see https://stackoverflow.com/questions/37753833)
     # data_files is deprecated. It does not work with wheels, so it should be avoided.
-    'data_files': ['requirements.txt'],
     'install_requires': list(requirements),
     'entry_points': {'console_scripts': [f'{project.__project_name__}={project.__package__}.cli:main']},
     'extras_require': {'use_browser': ['pyppeteer'],

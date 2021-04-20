@@ -418,7 +418,7 @@ then click **Authorize** (see `here
 <https://slack.com/intl/en-sg/help/articles/115005265063-Incoming-webhooks-for-Slack>`__). Copy the webhook URL and
 paste it into the configuration as seen above.
 
-`Changed in version 3.0.1:` reporter renamed from ``slack`` to ``webhook``
+`Changed in version 3.0.1:` Renamed from ``slack`` to ``webhook``
 
 Discord
 ~~~~~~~
@@ -450,7 +450,7 @@ sub-directives
 * ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
   with \https://discordapp.com, then 2,000). `New in version 3.0.`
 
-`Added in version 3.0.1:` ``webhook-markdown`` variant
+`Changed in version 3.0.1:` Added ``webhook_markdown`` variant
 
 
 
@@ -544,3 +544,5 @@ Here is a sample configuration:
 
 The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
 shown as the source of the event in the Prowl App.
+
+`Added in version 3.0.1:`

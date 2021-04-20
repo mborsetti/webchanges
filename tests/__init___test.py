@@ -1,3 +1,5 @@
+"""Test that all __init__ variables have been defined."""
+
 from webchanges.__init__ import init_data
 
 INITDATAKEYS = (

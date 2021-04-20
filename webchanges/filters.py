@@ -1,7 +1,6 @@
 """Filters."""
 
 import hashlib
-import html.parser
 import io
 import itertools
 import json
@@ -13,7 +12,8 @@ import sys
 import warnings
 from abc import ABCMeta
 from enum import Enum
-from typing import Any, AnyStr, Dict, Iterator, List, TYPE_CHECKING, Tuple, Type, Union
+from html.parser import HTMLParser
+from typing import Any, AnyStr, Dict, Iterator, List, Optional, TYPE_CHECKING, Tuple, Type, Union
 from xml.dom import minidom
 
 import html2text
@@ -102,7 +102,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
         for filtercls in filters:
             filter_instance = filtercls(state.job, state)
             if filter_instance.match():
-                logger.info(f'Auto-applying filter {filter_instance!r} to {state.job.get_location()}')
+                logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
                 data = filter_instance.filter(data, None)  # all filters take a subfilter
 
         return data
@@ -140,7 +140,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
             filter_spec = [dict([filter_kind.split(':', 1)]) if ':' in filter_kind else filter_kind
                            for filter_kind in old_filter_spec.split(',')]
 
-            logger.warning(
+            warnings.warn(
                 f'String-based filter definitions ({old_filter_spec}) are deprecated, please convert to dict-style:\n\n'
                 f'{yaml.safe_dump(filter_spec, default_flow_style=False, allow_unicode=True)}', DeprecationWarning)
 
@@ -167,7 +167,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
     @classmethod
     def process(cls, filter_kind: str, subfilter: Dict[str, Any], state: 'JobState',
                 data: AnyStr) -> Type['FilterBase']:
-        logger.info(f'Applying filter {filter_kind!r}, subfilter {subfilter!r} to {state.job.get_location()}')
+        logger.info(f'Job {state.job.index_number}: Applying filter {filter_kind}, subfilter {subfilter}')
         filtercls = cls.__subclasses__.get(filter_kind, None)
         return filtercls(state.job, state).filter(data, subfilter)
 
@@ -236,13 +236,13 @@ class BeautifyFilter(FilterBase):
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if BeautifulSoup is None:
             raise ImportError(f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}' "
-                              f'filter ( {self.job.get_location()} )')
+                              f'filter ({self.job.get_indexed_location()})')
 
         soup = BeautifulSoup(data, features='lxml')
 
         if jsbeautifier is None:
             logger.info(f"Python package 'jsbeautifier' is not installed; will not beautify <script> tags"
-                        f' ( {self.job.get_location()} )')
+                        f' ({self.job.get_indexed_location()})')
         else:
             scripts = soup.find_all('script')
             for script in scripts:
@@ -252,7 +252,7 @@ class BeautifyFilter(FilterBase):
 
         if cssbeautifier is None:
             logger.info("Python package 'cssbeautifier' is not installed; will not beautify <style> tags"
-                        f' ( {self.job.get_location()} )')
+                        f' ({self.job.get_indexed_location()})')
         else:
             styles = soup.find_all('style')
             for style in styles:
@@ -299,9 +299,8 @@ class Html2TextFilter(FilterBase):
 
         if method in ('html2text', 'pyhtml2text'):  # pythtml2text for backward compatibility
             if method == 'pyhtml2text':
-                logger.warning(f"filter html2text's method 'pyhtml2text' is deprecated: replace with 'html2text' "
-                               f"(or remove method as it's now the filter's default) ( {self.job.get_location()} )",
-                               DeprecationWarning)
+                warnings.warn(f"filter html2text's method 'pyhtml2text' is deprecated: remove method as it's now the "
+                              f"filter's default) ({self.job.get_indexed_location()})", DeprecationWarning)
             self.job.is_markdown = True
 
             parser = html2text.HTML2Text()
@@ -321,7 +320,7 @@ class Html2TextFilter(FilterBase):
         elif method == 'bs4':
             if BeautifulSoup is None:
                 raise ImportError(f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}: "
-                                  f"{method}' filter ( {self.job.get_location()} )")
+                                  f"{method}' filter ({self.job.get_indexed_location()})")
 
             parser = options.pop('parser', 'lxml')
             soup = BeautifulSoup(data, parser)
@@ -329,17 +328,17 @@ class Html2TextFilter(FilterBase):
 
         elif method in ('strip_tags', 're'):  # re for backward compatibility
             if method == 're':
-                logger.warning(f"filter html2text's method 're' is deprecated: replace with 'strip_tags' "
-                               f'( {self.job.get_location()} )', DeprecationWarning)
+                warnings.warn(f"filter html2text's method 're' is deprecated: replace with 'strip_tags' "
+                              f'({self.job.get_indexed_location()})', DeprecationWarning)
             stripped_tags = re.sub(r'<[^>]*>', '', data)
             return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''))
 
         elif method == 'lynx':
             logger.error(f"'filter html2text's method 'lynx' is no longer supported; use the 'html2text' filter instead"
-                         f' ( {self.job.get_location()} )')
+                         f' ({self.job.get_indexed_location()})')
 
         else:
-            raise ValueError(f'Unknown filter html2text method: {method} ( {self.job.get_location()} )')
+            raise ValueError(f'Unknown filter html2text method: {method} ({self.job.get_indexed_location()})')
 
 
 class Pdf2TextFilter(FilterBase):
@@ -358,12 +357,12 @@ class Pdf2TextFilter(FilterBase):
     def filter(self, data: bytes, subfilter: Dict[str, Any]) -> str:
         if pdftotext is None:
             raise ImportError(f"Python package 'pdftotext' (and OS-specific dependencies) is not installed; cannot use"
-                              f" 'html2text: pdf2text' filter ( {self.job.get_location()} )")
+                              f" 'html2text: pdf2text' filter ({self.job.get_indexed_location()})")
 
         # data must be bytes
         if not isinstance(data, bytes):
             raise ValueError(f"The 'html2text: pdf2text' filter needs bytes input (is it the first filter?)"
-                             f' ( {self.job.get_location()} )')
+                             f' ({self.job.get_indexed_location()})')
 
         return '\n\n'.join(pdftotext.PDF(io.BytesIO(data), password=subfilter.get('password', '')))
 
@@ -378,7 +377,7 @@ class Ical2TextFilter(FilterBase):
     def filter(self, data: AnyStr, subfilter: Dict[str, Any]) -> str:
         if vobject is None:
             raise ImportError(f"Python package 'vobject' is not installed; cannot use 'html2text: ical2text' filter"
-                              f' ( {self.job.get_location()} )')
+                              f' ({self.job.get_indexed_location()})')
 
         result = []
         if isinstance(data, str):
@@ -484,7 +483,7 @@ class KeepLinesFilter(FilterBase):
             return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line))
         else:
             raise ValueError(f'The keep_lines_containing filter needs a text or re expression'
-                             f' ( {self.job.get_location()} )')
+                             f' ({self.job.get_indexed_location()})')
 
 
 class GrepFilter(FilterBase):
@@ -499,9 +498,8 @@ class GrepFilter(FilterBase):
     __default_subfilter__ = 're'
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
-        print(f'{self.job.get_location()}')
         warnings.warn(f"'grep' filter is deprecated; replace with 'keep_lines_containing' (+ 're' subfilter)"
-                      f' ( {self.job.get_location()} )', DeprecationWarning)
+                      f' ({self.job.get_indexed_location()})', DeprecationWarning)
         return KeepLinesFilter.filter(self, data, subfilter)
 
 
@@ -524,7 +522,7 @@ class DeleteLinesFilter(FilterBase):
             return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line) is None)
         else:
             raise ValueError(f'The delete_lines_containing filter needs a text or re expression'
-                             f' ( {self.job.get_location()} )')
+                             f' ({self.job.get_indexed_location()})')
 
 
 class InverseGrepFilter(FilterBase):
@@ -540,7 +538,7 @@ class InverseGrepFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         warnings.warn(f"'grepi' filter is deprecated; replace with 'delete_lines_containing (+ 're' subfilter')"
-                      f' ( {self.job.get_location()} )', DeprecationWarning)
+                      f' ({self.job.get_indexed_location()})', DeprecationWarning)
         return DeleteLinesFilter.filter(self, data, subfilter)
 
 
@@ -549,10 +547,41 @@ class StripFilter(FilterBase):
 
     __kind__ = 'strip'
 
-    __no_subfilter__ = True
+    __supported_subfilters__ = {
+        'splitlines': 'Apply the filter on each line of text (default: false, apply to the entire data)',
+        'chars': 'String specifying the set of characters to be removed. If omitted, defaults to removing whitespace',
+        'side': "One-sided removal: either 'left' (leading characters) or 'right' (trailing characters)"
+    }
+
+    __default_subfilter__ = 'chars'
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
-        return data.strip()
+        if subfilter.get('splitlines'):
+
+            data = data.splitlines()
+
+            if 'side' in subfilter:
+                if subfilter['side'] == 'right':
+                    return '\n'.join([line.rstrip(subfilter.get('chars')) for line in data])
+                if subfilter['side'] == 'left':
+                    return '\n'.join([line.lstrip(subfilter.get('chars')) for line in data])
+
+                raise ValueError(f"The strip filter's 'side' sub-directive can only be 'right' or 'left' "
+                                 f'({self.job.get_indexed_location()})')
+
+            return '\n'.join([line.strip(subfilter.get('chars')) for line in data])
+
+        else:
+            if 'side' in subfilter:
+                if subfilter['side'] == 'right':
+                    return data.rstrip(subfilter.get('chars'))
+                if subfilter['side'] == 'left':
+                    return data.lstrip(subfilter.get('chars'))
+
+                raise ValueError(f"The strip filter's 'side' sub-directive can only be 'right' or 'left' "
+                                 f'({self.job.get_indexed_location()})')
+
+            return data.strip(subfilter.get('chars'))
 
 
 class StripEachLineFilter(FilterBase):
@@ -563,6 +592,8 @@ class StripEachLineFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
+        warnings.warn(f"'strip_each_line' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: "
+                      f"true' ({self.job.get_indexed_location()})", DeprecationWarning)
         return '\n'.join([line.strip() for line in data.splitlines()])
 
 
@@ -571,7 +602,7 @@ class FilterBy(Enum):
     TAG = 2
 
 
-class ElementsBy(html.parser.HTMLParser, metaclass=ABCMeta):
+class ElementsBy(HTMLParser, metaclass=ABCMeta):
     def __init__(self, filter_by: FilterBy, name: str, value: Any = None) -> None:
         super().__init__()
 
@@ -579,6 +610,7 @@ class ElementsBy(html.parser.HTMLParser, metaclass=ABCMeta):
         if self._filter_by == FilterBy.ATTRIBUTE:
             self._attributes = {name: value}
         else:
+            # FilterBy.TAG
             self._name = name
 
         self._result = []
@@ -588,7 +620,7 @@ class ElementsBy(html.parser.HTMLParser, metaclass=ABCMeta):
     def get_html(self) -> str:
         return ''.join(self._result)
 
-    def handle_starttag(self, tag: str, attrs) -> None:
+    def handle_starttag(self, tag: str, attrs: Optional[List[Tuple[str, str]]]) -> None:
         ad = dict(attrs)
 
         if self._filter_by == FilterBy.ATTRIBUTE and all(ad.get(k, None) == v for k, v in self._attributes.items()):
@@ -597,7 +629,7 @@ class ElementsBy(html.parser.HTMLParser, metaclass=ABCMeta):
             self._inside = True
 
         if self._inside:
-            self._result.append('<%s%s%s>' % (tag, ' ' if attrs else '', ' '.join(f'{k}="{v}"' for k, v in attrs)))
+            self._result.append(f"<{tag}{' ' if attrs else ''}%s>" % ' '.join(f'{k}="{v}"' for k, v in attrs))
             self._elts.append(tag)
 
     def handle_endtag(self, tag: str) -> None:
@@ -628,7 +660,7 @@ class GetElementById(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'id' not in subfilter:
-            raise ValueError(f'The element-by-id filter needs an id for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The element-by-id filter needs an id for filtering ({self.job.get_indexed_location()})')
 
         element_by_id = ElementsBy(FilterBy.ATTRIBUTE, 'id', subfilter['id'])
         element_by_id.feed(data)
@@ -648,7 +680,8 @@ class GetElementByClass(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'class' not in subfilter:
-            raise ValueError(f'The element-by-class filter needs a class for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The element-by-class filter needs a class for filtering '
+                             f'({self.job.get_indexed_location()})')
 
         element_by_class = ElementsBy(FilterBy.ATTRIBUTE, 'class', subfilter['class'])
         element_by_class.feed(data)
@@ -668,7 +701,8 @@ class GetElementByStyle(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'style' not in subfilter:
-            raise ValueError(f'The element-by-style filter needs a style for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The element-by-style filter needs a style for filtering '
+                             f'({self.job.get_indexed_location()})')
 
         element_by_style = ElementsBy(FilterBy.ATTRIBUTE, 'style', subfilter['style'])
         element_by_style.feed(data)
@@ -688,7 +722,7 @@ class GetElementByTag(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'tag' not in subfilter:
-            raise ValueError(f'The element-by-tag filter needs a tag for filtering ( {self.job.get_location()} )')
+            raise ValueError(f'The element-by-tag filter needs a tag for filtering ({self.job.get_indexed_location()})')
 
         element_by_tag = ElementsBy(FilterBy.TAG, subfilter['tag'])
         element_by_tag.feed(data)
@@ -702,24 +736,26 @@ class Sha1Filter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
-        sha = hashlib.sha1()  # noqa: DUO130 insecure use of "hashlib" module
-        sha.update(data.encode(errors='ignore'))
-        return sha.hexdigest()
+    def filter(self, data: AnyStr, subfilter: Dict[str, Any]) -> str:
+        if isinstance(data, str):
+            data = data.encode(errors='ignore')
+        return hashlib.sha1(data).hexdigest()  # noqa: DUO130 insecure use of "hashlib" module
 
 
 class HexdumpFilter(FilterBase):
-    """Convert binary data to hex dump format."""
+    """Convert string to hex dump format."""
 
     __kind__ = 'hexdump'
 
     __no_subfilter__ = True
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
-        data = bytearray(data.encode(errors='ignore'))
+    def filter(self, data: AnyStr, subfilter: Dict[str, Any]) -> str:
+        if isinstance(data, str):
+            data = data.encode(errors='ignore')
+        data = bytearray(data)
         blocks = [data[i * 16:(i + 1) * 16] for i in range(int((len(data) + (16 - 1)) / 16))]
-        return '\n'.join('%s  %s' % (' '.join('%02x' % c for c in block),
-                                     ''.join((chr(c) if (31 < c < 127) else '.') for c in block)) for block in blocks)
+        return '\n'.join(f"{' '.join(f'{c:02x}' for c in block):49}"
+                         f"{''.join((chr(c) if (31 < c < 127) else '.') for c in block)}" for block in blocks)
 
 
 class LxmlParser():
@@ -731,7 +767,7 @@ class LxmlParser():
         self.filter_kind = filter_kind
         if expr_key not in subfilter:
             raise ValueError(f'The {filter_kind} filter needs {self.EXPR_NAMES[filter_kind]} for filtering'
-                             f' ( {self.job.get_location()} )')
+                             f' ({self.job.get_indexed_location()})')
         self.expression = subfilter[expr_key]
         self.method = subfilter.get('method', 'html')
         self.exclude = subfilter.get('exclude')
@@ -740,10 +776,10 @@ class LxmlParser():
         self.maxitems = int(subfilter.get('maxitems', 0))
         if self.method not in ('html', 'xml'):
             raise ValueError(f"The {filter_kind} filter's method must be 'html' or 'xml', got {self.method}"
-                             f' ( {self.job.get_location()} )')
+                             f' ({self.job.get_indexed_location()})')
         if self.method == 'html' and self.namespaces:
             raise ValueError(f"Namespace prefixes only supported with 'xml' method"
-                             f' ( {self.job.get_location()} )')
+                             f' ({self.job.get_indexed_location()})')
         self.parser = (etree.HTMLParser if self.method == 'html' else etree.XMLParser)()
         self.data = ''
 
@@ -905,7 +941,7 @@ class RegexSub(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'pattern' not in subfilter:
-            raise ValueError(f'The re.sub filter needs a pattern ( {self.job.get_location()} )')
+            raise ValueError(f'The re.sub filter needs a pattern ({self.job.get_indexed_location()})')
 
         # Default: Replace with empty string if no "repl" value is set
         return re.sub(subfilter['pattern'], subfilter.get('repl', ''), data)
@@ -958,7 +994,7 @@ class ShellPipeFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'command' not in subfilter:
-            raise ValueError(f'The shellpipe filter needs a command ( {self.job.get_location()} )')
+            raise ValueError(f'The shellpipe filter needs a command ({self.job.get_indexed_location()})')
 
         encoding = sys.getdefaultencoding()
 
@@ -978,7 +1014,7 @@ class ShellPipeFilter(FilterBase):
         #                       shell=True, check=True,
         #                       env=env).stdout.decode(encoding)  # noqa: DUO116 use of "shell=True" is insecure
         except subprocess.CalledProcessError as e:
-            logger.error(f"filter 'shellpipe' returned error ( {self.job.get_location()} ):")
+            logger.error(f"filter 'shellpipe' returned error ({self.job.get_indexed_location()}):")
             logger.error(e.stderr.decode())
             raise e
 
@@ -997,18 +1033,18 @@ class OCRFilter(FilterBase):
     def filter(self, data: bytes, subfilter: Dict[str, Any]) -> str:
         if not isinstance(data, bytes):
             raise ValueError(f'The ocr filter needs bytes input (is it the first filter?)'
-                             f' ( {self.job.get_location()} )')
+                             f' ({self.job.get_indexed_location()})')
 
         language = subfilter.get('language', None)
         timeout = int(subfilter.get('timeout', 10))
 
         if pytesseract is None:
             raise ImportError(f"Python package 'pytesseract' is not installed; cannot use the '{self.__kind__}' filter"
-                              f' ( {self.job.get_location()} )')
+                              f' ({self.job.get_indexed_location()})')
 
         if Image is None:
             raise ImportError(f"Python package 'Pillow' is not installed; cannot use the '{self.__kind__}' filter"
-                              f' ( {self.job.get_location()} )')
+                              f' ({self.job.get_indexed_location()})')
 
         return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip()
 
@@ -1029,15 +1065,15 @@ class JQFilter(FilterBase):
 
         if jq is None:
             raise ImportError(f"Python package 'jq' is not installed; cannot use the '{self.__kind__}' filter"
-                              f' ( {self.job.get_location()} )')
+                              f' ({self.job.get_indexed_location()})')
 
         try:
             jsondata = json.loads(data)
         except ValueError:
-            raise ValueError(f'The jq filter needs valid JSON ( {self.job.get_location()} )')
+            raise ValueError(f'The jq filter needs valid JSON ({self.job.get_indexed_location()})')
 
         if 'query' not in subfilter:
-            raise ValueError(f'The jq filter needs a query ( {self.job.get_location()} )')
+            raise ValueError(f'The jq filter needs a query ({self.job.get_indexed_location()})')
 
         return jq.text(subfilter['query'], jsondata)
         # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59

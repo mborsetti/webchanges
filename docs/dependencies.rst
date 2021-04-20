@@ -18,9 +18,9 @@ like this::
 +-------------------------+-------------------------------------------------------------------------+
 | Feature                 | Python package(s) installed                                             |
 +=========================+=========================================================================+
-| ``use _browser`` set to | * `pyppeteer <https://github.com/pyppeteer/pyppeteer>`__                |
+| ``use_browser`` set to  | * `pyppeteer <https://github.com/pyppeteer/pyppeteer>`__                |
 | true (in a url job)     | * Note: you may also have to **separately install** OS-specific         |
-|                         |    dependencies [#f1]_                                                  |
+|                         |   dependencies [#f1]_                                                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
 | html2text filter        |                                                                         |
@@ -37,12 +37,12 @@ like this::
 |                         |   incomplete)                                                           |
 +-------------------------+-------------------------------------------------------------------------+
 | ``ocr`` filter          | * `pytesseract <https://github.com/madmaze/pytesseract>`__              |
-|                         |   Note: requires Tesseract to be **separately installed** [#f5]_        |
+|                         | * Note: requires Tesseract to be **separately installed** [#f4]_        |
 |                         | * `Pillow <https://python-pillow.org>`__                                |
 +-------------------------+-------------------------------------------------------------------------+
 | ``pdf2text`` filter     | * `pdftotext <https://github.com/jalan/pdftotext>`__                    |
 |                         | * Note: you will also have to **separately install** OS-specific        |
-|                         |   dependencies [#f4]_                                                   |
+|                         |   dependencies [#f5]_                                                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``matrix`` reporter     | * `matrix_client <https://github.com/matrix-org/matrix-python-sdk>`__   |
 +-------------------------+-------------------------------------------------------------------------+
@@ -71,10 +71,10 @@ like this::
    attention to the documentation if you're running in `Docker
    <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#running-puppeteer-in-docker>`__ or other
    specialized environments.
-.. [#f2] Optional, to beautify content of <script> tags
-.. [#f3] Optional, to beautify content of <style> tags
-.. [#f4] see `here <https://github.com/jalan/pdftotext#os-dependencies>`__
-.. [#f5] see `here <https://tesseract-ocr.github.io/tessdoc/Installation.html>`__
+.. [#f2] Optional, to beautify content of ``<script>`` tags
+.. [#f3] Optional, to beautify content of ``<style>`` tags
+.. [#f4] See Tesseract information `here <https://tesseract-ocr.github.io/tessdoc/Installation.html>`__
+.. [#f5] See pdftotext information `here <https://github.com/jalan/pdftotext#os-dependencies>`__
 
 
 Installed packages

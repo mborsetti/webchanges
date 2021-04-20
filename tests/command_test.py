@@ -1,6 +1,5 @@
-"""tests filters based on a set of patterns"""
+"""Test commands."""
 
-import logging
 import os
 
 import pytest
@@ -11,8 +10,6 @@ from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
-
-logger = logging.getLogger(__name__)
 
 here = os.path.dirname(__file__)
 

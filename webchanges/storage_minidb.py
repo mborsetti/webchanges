@@ -51,7 +51,7 @@ class CacheMiniDBStorage(CacheStorage):
     def get_guids(self) -> Iterator[str]:
         return (guid for guid, in self.CacheEntry.query(self.db, minidb.Function('distinct', self.CacheEntry.c.guid)))
 
-    def load(self, guid: str) -> (Optional[str], Optional[float], Optional[int], Optional[str]):
+    def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
         for data, timestamp, tries, etag in self.CacheEntry.query(
                 self.db,
                 self.CacheEntry.c.data // self.CacheEntry.c.timestamp // self.CacheEntry.c.tries
@@ -77,7 +77,8 @@ class CacheMiniDBStorage(CacheStorage):
                     break
         return history
 
-    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str] = None) -> None:
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str] = None,
+             temporary: Optional[str] = None) -> None:
         self.db.save(self.CacheEntry(guid=guid, timestamp=timestamp, data=data, tries=tries, etag=etag))
         self.db.commit()
 

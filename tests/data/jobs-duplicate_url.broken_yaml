@@ -1,0 +1,8 @@
+name: Duplicate url; used in handler_test.py
+url: https://dupe_1
+---
+url: https://dupe_2
+---
+url: https://dupe_1
+---
+url: https://dupe_2

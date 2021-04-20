@@ -223,12 +223,12 @@ sha1:
 hexdump:
     filter:
       - hexdump:
-    data: |
+    data: |-
         Hello world!
         你好，世界！
     expected_result: |-
         48 65 6c 6c 6f 20 77 6f 72 6c 64 21 0a e4 bd a0  Hello world!....
-        e5 a5 bd ef bc 8c e4 b8 96 e7 95 8c ef bc 81 0a  ................
+        e5 a5 bd ef bc 8c e4 b8 96 e7 95 8c ef bc 81     ...............
 sort:
     filter:
       - sort:
@@ -368,3 +368,70 @@ deprecated_grepi:
       The rose is red;
       Sugar is sweet,
       and so are you.
+strip_with_chars:
+  filter:
+    - strip:
+        chars: .
+  data: |-
+      .line1.
+      .line2.
+  expected_result: |-
+      line1.
+      .line2
+rstrip_with_chars:
+  filter:
+    - strip:
+        chars: .
+        side: right
+  data: |-
+      .line1.
+      .line2.
+  expected_result: |-
+      .line1.
+      .line2
+lstrip_with_chars:
+  filter:
+    - strip:
+        chars: .
+        side: left
+  data: |-
+      .line1.
+      .line2.
+  expected_result: |-
+      line1.
+      .line2.
+strip_each_line_with_chars:
+  filter:
+    - strip:
+        splitlines: true
+        chars: .
+  data: |
+      .line1.
+      .line2.
+  expected_result: |-
+      line1
+      line2
+rstrip_each_line_with_chars:
+  filter:
+    - strip:
+        splitlines: true
+        chars: .
+        side: right
+  data: |
+      .line1.
+      .line2.
+  expected_result: |-
+      .line1
+      .line2
+lstrip_each_line_with_chars:
+  filter:
+    - strip:
+        splitlines: true
+        chars: .
+        side: left
+  data: |
+      .line1.
+      .line2.
+  expected_result: |-
+      line1.
+      line2.

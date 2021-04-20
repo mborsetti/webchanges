@@ -1,3 +1,5 @@
+"""Test the handling of jobs."""
+
 import contextlib
 import importlib.util
 import os
@@ -69,6 +71,18 @@ def test_load_jobs_yaml():
     jobs_file = os.path.join(here, 'data', 'jobs.yaml')
     if os.path.exists(jobs_file):
         assert len(YamlJobsStorage(jobs_file).load_secure()) > 0
+    else:
+        warnings.warn(f'{jobs_file} not found', UserWarning)
+
+
+def test_duplicates_in_jobs_yaml():
+    jobs_file = os.path.join(here, 'data', 'jobs-duplicate_url.broken_yaml')
+    if os.path.exists(jobs_file):
+        with pytest.raises(ValueError) as pytest_wrapped_e:
+            YamlJobsStorage(jobs_file).load_secure()
+        assert str(pytest_wrapped_e.value) == (
+            'Each job must have a unique URL, append #1, #2, ... to make them unique:\n   https://dupe_1\n   '
+            'https://dupe_2')
     else:
         warnings.warn(f'{jobs_file} not found', UserWarning)
 
@@ -152,11 +166,14 @@ def test_unserialize_shell_job_without_kind():
 
 
 def test_unserialize_with_unknown_key():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize({
             'unknown_key': 123,
             'name': 'hoho',
         })
+    assert str(pytest_wrapped_e.value) == (
+        "Directives don't match a job type; check for errors/typos/text escaping:\n"
+        "{'unknown_key': 123, 'name': 'hoho'}")
 
 
 def prepare_retry_test_sqlite3():

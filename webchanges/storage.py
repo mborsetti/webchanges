@@ -1,5 +1,4 @@
 """Handles all storage: job files, config files, hooks file, and cache database engines."""
-
 import copy
 import getpass
 import logging
@@ -11,8 +10,9 @@ import sys
 import tempfile
 import threading
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, Hashable, Iterable, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Hashable, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, Type, Union
 
 import msgpack
 
@@ -113,12 +113,12 @@ DEFAULT_CONFIG = {
         'webhook': {
             'enabled': False,
             'webhook_url': '',
-            'max_message_length': '',
+            'max_message_length': None,
         },
         'webhook_markdown': {
             'enabled': False,
             'webhook_url': '',
-            'max_message_length': '',
+            'max_message_length': None,
         },
         'matrix': {
             'enabled': False,
@@ -345,12 +345,37 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
 class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
     @classmethod
+    def _parse(cls, fp: TextIO) -> List[JobBase]:
+        jobs = []
+        jobs_by_guid = defaultdict(list)
+        for i, job_data in enumerate(yaml.safe_load_all(fp)):
+            if job_data is not None:
+                job_data['index_number'] = i + 1
+                job = JobBase.unserialize(job_data)
+                jobs.append(job)
+                jobs_by_guid[job.get_guid()].append(job)
+
+        conflicting_jobs = []
+        for guid, guid_jobs in jobs_by_guid.items():
+            if len(guid_jobs) != 1:
+                conflicting_jobs.append(guid_jobs[0].get_location())
+
+        if conflicting_jobs:
+            raise ValueError('\n   '.join(['Each job must have a unique URL, append #1, #2, ... to make them unique:']
+                                          + conflicting_jobs))
+
+        return jobs
+
+    @classmethod
     def parse(cls, *args) -> List[JobBase]:
         filename = args[0]
         if filename is not None and os.path.exists(filename):
             with open(filename) as fp:
-                return [JobBase.unserialize(job) for job in yaml.safe_load_all(fp)
-                        if job is not None]
+                return cls._parse(fp)
+
+    def load(self, *args) -> List[JobBase]:
+        with open(self.filename) as fp:
+            return self._parse(fp)
 
     def save(self, *args) -> None:
         jobs = args[0]
@@ -359,10 +384,6 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         with open(self.filename, 'w') as fp:
             yaml.safe_dump_all([job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False,
                                allow_unicode=True)
-
-    def load(self, *args) -> List[JobBase]:
-        with open(self.filename) as fp:
-            return [JobBase.unserialize(job) for job in yaml.safe_load_all(fp) if job is not None]
 
 
 class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
@@ -375,7 +396,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def load(self, guid: str) -> (Optional[str], Optional[float], Optional[int], Optional[str]):
+    def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
         ...
 
     @abstractmethod
@@ -383,7 +404,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str], *args) -> None:
         ...
 
     @abstractmethod
@@ -407,7 +428,7 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
             data, timestamp, tries, etag = self.load(guid)
             yield guid, data, timestamp, tries, etag
 
-    def restore(self, entries: Iterator[Tuple[str, str, float, int, str]]) -> None:
+    def restore(self, entries: Iterator[Tuple[str, str, float, int, Optional[str]]]) -> None:
         """Save multiple entries into the database.
 
         :param entries: An iterator of tuples WHERE each consists of (guid, data, timestamp, tries, etag)
@@ -491,13 +512,13 @@ class CacheDirStorage(CacheStorage):
 
         timestamp = os.stat(filename)[stat.ST_MTIME]
 
-        return data, timestamp, None, None
+        return data, timestamp, 0, None
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         """We only store the latest version, no history data"""
         return {}
 
-    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str], *args) -> None:
         # Timestamp is not saved as is read from the file's timestamp; ETag is ignored
         filename = self._get_filename(guid)
         with open(filename, 'w+') as fp:
@@ -513,6 +534,13 @@ class CacheDirStorage(CacheStorage):
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("'textfiles' databases cannot be rolled back as new snapshots overwrite old ones")
+
+
+class Snapshot(NamedTuple):
+    data: Optional[str]
+    timestamp: Optional[float]
+    tries: int
+    etag: Optional[str]
 
 
 class CacheSQLite3Storage(CacheStorage):
@@ -539,16 +567,14 @@ class CacheSQLite3Storage(CacheStorage):
 
         self.max_snapshots = max_snapshots
 
-        logger.debug(f'Opening main sqlite3 database file {filename}')
+        logger.debug(f'sqlite3.version={sqlite3.version}, sqlite3.sqlite_version={sqlite3.sqlite_version}')
+        logger.info(f'Opening permanent sqlite3 database file {filename}')
         super().__init__(filename)
 
         dirname = os.path.dirname(filename)
         if dirname and not os.path.isdir(dirname):
             os.makedirs(dirname)
         fn_base, fn_ext = os.path.splitext(filename)
-        # if os.path.isfile(filename):
-        #     import shutil
-        #     _ = shutil.copy2(filename, f'{filename}.{int(time.time())}.bak')
 
         # https://stackoverflow.com/questions/26629080
         self.lock = threading.RLock()
@@ -556,23 +582,33 @@ class CacheSQLite3Storage(CacheStorage):
         self.db = sqlite3.connect(filename, check_same_thread=False)
         self.cur = self.db.cursor()
         tables = self._execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
+
+        def _initialize_table(self) -> None:
+            logger.debug('Initializing sqlite3 database')
+            self._execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
+            self._execute('CREATE INDEX idx_uuid_time ON webchanges(uuid, timestamp)')
+            self.db.commit()
+
         if tables == ('CacheEntry',):
-            logger.debug("Found legacy 'minidb' database to convert")
-            # found a minidb legacy database; rename it for migration and create new one
+            logger.info("Found legacy 'minidb' database to convert")
+            # found a minidb legacy database; close it, rename it for migration and create new sqlite3 one
+            import importlib.util
+
+            if importlib.util.find_spec('minidb') is None:
+                raise ImportError(
+                    "Python package 'minidb' is not installed; cannot upgrade the legacy 'minidb' database"
+                )
+
             self.db.close()
             minidb_filename = f'{fn_base}_minidb{fn_ext}'
             os.replace(filename, minidb_filename)
             self.db = sqlite3.connect(filename, check_same_thread=False)
             self.cur = self.db.cursor()
-        if tables != ('webchanges',):
-            # not yet initialized
-            logger.debug('Initializing database')
-            self._execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
-            self._execute('CREATE INDEX idx_uuid_time ON webchanges(uuid, timestamp)')
-            self.db.commit()
-        if tables == ('CacheEntry',):
+            _initialize_table(self)
             # migrate the minidb legacy database renamed above
             self.migrate_from_minidb(minidb_filename)
+        elif tables != ('webchanges',):
+            _initialize_table(self)
 
         # create temporary file for writing (fault tolerant)
         self.temp_filename = tempfile.NamedTemporaryFile().name
@@ -586,10 +622,10 @@ class CacheSQLite3Storage(CacheStorage):
     def _execute(self, sql: str, args: Optional[tuple] = None) -> sqlite3.Cursor:
         """Execute SQL command on main database"""
         if args is None:
-            logger.debug(f"Executing (main) '{sql}'")
+            logger.debug(f"Executing (perm) '{sql}'")
             return self.cur.execute(sql)
         else:
-            logger.debug(f"Executing (main) '{sql}' with {args}")
+            logger.debug(f"Executing (perm) '{sql}' with {args}")
             return self.cur.execute(sql, args)
 
     def _temp_execute(self, sql: str, args: Optional[tuple] = None) -> sqlite3.Cursor:
@@ -604,20 +640,20 @@ class CacheSQLite3Storage(CacheStorage):
     def close(self) -> None:
         """Writes the temporary database to the permanent one, purges old entries if required, and closes all database
         connections."""
-        logger.debug('Saving session data to permanent sqlite3 database')
+        logger.debug('Saving new snapshots to permanent sqlite3 database')
         with self.temp_lock:
             self.temp_db.commit()
             self.temp_db.close()
         with self.lock:
-            self.cur.execute('ATTACH DATABASE ? AS temp_db', (self.temp_filename,))
-            self.cur.execute('INSERT INTO webchanges SELECT * FROM temp_db.webchanges')
+            self._execute('ATTACH DATABASE ? AS temp_db', (self.temp_filename,))
+            self._execute('INSERT INTO webchanges SELECT * FROM temp_db.webchanges')
             logger.debug(f'Wrote {self.cur.rowcount} new snapshots to permanent sqlite3 database')
             self.db.commit()
-            self.cur.execute('DETACH DATABASE temp_db')
+            self._execute('DETACH DATABASE temp_db')
             if os.path.exists(self.temp_filename):
                 logger.debug(f'Deleting temp sqlite3 database file {self.temp_filename}')
                 os.remove(self.temp_filename)
-            logger.debug('Cleaning up the sqlite3 database and closing the connection')
+            logger.debug('Cleaning up the permanent sqlite3 database and closing the connection')
             if self.max_snapshots:
                 num_del = self.keep_latest(self.max_snapshots)
                 logger.debug(f'Keeping no more than {self.max_snapshots} snapshots per job: '
@@ -626,7 +662,7 @@ class CacheSQLite3Storage(CacheStorage):
                 self.db.commit()
             self._execute('VACUUM')
             self.db.close()
-            logger.debug(f'Closed main sqlite3 database file {self.filename}')
+            logger.info(f'Closed main sqlite3 database file {self.filename}')
         del self.temp_cur
         del self.temp_db
         del self.temp_lock
@@ -645,7 +681,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.cur.row_factory = None
         return guids
 
-    def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
+    def load(self, guid: str) -> Snapshot:
         """Return the most recent entry matching a 'guid'.
 
         :param guid: The guid
@@ -663,9 +699,9 @@ class CacheSQLite3Storage(CacheStorage):
         if row:
             msgpack_data, timestamp = row
             r = msgpack.unpackb(msgpack_data)
-            return r['d'], timestamp, r['t'], r['e']
+            return Snapshot(r['d'], timestamp, r['t'], r['e'])
 
-        return None, None, 0, None
+        return Snapshot(None, None, 0, None)
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         """Return data and timestamp from the last 'count' (None = all) entries matching a 'guid'.
@@ -691,11 +727,12 @@ class CacheSQLite3Storage(CacheStorage):
                 if not r['t']:
                     if r['d'] not in history:
                         history[r['d']] = timestamp
-                        if count and len(history) >= count:
+                        if count is not None and len(history) >= count:
                             break
         return history
 
-    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str, temporary: bool = True) -> None:
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str],
+             temporary: Optional[bool] = True) -> None:
         """Save the data from a job.
 
         By default it is saved into the temporary database.  Call close() to tranfer the contents of the temporary
@@ -705,7 +742,7 @@ class CacheSQLite3Storage(CacheStorage):
         :param data: The data
         :param timestamp: The timestamp
         :param tries: The number of tries
-        :param etag: The ETag
+        :param etag: The ETag (could be None)
         :param temporary: If true, saved to temporary database (default)
         """
         c = {
@@ -762,7 +799,7 @@ class CacheSQLite3Storage(CacheStorage):
             self._execute('DELETE FROM webchanges '
                           'WHERE EXISTS ( '
                           '    SELECT 1 FROM webchanges w '
-                          '    WHERE w.uuid = webchanges.uuid AND w.timestamp < webchanges.timestamp '
+                          '    WHERE w.uuid = webchanges.uuid AND w.timestamp > webchanges.timestamp '
                           ')')
             num_del = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
@@ -879,11 +916,11 @@ class CacheRedisStorage(CacheStorage):
             if c['tries'] == 0 or c['tries'] is None:
                 if c['data'] not in history:
                     history[c['data']] = c['timestamp']
-                    if count and len(history) >= count:
+                    if count is not None and len(history) >= count:
                         break
         return history
 
-    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: str) -> None:
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str], *args) -> None:
         r = {
             'data': data,
             'timestamp': timestamp,

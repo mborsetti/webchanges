@@ -177,6 +177,13 @@ https://example.com/strip.html:
   input: "This paragraph™ ends with a space "
   output: |-
     This paragraph™ ends with a space
+https://example.com/strip_by_line.html:
+  input: |-
+    This line™ ends with a comma,
+    ,This one starts with a comma too,
+  output: |-
+    This line™ ends with a comma
+    ,This one starts with a comma too
 https://example.com/strip_each_line.html:
   input: "This line™ ends with a space \n This one starts with one as well! "
   output: |-

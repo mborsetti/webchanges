@@ -89,10 +89,10 @@ class ReporterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def submit_one(cls, name: str, report: 'Report', job_states: Collection[Type['JobState']],
-                   duration: float) -> None:
+                   duration: float, check_enabled: Optional[bool] = True) -> None:
         subclass = cls.__subclasses__[name]
         cfg = report.config['report'].get(name, {'enabled': False})
-        if cfg['enabled']:
+        if cfg['enabled'] or not check_enabled:
             subclass(report, cfg, job_states, duration).submit()
         else:
             raise ValueError(f'Reporter not enabled: {name}')
@@ -104,7 +104,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
             cfg = report.config['report'].get(name, {'enabled': False})
             if cfg['enabled']:
                 any_enabled = True
-                logger.info('Submitting with %s (%r)', name, subclass)
+                logger.info(f'Submitting with {name} ({subclass})')
                 subclass(report, cfg, job_states, duration).submit()
 
         if not any_enabled:
@@ -162,6 +162,7 @@ class HtmlReporter(ReporterBase):
     @staticmethod
     def _diff_to_html(diff: str, job: JobBase) -> Iterable[str]:
         """Generator yielding the HTML-formatted unified diff; called by _format_content."""
+        mark_to_html = None  # PyCharm
         if job.diff_tool and job.diff_tool.startswith('wdiff'):
             # wdiff colorization
             yield '<span style="font-family:monospace;white-space:pre-wrap">'
@@ -260,7 +261,7 @@ class HtmlReporter(ReporterBase):
                 return
 
         elif difftype == 'table':
-            timestamp_old = email.utils.formatdate(job_state.timestamp, localtime=True)
+            timestamp_old = email.utils.formatdate(job_state.old_timestamp, localtime=True)
             timestamp_new = email.utils.formatdate(time.time(), localtime=True)
             html_diff = difflib.HtmlDiff()
             table = html_diff.make_table(job_state.old_data.splitlines(keepends=True),
@@ -290,7 +291,7 @@ class TextReporter(ReporterBase):
                 pretty_name = job_state.job.pretty_name()
                 location = job_state.job.get_location()
                 if pretty_name != location:
-                    location = f'{pretty_name} ( {location} )'
+                    location = f'{pretty_name} ({location})'
                 yield ': '.join((job_state.verb.upper(), location))
                 if hasattr(job_state.job, 'note'):
                     yield job_state.job.note
@@ -338,7 +339,7 @@ class TextReporter(ReporterBase):
         pretty_name = job_state.job.pretty_name()
         location = job_state.job.get_location()
         if pretty_name != location:
-            location = f'{pretty_name} ( {location} )'
+            location = f'{pretty_name} ({location})'
 
         pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
         summary = ': '.join((job_state.verb.upper(), location))
@@ -397,7 +398,8 @@ class MarkdownReporter(ReporterBase):
             details = None
 
         trimmed_msg = '*Parts of the report were omitted due to message length.*\n'
-        max_length -= len(trimmed_msg)
+        if max_length:
+            max_length -= len(trimmed_msg)
 
         trimmed, summary, details, footer = MarkdownReporter._render(max_length, summary, details, footer)
 
@@ -418,8 +420,8 @@ class MarkdownReporter(ReporterBase):
             yield from footer
 
     @classmethod
-    def _render(cls, max_length: int, summary: Optional[List[str]] = None, details: Optional[List[str]] = None,
-                footer: Optional[List[str]] = None) -> (bool, str, str, str):
+    def _render(cls, max_length: Optional[int], summary: Optional[List[str]] = None,
+                details: Optional[List[str]] = None, footer: Optional[List[str]] = None) -> (bool, str, str, str):
         """Render the report components, trimming them if the available length is insufficient.
 
         Returns a tuple (trimmed, summary, details, footer).
@@ -432,7 +434,7 @@ class MarkdownReporter(ReporterBase):
         # The footer/summary lengths are the sum of the length of their parts
         # plus the space taken up by newlines.
         if summary:
-            summary = ['%d. %s' % (idx + 1, line) for idx, line in enumerate(summary)]
+            summary = [f'{idx + 1}. {line}' for idx, line in enumerate(summary)]
             summary_len = sum(len(part) for part in summary) + len(summary) - 1
         else:
             summary_len = 0
@@ -642,7 +644,7 @@ class EMailReporter(TextReporter):
         body_text = '\n'.join(super().submit())
 
         if not body_text:
-            logger.debug('Not sending e-mail (no changes)')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         if self.config['method'] == 'smtp':
@@ -654,10 +656,11 @@ class EMailReporter(TextReporter):
         elif self.config['method'] == 'sendmail':
             mailer = SendmailMailer(self.config['sendmail']['path'])
         else:
-            logger.error(f'Invalid entry for method {self.config["method"]}')
+            raise ValueError(f"Unknown email reporter method: {self.config['method']}")
 
         if self.config['html']:
-            body_html = '\n'.join(self.convert(HtmlReporter).submit())
+            html_reporter = HtmlReporter(self.report, {}, self.job_states, self.duration)
+            body_html = '\n'.join(html_reporter.submit())
             msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html)
         else:
             msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text)
@@ -683,6 +686,9 @@ class IFTTTReport(TextReporter):
 
 
 class WebServiceReporter(TextReporter):
+    """Base class for other reporters, such as Pushover and Pushbullet."""
+
+    __kind__ = None
     MAX_LENGTH = 1024
 
     def web_service_get(self) -> None:
@@ -695,7 +701,7 @@ class WebServiceReporter(TextReporter):
         body_text = '\n'.join(super().submit())
 
         if not body_text:
-            logger.debug('Not sending %s (no changes)', self.__kind__)
+            logger.debug(f'Not sending {self.__kind__} (no changes)')
             return
 
         if len(body_text) > self.MAX_LENGTH:
@@ -703,10 +709,9 @@ class WebServiceReporter(TextReporter):
 
         try:
             service = self.web_service_get()
-        except Exception:
-            logger.error('Failed to load or connect to %s - are the dependencies installed and configured?',
-                         self.__kind__, exc_info=True)
-            return
+        except Exception as e:
+            raise RuntimeError(f'Failed to load or connect to {self.__kind__} - are the dependencies installed and '
+                               'configured?') from e
 
         self.web_service_submit(service, 'Website Change Detected', body_text)
 
@@ -785,7 +790,7 @@ class MailGunReporter(TextReporter):
         body_html = '\n'.join(self.convert(HtmlReporter).submit())
 
         if not body_text:
-            logger.debug('Not calling Mailgun API (no changes)')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         logger.debug(f"Sending Mailgun request for domain:'{domain}'")
@@ -804,10 +809,10 @@ class MailGunReporter(TextReporter):
             if result.status_code == requests.codes.ok:
                 logger.info(f"Mailgun response: id '{json_res['id']}'. {json_res['message']}")
             else:
-                logger.error(f"Mailgun error: {json_res['message']}")
+                raise RuntimeError(f"Mailgun error: {json_res['message']}")
         except ValueError:
-            logger.error(
-                f'Failed to parse Mailgun response. HTTP status code: {result.status_code}, content: {result.content}')
+            raise RuntimeError(
+                f'Failed to parse Mailgun response. HTTP status code: {result.status_code}, content: {result.text}')
 
         return result
 
@@ -827,7 +832,7 @@ class TelegramReporter(TextReporter):
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.debug('Not calling telegram API (no changes)')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         result = None
@@ -850,7 +855,7 @@ class TelegramReporter(TextReporter):
             if result.status_code == requests.codes.ok:
                 logger.info(f"Telegram response: ok '{json_res['ok']}'. {json_res['result']}")
             else:
-                logger.error(f"Telegram error: {json_res['description']}")
+                raise RuntimeError(f"Telegram error: {json_res['description']}")
         except ValueError:
             logger.error(
                 f'Failed to parse telegram response. HTTP status code: {result.status_code}, content: {result.content}')
@@ -868,14 +873,17 @@ class WebhookReporter(TextReporter):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
-        self.max_length = self.config.get('max_message_length', default_max_length)
+        if isinstance(self.config.get('max_message_length'), int):
+            self.max_length = self.config.get('max_message_length')
+        else:
+            self.max_length = default_max_length
 
     def submit(self) -> Optional[requests.Response]:
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.debug('Not calling service webhook due to nothing to report')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         result = None
@@ -892,12 +900,13 @@ class WebhookReporter(TextReporter):
         result = requests.post(webhook_url, json=post_data)
         try:
             if result.status_code == requests.codes.ok:
-                logger.info('Server response: ok')
+                logger.info('Webhook server response: ok')
             else:
-                logger.error(f'Server error: {result.text}')
+                raise RuntimeError(f'Webhook server error: {result.text}')
         except ValueError:
             logger.error(
-                f'Failed to parse server response. HTTP status code: {result.status_code}, content: {result.content}')
+                f'Failed to parse webhook server response. HTTP status code: {result.status_code}, content:'
+                f' {result.content}')
         return result
 
 
@@ -919,14 +928,17 @@ class WebhookMarkdownReporter(MarkdownReporter):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
-        self.max_length = self.config.get('max_message_length', default_max_length)
+        if isinstance(self.config.get('max_message_length'), int):
+            self.max_length = self.config.get('max_message_length')
+        else:
+            self.max_length = default_max_length
 
     def submit(self, max_length: int = None) -> Optional[requests.Response]:
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.debug('Not calling service webhook due to nothing to report')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         result = None
@@ -938,17 +950,18 @@ class WebhookMarkdownReporter(MarkdownReporter):
         return result
 
     def submit_to_webhook(self, webhook_url: str, text: str) -> Optional[requests.Response]:
-        logger.debug(f'Sending request to webhook with text:{text}')
+        logger.debug(f'Sending request to webhook_markdown with text:{text}')
         post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
         try:
             if result.status_code == requests.codes.ok:
-                logger.info('Server response: ok')
+                logger.info('Webhook_markdown server response: ok')
             else:
-                logger.error(f'Server error: {result.text}')
+                raise RuntimeError(f'Webhook_markdown server error: {result.text}')
         except ValueError:
             logger.error(
-                f'Failed to parse server response. HTTP status code: {result.status_code}, content: {result.content}')
+                f'Failed to parse webhook_markdown server response. HTTP status code: {result.status_code}, '
+                f'content: {result.content}')
         return result
 
 
@@ -969,7 +982,7 @@ class MatrixReporter(MarkdownReporter):
         body_markdown = '\n'.join(super().submit(MatrixReporter.MAX_LENGTH))
 
         if not body_markdown:
-            logger.debug('Not calling Matrix API (no changes)')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         client_api = matrix_client.api.MatrixHttpApi(homeserver_url, access_token)
@@ -1002,7 +1015,7 @@ class XMPPReporter(TextReporter):
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.debug('Not sending XMPP message (no reportable changes)')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         xmpp = XMPP(sender, recipient, self.config.get('insecure_password'))
@@ -1018,18 +1031,17 @@ class BrowserReporter(HtmlReporter):
 
     def submit(self) -> None:
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
-
         if not filtered_job_states:
-            logger.debug('Not opening browser (no reportable changes)')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
-        body_html = '\n'.join(self.convert(HtmlReporter).submit())
+        html_reporter = HtmlReporter(self.report, {}, self.job_states, self.duration)
+        body_html = '\n'.join(html_reporter.submit())
 
-        # recheck as some job_states.verb could have changed to 'changed,no_report'
+        # recheck after running as diff_filters can modify job_states.verb
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
-
         if not filtered_job_states:
-            logger.debug('Not opening browser (no reportable changes)')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         import tempfile
@@ -1107,7 +1119,7 @@ class ProwlReporter(TextReporter):
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.debug('Not calling Prowl API (no changes)')
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
@@ -1145,7 +1157,7 @@ class ProwlReporter(TextReporter):
             if result.status_code in (requests.codes.ok, requests.codes.no_content):
                 logger.info('Prowl response: ok')
             else:
-                logger.error(f'Prowl error: {result.text}')
+                raise RuntimeError(f'Prowl error: {result.text}')
         except ValueError:
             logger.error(f'Failed to parse Prowl response. HTTP status code: {result.status_code}, '
                          f'content: {result.content}')

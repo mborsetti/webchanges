@@ -16,6 +16,8 @@ repos:
     rev: v3.4.0
     hooks:
       # see https://github.com/pre-commit/pre-commit-hooks
+#      - id: check-added-large-files
+#        description: Prevent giant files from being committed
       - id: check-ast
         description: Simply check whether files parse as valid python
       - id: check-builtin-literals
@@ -39,6 +41,7 @@ repos:
 #      - id: check-xml
 #        description: Attempts to load all xml files to verify syntax
       - id: check-yaml
+        args: [--allow-multiple-documents]
         description: Attempts to load all yaml files to verify syntax
       - id: debug-statements
         description: Check for debugger imports and py37+ breakpoint() calls in python source.
@@ -99,8 +102,8 @@ repos:
         description: Enforce that python3.6+ type annotations are used instead of type comments
 #      - id: rst-backticks
 #        description: Detect common mistake of using single backticks when writing rst
-#      - id: rst-directive-colons
-#        description: Detect mistake of rst directive not ending with double colon
+      - id: rst-directive-colons
+        description: Detect mistake of rst directive not ending with double colon
 #      - id: rst-inline-touching-normal
 #        description: Detect mistake of inline code touching normal text in rst
       - id: text-unicode-replacement-char

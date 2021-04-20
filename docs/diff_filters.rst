@@ -43,6 +43,8 @@ As a safeguard, ``additions_only: true`` will display a warning (and all lines d
 shrinks by 75% or more, as this could be due to changes in where or how the information is published (requiring the job
 to be reconfigured to continue monitoring the relevant information).
 
+Changes consisting exclusively of added empty lines are not reported.
+
 Example:
 
 .. code-block:: yaml
@@ -102,7 +104,9 @@ or (text):
 Note: When using ``additions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
 course, this can be changed by specifying the key with the desired value in the job.
 
-`New in Version 3.0`
+`New in version 3.0.`
+
+`Changed in version 3.5:` Additions consisting of only empty lines are not reported.
 
 
 .. _deletions_only:
@@ -111,6 +115,9 @@ deletions_only
 --------------
 The ``deletions_only: true`` directive causes the report for that source to contain only lines that are deleted by the
 diff (no additions).
+
+Changes consisting exclusively of deleted empty lines are not reported.
+
 
 Example:
 
@@ -141,7 +148,10 @@ or (text):
 Note: When using ``deletions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
 course, this can be changed by specifying the key with the desired value in the job.
 
-`New in Version 3.0`
+`New in version 3.0.`
+
+
+`Changed in version 3.5:` Deletions consisting of only empty lines are not reported.
 
 
 .. _contextlines:
@@ -207,4 +217,4 @@ Output:
     This is line 17
     This is line 18
 
-`New in Version 3.0`
+`New in version 3.0.`

@@ -22,9 +22,10 @@ class Urlwatch(object):
 
         self.urlwatch_config = urlwatch_config
 
-        logger.info('Using %s as jobs file', self.urlwatch_config.jobs)
-        logger.info('Using %s for hooks', self.urlwatch_config.hooks)
-        logger.info('Using %s as cache database', self.urlwatch_config.cache)
+        logger.info(f'Config file is {self.urlwatch_config.config}')
+        logger.info(f'Jobs file is {self.urlwatch_config.jobs}')
+        logger.info(f'Hooks file is {self.urlwatch_config.hooks}')
+        logger.info(f'Database file is {self.urlwatch_config.cache}')
 
         self.config_storage = config_storage
         self.cache_storage = cache_storage

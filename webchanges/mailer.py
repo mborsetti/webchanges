@@ -53,6 +53,7 @@ class SMTPMailer(Mailer):
         self.insecure_password = insecure_password
 
     def send(self, msg: Union[EmailMessage]) -> None:
+        passwd = None
         if self.auth:
             if self.insecure_password:
                 passwd = self.insecure_password
@@ -70,6 +71,7 @@ class SMTPMailer(Mailer):
             if self.auth:
                 server.login(self.smtp_user, passwd)
             server.send_message(msg)
+            logger.info(f"SMTP email sent to {msg.get('to')} via {self.smtp_server}")
 
 
 class SendmailMailer(Mailer):

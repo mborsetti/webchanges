@@ -24,32 +24,35 @@ Upgrading from a `urlwatch` 2.23 setup is automatic (see more below), and gives 
   * Links that are `clickable <https://pypi.org/project/webchanges/>`__!
   * Formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and indentation is
     preserved
-  * Use of color (which work with Dark Mode) and strikethrough to highlight :additions:`added` and :deletions:`deleted`
+  * Use of color (compatible with Dark Mode) and strikethrough to highlight :additions:`added` and :deletions:`deleted`
     lines
-  * Long lines wrap around
+  * Correct wrapping of long lines
   * Correct rendering by email clients who override stylesheets (e.g. Gmail)
-  * Better HTML to text translation with updated defaults for the ``html2text`` filter
+  * Better HTML-to-text translation with updated defaults for the ``html2text`` filter
   * Other legibility improvements
-* Multiple upgrades in `Pyppeteer`-based browsing to render JavaScript that includes:
+* Multiple upgrades in `Pyppeteer`-based browsing (called ``navigate`` in `urlwatch`) to render JavaScript, including:
 
   * Upgraded browser engine (same as Chrome 89)
-  * Increased reliability by use of Python's built-in ``asyncio.run()`` to manage the asyncio event loop, finalizing
-    asynchronous generators, and closing the threadpool instead of custom code (only if running in Python 3.7 or higher)
+  * Increased reliability with the use of Python's built-in ``asyncio.run()`` to manage the asyncio event loop,
+    finalizing asynchronous generators, and closing the threadpool instead of custom code (only if running in Python 3.7
+    or higher)
   * Higher stability by optimizing of concurrency
   * More flexibility and control with new directives ``chromium_revision``, ``switches``, ``wait_until``,
     ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``, ``user_data_dir``, ``block_elements``, ``cookies``,
     ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``
+  * Faster runs due to handling of ETags allowing servers to send a simple "HTTP 304 Not Modified" message when
+    relevant
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
   does not infinitely grow
-* The use of the webpage's title as a job ``name`` if one isn't provided and the ability to add a job ``note`` in the
-  report
+* Diffs (changes) that are no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a
+  reporter
+* The use of the webpage's title as a job ``name`` if one isn't provided
+* The ability to add a job ``note`` in the report
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
   which makes it easier to track content that was added without the distractions of the content that was deleted
 * A new ``--errors`` command line argument to help catching any problems by listing all jobs that error out or have
   empty data after filters are applied
 * The support of Unicode throughout, including in filters and in the jobs and configuration YAML files
-* Diffs (changes) that are no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a
-  reporter
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
   the new subdirective ``sort_keys``
 * More reliable releases due to:
@@ -57,7 +60,7 @@ Upgrading from a `urlwatch` 2.23 setup is automatic (see more below), and gives 
   * A 23 percentage point increase in code testing coverage (to 65%)
   * Completely new continuous integration (CI) and continuous delivery (CD) pipeline (GitHub Actions with pre-commit)
   * Uses of flake8 and doc8 linters and pre-commit checks
-  * Testing on both Linux (Ubuntu) **and** macOS (with Windows 10 x64 to come)
+  * Testing on both Linux (Ubuntu) **and** macOS, with Windows 10 x64 to come
 * A vast improvement in documentation and error text
 * And much more!
 
@@ -151,6 +154,7 @@ Relative to `urlwatch` 2.23:
   * New ``--rollback-cache TIMESTAMP`` new command line argument to rollback the snapshot database to a previous time,
     useful when you lose notifications. Does not work with database engine ``minidb`` or ``textfiles``.
   * New ``-V`` command line argument, as an alias to ``--version``
+  * New ``--log-level`` command line argument to control the amount of logging displayed by the ``-v`` argument
   * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
     the current directory, `webchanges` now looks for it in the default configuration directory
   * If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' extension, or a filename for ``--hooks``
@@ -184,6 +188,7 @@ Relative to `urlwatch` 2.23:
     ``chromium_revision``, ``switches``, ``wait_until``, ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``,
     ``user_data_dir``, ``block_elements``, ``cookies``, ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``
   * New ``note`` job directive to ad a freetext note appearing in the report after the job header
+  * New sub-directives for the ``strip`` filter: ``chars``, ``side`` and ``splitlines``
   * The ``html2text`` filter's ``re`` method has been renamed ``strip_tags`` for clarity, the old name is deprecated and
     will trigger a warning
   * New ``strip_each_line`` filter to remove leading and trailing whitespace on each line

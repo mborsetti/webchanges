@@ -10,24 +10,17 @@ import shutil
 import signal
 import sys
 import warnings
-from typing import Optional
+from typing import Optional, Union
 
 from appdirs import AppDirs
 
-from . import __min_python_version__
+from . import __copyright__, __min_python_version__, __version__
 from .command import UrlwatchCommand
 from .config import CommandConfig
 from .main import Urlwatch
 from .storage import CacheDirStorage, CacheRedisStorage, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
-# Check if we are installed in the system already # Legacy for apt-get type of packaging
-# (prefix, bindir) = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
-# if bindir != 'bin':
-#     sys.path.insert(1, os.path.dirname(os.path.abspath(sys.argv[0])))
-
-
 project_name = __package__
-prefix, bindir = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 # directory where the config, jobs and hooks files are located
 if os.name != 'nt':
@@ -50,14 +43,17 @@ except AttributeError:
 logger = logging.getLogger(project_name)
 
 
-def setup_logger_verbose() -> None:
+def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
     """Set up the loggers for verbosity."""
-    root_logger = logging.getLogger('')
+    import platform
+
     console = logging.StreamHandler()
     console.setFormatter(logging.Formatter('%(asctime)s %(module)s %(levelname)s: %(message)s'))
-    root_logger.addHandler(console)
-    root_logger.setLevel(logging.DEBUG)
-    root_logger.info('turning on verbose logging mode')
+    logger.addHandler(console)
+    logger.setLevel(log_level)
+    logger.debug(f'{__package__}: {__version__} {__copyright__}')
+    logger.debug(f'Python: {sys.version}')
+    logger.debug(f'System: {platform.platform()}')
 
 
 def locate_storage_file(filename: str, default_dir: str, ext: Optional[str] = None) -> str:
@@ -130,12 +126,13 @@ def main() -> None:  # pragma: no cover
     migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file)
 
     # load config files
+    prefix, bindir = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
     command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
                                    cache_file, verbose=False)
 
     # set up the logger to verbose if needed
     if command_config.verbose:
-        setup_logger_verbose()
+        setup_logger_verbose(command_config.log_level)
 
     # check for location of config files entered in cli
     command_config.config = locate_storage_file(command_config.config, command_config.config_dir, '.yaml')

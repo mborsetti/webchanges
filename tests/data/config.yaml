@@ -53,7 +53,7 @@ report:
   webhook:
     enabled: false
     webhook_url: ''
-    max_message_length: ''
+    max_message_length:
   matrix:
     enabled: false
     homeserver: ''

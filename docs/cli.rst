@@ -12,6 +12,8 @@ Command line arguments
     -h, --help            show this help message and exit
     -V, --version         show program's version number and exit
     -v, --verbose         show debug output
+    --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                          level of logging output if -v is selected (default: DEBUG)
 
   override file defaults:
     --jobs FILE, --urls FILE

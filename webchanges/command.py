@@ -68,16 +68,16 @@ class UrlwatchCommand:
         print()
 
     def list_jobs(self) -> None:
-        for idx, job in enumerate(self.urlwatcher.jobs):
+        for job in self.urlwatcher.jobs:
             if self.urlwatch_config.verbose:
-                print(f'{idx + 1}: {repr(job)}')
+                print(f'{job.index_number:3}: {repr(job)}')
             else:
                 pretty_name = job.pretty_name()
                 location = job.get_location()
                 if pretty_name != location:
-                    print(f'{idx + 1}: {pretty_name} ( {location} )')
+                    print(f'{job.index_number:3}: {pretty_name} ({location})')
                 else:
-                    print(f'{idx + 1}: {pretty_name}')
+                    print(f'{job.index_number:3}: {pretty_name}')
 
     def _find_job(self, query: Union[str, int]) -> Optional[JobBase]:
         try:
@@ -91,15 +91,15 @@ class UrlwatchCommand:
         except ValueError:
             return next((job for job in self.urlwatcher.jobs if job.get_location() == query), None)
 
-    def _get_job(self, id: Union[str, int]) -> JobBase:
-        job = self._find_job(id)
+    def _get_job(self, job_id: Union[str, int]) -> JobBase:
+        job = self._find_job(job_id)
         if job is None:
-            print(f'Not found: {id!r}')
+            print(f'Not found: {job_id}')
             raise SystemExit(1)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
-    def test_job(self, id: str) -> None:
-        job = self._get_job(id)
+    def test_job(self, job_id: Union[str, int]) -> None:
+        job = self._get_job(job_id)
 
         if isinstance(job, UrlJob):
             # Force re-retrieval of job, as we're testing filters
@@ -120,8 +120,8 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
-    def test_diff(self, id: str) -> Optional[int]:
-        job = self._get_job(id)
+    def test_diff(self, job_id: str) -> Optional[int]:
+        job = self._get_job(job_id)
 
         history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid())
         history_data = sorted(history_data.items(), key=lambda kv: kv[1])
@@ -132,8 +132,8 @@ class UrlwatchCommand:
 
         for i in range(len(history_data) - 1):
             with JobState(self.urlwatcher.cache_storage, job) as job_state:
-                job_state.old_data, job_state.timestamp = history_data[i]
-                job_state.new_data, job_state.current_timestamp = history_data[i + 1]
+                job_state.old_data, job_state.old_timestamp = history_data[i]
+                job_state.new_data, job_state.new_timestamp = history_data[i + 1]
                 print(f'=== Filtered diff between state {i} and state {i + 1} ===')
                 print(job_state.get_diff())
 
@@ -145,28 +145,27 @@ class UrlwatchCommand:
         print(f'Jobs, if any, with errors or returning no data after filtering in "{self.urlwatch_config.jobs}":\n')
         jobs = [job.with_defaults(self.urlwatcher.config_storage.config)
                 for job in self.urlwatcher.jobs]
-        for idx, job in enumerate(jobs):
-            job.idx = idx
+        for job in jobs:
             # Force re-retrieval of job, as we're testing for errors
             job.ignore_cached = True
         with contextlib.ExitStack() as exit_stack:
             for job_state in (run_parallel(
-                lambda job_state: job_state.process(),
+                lambda jobstate: jobstate.process(),
                 (exit_stack.enter_context(JobState(self.urlwatcher.cache_storage, job))  # type: ignore
                  for job in jobs)
             )):
                 if job_state.exception is not None:
-                    print(f'{job_state.job.idx + 1: 3}: {job_state.exception.args[0]}')
+                    print(f'{job_state.job.index_number:3}: Error: {job_state.exception.args[0]}')
                 elif len(job_state.new_data.strip()) == 0:
                     if self.urlwatch_config.verbose:
-                        print(f'{job_state.job.idx + 1: 3}: No data: {repr(job_state.job)}')
+                        print(f'{job_state.job.index_number:3}: No data: {repr(job_state.job)}')
                     else:
                         pretty_name = job_state.job.pretty_name()
                         location = job_state.job.get_location()
                         if pretty_name != location:
-                            print(f'{job_state.job.idx + 1: 3}: No data: {pretty_name} ( {location} )')
+                            print(f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})')
                         else:
-                            print(f'{job_state.job.idx + 1: 3}: No data: {pretty_name}')
+                            print(f'{job_state.job.index_number:3}: No data: {pretty_name}')
 
         end = timeit.default_timer()
         duration = (end - start)
@@ -266,7 +265,7 @@ class UrlwatchCommand:
             headers = ('Chat ID', 'Name')
             maxchat = max(len(headers[0]), max((len(k) for k, v in chats.items()), default=0))
             maxname = max(len(headers[1]), max((len(v) for k, v in chats.items()), default=0))
-            fmt = '%-' + str(maxchat) + 's  %s'
+            fmt = f'%-{maxchat}s  %s'
             print(fmt % headers)
             print(fmt % ('-' * maxchat, '-' * maxname))
             for k, v in sorted(chats.items(), key=lambda kv: kv[1]):
@@ -292,8 +291,8 @@ class UrlwatchCommand:
 
         report = Report(self.urlwatcher)
 
-        def build_job(name, url, old, new):
-            job = JobBase.unserialize({'name': name, 'url': url})
+        def build_job(job_name: str, url: str, old: str, new: str) -> JobState:
+            job = JobBase.unserialize({'name': job_name, 'url': url})
 
             # Can pass in None as cache_storage, as we are not
             # going to load or save the job state for testing;
@@ -306,7 +305,7 @@ class UrlwatchCommand:
 
             return job_state
 
-        def set_error(job_state, message):
+        def set_error(job_state: 'JobState', message: str) -> JobState:
             try:
                 raise ValueError(message)
             except ValueError as e:

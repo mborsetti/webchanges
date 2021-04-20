@@ -1,4 +1,4 @@
-"""tests filters based on a set of patterns"""
+"""Test filters based on a set of patterns."""
 
 import importlib.util
 import logging
@@ -70,19 +70,23 @@ def test_filters(test_name, test_data):
 
 
 def test_invalid_filter_name_raises_valueerror():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list(['afilternamethatdoesnotexist']))
+    assert str(pytest_wrapped_e.value) == 'Unknown filter kind: afilternamethatdoesnotexist (subfilter {})'
 
 
 def test_providing_subfilter_to_filter_without_subfilter_raises_valueerror():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list([{'beautify': {'asubfilterthatdoesnotexist': True}}]))
+    assert str(pytest_wrapped_e.value) == 'No subfilters supported for beautify'
 
 
 def test_providing_unknown_subfilter_raises_valueerror():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list([{'keep_lines_containing': {'re': 'Price: .*',
                                                                           'anothersubfilter': '42'}}]))
+    assert ("Filter keep_lines_containing does not support subfilter(s): {'anothersubfilter'} (supported:" in str(
+        pytest_wrapped_e.value))
 
 
 def test_shellpipe_inherits_environment_but_does_not_modify_it():
@@ -113,5 +117,5 @@ def test_deprecated_filters():
 
 class FakeJob():
 
-    def get_location(self):
+    def get_indexed_location(self):
         return ''

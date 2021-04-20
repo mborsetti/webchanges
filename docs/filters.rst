@@ -87,7 +87,7 @@ At the moment, the following filters are available:
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
   - :ref:`re.sub`: Replace or remove text matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
-  - :ref:`strip`: Strip leading and trailing whitespace (entire document, not line-by-line)
+  - :ref:`strip`: Strip leading and/or trailing whitespace or specified characters (entire document, not line-by-line)
   - :ref:`sort`: Sort lines
   - :ref:`reverse`: Reverse the order of items (lines)
 
@@ -353,11 +353,11 @@ follows:
 ^^^^^^^^^^^^^^
 A simple HTML/XML tag stripper based on applying a regex.  Very fast but may not yield the prettiest results.
 
-`Changed in version 3.0:` method renamed to ``strip_tags`` from ``re``.
+`Changed in version 3.0:` Method renamed to ``strip_tags`` from ``re``.
 
-`Changed in version 3.0:` filter defaults to the use of Python ``html2text`` package.
+`Changed in version 3.0:` Filter defaults to the use of Python ``html2text`` package.
 
-`Removed in version 3.0:` method ``lynx`` requiring external OS-specific dependency.
+`Removed in version 3.0:` Method ``lynx`` requiring external OS-specific dependency.
 
 .. _beautify:
 
@@ -647,7 +647,7 @@ Optional sub-directives
 * ``re``: Match the the Python `regular
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
 
-`Changed in version 3.0`: renamed from ``grep``.
+`Changed in version 3.0:` renamed from ``grep``.
 
 
 
@@ -687,7 +687,7 @@ Optional sub-directives
 * ``re``: Match the the Python `regular
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
 
-`Changed in version 3.0`: renamed from ``grepi``.
+`Changed in version 3.0:` renamed from ``grepi``.
 
 
 
@@ -749,34 +749,36 @@ Optional sub-directives
 
 strip
 -----
-This filter removes leading and trailing whitespace.  Unlike many other filters, this filter is applied to the entire
-document and is **not** applied line-by line (use :ref:`strip_each_line`)
+This filter removes leading and trailing whitespace or specified characters.
 
 .. code-block:: yaml
 
-   name: "Stripping leading and trailing whitespace test"
+   name: "Strip leading and trailing whitespace from entire returned data"
    url: https://example.com/strip.html
    filter:
      - strip:
 
 
-
-.. _strip_each_line:
-
-strip_each_line
----------------
-This filter removes leading and trailing whitespace.  Unlike many other filters, this filter is applied to the entire
-document and is **not** applied line-by line.
-
 .. code-block:: yaml
 
-   name: "Stripping leading and trailing whitespace test"
-   url: https://example.com/strip_each_line.html
+   name: "Strip trailing comma from each line"
+   url: https://example.com/strip_by_line.html
    filter:
-     - strip_each_line:
+     - strip:
+         chars: ','
+         side: right
+         splitlines: true
 
 
-`New in version 3.3.`
+Optional sub-directives
+"""""""""""""""""""""""
+* ``chars`` (default): A string specifying the set of characters to be removed instead of the default whitespace
+* ``side``: For one-sided removal: either ``left`` (strip only leading whitespace or matching characters)
+  or ``right`` (strip only trailing whitespace or matching characters)
+* ``splitlines``: Apply the filter on each line of text (true/false) (default: false, apply to the entire data as a
+  block)
+
+`Changed in version 3.5:` Added optional sub-directives
 
 
 .. _sort:

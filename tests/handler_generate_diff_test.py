@@ -1,4 +1,5 @@
-"""test the generation of various types of diffs"""
+"""Test the generation of various types of diffs."""
+
 import os
 
 from webchanges.handler import JobState
@@ -8,7 +9,7 @@ from webchanges.storage import CacheDirStorage
 here = os.path.dirname(__file__)
 cache_storage = CacheDirStorage(os.path.join(here, 'data'))
 job_state = JobState(cache_storage, ShellJob(command=''))
-job_state.timestamp = 0
+job_state.old_timestamp = 0
 
 
 def test_generate_diff_normal():
@@ -34,6 +35,17 @@ def test_generate_diff_additions_only():
     assert diff.splitlines()[2:] == expected
 
 
+def test_generate_diff_additions_only_new_lines():
+    """change of new empty lines with "additions" comparison_filter"""
+    job_state.old_data = 'a\nb'
+    job_state.new_data = 'a\n\nb\n'
+    job_state.job.additions_only = True
+    job_state.verb = 'changed'
+    diff = job_state._generate_diff()
+    assert not diff
+    assert job_state.verb == 'changed,no_report'
+
+
 def test_generate_diff_deletions_only():
     """changed line with "deletions" comparison_filter"""
     job_state.old_data = 'a\n'
@@ -45,6 +57,18 @@ def test_generate_diff_deletions_only():
                 '-a']
     diff = job_state._generate_diff()
     assert diff.splitlines()[2:] == expected
+
+
+def test_generate_diff_deletions_only_only_removed_lines():
+    """changed line with "deletions" comparison_filter"""
+    job_state.old_data = 'a\n\nb\n'
+    job_state.new_data = 'a\nb'
+    job_state.job.additions_only = False
+    job_state.job.deletions_only = True
+    job_state.verb = 'changed'
+    diff = job_state._generate_diff()
+    assert not diff
+    assert job_state.verb == 'changed,no_report'
 
 
 def test_generate_diff_additions_only_75pct_deleted():

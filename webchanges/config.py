@@ -18,6 +18,7 @@ class BaseConfig(object):
         self.cache = cache
         self.hooks = hooks
         self.verbose = verbose
+        self.log_level = 'DEBUG'
         self.list: bool = False
         self.test_job: Optional[str] = None
         self.test_diff: Optional[str] = None
@@ -68,8 +69,9 @@ class CommandConfig(BaseConfig):
                                          formatter_class=argparse.RawDescriptionHelpFormatter)
         parser.add_argument('-V', '--version', action='version', version=f'{project.__project_name__}'
                                                                          f' {project.__version__}')
-        parser.add_argument('-v', '--verbose', action='store_true', help='show debug output')
-
+        parser.add_argument('-v', '--verbose', action='store_true', help='show logging output')
+        parser.add_argument('--log-level', default='DEBUG', choices=('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'),
+                            help='level of logging output if -v is selected (default: %(default)s)')
         group = parser.add_argument_group('override file defaults')
         group.add_argument('--jobs', '--urls', dest='jobs', metavar='FILE',
                            help='read job list (URLs) from FILE', default=self.jobs)
