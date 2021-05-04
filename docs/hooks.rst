@@ -1,3 +1,8 @@
+.. **** IMPORTANT ****
+   All code here is automatically tested. See test/docs_hooks_test.py (the code), test/data/doc_hooks_jobs.yaml
+   (the test jobs, with unique URLs) and test/data/doc_hooks_testdata.yaml (the "before" and "after" data).
+   This ensures that all examples work now and in the future.
+
 .. _hooks:
 
 =================
