@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >NUL
 
 REM Windows batch file to deploy new release
 
@@ -26,7 +27,7 @@ if %r% EQU n exit /b
 set /p r=Are you in the unreleased branch? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
-set /p r=Did you update CHANGELOG.rst by replacing `Unreleased` with today's date`? [N/y] || set r=n
+set /p r=Did you update CHANGELOG.rst by replacing 'Unreleased' with today's date`? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
 set /p r=Did you copy the release info from CHANGELOG.rst to RELEASE.rst and updated the wishlist? [N/y] || set r=n
@@ -38,7 +39,7 @@ if %r% EQU n exit /b
 set /p v=Do you want to bump by prekind (i.e. from rc → released) or major, minor or patch version? [prekind] || set ^
   v=prekind
 echo.
-bump2version --verbose --dry-run--commit --tag --no-sign-tags %v%
+bump2version --verbose --dry-run --commit --tag --no-sign-tags %v%
 if NOT ["%errorlevel%"]==["0"] (
     pause
     exit /b %errorlevel%
