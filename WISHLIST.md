@@ -4,6 +4,5 @@
   - [ ] Increase line coverage
 - [ ] Document code
   - [ ] Docstrings
-- [ ] Considering queuing failed (undelivered) reports
 - [ ] Figure out what to do with `--add JOB` and `--delete JOB`
 - [ ] Simplify main Urlwatcher class

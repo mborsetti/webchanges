@@ -10,54 +10,54 @@ from webchanges.reporters import HtmlReporter, TextReporter
 
 
 class CustomLoginJob(UrlJob):
-   """Custom login for my webpage."""
+    """Custom login for my webpage."""
 
-   __kind__ = 'custom-login'
-   __required__ = ('username', 'password')
+    __kind__ = 'custom-login'
+    __required__ = ('username', 'password')
 
-   def retrieve(self, job_state: JobState) -> str:
-       ...  # custom code here
-       return f'Would log in to {self.url} with {self.username} and {self.password}\n'
+    def retrieve(self, job_state: JobState) -> str:
+        ...  # custom code here
+        return f'Would log in to {self.url} with {self.username} and {self.password}\n'
 
 
 class CaseFilter(FilterBase):
-   """Custom filter for changing case, needs to be selected manually."""
+    """Custom filter for changing case, needs to be selected manually."""
 
-   __kind__ = 'case'
+    __kind__ = 'case'
 
-   __supported_subfilters__ = {
-     'upper': 'Upper case (default)',
-     'lower': 'Lower case'
-   }
+    __supported_subfilters__ = {
+        'upper': 'Upper case (default)',
+        'lower': 'Lower case'
+    }
 
-   __default_subfilter__ = 'upper'
+    __default_subfilter__ = 'upper'
 
-   def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
 
-       if not subfilter or subfilter.get('upper'):
-           return data.upper()
-       elif subfilter.get('lower'):
-           return data.lower()
-       else:
-           raise ValueError(f'Unknown case subfilter {subfilter}')
+        if not subfilter or subfilter.get('upper'):
+            return data.upper()
+        elif subfilter.get('lower'):
+            return data.lower()
+        else:
+            raise ValueError(f'Unknown case subfilter {subfilter}')
 
 
 class IndentFilter(FilterBase):
-   """Custom filter for indenting, needs to be selected manually."""
+    """Custom filter for indenting, needs to be selected manually."""
 
-   __kind__ = 'indent'
+    __kind__ = 'indent'
 
-   __supported_subfilters__ = {
-     'indent': 'Number of spaces to indent (default 8)'
-   }
+    __supported_subfilters__ = {
+        'indent': 'Number of spaces to indent (default 8)'
+    }
 
-   __default_subfilter__ = 'indent'
+    __default_subfilter__ = 'indent'
 
-   def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
 
-       indent = int(subfilter.get('indent', 8))
+        indent = int(subfilter.get('indent', 8))
 
-       return '\n'.join((' ' * indent) + line for line in data.splitlines())
+        return '\n'.join((' ' * indent) + line for line in data.splitlines())
 
 
 class CustomMatchUrlFilter(AutoMatchFilter):
