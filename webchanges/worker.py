@@ -32,7 +32,7 @@ def run_jobs(urlwatcher: 'Urlwatch') -> None:
 
     logger.debug(f'Processing {len(jobs)} jobs')
     with ExitStack() as stack:
-        max_workers = max(1, min(32, os.cpu_count() - 1)) if any(type(job) == BrowserJob for job in jobs) else None
+        max_workers = min(32, os.cpu_count()) if any(type(job) == BrowserJob for job in jobs) else None
         logger.debug(f'Max_workers set to {max_workers}')
         for job_state in run_parallel(
             lambda job_state: job_state.process(),
@@ -66,7 +66,7 @@ def run_jobs(urlwatcher: 'Urlwatch') -> None:
                 else:
                     logger.debug(f'Job {job_state.job.index_number}: Job finished with no exceptions')
             elif job_state.old_data is not None or job_state.old_timestamp is not None:
-                # We have already run this job
+                # This is not the first time running this job (we have snapshots)
                 if job_state.old_timestamp:
                     if job_state.new_data == job_state.old_data:
                         if job_state.tries > 0:
@@ -96,7 +96,7 @@ def run_jobs(urlwatcher: 'Urlwatch') -> None:
                         job_state.save()
                         report.changed(job_state)
             else:
-                # We have never run this job before
+                # We have never run this job before (there are no snapshots)
                 job_state.tries = 0
                 job_state.save()
                 report.new(job_state)

@@ -14,18 +14,19 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * PATCH version when you make backwards compatible bug fixes
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.5.0.rc0'
+__version__ = '3.5.0.rc1'
 __min_python_version__ = (3, 6)  # minimum version of Python required to run
 __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'
 __license__ = 'MIT, BSD 3-Clause License'
 __url__ = f'https://pypi.org/project/{__project_name__}/'
+__docs_url__ = f'https://{__project_name__}.readthedocs.io/en/stable/'
 __user_agent__ = f'{__project_name__}/{__version__} (+{__url__})'
 
-from typing import Any, Dict
+from typing import Dict, Union
 
 
-def init_data() -> Dict[str, Any]:
+def init_data() -> Dict[str, Union[str, tuple]]:
     """Returns dict of globals, including __version__ (used in testing)
 
     :return: dict of globals()

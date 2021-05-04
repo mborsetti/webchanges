@@ -5,8 +5,8 @@ branch = True
 source = webchanges
 omit =
     .tox/*
-    tests/*
     docs/*
+    tests/*
     setup.py
     webchanges.py
     webchanges/jobs_browser.py

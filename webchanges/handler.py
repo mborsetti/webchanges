@@ -66,12 +66,14 @@ class JobState(object):
             logger.warning(f'Job {self.job.index_number}: Exception while releasing resources for job', exc_info=True)
 
     def load(self) -> None:
+        """Loads new data for the job."""
         guid = self.job.get_guid()
         self.old_data, self.old_timestamp, self.tries, self.old_etag = self.cache_storage.load(guid)
         if self.job.compared_versions and self.job.compared_versions > 1:
             self.history_data = self.cache_storage.get_history_data(guid, self.job.compared_versions)
 
     def save(self) -> None:
+        """Saves any new data already loaded for the job."""
         if self.new_data is None and self.exception is not None:
             # If no new data has been retrieved due to an exception, reuse the old job data
             self.new_data = self.old_data
@@ -80,6 +82,7 @@ class JobState(object):
         self.cache_storage.save(self.job.get_guid(), self.new_data, self.new_timestamp, self.tries, self.new_etag)
 
     def process(self) -> 'JobState':
+        """Processes the job: loads it and handles exceptions."""
         logger.info(f'Job {self.job.index_number}: Processing job {self.job}')
 
         if self.exception:
@@ -123,6 +126,7 @@ class JobState(object):
         return self
 
     def get_diff(self) -> str:
+        """Generates the job's diff and applies diff_filters."""
         if self._generated_diff is None:
             self._generated_diff = self._generate_diff()
             # Apply any specified diff filters
@@ -132,6 +136,7 @@ class JobState(object):
         return self._generated_diff
 
     def _generate_diff(self) -> Union[str, bool, None]:
+        """Generates the job's diff."""
         if self.job.diff_tool is not None:
             with tempfile.TemporaryDirectory() as tmpdir:
                 old_file_path = os.path.join(tmpdir, 'old_file')
@@ -140,9 +145,9 @@ class JobState(object):
                     old_file.write(self.old_data.encode())
                     new_file.write(self.new_data.encode())
                 cmdline = shlex.split(self.job.diff_tool) + [old_file_path, new_file_path]
-                proc = subprocess.run(shlex.split(cmdline), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                proc = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Python 3.7
-                # proc = subprocess.run(shlex.split(cmdline), capture_output=True, text=True)
+                # proc = subprocess.run(cmdline, capture_output=True, text=True)
                 # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
                 if proc.returncode == 0:
                     return False

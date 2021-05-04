@@ -156,6 +156,14 @@ For all ``url`` jobs:
 - ``user_visible_url``: Use this text in reports (e.g. when watched URL is a REST API endpoint but you want to link to
   the webpage instead). `New in version 3.0.3.`
 - ``note``: Information added under the header in reports. `New in version 3.2.`
+- ``ignore_connection_errors``: Ignore (temporary) connection errors (true/false) (see :ref:`here <ignore_errors>`).
+  `Changed in version 3.5:` Works with all ``url`` jobs.
+- ``ignore_timeout_errors``: Do not report errors when the timeout is hit (true/false) (see :ref:`here
+  <ignore_errors>`). `Changed in version 3.5:` Works with all ``url`` jobs.
+- ``ignore_too_many_redirects``: Ignore redirect loops (true/false) (see :ref:`here <ignore_errors>`). `Changed in
+  version 3.5:` Works with all ``url`` jobs.
+- ``ignore_http_error_codes``: List of HTTP errors to ignore (see :ref:`here <ignore_errors>`). `Changed in version
+  3.5:` Works with all ``url`` jobs.
 
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
@@ -168,10 +176,6 @@ For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 - ``ssl_no_verify``: Do not verify SSL certificates (true/false) (see :ref:`here <ssl_no_verify>`)
 - ``ignore_cached``: Do not use cache control (ETag/Last-Modified) values (true/false)
 - ``encoding``: Override the character encoding from the server (see :ref:`here <encoding>`)
-- ``ignore_connection_errors``: Ignore (temporary) connection errors (true/false) (see :ref:`here <ignore_errors>`)
-- ``ignore_http_error_codes``: List of HTTP errors to ignore (see :ref:`here <ignore_errors>`)
-- ``ignore_timeout_errors``: Do not report errors when the timeout is hit (true/false) (see :ref:`here <ignore_errors>`)
-- ``ignore_too_many_redirects``: Ignore redirect loops (true/false) (see :ref:`here <ignore_errors>`)
 
 For ``url`` jobs that have ``use_browser: true``:
 

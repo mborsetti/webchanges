@@ -5,7 +5,7 @@ import os
 import pytest
 
 from webchanges import __project_name__ as project_name
-from webchanges.cli import migrate_from_urlwatch
+from webchanges.cli import locate_storage_file, migrate_from_urlwatch, setup_logger_verbose
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
@@ -130,42 +130,43 @@ def test_test_job():
 
 
 def test_test_diff():
-    jobs_file2 = os.path.join(here, 'data', 'jobs-time.yaml')
-    jobs_storage2 = YamlJobsStorage(jobs_file2)
-    command_config2 = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file2, hooks_file,
-                                    cache_file, verbose=False)
-    urlwatcher2 = Urlwatch(command_config2, config_storage, cache_storage, jobs_storage2)  # main.py
+    jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
+    jobs_storage = YamlJobsStorage(jobs_file)
+    command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
+                                   cache_file, verbose=False)
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
 
-    setattr(command_config2, 'test_diff', 1)
-    urlwatch_command = UrlwatchCommand(urlwatcher2)
+    setattr(command_config, 'test_diff', 1)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config2, 'test_diff', None)
+    setattr(command_config, 'test_diff', None)
     assert pytest_wrapped_e.value.code == 1
 
-    job = urlwatcher2.jobs[0]
+    job = urlwatcher.jobs[0]
     if os.name == 'nt':
         job.command = 'echo %time%'
     job.filter = []
     guid = job.get_guid()
 
     # run once
-    urlwatcher2.run_jobs()
+    urlwatcher.run_jobs()
     cache_storage.close()
     cache_storage.__init__(cache_file)
 
     # run twice
-    urlwatcher2.run_jobs()
+    urlwatcher.run_jobs()
     cache_storage.close()
     cache_storage.__init__(cache_file)
     history = cache_storage.get_history_data(guid)
     assert len(history) == 2
 
-    setattr(command_config2, 'test_diff', 1)
-    urlwatch_command = UrlwatchCommand(urlwatcher2)
+    setattr(command_config, 'test_diff', 1)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config2, 'test_diff', None)
+    setattr(command_config, 'test_diff', None)
+    urlwatcher.cache_storage.delete(job.get_guid())
     assert pytest_wrapped_e.value.code is None
 
 
@@ -190,6 +191,47 @@ def test_modify_urls():
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete', None)
     assert pytest_wrapped_e.value.code is None
+
+
+def test_delete_snapshot():
+    jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
+    jobs_storage = YamlJobsStorage(jobs_file)
+    command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
+                                   cache_file, verbose=False)
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+
+    setattr(command_config, 'delete_snapshot', True)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'delete_snapshot', False)
+    assert pytest_wrapped_e.value.code == 'No snapshots found to be deleted'
+
+    job = urlwatcher.jobs[0]
+    if os.name == 'nt':
+        job.command = 'echo %time%'
+    job.filter = []
+    guid = job.get_guid()
+
+    # run once
+    urlwatcher.run_jobs()
+    cache_storage.close()
+    cache_storage.__init__(cache_file)
+
+    # run twice
+    urlwatcher.run_jobs()
+    cache_storage.close()
+    cache_storage.__init__(cache_file)
+    history = cache_storage.get_history_data(guid)
+    assert len(history) == 2
+
+    setattr(command_config, 'delete_snapshot', True)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'delete_snapshot', False)
+    urlwatcher.cache_storage.delete(job.get_guid())
+    assert pytest_wrapped_e.value.code == 0
 
 
 def test_gc_cache():
@@ -301,3 +343,12 @@ def cleanup(request):
                 os.remove(filename)
 
     request.addfinalizer(finalizer)
+
+
+def test_setup_logger_verbose():
+    setup_logger_verbose()
+
+
+def test_locate_storage_file():
+    file = locate_storage_file('test', 'nowhere', '.noext')
+    assert file == 'test'

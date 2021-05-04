@@ -19,7 +19,7 @@ from warnings import warn
 import requests
 from markdown2 import Markdown
 
-import webchanges as project
+from . import __project_name__, __url__, __version__
 from .jobs import JobBase
 from .mailer import SMTPMailer, SendmailMailer
 from .util import TrackSubClasses, chunk_string, linkify
@@ -126,7 +126,7 @@ class HtmlReporter(ReporterBase):
             <!DOCTYPE html>
             <html>
             <head>
-            <title>{project.__project_name__} report</title>
+            <title>{__project_name__} report</title>
             <meta http-equiv="content-type" content="text/html; charset=utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             </head>
@@ -153,8 +153,8 @@ class HtmlReporter(ReporterBase):
         yield (f"""
             <div style="font-style:italic">
             Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}
-            seconds with <a href="{html.escape(project.__url__)}">
-            {html.escape(project.__project_name__)}</a></address> {html.escape(project.__version__)}
+            seconds with <a href="{html.escape(__url__)}">
+            {html.escape(__project_name__)}</a></address> {html.escape(__version__)}
             </div>
             </body>
             </html>""")
@@ -227,7 +227,7 @@ class HtmlReporter(ReporterBase):
                              else ' style="color:darkred"')
                 elif line[0] == '@':  # unified_diff section header
                     style = ' style="background-color:#fbfbfb"'
-                elif line[0] == '/':  # informational header added by webchanges
+                elif line[0] == '/':  # informational header added by additions_only or deletions_only filters
                     style = ' style="background-color:lightyellow"'
                 else:
                     style = ''
@@ -318,7 +318,7 @@ class TextReporter(ReporterBase):
         if summary and show_footer:
             duration = round(self.duration, max(0, 1 - floor(log10(self.duration))))
             yield (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-                   f' seconds with {project.__project_name__} {project.__version__}')
+                   f' seconds with {__project_name__} {__version__}')
 
     def _format_content(self, job_state: 'JobState') -> Optional[str]:
         if job_state.verb == 'error':
@@ -390,7 +390,7 @@ class MarkdownReporter(ReporterBase):
         if summary and show_footer:
             duration = round(self.duration, max(0, 1 - floor(log10(self.duration))))
             footer = (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in"
-                      f' {duration} seconds with {project.__project_name__} {project.__version__}')
+                      f' {duration} seconds with {__project_name__} {__version__}')
         else:
             footer = None
 
@@ -603,14 +603,13 @@ class StdoutReporter(TextReporter):
         body = '\n'.join(super().submit())
 
         if any(diff_tool.startswith('wdiff') for diff_tool in
-               [job_state.job.diff_tool for job_state in self.job_states if job_state.job.diff_tool]):
+               (job_state.job.diff_tool for job_state in self.job_states if job_state.job.diff_tool)):
             # wdiff colorization
             body = re.sub(r'[{][+].*?[+][}]', lambda x: self._green(x.group(0)), body, flags=re.DOTALL)
             body = re.sub(r'[\[][-].*?[-][]]', lambda x: self._red(x.group(0)), body, flags=re.DOTALL)
             separators = (*separators, '-' * 36)
 
         for line in body.splitlines():
-            # FIXME: This isn't ideal, but works for now...
             if line in separators:
                 print(line)
             elif line.startswith('+'):
@@ -633,19 +632,19 @@ class EMailReporter(TextReporter):
     __kind__ = 'email'
 
     def submit(self) -> None:
-        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
-
-        subject_args = {
-            'count': len(filtered_job_states),
-            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
-        }
-        subject = self.config['subject'].format(**subject_args)
 
         body_text = '\n'.join(super().submit())
 
         if not body_text:
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
+
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        subject_args = {
+            'count': len(filtered_job_states),
+            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
+        }
+        subject = self.config['subject'].format(**subject_args)
 
         if self.config['method'] == 'smtp':
             smtp_user = self.config['smtp'].get('user', None) or self.config['from']
@@ -698,14 +697,14 @@ class WebServiceReporter(TextReporter):
         raise NotImplementedError
 
     def submit(self) -> None:
-        body_text = '\n'.join(super().submit())
+        text = '\n'.join(super().submit())
 
-        if not body_text:
+        if not text:
             logger.debug(f'Not sending {self.__kind__} (no changes)')
             return
 
-        if len(body_text) > self.MAX_LENGTH:
-            body_text = body_text[:self.MAX_LENGTH]
+        if len(text) > self.MAX_LENGTH:
+            text = text[:self.MAX_LENGTH]
 
         try:
             service = self.web_service_get()
@@ -713,7 +712,7 @@ class WebServiceReporter(TextReporter):
             raise RuntimeError(f'Failed to load or connect to {self.__kind__} - are the dependencies installed and '
                                'configured?') from e
 
-        self.web_service_submit(service, 'Website Change Detected', body_text)
+        self.web_service_submit(service, 'Website Change Detected', text)
 
 
 class PushoverReport(WebServiceReporter):
@@ -779,19 +778,19 @@ class MailGunReporter(TextReporter):
         if region != '':
             region = f'.{region}'
 
-        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
-        subject_args = {
-            'count': len(filtered_job_states),
-            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
-        }
-        subject = self.config['subject'].format(**subject_args)
-
         body_text = '\n'.join(super().submit())
         body_html = '\n'.join(self.convert(HtmlReporter).submit())
 
         if not body_text:
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
+
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        subject_args = {
+            'count': len(filtered_job_states),
+            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
+        }
+        subject = self.config['subject'].format(**subject_args)
 
         logger.debug(f"Sending Mailgun request for domain:'{domain}'")
         result = requests.post(
@@ -1139,7 +1138,7 @@ class ProwlReporter(TextReporter):
         if application is not None:
             application = application.format(**subject_args)
         else:
-            application = f'{project.__project_name__} v{project.__version__}'
+            application = f'{__project_name__} v{__version__}'
 
         # build the data to post
         post_data = {

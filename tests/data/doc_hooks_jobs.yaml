@@ -1,0 +1,14 @@
+# Jobs for test cases for hooks.rst used by docs_hooks_test.py
+# Each heading is a unique pseudo-url
+# Ensure you use a Unicode character (e.g. ™ / &trade) in your example (both input and output) to test that too!
+url: https://example.org/case
+filter:
+  - case:
+---
+url: https://example.org/indent
+filter:
+  - indent:
+---
+url: https://example.org/
+---
+url: https://example.org/.foobar

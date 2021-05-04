@@ -4,14 +4,17 @@
 Reporters
 =========
 By default `webchanges` prints out information about changes to the data collected to standard output (``stdout``),
-which is your terminal if you run it interactively. If running via `cron` or another scheduler service, the destination
-of this output depends on the scheduler and its configuration.
+which is your terminal if you run it interactively (If running via `cron` or another scheduler service, the
+destination of this output depends on the scheduler and its configuration).
 
-You can change the settings to add or change where the report is sent to.  Settings are contained in the configuration
-file ``webchanges.yaml``, a text file located in the ``~\.urwatch\`` directory (Linux) or in a ``webchanges`` folder
-within your Documents folder, i.e. ``%USERPROFILE%/Documents/webchanges`` (Windows) and editable using any text editor
-or with the command ``webchanges --edit--config``.  The configuration for the reporters will be listed under the
-``reporters`` section.
+You can change the settings to change or add to where the report is sent to.  Settings are contained in the
+configuration file ``config.yaml``, a text file located in the ``~/.config/webchanges`` directory for Linux or MacOS,
+or in the ``webchanges`` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
+Windows, and is editable using any text editor or with the command ``webchanges --edit--config``.  The configuration
+for the reporters will be listed under the ``reporters`` section.
+
+.. note::
+   The ``config.yaml`` file is created at the first run of ``webchanges --edit`` or ``webchanges --edit--config``.
 
 Tip: to test a reporter, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.::
 
@@ -49,7 +52,7 @@ At the moment, the following reporters are available
 Each reporter has a directive called ``enabled`` that can be toggled (true/false).
 
 
-Please note that many reporters need additional Python packages installed to work, as noted below and in
+Please note that many reporters need the installation of additional Python packages to work, as noted below and in
 :ref:`dependencies`.
 
 

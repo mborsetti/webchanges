@@ -1,5 +1,5 @@
 appdirs
-colorama;os_name=="nt"
+colorama; os_name == "nt"
 cssselect
 html2text
 lxml

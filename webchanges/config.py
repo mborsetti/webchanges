@@ -3,7 +3,7 @@
 import argparse
 from typing import Optional
 
-import webchanges as project
+from . import __doc__, __project_name__, __version__
 
 
 class BaseConfig(object):
@@ -35,6 +35,7 @@ class BaseConfig(object):
         self.gc_cache: bool = False
         self.clean_cache: bool = False
         self.rollback_cache: Optional[int] = None
+        self.delete_snapshot: Optional[str] = None
         self.database_engine: str = 'sqlite3'
         self.max_snapshots: int = 4
         self.features: bool = False
@@ -64,36 +65,34 @@ class CommandConfig(BaseConfig):
 
     def parse_args(self) -> argparse.ArgumentParser:
         """Python arguments parser."""
-        parser = argparse.ArgumentParser(description=project.__doc__.replace('\n\n', '--par--').replace('\n', ' ')
+        parser = argparse.ArgumentParser(description=__doc__.replace('\n\n', '--par--').replace('\n', ' ')
                                          .replace('--par--', '\n\n'),
                                          formatter_class=argparse.RawDescriptionHelpFormatter)
-        parser.add_argument('-V', '--version', action='version', version=f'{project.__project_name__}'
-                                                                         f' {project.__version__}')
+        parser.add_argument('-V', '--version', action='version', version=f'{__project_name__} {__version__}')
         parser.add_argument('-v', '--verbose', action='store_true', help='show logging output')
 
         group = parser.add_argument_group('override file defaults')
-        group.add_argument('--jobs', '--urls', dest='jobs', metavar='FILE',
-                           help='read job list (URLs) from FILE', default=self.jobs)
-        group.add_argument('--config', metavar='FILE', help='read configuration from FILE', default=self.config)
-        group.add_argument('--hooks', metavar='FILE', help='use FILE as hooks.py module', default=self.hooks)
-        group.add_argument('--cache', metavar='FILE', help=('use FILE as cache (snapshots database) or directory, '
-                                                            'alternatively can accept a redis URI'), default=self.cache)
-
-        group = parser.add_argument_group('job management')
-        group.add_argument('--list', action='store_true', help='list jobs')
+        group.add_argument('--jobs', '--urls', default=self.jobs, help='read job list (URLs) from FILE',
+                           metavar='FILE', dest='jobs')
+        group.add_argument('--config', default=self.config, help='read configuration from FILE', metavar='FILE')
+        group.add_argument('--hooks', default=self.hooks, help='use FILE as hooks.py module', metavar='FILE')
+        group.add_argument('--cache', default=self.cache,
+                           help='use FILE as cache (snapshots database) or directory, alternatively a redis URI',
+                           metavar='FILE')
+        group.add_argument('--list', action='store_true', help='list jobs and their index number')
         group.add_argument('--errors', action='store_true', help='list jobs with errors or no data captured')
-        group.add_argument('--test', '--test-filter', dest='test_job', metavar='JOB',
-                           help='test a job (by index or URL/command) and show filtered output')
-        group.add_argument('--test-diff', '--test-diff-filter', dest='test_diff', metavar='JOB',
-                           help='show up to 10 diffs from saved snapshots (by URL/command or index)')
-        group.add_argument('--add', metavar='JOB', help='add job (key1=value1,key2=value2,...). WARNING: all remarks '
-                                                        'are deleted from jobs file; use --edit instead!')
-        group.add_argument('--delete', metavar='JOB',
-                           help='delete job by URL/command or index number. WARNING: all remarks are deleted from jobs '
-                                'file; use --edit instead!')
-
+        group.add_argument('--test', '--test-filter',
+                           help='test a job (by index or URL/command) and show filtered output', metavar='JOB',
+                           dest='test_job')
+        group.add_argument('--test-diff', '--test-diff-filter',
+                           help='test and show diff using existing saved snapshots of a job (by index or URL/command)',
+                           metavar='JOB', dest='test_diff')
+        group.add_argument('--add', help='add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from '
+                                         'jobs file; use --edit instead!', metavar='JOB')
+        group.add_argument('--delete', help='delete job by URL/command or index number. WARNING: all remarks are '
+                                            'deleted from jobs file; use --edit instead!', metavar='JOB')
         group = parser.add_argument_group('reporters')
-        group.add_argument('--test-reporter', metavar='REPORTER', help='send a test notification')
+        group.add_argument('--test-reporter', help='send a test notification', metavar='REPORTER')
         group.add_argument('--smtp-login', action='store_true',
                            help='verify SMTP login credentials with server and, if stored in keyring, enter or check '
                                 'password')
@@ -114,7 +113,9 @@ class CommandConfig(BaseConfig):
         group.add_argument('--rollback-cache', type=int,
                            help='delete recent snapshots > timestamp; backup the database before using!',
                            metavar='TIMESTAMP')
-        group.add_argument('--database-engine', choices=['sqlite3', 'redis', 'minidb', 'textfiles'], default='sqlite3',
+        group.add_argument('--delete-snapshot', help='delete the last saved snapshot of job (URL/command)',
+                           metavar='JOB')
+        group.add_argument('--database-engine', default='sqlite3', choices=['sqlite3', 'redis', 'minidb', 'textfiles'],
                            help='database engine to use (default: %(default)s unless redis URI in --cache)')
         group.add_argument('--max-snapshots', default=4, type=int,
                            help='maximum number of snapshots to retain in sqlite3 database (default: %(default)s) '

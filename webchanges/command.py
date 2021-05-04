@@ -124,17 +124,18 @@ class UrlwatchCommand:
         job = self._get_job(job_id)
 
         history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid())
-        history_data = sorted(history_data.items(), key=lambda kv: kv[1])
+        history_data = list(history_data.items())
 
-        if len(history_data) < 2:
+        num_snapshots = len(history_data)
+        if num_snapshots < 2:
             print('Not enough historic data available (need at least 2 different snapshots)')
             return 1
 
-        for i in range(len(history_data) - 1):
+        for i in range(num_snapshots - 1):
             with JobState(self.urlwatcher.cache_storage, job) as job_state:
-                job_state.old_data, job_state.old_timestamp = history_data[i]
-                job_state.new_data, job_state.new_timestamp = history_data[i + 1]
-                print(f'=== Filtered diff between state {i} and state {i + 1} ===')
+                job_state.old_data, job_state.old_timestamp = history_data[i + 1]
+                job_state.new_data, job_state.new_timestamp = history_data[i]
+                print(f'=== Filtered diff between state {-i} and state {-(i + 1)} ===')
                 print(job_state.get_diff())
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
@@ -175,6 +176,15 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
 
+    def delete_snapshot(self, job_id: Union[str, int]) -> None:
+        job = self._get_job(job_id)
+
+        deleted = self.urlwatcher.cache_storage.delete_latest(job.get_guid())
+        if deleted:
+            sys.exit(0)
+        else:
+            sys.exit('No snapshots found to be deleted')
+
     def modify_urls(self) -> None:
         save = True
         if self.urlwatch_config.delete is not None:
@@ -213,6 +223,8 @@ class UrlwatchCommand:
             self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
             self.urlwatcher.cache_storage.close()
             sys.exit(0)
+        if self.urlwatch_config.delete_snapshot:
+            sys.exit(self.delete_snapshot(self.urlwatch_config.delete_snapshot))
         if self.urlwatch_config.rollback_cache is not None:
             self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
             self.urlwatcher.cache_storage.close()

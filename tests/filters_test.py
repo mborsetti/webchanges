@@ -46,6 +46,12 @@ def test_normalize_filter_list(input, output):
 FILTER_TESTS = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), 'data/filter_tests.yaml'), 'r'))
 
 
+class FakeJob():
+
+    def get_indexed_location(self):
+        return ''
+
+
 @pytest.mark.parametrize('test_name, test_data', FILTER_TESTS.items())
 def test_filters(test_name, test_data):
     filter = test_data['filter']
@@ -64,8 +70,8 @@ def test_filters(test_name, test_data):
             raise ValueError('Unknown filter kind: {filter_kind}:{subfilter}')
         result = filtercls(FakeJob(), None).filter(result, subfilter)
 
-    logger.debug('Expected result:\n%s', expected_result)
-    logger.debug('Actual result:\n%s', result)
+    logger.debug(f'Expected result:\n{expected_result}')
+    logger.debug(f'Actual result:\n{result}')
     assert result == expected_result.rstrip()
 
 
@@ -113,9 +119,3 @@ def test_deprecated_filters():
 
     filtercls = FilterBase.__subclasses__.get('grepi')
     assert filtercls(FakeJob(), None).filter('a\nb', {'text': 'b'}) == 'a'
-
-
-class FakeJob():
-
-    def get_indexed_location(self):
-        return ''

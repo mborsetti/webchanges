@@ -13,7 +13,7 @@ import warnings
 from abc import ABCMeta
 from enum import Enum
 from html.parser import HTMLParser
-from typing import Any, AnyStr, Dict, Iterator, List, Optional, TYPE_CHECKING, Tuple, Type, Union
+from typing import Any, AnyStr, Dict, Iterator, List, Optional, TYPE_CHECKING, Tuple, Union
 from xml.dom import minidom
 
 import html2text
@@ -101,6 +101,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
         for filtercls in filters:
             filter_instance = filtercls(state.job, state)
+            print()
             if filter_instance.match():
                 logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
                 data = filter_instance.filter(data, None)  # all filters take a subfilter
@@ -166,15 +167,14 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def process(cls, filter_kind: str, subfilter: Dict[str, Any], state: 'JobState',
-                data: AnyStr) -> Type['FilterBase']:
+                data: AnyStr) -> AnyStr:
         logger.info(f'Job {state.job.index_number}: Applying filter {filter_kind}, subfilter {subfilter}')
         filtercls = cls.__subclasses__.get(filter_kind, None)
         return filtercls(state.job, state).filter(data, subfilter)
 
     @classmethod
     def filter_chain_needs_bytes(cls, filter: Union[str, List[Union[str, Dict[str, Any]]]]) -> bool:
-        # If the first filter is a bytes filter, return content in bytes instead of
-        # in Unicode as that's what's required by the library used by that filter
+        """Returns True if the first filter requires data in bytes (not Unicode)."""
         first_filter = next(cls.normalize_filter_list(filter), None)
         if first_filter is not None:
             filter_kind, subfilter = first_filter
@@ -184,8 +184,8 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def is_bytes_filter_kind(cls, filter_kind: str) -> bool:
-        return (filter_kind in [name for name, class_ in cls.__subclasses__.items()
-                                if getattr(class_, '__uses_bytes__', False)])
+        return (filter_kind in (name for name, class_ in cls.__subclasses__.items()
+                                if getattr(class_, '__uses_bytes__', False)))
 
     def match(self) -> bool:
         return False
@@ -204,7 +204,7 @@ class AutoMatchFilter(FilterBase):
 
         d = self.job.to_dict()
         result = all(d.get(k, None) == v for k, v in self.MATCH.items())
-        logger.debug(f'Matching {self!r} with {self.job!r} result: {result!r}')
+        logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
 
@@ -222,7 +222,7 @@ class RegexMatchFilter(FilterBase):
         # and no key/value pairs that do not match
         matches = [v.match(d[k]) for k, v in self.MATCH.items() if k in d]
         result = len(matches) > 0 and all(matches)
-        logger.debug(f'Matching {self!r} with {self.job!r} result: {result!r}')
+        logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
 

@@ -1,11 +1,8 @@
-coverage
 docutils
-jq;os_name!="nt"
+jq; os_name != "nt"
 minidb
-pre-commit
 pyppeteer
 pytest
 pytest-cov
-setuptools
 sphinx
 sphinx_rtd_theme

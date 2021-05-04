@@ -28,8 +28,7 @@ except ImportError:
 
 import yaml
 
-import webchanges as project
-
+from . import __docs_url__, __project_name__
 from .filters import FilterBase
 from .jobs import JobBase, ShellJob, UrlJob
 from .util import edit_file
@@ -71,7 +70,7 @@ DEFAULT_CONFIG = {
 
         'browser': {  # the system's default browser
             'enabled': False,
-            'title': f'[{project.__project_name__}] {{count}} changes: {{jobs}}',
+            'title': f'[{__project_name__}] {{count}} changes: {{jobs}}',
         },
 
         'email': {  # email (except mailgun)
@@ -79,7 +78,7 @@ DEFAULT_CONFIG = {
             'html': True,
             'to': '',
             'from': '',
-            'subject': f'[{project.__project_name__}] {{count}} changes: {{jobs}}',
+            'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
             'method': 'smtp',  # either 'smtp' or 'sendmail'
             'smtp': {
                 'host': 'localhost',
@@ -134,7 +133,7 @@ DEFAULT_CONFIG = {
             'from_mail': '',
             'from_name': '',
             'to': '',
-            'subject': f'[{project.__project_name__}] {{count}} changes: {{jobs}}',
+            'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
         },
         'ifttt': {
             'enabled': False,
@@ -151,7 +150,7 @@ DEFAULT_CONFIG = {
             'api_key': '',
             'priority': 0,
             'application': '',
-            'subject': f'[{project.__project_name__}] {{count}} changes: {{jobs}}',
+            'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
         },
     },
 
@@ -253,6 +252,8 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
         self.filename = filename
 
     def shelljob_security_checks(self) -> List[str]:
+        """Check security of jobs file and its directory, i.e. that they belong to the current UID and only the owner
+        can write to. Return list of errors if any. Linux only."""
 
         if os.name == 'nt':
             return []
@@ -291,12 +292,10 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
 
             return False
 
-        # Security checks for shell jobs - only execute if the current UID
-        # is the same as the file/directory owner and only owner can write
         shelljob_errors = self.shelljob_security_checks()
         if shelljob_errors and any(is_shell_job(job) for job in jobs):
             print(f"Removing 'command' job(s) because {' and '.join(shelljob_errors)} (see "
-                  f'https://webchanges.readthedocs.io/en/stable/jobs.html#important-note-for-command-jobs)')
+                  f'{__docs_url__}jobs.html#important-note-for-command-jobs)')
             jobs = [job for job in jobs if not is_shell_job(job)]
 
         return jobs
@@ -340,6 +339,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
     def save(self, *args) -> None:
         with open(self.filename, 'w') as fp:
+            fp.write(f'# {__project_name__} configuration file. See '
+                     f'{__docs_url__}configuration.html\n')
             yaml.safe_dump(self.config, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 
@@ -404,11 +405,15 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str], *args) -> None:
+    def save(self, guid: str, data: str, timestamp: float, tries: int, etag: Optional[str], **args) -> None:
         ...
 
     @abstractmethod
     def delete(self, guid: str) -> None:
+        ...
+
+    @abstractmethod
+    def delete_latest(self, guid: str) -> None:
         ...
 
     @abstractmethod
@@ -528,6 +533,12 @@ class CacheDirStorage(CacheStorage):
         filename = self._get_filename(guid)
         if os.path.exists(filename):
             os.unlink(filename)
+
+    def delete_latest(self, guid: str) -> int:
+        filename = self._get_filename(guid)
+        if os.path.exists(filename):
+            os.unlink(filename)
+            return 1
 
     def clean(self, guid: str) -> None:
         """We only store the latest version, no need to clean"""
@@ -769,9 +780,30 @@ class CacheSQLite3Storage(CacheStorage):
             self._execute('DELETE FROM webchanges WHERE uuid = ?', (guid,))
             self.db.commit()
 
+    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
+        """For the given 'guid', delete only the latest 'delete_entries' number of entries and keep all other (older)
+        ones.
+
+        :param guid: The guid
+        :param delete_entries: Number of most recent entries to delete
+
+        :returns: Number of records deleted
+        """
+        with self.lock:
+            self._execute('DELETE FROM webchanges '
+                          'WHERE ROWID IN ( '
+                          '    SELECT ROWID FROM webchanges '
+                          '    WHERE uuid = ? '
+                          '    ORDER BY timestamp DESC '
+                          '    LIMIT ? '
+                          ')', (guid, delete_entries))
+            num_del = self._execute('SELECT changes()').fetchone()[0]
+            self.db.commit()
+        return num_del
+
     def clean(self, guid: str, keep_entries: int = 1) -> int:
         """For the given 'guid', keep only the latest 'keep_entries' number of entries and delete all other (older)
-        ones. To older entries from all guids, use clean_all() instead.
+        ones. To delete older entries from all guids, use clean_all() instead.
 
         :param guid: The guid
         :param keep_entries: Number of entries to keep after deletion
@@ -931,6 +963,9 @@ class CacheRedisStorage(CacheStorage):
 
     def delete(self, guid: str) -> None:
         self.db.delete(self._make_key(guid))
+
+    def delete_latest(self, guid: str) -> None:
+        raise NotImplementedError("Deleting of latest snapshot no supported by 'redis' database engine")
 
     def clean(self, guid: str) -> int:
         key = self._make_key(guid)

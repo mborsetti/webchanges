@@ -18,16 +18,16 @@ Command line arguments
                           read job list (URLs) from FILE
     --config FILE         read configuration from FILE
     --hooks FILE          use FILE as hooks.py module
-    --cache FILE          use FILE as a cache (snapshots database) or directory, alternatively can
-                          accept a redis URI
+    --cache FILE          use FILE as a cache (snapshots database) or directory, alternatively a redis
+                          URI
 
   job management:
-    --list                list jobs
+    --list                list jobs and their index number
     --errors              list jobs with errors or no data captured
     --test JOB, --test-filter JOB
                           test a job (by index or URL/command) and show filtered output
     --test-diff JOB, --test-diff-filter JOB
-                          show up to 10 diffs from saved snapshots (by URL/command or index)
+                          test and show diff using existing saved snapshots of a job (by index or URL/command)
     --add JOB             add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from
                           jobs file; use --edit instead!
     --delete JOB          delete job by URL/command or index number. WARNING: all remarks are deleted
@@ -52,6 +52,8 @@ Command line arguments
     --clean-cache         remove old snapshots from the cache database
     --rollback-cache TIMESTAMP
                           delete recent snapshots > timestamp; backup the database before using!
+    --delete-snapshot JOB
+                          delete the last saved snapshot of job (URL/command)
     --database-engine {sqlite3,redis,minidb,textfiles}
                           database engine to use (default: sqlite3 unless redis URI in --cache)
     --max-snapshots NUM_SNAPSHOTS
@@ -70,6 +72,8 @@ You can run all jobs and see those that result in an error or who, after filteri
 `webchanges` with the ``--error`` argument. This can help with detecting jobs that may no longer be monitoring resources
 as expected. No snapshots are saved from this run.
 
+.. _test:
+
 Test run a job
 --------------
 You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
@@ -85,6 +89,22 @@ saved; obviously a minimum of 2 saved snapshots are required. This allows you to
 retrieve historical diffs (changes).
 
 `Changed in version 3.3: will now display all snapshots instead of only the latest 10`
+
+.. _delete-snapshot:
+
+Delete the latest saved snapshot
+--------------------------------
+You can delete the latest saved snapshot of a job by running `webchanges` with the ``--delete-snapshot`` argument
+followed by the job index number (from ``--list``) or its URL/command. This is extremely useful when a website
+is redesigned and your filters behave in unexpected ways (for example, by capturing nothing):
+
+* Update your filters to once again capture the content you're monitoring
+* Test it running `webchanges` with the ``test`` command line argument (see :ref:`here <test>`)
+* Delete the latest job's snapshot
+* Run `webchanges` again; this time the diff report will contain useful information on whether any content has changed
+
+`New in version 3.5.`
+
 
 .. _rollback-cache:
 

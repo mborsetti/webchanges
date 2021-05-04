@@ -37,7 +37,7 @@ jobs:
 
       # Run pre-commit cache per https://github.com/pre-commit/action
       - name: Run pre-commit
-        uses: pre-commit/action@v2.0.2
+        uses: pre-commit/action@v2.0.3
 
   test:
     name: "Test (${{ matrix.python-version }}, ${{ matrix.os }})"
@@ -196,7 +196,6 @@ jobs:
       # Only building wheel; otherwise run 'python setup.py sdist bdist_wheel'
       - name: Build dist
         run: |
-          python -m pip install -U -r requirements_deploy.txt
           python setup.py bdist_wheel
 
       # PyPI publish GitHub Action from https://github.com/pypa/gh-action-pypi-publish

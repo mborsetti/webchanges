@@ -72,7 +72,7 @@ SETUP = {
     'python_requires': f'>={".".join(str(v) for v in project.__min_python_version__)}',
     'project_urls': {'Bug Tracker': f'{project.__url__.rstrip("//")}/issues',
                      'CI': f'{project.__url__.rstrip("//")}/actions',
-                     'Documentation': f'https://{project.__project_name__}.readthedocs.io',
+                     'Documentation': project.__docs_url__,
                      'Source Code': project.__url__}
 }
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))

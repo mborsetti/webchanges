@@ -86,6 +86,9 @@ class CacheMiniDBStorage(CacheStorage):
         self.CacheEntry.delete_where(self.db, self.CacheEntry.c.guid == guid)
         self.db.commit()
 
+    def delete_latest(self, guid: str) -> None:
+        raise NotImplementedError("Deleting of latest snapshot no supported by 'minidb' database engine")
+
     def clean(self, guid: str):
         keep_id = next((self.CacheEntry.query(self.db, self.CacheEntry.c.id, where=self.CacheEntry.c.guid == guid,
                                               order_by=self.CacheEntry.c.timestamp.desc, limit=1)), (None,))[0]

@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import textwrap
+from http.client import responses as response_names
 from typing import Any, AnyStr, Dict, List, Optional, TYPE_CHECKING, Tuple, Type, Union
 from urllib.parse import urldefrag, urlsplit
 
@@ -36,20 +37,33 @@ DEFAULT_CHROMIUM_REVISION = {
 }
 
 
+class NotModifiedError(Exception):
+    """Exception raised on HTTP 304 responses."""
+    ...
+
+
+class BrowserResponseError(Exception):
+    """Exception for use_browser: true jobs with error HTTP response code."""
+
+    def __init__(self, args: tuple, status_code: int) -> None:
+        Exception.__init__(self)
+        self.args = args
+        self.status_code = status_code
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
+                f'{response_names[self.status_code]}')
+
+
 class ShellError(Exception):
     """Exception for shell commands with non-zero exit code."""
 
-    def __init__(self, result) -> None:
+    def __init__(self, result: int) -> None:
         Exception.__init__(self)
         self.result = result
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}: Exit status {self.result}'
-
-
-class NotModifiedError(Exception):
-    """Exception raised on HTTP 304 responses."""
-    ...
 
 
 class JobBase(object, metaclass=TrackSubClasses):
@@ -252,7 +266,8 @@ class Job(JobBase):
     __required__ = ()
     __optional__ = ('index_number', 'name', 'note', 'additions_only', 'compared_versions', 'contextlines',
                     'deletions_only', 'diff_filter', 'diff_tool', 'filter', 'markdown_padded_tables', 'max_tries',
-                    'is_markdown')
+                    'is_markdown', 'ignore_connection_errors', 'ignore_http_error_codes', 'ignore_timeout_errors',
+                    'ignore_too_many_redirects')
 
     def get_indexed_location(self) -> str:
         return f'Job {self.index_number}: {self.get_location()}'
@@ -271,9 +286,7 @@ class UrlJob(Job):
 
     __required__ = ('url',)
     __optional__ = ('cookies', 'data', 'encoding', 'headers', 'http_proxy', 'https_proxy', 'ignore_cached',
-                    'ignore_connection_errors', 'ignore_http_error_codes', 'ignore_timeout_errors',
-                    'ignore_too_many_redirects', 'method', 'no_redirects', 'ssl_no_verify', 'timeout',
-                    'user_visible_url')
+                    'method', 'no_redirects', 'ssl_no_verify', 'timeout', 'user_visible_url')
 
     def get_location(self) -> str:
         return self.user_visible_url or self.url
@@ -379,7 +392,7 @@ class UrlJob(Job):
         Adds custom request headers from the job list (URLs) to the pre-filled dictionary `headers`.
         Pre-filled values of conflicting header keys (case-insensitive) are overwritten by custom value.
         """
-        headers_to_remove = [x for x in headers if x.lower() in [y.lower() for y in self.headers]]
+        headers_to_remove = (x for x in headers if x.lower() in (y.lower() for y in self.headers))
         for header in headers_to_remove:
             headers.pop(header, None)
         headers.update(self.headers)
@@ -390,14 +403,14 @@ class UrlJob(Job):
             return str(exception)
         return tb
 
-    def ignore_error(self, exception: Exception) -> bool:
+    def ignore_error(self, exception: Exception) -> Union[bool, str]:
         if isinstance(exception, requests.exceptions.ConnectionError) and self.ignore_connection_errors:
             return True
         if isinstance(exception, requests.exceptions.Timeout) and self.ignore_timeout_errors:
             return True
         if isinstance(exception, requests.exceptions.TooManyRedirects) and self.ignore_too_many_redirects:
             return True
-        elif isinstance(exception, requests.exceptions.HTTPError):
+        elif isinstance(exception, requests.exceptions.HTTPError) and self.ignore_http_error_codes:
             status_code = exception.response.status_code
             ignored_codes = []
             if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
@@ -490,26 +503,29 @@ class BrowserJob(Job):
                      f"PYPPETEER_NO_PROGRESS_BAR={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}, "
                      f"PYPPETEER_DOWNLOAD_HOST={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}")
         try:
-            from pyppeteer import launch  # must be imported after setting os.environ variables
+            from pyppeteer import launch  # pyppeteer must be imported after setting os.environ variables
         except ImportError:
             raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
                               f' ( {self.get_indexed_location()} )')
+        from pyppeteer.errors import PageError
 
         headers = self.headers if self.headers else {}
-        if self.ignore_cached or job_state.tries > 0:
-            headers.pop('If-None-Match', None)
-            headers['If-Modified-Since'] = email.utils.formatdate(0)
-            headers['Cache-Control'] = 'max-age=172800'
-            headers['Expires'] = email.utils.formatdate()
-        else:
-            # ETag sending does not work on Chromium 90 and causes page.goto to return the error
-            # PageError('net::ERR_ABORTED [...]').
-            # Keeping code here for future use.
-            # if job_state.old_etag:
-            #     # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
-            #     headers['If-None-Match'] = job_state.old_etag
-            if job_state.old_timestamp is not None:
-                headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
+
+        # Setting of 'If-None-Match' or 'If-Modified-Since' headers can trigger a 'net::ERR_ABORTED [...]'
+        # browsing error that is returned by page.goto as a PageError(); cannot find a workable way to determine whether
+        # it's due to an HTTP 304 Not Modified code (goto) or something else (bad) as PageError only passes the text,
+        # not the full response.  Keeping code here for future ETag handling development.
+        # if self.ignore_cached or job_state.tries > 0:
+        #     headers.pop('If-None-Match', None)
+        #     headers['If-Modified-Since'] = email.utils.formatdate(0)
+        #     headers['Cache-Control'] = 'max-age=172800'
+        #     headers['Expires'] = email.utils.formatdate()
+        # else:
+        #     if job_state.old_etag:
+        #         # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
+        #         headers['If-None-Match'] = job_state.old_etag
+        #     if job_state.old_timestamp is not None:
+        #         headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
 
         args = []
         proxy = ''
@@ -535,12 +551,13 @@ class BrowserJob(Job):
         # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
         browser = await launch(ignoreHTTPSErrors=self.ignore_https_errors, args=args, handleSIGINT=False,
                                handleSIGTERM=False, handleSIGHUP=False, loop=asyncio.get_running_loop())
+        logger.debug(f'Job {self.index_number}: Launched browser with args={args}')
 
         # browse to page and get content
         page = await browser.newPage()
 
         if headers:
-            logger.debug(f'Job {self.index_number}: headers={headers}')
+            logger.debug(f'Job {self.index_number}: setExtraHTTPHeaders={headers}')
             await page.setExtraHTTPHeaders(headers)
         if self.cookies:
             await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
@@ -549,6 +566,8 @@ class BrowserJob(Job):
             proxy_password = urlsplit(proxy).password if urlsplit(proxy).password else ''
             if proxy_username or proxy_password:
                 await page.authenticate({'username': proxy_username, 'password': proxy_password})
+                logger.debug(f'Job {self.index_number}: Set page.authenticate with username={proxy_username}, '
+                             f'password={proxy_password}')
         options = {}
         if self.timeout:
             options['timeout'] = self.timeout * 1000
@@ -592,30 +611,39 @@ class BrowserJob(Job):
                 handle_request(request_event, self.block_elements)))  # inherited from pyee.EventEmitter
 
         async def store_etag(response_event):
-            """Store the etag for future use.
-            For future Etag development, keeping code in below to capture response_code to check for 304 Not Modified"""
+            """Store the ETag for future use as well as the response code."""
             nonlocal etag
-            # nonlocal response_code
+            nonlocal response_code
             logger.debug(f'Job {self.index_number}: response.status={response_event.status} '
                          f'response.url={response_event.url}')
             if urldefrag(response_event.url)[0] == urldefrag(self.url)[0]:
-                # response_code = response_event.status
+                response_code = response_event.status
                 if response_event.status == requests.codes.ok:
                     etag = response_event.headers.get('etag')
 
         etag: Optional[str] = None
-        # response_code: Optional[int] = None
+        response_code: Optional[int] = None
 
         # page.on inherited from pyee's EventEmitter class
         # https://pyee.readthedocs.io/en/latest/#pyee.EventEmitter
         page.on('response', lambda response_event: asyncio.create_task(store_etag(response_event)))
 
-        await page.goto(self.url, options=options)
+        try:
+            logger.debug(f'Job {self.index_number}: page.goto options={options}')
+            await page.goto(self.url, options=options)
+        except PageError as e:
+            logger.debug(f'Job {self.index_number}: Page returned error {str(e.args)}')
+            await browser.close()
+            if response_code and 400 <= response_code < 600:
+                raise BrowserResponseError(e.args, response_code)
+            else:
+                raise PageError(e)
 
-        # For future Etag development, keeping below code to trigger NotModifiedError if 304 Not Modified
-        # page_reponse = await page.goto(self.url, options=options)
-        # if not request_reponse and response_code == requests.codes.not_modified:
-        #     logger.debug(f'Job {self.index_number}: page_response={page_reponse}; response_code={response_code}')
+        # For future ETag handling development, the code in remarks below triggers NotModifiedError if HTTP 304 Not
+        # Modified is returned
+        # page_response = await page.goto(self.url, options=options)
+        # if not request_response and response_code == requests.codes.not_modified:
+        #     logger.debug(f'Job {self.index_number}: page_response={page_response}; response_code={response_code}')
         #     await browser.close()
         #     raise NotModifiedError(response_code)
 
@@ -631,7 +659,112 @@ class BrowserJob(Job):
         content = await page.content()
         await browser.close()
 
+        if response_code and 400 <= response_code < 600:
+            raise BrowserResponseError('', response_code)
+        elif response_code is not None and response_code != requests.codes.ok:
+            logger.info(f'Job {self.index_number}: Received response HTTP {self.status_code} '
+                        f'{response_names[self.status_code]}')
+
         return content, etag
+
+    def ignore_error(self, exception: Exception) -> Union[bool, str]:
+        from pyppeteer.errors import PageError  # pyppeteer must be imported after setting os.environ variables
+
+        if isinstance(exception, PageError):
+            # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
+            CHROMIUM_CONNECTION_ERRORS = [  # range 100-199 Connection related errors
+                'CONNECTION_CLOSED',
+                'CONNECTION_RESET',
+                'CONNECTION_REFUSED',
+                'CONNECTION_ABORTED',
+                'CONNECTION_FAILED',
+                'NAME_NOT_RESOLVED',
+                'INTERNET_DISCONNECTED',
+                'SSL_PROTOCOL_ERROR',
+                'ADDRESS_INVALID',
+                'ADDRESS_UNREACHABLE',
+                'SSL_CLIENT_AUTH_CERT_NEEDED',
+                'TUNNEL_CONNECTION_FAILED',
+                'NO_SSL_VERSIONS_ENABLED',
+                'SSL_VERSION_OR_CIPHER_MISMATCH',
+                'SSL_RENEGOTIATION_REQUESTED',
+                'PROXY_AUTH_UNSUPPORTED',
+                'CERT_ERROR_IN_SSL_RENEGOTIATION',
+                'BAD_SSL_CLIENT_AUTH_CERT',
+                'CONNECTION_TIMED_OUT',
+                'HOST_RESOLVER_QUEUE_TOO_LARGE',
+                'SOCKS_CONNECTION_FAILED',
+                'SOCKS_CONNECTION_HOST_UNREACHABLE',
+                'ALPN_NEGOTIATION_FAILED',
+                'SSL_NO_RENEGOTIATION',
+                'WINSOCK_UNEXPECTED_WRITTEN_BYTES',
+                'SSL_DECOMPRESSION_FAILURE_ALERT',
+                'SSL_BAD_RECORD_MAC_ALERT',
+                'PROXY_AUTH_REQUESTED',
+                'PROXY_CONNECTION_FAILED',
+                'MANDATORY_PROXY_CONFIGURATION_FAILED',
+                'PRECONNECT_MAX_SOCKET_LIMIT',
+                'SSL_CLIENT_AUTH_PRIVATE_KEY_ACCESS_DENIED',
+                'SSL_CLIENT_AUTH_CERT_NO_PRIVATE_KEY',
+                'PROXY_CERTIFICATE_INVALID',
+                'NAME_RESOLUTION_FAILED',
+                'NETWORK_ACCESS_DENIED',
+                'TEMPORARILY_THROTTLED',
+                'HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT',
+                'SSL_CLIENT_AUTH_SIGNATURE_FAILED',
+                'MSG_TOO_BIG',
+                'WS_PROTOCOL_ERROR',
+                'ADDRESS_IN_USE',
+                'SSL_HANDSHAKE_NOT_COMPLETED',
+                'SSL_BAD_PEER_PUBLIC_KEY',
+                'SSL_PINNED_KEY_NOT_IN_CERT_CHAIN',
+                'CLIENT_AUTH_CERT_TYPE_UNSUPPORTED',
+                'SSL_DECRYPT_ERROR_ALERT',
+                'WS_THROTTLE_QUEUE_TOO_LARGE',
+                'SSL_SERVER_CERT_CHANGED',
+                'SSL_UNRECOGNIZED_NAME_ALERT',
+                'SOCKET_SET_RECEIVE_BUFFER_SIZE_ERROR',
+                'SOCKET_SET_SEND_BUFFER_SIZE_ERROR',
+                'SOCKET_RECEIVE_BUFFER_SIZE_UNCHANGEABLE',
+                'SOCKET_SEND_BUFFER_SIZE_UNCHANGEABLE',
+                'SSL_CLIENT_AUTH_CERT_BAD_FORMAT',
+                'ICANN_NAME_COLLISION',
+                'SSL_SERVER_CERT_BAD_FORMAT',
+                'CT_STH_PARSING_FAILED',
+                'CT_STH_INCOMPLETE',
+                'UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH',
+                'CT_CONSISTENCY_PROOF_PARSING_FAILED',
+                'SSL_OBSOLETE_CIPHER',
+                'WS_UPGRADE',
+                'READ_IF_READY_NOT_IMPLEMENTED',
+                'NO_BUFFER_SPACE',
+                'SSL_CLIENT_AUTH_NO_COMMON_ALGORITHMS',
+                'EARLY_DATA_REJECTED',
+                'WRONG_VERSION_ON_EARLY_DATA',
+                'TLS13_DOWNGRADE_DETECTED',
+                'SSL_KEY_USAGE_INCOMPATIBLE',
+            ]
+
+            if self.ignore_connection_errors:
+                if any(str(exception.args[0]) == f'net::ERR_{error}' for error in CHROMIUM_CONNECTION_ERRORS):
+                    return True
+            if self.ignore_timeout_errors:
+                if str(exception.args[0]) == 'net::ERR_TIMED_OUT':
+                    return True
+            if self.ignore_too_many_redirects:
+                if str(exception.args[0]) == 'net::ERR_TOO_MANY_REDIRECTS':
+                    return True
+        elif isinstance(exception, BrowserResponseError) and self.ignore_http_error_codes:
+            status_code = exception.status_code
+            ignored_codes = []
+            if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
+                return True
+            elif isinstance(self.ignore_http_error_codes, str):
+                ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
+            elif isinstance(self.ignore_http_error_codes, list):
+                ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
+            return str(status_code) in ignored_codes or f'{(status_code // 100) in ignored_codes}xx'
+        return False
 
 
 class ShellJob(Job):

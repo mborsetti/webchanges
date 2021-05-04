@@ -2,7 +2,7 @@
 
 """Module containing the entry point."""
 
-# See config module for the actual CLI arguments
+# See config module for the command line arguments
 
 import logging
 import os.path
@@ -14,24 +14,22 @@ from typing import Optional, Union
 
 from appdirs import AppDirs
 
-from . import __copyright__, __min_python_version__, __version__
+from . import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
 from .command import UrlwatchCommand
 from .config import CommandConfig
 from .main import Urlwatch
 from .storage import CacheDirStorage, CacheRedisStorage, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
-project_name = __package__
-
 # directory where the config, jobs and hooks files are located
 if os.name != 'nt':
-    # typically ~/.config/{project_name}
-    config_dir = AppDirs(project_name).user_config_dir
+    # typically ~/.config/{__project_name__}
+    config_dir = AppDirs(__project_name__).user_config_dir
 else:
-    config_dir = os.path.expanduser(os.path.join('~', 'Documents', project_name))
+    config_dir = os.path.expanduser(os.path.join('~', 'Documents', __project_name__))
 
 # directory where the database is located
-# typically ~/.cache/{project_name} or %LOCALAPPDATA%\{project_name}\{project_name}\Cache
-cache_dir = AppDirs(project_name).user_cache_dir
+# typically ~/.cache/{__project_name__} or %LOCALAPPDATA%\{__project_name__}\{__project_name__}\Cache
+cache_dir = AppDirs(__project_name__).user_cache_dir
 
 # Ignore SIGPIPE for stdout (see https://github.com/thp/urlwatch/issues/77)
 try:
@@ -40,19 +38,20 @@ except AttributeError:
     # Windows does not have signal.SIGPIPE
     pass
 
-logger = logging.getLogger(project_name)
+logger = logging.getLogger(__name__)
 
 
 def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
     """Set up the loggers for verbosity."""
     import platform
 
+    # logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s', level=log_level)
     console = logging.StreamHandler()
     console.setFormatter(logging.Formatter('%(asctime)s %(module)s %(levelname)s: %(message)s'))
     logger.addHandler(console)
     logger.setLevel(log_level)
-    logger.debug(f'{__package__}: {__version__} {__copyright__}')
-    logger.debug(f'Python: {sys.version}')
+    logger.debug(f'{__project_name__}: {__version__} {__copyright__}')
+    logger.debug(f'Python: {platform.python_build()}')
     logger.debug(f'System: {platform.platform()}')
 
 
@@ -99,7 +98,22 @@ def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cac
         if os.path.isfile(old_file) and not os.path.isfile(new_file):
             os.makedirs(os.path.dirname(new_file), exist_ok=True)
             shutil.copyfile(old_file, new_file)
-            logger.warning(f"Copied urlwatch '{old_file}' file to webchanges '{new_file}'")
+            logger.warning(f"Copied urlwatch '{old_file}' file to {__project_name__} '{new_file}'")
+
+
+def first_run(command_config: CommandConfig) -> None:
+    """Create jobs and configuration files."""
+    os.makedirs(config_dir, exist_ok=True)
+    if not os.path.isfile(command_config.config):
+        YamlConfigStorage.write_default_config(command_config.config)
+        print(f'Created default config file at {command_config.config}\n> Edit it with {__project_name__} '
+              f'--edit-config')
+    if not os.path.isfile(command_config.jobs):
+        with open(command_config.jobs, 'w') as fp:
+            fp.write(f'# {__project_name__} jobs file. See {__docs_url__}jobs.html\n')
+        command_config.edit = True
+        print(f'Created default jobs file at {command_config.jobs}\n> Edit it with {__project_name__} --edit-config '
+              f'(trying to launch it automatically)')
 
 
 def main() -> None:  # pragma: no cover
@@ -117,18 +131,18 @@ def main() -> None:  # pragma: no cover
         PendingDeprecationWarning(warning)
 
     # The config, jobs, hooks and cache files
-    config_file = os.path.join(config_dir, 'config.yaml')
-    jobs_file = os.path.join(config_dir, 'jobs.yaml')
-    hooks_file = os.path.join(config_dir, 'hooks.py')
-    cache_file = os.path.join(cache_dir, 'cache.db')
+    default_config_file = os.path.join(config_dir, 'config.yaml')
+    default_jobs_file = os.path.join(config_dir, 'jobs.yaml')
+    default_hooks_file = os.path.join(config_dir, 'hooks.py')
+    default_cache_file = os.path.join(cache_dir, 'cache.db')
 
     # migrate legacy urlwatch 2.23 files
-    migrate_from_urlwatch(config_file, jobs_file, hooks_file, cache_file)
+    migrate_from_urlwatch(default_config_file, default_jobs_file, default_hooks_file, default_cache_file)
 
     # load config files
     prefix, bindir = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
-    command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
-                                   cache_file, verbose=False)
+    command_config = CommandConfig(__project_name__, config_dir, bindir, prefix, default_config_file, default_jobs_file,
+                                   default_hooks_file, default_cache_file, verbose=False)
 
     # set up the logger to verbose if needed
     if command_config.verbose:
@@ -138,6 +152,10 @@ def main() -> None:  # pragma: no cover
     command_config.config = locate_storage_file(command_config.config, command_config.config_dir, '.yaml')
     command_config.jobs = locate_storage_file(command_config.jobs, command_config.config_dir, '.yaml')
     command_config.hooks = locate_storage_file(command_config.hooks, command_config.config_dir, '.py')
+
+    # check for first run
+    if command_config.config == default_config_file and not os.path.isfile(command_config.config):
+        first_run(command_config)
 
     # setup config file API
     config_storage = YamlConfigStorage(command_config.config)  # storage.py
@@ -152,7 +170,7 @@ def main() -> None:  # pragma: no cover
     elif command_config.database_engine == 'textfiles':
         cache_storage = CacheDirStorage(command_config.cache)  # storage.py
     elif command_config.database_engine == 'minidb':
-        from .storage_minidb import CacheMiniDBStorage  # legacy code imported only if needed
+        from .storage_minidb import CacheMiniDBStorage  # legacy code imported only if needed (requires minidb)
 
         cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
     else:
