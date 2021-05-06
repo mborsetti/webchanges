@@ -35,6 +35,10 @@ Version 3.5.1.post0
 ====================
 Unreleased
 
+Fixed
+-----
+* readthedocs.io failure to not build autodoc API documentation
+
 
 Version 3.5.1
 ====================

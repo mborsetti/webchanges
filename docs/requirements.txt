@@ -1,4 +1,5 @@
 appdirs
+cssselect
 html2text
 lxml
 markdown2
