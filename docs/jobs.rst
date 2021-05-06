@@ -6,8 +6,8 @@ Jobs
 Each job contains the source of the data to be monitored (:ref:`URL <url>` or :ref:`command <command>`) and related
 directives, plus directives on transformations to apply to the data (ref:`filters <filters>`) once retrieved.
 
-The list of jobs is contained in the configuration file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable
-using any text editor or with the command ``webchanges --edit``.
+The list of jobs is contained in the jobs file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable with the
+command ``webchanges --edit`` or using any text editor.
 
 **YAML tips**
 
@@ -102,7 +102,7 @@ unique remark (the # and everything after is discarded by a web server, but capt
 JavaScript rendering
 """"""""""""""""""""
 If you're monitoring a website that requires for its content to be rendered with JavaScript in order to monitor the data
-you are interested in, add the directive ``use_browser: true`` to the job configuration:
+you are interested in, add the directive ``use_browser: true`` to the job:
 
 .. code-block:: yaml
 
@@ -235,10 +235,10 @@ uploader folder, output of scripts that query external devices (RPi GPIO), etc.
 
 Important note for command jobs
 """""""""""""""""""""""""""""""
-When `webchanges` is run in Linux, for security purposes a ``command`` job will only run if the configuration file is
-both owned by the same user running `webchanges` and can **only** be written by such user. To change the ownership and
-the access permissions of the file (i.e. remove write permission for the group and all other users), run the
-following commands:
+When `webchanges` is run in Linux, for security purposes a ``command`` job will only run if the job file is both
+owned by the same user running `webchanges` and can **only** be written by such user. To change the ownership and the
+access permissions of the file (i.e. remove write permission for the group and all other users), run the following
+commands:
 
 .. code-block:: bash
 
@@ -291,4 +291,4 @@ if the job has failed every single time during the span of one hour (5 minutes *
 
 Setting default directives
 """"""""""""""""""""""""""
-See :ref:`job_defaults` for how to configure default directives for all jobs
+See :ref:`job_defaults` for how to set default directives for all jobs

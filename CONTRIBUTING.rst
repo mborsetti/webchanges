@@ -74,8 +74,8 @@ Alternatively, you can manually run the following commands
    pre-commit run -a
    python -m pytest -v
 
-All tests need to pass, and the amount of lines covered by tests should not decrease (please write new or update the
-tests!)
+All tests need to pass, and the amount of lines covered by tests should not decrease (please write new tests or update
+the existing ones to cover your new code!)
 
 Testing documentation
 ~~~~~~~~~~~~~~~~~~~~~

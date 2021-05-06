@@ -21,6 +21,9 @@ title Deploy new release of '%project%' project
 echo Deploy new release of '%project%' project
 echo ==========================================
 echo.
+set /p r=Did you copy the release info from CHANGELOG.rst to RELEASE.rst and updated the wishlist? [N/y] || set r=n
+if %r% EQU N r=n
+if %r% EQU n exit /b
 set /p r=Did you run local tests (tox), commit to unreleased, and ensure CI passed? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
@@ -28,9 +31,6 @@ set /p r=Are you in the unreleased branch? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
 set /p r=Did you update CHANGELOG.rst by replacing 'Unreleased' with today's date`? [N/y] || set r=n
-if %r% EQU N r=n
-if %r% EQU n exit /b
-set /p r=Did you copy the release info from CHANGELOG.rst to RELEASE.rst and updated the wishlist? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
 set /p r=Did you commit all files (other than those that will be modified by bump2version)? [N/y] || set r=n
@@ -55,6 +55,8 @@ echo.
 bump2version --commit --tag --no-sign-tags %v%
 if NOT ["%errorlevel%"]==["0"] (
     echo.
+    echo.
+    echo errorlevel: "%errorlevel%"
     echo make sure to commit all files (other than those that will be modified by bump2version)
     echo before rerunning this script
     pause

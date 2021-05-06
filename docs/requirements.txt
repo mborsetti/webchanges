@@ -1,2 +1,9 @@
-sphinx >= 3.4
+appdirs
+html2text
+lxml
+markdown2
+msgpack
+pyyaml
+requests
+sphinx >= 3.5
 sphinx_rtd_theme

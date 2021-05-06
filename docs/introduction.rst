@@ -19,21 +19,23 @@ Every time you run `webchanges`, it:
 -----------
 Each web source or command to be monitored is a "job".
 
-The instructions for each such job are contained in a config file in the **YAML format** called ``jobs.yaml`` and
-located in the following directory:
+The instructions for each such job are contained in a file in the **YAML format** called ``jobs.yaml`` and located in
+the following directory:
 
 * Linux: ``~/.config/webchanges``
 * MacOS: ``~/Library/Preferences/webchanges``
 * Windows: ``%USERPROFILE%/Documents/webchanges`` (the webchanges folder within your Documents folder)
 
-You can edit it with any text editor or by running:
+It can be edited with any text editor or with:
 
 .. code:: bash
 
    webchanges --edit
 
-See a summary of the YAML syntax :ref:`here <yaml_syntax>`
+(Linux) If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment variable in your
+shell with a command such as ``export EDITOR=nano``.
 
+For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.
 
 The minimum configuration necessary for `webchanges` to work is a single ``url`` directive (for web resources) or
 ``command`` directive (for the output of a shell command):

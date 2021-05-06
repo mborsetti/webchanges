@@ -4,40 +4,29 @@
 Configuration
 =============
 The global configuration for `webchanges` contains basic settings for the generic behavior of `webchanges` as well as
-the :ref:`reporters <reporters>` in **YAML format** called ``config.yaml`` and located in the ``~/.config/webchanges``
-(Linux), ``~/Library/Preferences/webchanges`` (MacOS), or in the ``webchanges`` folder within your Documents folder,
-i.e. ``%USERPROFILE%/Documents/webchanges`` (Windows). You can edit it with any text editor or:
+the :ref:`reporters <reporters>` in **YAML format** called ``config.yaml`` and located in the in the following
+directory:
+
+* Linux: ``~/.config/webchanges``
+* MacOS: ``~/Library/Preferences/webchanges``
+* Windows: ``%USERPROFILE%/Documents/webchanges`` (the webchanges folder within your Documents folder)``
+
+It can be edited with any text editor or with:
 
 .. code:: bash
 
    webchanges --edit-config
 
-
 (Linux) If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment variable in your
 shell with a command such as ``export EDITOR=nano``.
 
-**About YAML special characters**
-
-Certain characters have significance in the YAML format, e.g. certain special characters at the beginning of the line,
-a ``:`` followed by a space, a space followed by ``#``, all sort of brackets, and more. Strings containing these
-characters or sequences need to be enclosed in quotes:
-
-.. code-block:: yaml
-
-   name: This is a human-readable name/label of the job  # and this is a remark
-   name: "This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark"
-   name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
-
-You can learn more about quoting  `here <https://www.yaml.info/learn/quote.html#flow>`__ (note: the library we use
-supports YAML 1.1, and our examples use "flow scalars").  URLs and XPaths are always safe and don't need to be enclosed
-in quotes.
-
+For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.
 
 .. _configuration_display:
 
 Display
 -------
-In addition to always reporting changes (which is the whole point of webchanges), webchanges by default reports
+In addition to always reporting changes (which is the whole point of `webchanges`), `webchanges` by default reports
 newly-added (``new``) pages and errors (``error``). You can change this behavior in the ``display`` section of the
 configuration:
 
@@ -48,7 +37,7 @@ configuration:
      error: true
      unchanged: false
 
-If you set ``unchanged`` to ``true``, webchanges will always report all pages that are checked but have not changed.
+If you set ``unchanged`` to ``true``, `webchanges` will always report all pages that are checked but have not changed.
 
 
 Filter changes are not applied for ``unchanged``
@@ -134,9 +123,9 @@ use a specific Chromium :ref:`revision <chromium_revision>` and certain Chromium
 
 The possible sub-directives to ``job_defaults`` are:
 
-* ``all``: Applies to all your jobs, independent of its kind
-* ``shell``: Applies only to ``shell`` jobs (with directive ``command``)
-* ``url``: Applies only to ``url`` jobs (with directive ``url`` and no ``use_browser``)
-* ``browser``: Applies only to ``url`` jobs with directive ``use_browser`` set to **true**
+* ``all``: Applies to all your jobs, independent of the sub-types below
+* ``shell``: Applies only to jobs with the directive ``command``
+* ``url``: Applies only to jobs with the directive ``url`` without ``use_browser``
+* ``browser``: Applies only to jobs with the directives ``url`` and ``use_browser: true``
 
 See :ref:`jobs <jobs>` about the different job kinds and directives that can be set.

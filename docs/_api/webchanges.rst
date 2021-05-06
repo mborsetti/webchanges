@@ -18,7 +18,6 @@ Submodules
    webchanges.main
    webchanges.reporters
    webchanges.storage
-   webchanges.storage_minidb
    webchanges.util
    webchanges.worker
 

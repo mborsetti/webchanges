@@ -1,4 +1,5 @@
 """Handles all storage: job files, config files, hooks file, and cache database engines."""
+
 import copy
 import getpass
 import logging
@@ -15,6 +16,12 @@ from datetime import datetime
 from typing import Any, Dict, Hashable, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, Type, Union
 
 import msgpack
+import yaml
+
+from . import __docs_url__, __project_name__
+from .filters import FilterBase
+from .jobs import JobBase, ShellJob, UrlJob
+from .util import edit_file
 
 try:
     import pwd
@@ -25,13 +32,6 @@ try:
     import redis
 except ImportError:
     redis = None
-
-import yaml
-
-from . import __docs_url__, __project_name__
-from .filters import FilterBase
-from .jobs import JobBase, ShellJob, UrlJob
-from .util import edit_file
 
 logger = logging.getLogger(__name__)
 

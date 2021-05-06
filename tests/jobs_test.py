@@ -41,7 +41,8 @@ TEST_JOBS = [
       'name': 'testing url basic job',
       'cookies': {'X-test': ''},
       'encoding': 'ascii',  # required for testing Python 3.6 in Windows as it has a tendency of erroring on cp1252
-      'headers': {'Accept-Language': 'en-US,en'},
+      'headers': {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                                'Chrome/90.0.4430.93 Safari/537.36'},
       'ignore_cached': True,
       'ignore_connection_errors': False,
       'ignore_http_error_codes': 200,

@@ -22,7 +22,6 @@ from .storage import CacheStorage
 if TYPE_CHECKING:
     from .main import Urlwatch
 
-
 logger = logging.getLogger(__name__)
 
 

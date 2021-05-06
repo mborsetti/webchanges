@@ -293,7 +293,7 @@ class UrlJob(Job):
 
     def retrieve(self, job_state: 'JobState') -> (AnyStr, str):
         headers = {
-            'User-agent': __user_agent__,
+            'User-Agent': __user_agent__,
         }
 
         proxies = {
@@ -320,7 +320,7 @@ class UrlJob(Job):
         if self.data is not None:
             if self.method is None:
                 self.method = 'POST'
-            headers['Content-type'] = 'application/x-www-form-urlencoded'
+            headers['Content-Type'] = 'application/x-www-form-urlencoded'
             logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
 
         if self.http_proxy is not None:
@@ -392,7 +392,7 @@ class UrlJob(Job):
         Adds custom request headers from the job list (URLs) to the pre-filled dictionary `headers`.
         Pre-filled values of conflicting header keys (case-insensitive) are overwritten by custom value.
         """
-        headers_to_remove = (x for x in headers if x.lower() in (y.lower() for y in self.headers))
+        headers_to_remove = [x for x in headers if x.lower() in (y.lower() for y in self.headers)]
         for header in headers_to_remove:
             headers.pop(header, None)
         headers.update(self.headers)
