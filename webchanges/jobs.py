@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import textwrap
+import warnings
 from http.client import responses as response_names
 from typing import Any, AnyStr, Dict, List, Optional, TYPE_CHECKING, Tuple, Type, Union
 from urllib.parse import urldefrag, urlsplit
@@ -75,79 +76,66 @@ class JobBase(object, metaclass=TrackSubClasses):
     # PyCharm IDE compatibility
     __kind__: str = ''
 
-    url: str = ''
-    command: str = ''
+    index_number: int = 0  # added at job loading
+
+    # __required__ in derived classes
+    url: Optional[str] = ''
+    command: Optional[str] = ''
     use_browser: Optional[bool] = False
 
-    additions_only: Optional[bool] = False
-    block_elements: list = []
-    chromium_revision: Union[Dict[str, Union[str, int]], Union[str, int]] = {}
-    compared_versions: Optional[int] = 0
-    contextlines: Optional[int] = 0
-    cookies: Optional[Dict[str, str]] = {}
-    data: Optional[AnyStr] = ''
-    deletions_only: Optional[bool] = False
-    diff_filter: Optional[str] = ''
-    diff_tool: Optional[str] = ''
-    encoding: Optional[str] = ''
-    filter: Union[str, List[Union[str, Dict[str, Any]]]] = ''
-    headers: Optional[Dict[str, str]] = {}
-    http_proxy: Optional[str] = ''
-    https_proxy: Optional[str] = ''
-    ignore_cached: Optional[bool] = False
-    ignore_connection_errors: Optional[bool] = False
-    ignore_http_error_codes: Optional[bool] = False
-    ignore_https_errors: Optional[bool] = False
-    ignore_timeout_errors: Optional[bool] = False
-    ignore_too_many_redirects: Optional[bool] = False
-    index_number: int = 0
-    is_markdown: Optional[bool] = False
+    # __optional__ in derived classes
+    additions_only: Optional[bool] = None
+    block_elements: Optional[list] = None
+    chromium_revision: Optional[Union[Dict[str, Union[str, int]], Union[str, int]]] = None
+    compared_versions: Optional[int] = None
+    contextlines: Optional[int] = None
+    cookies: Optional[Dict[str, str]] = None
+    data: Optional[AnyStr] = None
+    deletions_only: Optional[bool] = None
+    diff_filter: Optional[str] = None
+    diff_tool: Optional[str] = None
+    encoding: Optional[str] = None
+    filter: Optional[Union[str, List[Union[str, Dict[str, Any]]]]] = None
+    headers: Optional[Dict[str, str]] = None
+    http_proxy: Optional[str] = None
+    https_proxy: Optional[str] = None
+    ignore_cached: Optional[bool] = None
+    ignore_connection_errors: Optional[bool] = None
+    ignore_http_error_codes: Optional[bool] = None
+    ignore_https_errors: Optional[bool] = None
+    ignore_timeout_errors: Optional[bool] = None
+    ignore_too_many_redirects: Optional[bool] = None
+    is_markdown: Optional[bool] = None
     loop: Optional[asyncio.AbstractEventLoop] = None
-    markdown_padded_tables: Optional[bool] = False
-    max_tries: Optional[int] = 0
-    method: Optional[str] = ''
-    name: Optional[str] = ''
-    navigate: str = ''
-    no_redirects: Optional[bool] = False
-    note: Optional[str] = ''
-    ssl_no_verify: Optional[bool] = False
-    switches: List[str] = []
-    timeout: Optional[int] = 0
-    user_data_dir: str = ''
-    user_visible_url: Optional[str] = ''
-    wait_for: Union[int, str] = 0
-    wait_for_navigation: Union[str, Tuple[str, ...]] = ''
-    wait_until: str = ''
-
-    proxy_username: str = ''
-    proxy_password: str = ''
-
-    ctx = None  # Python 3.7
+    markdown_padded_tables: Optional[bool] = None
+    max_tries: Optional[int] = None
+    method: Optional[str] = None
+    name: Optional[str] = None
+    navigate: Optional[str] = None  # backwards compatibility (deprecated)
+    no_redirects: Optional[bool] = None
+    note: Optional[str] = None
+    ssl_no_verify: Optional[bool] = None
+    switches: Optional[List[str]] = None
+    timeout: Optional[int] = None
+    user_data_dir: Optional[str] = None
+    user_visible_url: Optional[str] = None
+    wait_for: Optional[Union[int, str]] = None
+    wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None
+    wait_until: Optional[str] = None
 
     def __init__(self, **kwargs) -> None:
-        # Set optional keys to None
-        for k in self.__optional__:
-            if k not in kwargs:
-                setattr(self, k, None)
-
-        # backwards-compatibility
-        if (self.__kind__ == 'browser' or 'navigate' in kwargs) and 'use_browser' not in kwargs:
-            logger.warning(f"'kind: browser' is deprecated: replace with 'use_browser: true'"
-                           f' ({self.get_indexed_location()})', DeprecationWarning)
-            kwargs['use_browser'] = True
+        # # Set optional keys to None -- legacy (explicit declarations added to support typing)
+        # for k in self.__optional__:
+        #     if k not in kwargs:
+        #         setattr(self, k, None)
 
         # Fail if any required keys are not provided
         for k in self.__required__:
             if k not in kwargs:
-                raise ValueError(f"Required directive '{k}' missing: '{kwargs!r}' ({self.get_indexed_location()})")
+                raise ValueError(f"Required directive '{k}' missing: '{kwargs}' ({self.get_indexed_location()})")
 
         for k, v in list(kwargs.items()):
             setattr(self, k, v)
-
-        # if self.__kind__ in ('url', 'shell'):
-        #     logger.warning(f"'kind: {self.__kind__}' is deprecated and not needed: please delete")
-        # elif self.__kind__ == 'browser':
-        #     logger.warning("'kind: browser' is deprecated: replace with 'use_browser: true'")
 
     @classmethod
     def job_documentation(cls) -> str:
@@ -183,32 +171,48 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def unserialize(cls, data: dict) -> 'JobBase':
-        if 'kind' not in data:
-            # Try to auto-detect the kind of job based on the available keys
-            if data.get('use_browser') is False:
-                del data['use_browser']
-            kinds = [subclass.__kind__ for subclass in list(cls.__subclasses__.values())
-                     if all(required in data for required in subclass.__required__) and not any(
-                     key not in subclass.__required__ and key not in subclass.__optional__ for key in data)]
+        # Backwards compatibility with 'navigate' directive (deprecated)
+        if data.get('navigate') and not data.get('use_browser'):
+            warnings.warn(f"Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true'"
+                          f' ({data})', DeprecationWarning)
+            data['url'] = data.get('url', data['navigate'])
+            data['use_browser'] = True
 
-            if len(kinds) == 1 or (len(kinds) == 2 and kinds[0] == 'url'):  # url defaults to kind: url
-                kind = kinds[0]
-            elif len(kinds) == 0:
-                if 'url' in data and data.get('use_browser'):
-                    kind = 'browser'
-                elif 'url' in data:
-                    kind = 'url'
-                elif 'command' in data:
-                    kind = 'shell'
-                else:
-                    raise ValueError(
-                        f"Directives don't match a job type; check for errors/typos/text escaping:\n{data!r}")
-            else:
-                raise ValueError(f'Multiple kinds of jobs match {data!r}: {kinds!r}')
+        # Backwards compatibility with 'kind' directive (deprecated)
+        if 'kind' in data:
+            warnings.warn(f"Job directive 'kind' is deprecated and ignored; delete from job file' ({data})",
+                          DeprecationWarning)
+            data.pop('kind')
+
+        # Auto-detect the job subclass based on required directives
+        matched_subclasses = [subclass for subclass in list(cls.__subclasses__.values())[1:] if
+                              all(data.get(required) for required in subclass.__required__)]
+
+        if len(matched_subclasses) == 1:
+            job_subclass = matched_subclasses[0]
+        elif len(matched_subclasses) > 1:
+            number_matched = {}
+            for match in matched_subclasses:
+                number_matched[match] = [data.get(required) is not None
+                                         for required in match.__required__].count(True)
+            job_subclass = sorted(number_matched.items(), key=lambda x: x[1], reverse=True)[0][0]
         else:
-            kind = data['kind']
+            if len(data) == 1:
+                raise ValueError(
+                    f"Job directive has no value or doesn't match a job type; check for errors/typos/escaping:\n{data}")
+            else:
+                raise ValueError(
+                    f"Job directives (with values) don't match a job type; check for errors/typos/escaping:\n{data}")
 
-        return cls.__subclasses__[kind].from_dict(data)
+        # remove extra required directives ("falsy")
+        other_subclasses = list(cls.__subclasses__.values())[1:]
+        other_subclasses.remove(job_subclass)
+        for other_subclass in other_subclasses:
+            for k in other_subclass.__required__:
+                if k not in job_subclass.__required__:
+                    data.pop(k, None)
+
+        return job_subclass.from_dict(data)
 
     def to_dict(self) -> dict:
         return {k: getattr(self, k) for keys in (self.__required__, self.__optional__) for k in keys
@@ -216,11 +220,10 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def from_dict(cls, data: dict) -> 'JobBase':
-        data.pop('kind', None)
-        for k, v in list(data.items()):
+        for k in data.keys():
             if k not in (cls.__required__ + cls.__optional__):
-                logger.error(f"Job directive '{k}' is unrecognized and is being skipped; check documentation ({data})")
-        return cls(**{k: v for k, v in list(data.items()) if k in (cls.__required__ + cls.__optional__)})
+                raise ValueError(f"Job directive '{k}' is unrecognized; check for errors/typos/escaping:\n{data}")
+        return cls(**{k: v for k, v in list(data.items())})
 
     def __repr__(self) -> str:
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
@@ -258,7 +261,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     def format_error(self, exception: Exception, tb: str) -> str:
         return tb
 
-    def ignore_error(self, exception) -> bool:
+    def ignore_error(self, exception: Exception) -> bool:
         return False
 
 
@@ -433,11 +436,13 @@ class BrowserJob(Job):
                     'ignore_https_errors', 'navigate', 'switches', 'timeout', 'user_visible_url', 'user_data_dir',
                     'wait_for', 'wait_for_navigation', 'wait_until')
 
+    ctx = None  # Python 3.6
+
+    proxy_username: str = ''
+    proxy_password: str = ''
+
     def get_location(self) -> str:
-        if not self.url and self.navigate:
-            logger.warning(f"'navigate:' directive is deprecated. Replace with 'url:' and 'use_browser: true"
-                           f' ({self.get_indexed_location()})', DeprecationWarning)
-        return self.user_visible_url or self.url or self.navigate
+        return self.user_visible_url or self.url
 
     def main_thread_enter(self) -> None:
         if sys.version_info < (3, 7):
@@ -471,7 +476,9 @@ class BrowserJob(Job):
     @staticmethod
     def current_platform() -> str:
         """Get current platform name by short string as used by Pyppeteer for downloading Chromium.
-        Originally from pyppeteer.chromium_downloader."""
+        Originally from pyppeteer.chromium_downloader, but we cannot simply import it as it will trigger
+        pyppeteer reading os.environ['PYPPETEER_CHROMIUM_REVISION'] before we can modify it ourselves."""
+        # TODO: see if you can use importlib.reload for the new value to stick
         if sys.platform.startswith('linux'):
             return 'linux'
         elif sys.platform.startswith('darwin'):
@@ -545,7 +552,7 @@ class BrowserJob(Job):
                 self.switches = self.switches.split(',')
             if not isinstance(self.switches, list):
                 raise TypeError(f"'switches' needs to be a string or list, not {type(self.switches)} "
-                                f'( {self.get_location()} )')
+                                f'( {self.get_indexed_location()} )')
             self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
             args.extend(self.switches)
         # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
@@ -578,7 +585,7 @@ class BrowserJob(Job):
                 self.block_elements = self.block_elements.split(',')
             if not isinstance(self.block_elements, list):
                 raise TypeError(f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
-                                f'( {self.get_location()} )')
+                                f'( {self.get_indexed_location()} )')
             # web_request_resource_types = [
             #     # https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType
             #     'beacon', 'csp_report', 'font', 'image', 'imageset', 'media', 'main_frame', 'media', 'object',
@@ -594,7 +601,7 @@ class BrowserJob(Job):
                 if element not in chrome_web_request_resource_types:
                     await browser.close()
                     raise ValueError(f"Unknown or unsupported '{element}' resource type in 'block_elements' "
-                                     f'( {self.get_location()} )')
+                                     f'( {self.get_indexed_location()} )')
 
             async def handle_request(request_event, block_elements):
                 logger.info(f'Job {self.index_number}: resource_type={request_event.resourceType} '
@@ -662,8 +669,8 @@ class BrowserJob(Job):
         if response_code and 400 <= response_code < 600:
             raise BrowserResponseError('', response_code)
         elif response_code is not None and response_code != requests.codes.ok:
-            logger.info(f'Job {self.index_number}: Received response HTTP {self.status_code} '
-                        f'{response_names[self.status_code]}')
+            logger.info(f'Job {self.index_number}: Received response HTTP {response_code} '
+                        f'{response_names[response_code]}')
 
         return content, etag
 

@@ -7,11 +7,13 @@ import sys
 from typing import Any, Dict
 
 import pytest
+from pyppeteer.chromium_downloader import current_platform
 
 from webchanges import __project_name__
 from webchanges.config import BaseConfig
 from webchanges.handler import JobState
-from webchanges.jobs import BrowserResponseError, JobBase, NotModifiedError
+from webchanges.jobs import BrowserJob, BrowserResponseError, DEFAULT_CHROMIUM_REVISION, JobBase, NotModifiedError, \
+    ShellError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheDirStorage, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
@@ -36,9 +38,10 @@ py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires P
 
 here = os.path.dirname(__file__)
 
+chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
 TEST_JOBS = [
     ({'url': 'https://www.google.com/#a',
-      'name': 'testing url basic job',
+      'note': 'Google with no name (grab title)',
       'cookies': {'X-test': ''},
       'encoding': 'ascii',  # required for testing Python 3.6 in Windows as it has a tendency of erroring on cp1252
       'headers': {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -51,14 +54,15 @@ TEST_JOBS = [
       'method': 'GET',
       'no_redirects': True,
       'ssl_no_verify': False,
-      'timeout': 15,
+      'timeout': 0,
       'user_visible_url': 'https://www.google.com/#a_visible',
       },
      'Google'),
-    ({'url': 'https://www.google.com/#b',
+    ({'url': 'http://www.google.com/#b',
       'name': 'testing url job with use_browser',
       'use_browser': True,
       'block_elements': ['stylesheet', 'font', 'image', 'media'],
+      'chromium_revision': chromium_revision_num,
       'cookies': {'X-test': ''},
       'headers': {'Accept-Language': 'en-US,en'},
       'ignore_https_errors': False,
@@ -224,3 +228,147 @@ def test_stress_use_browser() -> None:
         cache_storage.close()
         if os.path.exists(cache_file):
             os.remove(cache_file)
+
+
+def test_shell_exception_and_with_defaults() -> None:
+    job_data = {'command': 'this_command_does_not_exist'}
+    job = JobBase.unserialize(job_data)
+    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
+    job_state = JobState(cache_storage, job)
+    job_state.process()
+    assert isinstance(job_state.exception, Exception)
+    assert str(job_state.exception)
+
+
+def test_no_required_directive() -> None:
+    job_data = {'url_typo': 'this directive does not exist'}
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        JobBase.unserialize(job_data)
+    assert str(pytest_wrapped_e.value) == (
+        f"Job directive has no value or doesn't match a job type; check for errors/typos/escaping:\n{job_data}"
+    )
+
+
+def test_no_required_directive_plural() -> None:
+    job_data = {'url_typo': 'this directive does not exist',
+                'timeout': '10'}
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        JobBase.unserialize(job_data)
+    assert str(pytest_wrapped_e.value) == (
+        f"Job directives (with values) don't match a job type; check for errors/typos/escaping:\n{job_data}"
+    )
+
+
+def test_invalid_directive() -> None:
+    job_data = {'url': 'https://www.example.com',
+                'directive_with_typo': 'this directive does not exist'}
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        JobBase.unserialize(job_data)
+    assert str(pytest_wrapped_e.value) == (
+        f"Job directive 'directive_with_typo' is unrecognized; check for errors/typos/escaping:\n{job_data}"
+    )
+
+
+def test_navigate_directive() -> None:
+    job_data = {'navigate': 'http://www.example.com'}
+    with pytest.deprecated_call() as pytest_wrapped_warning:
+        JobBase.unserialize(job_data.copy())
+    assert str(pytest_wrapped_warning.list[0].message) == (
+        f"Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true' ({job_data})"
+    )
+
+
+def test_kind_directive_deprecation() -> None:
+    job_data = {'kind': 'url',
+                'url': 'http://www.example.com'}
+    with pytest.deprecated_call() as pytest_wrapped_warning:
+        JobBase.unserialize(job_data.copy())
+    assert str(pytest_wrapped_warning.list[0].message) == (
+        f"Job directive 'kind' is deprecated and ignored; delete from job file' ({job_data})"
+    )
+
+
+def test_url_job_without_kind():
+    job_data = {'url': 'https://www.example.com'}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, UrlJob)
+
+
+def test_url_job_use_browser_false_without_kind():
+    job_data = {'url': 'https://www.example.com',
+                'use_browser': False}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, UrlJob)
+
+
+def test_browser_job_without_kind():
+    job_data = {'url': 'https://www.example.com',
+                'use_browser': True}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, BrowserJob)
+
+
+def test_shell_job_without_kind():
+    job_data = {'command': 'ls'}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, ShellJob)
+
+
+def test_with_defaults():
+    job_data = {'url': 'https://www.example.com'}
+    job = JobBase.unserialize(job_data)
+    config = {'job_defaults': {'all': {'timeout': 999}}}
+    job = job.with_defaults(config)
+    assert job.timeout == 999
+    assert job.get_indexed_location() == 'Job 0: https://www.example.com'
+
+
+def test_ignore_error():
+    job_data = {'url': 'https://www.example.com'}
+    job = JobBase.unserialize(job_data)
+    assert job.ignore_error(Exception) is False
+
+
+@py37_required
+def test_browser_switches_not_str_or_list():
+    job_data = {'url': 'https://www.example.com',
+                'use_browser': True,
+                'switches': {'dict key': ''}}
+    job = JobBase.unserialize(job_data)
+    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
+    job_state = JobState(cache_storage, job)
+    job_state.process()
+    assert isinstance(job_state.exception, TypeError)
+
+
+@py37_required
+def test_browser_block_elements_not_str_or_list():
+    job_data = {'url': 'https://www.example.com',
+                'use_browser': True,
+                'block_elements': {'dict key': ''}}
+    job = JobBase.unserialize(job_data)
+    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
+    job_state = JobState(cache_storage, job)
+    job_state.process()
+    assert isinstance(job_state.exception, TypeError)
+
+
+@py37_required
+def test_browser_block_elements_invalid():
+    job_data = {'url': 'https://www.example.com',
+                'use_browser': True,
+                'block_elements': ['fake element']}
+    job = JobBase.unserialize(job_data)
+    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
+    job_state = JobState(cache_storage, job)
+    job_state.process()
+    assert isinstance(job_state.exception, ValueError)
+
+
+def test_shell_error():
+    job_data = {'command': 'this_command_does_not_exist'}
+    job = JobBase.unserialize(job_data)
+    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
+    job_state = JobState(cache_storage, job)
+    job_state.process()
+    assert isinstance(job_state.exception, ShellError)

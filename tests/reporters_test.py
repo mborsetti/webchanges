@@ -58,20 +58,28 @@ ALL_REPORTERS = [reporter for reporter, v in DEFAULT_CONFIG['report'].items()
                  if reporter not in ('html', 'text', 'markdown')]
 
 
+class UrlwatchTest:
+    class config_storage:
+        config = DEFAULT_CONFIG
+
+
+report = Report(UrlwatchTest)
+
+
 @pytest.mark.parametrize('inpt, out', DIFF_TO_HTML_TEST_DATA)
 def test_diff_to_html(inpt, out):
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
-    job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': False})
-    result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': False})
+    result = ''.join(list(HtmlReporter(report, {}, '', 0)._diff_to_html(inpt, job)))
     assert result[250:-8] == out
 
 
 def test_diff_to_htm_padded_table():
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
-    job = JobBase.unserialize({'url': '', 'is_markdown': True, 'markdown_padded_tables': True})
-    result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': True})
+    result = ''.join(list(HtmlReporter(report, {}, '', 0)._diff_to_html(inpt, job)))
     assert result[250:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
                               'row |</span></td></tr>')
 
@@ -79,8 +87,9 @@ def test_diff_to_htm_padded_table():
 def test_diff_to_htm_wdiff():
     # must add to fake headers to get what we want:
     inpt = '[-old-]{+new+}'
-    job = JobBase.unserialize({'url': '', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'})
-    result = ''.join(list(HtmlReporter('', '', '', '')._diff_to_html(inpt, job)))
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': False, 'markdown_padded_tables': False,
+                               'diff_tool': 'wdiff'})
+    result = ''.join(list(HtmlReporter(report, {}, '', 0)._diff_to_html(inpt, job)))
     assert result == ('<span style="font-family:monospace;white-space:pre-wrap">'
                       '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">[-old-]</span>'
                       '<span style="background-color:#d1ffd1;color:#082b08">{+new+}</span></span>')
@@ -90,12 +99,6 @@ def test_diff_to_htm_wdiff():
 def test_reporters(reporter):
     # command_config = CommandConfig('', '', '', '', '', '', '', '', verbose=False)
     # urlwatcher = Urlwatch('', '', '', '')
-
-    class urlwatch_config:
-        class config_storage:
-            config = DEFAULT_CONFIG
-
-    report = Report(urlwatch_config)
 
     def build_job(name, url, old, new):
         job = JobBase.unserialize({'name': name, 'url': url})

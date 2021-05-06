@@ -157,25 +157,6 @@ def test_run_watcher_minidb():
             cache_storage.close()
 
 
-def test_unserialize_shell_job_without_kind():
-    job = JobBase.unserialize({
-        'name': 'hoho',
-        'command': 'ls',
-    })
-    assert isinstance(job, ShellJob)
-
-
-def test_unserialize_with_unknown_key():
-    with pytest.raises(ValueError) as pytest_wrapped_e:
-        JobBase.unserialize({
-            'unknown_key': 123,
-            'name': 'hoho',
-        })
-    assert str(pytest_wrapped_e.value) == (
-        "Directives don't match a job type; check for errors/typos/text escaping:\n"
-        "{'unknown_key': 123, 'name': 'hoho'}")
-
-
 def prepare_retry_test_sqlite3():
     jobs_file = os.path.join(here, 'data', 'jobs-invalid_url.yaml')
     config_file = os.path.join(here, 'data', 'config.yaml')

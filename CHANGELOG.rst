@@ -3,8 +3,8 @@ Changelog
 *********
 
 This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`__. Release numbering mostly
-follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__.  Documentation
-updates and improvements are ongoing and not listed here.
+follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__. Release date is UTC.
+Documentation updates and improvements are ongoing and not always listed here.
 
 **Development**
 
@@ -37,7 +37,12 @@ Unreleased
 
 Fixed
 -----
-* readthedocs.io failure to not build autodoc API documentation
+* readthedocs.io fails to build autodoc API documentation
+
+Internals
+---------
+* Improvements of errors and DeprecationWarnings during the processing of job directives and their inclusion in tests
+* Updated algorithm to assign a job to a subclass (based on directives found)
 
 
 Version 3.5.1
