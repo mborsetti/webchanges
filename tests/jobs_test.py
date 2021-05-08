@@ -9,8 +9,8 @@ from typing import Any, Dict
 import pytest
 from pyppeteer.chromium_downloader import current_platform
 
-from webchanges import __project_name__
-from webchanges.config import BaseConfig
+from webchanges import __project_name__ as project_name
+from webchanges.config import CommandConfig
 from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, BrowserResponseError, DEFAULT_CHROMIUM_REVISION, JobBase, NotModifiedError, \
     ShellError, ShellJob, UrlJob
@@ -194,14 +194,6 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
     assert job_state.error_ignored is True
 
 
-class ConfigForTest(BaseConfig):
-    """BaseConfig class for testing purposes."""
-    def __init__(self, config_file: str, urls_file: str, cache_file: str, hooks_file: str, verbose: bool) -> None:
-        super().__init__(__project_name__, here, config_file, urls_file, cache_file, hooks_file, verbose)
-        self.edit = False
-        self.edit_hooks = False
-
-
 @connection_required
 @py37_required
 # Legacy code for Pyppeteer is not optimized for concurrency and fails in Github Actions with error
@@ -221,7 +213,8 @@ def test_stress_use_browser() -> None:
         setup_logger_verbose()
 
     try:
-        urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
+        urlwatch_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
+                                        cache_file, True)
         urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:

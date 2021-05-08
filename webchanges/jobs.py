@@ -667,7 +667,7 @@ class BrowserJob(Job):
         await browser.close()
 
         if response_code and 400 <= response_code < 600:
-            raise BrowserResponseError('', response_code)
+            raise BrowserResponseError(('',), response_code)
         elif response_code is not None and response_code != requests.codes.ok:
             logger.info(f'Job {self.index_number}: Received response HTTP {response_code} '
                         f'{response_names[response_code]}')

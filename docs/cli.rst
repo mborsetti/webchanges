@@ -8,6 +8,9 @@ Command line arguments
 
 .. code-block::
 
+  positional arguments:
+    joblist               job(s) to run (by index as per --list) (default: run all jobs)
+
   optional arguments:
     -h, --help            show this help message and exit
     -V, --version         show program's version number and exit

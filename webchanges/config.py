@@ -1,7 +1,8 @@
 """Command-line configuration."""
 
 import argparse
-from typing import Optional
+import os
+from typing import List, Optional, Union
 
 from . import __doc__, __project_name__, __version__
 
@@ -9,7 +10,9 @@ from . import __doc__, __project_name__, __version__
 class BaseConfig(object):
     """Base configuration class."""
 
-    def __init__(self, project_name: str, config_dir: str, config: str, jobs: str, cache: str, hooks: str,
+    def __init__(self, project_name: str, config_dir: Union[str, bytes, os.PathLike],
+                 config: Union[str, bytes, os.PathLike], jobs: Union[str, bytes, os.PathLike],
+                 cache: Union[str, bytes, os.PathLike], hooks: Union[str, bytes, os.PathLike],
                  verbose: bool) -> None:
         self.project_name = project_name
         self.config_dir = config_dir
@@ -18,7 +21,19 @@ class BaseConfig(object):
         self.cache = cache
         self.hooks = hooks
         self.verbose = verbose
-        self.log_level = 'DEBUG'
+
+
+class CommandConfig(BaseConfig):
+    """Command line arguments configuration."""
+
+    def __init__(self, project_name: str, config_dir: Union[str, bytes, os.PathLike],
+                 config: Union[str, bytes, os.PathLike], jobs: Union[str, bytes, os.PathLike],
+                 hooks: Union[str, bytes, os.PathLike], cache: Union[str, bytes, os.PathLike], verbose: bool) -> None:
+        super().__init__(project_name, config_dir, config, jobs, cache, hooks, verbose)
+        self.config_storage = None
+
+        self.joblist: Optional[List[int]] = None
+        self.log_level: str = 'DEBUG'
         self.list: bool = False
         self.test_job: Optional[str] = None
         self.test_diff: Optional[str] = None
@@ -40,27 +55,6 @@ class BaseConfig(object):
         self.max_snapshots: int = 4
         self.features: bool = False
 
-
-class CommandConfig(BaseConfig):
-    """Command line arguments configuration."""
-
-    def __init__(self, project_name: str, config_dir: str, bindir: str, prefix: str, config: str, jobs: str, hooks: str,
-                 cache: str, verbose: bool) -> None:
-        super().__init__(project_name, config_dir, config, jobs, cache, hooks, verbose)
-        self.bindir = bindir
-        self.prefix = prefix
-        self.config_storage = None
-
-        # if self.bindir == 'bin':
-        #     # Installed system-wide
-        #     self.examples_dir = os.path.join(prefix, 'share', self.project_name, 'examples')
-        # else:
-        #     # Assume we are not yet installed
-        #     self.examples_dir = os.path.join(prefix, bindir, 'share', self.project_name, 'examples')
-        #
-        # self.urls_yaml_example = os.path.join(self.examples_dir, 'jobs-example.yaml')
-        # self.hooks_py_example = os.path.join(self.examples_dir, 'hooks.rst')
-
         self.parse_args()
 
     def parse_args(self) -> argparse.ArgumentParser:
@@ -68,6 +62,8 @@ class CommandConfig(BaseConfig):
         parser = argparse.ArgumentParser(description=__doc__.replace('\n\n', '--par--').replace('\n', ' ')
                                          .replace('--par--', '\n\n'),
                                          formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser.add_argument('joblist', nargs='*', type=int,
+                            help='job(s) to run (by index as per --list) (default: run all jobs)', metavar='JOB')
         parser.add_argument('-V', '--version', action='version', version=f'{__project_name__} {__version__}')
         parser.add_argument('-v', '--verbose', action='store_true', help='show logging output')
 

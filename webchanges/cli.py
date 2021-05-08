@@ -55,7 +55,8 @@ def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
     logger.debug(f'System: {platform.platform()}')
 
 
-def locate_storage_file(filename: str, default_dir: str, ext: Optional[str] = None) -> str:
+def locate_storage_file(filename: Union[str, bytes, os.PathLike], default_dir: Union[str, bytes, os.PathLike],
+                        ext: Optional[str] = None) -> str:
     """Searches for file as specified and in default directory; retry with 'ext' extension.
 
     :param filename: The filename
@@ -84,7 +85,9 @@ def locate_storage_file(filename: str, default_dir: str, ext: Optional[str] = No
     return filename
 
 
-def migrate_from_urlwatch(config_file: str, jobs_file: str, hooks_file: str, cache_file: str) -> None:
+def migrate_from_urlwatch(config_file: Union[str, bytes, os.PathLike], jobs_file: Union[str, bytes, os.PathLike],
+                          hooks_file: Union[str, bytes, os.PathLike], cache_file: Union[str, bytes, os.PathLike]
+                          ) -> None:
     """Check for existence of legacy (urlwatch 2.23) config, jobs and hooks files and migrate them (i.e. make a copy to
     new folder and or naming).  Original files are not deleted."""
     uw_urlwatch_dir = os.path.expanduser(os.path.join('~', '.' + 'urlwatch'))
@@ -140,8 +143,7 @@ def main() -> None:  # pragma: no cover
     migrate_from_urlwatch(default_config_file, default_jobs_file, default_hooks_file, default_cache_file)
 
     # load config files
-    prefix, bindir = os.path.split(os.path.dirname(os.path.abspath(sys.argv[0])))
-    command_config = CommandConfig(__project_name__, config_dir, bindir, prefix, default_config_file, default_jobs_file,
+    command_config = CommandConfig(__project_name__, config_dir, default_config_file, default_jobs_file,
                                    default_hooks_file, default_cache_file, verbose=False)
 
     # set up the logger to verbose if needed

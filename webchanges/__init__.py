@@ -1,12 +1,12 @@
 """Check web (or commands) for changes since last run and notify.
 
-`webchanges` checks web content (or the output of local commands) for changes and shows or notifies you via e-mail or
-one of many other supported services if any change is detected. The notification includes the changed URL (or command)
-and a 'diff' summary of the changes. You can fine-tune what to track by using filters.
+Check web content (or the output of local commands) for changes and show, and/or notify via e-mail or one of many
+other supported services, if any change is detected since its prior run; the notification includes the changed URL
+(or command) and a 'diff' summary. See documentation at https://webchanges.readthedocs.io/
 """
 
-# The docstring above (__doc__) and the variables below are used in the program and for builds, including
-# documentation (Sphynx autodoc)
+# The docstring above (__doc__) and the variables below are used in the program and for builds, including in building
+# documentation with Sphinx.
 
 __project_name__ = __package__
 # Release numbering largely follows Semantic Versioning https://semver.org/spec/v2.0.0.html#semantic-versioning-200

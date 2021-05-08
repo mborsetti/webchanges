@@ -61,7 +61,7 @@ class TrackSubClasses(type):
         super().__init__(name, bases, namespace)
 
 
-def edit_file(filename: str) -> None:
+def edit_file(filename: Union[str, bytes, os.PathLike]) -> None:
     """Opens the editor to edit the file."""
     editor = os.environ.get('EDITOR', None)
     if not editor:
@@ -106,7 +106,7 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
                 text_length = length - 4 - 2 * digits_try
                 if text_length <= 0:
                     raise ValueError('Not enough space to chunkify string with line numbering (1)')
-                lines_guess = len(string) / (text_length)
+                lines_guess = len(string) / text_length
                 digits_guess = floor(log10(lines_guess)) + 1
 
             chunks = textwrap.wrap(string, text_length)

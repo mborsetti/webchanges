@@ -14,7 +14,6 @@ from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsS
 here = os.path.dirname(__file__)
 
 config_dir = os.path.join(here, 'data')
-prefix, bindir = os.path.split(config_dir)
 config_file = os.path.join(here, 'data', 'config.yaml')
 jobs_file = os.path.join(here, 'data', 'jobs-echo_test.yaml')
 cache_file = os.path.join(here, 'data', 'cache.db')
@@ -23,8 +22,8 @@ hooks_file = os.path.join(here, 'data', 'hooks_test.py')
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = YamlJobsStorage(jobs_file)
-command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
-                               cache_file, verbose=False)
+command_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file, cache_file,
+                               True)
 urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
 
 editor = os.getenv('EDITOR')
@@ -132,8 +131,7 @@ def test_test_job():
 def test_test_diff():
     jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)
-    command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
-                                   cache_file, verbose=False)
+    command_config = CommandConfig(project_name, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
 
     setattr(command_config, 'test_diff', 1)
@@ -196,8 +194,7 @@ def test_modify_urls():
 def test_delete_snapshot():
     jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)
-    command_config = CommandConfig(project_name, config_dir, bindir, prefix, config_file, jobs_file, hooks_file,
-                                   cache_file, verbose=False)
+    command_config = CommandConfig(project_name, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
 
     setattr(command_config, 'delete_snapshot', True)

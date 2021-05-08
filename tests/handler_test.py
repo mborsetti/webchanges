@@ -8,8 +8,8 @@ import warnings
 
 import pytest
 
-from webchanges import __project_name__ as pkgname
-from webchanges.config import BaseConfig
+from webchanges import __project_name__ as project_name
+from webchanges.config import CommandConfig
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, DEFAULT_CONFIG, YamlConfigStorage, YamlJobsStorage
@@ -22,7 +22,7 @@ if minidb_is_installed:
 
 minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
 
-root = os.path.join(os.path.dirname(__file__), f'../{pkgname}', '..')
+root = os.path.join(os.path.dirname(__file__), f'../{project_name}', '..')
 here = os.path.dirname(__file__)
 
 
@@ -95,13 +95,6 @@ def test_load_hooks_py():
         warnings.warn(f'{hooks_file} not found', UserWarning)
 
 
-class ConfigForTest(BaseConfig):
-    def __init__(self, config_file, urls_file, cache_file, hooks_file, verbose):
-        super().__init__(pkgname, here, config_file, urls_file, cache_file, hooks_file, verbose)
-        self.edit = False
-        self.edit_hooks = False
-
-
 @contextlib.contextmanager
 def teardown_func():
     try:
@@ -128,8 +121,8 @@ def test_run_watcher_sqlite3():
         jobs_storage = YamlJobsStorage(jobs_file)
         cache_storage = CacheSQLite3Storage(cache_file)
         try:
-            urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
-
+            urlwatch_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
+                                            cache_file, True)
             urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
             urlwatcher.run_jobs()
         finally:
@@ -149,8 +142,8 @@ def test_run_watcher_minidb():
         jobs_storage = YamlJobsStorage(jobs_file)
         cache_storage = CacheMiniDBStorage(cache_file)
         try:
-            urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
-
+            urlwatch_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
+                                            cache_file, True)
             urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
             urlwatcher.run_jobs()
         finally:
@@ -167,7 +160,8 @@ def prepare_retry_test_sqlite3():
     cache_storage = CacheSQLite3Storage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
 
-    urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
+    urlwatch_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
+                                    cache_file, True)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     return urlwatcher, cache_storage
@@ -262,7 +256,8 @@ def prepare_retry_test_minidb():
     cache_storage = CacheMiniDBStorage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
 
-    urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
+    urlwatch_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
+                                    cache_file, True)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     return urlwatcher, cache_storage

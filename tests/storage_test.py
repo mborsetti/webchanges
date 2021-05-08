@@ -10,8 +10,8 @@ from typing import Optional
 
 import pytest
 
-from webchanges import __project_name__ as pkgname
-from webchanges.config import BaseConfig
+from webchanges import __project_name__ as project_name
+from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
@@ -20,15 +20,8 @@ minidb_is_installed = importlib.util.find_spec('minidb') is not None
 minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
 py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
 
-root = os.path.join(os.path.dirname(__file__), f'../{pkgname}', '..')
+root = os.path.join(os.path.dirname(__file__), f'../{project_name}', '..')
 here = os.path.dirname(__file__)
-
-
-class ConfigForTest(BaseConfig):
-    def __init__(self, config_file, urls_file, cache_file, hooks_file, verbose):
-        super().__init__(pkgname, here, config_file, urls_file, cache_file, hooks_file, verbose)
-        self.edit = False
-        self.edit_hooks = False
 
 
 @contextlib.contextmanager
@@ -55,7 +48,8 @@ def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, Cache
     cache_storage = CacheSQLite3Storage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
 
-    urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
+    urlwatch_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
+                                    cache_file, True)
     if config_args:
         for k, v in config_args.items():
             setattr(urlwatch_config, k, v)
@@ -339,7 +333,8 @@ def prepare_storage_test_minidb(config_args={}):
     cache_storage = CacheMiniDBStorage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
 
-    urlwatch_config = ConfigForTest(config_file, jobs_file, cache_file, hooks_file, True)
+    urlwatch_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
+                                    cache_file, True)
     for k, v in config_args.items():
         setattr(urlwatch_config, k, v)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)

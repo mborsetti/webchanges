@@ -27,10 +27,15 @@ def run_parallel(func: Callable, items: Iterable, max_workers: Optional[int] = N
 def run_jobs(urlwatcher: 'Urlwatch') -> None:
     """Process jobs."""
     cache_storage = urlwatcher.cache_storage
-    jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs]
+    if urlwatcher.urlwatch_config.joblist:
+        jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs
+                if job.index_number in urlwatcher.urlwatch_config.joblist]
+        logger.debug(f'Processing {len(jobs)} job as specified (# {urlwatcher.urlwatch_config.joblist})')
+    else:
+        jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs]
+        logger.debug(f'Processing {len(jobs)} jobs')
     report = urlwatcher.report
 
-    logger.debug(f'Processing {len(jobs)} jobs')
     with ExitStack() as stack:
         max_workers = min(32, os.cpu_count()) if any(type(job) == BrowserJob for job in jobs) else None
         logger.debug(f'Max_workers set to {max_workers}')

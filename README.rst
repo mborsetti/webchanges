@@ -49,40 +49,71 @@ a summary of what has changed. This project is a fork of `urlwatch <https://gith
 its author to optimize it for HTML.
 
 
+Requirements
+============
+`webchanges` requires |support|.
+
+You should use the latest version of Python if possible. If you’re using an older version, be aware that for each minor
+version (3.x), only the latest bugfix release (3.x.y) is officially supported. Older Python versions are supported
+for 3 years after being obsoleted by a new major release.
+
+
 Installation
 ============
-`webchanges` |pypi_version| is available on `PyPI <https://pypi.org/project/webchanges/>`__ for |support| (Python
-versions are supported for 3 years after being obsoleted by a new major release) and can be installed using `pip`::
+Install `webchanges` |pypi_version| with::
 
    pip install webchanges
-
 
 
 Documentation
 =============
 The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__ |readthedocs|.
 
+
+Quick Start
+============
+Initialize
+----------
+
+1. Create the default ``config.yaml`` configuration file and open an editor to the ``jobs.yaml`` where to write the
+   `jobs <https://webchanges.readthedocs.io/en/stable/jobs.html>`__ to run:
+
+.. code-block:: bash
+
+   webchanges --edit
+
+
+2. If you want to change the default configuration, e.g. to enable `e-mail sending
+   <https://webchanges.readthedocs.io/en/stable/reporters.html#smtp>`__ of change reports, run:
+
+.. code-block:: bash
+
+   webchanges --edit-config
+
+
+Run
+---
+.. code-block:: bash
+
+   webchanges
+
+This checks the sources in your jobs, and will report on (e.g. display) any changes from the previous run.
+
+
+`webchanges` does not include a scheduler. We recommend using a system scheduler to automatically run `webchanges`
+periodically:
+
+- On Linux or MacOS, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for
+  you; if you have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__.
+- On Windows, you can use the built-in `Windows Task Scheduler
+  <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.
+
+
 Code
 ====
 |coveralls| |issues|
 
 The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
-
-
-Quick Start
-============
-#. Run ``webchanges --edit`` to customize your `jobs <https://webchanges.readthedocs.io/en/stable/jobs.html>`__ list
-   (this will also create ``jobs.yaml`` and ``config.yaml``)
-#. Run ``webchanges --edit-config`` if you want to set up e.g. `e-mail sending
-   <https://webchanges.readthedocs.io/en/stable/reporters.html#smtp>`__
-
-`webchanges` checks for changes every time you run it, but does not include a scheduler. We recommend using a
-system scheduler to automatically run `webchanges` periodically:
-
-- On Linux/MacOS, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for you; if
-  you have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__
-- On Windows, you can use the built-in `Windows Task Scheduler
-  <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__
 
 
 Contributing

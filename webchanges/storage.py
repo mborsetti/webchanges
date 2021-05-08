@@ -189,12 +189,12 @@ class BaseStorage(metaclass=ABCMeta):
 
 
 class BaseFileStorage(BaseStorage, metaclass=ABCMeta):
-    def __init__(self, filename: Optional[str]) -> None:
+    def __init__(self, filename: Optional[Union[str, bytes, os.PathLike]]) -> None:
         self.filename = filename
 
 
 class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename: Optional[str]) -> None:
+    def __init__(self, filename: Optional[Union[str, bytes, os.PathLike]]) -> None:
         super().__init__(filename)
         self.config = {}
         if not isinstance(self, JobsBaseFileStorage):
@@ -205,7 +205,7 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
     def parse(cls, *args) -> Iterator:
         ...
 
-    def edit(self, example_file: Optional[str] = None) -> int:
+    def edit(self, example_file: Optional[Union[str, bytes, os.PathLike]] = None) -> int:
         fn_base, fn_ext = os.path.splitext(self.filename)
         file_edit = fn_base + '.edit' + fn_ext
 
@@ -241,14 +241,14 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
         print('Saving edit changes in', self.filename)
 
     @classmethod
-    def write_default_config(cls, filename: str) -> None:
+    def write_default_config(cls, filename: Union[str, bytes, os.PathLike]) -> None:
         config_storage = cls(None)
         config_storage.filename = filename
         config_storage.save()
 
 
 class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename: str) -> None:
+    def __init__(self, filename: Union[str, bytes, os.PathLike]) -> None:
         super().__init__(filename)
         self.filename = filename
 
@@ -492,16 +492,16 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
 
 
 class CacheDirStorage(CacheStorage):
-    """Stores the information in individual files in a directory 'filename'"""
-    def __init__(self, filename: str) -> None:
-        super().__init__(filename)
-        if not os.path.isfile(filename):
-            os.makedirs(filename)
+    """Stores the information in individual files in a directory 'dirname'"""
+    def __init__(self, dirname: Union[str, bytes, os.PathLike]) -> None:
+        super().__init__(dirname)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
 
     def close(self) -> None:
         """No need to close"""
 
-    def _get_filename(self, guid: str) -> str:
+    def _get_filename(self, guid: str) -> Union[str, bytes, os.PathLike]:
         return os.path.join(self.filename, guid)
 
     def get_guids(self) -> List[str]:
@@ -573,7 +573,7 @@ class CacheSQLite3Storage(CacheStorage):
     * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
     * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
     """
-    def __init__(self, filename: str, max_snapshots: int = 4) -> None:
+    def __init__(self, filename: Union[str, bytes, os.PathLike], max_snapshots: int = 4) -> None:
         """
         :param filename: The full filename of the database file
         :param max_snapshots: The maximum number of snapshots to retain in the database for each 'guid'
@@ -887,7 +887,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
         return num_del
 
-    def migrate_from_minidb(self, minidb_filename: str) -> None:
+    def migrate_from_minidb(self, minidb_filename: Union[str, bytes, os.PathLike]) -> None:
         """Migrate the data of a legacy minidb database to the current database.
 
         :param minidb_filename: The filename of the legacy minidb database
@@ -908,7 +908,7 @@ class CacheSQLite3Storage(CacheStorage):
 
 
 class CacheRedisStorage(CacheStorage):
-    def __init__(self, filename: str) -> None:
+    def __init__(self, filename: Union[str, bytes, os.PathLike]) -> None:
         super().__init__(filename)
 
         if redis is None:
