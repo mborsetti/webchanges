@@ -101,7 +101,6 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
         for filtercls in filters:
             filter_instance = filtercls(state.job, state)
-            print()
             if filter_instance.match():
                 logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
                 data = filter_instance.filter(data, None)  # all filters take a subfilter
