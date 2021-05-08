@@ -5,6 +5,7 @@ import importlib.util
 import os
 import shutil
 import sys
+import time
 from typing import Optional
 
 import pytest
@@ -220,6 +221,41 @@ def test_clean_all_and_delete():
             cache_storage.delete(guid)
             history = cache_storage.get_history_data(guid)
             assert len(history) == 0
+        finally:
+            cache_storage.close()
+
+
+def test_rollback_cache():
+    with teardown_func():
+        urlwatcher, cache_storage, cache_file = prepare_storage_test()
+        try:
+            # use an url that changes
+            job = urlwatcher.jobs[0]
+            if os.name == 'nt':
+                job.command = 'echo %TIME%'
+            guid = job.get_guid()
+
+            # run once
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(cache_file)
+
+            run_time = time.time()
+
+            # run twice
+            urlwatcher.run_jobs()
+            cache_storage.close()
+            cache_storage.__init__(cache_file)
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 2
+
+            # rollback
+            num_del = cache_storage.rollback(run_time)
+            assert num_del == 1
+            cache_storage.close()
+            cache_storage.__init__(cache_file)
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 1
         finally:
             cache_storage.close()
 
