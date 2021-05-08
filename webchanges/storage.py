@@ -164,13 +164,14 @@ DEFAULT_CONFIG = {
 }
 
 
-def merge(source: dict, destination: dict) -> dict:
+def dict_deep_merge(source: dict, destination: dict) -> dict:
+    """Deep merges source dict into destination dict."""
     # https://stackoverflow.com/a/20666342
     for key, value in source.items():
         if isinstance(value, dict):
             # get node or create one
             node = destination.setdefault(key, {})
-            merge(value, node)
+            dict_deep_merge(value, node)
         else:
             destination[key] = value
 
@@ -188,7 +189,7 @@ class BaseStorage(metaclass=ABCMeta):
 
 
 class BaseFileStorage(BaseStorage, metaclass=ABCMeta):
-    def __init__(self, filename: str) -> None:
+    def __init__(self, filename: Optional[str]) -> None:
         self.filename = filename
 
 
@@ -208,9 +209,9 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
         fn_base, fn_ext = os.path.splitext(self.filename)
         file_edit = fn_base + '.edit' + fn_ext
 
-        if os.path.exists(self.filename):
+        if os.path.isfile(self.filename):
             shutil.copy(self.filename, file_edit)
-        elif example_file is not None and os.path.exists(example_file):
+        elif example_file is not None and os.path.isfile(example_file):
             shutil.copy(example_file, file_edit)
 
         while True:
@@ -305,7 +306,7 @@ class BaseTxtFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
     @classmethod
     def parse(cls, *args) -> Iterator[Type[JobBase]]:
         filename = args[0]
-        if filename is not None and os.path.exists(filename):
+        if filename is not None and os.path.isfile(filename):
             with open(filename) as fp:
                 for line in fp:
                     line = line.strip()
@@ -327,17 +328,20 @@ class BaseTxtFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
 class BaseYamlFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
     @classmethod
     def parse(cls, *args) -> Union[Dict[Hashable, Any], list, None]:
+        """Return contents of YAML file if it exists"""
         filename = args[0]
-        if filename is not None and os.path.exists(filename):
+        if filename is not None and os.path.isfile(filename):
             with open(filename) as fp:
                 return yaml.safe_load(fp)
 
 
 class YamlConfigStorage(BaseYamlFileStorage):
     def load(self, *args) -> None:
-        self.config = merge(self.parse(self.filename) or {}, copy.deepcopy(DEFAULT_CONFIG))
+        """Load configuration file from self.filename into self.config after merging it into DEFAULT_CONFIG"""
+        self.config = dict_deep_merge(self.parse(self.filename) or {}, copy.deepcopy(DEFAULT_CONFIG))
 
     def save(self, *args) -> None:
+        """Save self.config into self.filename using YAML."""
         with open(self.filename, 'w') as fp:
             fp.write(f'# {__project_name__} configuration file. See '
                      f'{__docs_url__}configuration.html\n')
@@ -370,7 +374,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
     @classmethod
     def parse(cls, *args) -> List[JobBase]:
         filename = args[0]
-        if filename is not None and os.path.exists(filename):
+        if filename is not None and os.path.isfile(filename):
             with open(filename) as fp:
                 return cls._parse(fp)
 
@@ -491,7 +495,7 @@ class CacheDirStorage(CacheStorage):
     """Stores the information in individual files in a directory 'filename'"""
     def __init__(self, filename: str) -> None:
         super().__init__(filename)
-        if not os.path.exists(filename):
+        if not os.path.isfile(filename):
             os.makedirs(filename)
 
     def close(self) -> None:
@@ -505,7 +509,7 @@ class CacheDirStorage(CacheStorage):
 
     def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
         filename = self._get_filename(guid)
-        if not os.path.exists(filename):
+        if not os.path.isfile(filename):
             return None, None, 0, None
 
         try:
@@ -531,12 +535,12 @@ class CacheDirStorage(CacheStorage):
 
     def delete(self, guid: str) -> None:
         filename = self._get_filename(guid)
-        if os.path.exists(filename):
+        if os.path.isfile(filename):
             os.unlink(filename)
 
     def delete_latest(self, guid: str) -> int:
         filename = self._get_filename(guid)
-        if os.path.exists(filename):
+        if os.path.isfile(filename):
             os.unlink(filename)
             return 1
 
@@ -661,7 +665,7 @@ class CacheSQLite3Storage(CacheStorage):
             logger.debug(f'Wrote {self.cur.rowcount} new snapshots to permanent sqlite3 database')
             self.db.commit()
             self._execute('DETACH DATABASE temp_db')
-            if os.path.exists(self.temp_filename):
+            if os.path.isfile(self.temp_filename):
                 logger.debug(f'Deleting temp sqlite3 database file {self.temp_filename}')
                 os.remove(self.temp_filename)
             logger.debug('Cleaning up the permanent sqlite3 database and closing the connection')
