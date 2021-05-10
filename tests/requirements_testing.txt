@@ -1,8 +1,11 @@
+beautifulsoup
 docutils
 jq; os_name != "nt"
+matrix
 minidb
 pyppeteer
 pytest
 pytest-cov
 sphinx
 sphinx_rtd_theme
+xmpp

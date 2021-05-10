@@ -97,8 +97,8 @@ TEST_ALL_URL_JOBS = [{}, {'use_browser': True}]
 @pytest.mark.parametrize('input_job, output', TEST_JOBS)
 def test_run_job(input_job: Dict[str, Any], output: str) -> None:
     if input_job.get('use_browser') and os.getenv('GITHUB_ACTIONS') and sys.version_info < (3, 7):
-        logger.warning('Skipping test on legacy code for Pyppeteer in GitHub Actions as it fails with error'
-                       'pyppeteer.errors.BrowserError: Browser closed unexpectedly')
+        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer in GitHub Actions '
+                       f'as it fails with error pyppeteer.errors.BrowserError: Browser closed unexpectedly')
         return
     job = JobBase.unserialize(input_job)
     job_state = JobState(cache_storage, job)
@@ -140,11 +140,12 @@ def test_run_ftp_job_needs_bytes() -> None:
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_etag(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser') and os.getenv('GITHUB_ACTIONS') and sys.version_info < (3, 7):
-        logger.warning('Skipping test on legacy code for Pyppeteer in GitHub Actions as it fails with error'
-                       'pyppeteer.errors.BrowserError: Browser closed unexpectedly')
+        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer in GitHub '
+                       f'Actions as it fails with error pyppeteer.errors.BrowserError: Browser closed unexpectedly')
         return
     if job_data.get('use_browser') and sys.version_info < (3, 7):
-        logger.warning('Skipping test on legacy code for Pyppeteer as it does not capture ETags')
+        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer as it does not '
+                       f'capture ETags')
         return
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
@@ -160,7 +161,8 @@ def test_check_etag(job_data: Dict[str, Any]) -> None:
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser'):
-        logger.warning('Skipping test on Pyppeteer since capturing of 304 cannot be implemented in Chromium 89')
+        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since capturing of 304 cannot be '
+                       f'implemented in Chromium 89')
         return
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
@@ -184,7 +186,8 @@ def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser'):
-        logger.warning('Skipping test on Pyppeteer since it times out after 90 seconds or so')
+        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since it times out after 90 '
+                       f'seconds or so')
         return
 
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
@@ -208,7 +211,8 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) 
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser') and sys.version_info < (3, 7):
-        logger.warning('Skipping test on legacy code for Pyppeteer as it does not capture exceptions')
+        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer as it does not '
+                       f'capture exceptions')
         return
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['timeout'] = 30
