@@ -988,16 +988,19 @@ class MatrixReporter(MarkdownReporter):
 
         body_html = Markdown(extras=['fenced-code-blocks', 'highlightjs-lang']).convert(body_markdown)
 
-        client_api.send_message_event(
-            room_id,
-            'm.room.message',
-            content={
-                'msgtype': 'm.text',
-                'format': 'org.matrix.custom.html',
-                'body': body_markdown,
-                'formatted_body': body_html
-            }
-        )
+        try:
+            client_api.send_message_event(
+                room_id,
+                'm.room.message',
+                content={
+                    'msgtype': 'm.text',
+                    'format': 'org.matrix.custom.html',
+                    'body': body_markdown,
+                    'formatted_body': body_html
+                }
+            )
+        except Exception as e:
+            raise RuntimeError(f'Matrix error: {e}')
 
 
 class XMPPReporter(TextReporter):
