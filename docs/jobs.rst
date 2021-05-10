@@ -73,15 +73,22 @@ HTML or XML, `webchanges` will automatically use the pages' title (up to 60 char
 
 URL
 ---
-This is the main job type -- it retrieves a document from a web server.
+This is the main job type -- it retrieves a document, generally from a web server but in addition to the ``http`` and
+``https`` URL schemes,  ``file``, which retrieves a file and ``ftp`` are supported as well.
 
 .. code-block:: yaml
 
    name: Example homepage
-   url: https://example.org/
+   url: https://www.example.org/
    ---
    name: Example page 2
-   url: https://example.org/page2
+   url: https://www.example.org/page2
+   ---
+   name: Example a local file
+   url: file://syslog
+   ---
+   name: Example of an FTP file (anonymous:anonymous if not specified)
+   url: ftp://username:password@ftp.example.com/file.txt
 
 
 Important: due to a legacy architectural choice, URLs must be **unique** to each job. If for some reason you want to

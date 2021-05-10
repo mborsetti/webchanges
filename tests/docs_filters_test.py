@@ -3,8 +3,8 @@ data/doc_filter_testadata.yaml file."""
 
 import importlib.util
 import logging
-import os
 from collections import defaultdict
+from pathlib import Path
 from typing import Any, Dict
 
 import docutils.frontend
@@ -21,8 +21,8 @@ from webchanges.jobs import JobBase
 
 logger = logging.getLogger(__name__)
 
-root = os.path.join(os.path.dirname(__file__), '../webchanges', '..')
-here = os.path.dirname(__file__)
+here = Path(__file__).parent
+docs_dir = here.joinpath('..').resolve().joinpath('docs')
 
 beautifulsoup_is_installed = importlib.util.find_spec('beautifulsoup') is not None
 jq_is_installed = importlib.util.find_spec('jq') is not None
@@ -59,7 +59,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
 def load_filter_doc_jobs() -> Dict[str, Dict[str, Any]]:
     """Load YAML code blocks from rst file"""
-    doc = parse_rst(open(os.path.join(root, 'docs/filters.rst')).read())
+    doc = parse_rst(open(docs_dir.joinpath('filters.rst')).read())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
 
@@ -84,7 +84,7 @@ def load_filter_doc_jobs() -> Dict[str, Dict[str, Any]]:
 
 
 def load_filter_testdata() -> Dict[str, Any]:
-    with open(os.path.join(here, 'data/doc_filter_testdata.yaml')) as f:
+    with open(here.joinpath('data').joinpath('doc_filter_testdata.yaml')) as f:
         yaml_data = f.read()
     return yaml.safe_load(yaml_data)
 
@@ -103,7 +103,7 @@ def test_url(job):
         # TODO update output and remove this when html2text > 2020.1.16 (https://github.com/Alir3z4/html2text/pull/339)
         d = testdata[job.url]
         if 'filename' in d:
-            data = open(os.path.join(here, 'data', d['filename']), 'rb').read()
+            data = open(here.joinpath('data').joinpath(d['filename']), 'rb').read()
         else:
             data = d['input']
         job_state = JobState(None, job)

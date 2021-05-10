@@ -10,9 +10,10 @@ import subprocess
 import sys
 import textwrap
 import warnings
+from ftplib import FTP
 from http.client import responses as response_names
 from typing import Any, AnyStr, Dict, List, Optional, TYPE_CHECKING, Tuple, Type, Union
-from urllib.parse import urldefrag, urlsplit
+from urllib.parse import urldefrag, urlparse, urlsplit
 
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -331,12 +332,39 @@ class UrlJob(Job):
         if self.https_proxy is not None:
             proxies['https'] = self.https_proxy
 
-        file_scheme = 'file://'
-        if self.url.startswith(file_scheme):
-            logger.info(f'Job {self.index_number}: Using local filesystem ({file_scheme} URI scheme)')
-            with open(self.url[len(file_scheme):], 'rt') as f:
+        if urlparse(self.url).scheme == 'file':
+            logger.info(f'Job {self.index_number}: Using local filesystem (file URI scheme)')
+            if FilterBase.filter_chain_needs_bytes(self.filter):
+                file_mode = 'rb'
+            else:
+                file_mode = 'rt'
+            with open(urlparse(self.url).path.lstrip('/'), mode=file_mode) as f:
                 file = f.read()
             return file, None
+
+        if urlparse(self.url).scheme == 'ftp':
+            url = urlparse(self.url)
+            username = url.username or 'anonymous'
+            password = url.password or 'anonymous'
+
+            with FTP(url.hostname, username, password, timeout=self.timeout) as ftp:
+                if FilterBase.filter_chain_needs_bytes(self.filter):
+                    data = b''
+
+                    def callback(dt):
+                        nonlocal data
+                        data += dt
+                    ftp.retrbinary(f'RETR {url.path}', callback)
+                else:
+                    data = []
+
+                    def callback(dt):
+                        nonlocal data
+                        data.append(dt)
+                    ftp.retrlines(f'RETR {url.path}', callback)
+                    data = '\n'.join(data)
+
+            return data, None
 
         if self.headers:
             self.add_custom_headers(headers)
@@ -463,7 +491,7 @@ class BrowserJob(Job):
                                         self.proxy_password, self.wait_until, self.wait_for, self.wait_for_navigation)
             etag = None
         else:
-            response, etag = asyncio.run(self._retrieve(job_state))
+            response, etag = asyncio.run(self._retrieve())
 
         # if no name is found, set it to the title of the page if found
         if not self.name:
@@ -489,7 +517,7 @@ class BrowserJob(Job):
             return 'win32'
         raise OSError('Platform unsupported by Pyppeteer (use_browser: true): ' + sys.platform)
 
-    async def _retrieve(self, job_state: 'JobState') -> (str, str):
+    async def _retrieve(self) -> (str, str):
         # launch browser
         if not self.chromium_revision:
             self.chromium_revision = DEFAULT_CHROMIUM_REVISION
@@ -546,7 +574,7 @@ class BrowserJob(Job):
                     f':{urlsplit(proxy).port}' if urlsplit(proxy).port else '')
                 args.append(f'--proxy-server={proxy_server}')
         if self.user_data_dir:
-            args.append(f'--user-data-dir={os.path.expanduser(os.path.expandvars(self.user_data_dir))}')
+            args.append(f'--user-data-dir={self.user_data_dir}')
         if self.switches:
             if isinstance(self.switches, str):
                 self.switches = self.switches.split(',')
@@ -584,6 +612,7 @@ class BrowserJob(Job):
             if isinstance(self.block_elements, str):
                 self.block_elements = self.block_elements.split(',')
             if not isinstance(self.block_elements, list):
+                await browser.close()
                 raise TypeError(f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
                                 f'( {self.get_indexed_location()} )')
             # web_request_resource_types = [
@@ -606,7 +635,7 @@ class BrowserJob(Job):
             async def handle_request(request_event, block_elements):
                 logger.info(f'Job {self.index_number}: resource_type={request_event.resourceType} '
                             f'elements={block_elements}')
-                if any(request_event.resourceType == element for element in block_elements):
+                if any(request_event.resourceType == el for el in block_elements):
                     logger.info(f'Job {self.index_number}: Aborting request {request_event.resourceType}')
                     await request_event.abort()
                 else:

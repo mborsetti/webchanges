@@ -1,6 +1,7 @@
 """Handles all storage: job files, config files, hooks file, and cache database engines."""
 
 import copy
+import email.utils
 import getpass
 import logging
 import os
@@ -8,11 +9,11 @@ import shutil
 import sqlite3
 import stat
 import sys
-import tempfile
 import threading
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from datetime import datetime
+from os import PathLike
+from pathlib import Path
 from typing import Any, Dict, Hashable, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, Type, Union
 
 import msgpack
@@ -189,12 +190,12 @@ class BaseStorage(metaclass=ABCMeta):
 
 
 class BaseFileStorage(BaseStorage, metaclass=ABCMeta):
-    def __init__(self, filename: Optional[Union[str, bytes, os.PathLike]]) -> None:
-        self.filename = filename
+    def __init__(self, filename: Optional[Union[str, bytes, PathLike]]) -> None:
+        self.filename = Path(filename)
 
 
 class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename: Optional[Union[str, bytes, os.PathLike]]) -> None:
+    def __init__(self, filename: Optional[Union[str, bytes, PathLike]]) -> None:
         super().__init__(filename)
         self.config = {}
         if not isinstance(self, JobsBaseFileStorage):
@@ -205,13 +206,13 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
     def parse(cls, *args) -> Iterator:
         ...
 
-    def edit(self, example_file: Optional[Union[str, bytes, os.PathLike]] = None) -> int:
-        fn_base, fn_ext = os.path.splitext(self.filename)
-        file_edit = fn_base + '.edit' + fn_ext
+    def edit(self, example_file: Optional[Union[str, bytes, PathLike]] = None) -> int:
+        # Python 3.9: file_edit = self.filename.with_stem(self.filename.stem + '_edit')
+        file_edit = self.filename.parent.joinpath(self.filename.stem + '_edit' + ''.join(self.filename.suffixes))
 
-        if os.path.isfile(self.filename):
+        if self.filename.is_file():
             shutil.copy(self.filename, file_edit)
-        elif example_file is not None and os.path.isfile(example_file):
+        elif example_file is not None and Path(example_file).is_file():
             shutil.copy(example_file, file_edit)
 
         while True:
@@ -237,18 +238,18 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
                 print('Your changes have been saved in', file_edit)
                 return 1
 
-        os.replace(file_edit, self.filename)
+        file_edit.replace(self.filename)
         print('Saving edit changes in', self.filename)
 
     @classmethod
-    def write_default_config(cls, filename: Union[str, bytes, os.PathLike]) -> None:
+    def write_default_config(cls, filename: Union[str, bytes, PathLike]) -> None:
         config_storage = cls(None)
         config_storage.filename = filename
         config_storage.save()
 
 
 class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename: Union[str, bytes, os.PathLike]) -> None:
+    def __init__(self, filename: Union[str, bytes, PathLike]) -> None:
         super().__init__(filename)
         self.filename = filename
 
@@ -262,14 +263,14 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
         shelljob_errors = []
         current_uid = os.getuid()
 
-        dirname = os.path.dirname(self.filename) or '.'
-        dir_st = os.stat(dirname)
+        dirname = self.filename.parent
+        dir_st = dirname.stat()
         if (dir_st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) != 0:
             shelljob_errors.append(f'{dirname} is group/world-writable')
         if dir_st.st_uid != current_uid:
             shelljob_errors.append(f'{dirname} not owned by {getpass.getuser()}')
 
-        file_st = os.stat(self.filename)
+        file_st = self.filename.stat()
         if (file_st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) != 0:
             shelljob_errors.append(f'{self.filename} is group/world-writable')
         if file_st.st_uid != current_uid:
@@ -306,7 +307,7 @@ class BaseTxtFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
     @classmethod
     def parse(cls, *args) -> Iterator[Type[JobBase]]:
         filename = args[0]
-        if filename is not None and os.path.isfile(filename):
+        if filename is not None and filename.is_file():
             with open(filename) as fp:
                 for line in fp:
                     line = line.strip()
@@ -330,7 +331,7 @@ class BaseYamlFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
     def parse(cls, *args) -> Union[Dict[Hashable, Any], list, None]:
         """Return contents of YAML file if it exists"""
         filename = args[0]
-        if filename is not None and os.path.isfile(filename):
+        if filename is not None and filename.is_file():
             with open(filename) as fp:
                 return yaml.safe_load(fp)
 
@@ -374,7 +375,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
     @classmethod
     def parse(cls, *args) -> List[JobBase]:
         filename = args[0]
-        if filename is not None and os.path.isfile(filename):
+        if filename is not None and filename.is_file():
             with open(filename) as fp:
                 return cls._parse(fp)
 
@@ -481,35 +482,31 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
         """
 
         count = self.rollback(timestamp)
-        try:
-            timestamp_date = datetime.fromtimestamp(timestamp).astimezone().isoformat()
-        except OSError:
-            timestamp_date = datetime.fromtimestamp(timestamp).isoformat()
+        timestamp_date = email.utils.formatdate(timestamp, localtime=True)
         if count:
             print(f'Deleted {count} snapshots taken after {timestamp_date}')
         else:
-            print(f'No snapshots taken after {timestamp_date} found to delete')
+            print(f'No snapshots found after {timestamp_date}')
 
 
 class CacheDirStorage(CacheStorage):
     """Stores the information in individual files in a directory 'dirname'"""
-    def __init__(self, dirname: Union[str, bytes, os.PathLike]) -> None:
+    def __init__(self, dirname: Union[str, bytes, PathLike]) -> None:
         super().__init__(dirname)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+        self.filename.mkdir(parents=True, exist_ok=True)  # filename is a dir (confusing!)
 
     def close(self) -> None:
         """No need to close"""
 
-    def _get_filename(self, guid: str) -> Union[str, bytes, os.PathLike]:
-        return os.path.join(self.filename, guid)
+    def _get_filename(self, guid: str) -> PathLike:
+        return self.filename.joinpath(guid)
 
     def get_guids(self) -> List[str]:
-        return os.listdir(self.filename)
+        return self.filename.iterdir()
 
     def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
         filename = self._get_filename(guid)
-        if not os.path.isfile(filename):
+        if not filename.is_file():
             return None, None, 0, None
 
         try:
@@ -519,7 +516,7 @@ class CacheDirStorage(CacheStorage):
             with open(filename, 'rb') as fp:
                 data = fp.read().decode(errors='ignore')
 
-        timestamp = os.stat(filename)[stat.ST_MTIME]
+        timestamp = filename.stat().st_mtime
 
         return data, timestamp, 0, None
 
@@ -535,13 +532,14 @@ class CacheDirStorage(CacheStorage):
 
     def delete(self, guid: str) -> None:
         filename = self._get_filename(guid)
-        if os.path.isfile(filename):
-            os.unlink(filename)
+        # Python 3.8: replace with filename.unlink(missing_ok=True)
+        if filename.is_file():
+            filename.unlink()
 
     def delete_latest(self, guid: str) -> int:
         filename = self._get_filename(guid)
-        if os.path.isfile(filename):
-            os.unlink(filename)
+        if filename.is_file():
+            filename.unlink()
             return 1
 
     def clean(self, guid: str) -> None:
@@ -573,7 +571,7 @@ class CacheSQLite3Storage(CacheStorage):
     * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
     * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
     """
-    def __init__(self, filename: Union[str, bytes, os.PathLike], max_snapshots: int = 4) -> None:
+    def __init__(self, filename: Union[str, bytes, PathLike], max_snapshots: int = 4) -> None:
         """
         :param filename: The full filename of the database file
         :param max_snapshots: The maximum number of snapshots to retain in the database for each 'guid'
@@ -586,16 +584,15 @@ class CacheSQLite3Storage(CacheStorage):
         logger.info(f'Opening permanent sqlite3 database file {filename}')
         super().__init__(filename)
 
-        dirname = os.path.dirname(filename)
-        if dirname and not os.path.isdir(dirname):
-            os.makedirs(dirname)
-        fn_base, fn_ext = os.path.splitext(filename)
+        self.filename.parent.mkdir(parents=True, exist_ok=True)
 
         # https://stackoverflow.com/questions/26629080
         self.lock = threading.RLock()
 
-        self.db = sqlite3.connect(filename, check_same_thread=False)
+        # filename needs to be converted from PathLike to str for 3.6
+        self.db = sqlite3.connect(str(filename), check_same_thread=False)
         self.cur = self.db.cursor()
+        self.cur.execute('PRAGMA temp_store = MEMORY;')
         tables = self._execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
 
         def _initialize_table(self) -> None:
@@ -615,9 +612,10 @@ class CacheSQLite3Storage(CacheStorage):
                 )
 
             self.db.close()
-            minidb_filename = f'{fn_base}_minidb{fn_ext}'
-            os.replace(filename, minidb_filename)
-            self.db = sqlite3.connect(filename, check_same_thread=False)
+            # Python 3.9: minidb_filename = filename.with_stem(filename.stem + '_minidb')
+            minidb_filename = filename.parent.joinpath(filename.stem + '_minidb' + ''.join(filename.suffixes))
+            filename.replace(minidb_filename)
+            self.db = sqlite3.connect(str(filename), check_same_thread=False)
             self.cur = self.db.cursor()
             _initialize_table(self)
             # migrate the minidb legacy database renamed above
@@ -625,11 +623,10 @@ class CacheSQLite3Storage(CacheStorage):
         elif tables != ('webchanges',):
             _initialize_table(self)
 
-        # create temporary file for writing (fault tolerant)
-        self.temp_filename = tempfile.NamedTemporaryFile().name
-        logger.debug(f'Creating temp sqlite3 database file {self.temp_filename}')
+        # create temporary database in memory for writing during execution (fault tolerance)
+        logger.debug('Creating temp sqlite3 database file in memory')
         self.temp_lock = threading.RLock()
-        self.temp_db = sqlite3.connect(self.temp_filename, check_same_thread=False)
+        self.temp_db = sqlite3.connect('', check_same_thread=False)
         self.temp_cur = self.temp_db.cursor()
         self._temp_execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
         self.temp_db.commit()
@@ -652,23 +649,33 @@ class CacheSQLite3Storage(CacheStorage):
             logger.debug(f"Executing (temp) '{sql}' with {args[:2]}...")
             return self.temp_cur.execute(sql, args)
 
+    def _copy_temp_to_permanent(self, delete: bool = False) -> None:
+        """Copy contents of temporary database to permanent one."""
+        logger.debug('Saving new snapshots to permanent sqlite3 database')
+        # with self.temp_lock:
+        #     self.temp_db.commit()
+        # with self.lock:
+        #     self._execute('ATTACH DATABASE ? AS temp_db', (str(self.temp_filename),))
+        #     self._execute('INSERT INTO webchanges SELECT * FROM temp_db.webchanges')
+        #     logger.debug(f'Wrote {self.cur.rowcount} new snapshots to permanent sqlite3 database')
+        #     self.db.commit()
+        #     self._execute('DETACH DATABASE temp_db')
+        with self.temp_lock:
+            with self.lock:
+                for row in self._temp_execute('SELECT * FROM webchanges').fetchall():
+                    self._execute('INSERT INTO webchanges VALUES (?, ?, ?)', row)
+                self.db.commit()
+            if delete:
+                self._temp_execute('DELETE FROM webchanges')
+
     def close(self) -> None:
         """Writes the temporary database to the permanent one, purges old entries if required, and closes all database
         connections."""
-        logger.debug('Saving new snapshots to permanent sqlite3 database')
+        self._copy_temp_to_permanent()
         with self.temp_lock:
-            self.temp_db.commit()
             self.temp_db.close()
-        with self.lock:
-            self._execute('ATTACH DATABASE ? AS temp_db', (self.temp_filename,))
-            self._execute('INSERT INTO webchanges SELECT * FROM temp_db.webchanges')
-            logger.debug(f'Wrote {self.cur.rowcount} new snapshots to permanent sqlite3 database')
-            self.db.commit()
-            self._execute('DETACH DATABASE temp_db')
-            if os.path.isfile(self.temp_filename):
-                logger.debug(f'Deleting temp sqlite3 database file {self.temp_filename}')
-                os.remove(self.temp_filename)
             logger.debug('Cleaning up the permanent sqlite3 database and closing the connection')
+        with self.lock:
             if self.max_snapshots:
                 num_del = self.keep_latest(self.max_snapshots)
                 logger.debug(f'Keeping no more than {self.max_snapshots} snapshots per job: '
@@ -887,7 +894,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
         return num_del
 
-    def migrate_from_minidb(self, minidb_filename: Union[str, bytes, os.PathLike]) -> None:
+    def migrate_from_minidb(self, minidb_filename: Union[str, bytes, PathLike]) -> None:
         """Migrate the data of a legacy minidb database to the current database.
 
         :param minidb_filename: The filename of the legacy minidb database
@@ -908,7 +915,7 @@ class CacheSQLite3Storage(CacheStorage):
 
 
 class CacheRedisStorage(CacheStorage):
-    def __init__(self, filename: Union[str, bytes, os.PathLike]) -> None:
+    def __init__(self, filename: Union[str, bytes, PathLike]) -> None:
         super().__init__(filename)
 
         if redis is None:

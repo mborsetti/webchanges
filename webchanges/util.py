@@ -11,6 +11,7 @@ import subprocess
 import sys
 import textwrap
 from math import floor, log10
+from os import PathLike
 from types import ModuleType
 from typing import Callable, Iterable, List, Match, Tuple, Type, TypeVar, Union
 
@@ -61,7 +62,7 @@ class TrackSubClasses(type):
         super().__init__(name, bases, namespace)
 
 
-def edit_file(filename: Union[str, bytes, os.PathLike]) -> None:
+def edit_file(filename: Union[str, bytes, PathLike]) -> None:
     """Opens the editor to edit the file."""
     editor = os.environ.get('EDITOR', None)
     if not editor:
@@ -73,11 +74,12 @@ def edit_file(filename: Union[str, bytes, os.PathLike]) -> None:
             raise SystemExit('Please set the path to the editor in the environment variable $EDITOR'
                              ' e.g. "export EDITOR=nano"')
 
-    subprocess.run(shlex.split(editor) + [filename], check=True)
+    subprocess.run(shlex.split(editor) + [str(filename)], check=True)
 
 
-def import_module_from_source(module_name: str, source_path: str) -> ModuleType:
+def import_module_from_source(module_name: str, source_path: Union[str, bytes, PathLike]) -> ModuleType:
     """Loads a module and executes it in its own namespace."""
+    source_path = str(source_path)
     loader = importlib.machinery.SourceFileLoader(module_name, source_path)
     spec = importlib.util.spec_from_file_location(module_name, source_path, loader=loader)
     module = importlib.util.module_from_spec(spec)

@@ -2,8 +2,8 @@
 data/doc_filer_testadata.yaml file."""
 import importlib.util
 import logging
-import os
 import sys
+from pathlib import Path
 from typing import Any, Dict
 
 import docutils.frontend
@@ -19,8 +19,9 @@ from webchanges.storage import YamlJobsStorage
 
 logger = logging.getLogger(__name__)
 
-root = os.path.join(os.path.dirname(__file__), '../webchanges', '..')
-here = os.path.dirname(__file__)
+here = Path(__file__).parent
+data_dir = here.joinpath('data')
+docs_dir = here.joinpath('..').resolve().joinpath('docs')
 
 
 # https://stackoverflow.com/a/48719723/1047040
@@ -51,20 +52,20 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
 def load_hooks_from_doc() -> str:
     """Load YAML code blocks from rst file."""
-    doc = parse_rst(open(os.path.join(root, 'docs/hooks.rst')).read())
+    doc = parse_rst(open(docs_dir.joinpath('hooks.rst')).read())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
     return visitor.code[0]
 
 
 def load_hooks_testdata() -> Dict[str, Any]:
-    with open(os.path.join(here, 'data/doc_hooks_testdata.yaml')) as f:
+    with open(data_dir.joinpath('doc_hooks_testdata.yaml')) as f:
         yaml_data = f.read()
     return yaml.safe_load(yaml_data)
 
 
 def load_hooks_jobs() -> Dict[str, Any]:
-    jobs_file = os.path.join(here, 'data/doc_hooks_jobs.yaml')
+    jobs_file = data_dir.joinpath('doc_hooks_jobs.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)
     return jobs_storage.load()
 

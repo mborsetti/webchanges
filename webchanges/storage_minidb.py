@@ -8,9 +8,8 @@ Code is loaded only:
 
 Having it into a standalone module allows running the program without having the minidb package installed.
 """
-
-import os
-from typing import Dict, Iterator, Optional
+from os import PathLike
+from typing import Dict, Iterator, Optional, Union
 
 from .storage import CacheStorage
 
@@ -31,17 +30,15 @@ class CacheMiniDBStorage(CacheStorage):
         tries = int
         etag = str
 
-    def __init__(self, filename) -> None:
+    def __init__(self, filename: Union[str, bytes, PathLike]) -> None:
         super().__init__(filename)
 
         if isinstance(minidb, type):
             raise ImportError("Python package 'minidb' is missing")
 
-        dirname = os.path.dirname(filename)
-        if dirname and not os.path.isdir(dirname):
-            os.makedirs(dirname)
+        self.filename.parent.mkdir(parents=True, exist_ok=True)
 
-        self.db = minidb.Store(self.filename, debug=True)
+        self.db = minidb.Store(str(self.filename), debug=True)
         self.db.register(self.CacheEntry)
 
     def close(self) -> None:

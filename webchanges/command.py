@@ -2,11 +2,11 @@
 
 import contextlib
 import logging
-import os.path
 import shutil
 import sys
 import timeit
 import traceback
+from pathlib import Path
 from typing import Optional, Union
 
 import requests
@@ -30,17 +30,19 @@ class UrlwatchCommand:
         self.urlwatch_config = urlwatcher.urlwatch_config
 
     def edit_hooks(self) -> Optional[int]:
-        fn_base, fn_ext = os.path.splitext(self.urlwatch_config.hooks)
-        hooks_edit = f'{fn_base}.edit{fn_ext}'
+        # Python 3.9: hooks_edit = Path(self.urlwatch_config.hooks).with_stem(Path(self.urlwatch_config.hooks).stem +
+        # '_edit')
+        hooks_edit = self.urlwatch_config.hooks.parent.joinpath(self.urlwatch_config.hooks.stem + '_edit' + ''.join(
+            self.urlwatch_config.hooks.suffixes))
         try:
-            if os.path.exists(self.urlwatch_config.hooks):
+            if Path(self.urlwatch_config.hooks).exists():
                 shutil.copy(self.urlwatch_config.hooks, hooks_edit)
             # elif self.urlwatch_config.hooks_py_example is not None and os.path.exists(
             #         self.urlwatch_config.hooks_py_example):
             #     shutil.copy(self.urlwatch_config.hooks_py_example, hooks_edit)
             edit_file(hooks_edit)
             import_module_from_source('hooks', hooks_edit)
-            os.replace(hooks_edit, self.urlwatch_config.hooks)
+            hooks_edit.replace(self.urlwatch_config.hooks)
             print(f'Saving edit changes in {self.urlwatch_config.hooks}')
         except SystemExit:
             raise

@@ -1,6 +1,8 @@
 """Test commands."""
 
 import os
+# import tempfile
+from pathlib import Path, PurePath
 
 import pytest
 
@@ -11,13 +13,14 @@ from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
-here = os.path.dirname(__file__)
+here = Path(__file__).parent
 
-config_dir = os.path.join(here, 'data')
-config_file = os.path.join(here, 'data', 'config.yaml')
-jobs_file = os.path.join(here, 'data', 'jobs-echo_test.yaml')
-cache_file = os.path.join(here, 'data', 'cache.db')
-hooks_file = os.path.join(here, 'data', 'hooks_test.py')
+config_dir = here.joinpath('data')
+config_file = config_dir.joinpath('config.yaml')
+jobs_file = config_dir.joinpath('jobs-echo_test.yaml')
+# cache_file = Path(tempfile.NamedTemporaryFile(suffix='.db').name)
+cache_file = Path(':memory:')
+hooks_file = config_dir.joinpath('hooks_test.py')
 
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)
@@ -34,6 +37,30 @@ else:
 visual = os.getenv('VISUAL')
 if visual:
     del os.environ['VISUAL']
+
+
+@pytest.fixture(scope='module', autouse=True)
+def cleanup(request):
+    """Cleanup once we are finished."""
+    def finalizer():
+        if editor:
+            os.environ['EDITOR'] = editor
+        if visual:
+            os.environ['VISUAL'] = visual
+        try:
+            urlwatcher.close()
+        except AttributeError:
+            pass
+        # Python 3.9: config_edit = config_file.with_stem(config_file.stem + '_edit')
+        # Python 3.9: hooks_edit = hooks_file.with_stem(hooks_file.stem + '_edit')
+        config_edit = config_file.joinpath(config_file.stem + '_edit' + ''.join(config_file.suffixes))
+        hooks_edit = hooks_file.joinpath(hooks_file.stem + '_edit' + ''.join(hooks_file.suffixes))
+        for filename in (config_edit, hooks_edit):
+            # Python 3.8: replace with filename.unlink(missing_ok=True)
+            if filename.is_file():
+                filename.unlink()
+
+    request.addfinalizer(finalizer)
 
 
 def test_migration():
@@ -129,10 +156,12 @@ def test_test_job():
 
 
 def test_test_diff():
-    jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
+    jobs_file = config_dir.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)
     command_config = CommandConfig(project_name, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    if os.name == 'nt':
+        urlwatcher.jobs[0].command = 'echo %time%'
 
     setattr(command_config, 'test_diff', 1)
     urlwatch_command = UrlwatchCommand(urlwatcher)
@@ -141,21 +170,14 @@ def test_test_diff():
     setattr(command_config, 'test_diff', None)
     assert pytest_wrapped_e.value.code == 1
 
-    job = urlwatcher.jobs[0]
-    if os.name == 'nt':
-        job.command = 'echo %time%'
-    job.filter = []
-    guid = job.get_guid()
-
     # run once
     urlwatcher.run_jobs()
-    cache_storage.close()
-    cache_storage.__init__(cache_file)
+    cache_storage._copy_temp_to_permanent(delete=True)
 
     # run twice
     urlwatcher.run_jobs()
-    cache_storage.close()
-    cache_storage.__init__(cache_file)
+    cache_storage._copy_temp_to_permanent(delete=True)
+    guid = urlwatcher.jobs[0].get_guid()
     history = cache_storage.get_history_data(guid)
     assert len(history) == 2
 
@@ -164,7 +186,7 @@ def test_test_diff():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'test_diff', None)
-    urlwatcher.cache_storage.delete(job.get_guid())
+    urlwatcher.cache_storage.delete(guid)
     assert pytest_wrapped_e.value.code is None
 
 
@@ -192,10 +214,12 @@ def test_modify_urls():
 
 
 def test_delete_snapshot():
-    jobs_file = os.path.join(here, 'data', 'jobs-time.yaml')
+    jobs_file = config_dir.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)
     command_config = CommandConfig(project_name, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    if os.name == 'nt':
+        urlwatcher.jobs[0].command = 'echo %time%'
 
     setattr(command_config, 'delete_snapshot', True)
     urlwatch_command = UrlwatchCommand(urlwatcher)
@@ -204,21 +228,16 @@ def test_delete_snapshot():
     setattr(command_config, 'delete_snapshot', False)
     assert pytest_wrapped_e.value.code == 'No snapshots found to be deleted'
 
-    job = urlwatcher.jobs[0]
-    if os.name == 'nt':
-        job.command = 'echo %time%'
-    job.filter = []
-    guid = job.get_guid()
-
     # run once
     urlwatcher.run_jobs()
-    cache_storage.close()
-    cache_storage.__init__(cache_file)
+    cache_storage._copy_temp_to_permanent(delete=True)
+    guid = urlwatcher.jobs[0].get_guid()
+    history = cache_storage.get_history_data(guid)
+    assert len(history) == 1
 
     # run twice
     urlwatcher.run_jobs()
-    cache_storage.close()
-    cache_storage.__init__(cache_file)
+    cache_storage._copy_temp_to_permanent(delete=True)
     history = cache_storage.get_history_data(guid)
     assert len(history) == 2
 
@@ -227,7 +246,6 @@ def test_delete_snapshot():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    urlwatcher.cache_storage.delete(job.get_guid())
     assert pytest_wrapped_e.value.code == 0
 
 
@@ -319,33 +337,10 @@ def test_check_xmpp_login():
     assert pytest_wrapped_e.value.code == 1
 
 
-@pytest.fixture(scope='session', autouse=True)
-def cleanup(request):
-    """Cleanup once we are finished."""
-    def finalizer():
-        if editor:
-            os.environ['EDITOR'] = editor
-        if visual:
-            os.environ['VISUAL'] = visual
-        try:
-            urlwatcher.close()
-        except AttributeError:
-            pass
-        fn_base, fn_ext = os.path.splitext(config_file)
-        config_edit = f'{fn_base}.edit{fn_ext}'
-        fn_base, fn_ext = os.path.splitext(hooks_file)
-        hooks_edit = f'{fn_base}.edit{fn_ext}'
-        for filename in (cache_file, config_edit, hooks_edit):
-            if os.path.exists(filename):
-                os.remove(filename)
-
-    request.addfinalizer(finalizer)
-
-
 def test_setup_logger_verbose():
     setup_logger_verbose()
 
 
 def test_locate_storage_file():
     file = locate_storage_file('test', 'nowhere', '.noext')
-    assert file == 'test'
+    assert file == PurePath('test')

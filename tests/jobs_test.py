@@ -1,9 +1,10 @@
 """Test running of jobs"""
-
+import ftplib
 import logging
 import os
 import socket
 import sys
+from pathlib import Path
 from typing import Any, Dict
 
 import pytest
@@ -15,9 +16,14 @@ from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, BrowserResponseError, DEFAULT_CHROMIUM_REVISION, JobBase, NotModifiedError, \
     ShellError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheDirStorage, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
 logger = logging.getLogger(__name__)
+
+here = Path(__file__).parent
+data_dir = here.joinpath('data')
+cache_file = Path(':memory:')
+cache_storage = CacheSQLite3Storage(cache_file)
 
 
 def is_connected() -> bool:
@@ -35,8 +41,6 @@ def is_connected() -> bool:
 
 connection_required = pytest.mark.skipif(not is_connected(), reason='no Internet connection')
 py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
-
-here = os.path.dirname(__file__)
 
 chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
 TEST_JOBS = [
@@ -74,6 +78,13 @@ TEST_JOBS = [
       'wait_until': 'load',
       },
      'Google'),
+    ({'url': data_dir.joinpath('file-test.txt').as_uri(),
+      },
+     'This is text\n'),
+    ({'url': data_dir.joinpath('file-test.txt').as_uri(),
+      'filter': [{'pdf2text': {}}],
+      },
+     b'This is text\n'),
     ({'command': 'echo test',
       },
      'test'),
@@ -90,11 +101,38 @@ def test_run_job(input_job: Dict[str, Any], output: str) -> None:
                        'pyppeteer.errors.BrowserError: Browser closed unexpectedly')
         return
     job = JobBase.unserialize(input_job)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job.main_thread_enter()
     data, etag = job.retrieve(job_state)
+    if job.filter == [{'pdf2text': {}}]:
+        assert isinstance(data, bytes)
     assert output in data
+    job.main_thread_exit()
+
+
+@connection_required
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
+def test_run_ftp_job() -> None:
+    job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt',
+                               'timeout': 2})
+    job_state = JobState(cache_storage, job)
+    job.main_thread_enter()
+    data, etag = job.retrieve(job_state)
+    assert len(data) == 319
+    job.main_thread_exit()
+
+
+@connection_required
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
+def test_run_ftp_job_needs_bytes() -> None:
+    job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip',
+                               'timeout': 2,
+                               'filter': [{'pdf2text': {}}]})
+    job_state = JobState(cache_storage, job)
+    job.main_thread_enter()
+    data, etag = job.retrieve(job_state)
+    assert isinstance(data, bytes)
+    assert len(data) == 1024
     job.main_thread_exit()
 
 
@@ -111,7 +149,6 @@ def test_check_etag(job_data: Dict[str, Any]) -> None:
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job.main_thread_enter()
     data, etag = job.retrieve(job_state)
@@ -128,7 +165,6 @@ def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job.main_thread_enter()
 
@@ -155,7 +191,6 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) 
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
     job_data['timeout'] = .001
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job_state.process()
     if not isinstance(job_state.exception, BrowserResponseError):
@@ -178,7 +213,6 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job_state.process()
     if isinstance(job_state.exception, BrowserResponseError):
@@ -199,34 +233,25 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
 # Legacy code for Pyppeteer is not optimized for concurrency and fails in Github Actions with error
 # pyppeteer.errors.BrowserError: Browser closed unexpectedly.
 def test_stress_use_browser() -> None:
-    jobs_file = os.path.join(here, 'data', 'jobs-use_browser.yaml')
-    config_file = os.path.join(here, 'data', 'config.yaml')
-    cache_file = os.path.join(here, 'data', 'cache.db')
+    jobs_file = data_dir.joinpath('jobs-use_browser.yaml')
+    config_file = data_dir.joinpath('config.yaml')
     hooks_file = ''
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage(jobs_file)
-    cache_storage = CacheSQLite3Storage(cache_file)
 
     if not os.getenv('GITHUB_ACTIONS'):
         from webchanges.cli import setup_logger_verbose
         setup_logger_verbose()
 
-    try:
-        urlwatch_config = CommandConfig(project_name, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
-                                        cache_file, True)
-        urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
-        urlwatcher.run_jobs()
-    finally:
-        cache_storage.close()
-        if os.path.exists(cache_file):
-            os.remove(cache_file)
+    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file, True)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    urlwatcher.run_jobs()
 
 
 def test_shell_exception_and_with_defaults() -> None:
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job_state.process()
     assert isinstance(job_state.exception, Exception)
@@ -328,7 +353,6 @@ def test_browser_switches_not_str_or_list():
                 'use_browser': True,
                 'switches': {'dict key': ''}}
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job_state.process()
     assert isinstance(job_state.exception, TypeError)
@@ -340,9 +364,9 @@ def test_browser_block_elements_not_str_or_list():
                 'use_browser': True,
                 'block_elements': {'dict key': ''}}
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job_state.process()
+    print('job_state.exception', job_state.exception)
     assert isinstance(job_state.exception, TypeError)
 
 
@@ -352,7 +376,6 @@ def test_browser_block_elements_invalid():
                 'use_browser': True,
                 'block_elements': ['fake element']}
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job_state.process()
     assert isinstance(job_state.exception, ValueError)
@@ -361,7 +384,6 @@ def test_browser_block_elements_invalid():
 def test_shell_error():
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
-    cache_storage = CacheDirStorage(os.path.join(here, 'data'))
     job_state = JobState(cache_storage, job)
     job_state.process()
     assert isinstance(job_state.exception, ShellError)

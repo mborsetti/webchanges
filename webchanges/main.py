@@ -4,7 +4,6 @@ For the entrypoint, see cli.py.
 """
 
 import logging
-import os
 
 from .config import CommandConfig
 from .handler import Report
@@ -44,19 +43,19 @@ class Urlwatch(object):
 
     def check_directories(self) -> None:
         if (not (self.urlwatch_config.config and self.urlwatch_config.jobs)
-                and not os.path.isdir(self.urlwatch_config.config_dir)):
-            os.makedirs(self.urlwatch_config.config_dir)
-            if not os.path.exists(self.urlwatch_config.config):
+                and not self.urlwatch_config.config_dir.is_dir()):
+            self.urlwatch_config.config_dir.mkdir(parents=True)
+            if not self.urlwatch_config.config.is_file():
                 self.config_storage.write_default_config(self.urlwatch_config.config)
                 print(f'A default config has been written to {self.urlwatch_config.config}.'
                       f'Use "{self.urlwatch_config.project_name} --edit-config" to customize it.')
 
     def load_hooks(self) -> None:
-        if os.path.exists(self.urlwatch_config.hooks):
+        if self.urlwatch_config.hooks.is_file():
             import_module_from_source('hooks', self.urlwatch_config.hooks)
 
     def load_jobs(self) -> None:
-        if os.path.isfile(self.urlwatch_config.jobs):
+        if self.urlwatch_config.jobs.is_file():
             jobs = self.jobs_storage.load_secure()
             logger.info(f'Found {len(jobs)} jobs')
         else:

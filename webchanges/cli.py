@@ -5,11 +5,13 @@
 # See config module for the command line arguments
 
 import logging
-import os.path
+import os
 import shutil
 import signal
 import sys
 import warnings
+from os import PathLike
+from pathlib import Path, PurePath
 from typing import Optional, Union
 
 from appdirs import AppDirs
@@ -23,13 +25,13 @@ from .storage import CacheDirStorage, CacheRedisStorage, CacheSQLite3Storage, Ya
 # directory where the config, jobs and hooks files are located
 if os.name != 'nt':
     # typically ~/.config/{__project_name__}
-    config_dir = AppDirs(__project_name__).user_config_dir
+    config_dir = Path(AppDirs(__project_name__).user_config_dir)
 else:
-    config_dir = os.path.expanduser(os.path.join('~', 'Documents', __project_name__))
+    config_dir = Path.home().joinpath('Documents').joinpath(__project_name__)
 
 # directory where the database is located
 # typically ~/.cache/{__project_name__} or %LOCALAPPDATA%\{__project_name__}\{__project_name__}\Cache
-cache_dir = AppDirs(__project_name__).user_cache_dir
+cache_dir = Path(AppDirs(__project_name__).user_cache_dir)
 
 # Ignore SIGPIPE for stdout (see https://github.com/thp/urlwatch/issues/77)
 try:
@@ -55,8 +57,8 @@ def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
     logger.debug(f'System: {platform.platform()}')
 
 
-def locate_storage_file(filename: Union[str, bytes, os.PathLike], default_dir: Union[str, bytes, os.PathLike],
-                        ext: Optional[str] = None) -> str:
+def locate_storage_file(filename: PathLike, default_dir: PathLike, ext: Optional[str] = None
+                        ) -> Union[str, bytes, PathLike]:
     """Searches for file as specified and in default directory; retry with 'ext' extension.
 
     :param filename: The filename
@@ -65,53 +67,54 @@ def locate_storage_file(filename: Union[str, bytes, os.PathLike], default_dir: U
 
     :returns: The filename, either original or with path where found
     """
+    filename = Path(filename)
+    default_dir = Path(default_dir)
     search_filenames = [filename]
 
     # if exp is given, iterate both on raw filename and the filename with ext if different
-    if ext and os.path.splitext(filename)[1] != ext:
-        search_filenames.append(filename + ext)
+    if ext and filename.suffix != ext:
+        search_filenames.append(filename.with_suffix(ext))
 
     for file in search_filenames:
         # return if found
-        if os.path.isfile(file):
+        if file.is_file():
             return file
 
         # no directory specified: add default one
-        if file == os.path.basename(file):
-            new_file = os.path.join(default_dir, file)
-            if os.path.isfile(new_file):
+        if file.parent == PurePath('.'):
+            new_file = default_dir.joinpath(file)
+            if new_file.is_file():
                 return new_file
 
     return filename
 
 
-def migrate_from_urlwatch(config_file: Union[str, bytes, os.PathLike], jobs_file: Union[str, bytes, os.PathLike],
-                          hooks_file: Union[str, bytes, os.PathLike], cache_file: Union[str, bytes, os.PathLike]
-                          ) -> None:
+def migrate_from_urlwatch(config_file: PathLike, jobs_file: PathLike, hooks_file: PathLike,
+                          cache_file: PathLike) -> None:
     """Check for existence of legacy (urlwatch 2.23) config, jobs and hooks files and migrate them (i.e. make a copy to
     new folder and or naming).  Original files are not deleted."""
-    uw_urlwatch_dir = os.path.expanduser(os.path.join('~', '.' + 'urlwatch'))
-    uw_config_file = os.path.join(uw_urlwatch_dir, 'urlwatch.yaml')
-    uw_urls_file = os.path.join(uw_urlwatch_dir, 'urls.yaml')
-    uw_hooks_file = os.path.join(uw_urlwatch_dir, 'hooks.py')
-    uw_cache_dir = AppDirs('urlwatch').user_cache_dir
-    uw_cache_file = os.path.join(uw_cache_dir, 'cache.db')
+    uw_urlwatch_dir = Path.home().joinpath('.urlwatch')
+    uw_config_file = uw_urlwatch_dir.joinpath('urlwatch.yaml')
+    uw_urls_file = uw_urlwatch_dir.joinpath('urls.yaml')
+    uw_hooks_file = uw_urlwatch_dir.joinpath('hooks.py')
+    uw_cache_dir = Path(AppDirs('urlwatch').user_cache_dir)
+    uw_cache_file = uw_cache_dir.joinpath('cache.db')
     for old_file, new_file in zip((uw_config_file, uw_urls_file, uw_hooks_file, uw_cache_file),
                                   (config_file, jobs_file, hooks_file, cache_file)):
-        if os.path.isfile(old_file) and not os.path.isfile(new_file):
-            os.makedirs(os.path.dirname(new_file), exist_ok=True)
+        if old_file.is_file() and not new_file.is_file():
+            new_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(old_file, new_file)
             logger.warning(f"Copied urlwatch '{old_file}' file to {__project_name__} '{new_file}'")
 
 
 def first_run(command_config: CommandConfig) -> None:
     """Create jobs and configuration files."""
-    os.makedirs(config_dir, exist_ok=True)
-    if not os.path.isfile(command_config.config):
+    config_dir.mkdir(parents=True, exist_ok=True)
+    if not Path(command_config.config).is_file():
         YamlConfigStorage.write_default_config(command_config.config)
         print(f'Created default config file at {command_config.config}\n> Edit it with {__project_name__} '
               f'--edit-config')
-    if not os.path.isfile(command_config.jobs):
+    if not Path(command_config.jobs).is_file():
         with open(command_config.jobs, 'w') as fp:
             fp.write(f'# {__project_name__} jobs file. See {__docs_url__}jobs.html\n')
         command_config.edit = True
@@ -134,10 +137,11 @@ def main() -> None:  # pragma: no cover
         PendingDeprecationWarning(warning)
 
     # The config, jobs, hooks and cache files
-    default_config_file = os.path.join(config_dir, 'config.yaml')
-    default_jobs_file = os.path.join(config_dir, 'jobs.yaml')
-    default_hooks_file = os.path.join(config_dir, 'hooks.py')
-    default_cache_file = os.path.join(cache_dir, 'cache.db')
+
+    default_config_file = config_dir.joinpath('config.yaml')
+    default_jobs_file = config_dir.joinpath('jobs.yaml')
+    default_hooks_file = config_dir.joinpath('hooks.py')
+    default_cache_file = cache_dir.joinpath('cache.db')
 
     # migrate legacy urlwatch 2.23 files
     migrate_from_urlwatch(default_config_file, default_jobs_file, default_hooks_file, default_cache_file)
@@ -156,7 +160,7 @@ def main() -> None:  # pragma: no cover
     command_config.hooks = locate_storage_file(command_config.hooks, command_config.config_dir, '.py')
 
     # check for first run
-    if command_config.config == default_config_file and not os.path.isfile(command_config.config):
+    if command_config.config == default_config_file and not Path(command_config.config).is_file():
         first_run(command_config)
 
     # setup config file API
