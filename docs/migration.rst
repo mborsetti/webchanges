@@ -39,9 +39,14 @@ Upgrading from a `urlwatch` 2.23 setup is automatic (see more below), and gives 
   * Higher stability by optimizing of concurrency
   * More flexibility and control with new directives ``chromium_revision``, ``switches``, ``wait_until``,
     ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``, ``user_data_dir``, ``block_elements``, ``cookies``,
-    ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``
+    ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout`` plus the implementation for this type of jobs (if
+    running in Python 3.7 or higher) of the ``ignore_connection_errors``, ``ignore_timeout_errors``,
+    ``ignore_too_many_redirects`` and ``ignore_http_error_codes`` directives
   * Faster runs due to handling of ETags allowing servers to send a simple "HTTP 304 Not Modified" message when
     relevant
+  *
+     directives now work with these type of jobs
+
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
   does not infinitely grow
 * Diffs (changes) that are no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a
@@ -108,10 +113,10 @@ this:
 
 .. _migration_changes:
 
-Detailed information
---------------------
-Everything, except the breaking changes below, work out of the box with a `urlwatch` 2.23 setup, and you can switch back
-whenever you want.
+Upgrade details
+---------------
+Everything, except the breaking changes below, work out of the box when upgrading from a `urlwatch` 2.23 setup,
+and you can switch back whenever you want.
 
 ⚠ Breaking Changes
 ~~~~~~~~~~~~~~~~~~
@@ -143,6 +148,8 @@ Relative to `urlwatch` 2.23:
   * ``--test-diff`` command line argument is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated and
     will be removed in a future release) and display diff history
   * ``--test-diff`` command line argument is no longer limited to displaying the last 10 snapshots
+  * Add job number(s) in command line to run a subset of them; for example, run ``webchanges 2 3`` to only run jobs #2
+    and #3 of your jobs list (find job numbers by running``webchanges --list``)
   * New ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults
     to 4. If set to 0, and unlimited number of snapshots will be kept. Only applies to Python 3.7 or higher and only
     works if the default ``sqlite3`` database is being used.
@@ -153,6 +160,10 @@ Relative to `urlwatch` 2.23:
     by `urlwatch`
   * New ``--rollback-cache TIMESTAMP`` new command line argument to rollback the snapshot database to a previous time,
     useful when you lose notifications. Does not work with database engine ``minidb`` or ``textfiles``.
+  * New ``--delete-snapshot`` command line argument to removes the latest saved snapshot of a job from the database;
+    useful if a change in a website (e.g. layout) requires modifying filters as invalid snapshot can be deleted and
+    `webchanges` rerun to create a truthful diff
+
   * New ``-V`` command line argument, as an alias to ``--version``
   * New ``--log-level`` command line argument to control the amount of logging displayed by the ``-v`` argument
   * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
@@ -164,12 +175,15 @@ Relative to `urlwatch` 2.23:
 
 * Files and location
 
+  * The name of the default jobs file has been changed to ``jobs.yaml``; if at program launch ``urls.yaml`` is found
+    and no ``jobs.yaml`` exists, this is copied into a newly created ``jobs.yaml`` file for backward-compatibility
   * The name of the default program configuration file has been changed to ``config.yaml``; if at program launch
-    ``urlwatch.yaml`` is found and no ``config.yaml`` exists, this is copied over for backward-compatibility
-  * In Windows, the location of config files has been moved to ``%USERPROFILE%\Documents\webchanges``,  where they can
-    be more easily edited (they are indexed there) and backed up; if at program launch config files are only found in
-    the old location (such as during an upgrade), these will be copied to the new directory automatically and the old
-    ones preserved for manual deletion
+    ``urlwatch.yaml`` is found and no ``config.yaml`` exists, this is copied into a newly created ``config.yaml`` file
+    for backward-compatibility
+  * In Windows, the location of the jobs and configuration files has been moved to
+    ``%USERPROFILE%\Documents\webchanges``, where they can be more easily edited (they are indexed there) and backed up;
+    if at program launch jobs and configurations files are only found in the old location (such as during an upgrade),
+    these will be copied to the new directory automatically and the old ones preserved for manual deletion
   * Legacy ``lib/hooks.py`` file location is no longer supported: ``hooks.py`` needs to be in the same directory as the
     configuration files
 
@@ -191,8 +205,14 @@ Relative to `urlwatch` 2.23:
   * New sub-directives for the ``strip`` filter: ``chars``, ``side`` and ``splitlines``
   * The ``html2text`` filter's ``re`` method has been renamed ``strip_tags`` for clarity, the old name is deprecated and
     will trigger a warning
-  * New ``strip_each_line`` filter to remove leading and trailing whitespace on each line
+  * New sub-directives to the ``strip`` filter:
+
+    * ``chars``: Set of characters to be removed (default: whitespace)
+    * ``side``: One-sided removal, either ``left`` (leading characters) or ``right`` (trailing characters)
+    * ``splitlines``: Whether to apply the filter on each line of text (true/false) (default: ``false``, i.e. apply to
+      the entire data)
   * New ``format-xml`` filter to pretty-print xml using the lxml Python package’s etree.tostring pretty_print function
+  * ``url`` directive supports ``ftp://`` URLs
   * The ``grep`` filter has been renamed ``keep_lines_containing`` for clarity, the old name is deprecated and will
     trigger a warning; it will be removed in a future release
   * The ``grepi`` filter has been renamed ``delete_lines_containing`` for clarity, the old name deprecated and will
@@ -279,8 +299,11 @@ Relative to `urlwatch` 2.23:
 
 * Also be aware that:
 
-  * The name of the default job file has changed to ``jobs.yaml``
-  * The location of config and jobs files in Windows has changed to ``%USERPROFILE%/Documents/webchanges``
+  * The name of the default job file has changed to ``jobs.yaml``; if not found, legacy ``urls.yaml`` will be
+    automatically copied into it
+  * The name of the default configuration file has changed to ``config.yaml``; if not found, legacy ``urlwatch.yaml``
+    will be automatically copied into it
+  * The location of configuration and jobs files in Windows has changed to ``%USERPROFILE%/Documents/webchanges``
     where they can be more easily edited and backed up
 
 Known issues

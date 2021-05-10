@@ -10,9 +10,8 @@ import sqlite3
 import stat
 import sys
 import threading
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
-from os import PathLike
 from pathlib import Path
 from typing import Any, Dict, Hashable, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, Type, Union
 
@@ -179,7 +178,7 @@ def dict_deep_merge(source: dict, destination: dict) -> dict:
     return destination
 
 
-class BaseStorage(metaclass=ABCMeta):
+class BaseStorage(ABC):
     @abstractmethod
     def load(self, *args):
         ...
@@ -189,13 +188,13 @@ class BaseStorage(metaclass=ABCMeta):
         ...
 
 
-class BaseFileStorage(BaseStorage, metaclass=ABCMeta):
-    def __init__(self, filename: Optional[Union[str, bytes, PathLike]]) -> None:
+class BaseFileStorage(BaseStorage, ABC):
+    def __init__(self, filename: Optional[Union[str, bytes, Path]]) -> None:
         self.filename = Path(filename)
 
 
-class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename: Optional[Union[str, bytes, PathLike]]) -> None:
+class BaseTextualFileStorage(BaseFileStorage, ABC):
+    def __init__(self, filename: Optional[Union[str, bytes, Path]]) -> None:
         super().__init__(filename)
         self.config = {}
         if not isinstance(self, JobsBaseFileStorage):
@@ -206,7 +205,7 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
     def parse(cls, *args) -> Iterator:
         ...
 
-    def edit(self, example_file: Optional[Union[str, bytes, PathLike]] = None) -> int:
+    def edit(self, example_file: Optional[Union[str, bytes, Path]] = None) -> int:
         # Python 3.9: file_edit = self.filename.with_stem(self.filename.stem + '_edit')
         file_edit = self.filename.parent.joinpath(self.filename.stem + '_edit' + ''.join(self.filename.suffixes))
 
@@ -242,14 +241,14 @@ class BaseTextualFileStorage(BaseFileStorage, metaclass=ABCMeta):
         print('Saving edit changes in', self.filename)
 
     @classmethod
-    def write_default_config(cls, filename: Union[str, bytes, PathLike]) -> None:
+    def write_default_config(cls, filename: Union[str, bytes, Path]) -> None:
         config_storage = cls(None)
         config_storage.filename = filename
         config_storage.save()
 
 
-class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
-    def __init__(self, filename: Union[str, bytes, PathLike]) -> None:
+class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
+    def __init__(self, filename: Path) -> None:
         super().__init__(filename)
         self.filename = filename
 
@@ -303,7 +302,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
         return jobs
 
 
-class BaseTxtFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
+class BaseTxtFileStorage(BaseTextualFileStorage, ABC):
     @classmethod
     def parse(cls, *args) -> Iterator[Type[JobBase]]:
         filename = args[0]
@@ -326,7 +325,7 @@ class BaseTxtFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
                             raise ValueError(f'Unsupported line format: {line}')
 
 
-class BaseYamlFileStorage(BaseTextualFileStorage, metaclass=ABCMeta):
+class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
     @classmethod
     def parse(cls, *args) -> Union[Dict[Hashable, Any], list, None]:
         """Return contents of YAML file if it exists"""
@@ -392,7 +391,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                                allow_unicode=True)
 
 
-class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
+class CacheStorage(BaseFileStorage, ABC):
     @abstractmethod
     def close(self) -> None:
         ...
@@ -491,18 +490,19 @@ class CacheStorage(BaseFileStorage, metaclass=ABCMeta):
 
 class CacheDirStorage(CacheStorage):
     """Stores the information in individual files in a directory 'dirname'"""
-    def __init__(self, dirname: Union[str, bytes, PathLike]) -> None:
+    def __init__(self, dirname: Union[str, bytes, Path]) -> None:
         super().__init__(dirname)
         self.filename.mkdir(parents=True, exist_ok=True)  # filename is a dir (confusing!)
 
     def close(self) -> None:
-        """No need to close"""
+        # No need to close
+        return
 
-    def _get_filename(self, guid: str) -> PathLike:
+    def _get_filename(self, guid: str) -> Path:
         return self.filename.joinpath(guid)
 
-    def get_guids(self) -> List[str]:
-        return self.filename.iterdir()
+    def get_guids(self) -> List[Path]:
+        return list(self.filename.iterdir())
 
     def load(self, guid: str) -> (Optional[str], Optional[float], int, Optional[str]):
         filename = self._get_filename(guid)
@@ -543,7 +543,8 @@ class CacheDirStorage(CacheStorage):
             return 1
 
     def clean(self, guid: str) -> None:
-        """We only store the latest version, no need to clean"""
+        # We only store the latest version, no need to clean
+        return
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("'textfiles' databases cannot be rolled back as new snapshots overwrite old ones")
@@ -571,7 +572,7 @@ class CacheSQLite3Storage(CacheStorage):
     * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
     * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
     """
-    def __init__(self, filename: Union[str, bytes, PathLike], max_snapshots: int = 4) -> None:
+    def __init__(self, filename: Union[str, bytes, Path], max_snapshots: int = 4) -> None:
         """
         :param filename: The full filename of the database file
         :param max_snapshots: The maximum number of snapshots to retain in the database for each 'guid'
@@ -589,7 +590,7 @@ class CacheSQLite3Storage(CacheStorage):
         # https://stackoverflow.com/questions/26629080
         self.lock = threading.RLock()
 
-        # filename needs to be converted from PathLike to str for 3.6
+        # filename needs to be converted from Path to str for 3.6
         self.db = sqlite3.connect(str(filename), check_same_thread=False)
         self.cur = self.db.cursor()
         self.cur.execute('PRAGMA temp_store = MEMORY;')
@@ -894,7 +895,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
         return num_del
 
-    def migrate_from_minidb(self, minidb_filename: Union[str, bytes, PathLike]) -> None:
+    def migrate_from_minidb(self, minidb_filename: Union[str, bytes, Path]) -> None:
         """Migrate the data of a legacy minidb database to the current database.
 
         :param minidb_filename: The filename of the legacy minidb database
@@ -915,7 +916,7 @@ class CacheSQLite3Storage(CacheStorage):
 
 
 class CacheRedisStorage(CacheStorage):
-    def __init__(self, filename: Union[str, bytes, PathLike]) -> None:
+    def __init__(self, filename: Union[str, bytes, Path]) -> None:
         super().__init__(filename)
 
         if redis is None:

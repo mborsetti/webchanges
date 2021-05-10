@@ -14,13 +14,16 @@ if sys.version_info < project.__min_python_version__:
              f'{".".join(str(v) for v in project.__min_python_version__)} or newer.\n'
              f'You are running {sys.version}')
 
-requirements = map(str.strip, open('requirements.txt').readlines())
-README_rst = open('README.rst').read()
+with open('requirements.txt') as f:
+    requirements = map(str.strip, f.readlines())
+
+with open('README.rst') as f:
+    README_rst = f.read()
 
 SETUP = {
     'name': project.__project_name__,
     'version': project.__version__,
-    'description': project.__doc__.split('\n\n', 1)[0],
+    'description': project.__description__,
     'long_description': README_rst,
     'long_description_content_type': 'text/x-rst',
     'author': re.match(r'(.*) <(.*)>', project.__author__).groups()[0],

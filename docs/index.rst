@@ -4,27 +4,18 @@
    and check the html generated.
    Tutorial at https://sphinx-tutorial.readthedocs.io/start/
 
-.. to rebuild the API autodoc run $ sphinx-apidoc -f -e -T -o docs\_api webchanges
+.. to rebuild the API autodoc files run $ sphinx-apidoc -o docs\_api -f -T -e webchanges -n
 
 
-.. highlight:: none
-
-.. include:: ../README.rst
-
-------------
-
-===============================
-Documentation table of contents
-===============================
 .. toctree::
-   :maxdepth: 1
+   :hidden:
    :caption: Getting Started
 
    Overview <self>
    introduction
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
    :caption: In Depth
 
    jobs
@@ -38,28 +29,32 @@ Documentation table of contents
    yaml_syntax
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
    :caption: Advanced
 
    advanced
    hooks
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
    :caption: Migration
 
    migration
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
    :caption: About webchanges
 
    contributing
    changelog
 
-.. to rebuild the API autodoc run $ sphinx-apidoc -f -e -T -o docs\_api webchanges
+.. see above for command to rebuild the API autodoc files
 
 .. toctree::
+   :hidden:
    :caption: API Reference
 
    _api/webchanges
+
+
+.. include:: ../README.rst

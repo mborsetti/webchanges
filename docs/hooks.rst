@@ -53,7 +53,8 @@ An example ``hooks.py`` file is below:
 
        __default_subfilter__ = 'upper'
 
-       def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+       @staticmethod
+       def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
 
            if not subfilter or subfilter.get('upper'):
                return data.upper()
@@ -74,7 +75,8 @@ An example ``hooks.py`` file is below:
 
        __default_subfilter__ = 'indent'
 
-       def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+       @staticmethod
+       def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
 
            indent = int(subfilter.get('indent', 8))
 
@@ -87,7 +89,8 @@ An example ``hooks.py`` file is below:
        MATCH = {'url': 'https://example.org/'}
 
        # An auto-match filter does not have any subfilters
-       def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+       @staticmethod
+       def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
            return data.replace('foo', 'bar')
 
 
@@ -96,7 +99,8 @@ An example ``hooks.py`` file is below:
        MATCH = {'url': re.compile('https://example.org/.*')}
 
        # An auto-match filter does not have any subfilters
-       def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+       @staticmethod
+       def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
            return data.replace('foo', 'bar')
 
 

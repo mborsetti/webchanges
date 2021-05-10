@@ -10,7 +10,6 @@ import shutil
 import signal
 import sys
 import warnings
-from os import PathLike
 from pathlib import Path, PurePath
 from typing import Optional, Union
 
@@ -57,8 +56,8 @@ def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
     logger.debug(f'System: {platform.platform()}')
 
 
-def locate_storage_file(filename: PathLike, default_dir: PathLike, ext: Optional[str] = None
-                        ) -> Union[str, bytes, PathLike]:
+def locate_storage_file(filename: Path, default_dir: Path, ext: Optional[str] = None
+                        ) -> Union[str, bytes, Path]:
     """Searches for file as specified and in default directory; retry with 'ext' extension.
 
     :param filename: The filename
@@ -89,8 +88,7 @@ def locate_storage_file(filename: PathLike, default_dir: PathLike, ext: Optional
     return filename
 
 
-def migrate_from_urlwatch(config_file: PathLike, jobs_file: PathLike, hooks_file: PathLike,
-                          cache_file: PathLike) -> None:
+def migrate_from_urlwatch(config_file: Path, jobs_file: Path, hooks_file: Path, cache_file: Path) -> None:
     """Check for existence of legacy (urlwatch 2.23) config, jobs and hooks files and migrate them (i.e. make a copy to
     new folder and or naming).  Original files are not deleted."""
     uw_urlwatch_dir = Path.home().joinpath('.urlwatch')

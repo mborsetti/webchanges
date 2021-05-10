@@ -247,7 +247,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         location = self.get_location()
         return hashlib.sha1(location.encode()).hexdigest()
 
-    def retrieve(self, job_state) -> (AnyStr, str):
+    def retrieve(self, job_state: 'JobState') -> (AnyStr, str):
         """Runs job and returns data and etag"""
         raise NotImplementedError()
 
@@ -273,11 +273,17 @@ class Job(JobBase):
                     'is_markdown', 'ignore_connection_errors', 'ignore_http_error_codes', 'ignore_timeout_errors',
                     'ignore_too_many_redirects')
 
+    def get_location(self) -> str:
+        pass
+
     def get_indexed_location(self) -> str:
         return f'Job {self.index_number}: {self.get_location()}'
 
     def pretty_name(self) -> str:
         return self.name or self.get_location()
+
+    def retrieve(self, job_state: 'JobState') -> (AnyStr, str):
+        pass
 
 
 CHARSET_RE = re.compile('text/(html|plain); charset=([^;]*)')
@@ -359,7 +365,6 @@ class UrlJob(Job):
                     data = []
 
                     def callback(dt):
-                        nonlocal data
                         data.append(dt)
                     ftp.retrlines(f'RETR {url.path}', callback)
                     data = '\n'.join(data)
@@ -478,7 +483,7 @@ class BrowserJob(Job):
             from .jobs_browser import BrowserContext, get_proxy
             proxy_server, self.proxy_username, self.proxy_password = get_proxy(self.url, self.http_proxy,
                                                                                self.https_proxy)
-            self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_http_error_codes,
+            self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_https_errors,
                                       self.user_data_dir, self.switches)
 
     def main_thread_exit(self) -> None:

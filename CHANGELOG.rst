@@ -31,21 +31,21 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.5.1.post0
+Version 3.6.0.rc0
 ====================
 Unreleased
 
 Added
 -----
 * Run a subset of jobs by adding their index number(s) as command line arguments. For example, run ``webchanges 2 3`` to
-  only run jobs #2 and #3 of your job list. Run ``webchanges --list`` to find the job numbers. Suggested by `dbro
+  only run jobs #2 and #3 of your jobs list. Run ``webchanges --list`` to find the job numbers. Suggested by `dbro
   <https://github.com/dbro>`__ upstream `here <https://github.com/thp/urlwatch/pull/641>`__.
 * Support for ``ftp://`` URLs to download a file from an ftp server
 
 Fixed
 -----
 * Readthedocs.io failed to build autodoc API documentation
-* Not processing jobs with URL/URIs starting with ``file:///``
+* Error processing jobs with URL/URIs starting with ``file:///``
 
 Internals
 ---------
@@ -82,7 +82,8 @@ Added
   rerun to create a truthful diff
 * ``--log-level`` command line argument to control the amount of logging displayed by the ``-v`` argument
 * ``ignore_connection_errors``, ``ignore_timeout_errors``, ``ignore_too_many_redirects`` and ``ignore_http_error_codes``
-  directives now work with ``url`` jobs having ``use_browser: true`` (i.e. using `Pyppeteer`)
+  directives now work with ``url`` jobs having ``use_browser: true`` (i.e. using `Pyppeteer`) when running in Python
+  3.7 or higher
 
 Changed
 -------

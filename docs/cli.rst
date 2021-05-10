@@ -69,6 +69,14 @@ Command line arguments
                           level of logging output if -v is selected (default: DEBUG)
 
 
+Select subset of jobs
+---------------------
+Add job number(s) in the command line to run a subset of them; for example, run ``webchanges 2 3`` to only run jobs #2
+and #3 from your job list. Find the numbering of your jobs running``webchanges --list``.
+
+`New in version 3.6.`
+
+
 Show errors and no-data jobs
 ----------------------------
 You can run all jobs and see those that result in an error or who, after filtering, return no data, by running
@@ -82,6 +90,7 @@ Test run a job
 You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
 its URL/command; `webchanges` will display the filtered output. This allows to easily test changes in filters.
 
+
 .. _test-diff:
 
 Show diff from saved snapshots
@@ -92,6 +101,7 @@ saved; obviously a minimum of 2 saved snapshots are required. This allows you to
 retrieve historical diffs (changes).
 
 `Changed in version 3.3: will now display all snapshots instead of only the latest 10`
+
 
 .. _delete-snapshot:
 
@@ -128,7 +138,6 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 
 
 `New in version 3.2.`
-
 
 
 .. _database-engine:
@@ -168,7 +177,6 @@ command line argument ``--cache-engine minidb``. The ``minidib`` Python package 
 
 
 `New in version 3.2.`
-
 
 
 .. _max-snapshots:

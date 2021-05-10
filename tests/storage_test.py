@@ -41,7 +41,7 @@ def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, Cache
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     if os.name == 'nt':
-        urlwatcher.jobs[0].command = 'echo %time%'
+        urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     return urlwatcher, cache_storage, cache_file
 

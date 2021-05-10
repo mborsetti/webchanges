@@ -138,12 +138,13 @@ Improvements from `urlwatch`
 ============================
 
 You can seamlessly upgrade from `urlwatch` 2.23 (see `here
-<https://webchanges.readthedocs.io/en/stable/migration.html>`__) and benefit from these HTML-focused improvements:
+<https://webchanges.readthedocs.io/en/stable/migration.html>`__) and benefit from many HTML-focused improvements
+including:
 
 * Links are `clickable <https://pypi.org/project/webchanges/>`__!
 * Formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and indentation is
   preserved
-* Uses color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines.,and long lines wrap
+* Uses color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines, and long lines wrap
   around
 * HTML is rendered correctly by email clients who override stylesheets (e.g. Gmail)
 * Other legibility improvements
@@ -153,7 +154,7 @@ You can seamlessly upgrade from `urlwatch` 2.23 (see `here
   which makes it easier to track content that was added without the distractions of the content that was deleted
 * Better documentation
 * More reliability and stability, including a 22 percentage point increase in testing coverage
-* Many many other additions, refinements and fixes (see `detailed information
+* Many other additions, refinements and fixes (see `detailed information
   <https://webchanges.readthedocs.io/en/stable/migration.html#detailed-information>`__)
 
 Examples:

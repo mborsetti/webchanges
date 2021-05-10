@@ -30,14 +30,11 @@ class CommandConfig(BaseConfig):
     def __init__(self, project_name: str, config_dir: PathLike, config: PathLike, jobs: PathLike,
                  hooks: PathLike, cache: PathLike, verbose: bool) -> None:
         super().__init__(project_name, config_dir, config, jobs, cache, hooks, verbose)
-        self.config_storage = None
-
         self.joblist: Optional[List[int]] = None
-        self.log_level: str = 'DEBUG'
         self.list: bool = False
+        self.errors: bool = False
         self.test_job: Optional[str] = None
         self.test_diff: Optional[str] = None
-        self.errors: bool = False
         self.add: Optional[str] = None
         self.delete: Optional[str] = None
         self.test_reporter: Optional[str] = None
@@ -54,6 +51,7 @@ class CommandConfig(BaseConfig):
         self.database_engine: str = 'sqlite3'
         self.max_snapshots: int = 4
         self.features: bool = False
+        self.log_level: str = 'DEBUG'
 
         self.parse_args()
 

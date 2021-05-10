@@ -10,7 +10,7 @@ import re
 import subprocess
 import sys
 import warnings
-from abc import ABCMeta
+from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
 from typing import Any, AnyStr, Dict, Iterator, List, Optional, TYPE_CHECKING, Tuple, Union
@@ -137,9 +137,8 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
             # Legacy string-based filter list specification:
             # "filter1:param1,filter2,filter3,filter4:param4"
-            filter_spec = [dict([filter_kind.split(':', 1)]) if ':' in filter_kind else filter_kind
+            filter_spec = [{filter_kind.split(':', 1)} if ':' in filter_kind else filter_kind
                            for filter_kind in old_filter_spec.split(',')]
-
             warnings.warn(
                 f'String-based filter definitions ({old_filter_spec}) are deprecated, please convert to dict-style:\n\n'
                 f'{yaml.safe_dump(filter_spec, default_flow_style=False, allow_unicode=True)}', DeprecationWarning)
@@ -172,9 +171,9 @@ class FilterBase(object, metaclass=TrackSubClasses):
         return filtercls(state.job, state).filter(data, subfilter)
 
     @classmethod
-    def filter_chain_needs_bytes(cls, filter: Union[str, List[Union[str, Dict[str, Any]]]]) -> bool:
+    def filter_chain_needs_bytes(cls, filter_name: Union[str, List[Union[str, Dict[str, Any]]]]) -> bool:
         """Returns True if the first filter requires data in bytes (not Unicode)."""
-        first_filter = next(cls.normalize_filter_list(filter), None)
+        first_filter = next(cls.normalize_filter_list(filter_name), None)
         if first_filter is not None:
             filter_kind, subfilter = first_filter
             return cls.is_bytes_filter_kind(filter_kind)
@@ -206,6 +205,9 @@ class AutoMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
+    def filter(self, data: str, subfilter: Dict[str, Any]) -> None:
+        pass
+
 
 class RegexMatchFilter(FilterBase):
     """Same as AutoMatchFilter but matching is done with regexes."""
@@ -223,6 +225,9 @@ class RegexMatchFilter(FilterBase):
         result = len(matches) > 0 and all(matches)
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
+
+    def filter(self, data: str, subfilter: Dict[str, Any]) -> None:
+        pass
 
 
 class BeautifyFilter(FilterBase):
@@ -601,7 +606,7 @@ class FilterBy(Enum):
     TAG = 2
 
 
-class ElementsBy(HTMLParser, metaclass=ABCMeta):
+class ElementsBy(HTMLParser, ABC):
     def __init__(self, filter_by: FilterBy, name: str, value: Any = None) -> None:
         super().__init__()
 
@@ -757,7 +762,7 @@ class HexdumpFilter(FilterBase):
                          f"{''.join((chr(c) if (31 < c < 127) else '.') for c in block)}" for block in blocks)
 
 
-class LxmlParser():
+class LxmlParser:
     EXPR_NAMES = {'css': 'a CSS selector',
                   'xpath': 'an XPath expression'}
 
@@ -785,7 +790,8 @@ class LxmlParser():
     def feed(self, data: str) -> None:
         self.data += data
 
-    def _to_string(self, element: Union[etree.Element, str]) -> str:
+    @staticmethod
+    def _to_string(element: Union[etree.Element, str]) -> str:
         # Handle "/text()" selector, which returns lxml.etree._ElementUnicodeResult (Issue #282)
         if isinstance(element, str):
             return element

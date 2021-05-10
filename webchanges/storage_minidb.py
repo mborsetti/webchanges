@@ -16,8 +16,8 @@ from .storage import CacheStorage
 try:
     import minidb
 except ImportError:
-    class minidb():
-        class Model():
+    class minidb:
+        class Model:
             pass
 
 
@@ -61,7 +61,7 @@ class CacheMiniDBStorage(CacheStorage):
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         history = {}
-        if isinstance(count, int) and count < 1:
+        if count is not None and count < 1:
             return history
         for data, timestamp in self.CacheEntry.query(
                 self.db, self.CacheEntry.c.data // self.CacheEntry.c.timestamp,
@@ -70,7 +70,7 @@ class CacheMiniDBStorage(CacheStorage):
                 & ((self.CacheEntry.c.tries == 0) | (self.CacheEntry.c.tries is None))):
             if data not in history:
                 history[data] = timestamp
-                if count and len(history) >= count:
+                if count is not None and len(history) >= count:
                     break
         return history
 

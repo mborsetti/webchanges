@@ -161,7 +161,7 @@ def test_test_diff():
     command_config = CommandConfig(project_name, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     if os.name == 'nt':
-        urlwatcher.jobs[0].command = 'echo %time%'
+        urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     setattr(command_config, 'test_diff', 1)
     urlwatch_command = UrlwatchCommand(urlwatcher)
@@ -219,7 +219,7 @@ def test_delete_snapshot():
     command_config = CommandConfig(project_name, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     if os.name == 'nt':
-        urlwatcher.jobs[0].command = 'echo %time%'
+        urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     setattr(command_config, 'delete_snapshot', True)
     urlwatch_command = UrlwatchCommand(urlwatcher)

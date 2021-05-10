@@ -87,7 +87,7 @@ This is the main job type -- it retrieves a document, generally from a web serve
    name: Example a local file
    url: file://syslog
    ---
-   name: Example of an FTP file (anonymous:anonymous if not specified)
+   name: Example of an FTP file (username anonymous if not specified)
    url: ftp://username:password@ftp.example.com/file.txt
 
 
@@ -102,6 +102,8 @@ unique remark (the # and everything after is discarded by a web server, but capt
    ---
    name: Example homepage -- again!
    url: https://example.org/#2
+
+`Changed in version 3.6:` Added support for URLs starting with ``ftp://``.
 
 
 .. _use_browser:
@@ -164,13 +166,13 @@ For all ``url`` jobs:
   the webpage instead). `New in version 3.0.3.`
 - ``note``: Information added under the header in reports. `New in version 3.2.`
 - ``ignore_connection_errors``: Ignore (temporary) connection errors (true/false) (see :ref:`here <ignore_errors>`).
-  `Changed in version 3.5:` Works with all ``url`` jobs.
+  `Changed in version 3.5:` Works with ``use_browser: true`` with Python version 3.7 or higher.
 - ``ignore_timeout_errors``: Do not report errors when the timeout is hit (true/false) (see :ref:`here
-  <ignore_errors>`). `Changed in version 3.5:` Works with all ``url`` jobs.
+  <ignore_errors>`). `Changed in version 3.5:` Works with ``use_browser: true`` with Python version 3.7 or higher.
 - ``ignore_too_many_redirects``: Ignore redirect loops (true/false) (see :ref:`here <ignore_errors>`). `Changed in
-  version 3.5:` Works with all ``url`` jobs.
+  version 3.5:` Works with ``use_browser: true`` with Python version 3.7 or higher.
 - ``ignore_http_error_codes``: List of HTTP errors to ignore (see :ref:`here <ignore_errors>`). `Changed in version
-  3.5:` Works with all ``url`` jobs.
+  3.5:` Works with ``use_browser: true`` with Python version 3.7 or higher.
 
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
@@ -230,8 +232,8 @@ Known issues
 
 Command
 -------
-This job type allows you to watch the output of arbitrary shell commands, which is useful for e.g. monitoring an FTP
-uploader folder, output of scripts that query external devices (RPi GPIO), etc.
+This job type allows you to watch the output of arbitrary shell commands, which is useful for e.g. monitoring files
+in a folder, output of scripts that query external devices (RPi GPIO), etc.
 
 .. code-block:: yaml
 

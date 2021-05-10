@@ -130,10 +130,6 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
     return textwrap.wrap(string, length)
 
 
-# Using regex from tornado library https://github.com/tornadoweb/tornado/blob/master/tornado/escape.py
-# This regex should avoid character entities other than &amp; so that we won't pick up &quot;, etc.
-# Note: it is vulnerable to Regular expression Denial of Service (ReDoS), which would divert computational resources to
-# an expensive regex match. There's a limited risk in this application and can't find anything better
 _URL_RE = re.compile(r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
 &amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|
 &quot;)*\)))+)""")  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible
@@ -151,19 +147,25 @@ def linkify(
     For example linkify("Hello http://tornadoweb.org!") would return 'Hello
     <a href="http://tornadoweb.org">http://tornadoweb.org</a>!'.
 
-    :parameter text: The text to linkify
+    We are using a regex from tornado library https://github.com/tornadoweb/tornado/blob/master/tornado/escape.py.
+    This regex should avoid character entities other than &amp; so that we won't pick up &quot;, etc., but it is
+    vulnerable to Regular expression Denial of Service (ReDoS), which would divert computational resources to an
+    expensive regex match. The risk in this application is limited and we can't find anything better.
+
+    :parameter text: The text to linkify.
     :parameter shorten: Long urls will be shortened for display.
     :parameter extra_params: Extra text to include in the link tag, or a callable taking the link as an argument and
-        returning the extra text, e.g. linkify(text, extra_params='rel="nofollow" class="external"')
+        returning the extra text, e.g. linkify(text, extra_params='rel="nofollow" class="external"').
     :parameter require_protocol: Only linkify urls which include a protocol; if this is False, urls such as
-        www.facebook.com will also be linkified
-    :parameter permitted_protocols: Tuple (or set) of protocols which should be linkified, e.g. linkify(text,
-        permitted_protocols=("http", "ftp", "mailto")); it is very unsafe to include protocols such as javascript.
+        www.facebook.com will also be linkified.
+    :parameter permitted_protocols: Protocols which should be linkified, e.g. linkify(text,
+        permitted_protocols=('http', 'ftp', 'mailto')); it is very unsafe to include protocols such as javascript.
     """
     if extra_params and not callable(extra_params):
         extra_params = ' ' + extra_params.strip()
 
     def make_link(m: Match) -> str:
+        """Replacement function for re.sub to convert plain text into HTML with links."""
         url = m.group(1)
         proto = m.group(2)
         if require_protocol and not proto:
