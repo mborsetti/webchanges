@@ -344,7 +344,10 @@ class UrlJob(Job):
                 file_mode = 'rb'
             else:
                 file_mode = 'rt'
-            with open(urlparse(self.url).path.lstrip('/'), mode=file_mode) as f:
+            filename = urlparse(self.url).path
+            if os.name == 'nt':
+                filename = filename.lstrip('/')
+            with open(filename, mode=file_mode) as f:
                 file = f.read()
             return file, None
 

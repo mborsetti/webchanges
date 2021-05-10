@@ -49,6 +49,7 @@ def test_save_load_jobs():
     # tempfile.NamedTemporaryFile() doesn't work on Windows
     # because the returned file object cannot be opened again
     fd, name = tempfile.mkstemp()
+    name = Path(name)
     YamlJobsStorage(name).save(jobs)
     jobs2 = YamlJobsStorage(name).load()
     os.chmod(name, 0o777)
