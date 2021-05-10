@@ -111,7 +111,7 @@ def test_run_job(input_job: Dict[str, Any], output: str) -> None:
 
 
 @connection_required
-@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))
 def test_run_ftp_job() -> None:
     job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt',
                                'timeout': 2})
