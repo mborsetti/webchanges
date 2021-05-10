@@ -1,3 +1,4 @@
+aioxmpp
 beautifulsoup4
 docutils
 jq; os_name != "nt"
@@ -8,4 +9,3 @@ pytest
 pytest-cov
 sphinx
 sphinx_rtd_theme
-xmpp
