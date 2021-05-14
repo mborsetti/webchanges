@@ -72,7 +72,8 @@ Command line arguments
 Select subset of jobs
 ---------------------
 Add job number(s) in the command line to run a subset of them; for example, run ``webchanges 2 3`` to only run jobs #2
-and #3 from your job list. Find the numbering of your jobs running``webchanges --list``.
+and #3 from your job list. Find the numbering of your jobs running``webchanges --list``. API is experimental and may
+change in the near future.
 
 `New in version 3.6.`
 

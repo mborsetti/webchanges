@@ -353,12 +353,11 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
     def _parse(cls, fp: TextIO) -> List[JobBase]:
         jobs = []
         jobs_by_guid = defaultdict(list)
-        for i, job_data in enumerate(yaml.safe_load_all(fp)):
-            if job_data is not None:
-                job_data['index_number'] = i + 1
-                job = JobBase.unserialize(job_data)
-                jobs.append(job)
-                jobs_by_guid[job.get_guid()].append(job)
+        for i, job_data in enumerate((job for job in yaml.safe_load_all(fp) if job)):
+            job_data['index_number'] = i + 1
+            job = JobBase.unserialize(job_data)
+            jobs.append(job)
+            jobs_by_guid[job.get_guid()].append(job)
 
         conflicting_jobs = []
         for guid, guid_jobs in jobs_by_guid.items():
@@ -366,8 +365,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 conflicting_jobs.append(guid_jobs[0].get_location())
 
         if conflicting_jobs:
-            raise ValueError('\n   '.join(['Each job must have a unique URL, append #1, #2, ... to make them unique:']
-                                          + conflicting_jobs))
+            raise ValueError('\n   '.join(['Each job must have a unique URL/command (for URLs, append #1, #2, etc. to '
+                                           'make them unique):'] + conflicting_jobs))
 
         return jobs
 

@@ -48,6 +48,8 @@ one of many other supported services if one is detected. The notification includ
 a summary of what has changed. This project is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as suggested by
 its author to optimize it for HTML.
 
+`webchanges` enables anonymous notifications.
+
 
 Requirements
 ============
@@ -75,16 +77,16 @@ Quick Start
 Initialize
 ----------
 
-1. Create the default ``config.yaml`` configuration file and open an editor to the ``jobs.yaml`` where to write the
-   `jobs <https://webchanges.readthedocs.io/en/stable/jobs.html>`__ to run:
+1. Create the default ``config.yaml`` configuration and an empty ``jobs.yaml`` jobs files, opening an editor to add
+   your `jobs <https://webchanges.readthedocs.io/en/stable/jobs.html>`__ to the latter:
 
 .. code-block:: bash
 
    webchanges --edit
 
 
-2. If you want to change the default configuration, e.g. to enable `e-mail sending
-   <https://webchanges.readthedocs.io/en/stable/reporters.html#smtp>`__ of change reports, run:
+2. If you want to change the default configuration, e.g. to receive notifications (reports) by `e-mail
+   <https://webchanges.readthedocs.io/en/stable/reporters.html#smtp>`__ and/or one of many other methods, run:
 
 .. code-block:: bash
 
@@ -120,7 +122,7 @@ Contributing
 ============
 We welcome any contribution, e.g. documentation, bug reports, new features, etc., as both pull requests and
 `issues <https://github.com/mborsetti/webchanges/issues>`__.
-More information for developers and documenters is `here
+More information for developers and documentation editors is `here
 <https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__, and our wishlist is `here
 <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__.
 
@@ -153,7 +155,7 @@ including:
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
   which makes it easier to track content that was added without the distractions of the content that was deleted
 * Better documentation
-* More reliability and stability, including a 22 percentage point increase in testing coverage
+* More reliability and stability, including a 33 percentage point increase in testing coverage
 * Many other additions, refinements and fixes (see `detailed information
   <https://webchanges.readthedocs.io/en/stable/migration.html#detailed-information>`__)
 
