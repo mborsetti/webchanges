@@ -1,3 +1,3 @@
 name: Returns the time (changing output); used in storage_test.py and command_test.py
 note: For Windows, change command to 'echo %time% %random%'
-command: echo $(date) $RANDOM
+command: "echo $(date) $RANDOM"
