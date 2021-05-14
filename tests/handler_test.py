@@ -87,8 +87,8 @@ def test_duplicates_in_jobs_yaml():
         with pytest.raises(ValueError) as pytest_wrapped_e:
             YamlJobsStorage(jobs_file).load_secure()
         assert str(pytest_wrapped_e.value) == (
-            'Each job must have a unique URL, append #1, #2, ... to make them unique:\n   https://dupe_1\n   '
-            'https://dupe_2')
+            'Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):'
+            '\n   https://dupe_1\n   https://dupe_2')
     else:
         warnings.warn(f'{jobs_file} not found', UserWarning)
 
