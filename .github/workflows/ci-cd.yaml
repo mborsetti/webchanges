@@ -44,7 +44,7 @@ jobs:
     # matrix.os is defined in strategy
     runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
-    needs: [pre-commit]
+#    needs: [pre-commit]
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
