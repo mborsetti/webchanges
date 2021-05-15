@@ -48,7 +48,6 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-#        os: [ubuntu-latest, macos-latest]
 #        python-version: ['3.9', '3.8', '3.7', '3.6']
         python-version: ['3.9']
         include:
@@ -62,7 +61,7 @@ jobs:
 #            ~/Library/Caches/Homebrew
         - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 20-mar-21
                               # https://github.com/pytest-dev/pytest/discussions/6349
-          pipcachepath: ~\AppData\Local\pip\Cache
+          pipcachepath: ~\AppData\Local\pip\cache
 
         # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
     env:
@@ -136,7 +135,7 @@ jobs:
         if: runner.os == 'Windows'
         run:
           # workaround for Windows fatal exception: access violation
-          python -m pytest -v
+          python -m pytest -v --trace
         env:
           PYTHONUTF8: 1
 
