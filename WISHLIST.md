@@ -1,4 +1,3 @@
-- [ ] Import current_platform() from pyppeteer and reload
 - [ ] Get GitHub Actions to work for Windows testing
 - [ ] Smart "just works for the web" philosophy automatically applies correct filters for monitoring webpages
 - [ ] Switch to `defusedxml` if possible to prevent XML attacks 

@@ -48,21 +48,21 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ['3.9', '3.8', '3.7', '3.6']
-#        python-version: ['3.9']
+#        os: [ubuntu-latest, macos-latest]
+#        python-version: ['3.9', '3.8', '3.7', '3.6']
+        python-version: ['3.9']
         include:
-        - os: ubuntu-latest
-          pipcachepath: |
-            ~/.cache/pip
-            /var/cache/apt/archives
-        - os: macos-latest
-          pipcachepath: |
-            ~/Library/Caches/pip
-            ~/Library/Caches/Homebrew
-#        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 20-mar-21
-#                              # https://github.com/pytest-dev/pytest/discussions/6349
-#          pipcachepath: ~\AppData\Local\pip\Cache
+#        - os: ubuntu-latest
+#          pipcachepath: |
+#            ~/.cache/pip
+#            /var/cache/apt/archives
+#        - os: macos-latest
+#          pipcachepath: |
+#            ~/Library/Caches/pip
+#            ~/Library/Caches/Homebrew
+        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 20-mar-21
+                              # https://github.com/pytest-dev/pytest/discussions/6349
+          pipcachepath: ~\AppData\Local\pip\Cache
 
         # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
     env:
@@ -105,18 +105,18 @@ jobs:
           brew install pkg-config poppler python tesseract
           python -m pip install -U pdftotext Pillow pytesseract
 
-      - name: Install pdf2text and ocr dependencies (Windows Python 3.9)
-        # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.9' && runner.os == 'Windows'
-        run: |
-          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe --output Miniconda3-latest-Windows-x86_64.exe
-          start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
-          del Miniconda3-latest-Windows-x86_64.exe /y
-          conda install -y -c conda-forge poppler
-          curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
-          start /wait "" tesseract-setup.exe /S
-          del tesseract-setup /y
-          python -m pip install -U keyring pdftotext Pillow pytesseract
+#      - name: Install pdf2text and ocr dependencies (Windows Python 3.9)
+#        # do full install and testing of pdf2text and ocr only on latest Python version
+#        if: matrix.python-version == '3.9' && runner.os == 'Windows'
+#        run: |
+#          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe --output Miniconda3-latest-Windows-x86_64.exe
+#          start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
+#          del Miniconda3-latest-Windows-x86_64.exe /y
+#          conda install -y -c conda-forge poppler
+#          curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
+#          start /wait "" tesseract-setup.exe /S
+#          del tesseract-setup /y
+#          python -m pip install -U keyring pdftotext Pillow pytesseract
 
       - name: Install dependencies
         # pip -e installs a project in editable mode (i.e. setuptools “develop mode”) from a local project path

@@ -31,6 +31,16 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.6.0.post0
+====================
+Unreleased
+
+Reminder
+--------
+Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.7 was
+released on 7 June 2018, the codebase will be streamlined by removing support for Python 3.6 on or after 7 June 2021.
+
+
 Version 3.6.0
 ====================
 2021-05-14

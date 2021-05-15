@@ -22,7 +22,7 @@ echo Deploy new release of '%project%' project
 echo ==========================================
 echo.
 set /p r=Did you copy the release info from CHANGELOG.rst to RELEASE.rst, updated migration.rst and updated the ^
-  wishlist? [N/y] || set r=n
+wishlist? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
 set /p r=Did you run local tests (tox), commit to unreleased, and ensure CI passed? [N/y] || set r=n
@@ -74,7 +74,7 @@ if NOT ["%errorlevel%"]==["0"] (
 
 echo.
 echo Bumping version locally to post-release
-bump2version --no-commit --no-tag postkind
+bump2version --verbose --no-commit --no-tag postkind
 if NOT ["%errorlevel%"]==["0"] (
     pause
 )
