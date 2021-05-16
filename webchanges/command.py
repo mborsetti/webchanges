@@ -183,9 +183,9 @@ class UrlwatchCommand:
 
         deleted = self.urlwatcher.cache_storage.delete_latest(job.get_guid())
         if deleted:
-            sys.exit(0)
+            sys.exit(f'Deleted last snapshot of {job.get_indexed_location()}')
         else:
-            sys.exit('No snapshots found to be deleted')
+            sys.exit(f'No snapshots found to be deleted for {job.get_indexed_location()}')
 
     def modify_urls(self) -> None:
         save = True
