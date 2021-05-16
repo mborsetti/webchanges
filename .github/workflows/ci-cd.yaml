@@ -12,56 +12,56 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   # Set the job key. The key is displayed as the job name
   # when a job name is not provided
-#  pre-commit:
-#    # Name the Job
-#    name: Quality assurance
-#    # Set the type of machine to run on
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      # Checks out a copy of the repository per https://github.com/actions/checkout
-#      - name: Check out repo
-#        uses: actions/checkout@main
-#
-#      # Build Python and packages per https://github.com/actions/setup-python
-#      - name: Set up Python
-#        uses: actions/setup-python@main
-#        with:
-#          python-version: '3.8'  # as per https://docs.readthedocs.io/en/stable/config-file/v2.html?#build-image
-#
-#      # Install dependencies needed by the repo: local in .pre-commit-config.yaml
-#      - name: Install dependencies
-#        run: |
-#          python -m pip install -U pip wheel
-#          python -m pip install -U -r requirements.txt -r docs/requirements.txt
-#
-#      # Run pre-commit cache per https://github.com/pre-commit/action
-#      - name: Run pre-commit
-#        uses: pre-commit/action@v2.0.3
+  pre-commit:
+    # Name the Job
+    name: Quality assurance
+    # Set the type of machine to run on
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks out a copy of the repository per https://github.com/actions/checkout
+      - name: Check out repo
+        uses: actions/checkout@main
+
+      # Build Python and packages per https://github.com/actions/setup-python
+      - name: Set up Python
+        uses: actions/setup-python@main
+        with:
+          python-version: '3.8'  # as per https://docs.readthedocs.io/en/stable/config-file/v2.html?#build-image
+
+      # Install dependencies needed by the repo: local in .pre-commit-config.yaml
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip wheel
+          python -m pip install -U -r requirements.txt -r docs/requirements.txt
+
+      # Run pre-commit cache per https://github.com/pre-commit/action
+      - name: Run pre-commit
+        uses: pre-commit/action@v2.0.3
 
   test:
     name: "Test (${{ matrix.python-version }}, ${{ matrix.os }})"
     # matrix.os is defined in strategy
     runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
-#    needs: [pre-commit]
+    needs: [pre-commit]
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-#        python-version: ['3.9', '3.8', '3.7', '3.6']
-        python-version: ['3.9']
+        python-version: ['3.9', '3.8', '3.7', '3.6']
+#        python-version: ['3.9']
         include:
-#        - os: ubuntu-latest
-#          pipcachepath: |
-#            ~/.cache/pip
-#            /var/cache/apt/archives
-#        - os: macos-latest
-#          pipcachepath: |
-#            ~/Library/Caches/pip
-#            ~/Library/Caches/Homebrew
-        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 20-mar-21
-                              # https://github.com/pytest-dev/pytest/discussions/6349
-          pipcachepath: ~\AppData\Local\pip\cache
+        - os: ubuntu-latest
+          pipcachepath: |
+            ~/.cache/pip
+            /var/cache/apt/archives
+        - os: macos-latest
+          pipcachepath: |
+            ~/Library/Caches/pip
+            ~/Library/Caches/Homebrew
+#        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 15-May-21
+#                              # https://github.com/pytest-dev/pytest/discussions/6349
+#          pipcachepath: ~\AppData\Local\pip\cache
 
         # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
     env:
@@ -135,7 +135,7 @@ jobs:
         if: runner.os == 'Windows'
         run:
           # workaround for Windows fatal exception: access violation
-          python -m pytest -v --trace
+          python -m pytest -v -p no:faulthandler
         env:
           PYTHONUTF8: 1
 
