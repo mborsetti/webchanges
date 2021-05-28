@@ -226,7 +226,7 @@ def test_delete_snapshot():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    assert pytest_wrapped_e.value.code == 'No snapshots found to be deleted for Job 1: echo %time% %random%'
+    assert 'No snapshots found to be deleted for Job 1:' in pytest_wrapped_e.value.code
 
     # run once
     urlwatcher.run_jobs()
@@ -246,7 +246,7 @@ def test_delete_snapshot():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    assert pytest_wrapped_e.value.code == 'Deleted last snapshot of Job 1: echo %time% %random%'
+    assert 'Deleted last snapshot of Job 1:' in pytest_wrapped_e.value.code
 
 
 def test_gc_cache():
