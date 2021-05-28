@@ -48,6 +48,7 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest]
         python-version: ['3.9', '3.8', '3.7', '3.6']
 #        python-version: ['3.9']
         include:
