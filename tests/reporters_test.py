@@ -14,7 +14,7 @@ from webchanges.storage import DEFAULT_CONFIG
 
 logger = logging.getLogger(__name__)
 
-matrix_is_installed = importlib.util.find_spec('matrix') is not None
+matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
 xmpp_is_installed = importlib.util.find_spec('xmpp') is not None
 
 DIFF_TO_HTML_TEST_DATA = [
@@ -145,7 +145,7 @@ def test_reporters(reporter):
         assert str(pytest_wrapped_e.value) in ('No password available in keyring for localhost ',
                                                'No password available for localhost ')
     elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'xmpp', 'prowl'):
-        if reporter == 'matrix' and not matrix_is_installed:
+        if reporter == 'matrix' and not matrix_client_is_installed:
             logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
             return
         if reporter == 'xmpp' and not xmpp_is_installed:

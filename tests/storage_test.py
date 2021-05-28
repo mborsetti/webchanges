@@ -23,7 +23,7 @@ py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires P
 here = Path(__file__).parent
 data_dir = here.joinpath('data')
 config_file = data_dir.joinpath('config.yaml')
-cache_file = Path(':memory:')
+cache_file = ':memory:'
 hooks_file = ''
 
 
@@ -156,7 +156,7 @@ def test_clean_all_and_delete():
         assert len(history) == 2
         timestamps = list(history.values())
         # returned in reverse order
-        assert timestamps[1] < timestamps[0]
+        assert timestamps[1] <= timestamps[0]
 
         # clean all
         cache_storage.clean_all()

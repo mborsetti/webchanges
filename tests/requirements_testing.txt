@@ -2,7 +2,7 @@ aioxmpp
 beautifulsoup4
 docutils
 jq; os_name != "nt"
-matrix
+matrix_client
 minidb
 pyppeteer
 pytest

@@ -28,7 +28,7 @@ docs_dir = here.joinpath('..').resolve().joinpath('docs')
 
 config_file = data_dir.joinpath('config.yaml')
 # cache_file = Path(tempfile.NamedTemporaryFile(suffix='.db').name)
-cache_file = Path(':memory:')
+cache_file = ':memory:'
 hooks_file = ''
 
 

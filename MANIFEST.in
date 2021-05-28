@@ -1,0 +1,3 @@
+# https://docs.python.org/3/distutils/sourcedist.html#specifying-the-files-to-distribute
+include requirements.txt
+# required for sdist, which is used by tox (as tox-wheel for some reason is super-slow)

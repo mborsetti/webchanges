@@ -5,6 +5,7 @@ name: Sample webchanges job definition
 note: Used by handler_test.test_run_watcher() and handler_test.test_load_jobs_yaml()
 url: https://example.com/
 max_tries: 2
+timeout: 0.001
 filter:
   - xpath: //section[@role="main"]
   - html2text:

@@ -19,7 +19,7 @@ config_dir = here.joinpath('data')
 config_file = config_dir.joinpath('config.yaml')
 jobs_file = config_dir.joinpath('jobs-echo_test.yaml')
 # cache_file = Path(tempfile.NamedTemporaryFile(suffix='.db').name)
-cache_file = Path(':memory:')
+cache_file = ':memory:'
 hooks_file = config_dir.joinpath('hooks_test.py')
 
 config_storage = YamlConfigStorage(config_file)

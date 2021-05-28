@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 here = Path(__file__).parent
 data_dir = here.joinpath('data')
-cache_file = Path(':memory:')
+cache_file = ':memory:'
 cache_storage = CacheSQLite3Storage(cache_file)
 
 
@@ -56,7 +56,7 @@ TEST_JOBS = [
       'ignore_timeout_errors': False,
       'ignore_too_many_redirects': False,
       'method': 'GET',
-      'no_redirects': True,
+      'no_redirects': False,
       'ssl_no_verify': False,
       'timeout': 0,
       'user_visible_url': 'https://www.google.com/#a_visible',

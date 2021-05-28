@@ -31,7 +31,7 @@ class Urlwatch(object):
         self.jobs_storage = jobs_storage
 
         self.report = Report(self)
-        self.jobs = None
+        self.jobs = []
 
         self.check_directories()
 
