@@ -2,8 +2,8 @@
 - [ ] Smart "just works for the web" philosophy automatically applies correct filters for monitoring webpages
 - [ ] Switch to `defusedxml` if possible to prevent XML attacks 
 - [ ] Add more tests
+  - [ ] Test first run after installation
   - [ ] Increase line coverage
-- [ ] Document code
-  - [ ] Docstrings
+- [ ] Document code (docstrings)
 - [ ] Figure out what to do with `--add JOB` and `--delete JOB`
 - [ ] Simplify main Urlwatcher class

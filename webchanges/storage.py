@@ -190,7 +190,10 @@ class BaseStorage(ABC):
 
 class BaseFileStorage(BaseStorage, ABC):
     def __init__(self, filename: Optional[Union[str, bytes, Path]]) -> None:
-        self.filename = Path(filename)
+        if isinstance(filename, (str, bytes, Path)):
+            self.filename = Path(filename)
+        else:
+            self.filename = None
 
 
 class BaseTextualFileStorage(BaseFileStorage, ABC):
@@ -242,7 +245,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
 
     @classmethod
     def write_default_config(cls, filename: Union[str, bytes, Path]) -> None:
-        config_storage = cls(None)
+        config_storage = cls(cls)
         config_storage.filename = filename
         config_storage.save()
 

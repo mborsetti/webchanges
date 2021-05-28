@@ -110,14 +110,16 @@ def first_run(command_config: CommandConfig) -> None:
     config_dir.mkdir(parents=True, exist_ok=True)
     if not Path(command_config.config).is_file():
         YamlConfigStorage.write_default_config(command_config.config)
-        print(f'Created default config file at {command_config.config}\n> Edit it with {__project_name__} '
-              f'--edit-config')
+        print(f'Created default config file at {command_config.config}')
+        if not command_config.edit_config:
+            print(f'> Edit it with {__project_name__} --edit-config')
     if not Path(command_config.jobs).is_file():
         with open(command_config.jobs, 'w') as fp:
             fp.write(f'# {__project_name__} jobs file. See {__docs_url__}jobs.html\n')
         command_config.edit = True
-        print(f'Created default jobs file at {command_config.jobs}\n> Edit it with {__project_name__} --edit-config '
-              f'(trying to launch it automatically)')
+        print(f'Created default jobs file at {command_config.jobs}')
+        if not command_config.edit:
+            print(f'> Edit it with {__project_name__} --edit')
 
 
 def main() -> None:  # pragma: no cover

@@ -42,8 +42,13 @@ released on 7 June 2018, the codebase will be streamlined by removing support fo
 
 Added
 -----
-Clearer results messages for `--delete-snapshot` command line argument
+* Clearer results messages for `--delete-snapshot` command line argument
 
+Fixed
+-----
+* First run would fail when creating new ``config.yaml`` file. Thanks to `David <https://github.com/notDavid>`__ in
+  issue `#10 <https://github.com/mborsetti/webchanges/issues/10>`__.
+* Use same duration precision in all reports
 
 Version 3.6.0
 ====================

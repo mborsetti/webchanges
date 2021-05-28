@@ -131,13 +131,13 @@ Python’s `Standard Encodings <https://docs.python.org/3/library/codecs.html#st
 
 Receiving a report every time webchanges runs
 ---------------------------------------------
-If you are watching pages that change seldomly, but you still want to be notified daily if ``webchanges`` still works,
-you can watch the output of the ``date`` command, for example:
+If you are watching pages that change seldomly, but you still want to be notified evert time ``webchanges`` runs
+to know it's still working, you can monitor the output of the ``date`` command, for example:
 
 .. code-block:: yaml
 
-   name: "webchanges watchdog"
-   command: "date"
+   name: webchanges run
+   command: date
 
 Since the output of ``date`` changes every second, this job should produce a report every time webchanges is run.
 
