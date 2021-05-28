@@ -12,7 +12,6 @@ import os
 import re
 import sys
 import time
-from math import floor, log10
 from typing import Collection, Iterable, List, Optional, TYPE_CHECKING, Type, Union
 from warnings import warn
 
@@ -316,7 +315,7 @@ class TextReporter(ReporterBase):
             yield from details
 
         if summary and show_footer:
-            duration = round(self.duration, max(0, 1 - floor(log10(self.duration))))
+            duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
             yield (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
                    f' seconds with {__project_name__} {__version__}')
 
@@ -388,7 +387,7 @@ class MarkdownReporter(ReporterBase):
             details.extend(details_part)
 
         if summary and show_footer:
-            duration = round(self.duration, max(0, 1 - floor(log10(self.duration))))
+            duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
             footer = (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in"
                       f' {duration} seconds with {__project_name__} {__version__}')
         else:
