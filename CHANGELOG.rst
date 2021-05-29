@@ -31,6 +31,11 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.6.1.post0
+====================
+Unreleased
+
+
 Version 3.6.1
 ====================
 2021-05-28
@@ -48,7 +53,7 @@ Fixed
 -----
 * First run would fail when creating new ``config.yaml`` file. Thanks to `David <https://github.com/notDavid>`__ in
   issue `#10 <https://github.com/mborsetti/webchanges/issues/10>`__.
-* Use same duration precision in all reports
+* Use same run duration precision in all reports
 
 Version 3.6.0
 ====================
