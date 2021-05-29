@@ -233,7 +233,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
                 print(e)
                 print('======')
                 print('')
-                print('The file', file_edit, 'was NOT updated.')
+                print('The file', self.filename, 'was NOT updated.')
                 user_input = input('Do you want to retry the same edit? (Y/n)')
                 if not user_input or user_input.lower()[0] == 'y':
                     continue

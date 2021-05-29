@@ -239,7 +239,7 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
 def test_stress_use_browser() -> None:
     jobs_file = data_dir.joinpath('jobs-use_browser.yaml')
     config_file = data_dir.joinpath('config.yaml')
-    hooks_file = ''
+    hooks_file = Path('')
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage(jobs_file)

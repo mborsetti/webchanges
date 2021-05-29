@@ -21,6 +21,7 @@ An example ``hooks.py`` file is below:
 
    """Example hooks file for webchanges."""
 
+   from pathlib import Path
    import re
    from typing import Any, Dict, Optional
 
@@ -110,8 +111,7 @@ An example ``hooks.py`` file is below:
        __kind__ = 'custom_file'
 
        def submit(self) -> None:
-           with open(self.config['filename'], 'w') as fp:
-               fp.write('\n'.join(super().submit()))
+           Path(self.config['filename']).write_text('\n'.join(super().submit()))
 
 
    class CustomHtmlFileReporter(HtmlReporter):
@@ -120,5 +120,4 @@ An example ``hooks.py`` file is below:
        __kind__ = 'custom_html'
 
        def submit(self) -> None:
-           with open(self.config['filename'], 'w') as fp:
-               fp.write('\n'.join(super().submit()))
+           Path(self.config['filename']).write_text('\n'.join(super().submit()))

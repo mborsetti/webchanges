@@ -12,6 +12,7 @@ import textwrap
 import warnings
 from ftplib import FTP
 from http.client import responses as response_names
+from pathlib import Path
 from typing import Any, AnyStr, Dict, List, Optional, TYPE_CHECKING, Tuple, Type, Union
 from urllib.parse import urldefrag, urlparse, urlsplit
 
@@ -340,15 +341,17 @@ class UrlJob(Job):
 
         if urlparse(self.url).scheme == 'file':
             logger.info(f'Job {self.index_number}: Using local filesystem (file URI scheme)')
-            if FilterBase.filter_chain_needs_bytes(self.filter):
-                file_mode = 'rb'
-            else:
-                file_mode = 'rt'
-            filename = urlparse(self.url).path
+
             if os.name == 'nt':
-                filename = filename.lstrip('/')
-            with open(filename, mode=file_mode) as f:
-                file = f.read()
+                filename = Path(urlparse(self.url).path.lstrip('/'))
+            else:
+                filename = Path(urlparse(self.url).path)
+
+            if FilterBase.filter_chain_needs_bytes(self.filter):
+                file = filename.read_bytes()
+            else:
+                file = filename.read_text()
+
             return file, None
 
         if urlparse(self.url).scheme == 'ftp':

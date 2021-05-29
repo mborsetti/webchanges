@@ -1,7 +1,6 @@
 """Command-line configuration."""
 
 import argparse
-from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -11,25 +10,23 @@ from . import __doc__, __project_name__, __version__
 class BaseConfig(object):
     """Base configuration class."""
 
-    def __init__(self, project_name: str, config_dir: Union[str, bytes, PathLike],
-                 config: Union[str, bytes, PathLike], jobs: Union[str, bytes, PathLike],
-                 cache: Union[str, bytes, PathLike], hooks: Union[str, bytes, PathLike],
-                 verbose: bool) -> None:
+    def __init__(self, project_name: str, config_dir: Path, config: Path, jobs: Path, hooks: Path,
+                 cache: Union[str, bytes, Path], verbose: bool) -> None:
         self.project_name = project_name
-        self.config_dir = Path(config_dir)
-        self.config = Path(config)
-        self.jobs = Path(jobs)
-        self.cache = Path(cache)
-        self.hooks = Path(hooks)
+        self.config_dir = config_dir
+        self.config = config
+        self.jobs = jobs
+        self.hooks = hooks
+        self.cache = cache
         self.verbose = verbose
 
 
 class CommandConfig(BaseConfig):
     """Command line arguments configuration."""
 
-    def __init__(self, project_name: str, config_dir: PathLike, config: PathLike, jobs: PathLike,
-                 hooks: PathLike, cache: PathLike, verbose: bool) -> None:
-        super().__init__(project_name, config_dir, config, jobs, cache, hooks, verbose)
+    def __init__(self, project_name: str, config_dir: Path, config: Path, jobs: Path, hooks: Path,
+                 cache: Union[str, bytes, Path], verbose: bool) -> None:
+        super().__init__(project_name, config_dir, config, jobs, hooks, cache, verbose)
         self.joblist: Optional[List[int]] = None
         self.list: bool = False
         self.errors: bool = False

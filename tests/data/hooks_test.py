@@ -1,6 +1,7 @@
 """Example hooks file for webchanges (used in testing)."""
 
 import re
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
@@ -85,8 +86,7 @@ class CustomTextFileReporter(TextReporter):
     __kind__ = 'custom_file'
 
     def submit(self) -> None:
-        with open(self.config['filename'], 'w') as fp:
-            fp.write('\n'.join(super().submit()))
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))
 
 
 class CustomHtmlFileReporter(HtmlReporter):
@@ -95,5 +95,4 @@ class CustomHtmlFileReporter(HtmlReporter):
     __kind__ = 'custom_html'
 
     def submit(self) -> None:
-        with open(self.config['filename'], 'w') as fp:
-            fp.write('\n'.join(super().submit()))
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))

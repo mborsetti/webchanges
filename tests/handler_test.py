@@ -27,9 +27,8 @@ data_dir = here.joinpath('data')
 docs_dir = here.joinpath('..').resolve().joinpath('docs')
 
 config_file = data_dir.joinpath('config.yaml')
-# cache_file = Path(tempfile.NamedTemporaryFile(suffix='.db').name)
 cache_file = ':memory:'
-hooks_file = ''
+hooks_file = Path('')
 
 
 def test_required_classattrs_in_subclasses():

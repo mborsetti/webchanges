@@ -141,9 +141,8 @@ class JobState(object):
                 tmpdir = Path(tmpdir)
                 old_file_path = tmpdir.joinpath('old_file')
                 new_file_path = tmpdir.joinpath('new_file')
-                with open(old_file_path, 'w') as old_file, open(new_file_path, 'w') as new_file:
-                    old_file.write(self.old_data)
-                    new_file.write(self.new_data)
+                old_file_path.write_text(self.old_data)
+                new_file_path.write_text(self.new_data)
                 cmdline = shlex.split(self.job.diff_tool) + [old_file_path, new_file_path]
                 proc = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 # Python 3.7

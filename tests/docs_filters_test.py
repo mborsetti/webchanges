@@ -84,8 +84,7 @@ def load_filter_doc_jobs() -> Dict[str, Dict[str, Any]]:
 
 
 def load_filter_testdata() -> Dict[str, Any]:
-    with open(here.joinpath('data').joinpath('doc_filter_testdata.yaml')) as f:
-        yaml_data = f.read()
+    yaml_data = Path(here.joinpath('data').joinpath('doc_filter_testdata.yaml')).read_text()
     return yaml.safe_load(yaml_data)
 
 

@@ -214,83 +214,47 @@ class UrlwatchCommand:
         if save:
             self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
-    def handle_actions(self) -> None:
-        if self.urlwatch_config.features:
-            sys.exit(self.show_features())
-        if self.urlwatch_config.gc_cache:
-            self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
-            self.urlwatcher.cache_storage.close()
-            sys.exit(0)
-        if self.urlwatch_config.clean_cache:
-            self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
-            self.urlwatcher.cache_storage.close()
-            sys.exit(0)
-        if self.urlwatch_config.delete_snapshot:
-            sys.exit(self.delete_snapshot(self.urlwatch_config.delete_snapshot))
-        if self.urlwatch_config.rollback_cache is not None:
-            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
-            self.urlwatcher.cache_storage.close()
-            sys.exit(0)
-        if self.urlwatch_config.edit:
-            sys.exit(self.urlwatcher.jobs_storage.edit())
-        if self.urlwatch_config.edit_hooks:
-            sys.exit(self.edit_hooks())
-        if self.urlwatch_config.test_job:
-            sys.exit(self.test_job(self.urlwatch_config.test_job))
-        if self.urlwatch_config.test_diff:
-            sys.exit(self.test_diff(self.urlwatch_config.test_diff))
-        if self.urlwatch_config.errors:
-            sys.exit(self.list_error_jobs())
-        if self.urlwatch_config.list:
-            sys.exit(self.list_jobs())
-        if self.urlwatch_config.add is not None or self.urlwatch_config.delete is not None:
-            sys.exit(self.modify_urls())
-
     def check_edit_config(self) -> None:
-        if self.urlwatch_config.edit_config:
-            sys.exit(self.urlwatcher.config_storage.edit())
+        sys.exit(self.urlwatcher.config_storage.edit())
 
     def check_telegram_chats(self) -> None:
-        if self.urlwatch_config.telegram_chats:
-            config = self.urlwatcher.config_storage.config['report'].get('telegram')
-            if not config:
-                print('You need to configure telegram in your config first (see documentation)')
-                sys.exit(1)
+        config = self.urlwatcher.config_storage.config['report'].get('telegram')
+        if not config:
+            print('You need to configure telegram in your config first (see documentation)')
+            sys.exit(1)
 
-            bot_token = config.get('bot_token')
-            if not bot_token:
-                print('You need to set up your bot token first (see documentation)')
-                sys.exit(1)
+        bot_token = config.get('bot_token')
+        if not bot_token:
+            print('You need to set up your bot token first (see documentation)')
+            sys.exit(1)
 
-            info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe').json()
+        info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe').json()
 
-            chats = {}
-            for chat_info in (requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates')
-                              .json()['result']):
-                chat = chat_info['message']['chat']
-                if chat['type'] == 'private':
-                    chats[str(chat['id'])] = (' '.join((chat['first_name'], chat['last_name']))
-                                              if 'last_name' in chat else chat['first_name'])
+        chats = {}
+        for chat_info in (requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates')
+                          .json()['result']):
+            chat = chat_info['message']['chat']
+            if chat['type'] == 'private':
+                chats[str(chat['id'])] = (' '.join((chat['first_name'], chat['last_name']))
+                                          if 'last_name' in chat else chat['first_name'])
 
-            if not chats:
-                print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}")
-                sys.exit(1)
+        if not chats:
+            print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}")
+            sys.exit(1)
 
-            headers = ('Chat ID', 'Name')
-            maxchat = max(len(headers[0]), max((len(k) for k, v in chats.items()), default=0))
-            maxname = max(len(headers[1]), max((len(v) for k, v in chats.items()), default=0))
-            fmt = f'%-{maxchat}s  %s'
-            print(fmt % headers)
-            print(fmt % ('-' * maxchat, '-' * maxname))
-            for k, v in sorted(chats.items(), key=lambda kv: kv[1]):
-                print(fmt % (k, v))
-            print(f"\nChat up your bot here: https://t.me/{info['result']['username']}")
-            sys.exit(0)
+        headers = ('Chat ID', 'Name')
+        maxchat = max(len(headers[0]), max((len(k) for k, v in chats.items()), default=0))
+        maxname = max(len(headers[1]), max((len(v) for k, v in chats.items()), default=0))
+        fmt = f'%-{maxchat}s  %s'
+        print(fmt % headers)
+        print(fmt % ('-' * maxchat, '-' * maxname))
+        for k, v in sorted(chats.items(), key=lambda kv: kv[1]):
+            print(fmt % (k, v))
+        print(f"\nChat up your bot here: https://t.me/{info['result']['username']}")
+        sys.exit(0)
 
     def check_test_reporter(self) -> None:
         name = self.urlwatch_config.test_reporter
-        if name is None:
-            return
 
         if name not in ReporterBase.__subclasses__:
             print(f'No such reporter: {name}')
@@ -348,101 +312,139 @@ class UrlwatchCommand:
         sys.exit(0)
 
     def check_smtp_login(self) -> None:
-        if self.urlwatch_config.smtp_login:
-            config = self.urlwatcher.config_storage.config['report']['email']
-            smtp_config = config['smtp']
+        config = self.urlwatcher.config_storage.config['report']['email']
+        smtp_config = config['smtp']
 
-            success = True
+        success = True
 
-            if not config.get('enabled'):
-                print('Please enable e-mail reporting in the config first.')
-                success = False
+        if not config.get('enabled'):
+            print('Please enable e-mail reporting in the config first.')
+            success = False
 
-            if config.get('method') != 'smtp':
-                print('Please set the method to SMTP for the e-mail reporter.')
-                success = False
+        if config.get('method') != 'smtp':
+            print('Please set the method to SMTP for the e-mail reporter.')
+            success = False
 
-            smtp_auth = smtp_config.get('auth')
-            if not smtp_auth:
-                print('Authentication must be enabled for SMTP.')
-                success = False
+        smtp_auth = smtp_config.get('auth')
+        if not smtp_auth:
+            print('Authentication must be enabled for SMTP.')
+            success = False
 
-            smtp_hostname = smtp_config.get('host')
-            if not smtp_hostname:
-                print('Please configure the SMTP hostname in the config first.')
-                success = False
+        smtp_hostname = smtp_config.get('host')
+        if not smtp_hostname:
+            print('Please configure the SMTP hostname in the config first.')
+            success = False
 
-            smtp_username = smtp_config.get('user') or config['from']
-            if not smtp_username:
-                print('Please configure the SMTP user in the config first.')
-                success = False
+        smtp_username = smtp_config.get('user') or config['from']
+        if not smtp_username:
+            print('Please configure the SMTP user in the config first.')
+            success = False
 
-            if not success:
-                sys.exit(1)
+        if not success:
+            sys.exit(1)
 
-            insecure_password = smtp_config.get('insecure_password')
-            if insecure_password:
-                print('The SMTP password is set in the config file (key "insecure_password")')
-            elif smtp_have_password(smtp_hostname, smtp_username):
-                message = f'Password for {smtp_username} / {smtp_hostname} already set, update? [y/N] '
-                if not input(message).lower().startswith('y'):
-                    print('Password unchanged.')
-                else:
-                    smtp_set_password(smtp_hostname, smtp_username)
+        insecure_password = smtp_config.get('insecure_password')
+        if insecure_password:
+            print('The SMTP password is set in the config file (key "insecure_password")')
+        elif smtp_have_password(smtp_hostname, smtp_username):
+            message = f'Password for {smtp_username} / {smtp_hostname} already set, update? [y/N] '
+            if not input(message).lower().startswith('y'):
+                print('Password unchanged.')
+            else:
+                smtp_set_password(smtp_hostname, smtp_username)
 
-            smtp_port = smtp_config.get('port')
-            smtp_tls = smtp_config.get('starttls')
+        smtp_port = smtp_config.get('port')
+        smtp_tls = smtp_config.get('starttls')
 
-            mailer = SMTPMailer(smtp_username, smtp_hostname, smtp_port, smtp_tls, smtp_auth, insecure_password)
-            print('Trying to log into the SMTP server...')
-            mailer.send(None)
-            print('Successfully logged into SMTP server')
+        mailer = SMTPMailer(smtp_username, smtp_hostname, smtp_port, smtp_tls, smtp_auth, insecure_password)
+        print('Trying to log into the SMTP server...')
+        mailer.send(None)
+        print('Successfully logged into SMTP server')
 
-            sys.exit(0)
+        sys.exit(0)
 
     def check_xmpp_login(self) -> None:
-        if self.urlwatch_config.xmpp_login:
-            xmpp_config = self.urlwatcher.config_storage.config['report']['xmpp']
+        xmpp_config = self.urlwatcher.config_storage.config['report']['xmpp']
 
-            success = True
+        success = True
 
-            if not xmpp_config['enabled']:
-                print('Please enable XMPP reporting in the config first.')
-                success = False
+        if not xmpp_config['enabled']:
+            print('Please enable XMPP reporting in the config first.')
+            success = False
 
-            xmpp_sender = xmpp_config.get('sender')
-            if not xmpp_sender:
-                print('Please configure the XMPP sender in the config first.')
-                success = False
+        xmpp_sender = xmpp_config.get('sender')
+        if not xmpp_sender:
+            print('Please configure the XMPP sender in the config first.')
+            success = False
 
-            if not xmpp_config.get('recipient'):
-                print('Please configure the XMPP recipient in the config first.')
-                success = False
+        if not xmpp_config.get('recipient'):
+            print('Please configure the XMPP recipient in the config first.')
+            success = False
 
-            if not success:
-                sys.exit(1)
+        if not success:
+            sys.exit(1)
 
-            if 'insecure_password' in xmpp_config:
-                print('The XMPP password is already set in the config (key "insecure_password").')
-                sys.exit(0)
-
-            if xmpp_have_password(xmpp_sender):
-                message = f'Password for {xmpp_sender} already set, update? [y/N] '
-                if input(message).lower() != 'y':
-                    print('Password unchanged.')
-                    sys.exit(0)
-
-            if success:
-                xmpp_set_password(xmpp_sender)
-
+        if 'insecure_password' in xmpp_config:
+            print('The XMPP password is already set in the config (key "insecure_password").')
             sys.exit(0)
 
+        if xmpp_have_password(xmpp_sender):
+            message = f'Password for {xmpp_sender} already set, update? [y/N] '
+            if input(message).lower() != 'y':
+                print('Password unchanged.')
+                sys.exit(0)
+
+        if success:
+            xmpp_set_password(xmpp_sender)
+
+        sys.exit(0)
+
+    def handle_actions(self) -> None:
+        if self.urlwatch_config.features:
+            sys.exit(self.show_features())
+        if self.urlwatch_config.gc_cache:
+            self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
+            self.urlwatcher.cache_storage.close()
+            sys.exit(0)
+        if self.urlwatch_config.clean_cache:
+            self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
+            self.urlwatcher.cache_storage.close()
+            sys.exit(0)
+        if self.urlwatch_config.delete_snapshot:
+            sys.exit(self.delete_snapshot(self.urlwatch_config.delete_snapshot))
+        if self.urlwatch_config.rollback_cache:
+            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
+            self.urlwatcher.cache_storage.close()
+            sys.exit(0)
+        if self.urlwatch_config.edit:
+            sys.exit(self.urlwatcher.jobs_storage.edit())
+        if self.urlwatch_config.edit_hooks:
+            sys.exit(self.edit_hooks())
+        if self.urlwatch_config.test_job:
+            sys.exit(self.test_job(self.urlwatch_config.test_job))
+        if self.urlwatch_config.test_diff:
+            sys.exit(self.test_diff(self.urlwatch_config.test_diff))
+        if self.urlwatch_config.errors:
+            sys.exit(self.list_error_jobs())
+        if self.urlwatch_config.list:
+            sys.exit(self.list_jobs())
+        if self.urlwatch_config.add or self.urlwatch_config.delete:
+            sys.exit(self.modify_urls())
+
     def run(self) -> None:  # pragma: no cover
-        self.check_edit_config()
-        self.check_smtp_login()
-        self.check_telegram_chats()
-        self.check_xmpp_login()
-        self.check_test_reporter()
+        if self.urlwatch_config.edit_config:
+            self.check_edit_config()
+        if self.urlwatch_config.smtp_login:
+            self.check_smtp_login()
+        if self.urlwatch_config.telegram_chats:
+            self.check_telegram_chats()
+        if self.urlwatch_config.xmpp_login:
+            self.check_xmpp_login()
+        if self.urlwatch_config.test_reporter:
+            self.check_test_reporter()
+
         self.handle_actions()
+
         self.urlwatcher.run_jobs()
+
         self.urlwatcher.close()

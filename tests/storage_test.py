@@ -24,7 +24,7 @@ here = Path(__file__).parent
 data_dir = here.joinpath('data')
 config_file = data_dir.joinpath('config.yaml')
 cache_file = ':memory:'
-hooks_file = ''
+hooks_file = Path('')
 
 
 def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, CacheSQLite3Storage, str):

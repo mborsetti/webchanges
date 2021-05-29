@@ -59,8 +59,7 @@ def load_hooks_from_doc() -> str:
 
 
 def load_hooks_testdata() -> Dict[str, Any]:
-    with open(data_dir.joinpath('doc_hooks_testdata.yaml')) as f:
-        yaml_data = f.read()
+    yaml_data = Path(data_dir.joinpath('doc_hooks_testdata.yaml')).read_text()
     return yaml.safe_load(yaml_data)
 
 

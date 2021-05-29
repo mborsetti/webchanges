@@ -97,9 +97,6 @@ def test_diff_to_htm_wdiff():
 
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)
 def test_reporters(reporter):
-    # command_config = CommandConfig('', '', '', '', '', '', '', '', verbose=False)
-    # urlwatcher = Urlwatch('', '', '', '')
-
     def build_job(name, url, old, new):
         job = JobBase.unserialize({'name': name, 'url': url})
 
