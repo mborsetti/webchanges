@@ -35,6 +35,14 @@ Version 3.6.1.post0
 ====================
 Unreleased
 
+Changed
+-------
+* Improved ``telegram`` reporter to use MarkdownV2 (some formatting is now preserved)
+
+Added
+-----
+* New option for ``telegram`` reporter: ``disable_notification`` (true/false) (default: false). If set to true, users
+  will receive a notification with no sound.
 
 Version 3.6.1
 ====================
@@ -47,7 +55,7 @@ released on 7 June 2018, the codebase will be streamlined by removing support fo
 
 Added
 -----
-* Clearer results messages for `--delete-snapshot` command line argument
+* Clearer results messages for ``--delete-snapshot`` command line argument
 
 Fixed
 -----

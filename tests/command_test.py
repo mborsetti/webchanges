@@ -170,6 +170,7 @@ def test_test_job(capsys):
     setattr(command_config, 'test_job', None)
     assert pytest_wrapped_e.value.code is None
     message = capsys.readouterr().out
+    message = message.replace('\n\n ', '\n').replace('\r', '')  # Python 3.6
     assert message == ('\n'
                        'Sample webchanges job; used by command_test.py\n'
                        '----------------------------------------------\n'

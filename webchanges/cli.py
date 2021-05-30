@@ -96,7 +96,7 @@ def locate_storage_file(filename: Path, default_dir: Path, ext: Optional[str] = 
     """
     search_filenames = [filename]
 
-    # if exp is given, iterate both on raw filename and the filename with ext if different
+    # if ext is given, iterate both on raw filename and the filename with ext if different
     if ext and filename.suffix != ext:
         search_filenames.append(filename.with_suffix(ext))
 

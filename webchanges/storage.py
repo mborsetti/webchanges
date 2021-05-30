@@ -108,6 +108,7 @@ DEFAULT_CONFIG = {
             'enabled': False,
             'bot_token': '',
             'chat_id': '',
+            'disable_notification': False,
         },
         'webhook': {
             'enabled': False,
@@ -761,7 +762,7 @@ class CacheSQLite3Storage(CacheStorage):
         """Save the data from a job.
 
         By default it is saved into the temporary database.  Call close() to tranfer the contents of the temporary
-        database to the permament one.
+        database to the permanent one.
 
         :param guid: The guid
         :param data: The data

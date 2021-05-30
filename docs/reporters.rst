@@ -246,6 +246,8 @@ The event will contain three values in the posted JSON:
 
 These values will be passed on to the Action in your Recipe.
 
+IFTT uses the :ref:`text` report type.
+
 
 .. _mailgun:
 
@@ -264,6 +266,8 @@ sub-directives
 * ``to``: Recipient's email address
 * ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported
 * ``region`` (optional)
+
+Mailgun uses the :ref:`text` report type.
 
 
 .. _matrix:
@@ -308,6 +312,8 @@ notifications to a public Matrix room, as the messages quickly become noisy:
      footer: false
      minimal: true
 
+Matrix uses the :ref:`text` report type.
+
 
 .. _pushbullet:
 
@@ -324,6 +330,7 @@ To use this report you need to install :ref:`optional_packages`. Install them us
 
    pip install --upgrade webchanges[pushbullet]
 
+Pushbullet uses the :ref:`text` report type.
 
 .. _pushover:
 
@@ -343,6 +350,8 @@ set ``device: null`` in your config (``webchanges --edit-config``) or leave out 
 Setting the priority is possible via the ``priority`` config option, which can be ``lowest``, ``low``, ``normal``,
 ``high`` or ``emergency``. Any other setting (including leaving the option unset) maps to ``normal``.
 
+Pushover uses the :ref:`text` report type.
+
 Required packages
 ~~~~~~~~~~~~~~~~~
 To use this report you need to install :ref:`optional_packages`. Install them using:
@@ -359,6 +368,8 @@ stdout
 ------
 Displays the summary in text format on stdout (the console)
 
+stdout uses the :ref:`text` report type.
+
 Optional directives
 ~~~~~~~~~~~~~~~~~~~
 * ``color``: Uses color (green for additions, red for deletions) (true/false)
@@ -369,36 +380,47 @@ Optional directives
 
 Telegram
 --------
-Telegram notifications are configured using the Telegram Bot API. For this, you’ll need a Bot API token and a chat id
-(see https://core.telegram.org/bots). Sample configuration:
+Telegram notifications are configured using the Telegram `Bot API <https://core.telegram.org/bots>`__).
+
+To set up Telegram, from your Telegram app chat up BotFather (New Message, Search, “BotFather”), then say ``/newbot``
+and follow the instructions. Eventually it will tell you the bot token (in the form ``<number>:<random string>``); add
+it to your configuration file (run ``webchanges --edit-config``) as below, and save the file.
+
+.. code:: yaml
+
+   telegram:
+     enabled: true  # don't forget to set this to true! :)
+     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # replace your bot api token
+     chat_id: ''  # empty for now
+
+Next click on the link of your bot (starts with https://t.me/) and, on the new screen, click on start (which will send
+the message ``/start``) and enter any text ("Hello" is fine).  Then run ``webchanges --telegram-chats``, which will list
+the private chats the bot is involved with. This will list the chat ID that you need to put into the configuration
+file (run ``webchanges --edit-config``) as ``chat_id``:
 
 .. code:: yaml
 
    telegram:
      enabled: true
-     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf' # your bot api token
-     chat_id: '88888888' # the chat id where the messages should be sent
+     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # replace with your bot api token
+     chat_id: 88888888  # the chat id where the messages should be sent
+     disable_notification: false  # set to true to receive a notification with no sound
 
-To set up Telegram, from your Telegram app, chat up BotFather (New Message, Search, “BotFather”), then say ``/newbot``
-and follow the instructions. Eventually it will tell you the bot token (in the form seen above,
-``<number>:<random string>``) - add this to your config file.
-
-You can then click on the link of your bot, which will send the message ``/start``. At this point, you can use the
-command ``webchanges --telegram-chats`` to list the private chats the bot is involved with. This is the chat ID that you
-need to put into the config file as ``chat_id``. You may add multiple chat IDs as a YAML list:
+You may add multiple chat IDs as a YAML list:
 
 .. code:: yaml
 
    telegram:
      enabled: true
-     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf' # your bot api token
+     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # your bot api token
      chat_id:
-       - '11111111'
-       - '22222222'
+       - 11111111
+       - 22222222
+     disable_notification: true  # set to false to receive a notification with sound
 
-Don’t forget to also enable the reporter.
+Telegram uses the :ref:`markdown` report type.
 
-
+`Changed in version 3.7:` Added `disable_notification` and switched from the `text` to the `markdown` report type.
 
 .. _webhook:
 
@@ -412,6 +434,8 @@ Services such as Slack, Discord, Mattermost etc. that support incoming webhooks 
    webhook:
      enabled: true
      webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
+
+``webhook`` uses the :ref:`text` report type, while ``webhook_markdown`` uses the :ref:`markdown` one.
 
 Slack
 ~~~~~
@@ -491,6 +515,8 @@ you can save the password in the ``insecure_password`` directive in the XMPP con
 As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet for an
 account that only sends these reports this might be a low-risk way.
 
+XMPP uses the :ref:`text` report type.
+
 Required packages
 ~~~~~~~~~~~~~~~~~
 To run jobs with this reporter, you need to install :ref:`optional_packages`. Install them using:
@@ -547,5 +573,7 @@ Here is a sample configuration:
 
 The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
 shown as the source of the event in the Prowl App.
+
+Prowl uses the :ref:`text` report type.
 
 `Added in version 3.0.1:`

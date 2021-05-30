@@ -72,6 +72,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         self.duration = duration
 
     def convert(self, othercls: Type['ReporterBase']) -> 'ReporterBase':
+        """Convert to a different ReporterBase class"""
         if hasattr(othercls, '__kind__'):
             config = self.report.config['report'][othercls.__kind__]
         else:
@@ -81,6 +82,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def reporter_documentation(cls) -> str:
+        """Return listings of reporters used by --features command line argument"""
         result = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
             result.extend((f'  * {sc.__kind__} - {sc.__doc__}',))
@@ -319,7 +321,8 @@ class TextReporter(ReporterBase):
             yield (f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
                    f' seconds with {__project_name__} {__version__}')
 
-    def _format_content(self, job_state: 'JobState') -> Optional[str]:
+    @staticmethod
+    def _format_content(job_state: 'JobState') -> Optional[str]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -393,14 +396,11 @@ class MarkdownReporter(ReporterBase):
         else:
             footer = None
 
-        if not show_details:
-            details = None
-
         trimmed_msg = '*Parts of the report were omitted due to message length.*\n'
         if max_length:
             max_length -= len(trimmed_msg)
 
-        trimmed, summary, details, footer = MarkdownReporter._render(max_length, summary, details, footer)
+        trimmed, summary, details, footer = self._render(max_length, summary, details, footer)
 
         if summary:
             yield from summary
@@ -410,20 +410,19 @@ class MarkdownReporter(ReporterBase):
             for header, body in details:
                 yield header
                 yield body
-                yield ''
 
         if trimmed:
             yield trimmed_msg
 
         if summary and show_footer:
-            yield from footer
+            yield footer
 
     @classmethod
     def _render(cls, max_length: Optional[int], summary: Optional[List[str]] = None,
                 details: Optional[List[str]] = None, footer: Optional[List[str]] = None) -> (bool, str, str, str):
         """Render the report components, trimming them if the available length is insufficient.
 
-        Returns a tuple (trimmed, summary, details, footer).
+        :returns: a tuple (trimmed, summary, details, footer).
 
         The first element of the tuple indicates whether any part of the report
         was omitted due to message length. The other elements are the
@@ -444,14 +443,18 @@ class MarkdownReporter(ReporterBase):
             footer_len = 0
 
         if max_length is None:
-            return (False, summary, details, footer)
+            processed_details = []
+            for header, body in details:
+                _, body = cls._format_details_body(body)
+                processed_details.append((header, body))
+            return False, summary, processed_details, footer
         else:
             if summary_len > max_length:
-                return (True, [], [], '')
+                return True, [], [], ''
             elif footer_len > max_length - summary_len:
-                return (True, summary, [], footer[:max_length - summary_len])
+                return True, summary, [], footer[:max_length - summary_len]
             elif not details:
-                return (False, summary, [], footer)
+                return False, summary, [], footer
             else:
                 # Determine the space remaining after taking into account
                 # summary and footer.
@@ -462,7 +465,7 @@ class MarkdownReporter(ReporterBase):
 
                 # First ensure we can show all the headers.
                 if headers_len > remaining_len:
-                    return (True, summary, [], footer)
+                    return True, summary, [], footer
                 else:
                     remaining_len -= headers_len
 
@@ -499,10 +502,10 @@ class MarkdownReporter(ReporterBase):
                         if unprocessed > 0:
                             body_len_per_details = remaining_len // unprocessed
 
-                    return (details_trimmed, summary, trimmed_details, footer)
+                    return details_trimmed, summary, trimmed_details, footer
 
     @staticmethod
-    def _format_details_body(s: str, max_length: int) -> (bool, str):
+    def _format_details_body(s: str, max_length: Optional[int] = None) -> (bool, str):
         wrapper_length = len('```diff\n\n```')
 
         # Message to print when the diff is too long.
@@ -510,7 +513,7 @@ class MarkdownReporter(ReporterBase):
         trim_message_length = len(trim_message)
 
         if max_length is None or len(s) + wrapper_length <= max_length:
-            return False, '```diff\n{}\n```'.format(s)
+            return False, f'```diff\n{s}\n```'
         else:
             target_max_length = max_length - trim_message_length - wrapper_length
             pos = s.rfind('\n', 0, target_max_length)
@@ -522,9 +525,10 @@ class MarkdownReporter(ReporterBase):
                 # Multiple lines, cut off extra lines.
                 s = s[0:pos]
 
-            return True, '{}\n```diff\n{}\n```'.format(trim_message, s)
+            return True, f'{trim_message}\n```diff\n{s}\n```'
 
-    def _format_content(self, job_state: 'JobState') -> Optional[str]:
+    @staticmethod
+    def _format_content(job_state: 'JobState') -> Optional[str]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -593,7 +597,7 @@ class StdoutReporter(TextReporter):
         return print
 
     def submit(self, job=None):
-        print = self._get_print()
+        print_color = self._get_print()
 
         cfg = self.report.config['report']['text']
         line_length = cfg['line_length']
@@ -610,19 +614,19 @@ class StdoutReporter(TextReporter):
 
         for line in body.splitlines():
             if line in separators:
-                print(line)
+                print_color(line)
             elif line.startswith('+'):
-                print(self._green(line))
+                print_color(self._green(line))
             elif line.startswith('-'):
-                print(self._red(line))
+                print_color(self._red(line))
             elif any(line.startswith(prefix) for prefix in ('NEW: ', 'CHANGED: ', 'UNCHANGED: ', 'ERROR: ')):
                 first, second = line.split(' ', 1)
                 if line.startswith('ERROR: '):
-                    print(first, self._red(second))
+                    print_color(first, self._red(second))
                 else:
-                    print(first, self._blue(second))
+                    print_color(first, self._blue(second))
             else:
-                print(line)
+                print_color(line)
 
 
 class EMailReporter(TextReporter):
@@ -815,38 +819,45 @@ class MailGunReporter(TextReporter):
         return result
 
 
-class TelegramReporter(TextReporter):
-    """Send a message using Telegram."""
-    MAX_LENGTH = 4096
+class TelegramReporter(MarkdownReporter):
+    """Send a message using Telegram.
 
+    See https://core.telegram.org/bots/api#formatting-options
+    """
     __kind__ = 'telegram'
 
-    def submit(self) -> Optional[requests.Response]:
+    def submit(self, max_length: int = 4096) -> Optional[requests.Response]:
 
         bot_token = self.config['bot_token']
         chat_ids = self.config['chat_id']
         chat_ids = [chat_ids] if not isinstance(chat_ids, list) else chat_ids
 
-        text = '\n'.join(super().submit())
+        text = '\n'.join(super().submit())  # no max_length here as we want all to chunk later
 
         if not text:
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
         result = None
-        for chunk in chunk_string(text, self.MAX_LENGTH, numbering=True):
-            for chat_id in chat_ids:
+        for chat_id in chat_ids:
+            for chunk in chunk_string(text, max_length, numbering=True):
+                chunk = self.telegram_escape_markdown(chunk)
                 res = self.submit_to_telegram(bot_token, chat_id, chunk)
                 if res.status_code != requests.codes.ok or res is None:
                     result = res
 
         return result
 
-    def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str):
+    def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str) -> requests.Response:
         logger.debug(f"Sending telegram request to chat id: '{chat_id}'")
-        result = requests.post(
-            f'https://api.telegram.org/bot{bot_token}/sendMessage',
-            data={'chat_id': chat_id, 'text': text, 'disable_web_page_preview': 'true'})
+
+        data = {'chat_id': chat_id,
+                'text': text,
+                'parse_mode': 'MarkdownV2',
+                'disable_web_page_preview': True,
+                'disable_notification': self.config['disable_notification']}
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data=data)
+
         try:
             json_res = result.json()
 
@@ -857,10 +868,43 @@ class TelegramReporter(TextReporter):
         except ValueError:
             logger.error(
                 f'Failed to parse telegram response. HTTP status code: {result.status_code}, content: {result.content}')
+
         return result
 
-    def chunkstring(self, string: str, length: int):
-        return (string[0 + i:length + i] for i in range(0, len(string), length))
+    @staticmethod
+    def telegram_escape_markdown(text: str, version: int = 2, entity_type: Optional[str] = None) -> str:
+        """
+        Helper function to escape telegram markup symbols. See https://core.telegram.org/bots/api#formatting-options
+
+        Inspired by https://github.com/python-telegram-bot/python-telegram-bot/blob/master/telegram/utils/helpers.py
+        v13.5 30-Apr-21
+
+        :param text: The text.
+        :param version: Use to specify the version of telegrams Markdown. Either ``1`` or ``2``. Defaults to ``2``.
+        :param entity_type: For the entity types ``PRE``, ``CODE`` and the link part of ``TEXT_LINKS``, only certain
+            characters need to be escaped in ``MarkdownV2``. See the official API documentation for details. Only valid
+            in combination with ``version=2``, will be ignored otherwise.
+
+        :returns: The escaped text.
+        """
+        if version == 1:
+            escape_chars = r'_*`['
+        elif version == 2:
+            if entity_type in ['pre', 'code']:
+                escape_chars = r'\`'
+            elif entity_type == 'text_link':
+                escape_chars = r'\)'
+            else:
+                escape_chars = r'_*[]()~`>#+-=|{}.!'
+        else:
+            raise ValueError('Markdown version must be either 1 or 2!')
+
+        text = re.split(r'(`{3})', text)
+        for i in range(len(text)):
+            if (i + 1) % 2:
+                text[i] = re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text[i])
+
+        return ''.join(text)
 
 
 class WebhookReporter(TextReporter):
@@ -892,7 +936,8 @@ class WebhookReporter(TextReporter):
 
         return result
 
-    def submit_to_webhook(self, webhook_url: str, text: str) -> Optional[requests.Response]:
+    @staticmethod
+    def submit_to_webhook(webhook_url: str, text: str) -> Optional[requests.Response]:
         logger.debug(f'Sending request to webhook with text:{text}')
         post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
@@ -947,7 +992,8 @@ class WebhookMarkdownReporter(MarkdownReporter):
 
         return result
 
-    def submit_to_webhook(self, webhook_url: str, text: str) -> Optional[requests.Response]:
+    @staticmethod
+    def submit_to_webhook(webhook_url: str, text: str) -> Optional[requests.Response]:
         logger.debug(f'Sending request to webhook_markdown with text:{text}')
         post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
@@ -977,7 +1023,7 @@ class MatrixReporter(MarkdownReporter):
         access_token = self.config['access_token']
         room_id = self.config['room_id']
 
-        body_markdown = '\n'.join(super().submit(MatrixReporter.MAX_LENGTH))
+        body_markdown = '\n'.join(super().submit(self.MAX_LENGTH))
 
         if not body_markdown:
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')

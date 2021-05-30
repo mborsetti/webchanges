@@ -167,6 +167,8 @@ class JobState(object):
             contextlines = 0 if self.job.additions_only or self.job.deletions_only else 3
         diff = list(difflib.unified_diff(self.old_data.splitlines(), self.new_data.splitlines(),
                                          '@', '@', timestamp_old, timestamp_new, contextlines, lineterm=''))
+        diff[0] = diff[0].replace('\t', ' ')
+        diff[1] = diff[1].replace('\t', ' ')
         if self.job.additions_only:
             if len(self.old_data) and len(self.new_data) / len(self.old_data) <= .25:
                 diff = (diff[:2] + ['/**Comparison type: Additions only**']

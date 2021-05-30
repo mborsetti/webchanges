@@ -63,11 +63,12 @@ class CommandConfig(BaseConfig):
         parser.add_argument('-v', '--verbose', action='store_true', help='show logging output')
 
         group = parser.add_argument_group('override file defaults')
-        group.add_argument('--jobs', '--urls', default=self.jobs, help='read job list (URLs) from FILE',
+        group.add_argument('--jobs', '--urls', default=self.jobs, type=Path, help='read job list (URLs) from FILE',
                            metavar='FILE', dest='jobs')
-        group.add_argument('--config', default=self.config, help='read configuration from FILE', metavar='FILE')
-        group.add_argument('--hooks', default=self.hooks, help='use FILE as hooks.py module', metavar='FILE')
-        group.add_argument('--cache', default=self.cache,
+        group.add_argument('--config', default=self.config, type=Path, help='read configuration from FILE',
+                           metavar='FILE')
+        group.add_argument('--hooks', default=self.hooks, type=Path, help='use FILE as hooks.py module', metavar='FILE')
+        group.add_argument('--cache', default=self.cache, type=Path,
                            help='use FILE as cache (snapshots database) or directory, alternatively a redis URI',
                            metavar='FILE')
         group.add_argument('--list', action='store_true', help='list jobs and their index number')

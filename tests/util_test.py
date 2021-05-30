@@ -18,7 +18,7 @@ CHUNK_TEST_DATA = [
       # 123456789012345
       ['Averylong (1/5)',
        'wordthath (2/5)',
-       'as newlin (3/5)',
+       'as\nnewlin (3/5)',
        'eseparati (4/5)',
        'ongoingon (5/5)'])),
 ]

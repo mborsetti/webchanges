@@ -93,9 +93,9 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
 
     :param string: The string
     :param length: The length of the chunked string
-    :param numbering: Whether to number each line on the right
+    :param numbering: Whether to number each chunk on the right
 
-    :returns: a list of strings
+    :returns: a list of chunked strings
     """
     if numbering and len(string) > length:
         try:
@@ -111,14 +111,14 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
                 lines_guess = len(string) / text_length
                 digits_guess = floor(log10(lines_guess)) + 1
 
-            chunks = textwrap.wrap(string, text_length)
+            chunks = textwrap.wrap(string, text_length, replace_whitespace=False)
             actual_digits = floor(log10(len(chunks))) + 1
             while actual_digits > digits_try:
                 digits_try += 1
                 text_length = length - 4 - 2 * digits_try
                 if text_length <= 0:
                     raise ValueError('Not enough space to chunkify string with line numbering (2)')
-                chunks = textwrap.wrap(string, text_length)
+                chunks = textwrap.wrap(string, text_length, replace_whitespace=False)
                 actual_digits = floor(log10(len(chunks))) + 1
 
             length = len(chunks)
@@ -127,7 +127,7 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
         except ValueError as e:
             logger.error(f'{e}')
 
-    return textwrap.wrap(string, length)
+    return textwrap.wrap(string, length, replace_whitespace=False)
 
 
 _URL_RE = re.compile(r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
