@@ -69,7 +69,7 @@ Email
 -----
 Sends email, via smtp or sendmail.
 
-sub-directives
+Sub-directives
 ~~~~~~~~~~~~~~
 * ``method``: Either `smtp` or `sendmail`
 * ``from``: The sender's email address. **Do not use your main email address** but create a throwaway one!
@@ -256,7 +256,7 @@ Mailgun
 Sends email using the commercial `Mailgun <https://www.mailgun.com/>`__ service.
 
 
-sub-directives
+Sub-directives
 ~~~~~~~~~~~~~~
 * ``domain``: The domain
 * ``api_key``: API key (see `here
@@ -370,8 +370,8 @@ Displays the summary in text format on stdout (the console)
 
 stdout uses the :ref:`text` report type.
 
-Optional directives
-~~~~~~~~~~~~~~~~~~~
+Optional sub-directives
+~~~~~~~~~~~~~~~~~~~~~~~
 * ``color``: Uses color (green for additions, red for deletions) (true/false)
 
 
@@ -404,7 +404,7 @@ file (run ``webchanges --edit-config``) as ``chat_id``:
      enabled: true
      bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # replace with your bot api token
      chat_id: 88888888  # the chat id where the messages should be sent
-     disable_notification: false  # set to true to receive a notification with no sound
+     silent: false  # set to true to receive a notification with no sound
 
 You may add multiple chat IDs as a YAML list:
 
@@ -416,11 +416,19 @@ You may add multiple chat IDs as a YAML list:
      chat_id:
        - 11111111
        - 22222222
-     disable_notification: true  # set to false to receive a notification with sound
+     silent: true  # set to false to receive a notification with sound
+     monospace: true
 
 Telegram uses the :ref:`markdown` report type.
 
-`Changed in version 3.7:` Added `disable_notification` and switched from the `text` to the `markdown` report type.
+Optional sub-directives
+~~~~~~~~~~~~~~~~~~~~~~~
+* ``silent``: Receive a notification with no sound (true/false) (default: false)
+* ``monospace``: Format message with monospace font (true/false) (default: false)
+
+
+`Changed in version 3.7:` Added `silent` and `monospace` sub-directives, and switched from the `text` to the `markdown`
+report type.
 
 .. _webhook:
 
@@ -471,7 +479,7 @@ using the ``webhook_markdown`` variant):
      enabled: true
      webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
 
-sub-directives
+Sub-directives
 ~~~~~~~~~~~~~~
 * ``webhook_url`` (required): the webhook URL
 * ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts

@@ -1,6 +1,159 @@
 # Test cases for filters.rst used by docs_filters_test.py
 # Each heading is a unique url: in the filter.rst examples
 # Ensure you use a Unicode character (e.g. ™ / &trade) in your example (both input and output) to test that too!
+https://example.net/css.html:
+  input: |-
+    <html>
+    <body>
+      <h1>Some</h1>
+      <ul id="fancy">
+        <li class="unchecked">Foo</li>
+        <li>Bar</li>
+        <li>Baz</li>
+      </ul>
+      <h2>More</h2>
+      <ul id="groceries">
+        <li class="unchecked">Milk™</li>
+        <li>Honey</li>
+        <li class="unchecked">Bread</li>
+        <li>Butter</li>
+      </ul>
+    </body>
+    </html>
+  output: |-
+    <li class="unchecked">Milk™</li>
+    <li class="unchecked">Bread</li>
+https://example.net/xpath.html:
+  input: |-
+    <html>
+    <head>
+    <title>Oh My HTML4</title>
+    </head>
+    <body>
+      <marquee>Just Below The Body™ Tag</marquee>
+      <p>Indeed, just BELOW the body tag. <marquee>Not this one.</marquee></p>
+      <marquee>But there is more</marquee>
+    </body>
+    </html>
+  output: |-
+    <marquee>Just Below The Body™ Tag</marquee>
+    <marquee>But there is more</marquee>
+https://example.com/blog/css-index.rss:
+  input: |-
+    <rss>
+      <item>
+        <title>Fancy™</title>
+        <pubDate>2020-07-11</pubDate>
+        <description>Bla bla bla</description>
+      </item>
+
+      <item>
+        <title>Pants</title>
+        <pubDate>2020-07-12</pubDate>
+        <description>Hey Ho Lets Go</description>
+      </item>
+    </rss>
+  output: |-
+    Fancy™
+    2020-07-11
+    Pants
+    2020-07-12
+
+https://example.com/blog/xpath-index.rss:
+  input: |-
+    <rss>
+      <item>
+        <title>Fancy™</title>
+        <pubDate>2020-07-11</pubDate>
+        <description>Bla bla bla</description>
+      </item>
+
+      <item>
+        <title>Pants</title>
+        <pubDate>2020-07-12</pubDate>
+        <description>Hey Ho Lets Go</description>
+      </item>
+    </rss>
+  output: |-
+    Fancy™
+    2020-07-11
+    Pants
+    2020-07-12
+https://example.org/feed/css-namespace.xml:
+  input: |-
+    <?xml version="1.0"?>
+    <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+      <channel>
+        <title>Weird</title>
+        <description>The latest from some page</description>
+        <language>en</language>
+        <item>
+          <title>How Mysterious Protest Messages Have Filled the Skies</title>
+          <pubDate>Fri, 10 Jul 2020 20:37:00 +0000</pubDate>
+          <description>Hello World From Testing Data</description>
+          <media:keywords>stylesheets™</media:keywords>
+        </item>
+      </channel>
+    </rss>
+  output: |
+    stylesheets™
+https://example.net/feed/xpath-namespace.xml:
+  input: |-
+    <?xml version="1.0"?>
+    <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+      <channel>
+        <title>Weird</title>
+        <description>The latest from some page</description>
+        <language>en</language>
+        <item>
+          <title>How Mysterious™ Protest Messages Have Filled the Skies</title>
+          <pubDate>Fri, 10 Jul 2020 20:37:00 +0000</pubDate>
+          <description>Hello World From Testing Data</description>
+          <media:keywords>protests</media:keywords>
+        </item>
+      </channel>
+    </rss>
+  output: protests
+https://example.org/css-exclude.html:
+  input: |-
+    <html>
+    <body>
+      <h1>A page™ in a book</h1>
+      <p>And some paragraph, too. <a href="http://example.net/">Also check out example.net!</a></p>
+    </body>
+    </html>
+  output: |-
+    <body>
+      <h1>A page™ in a book</h1>
+      <p>And some paragraph, too. </p>
+    </body>
+https://example.net/css-skip-maxitems.html:
+  input: |-
+    <body>
+      <div class="cpu">486</div>
+      <div class="cpu">Pentium™</div>
+      <div class="cpu">Pentium™ MMX</div>
+      <div class="cpu">Pentium™ Pro</div>
+    </body>
+  output: |-
+    <div class="cpu">Pentium™</div>
+    <div class="cpu">Pentium™ MMX</div>
+https://example.org/bodytag.html:
+  input: |-
+    <html>
+    <head>
+    <title>I Sing The Body Electric</title>
+    </head>
+    <body>
+      <marquee>The Body™ Tag</marquee>
+      <p>Indeed, just the body tag.</p>
+    </body>
+    </html>
+  output: |-
+    <body>
+      <marquee>The Body™ Tag</marquee>
+      <p>Indeed, just the body tag.</p>
+    </body>
 https://example.org/idtest.html:
   input: |-
     <html>
@@ -73,6 +226,94 @@ https://example.com/html2text.html:
 #    |-------------------------|--------|
 #    | Monday, 3 February 2020 | 10,000 |
 #    | Tu, 3 Mar               | 20,000 |
+https://example.net/beautify.html:
+  input: |
+    <!DOCTYPE html>
+    <html itemscope="" itemtype="http://schema.org/WebPage" lang="en-US">
+    <head><meta charset="UTF-8"><meta content="origin" name="referrer">
+    <style data-iml="1618111006770">.L3eUgb{display:flex;flex-direction:column;height:100%}</style>
+    </head><body>test™</body></html>
+  output: |
+    <!DOCTYPE html>
+    <html itemscope="" itemtype="http://schema.org/WebPage" lang="en-US">
+     <head>
+      <meta charset="utf-8"/>
+      <meta content="origin" name="referrer"/>
+      <style data-iml="1618111006770">
+       .L3eUgb{display:flex;flex-direction:column;height:100%}
+      </style>
+     </head>
+     <body>
+      test™
+     </body>
+    </html>
+https://example.net/pdf-test.pdf:
+  filename: pdf-test.pdf
+  output: "A PDF Document that can be turned into plain text."
+https://example.net/pdf-test-password.pdf:
+  filename: pdf-test-password.pdf
+  output: "A password-protected PDF Document that can be turned into plain text."
+https://example.net/pdf-collapse_whitespace.pdf:
+  filename: pdf-test.pdf
+  output: "A PDF Document that can be turned into plain text."
+https://example.net/ocr-test.png:
+  # Image taken from https://stackoverflow.com/q/39754903/1047040
+  filename: ocr-test.png
+  output: |-
+    This is a lot of 12 point text to test the
+    ocr code and see if it works on all types
+    of file format.
+
+    The quick brown dog jumped over the
+    lazy fox. The quick brown dog jumped
+    over the lazy fox. The quick brown dog
+    jumped over the lazy fox. The quick
+    brown dog jumped over the lazy fox.
+https://example.net/jq-ascii.json:
+  input: |
+    [
+      {
+        "title": "Senior Data Scientist",
+        "company": "Boogle"
+      },
+      {
+        "title": "Python Developer",
+        "company": "Tack-trest"
+      },
+      {
+        "title": "TPS Report Analyst",
+        "company": "Initech"
+      }
+    ]
+  output: |-
+      "Senior Data Scientist"
+      "Python Developer"
+      "TPS Report Analyst"
+https://example.com/format_xml.xml:
+  input: |
+      <?xml version="1.0" ?>
+      <issues><issue><id>1</id><title>Coffee maker</title><details>Coffee maker™ is broken.</details></issue></issues>
+  output: |
+    <issues>
+      <issue>
+        <id>1</id>
+        <title>Coffee maker</title>
+        <details>Coffee maker™ is broken.</details>
+      </issue>
+    </issues>
+https://example.com/pretty_xml.xml:
+  input: |
+      <?xml version="1.0" ?>
+      <issues><issue><id>1</id><title>Coffee maker</title><details>Coffee maker™ is broken.</details></issue></issues>
+  output: |
+    <?xml version="1.0" ?>
+    <issues>
+      <issue>
+        <id>1</id>
+        <title>Coffee maker</title>
+        <details>Coffee maker™ is broken.</details>
+      </issue>
+    </issues>
 https://example.com/cal.ics:
   input: |-
     BEGIN:VCALENDAR
@@ -180,7 +421,7 @@ https://example.com/strip.html:
 https://example.com/strip_by_line.html:
   input: |-
     This line™ ends with a comma,
-    ,This one starts with a comma too,
+    ,This one starts with a comma too.
   output: |-
     This line™ ends with a comma
     ,This one starts with a comma too
@@ -189,164 +430,19 @@ https://example.com/strip_each_line.html:
   output: |-
     This line™ ends with a space
     This one starts with one as well!
-https://example.net/version.html:
-  input: |-
-    <html>
-    <body>
-      <h1>Software Release Page</h1>
-      <p>This is the software page of the bar tool.</p>
-      <p>Current™ version: 1.2.3</p>
-      <p>There might be some other information here, too.</p>
-    </body>
-    </html>
-  output: "Current™ version: 1.2.3"
-https://example.org/bodytag.html:
-  input: |-
-    <html>
-    <head>
-    <title>I Sing The Body Electric</title>
-    </head>
-    <body>
-      <marquee>The Body™ Tag</marquee>
-      <p>Indeed, just the body tag.</p>
-    </body>
-    </html>
+https://example.com/strip_leading_spaces.txt:
+  input: |
+    A document™
+      with some indentation
+    and sometimes
+      	  with tabs mixed in
+      gets converted.
   output: |-
-    <body>
-      <marquee>The Body™ Tag</marquee>
-      <p>Indeed, just the body tag.</p>
-    </body>
-https://example.net/xpath.html:
-  input: |-
-    <html>
-    <head>
-    <title>Oh My HTML4</title>
-    </head>
-    <body>
-      <marquee>Just Below The Body™ Tag</marquee>
-      <p>Indeed, just BELOW the body tag. <marquee>Not this one.</marquee></p>
-      <marquee>But there is more</marquee>
-    </body>
-    </html>
-  output: |-
-    <marquee>Just Below The Body™ Tag</marquee>
-    <marquee>But there is more</marquee>
-https://example.net/css.html:
-  input: |-
-    <html>
-    <body>
-      <h1>Some</h1>
-      <ul id="fancy">
-        <li class="unchecked">Foo</li>
-        <li>Bar</li>
-        <li>Baz</li>
-      </ul>
-      <h2>More</h2>
-      <ul id="groceries">
-        <li class="unchecked">Milk™</li>
-        <li>Honey</li>
-        <li class="unchecked">Bread</li>
-        <li>Butter</li>
-      </ul>
-    </body>
-    </html>
-  output: |-
-    <li class="unchecked">Milk™</li>
-    <li class="unchecked">Bread</li>
-https://example.com/blog/xpath-index.rss:
-  input: |-
-    <rss>
-      <item>
-        <title>Fancy™</title>
-        <pubDate>2020-07-11</pubDate>
-        <description>Bla bla bla</description>
-      </item>
-
-      <item>
-        <title>Pants</title>
-        <pubDate>2020-07-12</pubDate>
-        <description>Hey Ho Lets Go</description>
-      </item>
-    </rss>
-  output: |-
-    Fancy™
-    2020-07-11
-    Pants
-    2020-07-12
-https://example.com/blog/css-index.rss:
-  input: |-
-    <rss>
-      <item>
-        <title>Fancy™</title>
-        <pubDate>2020-07-11</pubDate>
-        <description>Bla bla bla</description>
-      </item>
-
-      <item>
-        <title>Pants</title>
-        <pubDate>2020-07-12</pubDate>
-        <description>Hey Ho Lets Go</description>
-      </item>
-    </rss>
-  output: |-
-    Fancy™
-    2020-07-11
-    Pants
-    2020-07-12
-https://example.net/feed/xpath-namespace.xml:
-  input: |-
-    <?xml version="1.0"?>
-    <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
-      <channel>
-        <title>Weird</title>
-        <description>The latest from some page</description>
-        <language>en</language>
-        <item>
-          <title>How Mysterious™ Protest Messages Have Filled the Skies</title>
-          <pubDate>Fri, 10 Jul 2020 20:37:00 +0000</pubDate>
-          <description>Hello World From Testing Data</description>
-          <media:keywords>protests</media:keywords>
-        </item>
-      </channel>
-    </rss>
-  output: protests
-https://example.org/feed/css-namespace.xml:
-  input: |-
-    <?xml version="1.0"?>
-    <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
-      <channel>
-        <title>Weird</title>
-        <description>The latest from some page</description>
-        <language>en</language>
-        <item>
-          <title>How Mysterious Protest Messages Have Filled the Skies</title>
-          <pubDate>Fri, 10 Jul 2020 20:37:00 +0000</pubDate>
-          <description>Hello World From Testing Data</description>
-          <media:keywords>stylesheets™</media:keywords>
-        </item>
-      </channel>
-    </rss>
-  output: |
-    stylesheets™
-https://example.org/css-exclude.html:
-  input: |-
-    <html>
-    <body>
-      <h1>A page™ in a book</h1>
-      <p>And some paragraph, too. <a href="http://example.net/">Also check out example.net!</a></p>
-    </body>
-    </html>
-  output: |-
-    <body>
-      <h1>A page™ in a book</h1>
-      <p>And some paragraph, too. </p>
-    </body>
-https://example.net/pdf-test.pdf:
-  filename: pdf-test.pdf
-  output: "A PDF Document that can be turned into plain text."
-https://example.net/pdf-test-password.pdf:
-  filename: pdf-test-password.pdf
-  output: "A password-protected PDF Document that can be turned into plain text."
+    A document™
+    with some indentation
+    and sometimes
+    with tabs mixed in
+    gets converted.
 https://example.net/sorting.txt:
   input: |-
     A
@@ -415,6 +511,26 @@ https://example.org/reverse-paragraphs.txt:
 
     When there are multiple
     paragraphs like this.
+https://example.net/execute.html:
+  input: TEST
+  output: I heard TEST
+https://example.net/shellpipe.html:
+  input: |
+  output: TEST
+
+
+# These below are orphaned (for now)
+https://example.net/version.html:
+  input: |-
+    <html>
+    <body>
+      <h1>Software Release Page</h1>
+      <p>This is the software page of the bar tool.</p>
+      <p>Current™ version: 1.2.3</p>
+      <p>There might be some other information here, too.</p>
+    </body>
+    </html>
+  output: "Current™ version: 1.2.3"
 https://github.com/user/project/releases:
   input: |-
     <div class="release-timeline-tags release-entry">
@@ -473,109 +589,3 @@ https://example.net/shellpipe-awk-oneliner.txt:
     3 How
     4 Are
     5 You
-https://example.com/leading-spaces.txt:
-  input: |
-    A document™
-      with some indentation
-    and sometimes
-      	  with tabs mixed in
-      gets converted.
-  output: |
-    A document™
-    with some indentation
-    and sometimes
-    with tabs mixed in
-    gets converted.
-https://example.net/ocr-test.png:
-  # Image taken from https://stackoverflow.com/q/39754903/1047040
-  filename: ocr-test.png
-  output: |-
-    This is a lot of 12 point text to test the
-    ocr code and see if it works on all types
-    of file format.
-    
-    The quick brown dog jumped over the
-    lazy fox. The quick brown dog jumped
-    over the lazy fox. The quick brown dog
-    jumped over the lazy fox. The quick
-    brown dog jumped over the lazy fox.
-https://example.net/css-skip-maxitems.html:
-  input: |-
-    <body>
-      <div class="cpu">486</div>
-      <div class="cpu">Pentium™</div>
-      <div class="cpu">Pentium™ MMX</div>
-      <div class="cpu">Pentium™ Pro</div>
-    </body>
-  output: |-
-    <div class="cpu">Pentium™</div>
-    <div class="cpu">Pentium™ MMX</div>
-https://example.net/shellpipe.html:
-  input: |
-  output: TEST
-https://example.net/jq-ascii.json:
-  input: |
-    [
-      {
-        "title": "Senior Data Scientist",
-        "company": "Boogle"
-      },
-      {
-        "title": "Python Developer",
-        "company": "Tack-trest"
-      },
-      {
-        "title": "TPS Report Analyst",
-        "company": "Initech"
-      }
-    ]
-  output: |-
-      "Senior Data Scientist"
-      "Python Developer"
-      "TPS Report Analyst"
-https://example.com/format_xml.xml:
-  input: |
-      <?xml version="1.0" ?>
-      <issues><issue><id>1</id><title>Coffee maker</title><details>Coffee maker™ is broken.</details></issue></issues>
-  output: |
-    <issues>
-      <issue>
-        <id>1</id>
-        <title>Coffee maker</title>
-        <details>Coffee maker™ is broken.</details>
-      </issue>
-    </issues>
-https://example.com/pretty_xml.xml:
-  input: |
-      <?xml version="1.0" ?>
-      <issues><issue><id>1</id><title>Coffee maker</title><details>Coffee maker™ is broken.</details></issue></issues>
-  output: |
-    <?xml version="1.0" ?>
-    <issues>
-      <issue>
-        <id>1</id>
-        <title>Coffee maker</title>
-        <details>Coffee maker™ is broken.</details>
-      </issue>
-    </issues>
-https://example.net/beautify.html:
-  input: |
-    <!DOCTYPE html>
-    <html itemscope="" itemtype="http://schema.org/WebPage" lang="en-US">
-    <head><meta charset="UTF-8"><meta content="origin" name="referrer">
-    <style data-iml="1618111006770">.L3eUgb{display:flex;flex-direction:column;height:100%}</style>
-    </head><body>test™</body></html>
-  output: |
-    <!DOCTYPE html>
-    <html itemscope="" itemtype="http://schema.org/WebPage" lang="en-US">
-     <head>
-      <meta charset="utf-8"/>
-      <meta content="origin" name="referrer"/>
-      <style data-iml="1618111006770">
-       .L3eUgb{display:flex;flex-direction:column;height:100%}
-      </style>
-     </head>
-     <body>
-      test™
-     </body>
-    </html>

@@ -108,7 +108,8 @@ DEFAULT_CONFIG = {
             'enabled': False,
             'bot_token': '',
             'chat_id': '',
-            'disable_notification': False,
+            'silent': False,
+            'monospace': False,
         },
         'webhook': {
             'enabled': False,

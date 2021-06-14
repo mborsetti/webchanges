@@ -59,7 +59,7 @@ Upgrading from a `urlwatch` 2.23 setup is automatic (see more below), and gives 
   empty data after filters are applied
 * The support of Unicode throughout, including in filters and in the jobs and configuration YAML files
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
-  the new subdirective ``sort_keys``
+  the new sub-directive ``sort_keys``
 * More reliable releases due to:
 
   * A 33 percentage point increase in code testing coverage (to 75%)
@@ -128,7 +128,7 @@ Relative to `urlwatch` 2.23:
   are purged after every run; run with ``--max-snapshots 0`` command line argument to keep the existing behavior
   (but beware of infinite database growth)
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python packages; use the
-  default method instead or construct a custom ``shellpipe``
+  default method instead or construct a custom ``execute`` command
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -268,7 +268,7 @@ Relative to `urlwatch` 2.23:
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
   the first sub-directive for a reporter)
 * The presence of the ``data`` directive in a job would force the method to POST, impeding the ability to do PUTs
-* ``format-json`` filter no longer unexpectedly reorders contents of dictionaries, but the new subdirective
+* ``format-json`` filter no longer unexpectedly reorders contents of dictionaries, but the new sub-directive
   ``sort_keys`` allows you to set it to do so
 * Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
 * Fixed various system errors and freezes when running ``url`` jobs with ``use_browser: true`` (formerly ``navigate``
@@ -283,14 +283,14 @@ Deprecations
 Relative to `urlwatch` 2.23:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
-  default method instead or construct a custom ``shellpipe``
+  default method instead or construct a custom ``execute`` command
 
 * The following deprecations are (for now) still working with a warning:
 
   * Job directive ``kind`` is unused: remove from job
   * Job directive ``navigate`` is deprecated: use ``url`` and add ``use_browser: true``
   * Method ``pyhtml2text`` of filter ``html2text`` is deprecated; since that method is now the default, remove the
-    method subdirective
+    method's sub-directive
   * Method ``re`` of filter ``html2text`` is renamed to ``strip_tags``
   * Filter ``grep`` is renamed to ``keep_lines_containing``
   * Filter ``grepi`` is renamed to ``delete_lines_containing``

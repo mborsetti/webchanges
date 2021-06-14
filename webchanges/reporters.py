@@ -827,35 +827,43 @@ class TelegramReporter(MarkdownReporter):
     __kind__ = 'telegram'
 
     def submit(self, max_length: int = 4096) -> Optional[requests.Response]:
-
+        """Submit report."""
         bot_token = self.config['bot_token']
         chat_ids = self.config['chat_id']
         chat_ids = [chat_ids] if not isinstance(chat_ids, list) else chat_ids
 
-        text = '\n'.join(super().submit())  # no max_length here as we want all to chunk later
+        text = '\n'.join(super().submit())  # no max_length here as we will chunk later
 
         if not text:
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
+        if self.config['monospace']:
+            max_length -= 6
+
+        chunks = self.telegram_chunk_by_line(text, max_length)
+
         result = None
         for chat_id in chat_ids:
-            for chunk in chunk_string(text, max_length, numbering=True):
-                chunk = self.telegram_escape_markdown(chunk)
+            for chunk in chunks:
                 res = self.submit_to_telegram(bot_token, chat_id, chunk)
                 if res.status_code != requests.codes.ok or res is None:
                     result = res
-
         return result
 
     def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str) -> requests.Response:
-        logger.debug(f"Sending telegram request to chat id: '{chat_id}'")
+        """Submit to Telegram."""
+        logger.error(f"Sending telegram request to chat id: '{chat_id}'")  # TODO make logger.info
+        logger.error(f'text={text}')  # TODO remove
+
+        if self.config['monospace']:
+            text = f'```{text}```'
 
         data = {'chat_id': chat_id,
                 'text': text,
                 'parse_mode': 'MarkdownV2',
                 'disable_web_page_preview': True,
-                'disable_notification': self.config['disable_notification']}
+                'disable_notification': self.config['silent']}
         result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data=data)
 
         try:
@@ -905,6 +913,37 @@ class TelegramReporter(MarkdownReporter):
                 text[i] = re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text[i])
 
         return ''.join(text)
+
+    def telegram_chunk_by_line(self, text: str, max_length: int) -> List[str]:
+        """Chunkify by line while escaping markdown as required by Telegram."""
+        chunks = []
+
+        lines = [self.telegram_escape_markdown(line) for line in text.splitlines(keepends=True)]
+
+        # check if any individual line is too long and chunkify it
+        if any(len(line) > max_length for line in lines):
+            new_lines = []
+            for line in lines:
+                if len(line) > max_length:
+                    new_lines.extend(chunk_string(line, max_length))
+                else:
+                    new_lines.append(line)
+            lines = new_lines
+
+        lines = iter(lines)
+        chunk_lines = []
+        try:
+            while True:
+                next_line = next(lines)
+                if sum(len(line) for line in chunk_lines) + len(next_line) > max_length:
+                    chunks.append('\n'.join(chunk_lines))
+                    chunk_lines = [next_line]
+                else:
+                    chunk_lines.append(next_line)
+        except StopIteration:
+            chunks.append('\n'.join(chunk_lines))
+
+        return chunks
 
 
 class WebhookReporter(TextReporter):

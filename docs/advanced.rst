@@ -41,11 +41,46 @@ specify it in number of seconds, or set it to 0 to never timeout.
    timeout: 300
 
 
+.. _headers:
+
+Setting default headers
+-----------------------
+It is possible to set default headers for HTTP requests by entering them in ``config.yaml`` under ``job_defaults``, as
+per the example below. If a ``headers`` key is also found in a job, for that job the headers will be merged
+(case-insensitively) one by one with any conflict resolved in favor of the header specified in the job.
+
+.. code-block:: yaml
+
+   job_defaults:
+     all:
+       headers:
+         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+         Accept-Language: en-US,en
+         Device-Memory: '0.25'
+         DNT: '1'
+         Downlink: '0.384'
+         DPR: '1.5'
+         ECT: slow-2g
+         RTT: '250'
+         Sec-CH-UA: '"Google Chrome";v="89", "Chromium";v="89", ";Not A Brand";v="99"'
+         Sec-CH-UA-Mobile: '?0'
+         Sec-CH-UA-Platform: 'Windows'
+         Sec-CH-UA-Platform-Version: '10.0'
+         Sec-Fetch-Dest: document
+         Sec-Fetch-Mode: navigate
+         Sec-Fetch-Site: none
+         Sec-Fetch-User: '?1'
+         Sec-GPC: '1'
+         Upgrade-Insecure-Requests: '1'
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; 64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4389.114 Safari/537.36
+         Viewport-Width: '1707'
+
+
 .. _cookies:
 
 Supplying cookie data
 ---------------------
-It is possible to add cookies to HTTP requests for pages that need it, the YAML syntax for this is:
+It is possible to add cookies to HTTP requests for pages that need it, for example:
 
 .. code-block:: yaml
 
@@ -120,8 +155,11 @@ or ignore all HTTP errors if you like:
 
 Overriding the content encoding
 -------------------------------
-For web pages with misconfigured HTTP headers or rare encodings, it may be useful to explicitly specify an encoding from
-Python’s `Standard Encodings <https://docs.python.org/3/library/codecs.html#standard-encodings>`__:
+For web pages with missing or incorrect ``'Content-type'`` HTTP header or whose (rare) encoding cannot be
+`correctly guessed <https://docs.python-requests.org/en/master/api/#requests.Response.apparent_encoding>`__
+by the `chardet <https://chardet.readthedocs.io/en/latest/faq.html#what-is-character-encoding-auto-detection>`__
+library we use, it may be useful to explicitly specify an encoding as defined in Python’s `Standard Encodings
+<https://docs.python.org/3/library/codecs.html#standard-encodings>`__ like this:
 
 .. code-block:: yaml
 
@@ -155,7 +193,7 @@ like the one below:
 
    url: https://example.com/api_data.json
    user_visible_url: https://example.com
-   shellpipe: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
+   execute: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
 
 
 Escaping of the Python is a bit complex due to being inside a double quoted shell string inside a double quoted YAML
@@ -166,11 +204,8 @@ seemingly complex escaping as well how to inform the downstream html reporter th
 
    url: https://example.com/api_data.json
    user_visible_url: https://example.com
-   shellpipe: "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\\\"[{v['Title']}]\\n({v['DownloadUrl']})\\\") for v in d['value']]\""
+   execute: "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\\\"[{v['Title']}]\\n({v['DownloadUrl']})\\\") for v in d['value']]\""
    is_markdown: true
-
-If running on Linux/MacOS, please read the file permission restrictions in the filter's explanation
-:ref:`here <shellpipe>`.
 
 
 
@@ -233,7 +268,7 @@ Passing diff output to a custom script
 --------------------------------------
 In some situations, it might be useful to run a script with the diff as input when changes were detected (e.g. to start
 an update or process something). This can be done by combining ``diff_filter`` with the ``shellpipe`` filter, which
-can be any custom script.
+can run any custom script.
 
 The output of the custom script will then be the diff result as reported by webchanges, so if it outputs any status, the
 ``CHANGED`` notification that webchanges does will contain the output of the custom script, not the original diff. This
@@ -247,6 +282,8 @@ can even have a "normal" filter attached to only watch links (the ``css: a`` par
    diff_filter:
      - shellpipe: /usr/local/bin/process_new_links.sh
 
+If running on Linux/MacOS, please read about file permission restrictions in the filter's explanation
+:ref:`here <shellpipe>`.
 
 .. _word_based_differ:
 

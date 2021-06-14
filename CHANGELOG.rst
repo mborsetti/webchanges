@@ -37,12 +37,22 @@ Unreleased
 
 Changed
 -------
-* Improved ``telegram`` reporter to use MarkdownV2 (some formatting is now preserved)
+* Improved ``telegram`` reporter to use MarkdownV2 (some formatting of HTML sites is now preserved)
 
 Added
 -----
-* New option for ``telegram`` reporter: ``disable_notification`` (true/false) (default: false). If set to true, users
-  will receive a notification with no sound.
+* New filter ``execute`` to run an executable to filter the data without launching the shell (as ``shellpipe`` does)
+  and therefore exposing to additional security risks.
+* New sub-directives for ``telegram`` reporter:
+  * ``silent``: Receive a notification with no sound (true/false) (default: false)
+  * ``monospace``: Format message with monospace font (true/false) (default: false)
+
+Fixed
+-----
+* Job ``headers`` stored in the configuration are now merged correctly and case-insensitively with those present in
+  the job (in ``jobs.yaml``). A header in the job replaces a header by the same name already present in the
+  configuration file (``config.yaml``) or is added to the ones present in the configuration file.
+
 
 Version 3.6.1
 ====================
@@ -51,7 +61,7 @@ Version 3.6.1
 Reminder
 --------
 Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.7 was
-released on 7 June 2018, the codebase will be streamlined by removing support for Python 3.6 on or after 7 June 2021.
+released on 27 June 2018, the codebase will be streamlined by removing support for Python 3.6 on or after 27 June 2021.
 
 Added
 -----
@@ -62,6 +72,7 @@ Fixed
 * First run would fail when creating new ``config.yaml`` file. Thanks to `David <https://github.com/notDavid>`__ in
   issue `#10 <https://github.com/mborsetti/webchanges/issues/10>`__.
 * Use same run duration precision in all reports
+
 
 Version 3.6.0
 ====================
@@ -356,6 +367,7 @@ Known issues
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
   ``Future exception was never retrieved``
 
+
 Version 3.1.1
 =================
 2021-02-08
@@ -363,6 +375,7 @@ Version 3.1.1
 Fixed
 -----
 * Documentation was failing to build at https://webchanges.readthedocs.io/
+
 
 Version 3.1.0
 =================
@@ -391,6 +404,7 @@ Internals
 * Added automated pre-commit local testing using `tox <https://tox.readthedocs.io/en/latest/>`__
 * Added continuous integration (CI) testing on macOS platform
 
+
 Version 3.0.3
 =============
 2020-12-21
@@ -406,7 +420,7 @@ Version 3.0.3
 
 Added
 -----
-* New job subdirective ``user_visible_url`` to replace the URL in reports, useful e.g. if the watched URL is a REST
+* New job sub-directive ``user_visible_url`` to replace the URL in reports, useful e.g. if the watched URL is a REST
   API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`__
   upstream by `huxiba <https://github.com/huxiba>`__)
 
@@ -430,6 +444,7 @@ Internals
 ---------
 * Upgraded to use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__
 
+
 Version 3.0.2
 =============
 2020-12-06
@@ -439,13 +454,14 @@ Fixed
 * Logic error in reading ``EDITOR`` environment variable (# `1 <https://github.com/mborsetti/webchanges/issues/1>`__
   contributed by `MazdaFunSun <https://github.com/mazdafunsunn>`__)
 
+
 Version 3.0.1
 =============
 2020-12-05
 
 Added
 -----
-* New ``format-json`` subdirective ``sort_keys`` sets whether JSON dictionaries should be sorted (defaults to false)
+* New ``format-json`` sub-directive ``sort_keys`` sets whether JSON dictionaries should be sorted (defaults to false)
 * New ``webhook_markdown`` reporter for services such as Mattermost, which expects Markdown-formatted text
 * Code autodoc, highlighting just how badly the code needs documentation!
 * Output from ``diff_tool: wdiff`` is colorized in html reports
@@ -467,6 +483,7 @@ Fixed
 * Deprecation warnings now use the ``DeprecationWarning`` category, which is always printed
 * All filters take a subfilter (# `600 <https://github.com/thp/urlwatch/pull/600>`__ upstream by `Martin Monperrus
   <https://github.com/monperrus>`__)
+
 
 Version 3.0.0
 =============

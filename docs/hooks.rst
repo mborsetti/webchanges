@@ -12,7 +12,7 @@ Python programmers can hook their own code to expand `webchanges` with custom fu
 ``hooks.py`` file and placing it into the same directory as the job and configuration files.  The code will be
 automatically loaded at startup.
 
-Smaller code snippets can also be run using the :ref:`shellpipe` filter, for example as used :ref:`here <json_dict>`
+Smaller code snippets can also be run using the :ref:`execute` filter, for example as used :ref:`here <json_dict>`
 for filtering JSON dictionaries.
 
 An example ``hooks.py`` file is below:

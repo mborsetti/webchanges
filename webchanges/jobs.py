@@ -18,6 +18,7 @@ from urllib.parse import urldefrag, urlparse, urlsplit
 
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from requests.structures import CaseInsensitiveDict
 
 from . import __user_agent__
 from .filters import FilterBase
@@ -98,7 +99,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     diff_tool: Optional[str] = None
     encoding: Optional[str] = None
     filter: Optional[Union[str, List[Union[str, Dict[str, Any]]]]] = None
-    headers: Optional[Dict[str, str]] = None
+    headers: Optional[CaseInsensitiveDict] = None
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
     ignore_cached: Optional[bool] = None
@@ -231,12 +232,21 @@ class JobBase(object, metaclass=TrackSubClasses):
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
     def _set_defaults(self, defaults) -> None:
+        """merge Job attributes with defaults from the configuration"""
+        # use case insensitive dict for headers
+        self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if isinstance(defaults, dict):
+            # merge defaults from configuration into Job attributes without overwriting them
             for key, value in defaults.items():
+                if key in self.__optional__ and isinstance(defaults[key], dict):
+                    for subkey, subvalue in defaults[key].items():
+                        if subkey not in getattr(self, key):
+                            getattr(self, key)[subkey] = subvalue
                 if key in self.__optional__ and getattr(self, key) is None:
                     setattr(self, key, value)
 
     def with_defaults(self, config: dict) -> 'JobBase':
+        """return a Job class from a configuration that also contains defaults from the configuration"""
         new_job = JobBase.unserialize(self.serialize())
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
@@ -303,9 +313,9 @@ class UrlJob(Job):
         return self.user_visible_url or self.url
 
     def retrieve(self, job_state: 'JobState') -> (AnyStr, str):
-        headers = {
-            'User-Agent': __user_agent__,
-        }
+        self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
+        if 'User-Agent' not in self.headers:
+            self.headers['User-Agent'] = __user_agent__
 
         proxies = {
             'http': os.getenv('HTTP_PROXY'),
@@ -314,16 +324,16 @@ class UrlJob(Job):
 
         if job_state.old_etag:
             # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
-            headers['If-None-Match'] = job_state.old_etag
+            self.headers['If-None-Match'] = job_state.old_etag
 
         if job_state.old_timestamp is not None:
-            headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
+            self.headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
 
         if self.ignore_cached or job_state.tries > 0:
-            headers['If-None-Match'] = None
-            headers['If-Modified-Since'] = email.utils.formatdate(0)
-            headers['Cache-Control'] = 'max-age=172800'
-            headers['Expires'] = email.utils.formatdate()
+            self.headers.pop('If-None-Match', None)
+            self.headers['If-Modified-Since'] = email.utils.formatdate(0)
+            self.headers['Cache-Control'] = 'max-age=172800'
+            self.headers['Expires'] = email.utils.formatdate()
 
         if self.method is None:
             self.method = 'GET'
@@ -331,7 +341,8 @@ class UrlJob(Job):
         if self.data is not None:
             if self.method is None:
                 self.method = 'POST'
-            headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            if 'Content-Type' not in self.headers:
+                self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
             logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
 
         if self.http_proxy is not None:
@@ -377,8 +388,8 @@ class UrlJob(Job):
 
             return data, None
 
-        if self.headers:
-            self.add_custom_headers(headers)
+        # if self.headers:
+        #     self.add_custom_headers(headers)
 
         if self.timeout is None:
             # default timeout
@@ -392,7 +403,7 @@ class UrlJob(Job):
         response = requests.request(method=self.method,
                                     url=self.url,
                                     data=self.data,
-                                    headers=headers,
+                                    headers=self.headers,
                                     cookies=self.cookies,
                                     timeout=timeout,
                                     allow_redirects=(not self.no_redirects),
@@ -429,15 +440,15 @@ class UrlJob(Job):
 
         return response.text, etag
 
-    def add_custom_headers(self, headers: Dict[str, Any]) -> None:
-        """
-        Adds custom request headers from the job list (URLs) to the pre-filled dictionary `headers`.
-        Pre-filled values of conflicting header keys (case-insensitive) are overwritten by custom value.
-        """
-        headers_to_remove = [x for x in headers if x.lower() in (y.lower() for y in self.headers)]
-        for header in headers_to_remove:
-            headers.pop(header, None)
-        headers.update(self.headers)
+    # def add_custom_headers(self, headers: Dict[str, Any]) -> None:
+    #     """
+    #     Adds custom request headers from the job list (URLs) to the pre-filled dictionary `headers`.
+    #     Pre-filled values of conflicting header keys (case-insensitive) are overwritten by custom value.
+    #     """
+    #     headers_to_remove = [x for x in headers if x.lower() in (y.lower() for y in self.headers)]
+    #     for header in headers_to_remove:
+    #         headers.pop(header, None)
+    #     headers.update(self.headers)
 
     def format_error(self, exception: Exception, tb: str) -> str:
         if isinstance(exception, requests.exceptions.RequestException):
@@ -526,7 +537,7 @@ class BrowserJob(Job):
             if sys.maxsize > 2 ** 31 - 1:
                 return 'win64'
             return 'win32'
-        raise OSError('Platform unsupported by Pyppeteer (use_browser: true): ' + sys.platform)
+        raise OSError(f'Platform unsupported by Pyppeteer (use_browser: true): {sys.platform}')
 
     async def _retrieve(self) -> (str, str):
         # launch browser

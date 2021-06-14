@@ -7,8 +7,8 @@ import json
 import logging
 import os
 import re
+import shlex
 import subprocess
-import sys
 import warnings
 from abc import ABC
 from enum import Enum
@@ -999,9 +999,9 @@ class ShellPipeFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
         if 'command' not in subfilter:
-            raise ValueError(f'The shellpipe filter needs a command ({self.job.get_indexed_location()})')
+            raise ValueError(f"The 'shellpipe' filter needs a command ({self.job.get_indexed_location()})")
 
-        encoding = sys.getdefaultencoding()
+        warnings.warn("If possible replace the 'shellpipe' filter with the 'execute' one for security reasons")
 
         # Work on a copy to not modify the outside environment
         env = dict(os.environ)
@@ -1011,16 +1011,49 @@ class ShellPipeFilter(FilterBase):
         })
 
         try:
-            return subprocess.run(subfilter['command'], input=data.encode(encoding), stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE, shell=True, check=True,
-                                  env=env).stdout.decode(encoding)  # noqa: DUO116 use of "shell=True" is insecure
+            return subprocess.run(subfilter['command'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  shell=True, check=True, env=env,
+                                  input=data.encode()).stdout.decode()  # noqa: DUO116 use of "shell=True" is insecure
         # Python 3.7
-        # return subprocess.run(subfilter['command'], input=data.encode(encoding), capture_output=True,
-        #                       shell=True, check=True,
-        #                       env=env).stdout.decode(encoding)  # noqa: DUO116 use of "shell=True" is insecure
+        #     return subprocess.run(subfilter['command'], capture_output=True, shell=True, check=True, text=True,
+        #                           env=env, input=data.encode()).stdout  # noqa: DUO116 use of "shell=True" is insecure
         except subprocess.CalledProcessError as e:
-            logger.error(f"filter 'shellpipe' returned error ({self.job.get_indexed_location()}):")
-            logger.error(e.stderr.decode())
+            logger.error(f"The 'shellpipe' filter returned error ({self.job.get_indexed_location()}):\n"
+                         f'{e.stderr.decode()}')
+            raise e
+
+
+class ExecutePipeFilter(FilterBase):
+    """Filter using a command."""
+
+    __kind__ = 'execute'
+
+    __supported_subfilters__ = {
+        'command': 'Command to execute for filtering (required)',
+    }
+
+    __default_subfilter__ = 'command'
+
+    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:
+        if 'command' not in subfilter:
+            raise ValueError(f"The 'execute' filter needs a command ({self.job.get_indexed_location()})")
+
+        # Work on a copy to not modify the outside environment
+        env = dict(os.environ)
+        env.update({
+            'URLWATCH_JOB_NAME': self.job.pretty_name() if self.job else '',
+            'URLWATCH_JOB_LOCATION': self.job.get_location() if self.job else '',
+        })
+
+        try:
+            return subprocess.run(shlex.split(subfilter['command']), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  check=True, env=env, input=data.encode()).stdout.decode()
+        # Python 3.7
+        #     return subprocess.run(shlex.split(subfilter['command']), capture_output=True, check=True, text=True,
+        #                           env=env, input=data.encode()).stdout
+        except subprocess.CalledProcessError as e:
+            logger.error(f"The 'execute' filter returned error ({self.job.get_indexed_location()}):\n"
+                         f'{e.stderr.decode()}')
             raise e
 
 

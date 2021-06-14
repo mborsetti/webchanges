@@ -156,7 +156,8 @@ For all ``url`` jobs:
 - ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
 - ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`). `Changed in version 3.0:` Works
   for all ``url`` jobs.
-- ``headers``: Headers to send along with the request (a dict). `Changed in version 3.0:` Works for all ``url`` jobs.
+- ``headers``: Headers to send along with the request (a dict)  (see :ref:`here <headers>`). `Changed in version 3.0:`
+  Works for all ``url`` jobs.
 - ``http_proxy``: Proxy server to use for HTTP requests (e.g. \http://username:password@proxy.com:8080). `Changed in
   version 3.0:` Works for all ``url`` jobs.
 - ``https_proxy``: Proxy server to use for HTTPS requests. `Changed in version 3.0:` Works for all ``url`` jobs.

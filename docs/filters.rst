@@ -93,7 +93,7 @@ At the moment, the following filters are available:
 
 * Any custom script or program:
 
-  - :ref:`shellpipe`: Run a program or custom script
+  - :ref:`execute`: Run a program that filters the data (see also :ref:`shellpipe`, to be avoided)
 
 Python programmers can write their own plug-in that could include filters; see :ref:`hooks`.
 
@@ -409,6 +409,21 @@ If the PDF file is password protected, you can specify its password:
    filter:
      - pdf2text:
          password: webchangessecret
+
+Tip: since Poppler tries to keep the layout of the original document by using spaces, and these may change when a
+document is updated, you can chain a ``re.sub`` filter to replace all multiple Unicode whitespaces with a single
+one, such that, for example, a change from ``Column A   Column B`` to ``Column A        Column B`` isn't reported (as
+multiple spaces get collapsed into one, both instances become ``Column A Column B`` which are identical):
+
+.. code-block:: yaml
+
+   url: https://example.net/pdf-collapse_whitespace.pdf
+   filter:
+     - pdf2text
+     - re.sub:
+         pattern: '(?:(?!\n)\s)'
+         repl: ' '
+
 
 Optional sub-directives
 """""""""""""""""""""""
@@ -749,11 +764,12 @@ Optional sub-directives
 
 strip
 -----
-This filter removes leading and trailing whitespace or specified characters.
+This filter removes leading and trailing whitespace or specified characters from a set of characters. Whitespace
+includes the characters space, tab, linefeed, return, formfeed, and vertical tab.
 
 .. code-block:: yaml
 
-   name: "Strip leading and trailing whitespace from entire returned data"
+   name: "Strip leading and trailing whitespace from the block of data"
    url: https://example.com/strip.html
    filter:
      - strip:
@@ -761,12 +777,31 @@ This filter removes leading and trailing whitespace or specified characters.
 
 .. code-block:: yaml
 
-   name: "Strip trailing comma from each line"
+   name: "Strip trailing commas or periods from all lines"
    url: https://example.com/strip_by_line.html
    filter:
      - strip:
-         chars: ','
+         chars: ',.'
          side: right
+         splitlines: true
+
+
+.. code-block:: yaml
+
+   name: "Strip beginning spaces, tabs, etc. from all lines"
+   url: https://example.com/strip_leading_spaces.txt
+   filter:
+     - strip:
+         side: left
+         splitlines: true
+
+
+.. code-block:: yaml
+
+   name: "Strip spaces, tabs etc. from both ends of all lines"
+   url: https://example.com/strip_each_line.html
+   filter:
+     - strip:
          splitlines: true
 
 
@@ -865,14 +900,34 @@ Optional sub-directives
   line-based reversing); it can also be specified inline as the value of ``reverse``
 
 
+.. _execute:
+
+execute
+---------
+The data to be filtered is passed as the input to a command to be run, and the output from this is used in
+`webchanges`'s next step. The environment variable ``URLWATCH_JOB_NAME`` will have the name of the job,
+``URLWATCH_JOB_LOCATION`` its 'location' (the value of either ``url`` or ``command``) and ``URLWATCH_JOB_NUMBER`` its
+index number.
+
+.. code-block:: yaml
+
+   url: https://example.net/execute.html
+   filter:
+     - execute: "python3 -c \"import sys; print(f'I heard {sys.stdin.read()}', end='')\""
+
+If the command generates an error, the output of the error will be in the first line, before the traceback.
+
+
 
 .. _shellpipe:
 
 shellpipe
 ---------
-The data to be filtered is passed to a 'shell' command or script and the output from this is used by `webchanges`. The
-environment variable ``URLWATCH_JOB_NAME`` will have the name of the job, while ``URLWATCH_JOB_LOCATION`` its 'location'
-(the value of either ``url`` or ``command``).
+This filter works like :ref:`execute`, except that an intermediate shell process is spawned and it will run the
+command. This opens up all sort of security issues, in addition to generating additional processing overhead, so the use
+of this filter should be avoided if possible in favor of ``execute``; however, there are certain situation (e.g.
+relying on variables, glob patterns, and other special shell features in the command) that require running within a
+shell, hence this filter.
 
 .. code-block:: yaml
 
@@ -880,7 +935,7 @@ environment variable ``URLWATCH_JOB_NAME`` will have the name of the job, while 
    filter:
      - shellpipe: echo TEST
 
-If the command errors, the output of that error will be in the first line, before the traceback.
+If the command generates an error, the output of the error will be in the first line, before the traceback.
 
 WARNING: On Linux and macOS systems, this filter will not run for security reasons unless both the config directory and
 the jobs file are owned by and writeable **only** by the user who is running the job, and not by the group or other
