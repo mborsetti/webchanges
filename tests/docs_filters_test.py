@@ -99,7 +99,7 @@ def test_url(job):
     # only tests shellpipe in linux; test pdf2text and ocr only if packages are installed (they require
     # OS-specific installations beyond pip)
     if job.url != 'https://example.com/html2text.html' or html2text.__version__ <= (2020, 1, 16):
-        # TODO update output and remove this when html2text > 2020.1.16 (https://github.com/Alir3z4/html2text/pull/339)
+        # TODO when html2text > 2020.1.16 update output and remove this (https://github.com/Alir3z4/html2text/pull/339)
         d = testdata[job.url]
         if 'filename' in d:
             data = open(here.joinpath('data').joinpath(d['filename']), 'rb').read()

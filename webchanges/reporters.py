@@ -19,7 +19,7 @@ import requests
 from markdown2 import Markdown
 
 from . import __project_name__, __url__, __version__
-from .jobs import JobBase
+from .jobs import JobBase, UrlJob
 from .mailer import SMTPMailer, SendmailMailer
 from .util import TrackSubClasses, chunk_string, linkify
 
@@ -506,16 +506,21 @@ class MarkdownReporter(ReporterBase):
 
     @staticmethod
     def _format_details_body(s: str, max_length: Optional[int] = None) -> (bool, str):
-        wrapper_length = len('```diff\n\n```')
+
+        s = s.splitlines()
+        for i in range(len(s)):
+            if i <= 1 or s[i][:3] == '@@ ':
+                s[i] = f'`{s[i]}`'
+        s = '\n'.join(s)
 
         # Message to print when the diff is too long.
-        trim_message = '*diff trimmed*'
+        trim_message = '*diff trimmed*\n'
         trim_message_length = len(trim_message)
 
-        if max_length is None or len(s) + wrapper_length <= max_length:
-            return False, f'```diff\n{s}\n```'
+        if max_length is None or len(s) <= max_length:
+            return False, s
         else:
-            target_max_length = max_length - trim_message_length - wrapper_length
+            target_max_length = max_length - trim_message_length
             pos = s.rfind('\n', 0, target_max_length)
 
             if pos == -1:
@@ -525,7 +530,7 @@ class MarkdownReporter(ReporterBase):
                 # Multiple lines, cut off extra lines.
                 s = s[0:pos]
 
-            return True, f'{trim_message}\n```diff\n{s}\n```'
+            return True, f'{trim_message}{s}'
 
     @staticmethod
     def _format_content(job_state: 'JobState') -> Optional[str]:
@@ -547,7 +552,10 @@ class MarkdownReporter(ReporterBase):
         pretty_name = job_state.job.pretty_name()
         location = job_state.job.get_location()
         if pretty_name != location:
-            location = f'{pretty_name} ({location})'
+            if isinstance(job_state.job, UrlJob):
+                location = f'[{pretty_name}]({location})'
+            else:
+                location = f'{pretty_name} ({location})'
 
         pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
         summary = ': '.join((job_state.verb.upper(), location))
@@ -838,9 +846,6 @@ class TelegramReporter(MarkdownReporter):
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
-        if self.config['monospace']:
-            max_length -= 6
-
         chunks = self.telegram_chunk_by_line(text, max_length)
 
         result = None
@@ -853,11 +858,7 @@ class TelegramReporter(MarkdownReporter):
 
     def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str) -> requests.Response:
         """Submit to Telegram."""
-        logger.error(f"Sending telegram request to chat id: '{chat_id}'")  # TODO make logger.info
-        logger.error(f'text={text}')  # TODO remove
-
-        if self.config['monospace']:
-            text = f'```{text}```'
+        logger.info(f"Sending telegram message to chat id: '{chat_id}'")
 
         data = {'chat_id': chat_id,
                 'text': text,
@@ -889,7 +890,7 @@ class TelegramReporter(MarkdownReporter):
 
         :param text: The text.
         :param version: Use to specify the version of telegrams Markdown. Either ``1`` or ``2``. Defaults to ``2``.
-        :param entity_type: For the entity types ``PRE``, ``CODE`` and the link part of ``TEXT_LINKS``, only certain
+        :param entity_type: For the entity types ``pre``, ``code`` and the link part of ``text_links``, only certain
             characters need to be escaped in ``MarkdownV2``. See the official API documentation for details. Only valid
             in combination with ``version=2``, will be ignored otherwise.
 
@@ -898,19 +899,22 @@ class TelegramReporter(MarkdownReporter):
         if version == 1:
             escape_chars = r'_*`['
         elif version == 2:
-            if entity_type in ['pre', 'code']:
+            if entity_type is None:
+                escape_chars = r'\_*[]()~`>#+-=|{}.!'
+            elif entity_type in ('pre', 'code'):
                 escape_chars = r'\`'
             elif entity_type == 'text_link':
                 escape_chars = r'\)'
             else:
-                escape_chars = r'_*[]()~`>#+-=|{}.!'
+                raise ValueError("entity_type must be None, 'pre', 'code' or 'text_link'!")
         else:
             raise ValueError('Markdown version must be either 1 or 2!')
 
-        text = re.split(r'(`{3})', text)
-        for i in range(len(text)):
-            if (i + 1) % 2:
-                text[i] = re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text[i])
+        text = re.sub(f'([{re.escape(escape_chars)}])', r'\\\1', text)
+        text = text.splitlines(keepends=True)
+        for i in range(len(text)):  # rebuild bolding
+            if text[i].count('\\*\\*') and not text[i].count('\\*\\*') % 2:
+                text[i] = text[i].replace('\\*\\*', '*')
 
         return ''.join(text)
 
@@ -918,7 +922,28 @@ class TelegramReporter(MarkdownReporter):
         """Chunkify by line while escaping markdown as required by Telegram."""
         chunks = []
 
-        lines = [self.telegram_escape_markdown(line) for line in text.splitlines(keepends=True)]
+        # Escape Markdown by type
+        text = re.split(r'(`)(.*?)(`)', text)
+        for i in range(len(text)):
+            if i % 4 in (1, 3):
+                continue
+            base_entity = 'code' if i % 4 == 2 else None
+            subtext = re.split(r'(\[[^\][]*]\((?:https?|tel|mailto):[^()]*\))', text[i])
+            for j in range(len(subtext)):
+                if (j + 1) % 2:
+                    subtext[j] = self.telegram_escape_markdown(subtext[j], entity_type=base_entity)
+                else:
+                    subtext[j] = ''.join([
+                        '[',
+                        self.telegram_escape_markdown(subtext[j][1:].split(']')[0]),
+                        '](',
+                        self.telegram_escape_markdown(subtext[j].split('(')[-1].split(')')[0],
+                                                      entity_type='text_link'),
+                        ')'
+                    ])
+            text[i] = ''.join(subtext)
+
+        lines = ''.join(text).splitlines(keepends=True)
 
         # check if any individual line is too long and chunkify it
         if any(len(line) > max_length for line in lines):
@@ -932,16 +957,21 @@ class TelegramReporter(MarkdownReporter):
 
         lines = iter(lines)
         chunk_lines = []
+        pre_status = False  # keep track of whether you're in the middle of a PreCode entity to close and reopen
         try:
             while True:
                 next_line = next(lines)
-                if sum(len(line) for line in chunk_lines) + len(next_line) > max_length:
-                    chunks.append('\n'.join(chunk_lines))
-                    chunk_lines = [next_line]
+                if sum(len(line) for line in chunk_lines) + len(next_line) > max_length - pre_status * 3:
+                    if pre_status:
+                        chunk_lines[-1] += '```'
+                    chunks.append(''.join(chunk_lines))
+                    chunk_lines = [pre_status * '```' + next_line]
                 else:
                     chunk_lines.append(next_line)
+                if next_line.count('```') % 2:
+                    pre_status = not pre_status
         except StopIteration:
-            chunks.append('\n'.join(chunk_lines))
+            chunks.append(''.join(chunk_lines))
 
         return chunks
 

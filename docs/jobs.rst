@@ -178,9 +178,12 @@ For all ``url`` jobs:
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
 - ``method``: `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use
-  (default: ``GET`` unless ``data``, below, is set)
-- ``data``: HTTP data (defaults request method to ``POST`` and `Content-type
-  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header to
+  (one of ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``; default: ``GET``, unless
+  the ``data`` directive, below, is set)
+- ``data``: form-encoded data to send with a ``POST`` `HTTP request method
+  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ (see :ref:`here <post>`); also sets
+  ``method`` directive  to ``POST`` and a `Content-type
+  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` to
   ``application/x-www-form-urlencoded``)
 - ``no_redirects``: Disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection (true/false). `New in version 3.2.7`
 - ``ssl_no_verify``: Do not verify SSL certificates (true/false) (see :ref:`here <ssl_no_verify>`)

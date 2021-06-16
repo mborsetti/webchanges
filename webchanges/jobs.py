@@ -238,12 +238,14 @@ class JobBase(object, metaclass=TrackSubClasses):
         if isinstance(defaults, dict):
             # merge defaults from configuration into Job attributes without overwriting them
             for key, value in defaults.items():
-                if key in self.__optional__ and isinstance(defaults[key], dict):
-                    for subkey, subvalue in defaults[key].items():
-                        if subkey not in getattr(self, key):
-                            getattr(self, key)[subkey] = subvalue
-                if key in self.__optional__ and getattr(self, key) is None:
-                    setattr(self, key, value)
+                if key in self.__optional__:
+                    if getattr(self, key) is None:
+                        setattr(self, key, value)
+                    elif (isinstance(defaults[key], dict)
+                          and isinstance(getattr(self, key), (dict, CaseInsensitiveDict))):
+                        for subkey, subvalue in defaults[key].items():
+                            if hasattr(self, key) and subkey not in getattr(self, key):
+                                getattr(self, key)[subkey] = subvalue
 
     def with_defaults(self, config: dict) -> 'JobBase':
         """return a Job class from a configuration that also contains defaults from the configuration"""
@@ -400,6 +402,10 @@ class UrlJob(Job):
         else:
             timeout = self.timeout
 
+        # cookiejar (called by requests) expects strings or bytes-like objects; PyYAML will try to guess int etc.
+        if self.cookies:
+            self.cookies = {k: str(v) for k, v in self.cookies.items()}
+
         response = requests.request(method=self.method,
                                     url=self.url,
                                     data=self.data,
@@ -528,7 +534,6 @@ class BrowserJob(Job):
         """Get current platform name by short string as used by Pyppeteer for downloading Chromium.
         Originally from pyppeteer.chromium_downloader, but we cannot simply import it as it will trigger
         pyppeteer reading os.environ['PYPPETEER_CHROMIUM_REVISION'] before we can modify it ourselves."""
-        # TODO: see if you can use importlib.reload for the new value to stick
         if sys.platform.startswith('linux'):
             return 'linux'
         elif sys.platform.startswith('darwin'):

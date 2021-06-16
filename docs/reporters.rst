@@ -417,18 +417,15 @@ You may add multiple chat IDs as a YAML list:
        - 11111111
        - 22222222
      silent: true  # set to false to receive a notification with sound
-     monospace: true
 
 Telegram uses the :ref:`markdown` report type.
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
 * ``silent``: Receive a notification with no sound (true/false) (default: false)
-* ``monospace``: Format message with monospace font (true/false) (default: false)
 
 
-`Changed in version 3.7:` Added `silent` and `monospace` sub-directives, and switched from the `text` to the `markdown`
-report type.
+`Changed in version 3.7:` Added `silent` sub-directive and switched from the `text` to the `markdown` report type.
 
 .. _webhook:
 

@@ -78,8 +78,8 @@ per the example below. If a ``headers`` key is also found in a job, for that job
 
 .. _cookies:
 
-Supplying cookie data
----------------------
+Supplying cookies
+-----------------
 It is possible to add cookies to HTTP requests for pages that need it, for example:
 
 .. code-block:: yaml
@@ -88,6 +88,31 @@ It is possible to add cookies to HTTP requests for pages that need it, for examp
    cookies:
        Key: ValueForKey
        OtherKey: OtherValue
+
+
+.. _post:
+
+Using POST request method
+-------------------------
+The ``POST`` `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ is used to submit
+form-encoded data to the specified resource (server). In `webchanges`, simply supply your data in the ``data``
+directive. The ``method`` will be automatically changed to ``POST`` and, if no `Content-type
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header is supplied, it will be set to
+``application/x-www-form-urlencoded``.
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   data:
+       Element1: Data
+       Element2: OtherData
+
+For a string (e.g. JSON-encoded data, if supported by the server):
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   data: '{"Element1": "Data", "Element2": "OtherData"}'
 
 
 .. _compared_versions:
