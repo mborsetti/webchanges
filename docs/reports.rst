@@ -42,7 +42,7 @@ HTML
 .. role:: deletions
     :class: deletions
 
-These reports are by default ``unified`` diffs that are prettified by `webchanges` by:
+These reports are by default ``unified`` diffs that are prettified by :program:`webchanges` by:
 
 * Making links `clickable <https://pypi.org/project/webchanges/>`__!
 * Preserving formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and

@@ -8,7 +8,7 @@ Checking different sources at different intervals
 -------------------------------------------------
 You can divide your jobs into multiple job lists depending on how often you want to check.  For example, you can have
 a ``daily.yaml`` job list for daily jobs, and a ``weekly.yaml`` for weekly ones.  You then set up the scheduler to
-run `webchanges`, defining which job list to use, at different intervals.  For example in Linux using cron::
+run :program:`webchanges`, defining which job list to use, at different intervals.  For example in Linux using cron::
 
   0 0 * * * webchanges --jobs daily.yaml
   0 0 0 * * webchanges --jobs weekly.yaml
@@ -16,13 +16,15 @@ run `webchanges`, defining which job list to use, at different intervals.  For e
 
 Getting reports via different channels for different sources
 ------------------------------------------------------------
-Job-specific alerts (reports) is not a functionality of `webchanges`, but you can work around this by creating multiple
-configurations and job lists, and run `webchanges` multiple times specifying ``--jobs`` and ``--config``.
+Job-specific alerts (reports) is not a functionality of :program:`webchanges`, but you can work around this by creating
+multiple configurations and job lists, and run :program:`webchanges` multiple times specifying ``--jobs`` and
+``--config``.
 
 For example, you can create two configuration files, e.g. ``config-slack.yaml`` and ``config-email.yaml`` (the
 first set for slack reporting and the second for email reporting) and two job lists, e.g. ``slack.yaml`` and
 ``email.yaml`` (the first containing jobs you want to be notified of via slack, the second for jobs you want to be
-notified of via email).  You can then run `webchanges` similarly to the below example (taken from Linux crontab)::
+notified of via email).  You can then run :program:`webchanges` similarly to the below example (taken from Linux
+crontab)::
 
   00 00 * * * webchanges --jobs slack.yaml --config config-slack.yaml
   05 00 * * * webchanges --jobs email.yaml --config config-email.yaml
@@ -95,7 +97,7 @@ It is possible to add cookies to HTTP requests for pages that need it, for examp
 Using POST request method
 -------------------------
 The ``POST`` `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ is used to submit
-form-encoded data to the specified resource (server). In `webchanges`, simply supply your data in the ``data``
+form-encoded data to the specified resource (server). In :program:`webchanges`, simply supply your data in the ``data``
 directive. The ``method`` will be automatically changed to ``POST`` and, if no `Content-type
 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header is supplied, it will be set to
 ``application/x-www-form-urlencoded``.
@@ -136,9 +138,9 @@ Ignoring SSL errors
 -------------------
 Setting `ssl_no_verify` to true may be useful during local development or testing.
 
-When set to true, `webchanges` requests will accept any TLS certificate presented by the server, and will ignore
-hostname mismatches and/or expired certificates, which will make your application vulnerable to man-in-the-middle (MitM)
-attacks.
+When set to true, :program:`webchanges` requests will accept any TLS certificate presented by the server, and will
+ignore hostname mismatches and/or expired certificates, which will make your application vulnerable to
+man-in-the-middle (MitM) attacks.
 
 .. code-block:: yaml
 
@@ -194,8 +196,8 @@ library we use, it may be useful to explicitly specify an encoding as defined in
 
 Receiving a report every time webchanges runs
 ---------------------------------------------
-If you are watching pages that change seldomly, but you still want to be notified evert time ``webchanges`` runs
-to know it's still working, you can monitor the output of the ``date`` command, for example:
+If you are watching pages that change seldomly, but you still want to be notified evert time `:program:`webchanges``
+runs to know it's still working, you can monitor the output of the ``date`` command, for example:
 
 .. code-block:: yaml
 
@@ -241,7 +243,7 @@ either configure a Tor client as an HTTP/HTTPS proxy or, in Linux/MacOS, use the
 (installable using ``apt install tor`` on Debian or Ubuntu or ``brew install tor`` on macOS). Setting up Tor is out of
 scope for this document.
 
-If using `torify`, just prefix the `webchanges` command with the `torify` wrapper to access .onion pages:
+If using `torify`, just prefix the :program:`webchanges` command with the `torify` wrapper to access .onion pages:
 
 .. code-block:: bash
 
@@ -336,8 +338,8 @@ Note: the use of an external differ will override the ``diff`` setting of the ``
 
 Using a Chromium revision matching a Google Chrome / Chromium release
 ---------------------------------------------------------------------
-``webchanges`` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72.  If you want a
-different one, you can do so, but unfortunately the Chromium revision number does not match the Google Chrome /
+`:program:`webchanges`` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72.  If you
+want a different one, you can do so, but unfortunately the Chromium revision number does not match the Google Chrome /
 Chromium release one.
 
 There are multiple ways of finding what the revision number is for a stable Chrome release; the
@@ -383,9 +385,9 @@ To specify the same on an individual job:
      - '--window-size=1298,1406'
 
 
-If you use multiple OSs, you can specify different Chromium revisions to use based on the OS ``webchanges`` is running
-in by using a dict with one or more of ``linux``, ``mac``, ``win32`` and/or ``win64`` keys, either as a global default
-(like below) or in individual jobs:
+If you use multiple OSs, you can specify different Chromium revisions to use based on the OS `:program:`webchanges`` is
+running in by using a dict with one or more of ``linux``, ``mac``, ``win32`` and/or ``win64`` keys, either as a global
+default (like below) or in individual jobs:
 
 .. code-block:: yaml
 
@@ -425,8 +427,8 @@ to crash, forcing instead the use of the drive-based filesystem, which may be sl
 Browsing websites using local storage for authentication
 ---------------------------------------------------------
 Some sites don't use cookies for authentication but store their functional equivalent using 'Local Storage'.  In these
-circumstances, you can use `webchanges` with ``use_browser: true`` directive and its ``user_data_dir`` sub-directive to
-instruct it to use a pre-existing user directory.
+circumstances, you can use :program:`webchanges` with ``use_browser: true`` directive and its ``user_data_dir``
+sub-directive to instruct it to use a pre-existing user directory.
 
 Specifically:
 
@@ -437,7 +439,7 @@ Specifically:
    authentication data in local storage
 #. Exit the browser
 
-You can now run a `webchanges` job defined like this:
+You can now run a :program:`webchanges` job defined like this:
 
 .. code-block:: yaml
 

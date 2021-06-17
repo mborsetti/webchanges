@@ -3,9 +3,9 @@
 ============
 Introduction
 ============
-`webchanges` monitors the output of web sources (or of commands on your computer).
+:program:`webchanges` monitors the output of web sources (or of commands on your computer).
 
-Every time you run `webchanges`, it:
+Every time you run :program:`webchanges`, it:
 
 #. retrieves the output from the source;
 #. transforms and filters it (optional);
@@ -37,8 +37,8 @@ shell with a command such as ``export EDITOR=nano``.
 
 For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.
 
-The minimum configuration necessary for `webchanges` to work is a single ``url`` directive (for web resources) or
-``command`` directive (for the output of a shell command):
+The minimum configuration necessary for :program:`webchanges` to work is a single ``url`` directive (for web resources)
+or ``command`` directive (for the output of a shell command):
 
 .. code-block:: yaml
 
@@ -66,8 +66,8 @@ information.
    url: https://example.com/
    use_browser: true
 
-You can add a ``name`` to a job to help you identify what you're monitoring, but `webchanges` will automatically try
-to use a webpage's title if you don't do so:
+You can add a ``name`` to a job to help you identify what you're monitoring, but :program:`webchanges` will
+automatically try to use a webpage's title if you don't do so:
 
 .. code-block:: yaml
 
@@ -141,7 +141,7 @@ Filters are explained :ref:`here <filters>`.
 
 Comparison
 ----------
-`webchanges` then automatically performs a comparison between the filtered data collected in this run with
+:program:`webchanges` then automatically performs a comparison between the filtered data collected in this run with
 the one saved from a prior run, computing a diff in the `unified format
 <https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ('unified diff') by default.
 
@@ -176,8 +176,8 @@ Reports are explained :ref:`here <reports>`.
 
 :ref:`Reporters`
 ----------------
-Finally, by default `webchanges` displays the diff report on the ``stdout`` console, but you can add (or change to) one
-or more of:
+Finally, by default :program:`webchanges` displays the diff report on the ``stdout`` console, but you can add (or change
+to) one or more of:
 
 - ``stdout``
 - ``browser``
@@ -196,8 +196,8 @@ Reporters are explained :ref:`here <reporters>`.
 Scheduling
 ----------
 
-``webchanges`` will check for changes every time you run it, but does not include a scheduler. We recommend using a
-system scheduler to automatically run `webchanges` periodically:
+`:program:`webchanges`` will check for changes every time you run it, but does not include a scheduler. We recommend
+using a system scheduler to automatically run :program:`webchanges` periodically:
 
 - In Linux, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for you. If you
   have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__.

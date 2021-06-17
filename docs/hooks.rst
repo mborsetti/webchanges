@@ -1,6 +1,6 @@
 .. **** IMPORTANT ****
-   All code here is automatically tested. See test/docs_hooks_test.py (the code), test/data/doc_hooks_jobs.yaml
-   (the test jobs, with unique URLs) and test/data/doc_hooks_testdata.yaml (the "before" and "after" data).
+   All code here is automatically tested. See tests/docs_hooks_test.py (the code), tests/data/doc_hooks_jobs.yaml
+   (the test jobs, with unique URLs) and tests/data/doc_hooks_testdata.yaml (the "before" and "after" data).
    This ensures that all examples work now and in the future.
 
 .. _hooks:
@@ -8,8 +8,8 @@
 =================
 Python code hooks
 =================
-Python programmers can hook their own code to expand `webchanges` with custom functionality by writing it into a
-``hooks.py`` file and placing it into the same directory as the job and configuration files.  The code will be
+Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing it into
+a ``hooks.py`` file and placing it into the same directory as the job and configuration files.  The code will be
 automatically loaded at startup.
 
 Smaller code snippets can also be run using the :ref:`execute` filter, for example as used :ref:`here <json_dict>`

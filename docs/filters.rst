@@ -1,6 +1,7 @@
 .. **** IMPORTANT ****
-   All code examples here are automatically tested. As such, each example needs to have a unique URL.
-   This URL also needs to be added to the file along with the "before" and "after" data that will be used for testing.
+   All code-block:: yaml in here are automatically tested. As such, each example needs to have a unique URL.
+   This URL also needs to be added to the file tests/data/docs_filters_test.py along with the "before" and "after" data
+   that will be used for testing.
    This ensures that all examples work now and in the future.
 
 .. _filters:
@@ -14,8 +15,8 @@ Filters can be applied at either of two stages of processing:
 * Applied to the diff result before reporting the changes (``diff_filter``)
 
 While creating your job pipeline, you might want to preview what the filtered output looks like. For filters applied
-to the data, you can run `webchanges` with the ``--test-filter`` command-line option, passing in the index (from
-``--list``) or the URL/command of the job to be tested::
+to the data, you can run :program:`webchanges` with the ``--test-filter`` command-line option, passing in the index
+(from ``--list``) or the URL/command of the job to be tested::
 
    webchanges --test 1   # Test the first job in the list and show the data colleted after it's filtered
    webchanges --test https://example.net/  # Test the job that matches the given URL
@@ -23,9 +24,10 @@ to the data, you can run `webchanges` with the ``--test-filter`` command-line op
 This command will show the output that will be captured and stored, and used to compare to the old version stored from
 a previous run against the same url or shell command.
 
-Once `webchanges` has collected at least 2 historic snapshots of a job (two different states of a webpage) you can start
-testing the effects of your ``diff_filter`` with the command-line option ``--test-diff``, passing in the index (from
-``--list``) or the URL/command of the job to be tested, which using the historic data saved locally in the cache::
+Once :program:`webchanges` has collected at least 2 historic snapshots of a job (two different states of a webpage) you
+can start testing the effects of your ``diff_filter`` with the command-line option ``--test-diff``, passing in the
+index (from ``--list``) or the URL/command of the job to be tested, which using the historic data saved locally in
+the cache::
 
    webchanges --test-diff 1   # Test the first job in the list and show the report
 
@@ -39,10 +41,10 @@ At the moment, the following filters are available:
 
   - :ref:`css <css-and-xpath>`: Filter XML/HTML using CSS selectors
   - :ref:`xpath <css-and-xpath>`: Filter XML/HTML using XPath expressions
-  - :ref:`element-by-class <element-by->`: Get all HTML elements by class
-  - :ref:`element-by-id <element-by->`: Get an HTML element by its ID
-  - :ref:`element-by-style <element-by->`: Get all HTML elements by style
-  - :ref:`element-by-tag <element-by->`: Get an HTML element by its tag
+  - :ref:`element-by-class <element-by-…>`: Get all HTML elements by class
+  - :ref:`element-by-id <element-by-…>`: Get an HTML element by its ID
+  - :ref:`element-by-style <element-by-…>`: Get all HTML elements by style
+  - :ref:`element-by-tag <element-by-…>`: Get an HTML element by its tag
 
 * To make HTML more readable:
 
@@ -222,14 +224,15 @@ Optional directives
 * ``method``: Either of ``html`` (default) or ``xml``
 * ``namespaces`` Mapping of XML namespaces for matching
 * ``exclude``: Elements to remove from the final result
-* ``skip``: 'Number of elements to skip from the beginning (default: 0)
+* ``skip``: Number of elements to skip from the beginning (default: 0)
 * ``maxitems``: Maximum number of items to return (default: all)
 
 
-.. _element-by-:
 
-element-by-
------------
+.. _element-by-…:
+
+element-by-…
+------------
 The filters **element-by-class**, **element-by-id**, **element-by-style**, and **element-by-tag** allow you to select
 all matching instances of a given HTML element.
 
@@ -279,17 +282,19 @@ To extract ``<div style="something">.../<div>`` from a page:
    filter:
      - element-by-style: something
 
+
+
 .. _html2text:
 
 html2text
 -------------
 This filter converts HTML (or XML) to plaintext.
 
-Optional directives
-"""""""""""""""""""
+Optional sub-directives
+"""""""""""""""""""""""
 * ``method``: One of:
 
- - ``html2text``: Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package (default) and retains
+ - ``html2text`` (default): Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package and retains
    some simple formatting (Markup language)
  - ``bs4``: Uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
  - ``strip_tags``: Uses regex to strip tags
@@ -297,14 +302,14 @@ Optional directives
 
 ``html2text``
 ^^^^^^^^^^^^^
-This filter converts HTML into `Markdown <https://www.markdownguide.org/>`__.
-using the `html2text <https://pypi.org/project/html2text/>`__ Python package.
+This filter converts HTML into `Markdown <https://www.markdownguide.org/>`__ using the
+`html2text <https://pypi.org/project/html2text/>`__ Python package.
 
 It is the recommended option to convert all types of HTML into readable text.
 
 Example configuration:
 
-Note: If the content has tables, adding the sub-directive `pad_tables: true` *may* improve readability.
+.. note:: If the content has tables, adding the sub-directive `pad_tables: true` *may* improve readability.
 
 .. code-block:: yaml
 
@@ -330,9 +335,9 @@ This filter extracts unformatted text from HTML using the `BeautifulSoup
 <https://pypi.org/project/beautifulsoup4/>`__, specifically its `get_text(strip=True)
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
 
-Note that as of Beautiful Soup version 4.9.0, when lxml or html.parser are in use, the contents of <script>, <style>,
-and <template> tags are not considered to be ‘text’, since those tags are not part of the human-visible content of the
-page.
+.. note:: As of Beautiful Soup version 4.9.0, when lxml or html.parser are in use, the contents of <script>, <style>,
+   and <template> tags are not considered to be ‘text’, since those tags are not part of the human-visible content of
+   the page.
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -351,13 +356,19 @@ follows:
 
 ``strip_tags``
 ^^^^^^^^^^^^^^
-A simple HTML/XML tag stripper based on applying a regex.  Very fast but may not yield the prettiest results.
+A simple HTML/XML tag stripper based on applying a regular expression-based function. Very fast but may not yield the
+prettiest of results.
 
-`Changed in version 3.0:` Method renamed to ``strip_tags`` from ``re``.
+.. versionchanged:: 3.0
+   Method renamed to ``strip_tags`` from ``re``.
 
-`Changed in version 3.0:` Filter defaults to the use of Python ``html2text`` package.
+.. versionchanged:: 3.0
+   Filter defaults to the use of Python ``html2text`` package.
 
-`Removed in version 3.0:` Method ``lynx`` requiring external OS-specific dependency.
+.. deprecated:: 3.0
+   Removed method ``lynx`` (external OS-specific dependency).
+
+
 
 .. _beautify:
 
@@ -382,6 +393,7 @@ follows:
 .. code-block:: bash
 
    pip install --upgrade webchanges[beautify]
+
 
 
 .. _pdf2text:
@@ -410,10 +422,10 @@ If the PDF file is password protected, you can specify its password:
      - pdf2text:
          password: webchangessecret
 
-Tip: since Poppler tries to keep the layout of the original document by using spaces, and these may change when a
-document is updated, you can chain a ``re.sub`` filter to replace all multiple Unicode whitespaces with a single
-one, such that, for example, a change from ``Column A   Column B`` to ``Column A        Column B`` isn't reported (as
-multiple spaces get collapsed into one, both instances become ``Column A Column B`` which are identical):
+.. tip:: Since Poppler tries to keep the layout of the original document by using spaces, and these may change when a
+   document is updated, you can chain a ``re.sub`` filter to replace all multiple Unicode whitespaces with a single
+   one, such that, for example, a change from ``Column A   Column B`` to ``Column A        Column B`` isn't reported (as
+   multiple spaces get collapsed into one, both instances become ``Column A Column B`` which are identical):
 
 .. code-block:: yaml
 
@@ -438,8 +450,9 @@ follows:
 
    pip install --upgrade webchanges[pdf2text]
 
-In addition, you need to first install any of the OS-specific dependencies of Poppler (see
+In addition, you need to install any of the OS-specific dependencies of Poppler (see
 `website <https://github.com/jalan/pdftotext/blob/master/README.md#os-dependencies>`__).
+
 
 
 .. _ocr:
@@ -473,7 +486,7 @@ follows:
 
    pip install --upgrade webchanges[ocr]
 
-In addition, you need to first install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__.
+In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__ itself.
 
 
 
@@ -497,8 +510,8 @@ Optional sub-directives
 jq
 --
 
-Linux/MacOS only
-""""""""""""""""
+Linux/MacOS ASCII only
+""""""""""""""""""""""
 
 The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight ASCII JSON
 processor. It is currently available only for Linux (most flavors) and MacOS (no Windows) and does not handle Unicode;
@@ -528,8 +541,8 @@ follows:
 
 .. _filtering_json:
 
-Filtering JSON on Windows or containing Unicode or without ``jq``
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Filtering JSON on Windows or containing Unicode and without ``jq``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Python programmers on all OSs can use an advanced technique to select only certain elements of the JSON object; see
 :ref:`json_dict`. This method will preserve Unicode characters.
 
@@ -539,7 +552,7 @@ Python programmers on all OSs can use an advanced technique to select only certa
 
 format-xml
 ----------
-This filter deserializes an XML object and reformats it using the `lxml <https://lxml.de>`__ Python package's
+This filter deserializes an XML object and reformats it. It uses the `lxml <https://lxml.de>`__ Python package's
 etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ function.
 
 .. code-block:: yaml
@@ -550,7 +563,7 @@ etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.
      - format-xml:
 
 
-`New in version 3.0.`
+.. versionadded:: 3.0
 
 
 
@@ -558,7 +571,7 @@ etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.
 
 pretty-xml
 ----------
-This filter deserializes an XML object and pretty-prints it using Python's xml.dom.minidom `toprettyxml
+This filter deserializes an XML object and pretty-prints it. It uses Python's xml.dom.minidom `toprettyxml
 <https://docs.python.org/3/library/xml.dom.minidom.html#xml.dom.minidom.Node.toprettyxml>`__ function.
 
 .. code-block:: yaml
@@ -569,7 +582,7 @@ This filter deserializes an XML object and pretty-prints it using Python's xml.d
      - pretty-xml:
 
 
-`New in version 3.3.`
+.. versionadded:: 3.3
 
 
 
@@ -577,11 +590,11 @@ This filter deserializes an XML object and pretty-prints it using Python's xml.d
 
 ical2text
 ---------
-This filter reads an iCalendar document and converts them to easy-to read text
+This filter reads an iCalendar document and converts it to easy-to read text.
 
 .. code-block:: yaml
 
-   name: "Make iCal file readable test"
+   name: "Make iCal file readable"
    url: https://example.com/cal.ics
    filter:
      - ical2text:
@@ -601,7 +614,7 @@ follows:
 
 hexdump
 -----------
-This filter display the contents both in binary and ASCII (hex dump format).
+This filter displays the contents both in binary and ASCII using the hex dump format.
 
 .. code-block:: yaml
 
@@ -616,7 +629,8 @@ This filter display the contents both in binary and ASCII (hex dump format).
 
 sha1sum
 -----------
-This filter calculates a SHA-1 hash for the document.
+This filter calculates a SHA-1 hash for the contents.  Useful to be notified when something has changed without any
+detail, or saving large snapshots of data.
 
 .. code-block:: yaml
 
@@ -662,7 +676,8 @@ Optional sub-directives
 * ``re``: Match the the Python `regular
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
 
-`Changed in version 3.0:` renamed from ``grep``.
+.. versionchanged:: 3.0
+   Renamed from ``grep``.
 
 
 
@@ -702,7 +717,8 @@ Optional sub-directives
 * ``re``: Match the the Python `regular
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
 
-`Changed in version 3.0:` renamed from ``grepi``.
+.. versionchanged:: 3.0
+   Renamed from ``grepi``.
 
 
 
@@ -760,6 +776,7 @@ Optional sub-directives
   string matched in ``pattern``)
 
 
+
 .. _strip:
 
 strip
@@ -813,7 +830,9 @@ Optional sub-directives
 * ``splitlines``: Apply the filter on each line of text (true/false) (default: false, apply to the entire data as a
   block)
 
-`Changed in version 3.5:` Added optional sub-directives
+.. versionchanged:: 3.5
+   Added optional sub-directives ``chars``, ``side`` and ``splitlines``.
+
 
 
 .. _sort:
@@ -900,12 +919,13 @@ Optional sub-directives
   line-based reversing); it can also be specified inline as the value of ``reverse``
 
 
+
 .. _execute:
 
 execute
 ---------
 The data to be filtered is passed as the input to a command to be run, and the output from this is used in
-`webchanges`'s next step. The environment variable ``URLWATCH_JOB_NAME`` will have the name of the job,
+:program:`webchanges`'s next step. The environment variable ``URLWATCH_JOB_NAME`` will have the name of the job,
 ``URLWATCH_JOB_LOCATION`` its 'location' (the value of either ``url`` or ``command``) and ``URLWATCH_JOB_NUMBER`` its
 index number.
 
@@ -948,5 +968,5 @@ users. To set this up:
    sudo chmod go-w *.yaml
 
 * ``sudo`` may or may not be required
-* Replace ``$USER:$(id -g -n)`` with the username that runs `webchanges` if different than the use you're logged in when
-  making the above changes
+* Replace ``$USER:$(id -g -n)`` with the username that runs :program:`webchanges` if different than the use you're
+  logged in when making the above changes

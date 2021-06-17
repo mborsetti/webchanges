@@ -14,10 +14,10 @@
 Upgrading from urlwatch
 =======================
 
-`webchanges` |version| is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as suggested by its author to
-optimize it for HTML, and is backward-compatible with `urlwatch 2.23`'s job and configuration files.
+:program:`webchanges` |version| is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as suggested by its author
+to optimize it for HTML, and is backward-compatible with `urlwatch 2.23`'s job and configuration files.
 
-Upgrading from a `urlwatch` 2.23 setup is automatic (see more below), and gives you:
+Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), and gives you:
 
 * Vastly improved HTML reporting, including:
 
@@ -30,7 +30,8 @@ Upgrading from a `urlwatch` 2.23 setup is automatic (see more below), and gives 
   * Correct rendering by email clients who override stylesheets (e.g. Gmail)
   * Better HTML-to-text translation with updated defaults for the ``html2text`` filter
   * Other legibility improvements
-* Multiple upgrades in `Pyppeteer`-based browsing (called ``navigate`` in `urlwatch`) to render JavaScript, including:
+* Multiple upgrades in `Pyppeteer`-based browsing (called ``navigate`` in :program:`urlwatch`) to render JavaScript,
+  including:
 
   * Upgraded browser engine (same as Chrome 89)
   * Increased reliability with the use of Python's built-in ``asyncio.run()`` to manage the asyncio event loop,
@@ -49,8 +50,8 @@ Upgrading from a `urlwatch` 2.23 setup is automatic (see more below), and gives 
 
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
   does not infinitely grow
-* Diffs (changes) that are no longer lost if `webchanges` is interrupted mid-execution or encounters an error with a
-  reporter
+* Diffs (changes) that are no longer lost if :program:`webchanges` is interrupted mid-execution or encounters an error
+  with a reporter
 * The use of the webpage's title as a job ``name`` if one isn't provided
 * The ability to add a job ``note`` in the report
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
@@ -82,27 +83,27 @@ Examples:
 
 How-to
 ------
-If you are using `urlwatch` 2.23, simply install `webchanges` and run it. It will find the existing `urlwatch` job and
-configuration files, and, unless you were still running ``lynx`` (see below), it will run just fine as is. It may
-complain about some directive name being changed for clarity and other :ref:`deprecations <migration_deprecations>`, but
-you will have time to make the edits if you decide to stick around!
+If you are using :program:`urlwatch` 2.23, simply install :program:`webchanges` and run it. It will find the existing
+:program:`urlwatch` job and configuration files, and, unless you were still running ``lynx`` (see below), it will run
+just fine as is. It may complain about some directive name being changed for clarity and other :ref:`deprecations
+<migration_deprecations>`, but you will have time to make the edits if you decide to stick around!
 
 If you encounter any problems or have any suggestions please open an issue `here
 <https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.
 
-If you are upgrading from a version of `urlwatch` prior to 2.23, before running `webchanges` make sure that you have
-implemented all `urlwatch` breaking changes in your job and configuration files and can run `urlwatch` 2.23
-successfully.
+If you are upgrading from a version of :program:`urlwatch` prior to 2.23, before running :program:`webchanges` make sure
+that you have implemented all :program:`urlwatch` breaking changes in your job and configuration files and can run
+:program:`urlwatch` 2.23 successfully.
 
-For example, per `urlwatch` issue `#600 <https://github.com/thp/urlwatch/pull/600#issuecomment-753944678>`__),
+For example, per :program:`urlwatch` issue `#600 <https://github.com/thp/urlwatch/pull/600#issuecomment-753944678>`__),
 
 .. code-block:: yaml
 
    url: https://example.com/
    filter: html2text
 
-no longer works in `urlwatch` 2.23, and therefore in `webchanges`, as all filters must be specified as subfilters like
-this:
+no longer works in :program:`urlwatch` 2.23, and therefore in :program:`webchanges`, as all filters must be specified as
+sub-filters like this:
 
 .. code-block:: yaml
 
@@ -115,12 +116,12 @@ this:
 
 Upgrade details
 ---------------
-Everything, except the breaking changes below, work out of the box when upgrading from a `urlwatch` 2.23 setup,
+Everything, except the breaking changes below, work out of the box when upgrading from a :program:`urlwatch` 2.23 setup,
 and you can switch back whenever you want.
 
 ⚠ Breaking Changes
 ~~~~~~~~~~~~~~~~~~
-Relative to `urlwatch` 2.23:
+Relative to :program:`urlwatch` 2.23:
 
 * By default a new much improved database engine is used; run with ``--database-engine minidb`` command line argument to
   preserve backwards-compatibility
@@ -132,7 +133,7 @@ Relative to `urlwatch` 2.23:
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
-Relative to `urlwatch` 2.23:
+Relative to :program:`urlwatch` 2.23:
 
 * Installation and command line
 
@@ -157,19 +158,19 @@ Relative to `urlwatch` 2.23:
     smaller database due to data compression with `msgpack <https://msgpack.org/index.html>`__, higher speed due to
     indexing, and offers additional features and flexibility; migration from old 'minidb' database is done automatically
     and the old database preserved for manual deletion. Specify ``minidb`` to continue using the legacy database used
-    by `urlwatch`
+    by :program:`urlwatch`
   * New ``--rollback-cache TIMESTAMP`` new command line argument to rollback the snapshot database to a previous time,
     useful when you lose notifications. Does not work with database engine ``minidb`` or ``textfiles``.
   * New ``--delete-snapshot`` command line argument to removes the latest saved snapshot of a job from the database;
     useful if a change in a website (e.g. layout) requires modifying filters as invalid snapshot can be deleted and
-    `webchanges` rerun to create a truthful diff
+    :program:`webchanges` rerun to create a truthful diff
 
   * New ``-V`` command line argument, as an alias to ``--version``
   * New ``--log-level`` command line argument to control the amount of logging displayed by the ``-v`` argument
   * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
-    the current directory, `webchanges` now looks for it in the default configuration directory
+    the current directory, :program:`webchanges` now looks for it in the default configuration directory
   * If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' extension, or a filename for ``--hooks``
-    without a '.py' extension, `webchanges` now also looks for one with such an extension appended to it
+    without a '.py' extension, :program:`webchanges` now also looks for one with such an extension appended to it
   * In Windows, ``--edit`` defaults to using the built-in notepad.exe text editor if both the %EDITOR% and %VISUAL%
     environment variables are not set
 
@@ -245,24 +246,24 @@ Relative to `urlwatch` 2.23:
   * Reports' elapsed time now always has at least 2 significant digits
   * Unicode is supported throughout, including in filters and jobs and configuration YAML files
   * A 33 percentage point increase in code testing coverage (to 75%), a completely new continuous integration
-    (CI) and continuous delivery (CD) pipeline (GitHub Actions), and testing on both Ubuntu **and** macOS (Windows 10
-    x64 to come) increase reliability of new releases
-  * Using flake8 to check PEP-8 compliance and more
-  * Using coverage to check unit testing coverage
+    (CI) and continuous delivery (CD) pipeline (`GitHub Actions <https://github.com/features/actions>`__), and testing
+    on both Ubuntu **and** macOS (Windows 10 x64 to come) increase reliability of new releases
+  * Using `flake8 <https://pypi.org/project/flake8/>`__ to check PEP-8 compliance and more
+  * Using `coverage <https://pypi.org/project/coverage/>`__ to check unit testing coverage
   * Added type hinting to the entire code
   * A vast improvement in documentation and error text
   * The support for Python 3.9
 
 Fixed
 ~~~~~
-Relative to `urlwatch` 2.23:
+Relative to :program:`urlwatch` 2.23:
 
-* Diff (change) data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error in reporting:
-  the permanent database is updated only at the very end (after reports are sent)
+* Diff (change) data is no longer lost if :program:`webchanges` is interrupted mid-execution or encounters an error in
+  reporting: the permanent database is updated only at the very end (after reports are sent)
 * The database no longer grows unbounded to infinity. Fix only works when running in Python 3.7 or higher and using
   the new, default, ``sqlite3`` database engine. In this scenario only the latest 4 snapshots are kept, and older ones
   are purged after every run; the number is selectable with the new ``--max-snapshots`` command line argument. To keep
-  the existing grow-to-infinity behavior, run `webchanges` with ``--max-snapshots 0``.
+  the existing grow-to-infinity behavior, run :program:`webchanges` with ``--max-snapshots 0``.
 * The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
 * HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
@@ -280,7 +281,7 @@ Relative to `urlwatch` 2.23:
 
 Deprecations
 ~~~~~~~~~~~~
-Relative to `urlwatch` 2.23:
+Relative to :program:`urlwatch` 2.23:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
   default method instead or construct a custom ``execute`` command
@@ -309,8 +310,8 @@ Relative to `urlwatch` 2.23:
 Known issues
 ~~~~~~~~~~~~
 * ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
-  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be
-  fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+  stdout (terminal console). This does not affect :program:`webchanges` as all data is downloaded, and hopefully it will
+  be fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``

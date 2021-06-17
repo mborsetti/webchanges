@@ -3,9 +3,9 @@
 =============
 Configuration
 =============
-The global configuration for `webchanges` contains basic settings for the generic behavior of `webchanges` as well as
-the :ref:`reporters <reporters>` in **YAML format** called ``config.yaml`` and located in the in the following
-directory:
+The global configuration for :program:`webchanges` contains basic settings for the generic behavior of
+:program:`webchanges` as well as the :ref:`reporters <reporters>` in **YAML format** called ``config.yaml`` and
+located in the in the following directory:
 
 * Linux: ``~/.config/webchanges``
 * MacOS: ``~/Library/Preferences/webchanges``
@@ -26,9 +26,9 @@ For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.
 
 Display
 -------
-In addition to always reporting changes (which is the whole point of `webchanges`), `webchanges` by default reports
-newly-added (``new``) pages and errors (``error``). You can change this behavior in the ``display`` section of the
-configuration:
+In addition to always reporting changes (which is the whole point of :program:`webchanges`), :program:`webchanges` by
+default reports newly-added (``new``) pages and errors (``error``). You can change this behavior in the ``display``
+section of the configuration:
 
 .. code:: yaml
 
@@ -37,7 +37,8 @@ configuration:
      error: true
      unchanged: false
 
-If you set ``unchanged`` to ``true``, `webchanges` will always report all pages that are checked but have not changed.
+If you set ``unchanged`` to ``true``, :program:`webchanges` will always report all pages that are checked but have not
+changed.
 
 
 Filter changes are not applied for ``unchanged``

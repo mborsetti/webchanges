@@ -4,7 +4,7 @@
 Jobs
 ====
 Each job contains the source of the data to be monitored (:ref:`URL <url>` or :ref:`command <command>`) and related
-directives, plus directives on transformations to apply to the data (ref:`filters <filters>`) once retrieved.
+directives, plus directives on transformations to apply to the data (:ref:`filters <filters>`) once retrieved.
 
 The list of jobs is contained in the jobs file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable with the
 command ``webchanges --edit`` or using any text editor.
@@ -61,7 +61,7 @@ Multiple jobs are separated by a line containing three hyphens, i.e. ``---``.
 **Naming a job**
 
 While optional, it is recommended that each job starts with a ``name`` entry. If omitted and the data monitored is
-HTML or XML, `webchanges` will automatically use the pages' title (up to 60 characters) for a name.
+HTML or XML, :program:`webchanges` will automatically use the pages' title (up to 60 characters) for a name.
 
 .. code-block:: yaml
 
@@ -91,19 +91,20 @@ This is the main job type -- it retrieves a document, generally from a web serve
    url: ftp://username:password@ftp.example.com/file.txt
 
 
-Important: due to a legacy architectural choice, URLs must be **unique** to each job. If for some reason you want to
-monitor the same resource multiple times, make each job's URL unique by adding # at the end of the link followed by a
-unique remark (the # and everything after is discarded by a web server, but captured by `webchanges`):
+.. caution:: Due to a legacy architectural choice, URLs must be **unique** to each job. If for some reason you want to
+   monitor the same resource multiple times, make each job's URL unique by adding # at the end of the link followed by a
+   unique remark (the # and everything after is discarded by a web server, but captured by :program:`webchanges`):
 
-.. code-block:: yaml
+   .. code-block:: yaml
 
-   name: Example homepage
-   url: https://example.org/
-   ---
-   name: Example homepage -- again!
-   url: https://example.org/#2
+      name: Example homepage
+      url: https://example.org/
+      ---
+      name: Example homepage -- again!
+      url: https://example.org/#2
 
-`Changed in version 3.6:` Added support for URLs starting with ``ftp://``.
+.. versionchanged:: 3.6
+   Added support for URLs starting with ``ftp://``.
 
 
 .. _use_browser:
@@ -223,8 +224,8 @@ For ``url`` jobs that have ``use_browser: true``:
 Known issues
 """"""""""""
 * ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
-  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
-  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+  stdout (terminal console). This does not affect :program:`webchanges` as all data is downloaded, and hopefully it will
+  be fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``Future exception was never retrieved``
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
@@ -248,20 +249,20 @@ in a folder, output of scripts that query external devices (RPi GPIO), etc.
 
 Important note for command jobs
 """""""""""""""""""""""""""""""
-When `webchanges` is run in Linux, for security purposes a ``command`` job will only run if the job file is both
-owned by the same user running `webchanges` and can **only** be written by such user. To change the ownership and the
-access permissions of the file (i.e. remove write permission for the group and all other users), run the following
-commands:
+.. important:: When :program:`webchanges` is run in Linux, for security purposes a ``command`` job will only run if
+   the job file is both owned by the same user running :program:`webchanges` and can **only** be written by such user.
+   To change the ownership and the access permissions of the file (i.e. remove write permission for the group and all
+   other users), run the following commands:
 
-.. code-block:: bash
+   .. code-block:: bash
 
-   cd ~/.config/webchanges  # could be different
-   sudo chown $USER:$(id -g -n) *.yaml
-   sudo chmod go-w *.yaml
+      cd ~/.config/webchanges  # could be different
+      sudo chown $USER:$(id -g -n) *.yaml
+      sudo chmod go-w *.yaml
 
-* ``sudo`` may or may not be required.
-* Replace ``$USER`` with the username that runs `webchanges` if different than the use you're logged in when making the
-  above changes, similarly with ``$(id -g -n)`` for the group.
+   * ``sudo`` may or may not be required.
+   * Replace ``$USER`` with the username that runs :program:`webchanges` if different than the use you're logged in when
+     making the above changes, similarly with ``$(id -g -n)`` for the group.
 
 Required directives
 """""""""""""""""""
@@ -294,13 +295,13 @@ These optional directives apply to all job types:
 max_tries
 """""""""
 Due to legacy naming, this directive doesn't do what intuition would tell you it should do, rather, it tells
-`webchanges` **not** to report a job error until the job has failed for the number of consecutive times of
-``max_tries``. Specifically, when a job fails, `webchanges` increases an internal counter, and will report an error
-only when this counter reaches or exceeds the number of ``max_tries`` (default: 1, i.e. immediately). The internal
-counter is reset to 0 when the job succeeds.
+:program:`webchanges` **not** to report a job error until the job has failed for the number of consecutive times of
+``max_tries``. Specifically, when a job fails for `any` reason, :program:`webchanges` increases an internal counter;
+it will report an error only when this counter reaches or exceeds the number of ``max_tries`` (default: 1, i.e.
+at the first error encountered). The internal counter is reset to 0 when the job succeeds.
 
-For example, if you set a job with ``max_tries: 12`` and run `webchanges` every 5 minutes, you will only get notified
-if the job has failed every single time during the span of one hour (5 minutes * 12).
+For example, if you set a job with ``max_tries: 12`` and run :program:`webchanges` every 5 minutes, you will only get
+notified if the job has failed every single time during the span of one hour (5 minutes * 12).
 
 Setting default directives
 """"""""""""""""""""""""""

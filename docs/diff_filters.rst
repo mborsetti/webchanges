@@ -104,10 +104,10 @@ or (text):
 Note: When using ``additions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
 course, this can be changed by specifying the key with the desired value in the job.
 
-`New in version 3.0.`
+.. versionadded:: 3.0
 
-`Changed in version 3.5:` Additions consisting of only empty lines are not reported.
-
+.. versionchanged:: 3.5
+   Additions consisting of only empty lines are not reported.
 
 .. _deletions_only:
 
@@ -148,10 +148,10 @@ or (text):
 Note: When using ``deletions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
 course, this can be changed by specifying the key with the desired value in the job.
 
-`New in version 3.0.`
+.. versionadded:: 3.0
 
-
-`Changed in version 3.5:` Deletions consisting of only empty lines are not reported.
+.. versionchanged:: 3.5
+   Deletions consisting of only empty lines are not reported.
 
 
 .. _contextlines:
@@ -217,4 +217,4 @@ Output:
     This is line 17
     This is line 18
 
-`New in version 3.0.`
+.. versionadded:: 3.0

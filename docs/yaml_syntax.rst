@@ -213,13 +213,13 @@ value::
 URLs are always safe and don't need to be enclosed in quotes.
 
 
-According to the YAML specification, only ASCII characters can be used, but `urlwatch` supports Unicode. In case you
-care, under the standard special characters may be represented with a ``\u``-style escape sequence within
+According to the YAML specification, only ASCII characters can be used, but :program:`webchanges` supports Unicode. In
+case you care, under the standard special characters may be represented with a ``\u``-style escape sequence within
 double-quotes::
 
    name: "\u00A9 Megaco"  # The copyright sign ©
 
-The below works fine in `urlwatch`:
+The below works fine in :program:`webchanges`:
 
    name: "© Megaco"
 
@@ -231,6 +231,7 @@ The below works fine in `urlwatch`:
    `Wikipedia YAML syntax reference <https://en.wikipedia.org/wiki/YAML>`__
        A good guide to YAML syntax
    `YAML 1.1 Specification <https://yaml.org/spec/1.1/>`__
-       The Specification for YAML 1.1, which PyYAML (used in ``webchanges`` implements)
+       The Specification for YAML 1.1, which Python package `PyYAML <https://pypi.org/project/PyYAML/>`__ (used in
+       `:program:`webchanges``) implements
    `YAML flow scalars <https://www.yaml.info/learn/quote.html#flow>`__
        A guide on when to use quotes in YAML (refer to YAML 1.1)

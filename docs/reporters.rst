@@ -3,25 +3,24 @@
 =========
 Reporters
 =========
-By default `webchanges` prints out information about changes to the data collected to standard output (``stdout``),
-which is your terminal if you run it interactively (If running via `cron` or another scheduler service, the
-destination of this output depends on the scheduler and its configuration).
+By default :program:`webchanges` prints out information about changes to the data collected to standard output
+(``stdout``), which is your terminal if you run it interactively (If running via `cron` or another scheduler service,
+the destination of this output depends on the scheduler and its configuration).
 
 You can change the settings to change or add to where the report is sent to.  Settings are contained in the
 configuration file ``config.yaml``, a text file located in the ``~/.config/webchanges`` directory for Linux or MacOS,
-or in the ``webchanges`` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
+or in the `:program:`webchanges`` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
 Windows, and is editable using any text editor or with the command ``webchanges --edit--config``.  The configuration
 for the reporters will be listed under the ``reporters`` section.
 
 .. note::
    The ``config.yaml`` file is created at the first run of ``webchanges --edit`` or ``webchanges --edit--config``.
 
-Tip: to test a reporter, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.::
+.. tip:: To test a reporter, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.
+   ``webchanges --test-reporter stdout``
 
-   webchanges --test-reporter stdout
-
-`webchanges` will generate test  ``new``, ``changed``, ``unchanged`` and ``error`` notifications and send (the ones
-configured to be sent under ``display``) via the ``stdout`` reporter (if it is enabled). Any reporter that is
+:program:`webchanges` will generate test  ``new``, ``changed``, ``unchanged`` and ``error`` notifications and send (the
+ones configured to be sent under ``display``) via the ``stdout`` reporter (if it is enabled). Any reporter that is
 configured and enabled can be tested. To test if your email reporter is configured correctly, you use::
 
    webchanges --test-reporter email
@@ -86,8 +85,9 @@ SMTP
 Login with plaintext password
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 You can save a password in the ``insecure_password`` directive in the SMTP to enable unattended scheduled runs of
-`webchanges`. As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet
-for a throwaway account that is only used for sending these reports this might be a low-risk way to run unattended.
+:program:`webchanges`. As the name says, storing the password as plaintext in the configuration is insecure and bad
+practice, yet for a throwaway account that is only used for sending these reports this might be a low-risk way to run
+unattended.
 
 **Never ever use this method with your your primary email account!**  Seriously! Create a throw-away free email
 account just for sending out these emails; see below for an example on how to do so with :ref:`Gmail <gmail>`.
@@ -121,8 +121,8 @@ Login with keyring
 ^^^^^^^^^^^^^^^^^^^
 A secure way to store your password is to use a keyring by running ``webchanges --smtp-login`` after configuring your
 ``host`` and ``user``; this requires installing the optional ``safe_password`` dependencies (see optional packages
-below). Be aware that the use of keyring won't allow you to run `webchanges` unattended (e.g. from a scheduler). If
-you're using a keychain, the ``insecure_password`` key is ignored and can be left blank.
+below). Be aware that the use of keyring won't allow you to run :program:`webchanges` unattended (e.g. from a
+scheduler). If you're using a keychain, the ``insecure_password`` key is ignored and can be left blank.
 
 
 SMTP sub-directives
@@ -139,8 +139,8 @@ SMTP sub-directives
 Gmail example
 ^^^^^^^^^^^^^
 WARNING: You **do not want to do this with your primary Google account**, but rather get a free separate one just for
-sending mails from `webchanges` and similar programs. Allowing less secure apps and storing the password (even if it's
-in the keychain) is not good security practice for your primary account. You have been warned!
+sending mails from :program:`webchanges` and similar programs. Allowing less secure apps and storing the password (even
+if it's in the keychain) is not good security practice for your primary account. You have been warned!
 
 First configure your Gmail account to allow for "less secure" (password-based) apps to login:
 
@@ -172,8 +172,8 @@ Amazon Simple Email Service (SES) example
 First ensure that you have configured SES as per the `Quick start
 <https://docs.aws.amazon.com/ses/latest/DeveloperGuide/quick-start.html>`__
 
-Create a user just for `webchanges` for security reasons (so you can easily recover from a compromised user/password
-leak from, e.g. from a scan of your jobs file), then configure these directives as follows:
+Create a user just for :program:`webchanges` for security reasons (so you can easily recover from a compromised
+user/password leak from, e.g. from a scan of your jobs file), then configure these directives as follows:
 
 .. code-block:: yaml
 
@@ -425,7 +425,8 @@ Optional sub-directives
 * ``silent``: Receive a notification with no sound (true/false) (default: false)
 
 
-`Changed in version 3.7:` Added `silent` sub-directive and switched from the `text` to the `markdown` report type.
+.. versionchanged:: 3.7
+   Added `silent` sub-directive and switched from the `text` to the `markdown` report type.
 
 .. _webhook:
 
@@ -450,7 +451,8 @@ then click **Authorize** (see `here
 <https://slack.com/intl/en-sg/help/articles/115005265063-Incoming-webhooks-for-Slack>`__). Copy the webhook URL and
 paste it into the configuration as seen above.
 
-`Changed in version 3.0.1:` Renamed from ``slack`` to ``webhook``
+.. versionchanged:: 3.0.1
+   Renamed from ``slack`` to ``webhook``
 
 Discord
 ~~~~~~~
@@ -482,7 +484,8 @@ Sub-directives
 * ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
   with \https://discordapp.com, then 2,000). `New in version 3.0.`
 
-`Changed in version 3.0.1:` Added ``webhook_markdown`` variant
+.. versionchanged:: 3.0.1
+   Added ``webhook_markdown`` variant
 
 
 
@@ -492,7 +495,7 @@ XMPP
 ----
 You can have notifications sent to you through the `XMPP protocol`.
 
-To achieve this, you should register a new XMPP account that is just used for `webchanges`.
+To achieve this, you should register a new XMPP account that is just used for :program:`webchanges`.
 
 Here is a sample configuration:
 
@@ -505,8 +508,8 @@ Here is a sample configuration:
 
 You can store your password securely on a keychain if you have one installed by running ``webchanges --xmpp-login``;
 this also requires having the optional ``safe_password`` dependencies installed (see below).  However, be aware that
-the use of safe password and ``keyring`` won't allow you to run `webchanges` unattended (e.g. from a scheduler), so
-you can save the password in the ``insecure_password`` directive in the XMPP config instead:
+the use of safe password and ``keyring`` won't allow you to run :program:`webchanges` unattended (e.g. from a
+scheduler), so you can save the password in the ``insecure_password`` directive in the XMPP config instead:
 
 .. code-block:: yaml
 

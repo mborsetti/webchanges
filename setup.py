@@ -26,6 +26,7 @@ SETUP = {
     'description': project.__description__,
     'long_description': README_rst,
     'long_description_content_type': 'text/x-rst',
+    'keywords': 'webmonitoring monitoring',
     'author': re.match(r'(.*) <(.*)>', project.__author__).groups()[0],
     'author_email': re.match(r'(.*) <(.*)>', project.__author__).groups()[1],
     'url': project.__url__,
@@ -73,7 +74,7 @@ SETUP = {
                        'xmpp': ['aioxmpp'],
                        },
     'python_requires': f'>={".".join(str(v) for v in project.__min_python_version__)}',
-    'project_urls': {'Bug Tracker': f'{project.__url__.rstrip("//")}/issues',
+    'project_urls': {'Issues': f'{project.__url__.rstrip("//")}/issues',
                      'CI': f'{project.__url__.rstrip("//")}/actions',
                      'Documentation': project.__docs_url__,
                      'Source Code': project.__url__}

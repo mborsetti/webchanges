@@ -1,10 +1,10 @@
-.. The documentation is made with Sphynx, the Python document generator.
-   https://www.sphinx-doc.org/en/master/
-   To see your changes before contributing, run `make html` (`make.bat html` in Windows)
-   and check the html generated.
+.. The documentation is made with Sphynx, the Python document generator.  https://www.sphinx-doc.org/en/master/
+   To see your changes before contributing, run `make html` (`make.bat html` in Windows) and check the html generated.
    Tutorial at https://sphinx-tutorial.readthedocs.io/start/
 
-.. to rebuild the API autodoc files run $ sphinx-apidoc -o docs\_api -f -T -e webchanges -n
+.. Excellent cheat sheet at https://sphinx-tutorial.readthedocs.io/cheatsheet/
+
+.. To rebuild the API autodoc files run $ sphinx-apidoc -o docs\_api -f -T -e webchanges -n
 
 
 .. toctree::

@@ -9,8 +9,8 @@ Dependencies
 Optional packages
 -----------------
 The use of certain features require additional Python packages to work. These optional packages are installed with
-`pip` by appending to the name `webchanges` the name of the feature (from the table below) inside square brackets,
-like this::
+`pip` by appending to the name :program:`webchanges` the name of the feature (from the table below) inside square
+brackets, like this::
 
     pip install --upgrade webchanges[use_browser]
     pip install --upgrade webchanges[use_browser,redis]

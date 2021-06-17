@@ -75,21 +75,21 @@ Add job number(s) in the command line to run a subset of them; for example, run 
 and #3 from your job list. Find the numbering of your jobs running``webchanges --list``. API is experimental and may
 change in the near future.
 
-`New in version 3.6.`
+.. versionadded:: 3.6
 
 
 Show errors and no-data jobs
 ----------------------------
 You can run all jobs and see those that result in an error or who, after filtering, return no data, by running
-`webchanges` with the ``--error`` argument. This can help with detecting jobs that may no longer be monitoring resources
-as expected. No snapshots are saved from this run.
+:program:`webchanges` with the ``--error`` argument. This can help with detecting jobs that may no longer be monitoring
+resources as expected. No snapshots are saved from this run.
 
 .. _test:
 
 Test run a job
 --------------
 You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
-its URL/command; `webchanges` will display the filtered output. This allows to easily test changes in filters.
+its URL/command; :program:`webchanges` will display the filtered output. This allows to easily test changes in filters.
 
 
 .. _test-diff:
@@ -101,33 +101,36 @@ display diffs and apply the :ref:`diff filters <diff_filters>` currently defined
 saved; obviously a minimum of 2 saved snapshots are required. This allows you to test the effect of a diff filter and/or
 retrieve historical diffs (changes).
 
-`Changed in version 3.3: will now display all snapshots instead of only the latest 10`
+.. versionchanged:: 3.3
+   Will now display all snapshots instead of only the latest 10`
 
 
 .. _delete-snapshot:
 
 Delete the latest saved snapshot
 --------------------------------
-You can delete the latest saved snapshot of a job by running `webchanges` with the ``--delete-snapshot`` argument
-followed by the job index number (from ``--list``) or its URL/command. This is extremely useful when a website
+You can delete the latest saved snapshot of a job by running :program:`webchanges` with the ``--delete-snapshot``
+argument followed by the job index number (from ``--list``) or its URL/command. This is extremely useful when a website
 is redesigned and your filters behave in unexpected ways (for example, by capturing nothing):
 
 * Update your filters to once again capture the content you're monitoring
-* Test it running `webchanges` with the ``test`` command line argument (see :ref:`here <test>`)
+* Test it running :program:`webchanges` with the ``test`` command line argument (see :ref:`here <test>`)
 * Delete the latest job's snapshot
-* Run `webchanges` again; this time the diff report will contain useful information on whether any content has changed
+* Run :program:`webchanges` again; this time the diff report will contain useful information on whether any content has
+  changed
 
-`New in version 3.5.`
+.. versionadded:: 3.5
 
 
 .. _rollback-cache:
 
 Rollback the database
 ---------------------
-You can rollback the snapshots database to an earlier time by running `webchanges` with the ``--rollback-cache``
-argument followed by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating the point in time you
-want to go back to. Useful when you missed notifications or they got lost: rollback the database to the time of the last
-good report, then run `webchanges` again to get a new report with the differences since that time.
+You can rollback the snapshots database to an earlier time by running :program:`webchanges` with the
+``--rollback-cache`` argument followed by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating
+the point in time you want to go back to. Useful when you missed notifications or they got lost: rollback the database
+to the time of the last good report, then run :program:`webchanges` again to get a new report with the differences
+since that time.
 
 You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
 <https://www.unixtimestamp.com/>`__
@@ -138,7 +141,7 @@ up the database before doing a rollback in case of a mistake (or fat-finger).
 This feature does not work with database engines ``redis``, ``textfiles`` or ``minidb``.
 
 
-`New in version 3.2.`
+.. versionadded:: 3.2
 
 
 .. _database-engine:
@@ -173,30 +176,32 @@ To have the latest snapshot of each job saved as a separate text file instead of
 
 minidb (legacy)
 ~~~~~~~~~~~~~~~
-To use the minidb-based database structure used in prior versions and in `urlwatch` 2, launch `webchanges` with the
-command line argument ``--cache-engine minidb``. The ``minidib`` Python package must be installed for this to work.
+To use the minidb-based database structure used in prior versions and in :program:`urlwatch` 2, launch
+:program:`webchanges` with the command line argument ``--cache-engine minidb``. The ``minidib`` Python package must
+be installed for this to work.
 
 
-`New in version 3.2.`
+.. versionadded:: 3.2
 
 
 .. _max-snapshots:
 
 Maximum number of snapshots to save
 -----------------------------------
-Each time you run `webchanges` it captures the data downloaded from the URL (or the output of the command specified),
-applies filters, and saves the resulting snapshot to a database for future comparison.  By default¹ only the last 4
-snapshots are kept, but this number can be changed with the ``--max-snapshots`` command line argument.  If set to
-0, all snapshots are retained (the database will grow unbounded).
+Each time you run :program:`webchanges` it captures the data downloaded from the URL (or the output of the command
+specified), applies filters, and saves the resulting snapshot to a database for future comparison.  By default¹ only
+the last 4 snapshots are kept, but this number can be changed with the ``--max-snapshots`` command line argument.  If
+set to 0, all snapshots are retained (the database will grow unbounded).
 
-Tip: changes (diffs) between old snapshots can be redisplayed with the ``--test-diff`` command line argument (see
-:ref:`here <test-diff>`).
+.. tip:: Changes (diffs) between old snapshots can be redisplayed with the ``--test-diff`` command line argument (see
+   :ref:`here <test-diff>`).
 
 ¹ Note that when using ``redis`` or ``minidb`` database engines or when running Python 3.6 all snapshots will be kept,
 while when using the ``textfiles`` database engine only the last snapshot is kept.
 
 
-`New in version 3.3` for Python 3.7 or higher and default ``sqlite3`` database engine only.`
+.. versionadded:: 3.3
+   for Python 3.7 or higher and default ``sqlite3`` database engine only.`
 
 
 .. todo::
