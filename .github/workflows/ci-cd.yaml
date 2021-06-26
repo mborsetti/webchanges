@@ -142,11 +142,11 @@ jobs:
           PYTHONUTF8: 1
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@master
+        uses: codecov/codecov-action@v1
         with:
           flags: ${{ matrix.python-version }},${{ matrix.os }}
           name: ${{ env.commitmsg }}
-          fail_ci_if_error: true
+          fail_ci_if_error: false
 #          verbose: true # optional (default = false)
 
 #      # below not working as pytest-cov does not create the ./coverage/lcov.info file!

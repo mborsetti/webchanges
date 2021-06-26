@@ -74,7 +74,7 @@ This checks the sources in your jobs and will report on (e.g. display) any chang
 **webchanges** does not include a scheduler. We recommend using a system scheduler to automatically run **webchanges**
 periodically:
 
-- On Linux or MacOS, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for
+- On Linux or macOS, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for
   you (if you have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__).
 - On Windows, you can use the built-in `Windows Task Scheduler
   <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.
