@@ -297,7 +297,10 @@ def test_gc_cache(capsys):
     setattr(command_config, 'gc_cache', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == 'Deleting: 695925f99befa832d8aeae8c0f1836a59942866d (no longer being tracked)\n'
+    if os.name == 'nt':
+        assert message == 'Deleting: 695925f99befa832d8aeae8c0f1836a59942866d (no longer being tracked)\n'
+    else:
+        assert message == 'Deleting: 2f540ba442cd4a368fd3eb918dbe6d621ccae30b (no longer being tracked)\n'
 
 
 def test_clean_cache(capsys):
