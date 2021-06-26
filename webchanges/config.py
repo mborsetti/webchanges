@@ -1,6 +1,7 @@
 """Command-line configuration."""
 
 import argparse
+import os
 from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Union
@@ -192,8 +193,7 @@ class CommandConfig(BaseConfig):
         )
 
         # workaround for avoiding triggering error when invoked by pytest
-        print(f'parser.prog={parser.prog}')
-        if parser.prog != '_jb_pytest_runner.py':
+        if parser.prog != '_jb_pytest_runner.py' and not os.getenv('CI'):
             args = parser.parse_args()
 
             for arg in vars(args):
