@@ -56,6 +56,7 @@ def test_keep_latest():
         cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
+        time.sleep(0.0001)
         urlwatcher.run_jobs()
         cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
@@ -89,6 +90,7 @@ def test_clean():
         cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
+        time.sleep(0.0001)
         urlwatcher.run_jobs()
         cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
@@ -121,6 +123,7 @@ def test_clean_cache():
         cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
+        time.sleep(0.0001)
         urlwatcher.run_jobs()
         cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
@@ -149,6 +152,7 @@ def test_clean_all_and_delete():
         cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
+        time.sleep(0.0001)
         urlwatcher.run_jobs()
         cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
@@ -183,7 +187,7 @@ def test_rollback_cache():
         run_time = time.time()
 
         # run twice
-        time.sleep(.0001)
+        time.sleep(0.0001)
         urlwatcher.run_jobs()
         cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
@@ -245,8 +249,9 @@ def test_migrate_urlwatch_legacy_db():
             cache_storage.close()
             temp_cache_file.unlink()
             # Pyton 3.9: minidb_temp_cache_file = temp_cache_file.with_stem(temp_cache_file.stem + '_minidb')
-            minidb_temp_cache_file = temp_cache_file.parent.joinpath(temp_cache_file.stem + '_minidb'
-                                                                     + ''.join(temp_cache_file.suffixes))
+            minidb_temp_cache_file = temp_cache_file.parent.joinpath(
+                temp_cache_file.stem + '_minidb' + ''.join(temp_cache_file.suffixes)
+            )
             minidb_temp_cache_file.unlink()
     else:
         with pytest.raises(ImportError) as pytest_wrapped_e:
@@ -286,6 +291,7 @@ def test_clean_and_history_data_minidb():
         urlwatcher.run_jobs()
 
         # run twice
+        time.sleep(0.0001)
         urlwatcher.run_jobs()
         guid = urlwatcher.jobs[0].get_guid()
         history = cache_storage.get_history_data(guid)

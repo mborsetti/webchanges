@@ -51,7 +51,7 @@ def test_save_load_jobs():
     name = Path(name)
     YamlJobsStorage(name).save(jobs)
     jobs2 = YamlJobsStorage(name).load()
-    os.chmod(name, 0o777)
+    os.chmod(name, 0o777)  # nosec: B103 Chmod setting a permissive mask 0o777 on file (name).
     jobs3 = YamlJobsStorage(name).load_secure()
     os.close(fd)
     os.remove(name)
@@ -87,7 +87,8 @@ def test_duplicates_in_jobs_yaml():
             YamlJobsStorage(jobs_file).load_secure()
         assert str(pytest_wrapped_e.value) == (
             'Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):'
-            '\n   https://dupe_1\n   https://dupe_2')
+            '\n   https://dupe_1\n   https://dupe_2'
+        )
     else:
         warnings.warn(f'{jobs_file} not found', UserWarning)
 

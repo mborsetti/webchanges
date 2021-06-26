@@ -128,7 +128,7 @@ jobs:
       - name: Run tests (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run:
-          python -m pytest -v
+          python -m pytest -v --cov=./ --cov-report term --cov-report html --cov-report xml --cov-config=.coveragerc
         env:
           PYTHONUTF8: 1
 
@@ -136,7 +136,8 @@ jobs:
         if: runner.os == 'Windows'
         run:
           # workaround for Windows fatal exception: access violation
-          python -m pytest -v -p no:faulthandler
+          python -m pytest -v -p no:faulthandler \
+          --cov=./ --cov-report term --cov-report html --cov-report xml --cov-config=.coveragerc
         env:
           PYTHONUTF8: 1
 

@@ -1,6 +1,7 @@
 """Test commands."""
 
 import os
+import time
 from pathlib import Path, PurePath
 
 import pytest
@@ -23,9 +24,9 @@ hooks_file = config_dir.joinpath('hooks_test.py')
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = YamlJobsStorage(jobs_file)
-command_config = CommandConfig(__project_name__, os.path.dirname(__file__), config_file, jobs_file, hooks_file,
-                               cache_file,
-                               True)
+command_config = CommandConfig(
+    __project_name__, os.path.dirname(__file__), config_file, jobs_file, hooks_file, cache_file, True
+)
 urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
 
 editor = os.getenv('EDITOR')
@@ -41,6 +42,7 @@ if visual:
 @pytest.fixture(scope='module', autouse=True)
 def cleanup(request):
     """Cleanup once we are finished."""
+
     def finalizer():
         """Cleanup once we are finished."""
         if editor:
@@ -64,7 +66,7 @@ def cleanup(request):
 
 
 def test_migration():
-    """test check for existence of legacy urlwatch 2.2 files in urlwatch dirdir """
+    """test check for existence of legacy urlwatch 2.2 files in urlwatch dir"""
     assert migrate_from_urlwatch(config_file, jobs_file, hooks_file, Path(cache_file)) is None
 
 
@@ -88,9 +90,9 @@ def test_edit_hooks_fail(capsys):
         urlwatch_command.handle_actions()
     setattr(command_config, 'edit_hooks', False)
     os.environ['EDITOR'] = editor
-    hooks_edit = (urlwatch_command.urlwatch_config.hooks.parent.joinpath(
-                  urlwatch_command.urlwatch_config.hooks.stem + '_edit'
-                  + ''.join(urlwatch_command.urlwatch_config.hooks.suffixes)))
+    hooks_edit = urlwatch_command.urlwatch_config.hooks.parent.joinpath(
+        urlwatch_command.urlwatch_config.hooks.stem + '_edit' + ''.join(urlwatch_command.urlwatch_config.hooks.suffixes)
+    )
     hooks_edit.unlink()
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
@@ -119,7 +121,7 @@ def test_list_jobs_verbose(capsys):
         urlwatch_command.handle_actions()
     setattr(command_config, 'list', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message == '  1: Sample webchanges job; used by command_test.py (echo test)\n'
 
@@ -133,7 +135,7 @@ def test_list_jobs_not_verbose(capsys):
         urlwatch_command.handle_actions()
     setattr(command_config, 'list', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message == '  1: Sample webchanges job; used by command_test.py (echo test)\n'
 
@@ -168,15 +170,17 @@ def test_test_job(capsys):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'test_job', None)
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     message = message.replace('\n\n ', '\n').replace('\r', '')  # Python 3.6
-    assert message == ('\n'
-                       'Sample webchanges job; used by command_test.py\n'
-                       '----------------------------------------------\n'
-                       '\n'
-                       'test\n'
-                       '\n')
+    assert message == (
+        '\n'
+        'Sample webchanges job; used by command_test.py\n'
+        '----------------------------------------------\n'
+        '\n'
+        'test\n'
+        '\n'
+    )
 
 
 def test_test_diff(capsys):
@@ -201,6 +205,7 @@ def test_test_diff(capsys):
     cache_storage._copy_temp_to_permanent(delete=True)
 
     # run twice
+    time.sleep(0.0001)
     urlwatcher.run_jobs()
     cache_storage._copy_temp_to_permanent(delete=True)
     guid = urlwatcher.jobs[0].get_guid()
@@ -224,7 +229,7 @@ def test_list_error_jobs(capsys):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'errors', False)
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert 'Jobs, if any, with errors or returning no data after filtering in ' in message
 
@@ -235,18 +240,16 @@ def test_modify_urls(capsys):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'add', None)
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert ("Adding <url url='https://www.example.com/#test_modify_urls' index_number=0\nSaving updated list to"
-            in message)
+    assert "Adding <url url='https://www.example.com/#test_modify_urls'" in message
     setattr(command_config, 'delete', 'https://www.example.com/#test_modify_urls')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete', None)
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert ("Removed <url url='https://www.example.com/#test_modify_urls' index_number=0\nSaving updated list to"
-            in message)
+    assert "Removed <url url='https://www.example.com/#test_modify_urls'" in message
 
 
 def test_delete_snapshot():
@@ -272,6 +275,7 @@ def test_delete_snapshot():
     assert len(history) == 1
 
     # run twice
+    time.sleep(0.0001)
     urlwatcher.run_jobs()
     cache_storage._copy_temp_to_permanent(delete=True)
     history = cache_storage.get_history_data(guid)
@@ -326,7 +330,7 @@ def test_check_edit_config():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.check_edit_config()
     setattr(command_config, 'edit_config', False)
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
 
 
 def test_check_edit_config_fail(capsys):

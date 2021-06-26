@@ -45,6 +45,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
 # https://stackoverflow.com/a/48719723/1047040
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file"""
+
     def __init__(self, doc):
         super().__init__(doc)
         self.jobs = []
@@ -109,8 +110,11 @@ def test_url(job):
 
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
             # skip if package is not installed
-            if (filter_kind == 'beautify' or (filter_kind == 'html2text' and subfilter.get('method') == 'bs4')
-                    and not beautifulsoup_is_installed):
+            if (
+                filter_kind == 'beautify'
+                or (filter_kind == 'html2text' and subfilter.get('method') == 'bs4')
+                and not beautifulsoup_is_installed
+            ):
                 logger.warning(f"Skipping {job.url} since 'beautifulsoup' package is not installed")
                 return
             if filter_kind == 'ical2text' and not vobject_is_installed:

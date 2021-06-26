@@ -2,4 +2,5 @@ kind: shell
 command: echo test
 index_number: 1
 name: Sample webchanges job; used by command_test.py
+diff_filter: []
 filter: []

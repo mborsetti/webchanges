@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 class UrlwatchCommand:
-
     def __init__(self, urlwatcher: Urlwatch) -> None:
         self.urlwatcher = urlwatcher
         self.urlwatch_config = urlwatcher.urlwatch_config
@@ -32,8 +31,9 @@ class UrlwatchCommand:
     def edit_hooks(self) -> Optional[int]:
         # Python 3.9: hooks_edit = Path(self.urlwatch_config.hooks).with_stem(Path(self.urlwatch_config.hooks).stem +
         # '_edit')
-        hooks_edit = self.urlwatch_config.hooks.parent.joinpath(self.urlwatch_config.hooks.stem + '_edit' + ''.join(
-            self.urlwatch_config.hooks.suffixes))
+        hooks_edit = self.urlwatch_config.hooks.parent.joinpath(
+            self.urlwatch_config.hooks.stem + '_edit' + ''.join(self.urlwatch_config.hooks.suffixes)
+        )
         try:
             if Path(self.urlwatch_config.hooks).exists():
                 shutil.copy(self.urlwatch_config.hooks, hooks_edit)
@@ -55,6 +55,8 @@ class UrlwatchCommand:
             print(f'The file {self.urlwatch_config.hooks} was NOT updated.')
             print(f'Your changes have been saved in {hooks_edit}')
             return 1
+
+        return None
 
     @staticmethod
     def show_features() -> None:
@@ -125,8 +127,7 @@ class UrlwatchCommand:
     def test_diff(self, job_id: str) -> Optional[int]:
         job = self._get_job(job_id)
 
-        history_data = self.urlwatcher.cache_storage.get_history_data(job.get_guid())
-        history_data = list(history_data.items())
+        history_data = list(self.urlwatcher.cache_storage.get_history_data(job.get_guid()).items())
 
         num_snapshots = len(history_data)
         if num_snapshots < 2:
@@ -143,20 +144,20 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
+        return None
+
     def list_error_jobs(self) -> None:
         start = timeit.default_timer()
         print(f'Jobs, if any, with errors or returning no data after filtering in "{self.urlwatch_config.jobs}":\n')
-        jobs = [job.with_defaults(self.urlwatcher.config_storage.config)
-                for job in self.urlwatcher.jobs]
+        jobs = [job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs]
         for job in jobs:
             # Force re-retrieval of job, as we're testing for errors
             job.ignore_cached = True
         with contextlib.ExitStack() as exit_stack:
-            for job_state in (run_parallel(
+            for job_state in run_parallel(
                 lambda jobstate: jobstate.process(),
-                (exit_stack.enter_context(JobState(self.urlwatcher.cache_storage, job))  # type: ignore
-                 for job in jobs)
-            )):
+                (exit_stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
+            ):
                 if job_state.exception is not None:
                     print(f'{job_state.job.index_number:3}: Error: {job_state.exception.args[0]}')
                 elif len(job_state.new_data.strip()) == 0:
@@ -171,9 +172,9 @@ class UrlwatchCommand:
                             print(f'{job_state.job.index_number:3}: No data: {pretty_name}')
 
         end = timeit.default_timer()
-        duration = (end - start)
-        duration = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
-        print(f"--\nChecked {len(jobs)} job{'s' if len(jobs) else ''} in {duration} seconds")
+        duration = end - start
+        dur_str = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
+        print(f"--\nChecked {len(jobs)} job{'s' if len(jobs) else ''} in {dur_str} seconds")
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
@@ -202,8 +203,8 @@ class UrlwatchCommand:
             # Allow multiple specifications of filter=, so that multiple filters can be specified on the CLI
             items = [item.split('=', 1) for item in self.urlwatch_config.add.split(',')]
             filters = [v for k, v in items if k == 'filter']
-            items = [(k, v) for k, v in items if k != 'filter']
-            d = {k: v for k, v in items}
+            items2 = [(k, v) for k, v in items if k != 'filter']
+            d = {k: v for k, v in items2}
             if filters:
                 d['filter'] = ','.join(filters)
 
@@ -231,12 +232,12 @@ class UrlwatchCommand:
         info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe').json()
 
         chats = {}
-        for chat_info in (requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates')
-                          .json()['result']):
+        for chat_info in requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates').json()['result']:
             chat = chat_info['message']['chat']
             if chat['type'] == 'private':
-                chats[str(chat['id'])] = (' '.join((chat['first_name'], chat['last_name']))
-                                          if 'last_name' in chat else chat['first_name'])
+                chats[str(chat['id'])] = (
+                    ' '.join((chat['first_name'], chat['last_name'])) if 'last_name' in chat else chat['first_name']
+                )
 
         if not chats:
             print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}")
@@ -272,11 +273,9 @@ class UrlwatchCommand:
         def build_job(job_name: str, url: str, old: str, new: str) -> JobState:
             job = JobBase.unserialize({'name': job_name, 'url': url})
 
-            # Can pass in None as cache_storage, as we are not
-            # going to load or save the job state for testing;
-            # also no need to use it as context manager, since
-            # no processing is called on the job
-            job_state = JobState(None, job)
+            # Can pass in None for cache_storage, as we are not going to load or save the job state for
+            # testing; also no need to use it as context manager, since no processing is called on the job
+            job_state = JobState(None, job)  # type: ignore[arg-type]
 
             job_state.old_data = old
             job_state.new_data = new
@@ -293,18 +292,17 @@ class UrlwatchCommand:
             return job_state
 
         report.new(build_job('Newly Added', 'http://example.com/new', '', ''))
-        report.changed(build_job('Something Changed', 'http://example.com/changed', """
-        Unchanged Line
-        Previous Content
-        Another Unchanged Line
-        """, """
-        Unchanged Line
-        Updated Content
-        Another Unchanged Line
-        """))
-        report.unchanged(build_job('Same As Before', 'http://example.com/unchanged',
-                                   'Same Old, Same Old\n',
-                                   'Same Old, Same Old\n'))
+        report.changed(
+            build_job(
+                'Something Changed',
+                'http://example.com/changed',
+                'Unchanged Line\nPrevious Content\nAnother Unchanged Line\n',
+                'Unchanged Line\nUpdated Content\nAnother Unchanged Line\n',
+            )
+        )
+        report.unchanged(
+            build_job('Same As Before', 'http://example.com/unchanged', 'Same Old, Same Old\n', 'Same Old, Same Old\n')
+        )
         report.error(set_error(build_job('Error Reporting', 'http://example.com/error', '', ''), 'Oh Noes!'))
 
         report.finish_one(name)
@@ -411,7 +409,8 @@ class UrlwatchCommand:
             self.urlwatcher.cache_storage.close()
             sys.exit(0)
         if self.urlwatch_config.delete_snapshot:
-            sys.exit(self.delete_snapshot(self.urlwatch_config.delete_snapshot))
+            self.delete_snapshot(self.urlwatch_config.delete_snapshot)
+            sys.exit(0)
         if self.urlwatch_config.rollback_cache:
             self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
             self.urlwatcher.cache_storage.close()
@@ -421,15 +420,19 @@ class UrlwatchCommand:
         if self.urlwatch_config.edit_hooks:
             sys.exit(self.edit_hooks())
         if self.urlwatch_config.test_job:
-            sys.exit(self.test_job(self.urlwatch_config.test_job))
+            self.test_job(self.urlwatch_config.test_job)
+            sys.exit(0)
         if self.urlwatch_config.test_diff:
             sys.exit(self.test_diff(self.urlwatch_config.test_diff))
         if self.urlwatch_config.errors:
-            sys.exit(self.list_error_jobs())
+            self.list_error_jobs()
+            sys.exit(0)
         if self.urlwatch_config.list:
-            sys.exit(self.list_jobs())
+            self.list_jobs()
+            sys.exit(0)
         if self.urlwatch_config.add or self.urlwatch_config.delete:
-            sys.exit(self.modify_urls())
+            self.modify_urls()
+            sys.exit(0)
 
     def run(self) -> None:  # pragma: no cover
         if self.urlwatch_config.edit_config:

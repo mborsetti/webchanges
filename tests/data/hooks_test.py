@@ -26,10 +26,7 @@ class CaseFilter(FilterBase):
 
     __kind__ = 'case'
 
-    __supported_subfilters__ = {
-        'upper': 'Upper case (default)',
-        'lower': 'Lower case'
-    }
+    __supported_subfilters__ = {'upper': 'Upper case (default)', 'lower': 'Lower case'}
 
     __default_subfilter__ = 'upper'
 
@@ -48,9 +45,7 @@ class IndentFilter(FilterBase):
 
     __kind__ = 'indent'
 
-    __supported_subfilters__ = {
-        'indent': 'Number of spaces to indent (default 8)'
-    }
+    __supported_subfilters__ = {'indent': 'Number of spaces to indent (default 8)'}
 
     __default_subfilter__ = 'indent'
 

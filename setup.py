@@ -10,9 +10,11 @@ from setuptools import setup
 import webchanges as project
 
 if sys.version_info < project.__min_python_version__:
-    sys.exit(f'{project.__project_name__} requires Python version '
-             f'{".".join(str(v) for v in project.__min_python_version__)} or newer.\n'
-             f'You are running {sys.version}')
+    sys.exit(
+        f'{project.__project_name__} requires Python version '
+        f'{".".join(str(v) for v in project.__min_python_version__)} or newer.\n'
+        f'You are running {sys.version}'
+    )
 
 with open('requirements.txt') as f:
     requirements = map(str.strip, f.readlines())
@@ -52,32 +54,35 @@ SETUP = {
         'Natural Language :: English',
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: System Administrators',
-        'Intended Audience :: Developers'
+        'Intended Audience :: Developers',
     ],
     'license': project.__license__,
     # below to include in sdist the files read above (see https://stackoverflow.com/questions/37753833)
     # data_files is deprecated. It does not work with wheels, so it should be avoided.
     'install_requires': list(requirements),
     'entry_points': {'console_scripts': [f'{project.__project_name__}={project.__package__}.cli:main']},
-    'extras_require': {'use_browser': ['pyppeteer'],
-                       'beautify': ['beautifulsoup4', 'jsbeautifier', 'cssbeautifier'],
-                       'bs4': ['beautifulsoup4'],
-                       'jq': ['jq;os_name!="nt"'],
-                       'ical2text': ['vobject'],
-                       'matrix': ['matrix_client'],
-                       'ocr': ['pytesseract', 'Pillow'],
-                       'pdf2text': ['pdftotext'],
-                       'pushbullet': ['pushbullet.py'],
-                       'pushover': ['chump'],
-                       'redis': ['redis'],
-                       'safe_password': ['keyring'],
-                       'xmpp': ['aioxmpp'],
-                       },
+    'extras_require': {
+        'use_browser': ['pyppeteer'],
+        'beautify': ['beautifulsoup4', 'jsbeautifier', 'cssbeautifier'],
+        'bs4': ['beautifulsoup4'],
+        'jq': ['jq;os_name!="nt"'],
+        'ical2text': ['vobject'],
+        'matrix': ['matrix_client'],
+        'ocr': ['pytesseract', 'Pillow'],
+        'pdf2text': ['pdftotext'],
+        'pushbullet': ['pushbullet.py'],
+        'pushover': ['chump'],
+        'redis': ['redis'],
+        'safe_password': ['keyring'],
+        'xmpp': ['aioxmpp'],
+    },
     'python_requires': f'>={".".join(str(v) for v in project.__min_python_version__)}',
-    'project_urls': {'Issues': f'{project.__url__.rstrip("//")}/issues',
-                     'CI': f'{project.__url__.rstrip("//")}/actions',
-                     'Documentation': project.__docs_url__,
-                     'Source Code': project.__url__}
+    'project_urls': {
+        'Issues': f'{project.__url__.rstrip("//")}/issues',
+        'CI': f'{project.__url__.rstrip("//")}/actions',
+        'Documentation': project.__docs_url__,
+        'Source Code': project.__url__,
+    },
 }
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))
 setup(**SETUP)

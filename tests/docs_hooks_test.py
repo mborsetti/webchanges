@@ -38,6 +38,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
 # https://stackoverflow.com/a/48719723/1047040
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file"""
+
     def __init__(self, doc):
         super().__init__(doc)
         self.code = []
@@ -76,7 +77,8 @@ HOOKS = load_hooks_from_doc()
 spec = importlib.util.spec_from_loader('hooks', loader=None)
 hooks = importlib.util.module_from_spec(spec)
 sys.modules['hooks'] = hooks
-exec(HOOKS, hooks.__dict__)  # TODO: ensure that this is the version loaded during testing.
+exec(HOOKS, hooks.__dict__)  # nosec: B102 Use of exec detected.
+# TODO: ensure that this is the version loaded during testing.
 
 
 @pytest.mark.parametrize('job', HOOKS_DOC_JOBS)

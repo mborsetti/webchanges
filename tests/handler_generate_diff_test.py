@@ -17,9 +17,7 @@ def test_generate_diff_normal():
     """Base case"""
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
-    expected = ['@@ -1 +1 @@',
-                '-a',
-                '+b']
+    expected = ['@@ -1 +1 @@', '-a', '+b']
     diff = job_state._generate_diff()
     assert diff.splitlines()[2:] == expected
 
@@ -29,9 +27,7 @@ def test_generate_diff_additions_only():
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     job_state.job.additions_only = True
-    expected = ['/**Comparison type: Additions only**',
-                '@@ -1 +1 @@',
-                '+b']
+    expected = ['/**Comparison type: Additions only**', '@@ -1 +1 @@', '+b']
     diff = job_state._generate_diff()
     assert diff.splitlines()[2:] == expected
 
@@ -53,9 +49,7 @@ def test_generate_diff_deletions_only():
     job_state.new_data = 'b\n'
     job_state.job.additions_only = False
     job_state.job.deletions_only = True
-    expected = ['/**Comparison type: Deletions only**',
-                '@@ -1 +1 @@',
-                '-a']
+    expected = ['/**Comparison type: Deletions only**', '@@ -1 +1 @@', '-a']
     diff = job_state._generate_diff()
     assert diff.splitlines()[2:] == expected
 
@@ -77,12 +71,14 @@ def test_generate_diff_additions_only_75pct_deleted():
     job_state.old_data = 'a\nb\nc\nd\n'
     job_state.new_data = 'd\n'
     job_state.job.additions_only = True
-    expected = ['/**Comparison type: Additions only**',
-                '/**Deletions are being shown as 75% or more of the content has been deleted**',
-                '@@ -1,3 +0,0 @@',
-                '-a',
-                '-b',
-                '-c']
+    expected = [
+        '/**Comparison type: Additions only**',
+        '/**Deletions are being shown as 75% or more of the content has been deleted**',
+        '@@ -1,3 +0,0 @@',
+        '-a',
+        '-b',
+        '-c',
+    ]
     diff = job_state._generate_diff()
     assert diff.splitlines()[2:] == expected
 

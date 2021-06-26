@@ -1,5 +1,5 @@
 """Test running of jobs"""
-import ftplib
+import ftplib  # nosec: B402 A FTP-related module is being imported.
 import logging
 import os
 import socket
@@ -13,8 +13,16 @@ from pyppeteer.chromium_downloader import current_platform
 from webchanges import __project_name__ as project_name
 from webchanges.config import CommandConfig
 from webchanges.handler import JobState
-from webchanges.jobs import BrowserJob, BrowserResponseError, DEFAULT_CHROMIUM_REVISION, JobBase, NotModifiedError, \
-    ShellError, ShellJob, UrlJob
+from webchanges.jobs import (
+    BrowserJob,
+    BrowserResponseError,
+    DEFAULT_CHROMIUM_REVISION,
+    JobBase,
+    NotModifiedError,
+    ShellError,
+    ShellJob,
+    UrlJob,
+)
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
@@ -44,50 +52,67 @@ py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires P
 
 chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
 TEST_JOBS = [
-    ({'url': 'https://www.google.com/#a',
-      'note': 'Google with no name (grab title)',
-      'cookies': {'X-test': ''},
-      'encoding': 'ascii',  # required for testing Python 3.6 in Windows as it has a tendency of erroring on cp1252
-      'headers': {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                                'Chrome/90.0.4430.93 Safari/537.36'},
-      'ignore_cached': True,
-      'ignore_connection_errors': False,
-      'ignore_http_error_codes': 200,
-      'ignore_timeout_errors': False,
-      'ignore_too_many_redirects': False,
-      'method': 'GET',
-      'no_redirects': False,
-      'ssl_no_verify': False,
-      'timeout': 0,
-      'user_visible_url': 'https://www.google.com/#a_visible',
-      },
-     'Google'),
-    ({'url': 'http://www.google.com/#b',
-      'name': 'testing url job with use_browser',
-      'use_browser': True,
-      'block_elements': ['stylesheet', 'font', 'image', 'media'],
-      'chromium_revision': chromium_revision_num,
-      'cookies': {'X-test': ''},
-      'headers': {'Accept-Language': 'en-US,en'},
-      'ignore_https_errors': False,
-      'switches': ['--window-size=1298,1406'],
-      'timeout': 15,
-      'user_visible_url': 'https://www.google.com/#b_visible',
-      'wait_for': 1,
-      'wait_for_navigation': 'https://www.google.com/',
-      'wait_until': 'load',
-      },
-     'Google'),
-    ({'url': data_dir.joinpath('file-test.txt').as_uri(),
-      },
-     'This is text\n'),
-    ({'url': data_dir.joinpath('file-test.txt').as_uri(),
-      'filter': [{'pdf2text': {}}],
-      },
-     b'This is text\n'),
-    ({'command': 'echo test',
-      },
-     'test'),
+    (
+        {
+            'url': 'https://www.google.com/#a',
+            'note': 'Google with no name (grab title)',
+            'cookies': {'X-test': ''},
+            'encoding': 'ascii',
+            'headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/90.0.4430.93 Safari/537.36'
+            },
+            'ignore_cached': True,
+            'ignore_connection_errors': False,
+            'ignore_http_error_codes': 200,
+            'ignore_timeout_errors': False,
+            'ignore_too_many_redirects': False,
+            'method': 'GET',
+            'no_redirects': False,
+            'ssl_no_verify': False,
+            'timeout': 0,
+            'user_visible_url': 'https://www.google.com/#a_visible',
+        },
+        'Google',
+    ),
+    (
+        {
+            'url': 'http://www.google.com/#b',
+            'name': 'testing url job with use_browser',
+            'use_browser': True,
+            'block_elements': ['stylesheet', 'font', 'image', 'media'],
+            'chromium_revision': chromium_revision_num,
+            'cookies': {'X-test': ''},
+            'headers': {'Accept-Language': 'en-US,en'},
+            'ignore_https_errors': False,
+            'switches': ['--window-size=1298,1406'],
+            'timeout': 15,
+            'user_visible_url': 'https://www.google.com/#b_visible',
+            'wait_for': 1,
+            'wait_for_navigation': 'https://www.google.com/',
+            'wait_until': 'load',
+        },
+        'Google',
+    ),
+    (
+        {
+            'url': data_dir.joinpath('file-test.txt').as_uri(),
+        },
+        'This is text\n',
+    ),
+    (
+        {
+            'url': data_dir.joinpath('file-test.txt').as_uri(),
+            'filter': [{'pdf2text': {}}],
+        },
+        b'This is text\n',
+    ),
+    (
+        {
+            'command': 'echo test',
+        },
+        'test',
+    ),
 ]
 
 TEST_ALL_URL_JOBS = [{}, {'use_browser': True}]
@@ -97,8 +122,10 @@ TEST_ALL_URL_JOBS = [{}, {'use_browser': True}]
 @pytest.mark.parametrize('input_job, output', TEST_JOBS)
 def test_run_job(input_job: Dict[str, Any], output: str) -> None:
     if input_job.get('use_browser') and os.getenv('GITHUB_ACTIONS') and sys.version_info < (3, 7):
-        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer in GitHub Actions '
-                       f'as it fails with error pyppeteer.errors.BrowserError: Browser closed unexpectedly')
+        logger.warning(
+            f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer in GitHub Actions '
+            f'as it fails with error pyppeteer.errors.BrowserError: Browser closed unexpectedly'
+        )
         return
     job = JobBase.unserialize(input_job)
     job_state = JobState(cache_storage, job)
@@ -113,8 +140,7 @@ def test_run_job(input_job: Dict[str, Any], output: str) -> None:
 @connection_required
 @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))
 def test_run_ftp_job() -> None:
-    job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt',
-                               'timeout': 2})
+    job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt', 'timeout': 2})
     job_state = JobState(cache_storage, job)
     job.main_thread_enter()
     data, etag = job.retrieve(job_state)
@@ -125,9 +151,7 @@ def test_run_ftp_job() -> None:
 @connection_required
 @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
 def test_run_ftp_job_needs_bytes() -> None:
-    job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip',
-                               'timeout': 2,
-                               'filter': [{'pdf2text': {}}]})
+    job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
     job_state = JobState(cache_storage, job)
     job.main_thread_enter()
     data, etag = job.retrieve(job_state)
@@ -140,12 +164,16 @@ def test_run_ftp_job_needs_bytes() -> None:
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_etag(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser') and os.getenv('GITHUB_ACTIONS') and sys.version_info < (3, 7):
-        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer in GitHub '
-                       f'Actions as it fails with error pyppeteer.errors.BrowserError: Browser closed unexpectedly')
+        logger.warning(
+            f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer in GitHub '
+            f'Actions as it fails with error pyppeteer.errors.BrowserError: Browser closed unexpectedly'
+        )
         return
     if job_data.get('use_browser') and sys.version_info < (3, 7):
-        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer as it does not '
-                       f'capture ETags')
+        logger.warning(
+            f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer as it does not '
+            f'capture ETags'
+        )
         return
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
@@ -161,8 +189,10 @@ def test_check_etag(job_data: Dict[str, Any]) -> None:
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser'):
-        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since capturing of 304 cannot be '
-                       f'implemented in Chromium 89')
+        logger.warning(
+            f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since capturing of 304 cannot be '
+            f'implemented in Chromium 89'
+        )
         return
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
@@ -186,13 +216,14 @@ def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser'):
-        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since it times out after 90 '
-                       f'seconds or so')
+        logger.warning(
+            f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since it times out after 90 ' f'seconds or so'
+        )
         return
 
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
-    job_data['timeout'] = .001
+    job_data['timeout'] = 0.001
     job = JobBase.unserialize(job_data)
     job_state = JobState(cache_storage, job)
     job_state.process()
@@ -211,8 +242,10 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) 
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser') and sys.version_info < (3, 7):
-        logger.warning(f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer as it does not '
-                       f'capture exceptions')
+        logger.warning(
+            f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer as it does not '
+            f'capture exceptions'
+        )
         return
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['timeout'] = 30
@@ -246,6 +279,7 @@ def test_stress_use_browser() -> None:
 
     if not os.getenv('GITHUB_ACTIONS'):
         from webchanges.cli import setup_logger_verbose
+
         setup_logger_verbose()
 
     urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file, True)
@@ -272,8 +306,7 @@ def test_no_required_directive() -> None:
 
 
 def test_no_required_directive_plural() -> None:
-    job_data = {'url_typo': 'this directive does not exist',
-                'timeout': '10'}
+    job_data = {'url_typo': 'this directive does not exist', 'timeout': '10'}
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
@@ -282,8 +315,7 @@ def test_no_required_directive_plural() -> None:
 
 
 def test_invalid_directive() -> None:
-    job_data = {'url': 'https://www.example.com',
-                'directive_with_typo': 'this directive does not exist'}
+    job_data = {'url': 'https://www.example.com', 'directive_with_typo': 'this directive does not exist'}
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
@@ -301,12 +333,11 @@ def test_navigate_directive() -> None:
 
 
 def test_kind_directive_deprecation() -> None:
-    job_data = {'kind': 'url',
-                'url': 'http://www.example.com'}
+    job_data = {'kind': 'url', 'url': 'http://www.example.com'}
     with pytest.deprecated_call() as pytest_wrapped_warning:
         JobBase.unserialize(job_data.copy())
     assert str(pytest_wrapped_warning.list[0].message) == (
-        f"Job directive 'kind' is deprecated and ignored; delete from job file' ({job_data})"
+        f"Job directive 'kind' is deprecated and ignored; delete from job file' ({job_data})"  # nosec: B608
     )
 
 
@@ -317,15 +348,13 @@ def test_url_job_without_kind():
 
 
 def test_url_job_use_browser_false_without_kind():
-    job_data = {'url': 'https://www.example.com',
-                'use_browser': False}
+    job_data = {'url': 'https://www.example.com', 'use_browser': False}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, UrlJob)
 
 
 def test_browser_job_without_kind():
-    job_data = {'url': 'https://www.example.com',
-                'use_browser': True}
+    job_data = {'url': 'https://www.example.com', 'use_browser': True}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, BrowserJob)
 
@@ -353,9 +382,7 @@ def test_ignore_error():
 
 @py37_required
 def test_browser_switches_not_str_or_list():
-    job_data = {'url': 'https://www.example.com',
-                'use_browser': True,
-                'switches': {'dict key': ''}}
+    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'switches': {'dict key': ''}}
     job = JobBase.unserialize(job_data)
     job_state = JobState(cache_storage, job)
     job_state.process()
@@ -364,9 +391,7 @@ def test_browser_switches_not_str_or_list():
 
 @py37_required
 def test_browser_block_elements_not_str_or_list():
-    job_data = {'url': 'https://www.example.com',
-                'use_browser': True,
-                'block_elements': {'dict key': ''}}
+    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': {'dict key': ''}}
     job = JobBase.unserialize(job_data)
     job_state = JobState(cache_storage, job)
     job_state.process()
@@ -376,9 +401,7 @@ def test_browser_block_elements_not_str_or_list():
 
 @py37_required
 def test_browser_block_elements_invalid():
-    job_data = {'url': 'https://www.example.com',
-                'use_browser': True,
-                'block_elements': ['fake element']}
+    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': ['fake element']}
     job = JobBase.unserialize(job_data)
     job_state = JobState(cache_storage, job)
     job_state.process()

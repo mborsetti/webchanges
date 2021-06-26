@@ -19,22 +19,35 @@ xmpp_is_installed = importlib.util.find_spec('xmpp') is not None
 
 DIFF_TO_HTML_TEST_DATA = [
     ('+Added line', '<tr style="background-color:#d1ffd1;color:#082b08"><td>Added line</td></tr>'),
-    ('-Deleted line', '<tr style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">'
-                      '<td>Deleted line</td></tr>'),
+    (
+        '-Deleted line',
+        '<tr style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">' '<td>Deleted line</td></tr>',
+    ),
     # Changes line
-    ('@@ -1,1 +1,1 @@', '<tr style="background-color:#fbfbfb"><td style="font-family:monospace">@@ -1,1 +1,1 @@'
-                        '</td></tr>'),
+    (
+        '@@ -1,1 +1,1 @@',
+        '<tr style="background-color:#fbfbfb"><td style="font-family:monospace">@@ -1,1 +1,1 @@' '</td></tr>',
+    ),
     # Horizontal ruler is manually expanded since <hr> tag is used to separate jobs
-    ('+* * *', '<tr style="background-color:#d1ffd1;color:#082b08"><td>'
-               '--------------------------------------------------------------------------------</td></tr>'),
-    ('+[Link](https://example.com)',
+    (
+        '+* * *',
+        '<tr style="background-color:#d1ffd1;color:#082b08"><td>'
+        '--------------------------------------------------------------------------------</td></tr>',
+    ),
+    (
+        '+[Link](https://example.com)',
         '<tr style="background-color:#d1ffd1;color:#082b08"><td><a style="font-family:inherit" rel="noopener" '
-        'target="_blank" href="https://example.com">Link</a></td></tr>'),
-    (' ![Image](https://example.com/picture.png "picture")',
-     '<tr><td><img style="max-width:100%;height:auto;max-height:100%" src="https://example.com/picture.png" alt="Image"'
-     ' title="picture" /></td></tr>'),
-    ('   Indented text (replace leading spaces)',
-     '<tr><td>&nbsp;&nbsp;Indented text (replace leading spaces)</td></tr>'),
+        'target="_blank" href="https://example.com">Link</a></td></tr>',
+    ),
+    (
+        ' ![Image](https://example.com/picture.png "picture")',
+        '<tr><td><img style="max-width:100%;height:auto;max-height:100%" src="https://example.com/picture.png"'
+        ' alt="Image" title="picture" /></td></tr>',
+    ),
+    (
+        '   Indented text (replace leading spaces)',
+        '<tr><td>&nbsp;&nbsp;Indented text (replace leading spaces)</td></tr>',
+    ),
     (' # Heading level 1', '<tr><td><strong>Heading level 1</strong></td></tr>'),
     (' ## Heading level 2', '<tr><td><strong>Heading level 2</strong></td></tr>'),
     (' ### Heading level 3', '<tr><td><strong>Heading level 3</strong></td></tr>'),
@@ -44,8 +57,10 @@ DIFF_TO_HTML_TEST_DATA = [
     ('   * Bullet point level 1', '<tr><td>&nbsp;&nbsp;● Bullet point level 1</td></tr>'),
     ('     * Bullet point level 2', '<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;⯀ Bullet point level 2</td></tr>'),
     ('       * Bullet point level 3', '<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;○ Bullet point level 3</td></tr>'),
-    ('         * Bullet point level 4',
-     '<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;○ Bullet point level 4</td></tr>'),
+    (
+        '         * Bullet point level 4',
+        '<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;○ Bullet point level 4</td></tr>',
+    ),
     (' *emphasis*', '<tr><td><em>emphasis</em></td></tr>'),
     (' _**emphasis and strong**_', '<tr><td><em><strong>emphasis and strong</strong></em></td></tr>'),
     (' **strong**', '<tr><td><strong>strong</strong></td></tr>'),
@@ -54,8 +69,9 @@ DIFF_TO_HTML_TEST_DATA = [
     (' | table | row |', '<tr><td>| table | row |</td></tr>'),
 ]
 
-ALL_REPORTERS = [reporter for reporter, v in DEFAULT_CONFIG['report'].items()
-                 if reporter not in ('html', 'text', 'markdown')]
+ALL_REPORTERS = [
+    reporter for reporter, v in DEFAULT_CONFIG['report'].items() if reporter not in ('html', 'text', 'markdown')
+]
 
 
 class UrlwatchTest:
@@ -80,19 +96,23 @@ def test_diff_to_htm_padded_table():
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
     job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': True})
     result = ''.join(list(HtmlReporter(report, {}, '', 0)._diff_to_html(inpt, job)))
-    assert result[250:-8] == ('<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | '
-                              'row |</span></td></tr>')
+    assert result[250:-8] == (
+        '<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | ' 'row |</span></td></tr>'
+    )
 
 
 def test_diff_to_htm_wdiff():
     # must add to fake headers to get what we want:
     inpt = '[-old-]{+new+}'
-    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': False, 'markdown_padded_tables': False,
-                               'diff_tool': 'wdiff'})
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'}
+    )
     result = ''.join(list(HtmlReporter(report, {}, '', 0)._diff_to_html(inpt, job)))
-    assert result == ('<span style="font-family:monospace;white-space:pre-wrap">'
-                      '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">[-old-]</span>'
-                      '<span style="background-color:#d1ffd1;color:#082b08">{+new+}</span></span>')
+    assert result == (
+        '<span style="font-family:monospace;white-space:pre-wrap">'
+        '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">[-old-]</span>'
+        '<span style="background-color:#d1ffd1;color:#082b08">{+new+}</span></span>'
+    )
 
 
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)
@@ -121,26 +141,35 @@ def test_reporters(reporter):
         return job_state
 
     report.new(build_job('Newly Added', 'https://example.com/new', '', ''))
-    report.changed(build_job('Something Changed', 'https://example.com/changed', """
+    report.changed(
+        build_job(
+            'Something Changed',
+            'https://example.com/changed',
+            """
     Unchanged Line
     Previous Content
     Another Unchanged Line
-    """, """
+    """,
+            """
     Unchanged Line
     Updated Content
     Another Unchanged Line
-    """))
+    """,
+        )
+    )
     report.changed_no_report(build_job('Newly Added', 'https://example.com/changed_no_report', '', ''))
-    report.unchanged(build_job('Same As Before', 'https://example.com/unchanged',
-                               'Same Old, Same Old\n',
-                               'Same Old, Same Old\n'))
+    report.unchanged(
+        build_job('Same As Before', 'https://example.com/unchanged', 'Same Old, Same Old\n', 'Same Old, Same Old\n')
+    )
     report.error(set_error(build_job('Error Reporting', 'https://example.com/error', '', ''), 'Sample error text'))
 
     if reporter == 'email':
         with pytest.raises(ValueError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
-        assert str(pytest_wrapped_e.value) in ('No password available in keyring for localhost ',
-                                               'No password available for localhost ')
+        assert str(pytest_wrapped_e.value) in (
+            'No password available in keyring for localhost ',
+            'No password available for localhost ',
+        )
     elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'xmpp', 'prowl'):
         if reporter == 'matrix' and not matrix_client_is_installed:
             logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")

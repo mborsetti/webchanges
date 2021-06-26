@@ -3,9 +3,26 @@
 from webchanges import init_data
 
 INITDATAKEYS = (
-    '__name__', '__doc__', '__package__', '__loader__', '__spec__', '__path__', '__file__', '__cached__',
-    '__builtins__', '__min_python_version__', '__project_name__', '__version__', '__description__', '__author__',
-    '__copyright__', '__license__', '__docs_url__', '__url__', '__user_agent__')
+    '__name__',
+    '__doc__',
+    '__package__',
+    '__loader__',
+    '__spec__',
+    '__path__',
+    '__file__',
+    '__cached__',
+    '__builtins__',
+    '__min_python_version__',
+    '__project_name__',
+    '__version__',
+    '__description__',
+    '__author__',
+    '__copyright__',
+    '__license__',
+    '__docs_url__',
+    '__url__',
+    '__user_agent__',
+)
 
 
 def test_init_data():

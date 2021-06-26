@@ -11,7 +11,7 @@ from typing import Optional, Union
 try:
     import keyring
 except ImportError:
-    keyring = None
+    keyring = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,9 @@ class Mailer(object):
         raise NotImplementedError
 
     @staticmethod
-    def msg(from_email: str, to_email: str, subject: str, text_body: str, html_body: Optional[str] = None
-            ) -> EmailMessage:
+    def msg(
+        from_email: str, to_email: str, subject: str, text_body: str, html_body: Optional[str] = None
+    ) -> EmailMessage:
         """Create an Email object for a message
 
         :param from_email: The 'from' email address
@@ -43,8 +44,15 @@ class Mailer(object):
 
 
 class SMTPMailer(Mailer):
-    def __init__(self, smtp_user: str, smtp_server: str, smtp_port: int, tls: bool, auth: Optional[str],
-                 insecure_password: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        smtp_user: str,
+        smtp_server: str,
+        smtp_port: int,
+        tls: bool,
+        auth: Optional[str],
+        insecure_password: Optional[str] = None,
+    ) -> None:
         self.smtp_server = smtp_server
         self.smtp_user = smtp_user
         self.smtp_port = smtp_port
@@ -53,14 +61,16 @@ class SMTPMailer(Mailer):
         self.insecure_password = insecure_password
 
     def send(self, msg: Optional[EmailMessage]) -> None:
-        passwd = None
+        passwd = ''  # nosec: B105 Possible hardcoded password
         if self.auth:
             if self.insecure_password:
                 passwd = self.insecure_password
             elif keyring is not None:
-                passwd = keyring.get_password(self.smtp_server, self.smtp_user)
-                if passwd is None:
+                key_pass = keyring.get_password(self.smtp_server, self.smtp_user)
+                if key_pass is None:
                     raise ValueError(f'No password available in keyring for {self.smtp_server} {self.smtp_user}')
+                else:
+                    passwd = key_pass
             else:
                 raise ValueError(f'No password available for {self.smtp_server} {self.smtp_user}')
 
@@ -83,8 +93,13 @@ class SendmailMailer(Mailer):
         # Python 3.7
         # p = subprocess.run([self.sendmail_path, '-oi', msg['To']], input=msg.as_string(), capture_output=True,
         #                    text=True)
-        p = subprocess.run([self.sendmail_path, '-oi', msg['To']], input=msg.as_string(), stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE, text=True)
+        p = subprocess.run(
+            [self.sendmail_path, '-oi', msg['To']],
+            input=msg.as_string(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
         if p.returncode:
             logger.error(f'Sendmail failed with {p.stderr}')
 

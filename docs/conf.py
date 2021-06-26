@@ -17,6 +17,8 @@ import sys
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused
 from docutils import nodes
 from docutils.nodes import Element
+
+# below required for local build
 from sphinx.writers.html import HTMLTranslator
 
 # below required to import project_data module
@@ -231,7 +233,6 @@ todo_include_todos = True
 
 
 class PatchedHTMLTranslator(HTMLTranslator):
-
     def visit_reference(self, node: Element) -> None:
         atts = {'class': 'reference'}
         if node.get('internal') or 'refuri' not in node:
@@ -249,8 +250,7 @@ class PatchedHTMLTranslator(HTMLTranslator):
                 atts['href'] = self.cloak_mailto(atts['href'])
                 self.in_mailto = True
         else:
-            assert 'refid' in node, \
-                'References must have "refuri" or "refid" attribute.'
+            assert 'refid' in node, 'References must have "refuri" or "refid" attribute.'
             atts['href'] = '#' + node['refid']
         if not isinstance(node.parent, nodes.TextElement):
             assert len(node) == 1 and isinstance(node[0], nodes.image)
@@ -262,8 +262,7 @@ class PatchedHTMLTranslator(HTMLTranslator):
         self.body.append(self.starttag(node, 'a', '', **atts))
 
         if node.get('secnumber'):
-            self.body.append(('%s' + self.secnumber_suffix) %
-                             '.'.join(map(str, node['secnumber'])))
+            self.body.append(('%s' + self.secnumber_suffix) % '.'.join(map(str, node['secnumber'])))
 
 
 def setup(app):

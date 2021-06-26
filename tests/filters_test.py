@@ -18,7 +18,7 @@ beautifulsoup_is_installed = importlib.util.find_spec('beautifulsoup') is not No
 if sys.version_info[0:2] == (3, 6) and os.name == 'nt':
     import _locale
 
-    _locale._getdefaultlocale = (lambda *args: ['en_US', 'utf8'])
+    _locale._getdefaultlocale = lambda *args: ['en_US', 'utf8']
 
 
 TESTDATA = [
@@ -26,15 +26,21 @@ TESTDATA = [
     ([{'keep_lines_containing': None}], [('keep_lines_containing', {})]),
     ([{'keep_lines_containing': {'re': 'bla'}}], [('keep_lines_containing', {'re': 'bla'})]),
     ([{'reverse': '\n\n'}], [('reverse', {'separator': '\n\n'})]),
-    (['html2text', {'keep_lines_containing': 'Current.version'}, 'strip'], [
-        ('html2text', {}),
-        ('keep_lines_containing', {'text': 'Current.version'}),
-        ('strip', {}),
-    ]),
+    (
+        ['html2text', {'keep_lines_containing': 'Current.version'}, 'strip'],
+        [
+            ('html2text', {}),
+            ('keep_lines_containing', {'text': 'Current.version'}),
+            ('strip', {}),
+        ],
+    ),
     ([{'css': 'body'}], [('css', {'selector': 'body'})]),
-    ([{'html2text': {'method': 'bs4', 'parser': 'html5lib'}}], [
-        ('html2text', {'method': 'bs4', 'parser': 'html5lib'}),
-    ]),
+    (
+        [{'html2text': {'method': 'bs4', 'parser': 'html5lib'}}],
+        [
+            ('html2text', {'method': 'bs4', 'parser': 'html5lib'}),
+        ],
+    ),
 ]
 
 
@@ -46,8 +52,7 @@ def test_normalize_filter_list(input, output):
 FILTER_TESTS = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), 'data/filter_tests.yaml'), 'r'))
 
 
-class FakeJob():
-
+class FakeJob:
     def get_indexed_location(self):
         return ''
 
@@ -61,8 +66,7 @@ def test_filters(test_name, test_data):
     result = data
     for filter_kind, subfilter in FilterBase.normalize_filter_list(filter):
         logger.info(f'filter kind: {filter_kind}, subfilter: {subfilter}')
-        if (filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
-                and not beautifulsoup_is_installed):
+        if filter_kind == 'html2text' and subfilter.get('method') == 'bs4' and not beautifulsoup_is_installed:
             logger.warning(f"Skipping {test_name} since 'beautifulsoup' package is not installed")
             return
         filtercls = FilterBase.__subclasses__.get(filter_kind)
@@ -89,10 +93,12 @@ def test_providing_subfilter_to_filter_without_subfilter_raises_valueerror():
 
 def test_providing_unknown_subfilter_raises_valueerror():
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        list(FilterBase.normalize_filter_list([{'keep_lines_containing': {'re': 'Price: .*',
-                                                                          'anothersubfilter': '42'}}]))
-    assert ("Filter keep_lines_containing does not support subfilter(s): {'anothersubfilter'} (supported:" in str(
-        pytest_wrapped_e.value))
+        list(
+            FilterBase.normalize_filter_list([{'keep_lines_containing': {'re': 'Price: .*', 'anothersubfilter': '42'}}])
+        )
+    assert "Filter keep_lines_containing does not support subfilter(s): {'anothersubfilter'} (supported:" in str(
+        pytest_wrapped_e.value
+    )
 
 
 def test_shellpipe_inherits_environment_but_does_not_modify_it():

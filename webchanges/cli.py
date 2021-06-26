@@ -19,7 +19,14 @@ from . import __copyright__, __docs_url__, __min_python_version__, __project_nam
 from .command import UrlwatchCommand
 from .config import CommandConfig
 from .main import Urlwatch
-from .storage import CacheDirStorage, CacheRedisStorage, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+from .storage import (
+    CacheDirStorage,
+    CacheRedisStorage,
+    CacheSQLite3Storage,
+    CacheStorage,
+    YamlConfigStorage,
+    YamlJobsStorage,
+)
 
 # directory where the config, jobs and hooks files are located
 if os.name != 'nt':
@@ -34,7 +41,7 @@ cache_dir = Path(AppDirs(__project_name__).user_cache_dir)
 
 # Ignore SIGPIPE for stdout (see https://github.com/thp/urlwatch/issues/77)
 try:
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # type: ignore[attr-defined]  # not defined in Windows
 except AttributeError:
     # Windows does not have signal.SIGPIPE
     pass
@@ -47,8 +54,10 @@ def python_version_warning() -> None:
     if sys.version_info[0:2] == __min_python_version__:
         current_minor_version = '.'.join(str(n) for n in sys.version_info[0:2])
         next_minor_version = f'{__min_python_version__[0]}.{__min_python_version__[1] + 1}'
-        warning = (f'Support for Python {current_minor_version} will be ending three years from the date Python '
-                   f'{next_minor_version} was released')
+        warning = (
+            f'Support for Python {current_minor_version} will be ending three years from the date Python '
+            f'{next_minor_version} was released'
+        )
         print(f'WARNING: {warning}\n')
         PendingDeprecationWarning(warning)
 
@@ -62,8 +71,9 @@ def migrate_from_urlwatch(config_file: Path, jobs_file: Path, hooks_file: Path, 
     uw_hooks_file = uw_urlwatch_dir.joinpath('hooks.py')
     uw_cache_dir = Path(AppDirs('urlwatch').user_cache_dir)
     uw_cache_file = uw_cache_dir.joinpath('cache.db')
-    for old_file, new_file in zip((uw_config_file, uw_urls_file, uw_hooks_file, uw_cache_file),
-                                  (config_file, jobs_file, hooks_file, cache_file)):
+    for old_file, new_file in zip(
+        (uw_config_file, uw_urls_file, uw_hooks_file, uw_cache_file), (config_file, jobs_file, hooks_file, cache_file)
+    ):
         if old_file.is_file() and not new_file.is_file():
             new_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(old_file, new_file)
@@ -84,8 +94,7 @@ def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
     logger.debug(f'System: {platform.platform()}')
 
 
-def locate_storage_file(filename: Path, default_dir: Path, ext: Optional[str] = None
-                        ) -> Union[str, bytes, Path]:
+def locate_storage_file(filename: Path, default_dir: Path, ext: Optional[str] = None) -> Path:
     """Searches for file as specified and in default directory; retry with 'ext' extension.
 
     :param filename: The filename
@@ -148,8 +157,15 @@ def main() -> None:  # pragma: no cover
     migrate_from_urlwatch(default_config_file, default_jobs_file, default_hooks_file, default_cache_file)
 
     # load config files
-    command_config = CommandConfig(__project_name__, config_dir, default_config_file, default_jobs_file,
-                                   default_hooks_file, default_cache_file, verbose=False)
+    command_config = CommandConfig(
+        __project_name__,
+        config_dir,
+        default_config_file,
+        default_jobs_file,
+        default_hooks_file,
+        default_cache_file,
+        verbose=False,
+    )
 
     # set up the logger to verbose if needed
     if command_config.verbose:
@@ -169,8 +185,10 @@ def main() -> None:  # pragma: no cover
 
     # setup database API
     if command_config.database_engine == 'sqlite3':
-        cache_storage = CacheSQLite3Storage(command_config.cache, command_config.max_snapshots)  # storage.py
-    elif any(command_config.cache.startswith(prefix) for prefix in ('redis://', 'rediss://')):
+        cache_storage: CacheStorage = CacheSQLite3Storage(
+            command_config.cache, command_config.max_snapshots
+        )  # storage.py
+    elif any(str(command_config.cache).startswith(prefix) for prefix in ('redis://', 'rediss://')):
         cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
     elif command_config.database_engine == 'redis':
         raise RuntimeError("A redis URI (starting with 'redis://' or 'rediss://' needs to be specified with --cache")

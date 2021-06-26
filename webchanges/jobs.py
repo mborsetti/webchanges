@@ -10,10 +10,10 @@ import subprocess
 import sys
 import textwrap
 import warnings
-from ftplib import FTP
+from ftplib import FTP  # nosec: B402
 from http.client import responses as response_names
 from pathlib import Path
-from typing import Any, AnyStr, Dict, List, Optional, TYPE_CHECKING, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 from urllib.parse import urldefrag, urlparse, urlsplit
 
 import requests
@@ -43,6 +43,7 @@ DEFAULT_CHROMIUM_REVISION = {
 
 class NotModifiedError(Exception):
     """Exception raised on HTTP 304 responses."""
+
     ...
 
 
@@ -55,8 +56,10 @@ class BrowserResponseError(Exception):
         self.status_code = status_code
 
     def __str__(self) -> str:
-        return (f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
-                f'{response_names[self.status_code]}')
+        return (
+            f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
+            f'{response_names[self.status_code]}'
+        )
 
 
 class ShellError(Exception):
@@ -71,10 +74,10 @@ class ShellError(Exception):
 
 
 class JobBase(object, metaclass=TrackSubClasses):
-    __subclasses__: dict = {}
+    __subclasses__: Dict[str, 'JobBase'] = {}
 
-    __required__: Tuple[str] = ()
-    __optional__: Tuple[str] = ()
+    __required__: Tuple[str, ...] = ()
+    __optional__: Tuple[str, ...] = ()
 
     # PyCharm IDE compatibility
     __kind__: str = ''
@@ -82,23 +85,23 @@ class JobBase(object, metaclass=TrackSubClasses):
     index_number: int = 0  # added at job loading
 
     # __required__ in derived classes
-    url: Optional[str] = ''
-    command: Optional[str] = ''
+    url: str = ''
+    command: str = ''
     use_browser: Optional[bool] = False
 
     # __optional__ in derived classes
     additions_only: Optional[bool] = None
-    block_elements: Optional[list] = None
-    chromium_revision: Optional[Union[Dict[str, Union[str, int]], Union[str, int]]] = None
+    block_elements: List[str] = []
+    chromium_revision: Union[Dict[str, int], Dict[str, str], str, int] = 0
     compared_versions: Optional[int] = None
     contextlines: Optional[int] = None
     cookies: Optional[Dict[str, str]] = None
-    data: Optional[AnyStr] = None
+    data: Optional[Union[bytes, str]] = None
     deletions_only: Optional[bool] = None
-    diff_filter: Optional[str] = None
+    diff_filter: Union[str, List[Union[str, Dict[str, Any]]]] = []
     diff_tool: Optional[str] = None
     encoding: Optional[str] = None
-    filter: Optional[Union[str, List[Union[str, Dict[str, Any]]]]] = None
+    filter: Union[str, List[Union[str, Dict[str, Any]]]] = []
     headers: Optional[CaseInsensitiveDict] = None
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
@@ -119,14 +122,14 @@ class JobBase(object, metaclass=TrackSubClasses):
     note: Optional[str] = None
     ssl_no_verify: Optional[bool] = None
     switches: Optional[List[str]] = None
-    timeout: Optional[int] = None
+    timeout: Optional[float] = None
     user_data_dir: Optional[str] = None
-    user_visible_url: Optional[str] = None
+    user_visible_url: str = ''
     wait_for: Optional[Union[int, str]] = None
     wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None
     wait_until: Optional[str] = None
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         # # Set optional keys to None -- legacy (explicit declarations added to support typing)
         # for k in self.__optional__:
         #     if k not in kwargs:
@@ -176,36 +179,44 @@ class JobBase(object, metaclass=TrackSubClasses):
     def unserialize(cls, data: dict) -> 'JobBase':
         # Backwards compatibility with 'navigate' directive (deprecated)
         if data.get('navigate') and not data.get('use_browser'):
-            warnings.warn(f"Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true'"
-                          f' ({data})', DeprecationWarning)
+            warnings.warn(
+                f"Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true'" f' ({data})',
+                DeprecationWarning,
+            )
             data['url'] = data.get('url', data['navigate'])
             data['use_browser'] = True
 
         # Backwards compatibility with 'kind' directive (deprecated)
         if 'kind' in data:
-            warnings.warn(f"Job directive 'kind' is deprecated and ignored; delete from job file' ({data})",
-                          DeprecationWarning)
+            warnings.warn(
+                f"Job directive 'kind' is deprecated and ignored; delete from job file'" f' ({data})',  # nosec: B608
+                DeprecationWarning,
+            )
             data.pop('kind')
 
         # Auto-detect the job subclass based on required directives
-        matched_subclasses = [subclass for subclass in list(cls.__subclasses__.values())[1:] if
-                              all(data.get(required) for required in subclass.__required__)]
+        matched_subclasses = [
+            subclass
+            for subclass in list(cls.__subclasses__.values())[1:]
+            if all(data.get(required) for required in subclass.__required__)
+        ]
 
         if len(matched_subclasses) == 1:
             job_subclass = matched_subclasses[0]
         elif len(matched_subclasses) > 1:
             number_matched = {}
             for match in matched_subclasses:
-                number_matched[match] = [data.get(required) is not None
-                                         for required in match.__required__].count(True)
+                number_matched[match] = [data.get(required) is not None for required in match.__required__].count(True)
             job_subclass = sorted(number_matched.items(), key=lambda x: x[1], reverse=True)[0][0]
         else:
             if len(data) == 1:
                 raise ValueError(
-                    f"Job directive has no value or doesn't match a job type; check for errors/typos/escaping:\n{data}")
+                    f"Job directive has no value or doesn't match a job type; check for errors/typos/escaping:\n{data}"
+                )
             else:
                 raise ValueError(
-                    f"Job directives (with values) don't match a job type; check for errors/typos/escaping:\n{data}")
+                    f"Job directives (with values) don't match a job type; check for errors/typos/escaping:\n{data}"
+                )
 
         # remove extra required directives ("falsy")
         other_subclasses = list(cls.__subclasses__.values())[1:]
@@ -218,8 +229,12 @@ class JobBase(object, metaclass=TrackSubClasses):
         return job_subclass.from_dict(data)
 
     def to_dict(self) -> dict:
-        return {k: getattr(self, k) for keys in (self.__required__, self.__optional__) for k in keys
-                if getattr(self, k) is not None}
+        return {
+            k: getattr(self, k)
+            for keys in (self.__required__, self.__optional__)
+            for k in keys
+            if getattr(self, k) is not None
+        }
 
     @classmethod
     def from_dict(cls, data: dict) -> 'JobBase':
@@ -231,7 +246,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     def __repr__(self) -> str:
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
-    def _set_defaults(self, defaults) -> None:
+    def _set_defaults(self, defaults: Optional[Dict[str, Any]]) -> None:
         """merge Job attributes with defaults from the configuration"""
         # use case insensitive dict for headers
         self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
@@ -241,13 +256,14 @@ class JobBase(object, metaclass=TrackSubClasses):
                 if key in self.__optional__:
                     if getattr(self, key) is None:
                         setattr(self, key, value)
-                    elif (isinstance(defaults[key], dict)
-                          and isinstance(getattr(self, key), (dict, CaseInsensitiveDict))):
+                    elif isinstance(defaults[key], dict) and isinstance(
+                        getattr(self, key), (dict, CaseInsensitiveDict)
+                    ):
                         for subkey, subvalue in defaults[key].items():
                             if hasattr(self, key) and subkey not in getattr(self, key):
                                 getattr(self, key)[subkey] = subvalue
 
-    def with_defaults(self, config: dict) -> 'JobBase':
+    def with_defaults(self, config: Dict[str, Dict[str, Any]]) -> 'JobBase':
         """return a Job class from a configuration that also contains defaults from the configuration"""
         new_job = JobBase.unserialize(self.serialize())
         cfg = config.get('job_defaults')
@@ -258,9 +274,9 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     def get_guid(self) -> str:
         location = self.get_location()
-        return hashlib.sha1(location.encode()).hexdigest()
+        return hashlib.sha1(location.encode()).hexdigest()  # nosec: B303
 
-    def retrieve(self, job_state: 'JobState') -> (AnyStr, str):
+    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
         """Runs job and returns data and etag"""
         raise NotImplementedError()
 
@@ -275,16 +291,31 @@ class JobBase(object, metaclass=TrackSubClasses):
     def format_error(self, exception: Exception, tb: str) -> str:
         return tb
 
-    def ignore_error(self, exception: Exception) -> bool:
+    def ignore_error(self, exception: Exception) -> Union[bool, str]:
         return False
 
 
 class Job(JobBase):
-    __required__ = ()
-    __optional__ = ('index_number', 'name', 'note', 'additions_only', 'compared_versions', 'contextlines',
-                    'deletions_only', 'diff_filter', 'diff_tool', 'filter', 'markdown_padded_tables', 'max_tries',
-                    'is_markdown', 'ignore_connection_errors', 'ignore_http_error_codes', 'ignore_timeout_errors',
-                    'ignore_too_many_redirects')
+    __required__: Tuple[str, ...] = ()
+    __optional__: Tuple[str, ...] = (
+        'index_number',
+        'name',
+        'note',
+        'additions_only',
+        'compared_versions',
+        'contextlines',
+        'deletions_only',
+        'diff_filter',
+        'diff_tool',
+        'filter',
+        'markdown_padded_tables',
+        'max_tries',
+        'is_markdown',
+        'ignore_connection_errors',
+        'ignore_http_error_codes',
+        'ignore_timeout_errors',
+        'ignore_too_many_redirects',
+    )
 
     def get_location(self) -> str:
         pass
@@ -295,7 +326,7 @@ class Job(JobBase):
     def pretty_name(self) -> str:
         return self.name or self.get_location()
 
-    def retrieve(self, job_state: 'JobState') -> (AnyStr, str):
+    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
         pass
 
 
@@ -308,13 +339,25 @@ class UrlJob(Job):
     __kind__ = 'url'
 
     __required__ = ('url',)
-    __optional__ = ('cookies', 'data', 'encoding', 'headers', 'http_proxy', 'https_proxy', 'ignore_cached',
-                    'method', 'no_redirects', 'ssl_no_verify', 'timeout', 'user_visible_url')
+    __optional__ = (
+        'cookies',
+        'data',
+        'encoding',
+        'headers',
+        'http_proxy',
+        'https_proxy',
+        'ignore_cached',
+        'method',
+        'no_redirects',
+        'ssl_no_verify',
+        'timeout',
+        'user_visible_url',
+    )
 
     def get_location(self) -> str:
         return self.user_visible_url or self.url
 
-    def retrieve(self, job_state: 'JobState') -> (AnyStr, str):
+    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
         self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if 'User-Agent' not in self.headers:
             self.headers['User-Agent'] = __user_agent__
@@ -356,46 +399,47 @@ class UrlJob(Job):
             logger.info(f'Job {self.index_number}: Using local filesystem (file URI scheme)')
 
             if os.name == 'nt':
-                filename = Path(urlparse(self.url).path.lstrip('/'))
+                filename = Path(str(urlparse(self.url).path).lstrip('/'))
             else:
-                filename = Path(urlparse(self.url).path)
+                filename = Path(str(urlparse(self.url).path))
 
             if FilterBase.filter_chain_needs_bytes(self.filter):
-                file = filename.read_bytes()
+                return filename.read_bytes(), ''
             else:
-                file = filename.read_text()
-
-            return file, None
+                return filename.read_text(), ''
 
         if urlparse(self.url).scheme == 'ftp':
             url = urlparse(self.url)
             username = url.username or 'anonymous'
             password = url.password or 'anonymous'
 
-            with FTP(url.hostname, username, password, timeout=self.timeout) as ftp:
+            with FTP(str(url.hostname), str(username), str(password), timeout=self.timeout) as ftp:  # nosec: B321
                 if FilterBase.filter_chain_needs_bytes(self.filter):
-                    data = b''
+                    data_bytes = b''
 
-                    def callback(dt):
-                        nonlocal data
-                        data += dt
-                    ftp.retrbinary(f'RETR {url.path}', callback)
+                    def callback_bytes(dt: bytes) -> None:
+                        nonlocal data_bytes
+                        data_bytes += dt
+
+                    ftp.retrbinary(f'RETR {url.path}', callback_bytes)
+
+                    return data_bytes, ''
                 else:
-                    data = []
+                    data: List[str] = []
 
-                    def callback(dt):
+                    def callback(dt: str) -> None:
                         data.append(dt)
-                    ftp.retrlines(f'RETR {url.path}', callback)
-                    data = '\n'.join(data)
 
-            return data, None
+                    ftp.retrlines(f'RETR {url.path}', callback)
+
+                    return '\n'.join(data), ''
 
         # if self.headers:
         #     self.add_custom_headers(headers)
 
         if self.timeout is None:
             # default timeout
-            timeout = 60
+            timeout = 60.0
         elif self.timeout == 0:
             # never timeout
             timeout = None
@@ -406,24 +450,26 @@ class UrlJob(Job):
         if self.cookies:
             self.cookies = {k: str(v) for k, v in self.cookies.items()}
 
-        response = requests.request(method=self.method,
-                                    url=self.url,
-                                    data=self.data,
-                                    headers=self.headers,
-                                    cookies=self.cookies,
-                                    timeout=timeout,
-                                    allow_redirects=(not self.no_redirects),
-                                    proxies=proxies,
-                                    verify=(not self.ssl_no_verify))
+        response = requests.request(
+            method=self.method,
+            url=self.url,
+            data=self.data,
+            headers=self.headers,
+            cookies=self.cookies,
+            timeout=timeout,
+            allow_redirects=(not self.no_redirects),
+            proxies=proxies,
+            verify=(not self.ssl_no_verify),
+        )
 
         response.raise_for_status()
         if response.status_code == requests.codes.not_modified:
             raise NotModifiedError(response.status_code)
 
         # Save ETag from response into job_state, saved in cache and used in future requests in If-None-Match header
-        etag = None
+        etag = ''
         if not response.history:  # no redirects
-            etag = response.headers.get('ETag')
+            etag = response.headers.get('ETag', '')
 
         if FilterBase.filter_chain_needs_bytes(self.filter):
             return response.content, etag
@@ -434,8 +480,10 @@ class UrlJob(Job):
             # requests follows RFC 2616 and defaults to ISO-8859-1 if no explicit charset is present in the HTTP headers
             # and the Content-Type header contains text, but this IRL is often wrong; the below updates it with
             # whatever response detects it to be by its use of the chardet library
-            logger.debug(f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from '
-                         f'{response.encoding}')
+            logger.debug(
+                f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from '
+                f'{response.encoding}'
+            )
             response.encoding = response.apparent_encoding
 
         # if no name is given, set it to the title element if found in HTML or XML truncated to 60 characters
@@ -471,7 +519,7 @@ class UrlJob(Job):
             return True
         elif isinstance(exception, requests.exceptions.HTTPError) and self.ignore_http_error_codes:
             status_code = exception.response.status_code
-            ignored_codes = []
+            ignored_codes: List[str] = []
             if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
                 return True
             elif isinstance(self.ignore_http_error_codes, str):
@@ -488,9 +536,23 @@ class BrowserJob(Job):
     __kind__ = 'browser'
 
     __required__ = ('url', 'use_browser')
-    __optional__ = ('block_elements', 'chromium_revision', 'cookies', 'headers', 'http_proxy', 'https_proxy',
-                    'ignore_https_errors', 'navigate', 'switches', 'timeout', 'user_visible_url', 'user_data_dir',
-                    'wait_for', 'wait_for_navigation', 'wait_until')
+    __optional__ = (
+        'block_elements',
+        'chromium_revision',
+        'cookies',
+        'headers',
+        'http_proxy',
+        'https_proxy',
+        'ignore_https_errors',
+        'navigate',
+        'switches',
+        'timeout',
+        'user_visible_url',
+        'user_data_dir',
+        'wait_for',
+        'wait_for_navigation',
+        'wait_until',
+    )
 
     ctx = None  # Python 3.6
 
@@ -504,20 +566,32 @@ class BrowserJob(Job):
         if sys.version_info < (3, 7):
             # check if proxy is being used
             from .jobs_browser import BrowserContext, get_proxy
-            proxy_server, self.proxy_username, self.proxy_password = get_proxy(self.url, self.http_proxy,
-                                                                               self.https_proxy)
-            self.ctx = BrowserContext(self.chromium_revision, proxy_server, self.ignore_https_errors,
-                                      self.user_data_dir, self.switches)
+
+            proxy_server, self.proxy_username, self.proxy_password = get_proxy(
+                self.url, self.http_proxy, self.https_proxy
+            )
+            self.ctx = BrowserContext(
+                self.chromium_revision, proxy_server, self.ignore_https_errors, self.user_data_dir, self.switches
+            )
 
     def main_thread_exit(self) -> None:
         if sys.version_info < (3, 7):
             self.ctx.close()
 
-    def retrieve(self, job_state: 'JobState') -> (str, str):
+    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
         if sys.version_info < (3, 7):
-            response = self.ctx.process(self.url, self.headers, self.cookies, self.timeout, self.proxy_username,
-                                        self.proxy_password, self.wait_until, self.wait_for, self.wait_for_navigation)
-            etag = None
+            response = self.ctx.process(
+                self.url,
+                self.headers,
+                self.cookies,
+                self.timeout,
+                self.proxy_username,
+                self.proxy_password,
+                self.wait_until,
+                self.wait_for,
+                self.wait_for_navigation,
+            )
+            etag = ''
         else:
             response, etag = asyncio.run(self._retrieve())
 
@@ -544,31 +618,36 @@ class BrowserJob(Job):
             return 'win32'
         raise OSError(f'Platform unsupported by Pyppeteer (use_browser: true): {sys.platform}')
 
-    async def _retrieve(self) -> (str, str):
+    async def _retrieve(self) -> Tuple[str, str]:
         # launch browser
         if not self.chromium_revision:
             self.chromium_revision = DEFAULT_CHROMIUM_REVISION
         if isinstance(self.chromium_revision, dict):
             for key, value in DEFAULT_CHROMIUM_REVISION.items():
                 if key not in self.chromium_revision:
-                    self.chromium_revision[key] = value
+                    self.chromium_revision[key] = value  # type: ignore[assignment]
             try:
-                _revision = self.chromium_revision[self.current_platform()]
+                _revision: Union[str, int] = self.chromium_revision[self.current_platform()]
             except KeyError:
                 raise KeyError(f"No 'chromium_revision' key for operating system {self.current_platform()} found")
         else:
             _revision = self.chromium_revision
         os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(_revision)
 
-        logger.debug(f'Job {self.index_number}: '
-                     f"PYPPETEER_CHROMIUM_REVISION={os.environ.get('PYPPETEER_CHROMIUM_REVISION')}, "
-                     f"PYPPETEER_NO_PROGRESS_BAR={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}, "
-                     f"PYPPETEER_DOWNLOAD_HOST={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}")
+        logger.debug(
+            f'Job {self.index_number}: '
+            f"PYPPETEER_CHROMIUM_REVISION={os.environ.get('PYPPETEER_CHROMIUM_REVISION')}, "
+            f"PYPPETEER_NO_PROGRESS_BAR={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}, "
+            f"PYPPETEER_DOWNLOAD_HOST={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}"
+        )
         try:
             from pyppeteer import launch  # pyppeteer must be imported after setting os.environ variables
         except ImportError:
-            raise ImportError(f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
-                              f' ( {self.get_indexed_location()} )')
+            raise ImportError(
+                f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
+                f' ( {self.get_indexed_location()} )'
+            )
+        import pyppeteer.network_manager
         from pyppeteer.errors import PageError
 
         headers = self.headers if self.headers else {}
@@ -589,8 +668,8 @@ class BrowserJob(Job):
         #     if job_state.old_timestamp is not None:
         #         headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
 
-        args = []
-        proxy = ''
+        args: List[str] = []
+        proxy: Optional[str] = ''
         if self.http_proxy or self.https_proxy:
             if urlsplit(self.url).scheme == 'http':
                 proxy = self.http_proxy
@@ -598,7 +677,8 @@ class BrowserJob(Job):
                 proxy = self.https_proxy
             if proxy:
                 proxy_server = f'{urlsplit(proxy).scheme}://{urlsplit(proxy).hostname}' + (
-                    f':{urlsplit(proxy).port}' if urlsplit(proxy).port else '')
+                    f':{urlsplit(proxy).port}' if urlsplit(proxy).port else ''
+                )
                 args.append(f'--proxy-server={proxy_server}')
         if self.user_data_dir:
             args.append(f'--user-data-dir={self.user_data_dir}')
@@ -606,13 +686,21 @@ class BrowserJob(Job):
             if isinstance(self.switches, str):
                 self.switches = self.switches.split(',')
             if not isinstance(self.switches, list):
-                raise TypeError(f"'switches' needs to be a string or list, not {type(self.switches)} "
-                                f'( {self.get_indexed_location()} )')
+                raise TypeError(
+                    f"'switches' needs to be a string or list, not {type(self.switches)} "
+                    f'( {self.get_indexed_location()} )'
+                )
             self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
             args.extend(self.switches)
         # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
-        browser = await launch(ignoreHTTPSErrors=self.ignore_https_errors, args=args, handleSIGINT=False,
-                               handleSIGTERM=False, handleSIGHUP=False, loop=asyncio.get_running_loop())
+        browser = await launch(
+            ignoreHTTPSErrors=self.ignore_https_errors,
+            args=args,
+            handleSIGINT=False,
+            handleSIGTERM=False,
+            handleSIGHUP=False,
+            loop=asyncio.get_running_loop(),
+        )
         logger.debug(f'Job {self.index_number}: Launched browser with args={args}')
 
         # browse to page and get content
@@ -628,9 +716,11 @@ class BrowserJob(Job):
             proxy_password = urlsplit(proxy).password if urlsplit(proxy).password else ''
             if proxy_username or proxy_password:
                 await page.authenticate({'username': proxy_username, 'password': proxy_password})
-                logger.debug(f'Job {self.index_number}: Set page.authenticate with username={proxy_username}, '
-                             f'password={proxy_password}')
-        options = {}
+                logger.debug(
+                    f'Job {self.index_number}: Set page.authenticate with '
+                    f'username={proxy_username}, password={proxy_password}'  # type: ignore[str-bytes-safe]
+                )
+        options: Dict[str, Any] = {}
         if self.timeout:
             options['timeout'] = self.timeout * 1000
         if self.wait_until:
@@ -640,8 +730,10 @@ class BrowserJob(Job):
                 self.block_elements = self.block_elements.split(',')
             if not isinstance(self.block_elements, list):
                 await browser.close()
-                raise TypeError(f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
-                                f'( {self.get_indexed_location()} )')
+                raise TypeError(
+                    f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
+                    f'( {self.get_indexed_location()} )'
+                )
             # web_request_resource_types = [
             #     # https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType
             #     'beacon', 'csp_report', 'font', 'image', 'imageset', 'media', 'main_frame', 'media', 'object',
@@ -650,18 +742,34 @@ class BrowserJob(Job):
             #     ]
             chrome_web_request_resource_types = [
                 # https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType
-                'main_frame', 'sub_frame', 'stylesheet', 'script', 'image', 'font', 'object', 'xmlhttprequest', 'ping',
-                'csp_report', 'media', 'websocket', 'other'
+                'main_frame',
+                'sub_frame',
+                'stylesheet',
+                'script',
+                'image',
+                'font',
+                'object',
+                'xmlhttprequest',
+                'ping',
+                'csp_report',
+                'media',
+                'websocket',
+                'other',
             ]
             for element in self.block_elements:
                 if element not in chrome_web_request_resource_types:
                     await browser.close()
-                    raise ValueError(f"Unknown or unsupported '{element}' resource type in 'block_elements' "
-                                     f'( {self.get_indexed_location()} )')
+                    raise ValueError(
+                        f"Unknown or unsupported '{element}' resource type in 'block_elements' "
+                        f'( {self.get_indexed_location()} )'
+                    )
 
-            async def handle_request(request_event, block_elements):
-                logger.info(f'Job {self.index_number}: resource_type={request_event.resourceType} '
-                            f'elements={block_elements}')
+            async def handle_request(
+                request_event: pyppeteer.network_manager.Request, block_elements: List[str]
+            ) -> None:
+                logger.info(
+                    f'Job {self.index_number}: resource_type={request_event.resourceType} ' f'elements={block_elements}'
+                )
                 if any(request_event.resourceType == el for el in block_elements):
                     logger.info(f'Job {self.index_number}: Aborting request {request_event.resourceType}')
                     await request_event.abort()
@@ -670,21 +778,24 @@ class BrowserJob(Job):
                     await request_event.continue_()  # broken -- many sites hang here!
 
             await page.setRequestInterception(True)
-            page.on('request', lambda request_event: asyncio.create_task(
-                handle_request(request_event, self.block_elements)))  # inherited from pyee.EventEmitter
+            page.on(
+                'request', lambda request_event: asyncio.create_task(handle_request(request_event, self.block_elements))
+            )  # inherited from pyee.EventEmitter
 
-        async def store_etag(response_event):
+        async def store_etag(response_event: pyppeteer.network_manager.Response) -> None:
             """Store the ETag for future use as well as the response code."""
-            nonlocal etag
-            nonlocal response_code
-            logger.debug(f'Job {self.index_number}: response.status={response_event.status} '
-                         f'response.url={response_event.url}')
+            nonlocal etag  # type: ignore[misc]
+            nonlocal response_code  # type: ignore[misc]
+            logger.debug(
+                f'Job {self.index_number}: response.status={response_event.status} '
+                f'response.url={response_event.url}'
+            )
             if urldefrag(response_event.url)[0] == urldefrag(self.url)[0]:
                 response_code = response_event.status
                 if response_event.status == requests.codes.ok:
                     etag = response_event.headers.get('etag')
 
-        etag: Optional[str] = None
+        etag: str = ''
         response_code: Optional[int] = None
 
         # page.on inherited from pyee's EventEmitter class
@@ -725,8 +836,9 @@ class BrowserJob(Job):
         if response_code and 400 <= response_code < 600:
             raise BrowserResponseError(('',), response_code)
         elif response_code is not None and response_code != requests.codes.ok:
-            logger.info(f'Job {self.index_number}: Received response HTTP {response_code} '
-                        f'{response_names[response_code]}')
+            logger.info(
+                f'Job {self.index_number}: Received response HTTP {response_code} ' f'{response_names[response_code]}'
+            )
 
         return content, etag
 
@@ -819,7 +931,7 @@ class BrowserJob(Job):
                     return True
         elif isinstance(exception, BrowserResponseError) and self.ignore_http_error_codes:
             status_code = exception.status_code
-            ignored_codes = []
+            ignored_codes: List[str] = []
             if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
                 return True
             elif isinstance(self.ignore_http_error_codes, str):
@@ -841,22 +953,27 @@ class ShellJob(Job):
     def get_location(self) -> str:
         return self.command
 
-    def retrieve(self, job_state: Type['JobState']) -> (AnyStr, str):
+    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         if sys.version_info < (3, 7):
-            process = subprocess.run(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                     shell=True)  # noqa: DUO116 use of "shell=True" is insecure
+            process = subprocess.run(
+                self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+            )  # noqa: DUO116 use of "shell=True" is insecure
             result = process.returncode
             if result != 0:
-                raise ShellError(process.stderr)
+                raise ShellError(process.returncode)
 
             if needs_bytes:
-                return process.stdout, None
+                return process.stdout, ''
             else:
-                return process.stdout.decode(), None
+                return process.stdout.decode(), ''
         else:
             try:
-                return subprocess.run(self.command, capture_output=True, shell=True, check=True,
-                                      text=(not needs_bytes)).stdout, None  # noqa: DUO116 use of "shell=True" is insec
+                return (
+                    subprocess.run(
+                        self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)
+                    ).stdout,
+                    '',
+                )  # noqa: DUO116 use of "shell=True" is insecure
             except subprocess.CalledProcessError as e:
                 raise ShellError(e.stderr).with_traceback(e.__traceback__)

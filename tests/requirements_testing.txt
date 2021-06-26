@@ -1,11 +1,21 @@
 aioxmpp
+bandit
 beautifulsoup4
+codecov
+doc8
 docutils
+flake8
+flake8-quotes
+flynt
 jq; os_name != "nt"
 matrix_client
 minidb
+pre-commit
 pyppeteer
 pytest
 pytest-cov
 sphinx
 sphinx_rtd_theme
+types-PyYAML
+types-redis
+types-requests

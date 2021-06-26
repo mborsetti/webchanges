@@ -3,12 +3,15 @@
 
 # List of hooks at https://pre-commit.com/hooks.html
 
+# Prefer using local configurations so they don't have to be constantly auto-updated (slow).
+# Local configuration follows the repo's .pre-commit-hooks.yaml
+
 # Requires the pre-commit package manager to be installed: pip install pre-commit
 # To install pre-commit into your git hooks (i.e. at .git/hooks/pre-commit), run 'pre-commit install'.
 # To update hooks to the latest version automatically, run 'pre-commit autoupdate'. By default, this will bring the
 # hooks to the latest tag on the default branch.
 
-# NOTE: in this package implementation, tox runs 'pre-commit run -a'
+# NOTE: in this package tox runs 'pre-commit run -a'
 
 # A list of repository mappings.
 repos:
@@ -18,20 +21,22 @@ repos:
       # see https://github.com/pre-commit/pre-commit-hooks
 #      - id: check-added-large-files
 #        description: Prevent giant files from being committed
-      - id: check-ast
-        description: Simply check whether files parse as valid python
+#      - id: check-ast  # black takes care of this
+#        description: Simply check whether files parse as valid python
       - id: check-builtin-literals
         description: Require literal syntax when initializing empty or zero Python builtin types
       - id: check-case-conflict
         description: Check for files with names that would conflict on a case-insensitive filesystem
-      - id: check-docstring-first
-        description: Checks for a common error of placing code before the docstring
+#      - id: check-docstring-first  # black takes care of this
+#        description: Checks for a common error of placing code before the docstring
       - id: check-executables-have-shebangs
         description: Checks that non-binary executables have a proper shebang
-#      - id: check-json
+#      - id: check-json  # have no json files
 #        description: Attempts to load all json files to verify syntax
       - id: check-merge-conflict
         description: Check for files that contain merge conflict strings
+#      - id: check-shebang-scripts-are-executable  # have none
+#        description: Checks that scripts with shebangs are executable
 #      - id: check-symlinks
 #        description: Checks for symlinks which do not point to anything
 #      - id: check-toml
@@ -49,9 +54,9 @@ repos:
         description: >-
           Detects symlinks which are changed to regular files with a content of a path which that symlink was
           pointing to
-#      - id: detect-aws-credentials
+#      - id: detect-aws-credentials  # have none
 #        description: Checks for the existence of AWS secrets that you have set up with the AWS CLI
-#      - id: detect-private-key
+#      - id: detect-private-key  # have none
 #        description: Checks for the existence of private keys
       - id: double-quote-string-fixer
         description: This hook replaces double quoted strings with single quoted strings.
@@ -60,21 +65,20 @@ repos:
       - id: fix-byte-order-marker
         description: removes UTF-8 byte order marker
       - id: fix-encoding-pragma
-        args: ['--remove']
+        args: [--remove]
         description: "Remove # -*- coding: utf-8 -*- from the top of python files"
 #      - id: file-contents-sorter
 #        description: Sort the lines in specified files (defaults to alphabetical)
 #      - id: forbid-new-submodules
 #        description: Prevent addition of new git submodules
-#      - id: mixed-line-ending
-#        args: ['--fix=lf']
+#      - id: mixed-line-ending  # using gitattributes https://git-scm.com/docs/gitattributes
+#        args: [--fix=lf]
 #        description: Forces replacing of line ending by the UNIX 'lf' character
-#        note: switched to using gitattributes https://git-scm.com/docs/gitattributes
       - id: name-tests-test
         description: Assert that Python files in tests/ end in _test.py
 #      - id: no-commit-to-branch
 #        description: Protect specific branches from direct checkins.
-#      - id: pretty-format-json
+#      - id: pretty-format-json  # have none
 #        description: Checks that all your JSON files are pretty.
       - id: requirements-txt-fixer
         description: Sorts entries in requirements.txt and removes incorrect entry for pkg-resources==0.0.0
@@ -90,6 +94,10 @@ repos:
         description: >-
           "Enforce that noqa annotations always occur with specific codes. Sample annotations: # noqa: F401, # noqa:
           F401,W203"
+      - id: python-check-blanket-type-ignore
+        description: >-
+          "Enforce that # type: ignore annotations always occur with specific codes. Sample annotations: # type:
+          ignore[attr-defined], # type: ignore[attr-defined, name-defined]"
       - id: python-check-mock-methods
         description: >-
           Prevent common mistakes of assert mck.not_called(), assert mck.called_once_with(...) and mck
@@ -109,55 +117,72 @@ repos:
       - id: text-unicode-replacement-char
         description: Forbid files which have a UTF-8 Unicode replacement character
 
-#  NOT using black because it does not support single-quote
-#  - repo: https://github.com/python/black
-#    rev: 20.8b1
-#    hooks:
-#      - id: black
-#        language_version: python3
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 3.9.2
+  - repo: local
     hooks:
+      - id: bandit  # https://github.com/PyCQA/bandit
+        name: Find common security issues in Python code (bandit)
+        entry: bandit
+        language: python
+        language_version: python3
+        types: [ python ]
+        args:  [--ini, .bandit, --recursive]
+#  isort not needed if running black
+#      - id: isort  # https://github.com/PyCQA/isort
+#        name: isort your imports, so you don't have to (isort)
+#        entry: isort
+#        require_serial: true
+#        language: python
+#        language_version: python3
+#        types_or: [cython, pyi, python]
+#        args: [--filter-files]
+      - id: flynt  # https://github.com/ikamensh/flynt
+        name: Convert % strings to f-strings (flynt)
+        entry: flynt
+        language: python
+        language_version: python3
+        require_serial: true
+        types: [python]
+        args: [--fail-on-change]
+      - id: black  # https://github.com/python/black
+        name: Uncompromising code formatting (black)
+        entry: black
+        language: python
+        language_version: python3
+        types: [python]
       - id: flake8
         name: Check for errors, style, and over-complexity (flake8)
         description: Code linter
-#        additional_dependencies: [flake8-import-order]  # conflicts with PyCharm's Optimize imports
-
-  - repo: https://github.com/pycqa/doc8
-    rev: 0.9.0a1
-    hooks:
-      - id: doc8
+        entry: flake8  # https://gitlab.com/pycqa/flake8
+        language: python
+        language_version: python3
+        types: [python]
+        require_serial: true
         args: [--max-line-length, '120']
+#      - id: mypy  # https://github.com/python/mypy
+#        name: Static Typing for Python (mypy)
+#        entry: mypy
+#        language: python
+#        language_version: python3
+#        types: [python]
+      - id: doc8  # https://github.com/pycqa/doc8
         name: Check for style in rst documentation (doc8)
         description: Documentation linter
-
-#  NOT using this because it fails (and no support for Python > 3.6!)
-#  - repo: https://github.com/myint/rstcheck
-#    rev: 3f92957478422df87bd730abde66f089cc1ee19b
-#    hooks:
-#      # Checks syntax of reStructuredText and code blocks nested within it.
-#      # See .rstcheck.cfg for configuration
-#      - id: rstcheck
-#        name: Check *.rst syntax (rstcheck)
-
-#  - repo: local
-#    hooks:
+        entry: doc8
+        language: python
+        language_version: python3
+        types: [rst]
+        require_serial: true
+        args: [--max-line-length, '120']
 #      - id: python -m sphinx.apidoc
 #        name: Build autodoc API subdirectory (sphinx-apidoc)
 #        entry: sphinx-apidoc
 #        args: [-f, -e, -T, -o, docs\_api, webchanges]
 #        language: system
-
-  - repo: local
-    hooks:
       - id: sphinx-build
         name: Check documentation build (sphinx-build)
         entry: python -m sphinx.cmd.build
-        args: [-a, -E, -W, docs, docs/_build]
+        args: [-E, -W, docs, docs/_build]
         language: system
-        files: ^docs
-        types: [file]
         pass_filenames: false
 #      # https://www.sphinx-doc.org/en/master/usage/extensions/doctest.html#module-sphinx.ext.doctest
 #      - id: sphinx-doctest

@@ -13,17 +13,24 @@ import textwrap
 from math import floor, log10
 from os import PathLike
 from types import ModuleType
-from typing import Callable, Iterable, List, Match, Tuple, Type, TypeVar, Union
+from typing import Callable, Iterable, List, Match, TYPE_CHECKING, Tuple, Union
+
+# https://stackoverflow.com/questions/39740632
+if TYPE_CHECKING:
+    from .filters import FilterBase
 
 logger = logging.getLogger(__name__)
 
 
 class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
-    T = TypeVar('T')
+
+    # Typing
+    # __kind__ = ''   # issue: confuses converting to a different ReporterBase class
+    __supported_subfilters__ = ''
 
     @staticmethod
-    def sorted_by_kind(cls: T) -> List[Type[T]]:
+    def sorted_by_kind(cls: 'FilterBase') -> List['FilterBase']:
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
     def __init__(cls, name: str, bases: Tuple[type], namespace: dict) -> None:
@@ -71,8 +78,9 @@ def edit_file(filename: Union[str, bytes, PathLike]) -> None:
         if os.name == 'nt':
             editor = 'notepad.exe'
         else:
-            raise SystemExit('Please set the path to the editor in the environment variable $EDITOR'
-                             ' e.g. "export EDITOR=nano"')
+            raise SystemExit(
+                'Please set the path to the editor in the environment variable $EDITOR' ' e.g. "export EDITOR=nano"'
+            )
 
     subprocess.run(shlex.split(editor) + [str(filename)], check=True)
 
@@ -82,7 +90,7 @@ def import_module_from_source(module_name: str, source_path: Union[str, bytes, P
     source_path = str(source_path)
     loader = importlib.machinery.SourceFileLoader(module_name, source_path)
     spec = importlib.util.spec_from_file_location(module_name, source_path, loader=loader)
-    module = importlib.util.module_from_spec(spec)
+    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
     sys.modules[module_name] = module
     loader.exec_module(module)
     return module
@@ -100,8 +108,7 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
     if numbering and len(string) > length:
         try:
             text_length = length - 4 - 2
-            digits_try = (1 if text_length <= 0
-                          else floor(log10(len(string) / text_length)))  # initialization floor
+            digits_try = 1 if text_length <= 0 else floor(log10(len(string) / text_length))  # initialization floor
             digits_guess = digits_try + 1
             while digits_guess > digits_try:
                 digits_try += 1
@@ -130,9 +137,11 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
     return textwrap.wrap(string, length, replace_whitespace=False)
 
 
-_URL_RE = re.compile(r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
+_URL_RE = re.compile(
+    r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
 &amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|
-&quot;)*\)))+)""")  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible
+&quot;)*\)))+)"""
+)  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible
 
 
 def linkify(
@@ -140,7 +149,11 @@ def linkify(
     shorten: bool = False,
     extra_params: Union[str, Callable[[str], str]] = '',
     require_protocol: bool = False,
-    permitted_protocols: Tuple[str] = ('http', 'https', 'mailto',)
+    permitted_protocols: Tuple[str, ...] = (
+        'http',
+        'https',
+        'mailto',
+    ),
 ) -> str:
     """Converts plain text into HTML with links.
 
@@ -162,7 +175,7 @@ def linkify(
         permitted_protocols=('http', 'ftp', 'mailto')); it is very unsafe to include protocols such as javascript.
     """
     if extra_params and not callable(extra_params):
-        extra_params = ' ' + extra_params.strip()
+        extra_params = f' {extra_params.strip()}'
 
     def make_link(m: Match) -> str:
         """Replacement function for re.sub to convert plain text into HTML with links."""
@@ -176,10 +189,10 @@ def linkify(
 
         href = m.group(1)
         if not proto:
-            href = 'http://' + href  # no proto specified, use http
+            href = f'http://{href}'  # no proto specified, use http
 
         if callable(extra_params):
-            params = ' ' + extra_params(href).strip()
+            params = f' {extra_params(href).strip()}'
         else:
             params = extra_params
 
@@ -198,12 +211,7 @@ def linkify(
                 # The path is usually not that interesting once shortened
                 # (no more slug, etc), so it really just provides a little
                 # extra indication of shortening.
-                url = (
-                    url[:proto_len]
-                    + parts[0]
-                    + '/'
-                    + parts[1][:8].split('?')[0].split('.')[0]
-                )
+                url = url[:proto_len] + parts[0] + '/' + parts[1][:8].split('?')[0].split('.')[0]
 
             if len(url) > max_len * 1.5:  # still too long
                 url = url[:max_len]
@@ -220,7 +228,7 @@ def linkify(
                 else:
                     # full url is visible on mouse-over (for those who don't
                     # have a status bar, such as Safari by default)
-                    params += ' title=' + href
+                    params += f' title={href}'
 
         return f'<a href="{href}"{params}>{url}</a>'
 
