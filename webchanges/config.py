@@ -1,7 +1,7 @@
 """Command-line configuration."""
 
 import argparse
-import os
+import sys
 from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Union
@@ -192,12 +192,10 @@ class CommandConfig(BaseConfig):
             help='level of logging output if -v is selected (default: %(default)s)',
         )
 
-        # workaround for avoiding triggering error when invoked by pytest
-        if parser.prog != '_jb_pytest_runner.py' and not os.getenv('CI'):
-            args = parser.parse_args()
+        args = parser.parse_args(sys.argv[1:])
 
-            for arg in vars(args):
-                argval = getattr(args, arg)
-                setattr(self, arg, argval)
+        for arg in vars(args):
+            argval = getattr(args, arg)
+            setattr(self, arg, argval)
 
         return parser
