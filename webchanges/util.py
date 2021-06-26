@@ -15,7 +15,7 @@ import textwrap
 from math import floor, log10
 from os import PathLike
 from types import ModuleType
-from typing import Callable, Iterable, List, Match, TYPE_CHECKING, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Match, TYPE_CHECKING, Tuple, Type, Union
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -28,11 +28,11 @@ class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
 
     # Typing
-    # __kind__ = ''   # issue: confuses converting to a different ReporterBase class
-    __supported_subfilters__ = ''
+    # __kind__: str = ''   # issue: confuses converting to a different ReporterBase class
+    __supported_subfilters__: Dict[str, str] = {}
 
     @staticmethod
-    def sorted_by_kind(cls: FilterBase) -> List[FilterBase]:
+    def sorted_by_kind(cls: Type[FilterBase]) -> List[FilterBase]:
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
     def __init__(cls, name: str, bases: Tuple[type], namespace: dict) -> None:

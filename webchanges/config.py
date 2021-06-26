@@ -192,6 +192,7 @@ class CommandConfig(BaseConfig):
         )
 
         # workaround for avoiding triggering error when invoked by pytest
+        print(f'parser.prog={parser.prog}')
         if parser.prog != '_jb_pytest_runner.py':
             args = parser.parse_args()
 

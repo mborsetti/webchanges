@@ -95,7 +95,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         job_state.save()
                         report.changed(job_state)
                 else:
-                    # legacy code used when timestamp was not saved
+                    # timestamp was not saved
                     matched_history_time = job_state.history_data.get(job_state.new_data)
                     if matched_history_time:
                         job_state.old_timestamp = matched_history_time
