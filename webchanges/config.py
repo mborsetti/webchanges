@@ -193,7 +193,6 @@ class CommandConfig(BaseConfig):
         )
 
         # workaround for avoiding triggering error when invoked by pytest
-        print(f"os.getenv('CI')={os.getenv('CI')}")
         if parser.prog != '_jb_pytest_runner.py' and not os.getenv('CI'):
             args = parser.parse_args()
 
