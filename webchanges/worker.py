@@ -1,5 +1,7 @@
 """The worker that runs jobs in parallel."""
 
+from __future__ import annotations
+
 import difflib
 import logging
 import os
@@ -24,7 +26,7 @@ def run_parallel(func: Callable, items: Iterable, max_workers: Optional[int] = N
             yield result
 
 
-def run_jobs(urlwatcher: 'Urlwatch') -> None:
+def run_jobs(urlwatcher: Urlwatch) -> None:
     """Process jobs."""
     cache_storage = urlwatcher.cache_storage
     if urlwatcher.urlwatch_config.joblist:

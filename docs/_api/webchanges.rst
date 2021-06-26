@@ -13,7 +13,6 @@ Submodules
    webchanges.filters
    webchanges.handler
    webchanges.jobs
-   webchanges.jobs_browser
    webchanges.mailer
    webchanges.main
    webchanges.reporters

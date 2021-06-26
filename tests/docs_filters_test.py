@@ -5,7 +5,7 @@ import importlib.util
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import docutils.frontend
 import docutils.nodes
@@ -58,7 +58,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
         ...
 
 
-def load_filter_doc_jobs() -> Dict[str, Dict[str, Any]]:
+def load_filter_doc_jobs() -> List[JobBase]:
     """Load YAML code blocks from rst file"""
     doc = parse_rst(open(docs_dir.joinpath('filters.rst')).read())
     visitor = YAMLCodeBlockVisitor(doc)

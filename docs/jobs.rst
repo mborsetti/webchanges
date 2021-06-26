@@ -168,13 +168,13 @@ For all ``url`` jobs:
   the webpage instead). `New in version 3.0.3.`
 - ``note``: Information added under the header in reports. `New in version 3.2.`
 - ``ignore_connection_errors``: Ignore (temporary) connection errors (true/false) (see :ref:`here <ignore_errors>`).
-  `Changed in version 3.5:` Works with ``use_browser: true`` with Python version 3.7 or higher.
+  `Changed in version 3.5:` Works with ``use_browser: true``.
 - ``ignore_timeout_errors``: Do not report errors when the timeout is hit (true/false) (see :ref:`here
-  <ignore_errors>`). `Changed in version 3.5:` Works with ``use_browser: true`` with Python version 3.7 or higher.
+  <ignore_errors>`). `Changed in version 3.5:` Works with ``use_browser: true``.
 - ``ignore_too_many_redirects``: Ignore redirect loops (true/false) (see :ref:`here <ignore_errors>`). `Changed in
-  version 3.5:` Works with ``use_browser: true`` with Python version 3.7 or higher.
+  version 3.5:` Works with ``use_browser: true``.
 - ``ignore_http_error_codes``: List of HTTP errors to ignore (see :ref:`here <ignore_errors>`). `Changed in version
-  3.5:` Works with ``use_browser: true`` with Python version 3.7 or higher.
+  3.5:` Works with ``use_browser: true``.
 
 For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
@@ -212,7 +212,7 @@ For ``url`` jobs that have ``use_browser: true``:
   string is matched, before getting the HTML content (see `documentation
   <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds). If
   ``wait_for_navigation`` is also used, ``wait_for`` is applied after. Cannot be used with ``block_elements``.
-- ``block_elements`` (⚠ Python >= 3.7) (experimental feature): Do not request (download) specified `resource types
+- ``block_elements`` (⚠ experimental feature): Do not request (download) specified `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ as to
   speed up retrieval of the content (list). Only resource types `supported by Chromium
   <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed. See

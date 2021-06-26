@@ -1,5 +1,7 @@
 """Filters."""
 
+from __future__ import annotations
+
 import hashlib
 import io
 import itertools
@@ -17,9 +19,11 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, TYPE_CHECKING,
 from xml.dom import minidom  # nosec: B408 Replace minidom with the equivalent defusedxml package TODO
 
 import html2text
+
+from lxml import etree  # noqa: DUO107 insecure use of XML modules, prefer "defusedxml"  # nosec: B410 TODO
+from lxml.cssselect import CSSSelector  # noqa: DUO107 insecure use of XML ... "defusedxml"  # nosec: B410 TODO
+
 import yaml
-from lxml import etree  # noqa: DUO107 insecure use of XML modules, prefer "defusedxml" TODO # nosec: B410
-from lxml.cssselect import CSSSelector  # noqa: DUO107 insecure use of XML ... "defusedxml" TODO # nosec: B410
 
 from .util import TrackSubClasses
 
@@ -83,7 +87,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
     __uses_bytes__: bool = False
     method = ''
 
-    def __init__(self, job: 'JobBase', state: 'JobState') -> None:
+    def __init__(self, job: JobBase, state: JobState) -> None:
         self.job = job
         self.state = state
 
@@ -103,7 +107,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
         return '\n'.join(result)
 
     @classmethod
-    def auto_process(cls, state: 'JobState', data: Union[bytes, str]) -> Union[bytes, str]:
+    def auto_process(cls, state: JobState, data: Union[bytes, str]) -> Union[bytes, str]:
         filters = itertools.chain(
             (filtercls for _, filtercls in sorted(cls.__subclasses__.items(), key=lambda k_v: k_v[0])),
             cls.__anonymous_subclasses__,
@@ -182,7 +186,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
                     yield filter_kind, subfilter
 
     @classmethod
-    def process(cls, filter_kind: str, subfilter: Dict[str, Any], state: 'JobState', data: Union[bytes, str]) -> str:
+    def process(cls, filter_kind: str, subfilter: Dict[str, Any], state: JobState, data: Union[bytes, str]) -> str:
         logger.info(f'Job {state.job.index_number}: Applying filter {filter_kind}, subfilter {subfilter}')
         filtercls: TrackSubClasses = cls.__subclasses__.get(filter_kind, None)
         return filtercls(state.job, state).filter(data, subfilter)
@@ -497,7 +501,7 @@ class XMLFormatFilter(FilterBase):
 
 
 class PrettyXMLFilter(FilterBase):
-    """Pretty-print XML using built-in xml.minidom."""
+    """Pretty-print XML using xml.dom.minidom."""
 
     __kind__ = 'pretty-xml'
 
@@ -811,7 +815,7 @@ class Sha1Filter(FilterBase):
     def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         if isinstance(data, str):
             data = data.encode(errors='ignore')
-        return hashlib.sha1(data).hexdigest()  # noqa: DUO130 insecure use of "hashlib" module # nosec: B303
+        return hashlib.sha1(data).hexdigest()  # noqa: DUO130 insecure use of "hashlib" module  # nosec: B303
 
 
 class HexdumpFilter(FilterBase):
@@ -1097,16 +1101,13 @@ class ShellPipeFilter(FilterBase):
         try:
             return subprocess.run(
                 subfilter['command'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 shell=True,
                 check=True,
+                text=True,
                 env=env,
-                input=data.encode(),
-            ).stdout.decode()  # noqa: DUO116 use of "shell=True" is insecure
-        # Python 3.7
-        #     return subprocess.run(subfilter['command'], capture_output=True, shell=True, check=True, text=True,
-        #                           env=env, input=data.encode()).stdout  # noqa: DUO116 use of "shell=True" is insecure
+                input=data,
+            ).stdout  # noqa: DUO116 use of "shell=True" is insecure
         except subprocess.CalledProcessError as e:
             logger.error(
                 f"The 'shellpipe' filter returned error ({self.job.get_indexed_location()}):\n{e.stderr.decode()}"
@@ -1141,15 +1142,12 @@ class ExecutePipeFilter(FilterBase):
         try:
             return subprocess.run(
                 shlex.split(subfilter['command']),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 check=True,
+                text=True,
                 env=env,
-                input=data.encode(),
-            ).stdout.decode()
-        # Python 3.7
-        #     return subprocess.run(shlex.split(subfilter['command']), capture_output=True, check=True, text=True,
-        #                           env=env, input=data.encode()).stdout
+                input=data,
+            ).stdout
         except subprocess.CalledProcessError as e:
             logger.error(
                 f"The 'execute' filter returned error ({self.job.get_indexed_location()}):\n{e.stderr.decode()}"

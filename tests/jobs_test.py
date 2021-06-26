@@ -48,7 +48,7 @@ def is_connected() -> bool:
 
 
 connection_required = pytest.mark.skipif(not is_connected(), reason='no Internet connection')
-py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
+# py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
 
 chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
 TEST_JOBS = [
@@ -121,12 +121,6 @@ TEST_ALL_URL_JOBS = [{}, {'use_browser': True}]
 @connection_required
 @pytest.mark.parametrize('input_job, output', TEST_JOBS)
 def test_run_job(input_job: Dict[str, Any], output: str) -> None:
-    if input_job.get('use_browser') and os.getenv('GITHUB_ACTIONS') and sys.version_info < (3, 7):
-        logger.warning(
-            f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer in GitHub Actions '
-            f'as it fails with error pyppeteer.errors.BrowserError: Browser closed unexpectedly'
-        )
-        return
     job = JobBase.unserialize(input_job)
     job_state = JobState(cache_storage, job)
     job.main_thread_enter()
@@ -163,19 +157,6 @@ def test_run_ftp_job_needs_bytes() -> None:
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_etag(job_data: Dict[str, Any]) -> None:
-    if job_data.get('use_browser') and os.getenv('GITHUB_ACTIONS') and sys.version_info < (3, 7):
-        logger.warning(
-            f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer in GitHub '
-            f'Actions as it fails with error pyppeteer.errors.BrowserError: Browser closed unexpectedly'
-        )
-        return
-    if job_data.get('use_browser') and sys.version_info < (3, 7):
-        logger.warning(
-            f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer as it does not '
-            f'capture ETags'
-        )
-        return
-
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
     job_state = JobState(cache_storage, job)
@@ -241,12 +222,6 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) 
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
-    if job_data.get('use_browser') and sys.version_info < (3, 7):
-        logger.warning(
-            f'Skipping test {sys._getframe().f_code.co_name} on legacy code for Pyppeteer as it does not '
-            f'capture exceptions'
-        )
-        return
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
@@ -266,7 +241,7 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
 
 
 @connection_required
-@py37_required
+# @py37_required
 # Legacy code for Pyppeteer is not optimized for concurrency and fails in Github Actions with error
 # pyppeteer.errors.BrowserError: Browser closed unexpectedly.
 def test_stress_use_browser() -> None:
@@ -380,7 +355,7 @@ def test_ignore_error():
     assert job.ignore_error(Exception) is False
 
 
-@py37_required
+# @py37_required
 def test_browser_switches_not_str_or_list():
     job_data = {'url': 'https://www.example.com', 'use_browser': True, 'switches': {'dict key': ''}}
     job = JobBase.unserialize(job_data)
@@ -389,7 +364,7 @@ def test_browser_switches_not_str_or_list():
     assert isinstance(job_state.exception, TypeError)
 
 
-@py37_required
+# @py37_required
 def test_browser_block_elements_not_str_or_list():
     job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': {'dict key': ''}}
     job = JobBase.unserialize(job_data)
@@ -399,7 +374,7 @@ def test_browser_block_elements_not_str_or_list():
     assert isinstance(job_state.exception, TypeError)
 
 
-@py37_required
+# @py37_required
 def test_browser_block_elements_invalid():
     job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': ['fake element']}
     job = JobBase.unserialize(job_data)

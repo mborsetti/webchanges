@@ -19,7 +19,7 @@ to optimize it for HTML, and is backward-compatible with `urlwatch 2.23`'s job a
 
 Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), and gives you:
 
-* Vastly improved HTML reporting, including:
+* Vastly improved HTML email reporting, including:
 
   * Links that are `clickable <https://pypi.org/project/webchanges/>`__!
   * Formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and indentation is
@@ -30,23 +30,22 @@ Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), a
   * Correct rendering by email clients who override stylesheets (e.g. Gmail)
   * Better HTML-to-text translation with updated defaults for the ``html2text`` filter
   * Other legibility improvements
+* Improved ``telegram`` reporter now uses MarkdownV2 and preserves most formatting of HTML sites including clickable
+  links, bolding, underlining, italics and strikethrough.
 * Multiple upgrades in `Pyppeteer`-based browsing (called ``navigate`` in :program:`urlwatch`) to render JavaScript,
   including:
 
   * Upgraded browser engine (same as Chrome 89)
   * Increased reliability with the use of Python's built-in ``asyncio.run()`` to manage the asyncio event loop,
-    finalizing asynchronous generators, and closing the threadpool instead of custom code (only if running in Python 3.7
-    or higher)
+    finalizing asynchronous generators, and closing the threadpool instead of custom code
   * Higher stability by optimizing of concurrency
   * More flexibility and control with new directives ``chromium_revision``, ``switches``, ``wait_until``,
     ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``, ``user_data_dir``, ``block_elements``, ``cookies``,
-    ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout`` plus the implementation for this type of jobs (if
-    running in Python 3.7 or higher) of the ``ignore_connection_errors``, ``ignore_timeout_errors``,
-    ``ignore_too_many_redirects`` and ``ignore_http_error_codes`` directives
+    ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout`` plus the implementation for this type of jobs of the
+    ``ignore_connection_errors``, ``ignore_timeout_errors``, ``ignore_too_many_redirects`` and
+    ``ignore_http_error_codes`` directives
   * Faster runs due to handling of ETags allowing servers to send a simple "HTTP 304 Not Modified" message when
     relevant
-  *
-     directives now work with these type of jobs
 
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
   does not infinitely grow
@@ -66,6 +65,7 @@ Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), a
   * A 33 percentage point increase in code testing coverage (to 75%)
   * Completely new continuous integration (CI) and continuous delivery (CD) pipeline (GitHub Actions with pre-commit)
   * Uses of flake8 and doc8 linters and pre-commit checks
+  * Code security checks using bandit
   * Testing on both Linux (Ubuntu) **and** macOS, with Windows 10 x64 to come
 * A vast improvement in documentation and error text
 * And much more!
@@ -117,7 +117,7 @@ sub-filters like this:
 Upgrade details
 ---------------
 Everything, except the breaking changes below, work out of the box when upgrading from a :program:`urlwatch` 2.23 setup,
-and you can switch back whenever you want.
+as long as you run it in Python 3.7 or higher, and you can switch back whenever you want.
 
 ⚠ Breaking Changes
 ~~~~~~~~~~~~~~~~~~
@@ -125,11 +125,12 @@ Relative to :program:`urlwatch` 2.23:
 
 * By default a new much improved database engine is used; run with ``--database-engine minidb`` command line argument to
   preserve backwards-compatibility
-* By default only 4 snapshots are kept with the new database engine (if running Python 3.7 or higher), and older ones
-  are purged after every run; run with ``--max-snapshots 0`` command line argument to keep the existing behavior
-  (but beware of infinite database growth)
+* By default only 4 snapshots are kept with the new database engine, and older ones are purged after every run; run
+  with ``--max-snapshots 0`` command line argument to keep the existing behavior (but beware of infinite database
+  growth)
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python packages; use the
   default method instead or construct a custom ``execute`` command
+* Must run on Python version 3.7 or higher
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -152,8 +153,8 @@ Relative to :program:`urlwatch` 2.23:
   * Add job number(s) in command line to run a subset of them; for example, run ``webchanges 2 3`` to only run jobs #2
     and #3 of your jobs list (find job numbers by running``webchanges --list``)
   * New ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults
-    to 4. If set to 0, and unlimited number of snapshots will be kept. Only applies to Python 3.7 or higher and only
-    works if the default ``sqlite3`` database is being used.
+    to 4. If set to 0, and unlimited number of snapshots will be kept. Only works if the default ``sqlite3`` database
+    is being used.
   * New ``--cache-engine ENGINE`` command line argument to specify database engine. New default ``sqlite3`` creates a
     smaller database due to data compression with `msgpack <https://msgpack.org/index.html>`__, higher speed due to
     indexing, and offers additional features and flexibility; migration from old 'minidb' database is done automatically
@@ -173,6 +174,9 @@ Relative to :program:`urlwatch` 2.23:
     without a '.py' extension, :program:`webchanges` now also looks for one with such an extension appended to it
   * In Windows, ``--edit`` defaults to using the built-in notepad.exe text editor if both the %EDITOR% and %VISUAL%
     environment variables are not set
+  * Run a subset of jobs by adding their index number(s) as command line arguments. For example, run
+    ``webchanges 2 3`` to only run jobs #2 and #3 of your jobs list. Run ``webchanges --list`` to find the job numbers.
+    API is experimental and may change in the near future.
 
 * Files and location
 
@@ -220,18 +224,23 @@ Relative to :program:`urlwatch` 2.23:
     trigger a warning; it will be removed in a future release
   * Both the ``keep_lines_containing`` and ``delete_lines_containing`` accept ``text`` (default) in addition to ``re``
     (regular expressions)
+  * New filter ``execute`` to filter the data using an executable without invoking the shell (as ``shellpipe`` does)
+    and therefore exposing to additional security risks
+  * Support for ``ftp://`` URLs to download a file from an ftp server
   * The use of the ``kind`` directive in ``jobs.yaml`` configuration files has been deprecated for simplicity (but is,
     for now, still used internally); it will be removed in a future release
+  * New sub-directive ``silent`` for ``telegram`` reporter to receive a notification with no sound (true/false)
+    (default: false)
   * The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
     ``max_message_length`` sub-directive
   * The user is now alerted when the job file contains unrecognized directives (e.g. typo)
   * Reduction in concurrency for higher stability
 
+
 * Internals
 
   * Increased reliability by using Python's built-in ``asyncio.run()`` to manage the asyncio event loop, finalizing
-    asynchronous generators, and closing the threadpool instead of legacy custom code (only if running Python
-    3.7 or higher)
+    asynchronous generators, and closing the threadpool instead of legacy custom code
   * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
     <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__
   * A new, more efficient indexed database no longer requiring external Python package
@@ -251,6 +260,8 @@ Relative to :program:`urlwatch` 2.23:
   * Using `flake8 <https://pypi.org/project/flake8/>`__ to check PEP-8 compliance and more
   * Using `coverage <https://pypi.org/project/coverage/>`__ to check unit testing coverage
   * Added type hinting to the entire code
+  * Strengthened security with `bandit <https://pypi.org/project/bandit/>`__ to catch common security issues
+  * Standardized code formatting with `black <https://pypi.org/project/black/>`__
   * A vast improvement in documentation and error text
   * The support for Python 3.9
 
@@ -260,10 +271,10 @@ Relative to :program:`urlwatch` 2.23:
 
 * Diff (change) data is no longer lost if :program:`webchanges` is interrupted mid-execution or encounters an error in
   reporting: the permanent database is updated only at the very end (after reports are sent)
-* The database no longer grows unbounded to infinity. Fix only works when running in Python 3.7 or higher and using
-  the new, default, ``sqlite3`` database engine. In this scenario only the latest 4 snapshots are kept, and older ones
-  are purged after every run; the number is selectable with the new ``--max-snapshots`` command line argument. To keep
-  the existing grow-to-infinity behavior, run :program:`webchanges` with ``--max-snapshots 0``.
+* The database no longer grows unbounded to infinity. Fix only works when using the new, default, ``sqlite3`` database
+  engine. In this scenario only the latest 4 snapshots are kept, and older ones are purged after every run; the number
+  is selectable with the new ``--max-snapshots`` command line argument. To keep the existing grow-to-infinity behavior,
+  run :program:`webchanges` with ``--max-snapshots 0``.
 * The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
 * HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always

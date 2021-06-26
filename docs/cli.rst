@@ -60,8 +60,7 @@ Command line arguments
     --database-engine {sqlite3,redis,minidb,textfiles}
                           database engine to use (default: sqlite3 unless redis URI in --cache)
     --max-snapshots NUM_SNAPSHOTS
-                          maximum number of snapshots to retain in sqlite3 database (default: 4) (Python
-                          3.7 or higher)
+                          maximum number of snapshots to retain in sqlite3 database (default: 4)
 
   miscellaneous:
     --features            list supported job types, filters and reporters
@@ -196,8 +195,8 @@ set to 0, all snapshots are retained (the database will grow unbounded).
 .. tip:: Changes (diffs) between old snapshots can be redisplayed with the ``--test-diff`` command line argument (see
    :ref:`here <test-diff>`).
 
-¹ Note that when using ``redis`` or ``minidb`` database engines or when running Python 3.6 all snapshots will be kept,
-while when using the ``textfiles`` database engine only the last snapshot is kept.
+¹ Note that when using ``redis`` or ``minidb`` database engines all snapshots will be kept, while when using the
+``textfiles`` database engine only the last snapshot is kept.
 
 
 .. versionadded:: 3.3

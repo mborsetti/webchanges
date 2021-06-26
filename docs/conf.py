@@ -16,7 +16,7 @@ import sys
 # below required for local build
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused
 from docutils import nodes
-from docutils.nodes import Element
+from docutils.nodes import Element, Node
 
 # below required for local build
 from sphinx.writers.html import HTMLTranslator
@@ -233,6 +233,9 @@ todo_include_todos = True
 
 
 class PatchedHTMLTranslator(HTMLTranslator):
+    def unknown_visit(self, node: Node) -> None:
+        pass
+
     def visit_reference(self, node: Element) -> None:
         atts = {'class': 'reference'}
         if node.get('internal') or 'refuri' not in node:

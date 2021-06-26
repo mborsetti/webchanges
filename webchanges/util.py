@@ -1,5 +1,7 @@
 """A few utilities used elsewhere."""
 
+from __future__ import annotations
+
 import html
 import importlib.machinery
 import importlib.util
@@ -30,7 +32,7 @@ class TrackSubClasses(type):
     __supported_subfilters__ = ''
 
     @staticmethod
-    def sorted_by_kind(cls: 'FilterBase') -> List['FilterBase']:
+    def sorted_by_kind(cls: FilterBase) -> List[FilterBase]:
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
     def __init__(cls, name: str, bases: Tuple[type], namespace: dict) -> None:
