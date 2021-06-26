@@ -1,6 +1,7 @@
 aioxmpp
 bandit
 beautifulsoup4
+black
 codecov
 doc8
 docutils
