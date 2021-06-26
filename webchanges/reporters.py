@@ -1,5 +1,7 @@
 """Runs reports."""
 
+from __future__ import annotations
+
 import asyncio
 import difflib
 import email.utils
@@ -65,7 +67,7 @@ logger = logging.getLogger(__name__)
 class ReporterBase(object, metaclass=TrackSubClasses):
     __subclasses__: Dict[str, 'ReporterBase'] = {}
 
-    def __init__(self, report: 'Report', config: Dict[str, Any], job_states: List['JobState'], duration: float) -> None:
+    def __init__(self, report: Report, config: Dict[str, Any], job_states: List[JobState], duration: float) -> None:
         self.report = report
         self.config = config
         self.job_states = job_states
@@ -92,8 +94,8 @@ class ReporterBase(object, metaclass=TrackSubClasses):
     def submit_one(
         cls,
         name: str,
-        report: 'Report',
-        job_states: List['JobState'],
+        report: Report,
+        job_states: List[JobState],
         duration: float,
         check_enabled: Optional[bool] = True,
     ) -> None:
@@ -105,7 +107,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
             raise ValueError(f'Reporter not enabled: {name}')
 
     @classmethod
-    def submit_all(cls, report: 'Report', job_states: List['JobState'], duration: float) -> None:
+    def submit_all(cls, report: Report, job_states: List[JobState], duration: float) -> None:
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
             cfg = report.config['report'].get(name, {'enabled': False})
@@ -266,7 +268,7 @@ class HtmlReporter(ReporterBase):
                         yield f'<tr{style}><td>{linkify(line[1:])}</td></tr>'
             yield '</table>'
 
-    def _format_content(self, job_state: 'JobState', difftype: str) -> Optional[str]:
+    def _format_content(self, job_state: JobState, difftype: str) -> Optional[str]:
         """Generator yielding the HTML for a job; called by _parts. Calls _diff_to_html."""
         if job_state.verb == 'error':
             return f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
@@ -356,7 +358,7 @@ class TextReporter(ReporterBase):
             )
 
     @staticmethod
-    def _format_content(job_state: 'JobState') -> Optional[Union[str, bytes]]:
+    def _format_content(job_state: JobState) -> Optional[Union[str, bytes]]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -368,7 +370,7 @@ class TextReporter(ReporterBase):
 
         return job_state.get_diff()
 
-    def _format_output(self, job_state: 'JobState', line_length: int) -> Tuple[List[str], List[str]]:
+    def _format_output(self, job_state: JobState, line_length: int) -> Tuple[List[str], List[str]]:
         summary_part: List[str] = []
         details_part: List[str] = []
 
@@ -571,7 +573,7 @@ class MarkdownReporter(ReporterBase):
             return True, f'{trim_message}{s}'
 
     @staticmethod
-    def _format_content(job_state: 'JobState') -> Optional[Optional[Union[str, bytes]]]:
+    def _format_content(job_state: JobState) -> Optional[Optional[Union[str, bytes]]]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -583,7 +585,7 @@ class MarkdownReporter(ReporterBase):
 
         return job_state.get_diff()
 
-    def _format_output(self, job_state: 'JobState') -> Tuple[List[str], List[Tuple[str, str]]]:
+    def _format_output(self, job_state: JobState) -> Tuple[List[str], List[Tuple[str, str]]]:
         summary_part: List[str] = []
         details_part: List[Tuple[str, str]] = []
 

@@ -90,14 +90,10 @@ class SendmailMailer(Mailer):
         self.sendmail_path = sendmail_path
 
     def send(self, msg: Union[EmailMessage]) -> None:
-        # Python 3.7
-        # p = subprocess.run([self.sendmail_path, '-oi', msg['To']], input=msg.as_string(), capture_output=True,
-        #                    text=True)
         p = subprocess.run(
             [self.sendmail_path, '-oi', msg['To']],
             input=msg.as_string(),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
         if p.returncode:

@@ -3,7 +3,6 @@
 import importlib.util
 import os
 import shutil
-import sys
 import time
 from pathlib import Path
 from typing import Optional
@@ -18,7 +17,7 @@ from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsS
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
 
 minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
-py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
+# py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
 
 here = Path(__file__).parent
 data_dir = here.joinpath('data')
@@ -46,7 +45,7 @@ def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, Cache
     return urlwatcher, cache_storage, cache_file
 
 
-@py37_required
+# @py37_required
 # CacheSQLite3Storage.keep_latest() requires Python 3.7 to work (returns 0 otherwise).
 def test_keep_latest():
     urlwatcher, cache_storage, cache_file = prepare_storage_test()
@@ -263,7 +262,9 @@ def test_migrate_urlwatch_legacy_db():
 
 # Legacy testing
 @minidb_required
-def prepare_storage_test_minidb(config_args={}):
+def prepare_storage_test_minidb(config_args=None):
+    if config_args is None:
+        config_args = {}
     from webchanges.storage_minidb import CacheMiniDBStorage
 
     jobs_file = data_dir.joinpath('jobs-time.yaml')

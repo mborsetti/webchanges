@@ -8,7 +8,6 @@ import os
 import shutil
 import sqlite3
 import stat
-import sys
 import threading
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -102,7 +101,6 @@ DEFAULT_CONFIG = {
             'bot_token': '',
             'chat_id': '',
             'silent': False,
-            'monospace': False,
         },
         'webhook': {
             'enabled': False,
@@ -234,10 +232,9 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
                 print('Your changes have been saved in', file_edit)
                 return 1
 
-        return 0
-
         file_edit.replace(self.filename)
         print('Saving edit changes in', self.filename)
+        return 0
 
     @classmethod
     def write_default_config(cls, filename: Path) -> None:
@@ -608,8 +605,7 @@ class CacheSQLite3Storage(CacheStorage):
         # https://stackoverflow.com/questions/26629080
         self.lock = threading.RLock()
 
-        # filename needs to be converted from Path to str for 3.6
-        self.db = sqlite3.connect(str(filename), check_same_thread=False)
+        self.db = sqlite3.connect(filename, check_same_thread=False)
         self.cur = self.db.cursor()
         self.cur.execute('PRAGMA temp_store = MEMORY;')
         tables = self._execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
@@ -636,7 +632,7 @@ class CacheSQLite3Storage(CacheStorage):
                 self.filename.stem + '_minidb' + ''.join(self.filename.suffixes)
             )
             self.filename.replace(minidb_filename)
-            self.db = sqlite3.connect(str(filename), check_same_thread=False)
+            self.db = sqlite3.connect(filename, check_same_thread=False)
             self.cur = self.db.cursor()
             _initialize_table(self)
             # migrate the minidb legacy database renamed above
@@ -892,16 +888,11 @@ class CacheSQLite3Storage(CacheStorage):
 
     def keep_latest(self, keep_entries: int = 1) -> int:
         """Delete all older entries keeping only the 'keep_num' per guid.
-        Only works for Python => 3.7; does nothing otherwise.
 
         :param keep_entries: Number of entries to keep after deletion
 
         :returns: Number of records deleted
         """
-        if sys.version_info < (3, 7):
-            self.db.commit()
-            return 0
-
         with self.lock:
             self._execute(
                 'WITH '

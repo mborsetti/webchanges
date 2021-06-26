@@ -31,14 +31,19 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.7.0.rc0
+Version 3.7.0.rc1
 ====================
 Unreleased
+
+⚠ Breaking Changes
+------------------
+* Removed Python 3.6 support to simplify code. Older Python versions are supported for 3 years after being obsoleted by
+  a new major release; as Python 3.7 was released on 27 June 2018, 26 June 2021 was the last date of Python 3.6 support
 
 Changed
 -------
 * Improved ``telegram`` reporter now uses MarkdownV2 and preserves most formatting of HTML sites processed by the
-  ``html2text`` filter, e.g. clickable links, bolding, underlining, italics and strikethrough.
+  ``html2text`` filter, e.g. clickable links, bolding, underlining, italics and strikethrough
 
 Added
 -----
@@ -58,10 +63,11 @@ Fixed
 
 Internals
 ---------
-* Strengthened testing with `bandit <https://pypi.org/project/bandit/>`__ to catch common security issues
+* Strengthened security with `bandit <https://pypi.org/project/bandit/>`__ to catch common security issues
 * Standardized code formatting with `black <https://pypi.org/project/black/>`__
 * Improved pre-commit speed by using local libraries when practical
 * More improvements to type hinting (moving towards testing with `mypy <https://pypi.org/project/mypy/>`__)
+* Removed module jobs_browser.py (needed only for Python 3.6)
 
 
 Version 3.6.1

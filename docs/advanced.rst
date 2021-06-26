@@ -452,8 +452,6 @@ You can now run a :program:`webchanges` job defined like this:
 Speeding up ``use_browser: true`` jobs with ``block_elements``
 --------------------------------------------------------------
 
-⚠ Ignored if running in Python Version 3.6
-
 ⚠ Experimental: on certain sites this seems to totally freeze execution; test before use
 
 If you're not interested in all elements of a website, you can skip downloading the ones that you don't care, paying

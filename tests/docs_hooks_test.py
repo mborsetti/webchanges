@@ -4,7 +4,7 @@ import importlib.util
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import docutils.frontend
 import docutils.nodes
@@ -15,6 +15,7 @@ import yaml
 
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState
+from webchanges.jobs import JobBase
 from webchanges.storage import YamlJobsStorage
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ def load_hooks_testdata() -> Dict[str, Any]:
     return yaml.safe_load(yaml_data)
 
 
-def load_hooks_jobs() -> Dict[str, Any]:
+def load_hooks_jobs() -> List[JobBase]:
     jobs_file = data_dir.joinpath('doc_hooks_jobs.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)
     return jobs_storage.load()
@@ -82,7 +83,7 @@ exec(HOOKS, hooks.__dict__)  # nosec: B102 Use of exec detected.
 
 
 @pytest.mark.parametrize('job', HOOKS_DOC_JOBS)
-def test_url(job):
+def test_url(job: JobBase):
     d = testdata[job.url]
     data = d['input']
     job_state = JobState(None, job)

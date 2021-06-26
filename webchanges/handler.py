@@ -1,5 +1,7 @@
 """Handles the running of jobs and, afterwards, of the reports."""
 
+from __future__ import annotations
+
 import difflib
 import email.utils
 import logging
@@ -162,9 +164,7 @@ class JobState(object):
                 old_file_path.write_text(str(self.old_data))
                 new_file_path.write_text(str(self.new_data))
                 cmdline = shlex.split(self.job.diff_tool) + [str(old_file_path), str(new_file_path)]
-                proc = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                # Python 3.7
-                # proc = subprocess.run(cmdline, capture_output=True, text=True)
+                proc = subprocess.run(cmdline, capture_output=True, text=True)
                 # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
                 if proc.returncode == 0:
                     return False
@@ -236,7 +236,7 @@ class JobState(object):
 
 
 class Report(object):
-    def __init__(self, urlwatch_config: 'Urlwatch') -> None:
+    def __init__(self, urlwatch_config: Urlwatch) -> None:
         self.config: Dict[str, Any] = urlwatch_config.config_storage.config
 
         self.job_states: List[JobState] = []

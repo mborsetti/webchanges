@@ -1,5 +1,7 @@
 """Jobs."""
 
+from __future__ import annotations
+
 import asyncio
 import email.utils
 import hashlib
@@ -276,7 +278,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         location = self.get_location()
         return hashlib.sha1(location.encode()).hexdigest()  # nosec: B303
 
-    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
         """Runs job and returns data and etag"""
         raise NotImplementedError()
 
@@ -326,7 +328,7 @@ class Job(JobBase):
     def pretty_name(self) -> str:
         return self.name or self.get_location()
 
-    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
         pass
 
 
@@ -357,7 +359,7 @@ class UrlJob(Job):
     def get_location(self) -> str:
         return self.user_visible_url or self.url
 
-    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
         self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if 'User-Agent' not in self.headers:
             self.headers['User-Agent'] = __user_agent__
@@ -554,46 +556,14 @@ class BrowserJob(Job):
         'wait_until',
     )
 
-    ctx = None  # Python 3.6
-
     proxy_username: str = ''
     proxy_password: str = ''
 
     def get_location(self) -> str:
         return self.user_visible_url or self.url
 
-    def main_thread_enter(self) -> None:
-        if sys.version_info < (3, 7):
-            # check if proxy is being used
-            from .jobs_browser import BrowserContext, get_proxy
-
-            proxy_server, self.proxy_username, self.proxy_password = get_proxy(
-                self.url, self.http_proxy, self.https_proxy
-            )
-            self.ctx = BrowserContext(
-                self.chromium_revision, proxy_server, self.ignore_https_errors, self.user_data_dir, self.switches
-            )
-
-    def main_thread_exit(self) -> None:
-        if sys.version_info < (3, 7):
-            self.ctx.close()
-
-    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
-        if sys.version_info < (3, 7):
-            response = self.ctx.process(
-                self.url,
-                self.headers,
-                self.cookies,
-                self.timeout,
-                self.proxy_username,
-                self.proxy_password,
-                self.wait_until,
-                self.wait_for,
-                self.wait_for_navigation,
-            )
-            etag = ''
-        else:
-            response, etag = asyncio.run(self._retrieve())
+    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+        response, etag = asyncio.run(self._retrieve())
 
         # if no name is found, set it to the title of the page if found
         if not self.name:
@@ -692,7 +662,7 @@ class BrowserJob(Job):
                 )
             self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
             args.extend(self.switches)
-        # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
+
         browser = await launch(
             ignoreHTTPSErrors=self.ignore_https_errors,
             args=args,
@@ -700,7 +670,7 @@ class BrowserJob(Job):
             handleSIGTERM=False,
             handleSIGHUP=False,
             loop=asyncio.get_running_loop(),
-        )
+        )  # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
         logger.debug(f'Job {self.index_number}: Launched browser with args={args}')
 
         # browse to page and get content
@@ -734,14 +704,7 @@ class BrowserJob(Job):
                     f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
                     f'( {self.get_indexed_location()} )'
                 )
-            # web_request_resource_types = [
-            #     # https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType
-            #     'beacon', 'csp_report', 'font', 'image', 'imageset', 'media', 'main_frame', 'media', 'object',
-            #     'object_subrequest', 'ping', 'script', 'speculative', 'stylesheet', 'sub_frame', 'web_manifest',
-            #     'websocket', 'xbl', 'xml_dtd', 'xmlhttprequest', 'xslt', 'other'
-            #     ]
             chrome_web_request_resource_types = [
-                # https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType
                 'main_frame',
                 'sub_frame',
                 'stylesheet',
@@ -755,7 +718,7 @@ class BrowserJob(Job):
                 'media',
                 'websocket',
                 'other',
-            ]
+            ]  # https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType
             for element in self.block_elements:
                 if element not in chrome_web_request_resource_types:
                     await browser.close()
@@ -953,27 +916,14 @@ class ShellJob(Job):
     def get_location(self) -> str:
         return self.command
 
-    def retrieve(self, job_state: 'JobState') -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
-        if sys.version_info < (3, 7):
-            process = subprocess.run(
-                self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+        try:
+            return (
+                subprocess.run(
+                    self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)
+                ).stdout,
+                '',
             )  # noqa: DUO116 use of "shell=True" is insecure
-            result = process.returncode
-            if result != 0:
-                raise ShellError(process.returncode)
-
-            if needs_bytes:
-                return process.stdout, ''
-            else:
-                return process.stdout.decode(), ''
-        else:
-            try:
-                return (
-                    subprocess.run(
-                        self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)
-                    ).stdout,
-                    '',
-                )  # noqa: DUO116 use of "shell=True" is insecure
-            except subprocess.CalledProcessError as e:
-                raise ShellError(e.stderr).with_traceback(e.__traceback__)
+        except subprocess.CalledProcessError as e:
+            raise ShellError(e.stderr).with_traceback(e.__traceback__)

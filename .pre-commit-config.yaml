@@ -150,7 +150,7 @@ repos:
         language_version: python3
         types: [python]
       - id: flake8
-        name: Check for errors, style, and over-complexity (flake8)
+        name: Check for errors, style, [and over-complexity] (flake8)
         description: Code linter
         entry: flake8  # https://gitlab.com/pycqa/flake8
         language: python

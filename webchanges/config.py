@@ -178,8 +178,7 @@ class CommandConfig(BaseConfig):
             '--max-snapshots',
             default=4,
             type=int,
-            help='maximum number of snapshots to retain in sqlite3 database (default: %(default)s) '
-            '(Python 3.7 or higher)',
+            help='maximum number of snapshots to retain in sqlite3 database (default: %(default)s)',
             metavar='NUM_SNAPSHOTS',
         )
 

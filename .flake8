@@ -1,5 +1,5 @@
 [flake8]
-# Check for errors, style, and over-complexity
+# Check for errors, style, [and over-complexity]
 # Runs as part of pre-commit
 ignore = E203,I100,I101,I201,W503
   # E203 whitespace before ':'  [black conflict]
