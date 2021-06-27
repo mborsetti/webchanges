@@ -141,7 +141,7 @@ jobs:
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run:
           pytest tests/ -v \
-            --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+            --cov=webchanges --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
         env:
           PYTHONUTF8: 1
 
@@ -150,7 +150,7 @@ jobs:
         run:
           # workaround for Windows fatal exception: access violation
           pytest tests/ -v -p no:faulthandler \
-            --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+            --cov=webchanges --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
         env:
           PYTHONUTF8: 1
 
@@ -178,7 +178,7 @@ jobs:
           COVERALLS_PARALLEL: true
 
   coveralls:
-    name: Finish Coveralls parallel
+    name: Coveralls parallel finished
     needs: [test]
     runs-on: ubuntu-latest
     steps:
