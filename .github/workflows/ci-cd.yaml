@@ -104,6 +104,10 @@ jobs:
           restore-keys: |
             v2-${{ runner.os }}-${{ matrix.python-version }}-pip-
 
+      - name: Upgrade pip etc.
+        run: |
+          python -m pip install -U pip setuptools wheel
+
       - name: Install pdf2text and ocr dependencies (Linux Python 3.9)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'Linux'
@@ -132,25 +136,26 @@ jobs:
 #          del tesseract-setup /y
 #          pip install -U keyring pdftotext Pillow pytesseract
 
-      - name: Install dependencies
+      - name: Install all other dependencies
         run: |
-          python -m pip install -U pip setuptools wheel
           pip install -U -r requirements.txt -r tests/requirements_pytest.txt coveralls
 
       - name: Run tests (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
-        run:
-          # python -m required to get into correct directory
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70 tests/
+        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
+        run: >
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+          tests/
         env:
           PYTHONUTF8: 1
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
-        run:
-          # workaround for Windows fatal exception: access violation
-          # python -m required to get into correct directory
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70 tests/ -p no:faulthandler
+        # workaround for Windows fatal exception: access violation
+        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
+        run: >
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+          tests/ -p no:faulthandler
         env:
           PYTHONUTF8: 1
 

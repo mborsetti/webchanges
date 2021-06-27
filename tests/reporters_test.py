@@ -5,6 +5,7 @@ import os
 import traceback
 
 import pytest
+from keyring.errors import NoKeyringError
 from requests.exceptions import MissingSchema
 
 from webchanges.handler import JobState, Report
@@ -16,7 +17,7 @@ from webchanges.storage import DEFAULT_CONFIG
 logger = logging.getLogger(__name__)
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
-aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
+xmpp_is_installed = importlib.util.find_spec('xmpp') is not None
 
 DIFF_TO_HTML_TEST_DATA = [
     ('+Added line', '<tr style="background-color:#d1ffd1;color:#082b08"><td>Added line</td></tr>'),
@@ -117,8 +118,11 @@ def test_diff_to_htm_wdiff():
 
 
 def test_smtp_password():
-    assert smtp_have_password('fdsfdsfdsafdsf', '') is False
-    with pytest.raises((OSError, ImportError)):
+    try:
+        assert smtp_have_password('fdsfdsfdsafdsf', '') is False
+    except NoKeyringError:
+        pass
+    with pytest.raises((OSError, ImportError, NoKeyringError)):
         smtp_set_password('', '')
 
 
@@ -171,20 +175,24 @@ def test_reporters(reporter):
     report.error(set_error(build_job('Error Reporting', 'https://example.com/error', '', ''), 'Sample error text'))
 
     if reporter == 'email':
-        with pytest.raises(ValueError) as pytest_wrapped_e:
+        with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) in (
             'No password available in keyring for localhost ',
             'No password available for localhost ',
+            'No recommended backend was available.',
         )
     elif reporter == 'xmpp':
-        if not aioxmpp_is_installed:
+        if not xmpp_is_installed:
             logger.warning(f"Skipping {reporter} since 'aioxmpp' package is not installed")
             return
         else:
-            with pytest.raises(ValueError) as pytest_wrapped_e:
+            with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
                 report.finish_one(reporter, check_enabled=False)
-            assert str(pytest_wrapped_e.value) == 'No password available in keyring for '
+            assert str(pytest_wrapped_e.value) in (
+                'No password available in keyring for ',
+                'No recommended backend was available.',
+            )
     elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'prowl'):
         if reporter == 'matrix' and not matrix_client_is_installed:
             logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
