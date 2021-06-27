@@ -9,13 +9,14 @@ from requests.exceptions import MissingSchema
 
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
+from webchanges.mailer import smtp_have_password, smtp_set_password
 from webchanges.reporters import HtmlReporter
 from webchanges.storage import DEFAULT_CONFIG
 
 logger = logging.getLogger(__name__)
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
-xmpp_is_installed = importlib.util.find_spec('xmpp') is not None
+aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
 
 DIFF_TO_HTML_TEST_DATA = [
     ('+Added line', '<tr style="background-color:#d1ffd1;color:#082b08"><td>Added line</td></tr>'),
@@ -115,6 +116,12 @@ def test_diff_to_htm_wdiff():
     )
 
 
+def test_smtp_password():
+    assert smtp_have_password('fdsfdsfdsafdsf', '') is False
+    with pytest.raises((OSError, ImportError)):
+        smtp_set_password('', '')
+
+
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)
 def test_reporters(reporter):
     def build_job(name, url, old, new):
@@ -170,12 +177,17 @@ def test_reporters(reporter):
             'No password available in keyring for localhost ',
             'No password available for localhost ',
         )
-    elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'xmpp', 'prowl'):
+    elif reporter == 'xmpp':
+        if not aioxmpp_is_installed:
+            logger.warning(f"Skipping {reporter} since 'aioxmpp' package is not installed")
+            return
+        else:
+            with pytest.raises(ValueError) as pytest_wrapped_e:
+                report.finish_one(reporter, check_enabled=False)
+            assert str(pytest_wrapped_e.value) == 'No password available in keyring for '
+    elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'prowl'):
         if reporter == 'matrix' and not matrix_client_is_installed:
             logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
-            return
-        if reporter == 'xmpp' and not xmpp_is_installed:
-            logger.warning(f"Skipping {reporter} since 'xmpp' package is not installed")
             return
         with pytest.raises(RuntimeError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)

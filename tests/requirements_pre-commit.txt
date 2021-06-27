@@ -1,0 +1,12 @@
+# pip requirements for pre-commit (in addition to /requirements.txt and /docs/requirements.txt)
+bandit
+black
+doc8
+docutils
+flake8
+flake8-quotes
+flynt
+pre-commit
+types-PyYAML
+types-redis
+types-requests

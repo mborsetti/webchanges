@@ -312,7 +312,7 @@ def test_kind_directive_deprecation() -> None:
     with pytest.deprecated_call() as pytest_wrapped_warning:
         JobBase.unserialize(job_data.copy())
     assert str(pytest_wrapped_warning.list[0].message) == (
-        f"Job directive 'kind' is deprecated and ignored; delete from job file' ({job_data})"  # nosec: B608
+        f"Job directive 'kind' is deprecated and ignored: delete from job ({job_data})"  # nosec: B608
     )
 
 

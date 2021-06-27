@@ -1,14 +1,13 @@
 """Test the generation of various types of diffs."""
-import tempfile
 from pathlib import Path
 
 from webchanges.handler import JobState
 from webchanges.jobs import ShellJob
-from webchanges.storage import CacheDirStorage
+from webchanges.storage import CacheSQLite3Storage
 
 here = Path(__file__).parent
 data_dir = here.joinpath('data')
-cache_storage = CacheDirStorage(tempfile.mkdtemp(suffix='.db'))
+cache_storage = CacheSQLite3Storage(':memory:')
 job_state = JobState(cache_storage, ShellJob(command=''))
 job_state.old_timestamp = 0
 

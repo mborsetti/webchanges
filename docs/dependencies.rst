@@ -33,7 +33,7 @@ brackets, like this::
 | ``ical2text`` filter    | * `vobject <https://eventable.github.io/vobject/>`__                    |
 +-------------------------+-------------------------------------------------------------------------+
 | ``jq`` filter           | * `jq <https://github.com/mwilliamson/jq.py>`__                         |
-|                         | * **Only available for Linux and MacOS** (Windows installation is       |
+|                         | * **Only available for Linux and macOS** (Windows installation is       |
 |                         |   incomplete)                                                           |
 +-------------------------+-------------------------------------------------------------------------+
 | ``ocr`` filter          | * `pytesseract <https://github.com/madmaze/pytesseract>`__              |

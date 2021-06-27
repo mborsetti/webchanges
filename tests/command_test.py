@@ -1,13 +1,20 @@
 """Test commands."""
 
 import os
+import sys
 import time
 from pathlib import Path, PurePath
 
 import pytest
 
-from webchanges import __copyright__, __project_name__, __version__
-from webchanges.cli import locate_storage_file, migrate_from_urlwatch, setup_logger_verbose
+from webchanges import __copyright__, __min_python_version__, __project_name__, __version__
+from webchanges.cli import (
+    first_run,
+    locate_storage_file,
+    migrate_from_urlwatch,
+    python_version_warning,
+    setup_logger_verbose,
+)
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
@@ -24,9 +31,7 @@ hooks_file = config_dir.joinpath('hooks_test.py')
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = YamlJobsStorage(jobs_file)
-command_config = CommandConfig(
-    __project_name__, os.path.dirname(__file__), config_file, jobs_file, hooks_file, cache_file, True
-)
+command_config = CommandConfig(__project_name__, config_dir, config_file, jobs_file, hooks_file, cache_file, True)
 urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
 
 editor = os.getenv('EDITOR')
@@ -65,9 +70,33 @@ def cleanup(request):
     request.addfinalizer(finalizer)
 
 
+def test_python_version_warning(capsys):
+    """Test issuance of deprecation warning message when running on minimum version supported."""
+    python_version_warning()
+    message = capsys.readouterr().out
+    if sys.version_info[0:2] == __min_python_version__:
+        current_minor_version = '.'.join(str(n) for n in sys.version_info[0:2])
+        assert message.startswith(
+            f'WARNING: Support for Python {current_minor_version} will be ending three years from the date Python '
+        )
+    else:
+        assert not message
+
+
 def test_migration():
-    """test check for existence of legacy urlwatch 2.2 files in urlwatch dir"""
+    """Test check for existence of legacy urlwatch 2.2 files in urlwatch dir."""
     assert migrate_from_urlwatch(config_file, jobs_file, hooks_file, Path(cache_file)) is None
+
+
+def test_first_run(capsys, tmp_path):
+    """Test creation of default config and jobs files at first run."""
+    config_file2 = tmp_path.joinpath('config.yaml')
+    jobs_file2 = tmp_path.joinpath('jobs.yaml')
+    command_config2 = CommandConfig(__project_name__, tmp_path, config_file2, jobs_file2, hooks_file, cache_file, True)
+    assert first_run(command_config2) is None
+    message = capsys.readouterr().out
+    assert 'Created default config file at ' in message
+    assert 'Created default jobs file at ' in message
 
 
 def test_edit_hooks(capsys):

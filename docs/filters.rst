@@ -288,7 +288,7 @@ To extract ``<div style="something">.../<div>`` from a page:
 
 html2text
 -------------
-This filter converts HTML (or XML) to plaintext.
+This filter converts HTML (or XML) to Unicode plaintext.
 
 Optional sub-directives
 """""""""""""""""""""""
@@ -302,7 +302,8 @@ Optional sub-directives
 
 ``html2text``
 ^^^^^^^^^^^^^
-This filter converts HTML into `Markdown <https://www.markdownguide.org/>`__ using the
+This filter method is the default (does not need to be specified) and converts HTML into
+`Markdown <https://www.markdownguide.org/>`__ using the
 `html2text <https://pypi.org/project/html2text/>`__ Python package.
 
 It is the recommended option to convert all types of HTML into readable text.
@@ -317,7 +318,6 @@ Example configuration:
     filter:
       - xpath: '//section[@role="main"]'
       - html2text:
-          method: bs4
           pad_tables: true
 
 Optional sub-directives
@@ -329,15 +329,37 @@ Optional sub-directives
   (`single_line_break: true`), and images are ignored (`ignore_images: true`).
 
 
+``strip_tags``
+^^^^^^^^^^^^^^
+This filter method is a simple HTML/XML tag stripper based on applying a regular expression-based function. Very fast
+but may not yield the prettiest of results.
+
+.. code-block:: yaml
+
+    url: https://example.com/html2text_strip_tags.html
+    filter:
+      - xpath: '//section[@role="main"]'
+      - html2text:
+          method: strip_tags
+
+
 ``bs4``
 ^^^^^^^
-This filter extracts unformatted text from HTML using the `BeautifulSoup
+This filter method extracts unformatted text from HTML using the `Beautiful Soup
 <https://pypi.org/project/beautifulsoup4/>`__, specifically its `get_text(strip=True)
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
 
-.. note:: As of Beautiful Soup version 4.9.0, when lxml or html.parser are in use, the contents of <script>, <style>,
-   and <template> tags are not considered to be ‘text’, since those tags are not part of the human-visible content of
-   the page.
+.. note:: As of Beautiful Soup version 4.9.0, when using the ``lxml`` or ``html.parser`` parser (see optional
+   sub-directive below), the contents of <script>, <style>, and <template> tags are not considered to be ‘text’, since
+   those tags are not part of the human-visible content of the page.
+
+.. code-block:: yaml
+
+    url: https://example.com/html2text_bs4.html
+    filter:
+      - xpath: '//section[@role="main"]'
+      - html2text:
+          method: bs4
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -346,7 +368,7 @@ Optional sub-directives
 
 Required packages
 ~~~~~~~~~~~~~~~~~
-To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+To run jobs with this filter method, you need to first install :ref:`additional Python packages <optional_packages>` as
 follows:
 
 .. code-block:: bash
@@ -354,10 +376,6 @@ follows:
    pip install --upgrade webchanges[bs4]
 
 
-``strip_tags``
-^^^^^^^^^^^^^^
-A simple HTML/XML tag stripper based on applying a regular expression-based function. Very fast but may not yield the
-prettiest of results.
 
 .. versionchanged:: 3.0
    Method renamed to ``strip_tags`` from ``re``.
@@ -510,11 +528,11 @@ Optional sub-directives
 jq
 --
 
-Linux/MacOS ASCII only
+Linux/macOS ASCII only
 """"""""""""""""""""""
 
 The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight ASCII JSON
-processor. It is currently available only for Linux (most flavors) and MacOS (no Windows) and does not handle Unicode;
+processor. It is currently available only for Linux (most flavors) and macOS (no Windows) and does not handle Unicode;
 see :ref:`below <filtering_json>` for a cross-platform and Unicode-friendly way of selecting JSON.
 
 .. code-block:: yaml

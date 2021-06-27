@@ -1,0 +1,20 @@
+# pip requirements for pytest (testing) (in addition to /requirements.txt)
+# EXCLUDES requirements for testing 'ocr' and 'pdf2text' filters as they require OS-specific installs
+aioxmpp
+beautifulsoup4
+chump
+coverage_conditional_plugin
+cssbeautifier
+docutils
+jq; os_name != "nt"
+jsbeautifier
+keyring
+matrix_client
+minidb
+pushbullet.py
+Pygments
+pyppeteer
+pytest
+pytest-cov
+redis
+vobject

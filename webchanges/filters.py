@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import io
 import itertools
 import json
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 
 try:
     from bs4 import BeautifulSoup
-except ImportError:
+except ImportError:  # pragma: has-bs4
     BeautifulSoup = None
 
 try:
@@ -44,7 +45,7 @@ except ImportError:
 
 try:
     import jq
-except ImportError:
+except ImportError:  # pragma: has-jq
     jq = None
 
 try:
@@ -54,7 +55,7 @@ except ImportError:
 
 try:
     import pdftotext
-except ImportError:
+except ImportError:  # pragma: has-pdftotext
     pdftotext = None
 
 try:
@@ -64,7 +65,7 @@ except ImportError:
 
 try:
     import pytesseract
-except ImportError:
+except ImportError:  # pragma: has-pytesseract
     pytesseract = None
 
 try:
@@ -311,7 +312,7 @@ class Html2TextFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         """
-        Convert a string consisting of HTML to plain text for easy difference checking.
+        Convert a string consisting of HTML to Unicode plain text for easy difference checking.
         Method may be one of:
         'html2text' (DEFAULT): Use html2text library to extract text (in Markdown) from html.
         - options: https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options
@@ -331,10 +332,12 @@ class Html2TextFilter(FilterBase):
             method = 'html2text'
         options = subfilter
 
+        data = html.unescape(data)
+
         if method in ('html2text', 'pyhtml2text'):  # pythtml2text for backward compatibility
             if method == 'pyhtml2text':
                 warnings.warn(
-                    f"filter html2text's method 'pyhtml2text' is deprecated: remove method as it's now the "
+                    f"Filter html2text's method 'pyhtml2text' is deprecated: remove method as it's now the "
                     f"filter's default) ({self.job.get_indexed_location()})",
                     DeprecationWarning,
                 )
@@ -368,7 +371,7 @@ class Html2TextFilter(FilterBase):
         elif method in ('strip_tags', 're'):  # re for backward compatibility
             if method == 're':
                 warnings.warn(
-                    f"filter html2text's method 're' is deprecated: replace with 'strip_tags' "
+                    f"Filter html2text's method 're' is deprecated: replace with 'strip_tags' "
                     f'({self.job.get_indexed_location()})',
                     DeprecationWarning,
                 )
@@ -377,15 +380,15 @@ class Html2TextFilter(FilterBase):
 
         elif method == 'lynx':
             raise NotImplementedError(
-                f"'filter html2text's method 'lynx' is no longer supported; use the 'html2text'"
-                f' filter instead ({self.job.get_indexed_location()})'
+                f"Filter html2text's method 'lynx' is no longer supported; for similar results, use the filter without "
+                f'specifying a method ({self.job.get_indexed_location()})'
             )
 
         else:
-            raise ValueError(f'Unknown filter html2text method: {method} ({self.job.get_indexed_location()})')
+            raise ValueError(f"Unknown method {method} for filter 'html2text': ({self.job.get_indexed_location()})")
 
 
-class Pdf2TextFilter(FilterBase):
+class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
     """Convert PDF to plaintext (requires Python package 'pdftotext' and its dependencies)."""
 
     # Dependency: pdftotext (https://github.com/jalan/pdftotext), itself based
@@ -1155,7 +1158,7 @@ class ExecutePipeFilter(FilterBase):
             raise e
 
 
-class OCRFilter(FilterBase):
+class OCRFilter(FilterBase):  # pragma: has-pytesseract
     """Convert text in images to plaintext (requires Python packages 'pytesseract' and 'Pillow')."""
 
     __kind__ = 'ocr'
@@ -1190,7 +1193,7 @@ class OCRFilter(FilterBase):
         return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip()
 
 
-class JQFilter(FilterBase):
+class JQFilter(FilterBase):  # pragma: has-jq
     """Parse, transform, and extract data from json as text using `jq`."""
 
     # contributed by robgmills https://github.com/thp/urlwatch/pull/626

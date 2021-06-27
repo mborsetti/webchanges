@@ -182,7 +182,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         # Backwards compatibility with 'navigate' directive (deprecated)
         if data.get('navigate') and not data.get('use_browser'):
             warnings.warn(
-                f"Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true'" f' ({data})',
+                f"Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true' ({data})",
                 DeprecationWarning,
             )
             data['url'] = data.get('url', data['navigate'])
@@ -191,7 +191,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         # Backwards compatibility with 'kind' directive (deprecated)
         if 'kind' in data:
             warnings.warn(
-                f"Job directive 'kind' is deprecated and ignored; delete from job file'" f' ({data})',  # nosec: B608
+                f"Job directive 'kind' is deprecated and ignored: delete from job ({data})",  # nosec: B608
                 DeprecationWarning,
             )
             data.pop('kind')

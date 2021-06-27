@@ -219,13 +219,41 @@ https://example.com/html2text.html:
     </section>
     </body>
     </html>
-  output: "Date                    | #Sales™ \n------------------------|--------\nMonday, 3 February 2020 | 10,000 \nTu, 3 Mar               | 20,000 \n\n\n"
+  output: "Date                    | #Sales™ \n------------------------|---------\nMonday, 3 February 2020 | 10,000  \nTu, 3 Mar               | 20,000  \n\n\n"
 # The below is for when html2text > 2020.1.16 (fixes included)
 #  output: |-
-#    | Date                    | #Sales |
-#    |-------------------------|--------|
-#    | Monday, 3 February 2020 | 10,000 |
-#    | Tu, 3 Mar               | 20,000 |
+#    | Date                    | #Sales™ |
+#    |-------------------------|---------|
+#    | Monday, 3 February 2020 | 10,000  |
+#    | Tu, 3 Mar               | 20,000  |
+https://example.com/html2text_bs4.html:
+  input: |-
+    <html>
+    <body>
+      <section role="main">
+      <table>
+      <tr><th>Date</th><th>#Sales&trade</th></tr>
+      <tr><td>Monday, 3 February 2020</td><td>10,000</td></tr>
+      <tr><td>Tu, 3 Mar</td><td>20,000</td></tr>
+      </table>
+    </section>
+    </body>
+    </html>
+  output: Date#Sales&tradeMonday, 3 February 202010,000Tu, 3 Mar20,000
+https://example.com/html2text_strip_tags.html:
+  input: |-
+    <html>
+    <body>
+      <section role="main">
+      <table>
+      <tr><th>Date</th><th>#Sales&trade</th></tr>
+      <tr><td>Monday, 3 February 2020</td><td>10,000</td></tr>
+      <tr><td>Tu, 3 Mar</td><td>20,000</td></tr>
+      </table>
+    </section>
+    </body>
+    </html>
+  output: "  Date#Sales&trade\n  Monday, 3 February 202010,000\n  Tu, 3 Mar20,000"
 https://example.net/beautify.html:
   input: |
     <!DOCTYPE html>

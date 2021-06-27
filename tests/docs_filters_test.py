@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 here = Path(__file__).parent
 docs_dir = here.joinpath('..').resolve().joinpath('docs')
 
-beautifulsoup_is_installed = importlib.util.find_spec('beautifulsoup') is not None
+bs4_is_installed = importlib.util.find_spec('bs4') is not None
 jq_is_installed = importlib.util.find_spec('jq') is not None
 pdftotext_is_installed = importlib.util.find_spec('pdftotext') is not None
 pytesseract_is_installed = importlib.util.find_spec('pytesseract') is not None
@@ -100,10 +100,10 @@ def test_url(job):
     # only tests shellpipe in linux; test pdf2text and ocr only if packages are installed (they require
     # OS-specific installations beyond pip)
     if job.url != 'https://example.com/html2text.html' or html2text.__version__ <= (2020, 1, 16):
-        # TODO when html2text > 2020.1.16 update output and remove this (https://github.com/Alir3z4/html2text/pull/339)
+        # TODO when html2text > 2020.1.16 update output and remove if (https://github.com/Alir3z4/html2text/pull/339)
         d = testdata[job.url]
         if 'filename' in d:
-            data = open(here.joinpath('data').joinpath(d['filename']), 'rb').read()
+            data = here.joinpath('data').joinpath(d['filename']).read_bytes()
         else:
             data = d['input']
         job_state = JobState(None, job)
@@ -113,9 +113,9 @@ def test_url(job):
             if (
                 filter_kind == 'beautify'
                 or (filter_kind == 'html2text' and subfilter.get('method') == 'bs4')
-                and not beautifulsoup_is_installed
+                and not bs4_is_installed
             ):
-                logger.warning(f"Skipping {job.url} since 'beautifulsoup' package is not installed")
+                logger.warning(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
                 return
             if filter_kind == 'ical2text' and not vobject_is_installed:
                 logger.warning(f"Skipping {job.url} since 'vobject' package is not installed")
@@ -135,3 +135,6 @@ def test_url(job):
 
         expected_output_data = d['output']
         assert data == expected_output_data
+
+    else:
+        logger.warning("Skipping https://example.com/html2text.html since 'html2text' > (2020, 1, 16)")

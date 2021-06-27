@@ -212,7 +212,7 @@ Since the output of ``date`` changes every second, this job should produce a rep
 Selecting items from a JSON dictionary
 --------------------------------------
 If you are watching JSON-encoded dictionary data but are only interested in the data contained in (a) certain key(s),
-you can use the :ref:`jq` filter (Linux/MacOS only, ASCII only) to extract it, or write a cross-platform Python command
+you can use the :ref:`jq` filter (Linux/macOS only, ASCII only) to extract it, or write a cross-platform Python command
 like the one below:
 
 
@@ -239,7 +239,7 @@ seemingly complex escaping as well how to inform the downstream html reporter th
 Watching changes on .onion (Tor) pages
 --------------------------------------
 Since pages on the `Tor Network <https://www.torproject.org>`__ are not accessible via public DNS and TCP, you need to
-either configure a Tor client as an HTTP/HTTPS proxy or, in Linux/MacOS, use the `torify` tool from the `tor` package
+either configure a Tor client as an HTTP/HTTPS proxy or, in Linux/macOS, use the `torify` tool from the `tor` package
 (installable using ``apt install tor`` on Debian or Ubuntu or ``brew install tor`` on macOS). Setting up Tor is out of
 scope for this document.
 
@@ -309,7 +309,7 @@ can even have a "normal" filter attached to only watch links (the ``css: a`` par
    diff_filter:
      - shellpipe: /usr/local/bin/process_new_links.sh
 
-If running on Linux/MacOS, please read about file permission restrictions in the filter's explanation
+If running on Linux/macOS, please read about file permission restrictions in the filter's explanation
 :ref:`here <shellpipe>`.
 
 .. _word_based_differ:

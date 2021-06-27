@@ -8,7 +8,7 @@ By default :program:`webchanges` prints out information about changes to the dat
 the destination of this output depends on the scheduler and its configuration).
 
 You can change the settings to change or add to where the report is sent to.  Settings are contained in the
-configuration file ``config.yaml``, a text file located in the ``~/.config/webchanges`` directory for Linux or MacOS,
+configuration file ``config.yaml``, a text file located in the ``~/.config/webchanges`` directory for Linux or macOS,
 or in the `:program:`webchanges`` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
 Windows, and is editable using any text editor or with the command ``webchanges --edit--config``.  The configuration
 for the reporters will be listed under the ``reporters`` section.

@@ -62,17 +62,17 @@ packages, as below) before creating a pull request, starting from the project's 
 
 .. code-block:: bash
 
-   pip install -U tox -r tests/requirements_testing.txt
+   pip install -U tox
    tox
 
 Alternatively, you can manually run the following commands
 
 .. code-block:: bash
 
-   pip install -U -r tests/requirements_testing.txt
+   pip install -U -r tests/requirements_pre-commit.txt -r tests/requirements_pytest.txt -r docs/requirements.txt
    pre-commit autoupdate
    pre-commit run -a
-   python -m pytest -v
+   python -m pytest -v --cov=./ --cov-report=term --cov-config=.coveragerc
 
 All tests need to pass, and the amount of lines covered by tests should not decrease (please write new tests or update
 the existing ones to cover your new code!)

@@ -1,6 +1,7 @@
-# .coveragerc file for coverage.py (see https://coverage.readthedocs.io/en/latest/config.html)
+# .coveragerc file for pytest-cov (i.e. coverage) (see https://coverage.readthedocs.io/en/latest/config.html)
+# runs in Github Actions .github/workflows/ci-cd.yaml
 
-[run]
+[coverage:run]
 branch = True
 source = webchanges
 omit =
@@ -11,8 +12,10 @@ omit =
     webchanges.py
 relative_files = True
 command_line = -m pytest -v
+plugins =
+    coverage_conditional_plugin
 
-[report]
+[coverage:report]
 # Regexes for lines to exclude from consideration
 exclude_lines =
     # Don't complain about missing debug-only code:
@@ -30,3 +33,11 @@ exclude_lines =
     if 0:
     if __name__ == .__main__.:
 # ignore_errors = True
+
+[coverage:coverage_conditional_plugin]
+# Here we specify our pragma rules:
+rules =
+    "is_installed('bs4')": has-bs4
+    "is_installed('jq')": has-jq
+    "is_installed('pdftotext')": has-pdftotext
+    "is_installed('pytesseract')": has-pytesseract

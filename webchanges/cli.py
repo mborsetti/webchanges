@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 def python_version_warning() -> None:
-    """Issue deprecation warning if running on minimum version supported"""
+    """Issue deprecation warning if running on minimum version supported."""
     if sys.version_info[0:2] == __min_python_version__:
         current_minor_version = '.'.join(str(n) for n in sys.version_info[0:2])
         next_minor_version = f'{__min_python_version__[0]}.{__min_python_version__[1] + 1}'
@@ -124,14 +124,15 @@ def locate_storage_file(filename: Path, default_dir: Path, ext: Optional[str] = 
 
 
 def first_run(command_config: CommandConfig) -> None:
-    """Create jobs and configuration files."""
-    config_dir.mkdir(parents=True, exist_ok=True)
+    """Create configuration and jobs files."""
     if not command_config.config.is_file():
+        command_config.config.parent.mkdir(parents=True, exist_ok=True)
         YamlConfigStorage.write_default_config(command_config.config)
         print(f'Created default config file at {command_config.config}')
         if not command_config.edit_config:
             print(f'> Edit it with {__project_name__} --edit-config')
     if not command_config.jobs.is_file():
+        command_config.jobs.parent.mkdir(parents=True, exist_ok=True)
         command_config.jobs.write_text(f'# {__project_name__} jobs file. See {__docs_url__}jobs.html\n')
         command_config.edit = True
         print(f'Created default jobs file at {command_config.jobs}')
