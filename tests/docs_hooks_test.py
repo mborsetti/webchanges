@@ -10,7 +10,9 @@ import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
 import docutils.utils
+
 import pytest
+
 import yaml
 
 from webchanges.filters import FilterBase

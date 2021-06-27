@@ -5,7 +5,9 @@ import os
 import traceback
 
 import pytest
+
 from keyring.errors import NoKeyringError
+
 from requests.exceptions import MissingSchema
 
 from webchanges.handler import JobState, Report
@@ -177,10 +179,13 @@ def test_reporters(reporter):
     if reporter == 'email':
         with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
-        assert str(pytest_wrapped_e.value) in (
-            'No password available in keyring for localhost ',
-            'No password available for localhost ',
-            'No recommended backend was available.',
+        assert any(
+            x in str(pytest_wrapped_e.value)
+            for x in (
+                'No password available in keyring for localhost ',
+                'No password available for localhost ',
+                'No recommended backend was available.',
+            )
         )
     elif reporter == 'xmpp':
         if not xmpp_is_installed:
@@ -189,9 +194,12 @@ def test_reporters(reporter):
         else:
             with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
                 report.finish_one(reporter, check_enabled=False)
-            assert str(pytest_wrapped_e.value) in (
-                'No password available in keyring for ',
-                'No recommended backend was available.',
+            assert any(
+                x in str(pytest_wrapped_e.value)
+                for x in (
+                    'No password available in keyring for ',
+                    'No recommended backend was available.',
+                )
             )
     elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'prowl'):
         if reporter == 'matrix' and not matrix_client_is_installed:
