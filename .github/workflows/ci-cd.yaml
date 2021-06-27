@@ -140,7 +140,8 @@ jobs:
       - name: Run tests (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run:
-          pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70 tests/
+          # python -m required to get into correct directory
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70 tests/
         env:
           PYTHONUTF8: 1
 
@@ -148,7 +149,8 @@ jobs:
         if: runner.os == 'Windows'
         run:
           # workaround for Windows fatal exception: access violation
-          pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70 tests/ -p no:faulthandler
+          # python -m required to get into correct directory
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70 tests/ -p no:faulthandler
         env:
           PYTHONUTF8: 1
 
