@@ -1,7 +1,7 @@
 ⚠ Breaking Changes
 --------------------
 * Removed Python 3.6 support to simplify code. Older Python versions are supported for 3 years after being obsoleted by
-  a new major release; as Python 3.7 was released on 27 June 2018, 26 June 2021 was the last date of Python 3.6 support
+  a new major release; as Python 3.7 was released on 27 June 2018, the last date of Python 3.6 support was 26 June 2021
 
 Changed
 -------
