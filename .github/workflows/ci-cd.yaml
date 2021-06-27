@@ -14,7 +14,7 @@ jobs:
   # when a job name is not provided
   pre-commit:
     # Name the Job
-    name: Quality assurance
+    name: Quality assurance (pre-commit)
     # Set the type of machine to run on
     runs-on: ubuntu-latest
 
@@ -54,7 +54,7 @@ jobs:
           PYTHONUTF8: 1
 
   test:
-    name: "Test (${{ matrix.python-version }}, ${{ matrix.os }})"
+    name: "Test (${{ matrix.python-version }}, ${{ matrix.os }}) (pytest)"
     # matrix.os is defined in strategy
     runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
@@ -62,22 +62,22 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-#        os: [ubuntu-latest, macos-latest]
-#        python-version: [3.9, 3.8, 3.7]
-        os: [windows-latest]
-        python-version: [3.9]
+        os: [ubuntu-latest, macos-latest]
+        python-version: [3.9, 3.8, 3.7]
+#        os: [windows-latest]
+#        python-version: [3.9]
         include:
-#        - os: ubuntu-latest
-#          pipcachepath: |
-#            ~/.cache/pip
+        - os: ubuntu-latest
+          pipcachepath: |
+            ~/.cache/pip
 #            #  /var/cache/apt/archives  # archives/lock & archives/partial: Cannot open: Permission denied
-#        - os: macos-latest
-#          pipcachepath: |
-#            ~/Library/Caches/pip
-#            ~/Library/Caches/Homebrew
-        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 15-May-21
-                              # https://github.com/pytest-dev/pytest/discussions/6349
-          pipcachepath: ~\AppData\Local\pip\cache
+        - os: macos-latest
+          pipcachepath: |
+            ~/Library/Caches/pip
+            ~/Library/Caches/Homebrew
+#        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 27-Jun-21
+#                              # https://github.com/pytest-dev/pytest/discussions/6349
+#          pipcachepath: ~\AppData\Local\pip\cache
 
         # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
     env:
@@ -145,7 +145,7 @@ jobs:
         if: runner.os == 'Linux' || runner.os == 'macOS'
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=74
           tests/
         env:
           PYTHONUTF8: 1
@@ -155,7 +155,7 @@ jobs:
         # workaround for Windows fatal exception: access violation
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=74
           tests/ -p no:faulthandler
         env:
           PYTHONUTF8: 1
@@ -176,7 +176,7 @@ jobs:
 #          flag-name: tests-${{ matrix.python-version }}-${{ matrix.os }}
 #          parallel: true
 
-      - name: Upload coverage to Coveralls (parallel)
+      - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -184,7 +184,7 @@ jobs:
           COVERALLS_PARALLEL: true
 
   coveralls:
-    name: Coveralls parallel finished
+    name: Indicate completion to coveralls.io
     needs: [test]
     runs-on: ubuntu-latest
     steps:
