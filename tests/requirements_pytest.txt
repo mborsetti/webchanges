@@ -3,7 +3,6 @@
 aioxmpp
 beautifulsoup4
 chump
-coverage
 coverage_conditional_plugin
 cssbeautifier
 docutils

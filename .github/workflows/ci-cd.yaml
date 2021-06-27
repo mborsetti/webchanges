@@ -141,7 +141,7 @@ jobs:
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run:
           pytest -v \
-            --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+            --cov=. --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
         env:
           PYTHONUTF8: 1
 
@@ -150,7 +150,7 @@ jobs:
         run:
           # workaround for Windows fatal exception: access violation
           pytest -v -p no:faulthandler \
-            --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+            --cov=. --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
         env:
           PYTHONUTF8: 1
 
