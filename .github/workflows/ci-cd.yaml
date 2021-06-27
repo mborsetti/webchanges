@@ -34,19 +34,18 @@ jobs:
       - name: Cache
         uses: actions/cache@main
         with:
-          path: |
-            ~/.cache/pip
-            /var/cache/apt/archives
+          path: ~/.cache/pip
           # Look to see if there is a cache hit for the corresponding requirements file
-          key: v2-${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('docs/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements.txt') }}
           restore-keys: |
-            v2-${{ runner.os }}-${{ matrix.python-version }}-pip-
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
 
       # Install dependencies needed by the repo: local in .pre-commit-config.yaml
       - name: Install dependencies
         run: |
-          python -m pip install -U pip setuptools wheel
-          python -m pip install -U -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
+          pip install -U pip setuptools wheel
+          pip install -U -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
 
       # Run pre-commit cache per https://github.com/pre-commit/action
       - name: Run pre-commit
@@ -111,14 +110,14 @@ jobs:
         run: |
           sudo apt-get -y update
           sudo apt-get -y install python-dbus build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
-          python -m pip install -U pdftotext Pillow pytesseract
+          pip install -U pdftotext Pillow pytesseract
 
       - name: Install pdf2text and ocr dependencies (macOS Python 3.9)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'macOS'
         run: |
           brew install pkg-config poppler python tesseract
-          python -m pip install -U pdftotext Pillow pytesseract
+          pip install -U pdftotext Pillow pytesseract
 
 #      - name: Install pdf2text and ocr dependencies (Windows Python 3.9)
 #        # do full install and testing of pdf2text and ocr only on latest Python version
@@ -131,17 +130,17 @@ jobs:
 #          curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe --output tesseract-setup.exe
 #          start /wait "" tesseract-setup.exe /S
 #          del tesseract-setup /y
-#          python -m pip install -U keyring pdftotext Pillow pytesseract
+#          pip install -U keyring pdftotext Pillow pytesseract
 
       - name: Install dependencies
         run: |
-          python -m pip install -U pip setuptools wheel
-          python -m pip install -U -r requirements.txt -r tests/requirements_pytest.txt coveralls
+          pip install -U pip setuptools wheel
+          pip install -U -r requirements.txt -r tests/requirements_pytest.txt coveralls
 
       - name: Run tests (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run:
-          python -m pytest -v \
+          pytest -v \
             --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
         env:
           PYTHONUTF8: 1
@@ -150,7 +149,7 @@ jobs:
         if: runner.os == 'Windows'
         run:
           # workaround for Windows fatal exception: access violation
-          python -m pytest -v -p no:faulthandler \
+          pytest -v -p no:faulthandler \
             --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
         env:
           PYTHONUTF8: 1
@@ -205,7 +204,7 @@ jobs:
       # Install pip dependencies executing setup.py
       - name: Install dependencies
         run: |
-          python -m pip install -U pip setuptools wheel
+          pip install -U pip setuptools wheel
           pip install -U .
 
       # Only building wheel; otherwise run 'python setup.py sdist bdist_wheel'
