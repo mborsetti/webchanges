@@ -44,7 +44,7 @@ jobs:
       # Install dependencies needed by the repo: local in .pre-commit-config.yaml
       - name: Install dependencies
         run: |
-          pip install -U pip setuptools wheel
+          python -m pip install -U pip setuptools wheel
           pip install -U -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
 
       # Run pre-commit cache per https://github.com/pre-commit/action
@@ -134,14 +134,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -U pip setuptools wheel
+          python -m pip install -U pip setuptools wheel
           pip install -U -r requirements.txt -r tests/requirements_pytest.txt coveralls
 
       - name: Run tests (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run:
           pytest -v \
-            --cov=. --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+            --cov=webchanges --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
         env:
           PYTHONUTF8: 1
 
@@ -150,7 +150,7 @@ jobs:
         run:
           # workaround for Windows fatal exception: access violation
           pytest -v -p no:faulthandler \
-            --cov=. --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
+            --cov=webchanges --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=70
         env:
           PYTHONUTF8: 1
 
@@ -204,7 +204,7 @@ jobs:
       # Install pip dependencies executing setup.py
       - name: Install dependencies
         run: |
-          pip install -U pip setuptools wheel
+          python -m pip install -U pip setuptools wheel
           pip install -U .
 
       # Only building wheel; otherwise run 'python setup.py sdist bdist_wheel'
