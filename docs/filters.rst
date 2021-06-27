@@ -296,7 +296,7 @@ Optional sub-directives
 
  - ``html2text`` (default): Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package and retains
    some simple formatting (Markup language)
- - ``bs4``: Uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
+ - ``bs4``: Uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
  - ``strip_tags``: Uses regex to strip tags
 
 
@@ -392,7 +392,7 @@ follows:
 
 beautify
 --------
-This filter uses the `BeautifulSoup <https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
+This filter uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
 <https://pypi.org/project/jsbeautifier/>`__ and `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ Python
 packages to reformat the HTML in a document to make it more readable (keeping it as HTML).
 
