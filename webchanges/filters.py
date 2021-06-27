@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import html
 import io
 import itertools
 import json
@@ -331,8 +330,6 @@ class Html2TextFilter(FilterBase):
         else:
             method = 'html2text'
         options = subfilter
-
-        data = html.unescape(data)
 
         if method in ('html2text', 'pyhtml2text'):  # pythtml2text for backward compatibility
             if method == 'pyhtml2text':
