@@ -34,7 +34,9 @@ jobs:
       - name: Cache
         uses: actions/cache@main
         with:
-          path: ${{ matrix.pipcachepath }}
+          path: |
+            ~/.cache/pip
+            /var/cache/apt/archives
           # Look to see if there is a cache hit for the corresponding requirements file
           key: v2-${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('docs/requirements.txt') }}
           restore-keys: |
