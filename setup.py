@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Run by setuptools to build and distribute as a Python package wheel"""
+"""Run by setuptools to build and distribute as a Python package wheel."""
 
 import re
 import sys
@@ -56,7 +56,7 @@ SETUP = {
         'Intended Audience :: Developers',
     ],
     'license': project.__license__,
-    # below to include in sdist the files read above (see https://stackoverflow.com/questions/37753833)
+    # Below to include in sdist the files read above (see https://stackoverflow.com/questions/37753833)
     # data_files is deprecated. It does not work with wheels, so it should be avoided.
     'install_requires': list(requirements),
     'entry_points': {'console_scripts': [f'{project.__project_name__}={project.__package__}.cli:main']},
@@ -77,10 +77,10 @@ SETUP = {
     },
     'python_requires': f'>={".".join(str(v) for v in project.__min_python_version__)}',
     'project_urls': {
-        'Issues': f'{project.__url__.rstrip("//")}/issues',
-        'CI': f'{project.__url__.rstrip("//")}/actions',
+        'Issues': f'{project.__code_url__}issues',
+        'CI': f'{project.__code_url__}actions',
         'Documentation': project.__docs_url__,
-        'Source Code': project.__url__,
+        'Source Code': project.__code_url__,
     },
 }
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))

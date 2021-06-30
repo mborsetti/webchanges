@@ -19,6 +19,7 @@ INITDATAKEYS = (
     '__author__',
     '__copyright__',
     '__license__',
+    '__code_url__',
     '__docs_url__',
     '__url__',
     '__user_agent__',

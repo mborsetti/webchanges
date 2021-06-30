@@ -29,7 +29,7 @@ docs_dir = here.joinpath('..').resolve().joinpath('docs')
 
 # https://stackoverflow.com/a/48719723/1047040
 def parse_rst(text: str) -> docutils.nodes.document:
-    """Parse the rst document"""
+    """Parse the rst document."""
     parser = docutils.parsers.rst.Parser()
     components = (docutils.parsers.rst.Parser,)
     settings = docutils.frontend.OptionParser(components=components).get_default_values()
@@ -40,7 +40,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
 
 # https://stackoverflow.com/a/48719723/1047040
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
-    """Used in loading yaml code block from rst file"""
+    """Used in loading yaml code block from rst file."""
 
     def __init__(self, doc):
         super().__init__(doc)

@@ -66,7 +66,7 @@ if NOT ["%errorlevel%"]==["0"] (
 
 echo.
 echo Pushing branch to main and setting release tag
-git push origin unreleased:main --follow-tags
+git push origin unreleased:main --tags
 if NOT ["%errorlevel%"]==["0"] (
     pause
     exit /b %errorlevel%

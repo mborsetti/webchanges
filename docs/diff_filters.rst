@@ -18,7 +18,7 @@ Finally, if you're using unified diff (default), you can change the number of co
 
 Standard filters
 ----------------
-See :ref:`here <filters>` for the full list of generic filters.  Below is an example on how you apply a generic filter
+See :ref:`here <filters>` for the full list of generic filters. Below is an example on how you apply a generic filter
 to the result from the diff:
 
 .. code-block:: yaml

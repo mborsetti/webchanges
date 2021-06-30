@@ -4,13 +4,13 @@
 Reporters
 =========
 By default :program:`webchanges` prints out information about changes to the data collected to standard output
-(``stdout``), which is your terminal if you run it interactively (If running via `cron` or another scheduler service,
+(``stdout``), which is your terminal if you run it interactively (if running via cron or another scheduler service,
 the destination of this output depends on the scheduler and its configuration).
 
-You can change the settings to change or add to where the report is sent to.  Settings are contained in the
+You can change the settings to change or add to where the report is sent to. Settings are contained in the
 configuration file ``config.yaml``, a text file located in the ``~/.config/webchanges`` directory for Linux or macOS,
 or in the `:program:`webchanges`` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
-Windows, and is editable using any text editor or with the command ``webchanges --edit--config``.  The configuration
+Windows, and is editable using any text editor or with the command ``webchanges --edit--config``. The configuration
 for the reporters will be listed under the ``reporters`` section.
 
 .. note::
@@ -394,7 +394,7 @@ it to your configuration file (run ``webchanges --edit-config``) as below, and s
      chat_id: ''  # empty for now
 
 Next click on the link of your bot (starts with https://t.me/) and, on the new screen, click on start (which will send
-the message ``/start``) and enter any text ("Hello" is fine).  Then run ``webchanges --telegram-chats``, which will list
+the message ``/start``) and enter any text ("Hello" is fine). Then run ``webchanges --telegram-chats``, which will list
 the private chats the bot is involved with. This will list the chat ID that you need to put into the configuration
 file (run ``webchanges --edit-config``) as ``chat_id``:
 
@@ -507,7 +507,7 @@ Here is a sample configuration:
      recipient: 'YOUR_ACCOUNT_NAME'
 
 You can store your password securely on a keychain if you have one installed by running ``webchanges --xmpp-login``;
-this also requires having the optional ``safe_password`` dependencies installed (see below).  However, be aware that
+this also requires having the optional ``safe_password`` dependencies installed (see below). However, be aware that
 the use of safe password and ``keyring`` won't allow you to run :program:`webchanges` unattended (e.g. from a
 scheduler), so you can save the password in the ``insecure_password`` directive in the XMPP config instead:
 

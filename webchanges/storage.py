@@ -335,7 +335,7 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 
 class YamlConfigStorage(BaseYamlFileStorage):
     def load(self, *args: Any) -> None:
-        """Load configuration file from self.filename into self.config after merging it into DEFAULT_CONFIG"""
+        """Load configuration file from self.filename into self.config after merging it into DEFAULT_CONFIG."""
         self.config: Dict[str, Any] = dict_deep_merge(self.parse(self.filename) or {}, copy.deepcopy(DEFAULT_CONFIG))
 
     def save(self, *args: Any, **kwargs: Any) -> None:
@@ -351,7 +351,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         jobs = []
         jobs_by_guid = defaultdict(list)
         for i, job_data in enumerate((job for job in yaml.safe_load_all(fp) if job)):
-            job_data['index_number'] = i + 1
+            job_data['_index_number'] = i + 1
             job = JobBase.unserialize(job_data)
             jobs.append(job)
             jobs_by_guid[job.get_guid()].append(job)
@@ -453,7 +453,7 @@ class CacheStorage(BaseFileStorage, ABC):
         """Garbage collect the database: delete all guids not included in known_guids and keep only last snapshot for
         the others.
 
-        :param known_guids: The guids to keep
+        :param known_guids: Thfe guids to keep
         """
         for guid in set(self.get_guids()) - set(known_guids):
             print(f'Deleting: {guid} (no longer being tracked)')
@@ -517,7 +517,8 @@ class CacheDirStorage(CacheStorage):
         try:
             data = filename.read_text()
         except UnicodeDecodeError:
-            data = filename.read_bytes().decode(errors='ignore')
+            data = filename.read_text(errors='ignore')
+            logger.warning(f'Found and ignored Unicode-related errors when retrieving saved snapshot {guid}')
 
         timestamp = filename.stat().st_mtime
 
@@ -787,7 +788,7 @@ class CacheSQLite3Storage(CacheStorage):
     ) -> None:
         """Save the data from a job.
 
-        By default it is saved into the temporary database.  Call close() to tranfer the contents of the temporary
+        By default it is saved into the temporary database. Call close() to transfer the contents of the temporary
         database to the permanent one.
 
         :param guid: The guid

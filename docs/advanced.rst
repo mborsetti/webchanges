@@ -6,12 +6,21 @@ Usage examples
 
 Checking different sources at different intervals
 -------------------------------------------------
-You can divide your jobs into multiple job lists depending on how often you want to check.  For example, you can have
-a ``daily.yaml`` job list for daily jobs, and a ``weekly.yaml`` for weekly ones.  You then set up the scheduler to
-run :program:`webchanges`, defining which job list to use, at different intervals.  For example in Linux using cron::
+You can divide your jobs into multiple job lists depending on how often you want to check. For example, you can have
+a ``daily.yaml`` job list for daily jobs, and a ``weekly.yaml`` for weekly ones. You then set up the scheduler to
+run :program:`webchanges`, defining which job list to use, at different intervals. For example in Linux/macOS using
+crontab::
 
   0 0 * * * webchanges --jobs daily.yaml
-  0 0 0 * * webchanges --jobs weekly.yaml
+  0 0 0 * * webchanges --jobs weekly  # alias for weekly.yaml (if 'weekly' isn't found)
+
+
+Alternatively, you can ref:`select of a subset of jobs<job_subset>` to run only a few jobs. For example, if you want
+to run all jobs every day at midnight and in addition you want to run jobs 1 and 4 also at noon, you can do (in
+Linux/macOS using crontab)::
+
+  0  0 * * * webchanges
+  0 12 * * * webchanges 1 4
 
 
 Getting reports via different channels for different sources
@@ -23,11 +32,11 @@ multiple configurations and job lists, and run :program:`webchanges` multiple ti
 For example, you can create two configuration files, e.g. ``config-slack.yaml`` and ``config-email.yaml`` (the
 first set for slack reporting and the second for email reporting) and two job lists, e.g. ``slack.yaml`` and
 ``email.yaml`` (the first containing jobs you want to be notified of via slack, the second for jobs you want to be
-notified of via email).  You can then run :program:`webchanges` similarly to the below example (taken from Linux
+notified of via email). You can then run :program:`webchanges` similarly to the below example (taken from Linux/macOS
 crontab)::
 
   00 00 * * * webchanges --jobs slack.yaml --config config-slack.yaml
-  05 00 * * * webchanges --jobs email.yaml --config config-email.yaml
+  05 00 * * * webchanges --jobs email --config config-email  # .yaml not necessary if no conflict
 
 
 .. _timeout:
@@ -338,7 +347,7 @@ Note: the use of an external differ will override the ``diff`` setting of the ``
 
 Using a Chromium revision matching a Google Chrome / Chromium release
 ---------------------------------------------------------------------
-`:program:`webchanges`` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72.  If you
+`:program:`webchanges`` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72. If you
 want a different one, you can do so, but unfortunately the Chromium revision number does not match the Google Chrome /
 Chromium release one.
 
@@ -426,7 +435,7 @@ to crash, forcing instead the use of the drive-based filesystem, which may be sl
 
 Browsing websites using local storage for authentication
 ---------------------------------------------------------
-Some sites don't use cookies for authentication but store their functional equivalent using 'Local Storage'.  In these
+Some sites don't use cookies for authentication but store their functional equivalent using 'Local Storage'. In these
 circumstances, you can use :program:`webchanges` with ``use_browser: true`` directive and its ``user_data_dir``
 sub-directive to instruct it to use a pre-existing user directory.
 

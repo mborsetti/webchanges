@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import email.utils
 import hashlib
+import json
 import logging
 import os
 import re
@@ -84,7 +85,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     # PyCharm IDE compatibility
     __kind__: str = ''
 
-    index_number: int = 0  # added at job loading
+    _index_number: int = 0  # added at job loading
 
     # __required__ in derived classes
     url: str = ''
@@ -94,16 +95,16 @@ class JobBase(object, metaclass=TrackSubClasses):
     # __optional__ in derived classes
     additions_only: Optional[bool] = None
     block_elements: List[str] = []
-    chromium_revision: Union[Dict[str, int], Dict[str, str], str, int] = 0
+    chromium_revision: Optional[Union[Dict[str, int], Dict[str, str], str, int]] = None
     compared_versions: Optional[int] = None
     contextlines: Optional[int] = None
     cookies: Optional[Dict[str, str]] = None
     data: Optional[Union[bytes, str]] = None
     deletions_only: Optional[bool] = None
-    diff_filter: Union[str, List[Union[str, Dict[str, Any]]]] = []
+    diff_filter: Optional[Union[str, List[Union[str, Dict[str, Any]]]]] = None
     diff_tool: Optional[str] = None
     encoding: Optional[str] = None
-    filter: Union[str, List[Union[str, Dict[str, Any]]]] = []
+    filter: Optional[Union[str, List[Union[str, Dict[str, Any]]]]] = None
     headers: Optional[CaseInsensitiveDict] = None
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
@@ -126,7 +127,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     switches: Optional[List[str]] = None
     timeout: Optional[float] = None
     user_data_dir: Optional[str] = None
-    user_visible_url: str = ''
+    user_visible_url: Optional[str] = None
     wait_for: Optional[Union[int, str]] = None
     wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None
     wait_until: Optional[str] = None
@@ -173,8 +174,9 @@ class JobBase(object, metaclass=TrackSubClasses):
         raise NotImplementedError()
 
     def serialize(self) -> dict:
-        d = {'kind': self.__kind__}
-        d.update(self.to_dict())
+        """Serialize the Job, excluding its _index_number (e.g. for saving)."""
+        d = self.to_dict()
+        d.pop('_index_number', None)
         return d
 
     @classmethod
@@ -231,6 +233,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         return job_subclass.from_dict(data)
 
     def to_dict(self) -> dict:
+        """Return all defined Job directives (required and optional) as a serializable dict."""
         return {
             k: getattr(self, k)
             for keys in (self.__required__, self.__optional__)
@@ -240,20 +243,33 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def from_dict(cls, data: dict) -> 'JobBase':
+        """Create a JobBase class from a dict, checking that all keys are recognized (i.e. listed in __required__ or
+        __optional__)."""
         for k in data.keys():
             if k not in (cls.__required__ + cls.__optional__):
                 raise ValueError(f"Job directive '{k}' is unrecognized; check for errors/typos/escaping:\n{data}")
         return cls(**{k: v for k, v in list(data.items())})
 
+    def to_json(self) -> str:
+        """Return all defined Job directives (required and optional) as a JSON string."""
+        return json.dumps(
+            {
+                k: dict(getattr(self, k)) if isinstance(getattr(self, k), CaseInsensitiveDict) else getattr(self, k)
+                for keys in (self.__required__, self.__optional__)
+                for k in keys
+                if getattr(self, k) is not None
+            }
+        )
+
     def __repr__(self) -> str:
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
     def _set_defaults(self, defaults: Optional[Dict[str, Any]]) -> None:
-        """merge Job attributes with defaults from the configuration"""
+        """Merge Job attributes with defaults from the configuration."""
         # use case insensitive dict for headers
         self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if isinstance(defaults, dict):
-            # merge defaults from configuration into Job attributes without overwriting them
+            # merge defaults from configuration (including dicts) into Job attributes without overwriting them
             for key, value in defaults.items():
                 if key in self.__optional__:
                     if getattr(self, key) is None:
@@ -300,7 +316,7 @@ class JobBase(object, metaclass=TrackSubClasses):
 class Job(JobBase):
     __required__: Tuple[str, ...] = ()
     __optional__: Tuple[str, ...] = (
-        'index_number',
+        '_index_number',
         'name',
         'note',
         'additions_only',
@@ -323,7 +339,7 @@ class Job(JobBase):
         pass
 
     def get_indexed_location(self) -> str:
-        return f'Job {self.index_number}: {self.get_location()}'
+        return f'Job {self._index_number}: {self.get_location()}'
 
     def pretty_name(self) -> str:
         return self.name or self.get_location()
@@ -390,7 +406,7 @@ class UrlJob(Job):
                 self.method = 'POST'
             if 'Content-Type' not in self.headers:
                 self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
-            logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
+            logger.info(f'Job {self._index_number}: Sending POST request to {self.url}')
 
         if self.http_proxy is not None:
             proxies['http'] = self.http_proxy
@@ -398,7 +414,7 @@ class UrlJob(Job):
             proxies['https'] = self.https_proxy
 
         if urlparse(self.url).scheme == 'file':
-            logger.info(f'Job {self.index_number}: Using local filesystem (file URI scheme)')
+            logger.info(f'Job {self._index_number}: Using local filesystem (file URI scheme)')
 
             if os.name == 'nt':
                 filename = Path(str(urlparse(self.url).path).lstrip('/'))
@@ -483,7 +499,7 @@ class UrlJob(Job):
             # and the Content-Type header contains text, but this IRL is often wrong; the below updates it with
             # whatever response detects it to be by its use of the chardet library
             logger.debug(
-                f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from '
+                f'Job {self._index_number}: Encoding updated to {response.apparent_encoding} from '
                 f'{response.encoding}'
             )
             response.encoding = response.apparent_encoding
@@ -604,8 +620,8 @@ class BrowserJob(Job):
             _revision = self.chromium_revision
         os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(_revision)
 
-        logger.debug(
-            f'Job {self.index_number}: '
+        logger.info(
+            f'Job {self._index_number}: '
             f"PYPPETEER_CHROMIUM_REVISION={os.environ.get('PYPPETEER_CHROMIUM_REVISION')}, "
             f"PYPPETEER_NO_PROGRESS_BAR={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}, "
             f"PYPPETEER_DOWNLOAD_HOST={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}"
@@ -625,7 +641,7 @@ class BrowserJob(Job):
         # Setting of 'If-None-Match' or 'If-Modified-Since' headers can trigger a 'net::ERR_ABORTED [...]'
         # browsing error that is returned by page.goto as a PageError(); cannot find a workable way to determine whether
         # it's due to an HTTP 304 Not Modified code (goto) or something else (bad) as PageError only passes the text,
-        # not the full response.  Keeping code here for future ETag handling development.
+        # not the full response. Keeping code here for future ETag handling development.
         # if self.ignore_cached or job_state.tries > 0:
         #     headers.pop('If-None-Match', None)
         #     headers['If-Modified-Since'] = email.utils.formatdate(0)
@@ -671,13 +687,13 @@ class BrowserJob(Job):
             handleSIGHUP=False,
             loop=asyncio.get_running_loop(),
         )  # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
-        logger.debug(f'Job {self.index_number}: Launched browser with args={args}')
+        logger.debug(f'Job {self._index_number}: Launched browser with args={args}')
 
         # browse to page and get content
         page = await browser.newPage()
 
         if headers:
-            logger.debug(f'Job {self.index_number}: setExtraHTTPHeaders={headers}')
+            logger.debug(f'Job {self._index_number}: setExtraHTTPHeaders={headers}')
             await page.setExtraHTTPHeaders(headers)
         if self.cookies:
             await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
@@ -687,7 +703,7 @@ class BrowserJob(Job):
             if proxy_username or proxy_password:
                 await page.authenticate({'username': proxy_username, 'password': proxy_password})
                 logger.debug(
-                    f'Job {self.index_number}: Set page.authenticate with '
+                    f'Job {self._index_number}: Set page.authenticate with '
                     f'username={proxy_username}, password={proxy_password}'  # type: ignore[str-bytes-safe]
                 )
         options: Dict[str, Any] = {}
@@ -731,13 +747,14 @@ class BrowserJob(Job):
                 request_event: pyppeteer.network_manager.Request, block_elements: List[str]
             ) -> None:
                 logger.info(
-                    f'Job {self.index_number}: resource_type={request_event.resourceType} ' f'elements={block_elements}'
+                    f'Job {self._index_number}: resource_type={request_event.resourceType} '
+                    f'elements={block_elements}'
                 )
                 if any(request_event.resourceType == el for el in block_elements):
-                    logger.info(f'Job {self.index_number}: Aborting request {request_event.resourceType}')
+                    logger.info(f'Job {self._index_number}: Aborting request {request_event.resourceType}')
                     await request_event.abort()
                 else:
-                    logger.info(f'Job {self.index_number}: Continuing request {request_event.resourceType}')
+                    logger.info(f'Job {self._index_number}: Continuing request {request_event.resourceType}')
                     await request_event.continue_()  # broken -- many sites hang here!
 
             await page.setRequestInterception(True)
@@ -750,7 +767,7 @@ class BrowserJob(Job):
             nonlocal etag  # type: ignore[misc]
             nonlocal response_code  # type: ignore[misc]
             logger.debug(
-                f'Job {self.index_number}: response.status={response_event.status} '
+                f'Job {self._index_number}: response.status={response_event.status} '
                 f'response.url={response_event.url}'
             )
             if urldefrag(response_event.url)[0] == urldefrag(self.url)[0]:
@@ -766,10 +783,10 @@ class BrowserJob(Job):
         page.on('response', lambda response_event: asyncio.create_task(store_etag(response_event)))
 
         try:
-            logger.debug(f'Job {self.index_number}: page.goto options={options}')
+            logger.debug(f'Job {self._index_number}: page.goto options={options}')
             await page.goto(self.url, options=options)
         except PageError as e:
-            logger.debug(f'Job {self.index_number}: Page returned error {str(e.args)}')
+            logger.debug(f'Job {self._index_number}: Page returned error {str(e.args)}')
             await browser.close()
             if response_code and 400 <= response_code < 600:
                 raise BrowserResponseError(e.args, response_code)
@@ -780,13 +797,13 @@ class BrowserJob(Job):
         # Modified is returned
         # page_response = await page.goto(self.url, options=options)
         # if not request_response and response_code == requests.codes.not_modified:
-        #     logger.debug(f'Job {self.index_number}: page_response={page_response}; response_code={response_code}')
+        #     logger.debug(f'Job {self._index_number}: page_response={page_response}; response_code={response_code}')
         #     await browser.close()
         #     raise NotModifiedError(response_code)
 
         if self.wait_for_navigation:
             while not page.url.startswith(self.wait_for_navigation):
-                logger.info(f'Job {self.index_number}: Waiting for redirection from {page.url}')
+                logger.info(f'Job {self._index_number}: Waiting for redirection from {page.url}')
                 await page.waitForNavigation(option=options)
         if self.wait_for:
             if isinstance(self.wait_for, (int, float, complex)) and not isinstance(self.wait_for, bool):
@@ -800,7 +817,7 @@ class BrowserJob(Job):
             raise BrowserResponseError(('',), response_code)
         elif response_code is not None and response_code != requests.codes.ok:
             logger.info(
-                f'Job {self.index_number}: Received response HTTP {response_code} ' f'{response_names[response_code]}'
+                f'Job {self._index_number}: Received response HTTP {response_code} ' f'{response_names[response_code]}'
             )
 
         return content, etag

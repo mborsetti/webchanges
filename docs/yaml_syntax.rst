@@ -12,7 +12,7 @@ We use YAML because it is easier for humans to read and write than other common 
 YAML basics
 -----------
 
-All YAML files can optionally begin with ``---`` and end with ``...``.  This is part of the YAML format and indicates
+All YAML files can optionally begin with ``---`` and end with ``...``. This is part of the YAML format and indicates
 the start and end of a document.
 
 A list is made of lines beginning at the same indentation level starting with a ``"- "`` (a dash and a
@@ -74,7 +74,7 @@ You can specify a boolean value (true/false) in several forms::
 However, please use lowercase ``true`` or ``false`` for boolean values in dictionaries as these are the default syntax
 for tools like yamllint.
 
-Values can span multiple lines using ``|`` or ``>``.  Spanning multiple lines using a "Literal Block Scalar" ``|`` will
+Values can span multiple lines using ``|`` or ``>``. Spanning multiple lines using a "Literal Block Scalar" ``|`` will
 include the newlines and any trailing spaces.
 Using a "Folded Block Scalar" ``>`` will fold newlines to spaces; it's used to make what would otherwise be a very long
 line easier to read and edit.

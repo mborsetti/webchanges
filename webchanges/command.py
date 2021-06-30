@@ -11,6 +11,7 @@ from typing import Optional, Union
 
 import requests
 
+from . import __docs_url__
 from .filters import FilterBase
 from .handler import JobState, Report
 from .jobs import JobBase, UrlJob
@@ -61,6 +62,9 @@ class UrlwatchCommand:
     @staticmethod
     def show_features() -> None:
         print()
+        print(f'Please see full documentation at {__docs_url__}')
+
+        print()
         print('Supported jobs:\n')
         print(JobBase.job_documentation())
 
@@ -70,18 +74,20 @@ class UrlwatchCommand:
         print('Supported reporters:\n')
         print(ReporterBase.reporter_documentation())
         print()
+        print(f'Please see full documentation at {__docs_url__}')
+        print()
 
     def list_jobs(self) -> None:
         for job in self.urlwatcher.jobs:
             if self.urlwatch_config.verbose:
-                print(f'{job.index_number:3}: {repr(job)}')
+                print(f'{job._index_number:3}: {repr(job)}')
             else:
                 pretty_name = job.pretty_name()
                 location = job.get_location()
                 if pretty_name != location:
-                    print(f'{job.index_number:3}: {pretty_name} ({location})')
+                    print(f'{job._index_number:3}: {pretty_name} ({location})')
                 else:
-                    print(f'{job.index_number:3}: {pretty_name}')
+                    print(f'{job._index_number:3}: {pretty_name}')
 
     def _find_job(self, query: Union[str, int]) -> Optional[JobBase]:
         try:
@@ -96,9 +102,15 @@ class UrlwatchCommand:
             return next((job for job in self.urlwatcher.jobs if job.get_location() == query), None)
 
     def _get_job(self, job_id: Union[str, int]) -> JobBase:
+        try:
+            job_id = int(job_id)
+            if job_id < 0:
+                job_id = len(self.urlwatcher.jobs) + job_id + 1
+        except ValueError:
+            pass
         job = self._find_job(job_id)
         if job is None:
-            print(f'Not found: {job_id}')
+            print(f'Job not found: {job_id}')
             raise SystemExit(1)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
@@ -159,17 +171,17 @@ class UrlwatchCommand:
                 (exit_stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
             ):
                 if job_state.exception is not None:
-                    print(f'{job_state.job.index_number:3}: Error: {job_state.exception.args[0]}')
+                    print(f'{job_state.job._index_number:3}: Error: {job_state.exception.args[0]}')
                 elif len(job_state.new_data.strip()) == 0:
                     if self.urlwatch_config.verbose:
-                        print(f'{job_state.job.index_number:3}: No data: {repr(job_state.job)}')
+                        print(f'{job_state.job._index_number:3}: No data: {repr(job_state.job)}')
                     else:
                         pretty_name = job_state.job.pretty_name()
                         location = job_state.job.get_location()
                         if pretty_name != location:
-                            print(f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})')
+                            print(f'{job_state.job._index_number:3}: No data: {pretty_name} ({location})')
                         else:
-                            print(f'{job_state.job.index_number:3}: No data: {pretty_name}')
+                            print(f'{job_state.job._index_number:3}: No data: {pretty_name}')
 
         end = timeit.default_timer()
         duration = end - start
@@ -196,7 +208,7 @@ class UrlwatchCommand:
                 self.urlwatcher.jobs.remove(job)
                 print(f'Removed {job}')
             else:
-                print(f'Not found: {self.urlwatch_config.delete}')
+                print(f'Job not found: {self.urlwatch_config.delete}')
                 save = False
 
         if self.urlwatch_config.add is not None:

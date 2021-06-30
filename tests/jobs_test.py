@@ -173,7 +173,7 @@ def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser'):
         logger.warning(
             f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since capturing of 304 cannot be '
-            f'implemented in Chromium 89'
+            f'implemented in Chromium'  # last tested with Chromium 89
         )
         return
 

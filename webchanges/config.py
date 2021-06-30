@@ -6,7 +6,7 @@ from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Union
 
-from . import __doc__, __project_name__, __version__
+from . import __doc__, __docs_url__, __project_name__, __version__
 
 
 class BaseConfig(object):
@@ -74,6 +74,7 @@ class CommandConfig(BaseConfig):
         """Python arguments parser."""
         parser = argparse.ArgumentParser(
             description=__doc__.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--', '\n\n'),
+            epilog=f'Full documentation is at {__docs_url__}',
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         parser.add_argument(

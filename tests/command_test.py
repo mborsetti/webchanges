@@ -1,5 +1,5 @@
 """Test commands."""
-
+import logging
 import os
 import sys
 import time
@@ -190,7 +190,7 @@ def test__get_job_index_error(capsys):
         urlwatch_command._get_job(100).get_location()
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
-    assert message == 'Not found: 100\n'
+    assert message == 'Job not found: 100\n'
 
 
 def test_test_job(capsys):
@@ -264,6 +264,11 @@ def test_list_error_jobs(capsys):
 
 
 def test_modify_urls(capsys):
+    """Test --add JOB and --delete JOB."""
+    # save current contents of job file
+    before_file = jobs_file.read_text()
+
+    # add new job
     setattr(command_config, 'add', 'url=https://www.example.com/#test_modify_urls')
     urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -272,6 +277,8 @@ def test_modify_urls(capsys):
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert "Adding <url url='https://www.example.com/#test_modify_urls'" in message
+
+    # delete the job just added
     setattr(command_config, 'delete', 'https://www.example.com/#test_modify_urls')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
@@ -279,6 +286,10 @@ def test_modify_urls(capsys):
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert "Removed <url url='https://www.example.com/#test_modify_urls'" in message
+
+    # check that the job file is identical to before the add/delete operations
+    after_file = jobs_file.read_text()
+    assert after_file == before_file
 
 
 def test_delete_snapshot():
@@ -294,7 +305,7 @@ def test_delete_snapshot():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    assert 'No snapshots found to be deleted for Job 1:' in pytest_wrapped_e.value.code
+    assert 'No snapshots found to be deleted for Job 0:' in pytest_wrapped_e.value.code
 
     # run once
     urlwatcher.run_jobs()
@@ -310,17 +321,51 @@ def test_delete_snapshot():
     history = cache_storage.get_history_data(guid)
     assert len(history) == 2
 
+    # delete once
     setattr(command_config, 'delete_snapshot', True)
     urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    assert 'Deleted last snapshot of Job 1:' in pytest_wrapped_e.value.code
+    assert 'Deleted last snapshot of Job 0:' in pytest_wrapped_e.value.code
+
+    # delete twice
+    setattr(command_config, 'delete_snapshot', True)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'delete_snapshot', False)
+    assert 'Deleted last snapshot of Job 0:' in pytest_wrapped_e.value.code
+
+    # test all empty
+    setattr(command_config, 'delete_snapshot', True)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'delete_snapshot', False)
+    assert 'No snapshots found to be deleted for Job 0:' in pytest_wrapped_e.value.code
 
 
 def test_gc_cache(capsys):
-    setattr(command_config, 'gc_cache', True)
+    jobs_file = config_dir.joinpath('jobs-time.yaml')
+    jobs_storage = YamlJobsStorage(jobs_file)
+    command_config = CommandConfig(__project_name__, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    if os.name == 'nt':
+        urlwatcher.jobs[0].command = 'echo %time% %random%'
+
+    # run once to save 'jobs-time.yaml'
+    urlwatcher.run_jobs()
+    cache_storage._copy_temp_to_permanent(delete=True)
+
+    # set job file to a different one
+    jobs_file = config_dir.joinpath('jobs-echo_test.yaml')
+    command_config = CommandConfig(__project_name__, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)
+
+    # run gc_cache and check it deletes the snapshot of the job no longer being tracked
+    setattr(command_config, 'gc_cache', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'gc_cache', False)
@@ -430,6 +475,7 @@ def test_check_xmpp_login():
 
 
 def test_setup_logger_verbose(caplog):
+    caplog.set_level(logging.DEBUG)
     setup_logger_verbose()
     assert f' {__project_name__}: {__version__} {__copyright__}\n' in caplog.text
 

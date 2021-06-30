@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import io
 import itertools
 import json
@@ -25,6 +26,7 @@ from lxml.cssselect import CSSSelector  # noqa: DUO107 insecure use of XML ... "
 
 import yaml
 
+from . import __project_name__
 from .util import TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
@@ -116,7 +118,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
         for filtercls in filters:
             filter_instance = filtercls(state.job, state)
             if filter_instance.match():
-                logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
+                logger.info(f'Job {state.job._index_number}: Auto-applying filter {filter_instance}')
                 data = filter_instance.filter(data, {})  # all filters take a subfilter
 
         return data
@@ -187,7 +189,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def process(cls, filter_kind: str, subfilter: Dict[str, Any], state: JobState, data: Union[bytes, str]) -> str:
-        logger.info(f'Job {state.job.index_number}: Applying filter {filter_kind}, subfilter {subfilter}')
+        logger.info(f'Job {state.job._index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
         filtercls: TrackSubClasses = cls.__subclasses__.get(filter_kind, None)
         return filtercls(state.job, state).filter(data, subfilter)
 
@@ -271,7 +273,7 @@ class BeautifyFilter(FilterBase):
         soup = BeautifulSoup(data, features='lxml')
 
         if jsbeautifier is None:
-            logger.info(
+            logger.warning(
                 f"Python package 'jsbeautifier' is not installed; will not beautify <script> tags"
                 f' ({self.job.get_indexed_location()})'
             )
@@ -283,7 +285,7 @@ class BeautifyFilter(FilterBase):
                     script.string = beautified_js
 
         if cssbeautifier is None:
-            logger.info(
+            logger.warning(
                 "Python package 'cssbeautifier' is not installed; will not beautify <style> tags"
                 f' ({self.job.get_indexed_location()})'
             )
@@ -372,7 +374,7 @@ class Html2TextFilter(FilterBase):
                     f'({self.job.get_indexed_location()})',
                     DeprecationWarning,
                 )
-            stripped_tags = re.sub(r'<[^>]*>', '', data)
+            stripped_tags = html.unescape(re.sub(r'<[^>]*>', '', data))
             return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''))
 
         elif method == 'lynx':
@@ -438,6 +440,7 @@ class Ical2TextFilter(FilterBase):
                 parsedCal = vobject.readOne(data)
             except vobject.ParseError:
                 parsedCal = vobject.readOne(data.decode(errors='ignore'))
+                logger.warning('Found and ignored Unicode-related errors when reading iCal entry')
 
         for event in parsedCal.getChildren():
             if event.name == 'VEVENT':
@@ -1072,47 +1075,43 @@ class ReverseFilter(FilterBase):
         return separator.join(reversed(data.split(separator)))
 
 
-class ShellPipeFilter(FilterBase):
-    """Filter using a shell command."""
+def pipe_filter(f_cls: FilterBase, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    if 'command' not in subfilter:
+        raise ValueError(f"The '{f_cls.__kind__}' filter needs a command ({f_cls.job.get_indexed_location()})")
 
-    __kind__ = 'shellpipe'
+    # Work on a copy to not modify the outside environment
+    env = dict(os.environ)
+    env.update(
+        {
+            f'{__project_name__.upper()}_JOB_JSON': f_cls.job.to_json(),
+            f'{__project_name__.upper()}_JOB_NAME': f_cls.job.pretty_name(),
+            f'{__project_name__.upper()}_JOB_LOCATION': f_cls.job.get_location(),
+            f'{__project_name__.upper()}_JOB_INDEX_NUMBER': str(f_cls.job._index_number),
+            'URLWATCH_JOB_NAME': f_cls.job.pretty_name() if f_cls.job else '',  # urlwatch 2 compatibility
+            'URLWATCH_JOB_LOCATION': f_cls.job.get_location() if f_cls.job else '',  # urlwatch 2 compatibility
+        }
+    )
 
-    __supported_subfilters__ = {
-        'command': 'Shell command to execute for filtering (required)',
-    }
+    if f_cls.__kind__ == 'execute':
+        command = shlex.split(subfilter['command'])
+        shell = False
+    else:  # 'shellpipe'
+        command = subfilter['command']
+        shell = True
 
-    __default_subfilter__ = 'command'
-
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
-        if 'command' not in subfilter:
-            raise ValueError(f"The 'shellpipe' filter needs a command ({self.job.get_indexed_location()})")
-
-        warnings.warn("If possible replace the 'shellpipe' filter with the 'execute' one for security reasons")
-
-        # Work on a copy to not modify the outside environment
-        env = dict(os.environ)
-        env.update(
-            {
-                'URLWATCH_JOB_NAME': self.job.pretty_name() if self.job else '',
-                'URLWATCH_JOB_LOCATION': self.job.get_location() if self.job else '',
-            }
-        )
-
-        try:
-            return subprocess.run(
-                subfilter['command'],
-                capture_output=True,
-                shell=True,
-                check=True,
-                text=True,
-                env=env,
-                input=data,
-            ).stdout  # noqa: DUO116 use of "shell=True" is insecure
-        except subprocess.CalledProcessError as e:
-            logger.error(
-                f"The 'shellpipe' filter returned error ({self.job.get_indexed_location()}):\n{e.stderr.decode()}"
-            )
-            raise e
+    try:
+        return subprocess.run(
+            command,
+            capture_output=True,
+            shell=shell,
+            check=True,
+            text=True,
+            env=env,
+            input=data,
+        ).stdout
+    except subprocess.CalledProcessError as e:
+        logger.error(f"The '{f_cls.__kind__}' filter returned error ({f_cls.job.get_indexed_location()}):\n{e.stderr}")
+        raise e
 
 
 class ExecutePipeFilter(FilterBase):
@@ -1127,32 +1126,22 @@ class ExecutePipeFilter(FilterBase):
     __default_subfilter__ = 'command'
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
-        if 'command' not in subfilter:
-            raise ValueError(f"The 'execute' filter needs a command ({self.job.get_indexed_location()})")
+        return pipe_filter(self, data, subfilter)
 
-        # Work on a copy to not modify the outside environment
-        env = dict(os.environ)
-        env.update(
-            {
-                'URLWATCH_JOB_NAME': self.job.pretty_name() if self.job else '',
-                'URLWATCH_JOB_LOCATION': self.job.get_location() if self.job else '',
-            }
-        )
 
-        try:
-            return subprocess.run(
-                shlex.split(subfilter['command']),
-                capture_output=True,
-                check=True,
-                text=True,
-                env=env,
-                input=data,
-            ).stdout
-        except subprocess.CalledProcessError as e:
-            logger.error(
-                f"The 'execute' filter returned error ({self.job.get_indexed_location()}):\n{e.stderr.decode()}"
-            )
-            raise e
+class ShellPipeFilter(FilterBase):
+    """Filter using a shell command."""
+
+    __kind__ = 'shellpipe'
+
+    __supported_subfilters__ = {
+        'command': 'Shell command to execute for filtering (required)',
+    }
+
+    __default_subfilter__ = 'command'
+
+    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+        return pipe_filter(self, data, subfilter)
 
 
 class OCRFilter(FilterBase):  # pragma: has-pytesseract

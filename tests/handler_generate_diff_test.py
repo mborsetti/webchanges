@@ -13,7 +13,7 @@ job_state.old_timestamp = 0
 
 
 def test_generate_diff_normal():
-    """Base case"""
+    """Base case."""
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     expected = ['@@ -1 +1 @@', '-a', '+b']
@@ -22,7 +22,7 @@ def test_generate_diff_normal():
 
 
 def test_generate_diff_additions_only():
-    """changed line with "additions" comparison_filter"""
+    """Changed line with "additions" comparison_filter."""
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     job_state.job.additions_only = True
@@ -32,7 +32,7 @@ def test_generate_diff_additions_only():
 
 
 def test_generate_diff_additions_only_new_lines():
-    """change of new empty lines with "additions" comparison_filter"""
+    """Change of new empty lines with "additions" comparison_filter."""
     job_state.old_data = 'a\nb'
     job_state.new_data = 'a\n\nb\n'
     job_state.job.additions_only = True
@@ -43,7 +43,7 @@ def test_generate_diff_additions_only_new_lines():
 
 
 def test_generate_diff_deletions_only():
-    """changed line with "deletions" comparison_filter"""
+    """Changed line with "deletions" comparison_filter."""
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     job_state.job.additions_only = False
@@ -54,7 +54,7 @@ def test_generate_diff_deletions_only():
 
 
 def test_generate_diff_deletions_only_only_removed_lines():
-    """changed line with "deletions" comparison_filter"""
+    """Changed line with "deletions" comparison_filter."""
     job_state.old_data = 'a\n\nb\n'
     job_state.new_data = 'a\nb'
     job_state.job.additions_only = False
@@ -66,7 +66,7 @@ def test_generate_diff_deletions_only_only_removed_lines():
 
 
 def test_generate_diff_additions_only_75pct_deleted():
-    """'additions' comparison_filter with 75% or more of original content deleted"""
+    """'additions' comparison_filter with 75% or more of original content deleted."""
     job_state.old_data = 'a\nb\nc\nd\n'
     job_state.new_data = 'd\n'
     job_state.job.additions_only = True
@@ -83,7 +83,7 @@ def test_generate_diff_additions_only_75pct_deleted():
 
 
 def test_generate_diff_additions_only_deletions():
-    """'additions' comparison_filter and lines were only deleted"""
+    """'additions' comparison_filter and lines were only deleted."""
     job_state.old_data = 'a\nb\nc\nd\n'
     job_state.new_data = 'a\nb\nc\n'
     job_state.job.additions_only = True
@@ -92,7 +92,7 @@ def test_generate_diff_additions_only_deletions():
 
 
 def test_generate_diff_deletions_only_additions():
-    """'deletions' comparison_filter and lines were only added"""
+    """'deletions' comparison_filter and lines were only added."""
     job_state.old_data = 'a\n'
     job_state.new_data = 'a\nb\n'
     job_state.job.additions_only = False

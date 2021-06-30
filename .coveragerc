@@ -3,7 +3,7 @@
 
 [coverage:run]
 branch = True
-source = webchanges
+source = ./
 omit =
     .tox/*
     docs/*

@@ -31,6 +31,25 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.7.1.post0
+====================
+Unreleased
+
+Added
+-----
+* Job indices can now be negative. For example, run ``webchanges -1`` to only run the last job of your jobs list, or
+  ``webchanges --test -2`` to test the second to last job of your jobs list
+* Filter ``execute`` sets more environment variables; see improved documentation (including examples)
+
+Fixed
+-----
+* The ``html2text`` filter's method ``strip_tags`` was returning HTML named and numeric character references (e.g. &gt;,
+  &#62;, &#x3e;) instead of the corresponding Unicode characters
+
+Internals
+---------
+* ``tox`` testing can now be run in parallel
+
 Version 3.7.1
 ====================
 2021-06-27
@@ -98,7 +117,7 @@ Added
 -----
 * Run a subset of jobs by adding their index number(s) as command line arguments. For example, run ``webchanges 2 3`` to
   only run jobs #2 and #3 of your jobs list. Run ``webchanges --list`` to find the job numbers. Suggested by `Dan Brown
-  <https://github.com/dbro>`__ upstream `here <https://github.com/thp/urlwatch/pull/641>`__.  API is experimental and
+  <https://github.com/dbro>`__ upstream `here <https://github.com/thp/urlwatch/pull/641>`__. API is experimental and
   may change in the near future.
 * Support for ``ftp://`` URLs to download a file from an ftp server
 
@@ -323,7 +342,7 @@ Added
   you miss notifications; see `here <https://webchanges.readthedocs.io/en/stable/cli.html#rollback-cache>`__. Does not
   work with database engine ``minidb`` or ``textfiles``.
 * command line argument ``--cache-engine ENGINE``: specify ``minidb`` to continue using the database structure used
-  in prior versions and `urlwatch` 2.  New default ``sqlite3`` creates a smaller database due to data compression with
+  in prior versions and `urlwatch` 2. New default ``sqlite3`` creates a smaller database due to data compression with
   `msgpack <https://msgpack.org/index.html>`__ and offers additional features; migration from old minidb database is
   done automatically and the old database preserved for manual deletion.
 * Job directive ``block_elements`` for URL jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) (⚠ ignored in Python

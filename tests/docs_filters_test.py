@@ -47,7 +47,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
 
 # https://stackoverflow.com/a/48719723/1047040
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
-    """Used in loading yaml code block from rst file"""
+    """Used in loading yaml code block from rst file."""
 
     def __init__(self, doc):
         super().__init__(doc)
@@ -62,7 +62,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
 
 def load_filter_doc_jobs() -> List[JobBase]:
-    """Load YAML code blocks from rst file"""
+    """Load YAML code blocks from rst file."""
     doc = parse_rst(open(docs_dir.joinpath('filters.rst')).read())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
@@ -71,7 +71,7 @@ def load_filter_doc_jobs() -> List[JobBase]:
     jobs_by_guid = defaultdict(list)
     for i, job_data in enumerate(job for job in visitor.jobs if 'url' in job):
         if job_data is not None:
-            job_data['index_number'] = i + 1
+            job_data['_index_number'] = i + 1
             job = JobBase.unserialize(job_data)
             jobs.append(job)
             jobs_by_guid[job.get_guid()].append(job)
@@ -99,9 +99,9 @@ testdata = load_filter_testdata()
 @pytest.mark.parametrize('job', FILTER_DOC_JOBS)
 def test_url(job):
     """Test the yaml code in docs/filters.rst against the source and expected results contained
-    in tests/data/doc_filter_testdata.yaml using 'url' as the key)"""
-    # only tests shellpipe in linux; test pdf2text and ocr only if packages are installed (they require
-    # OS-specific installations beyond pip)
+    in tests/data/doc_filter_testdata.yaml using 'url' as the key)."""
+    # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
+    # installations beyond pip)
     if job.url != 'https://example.com/html2text.html' or html2text.__version__ <= (2020, 1, 16):
         # TODO when html2text > 2020.1.16 update output and remove if (https://github.com/Alir3z4/html2text/pull/339)
         d = testdata[job.url]

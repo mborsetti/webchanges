@@ -199,7 +199,7 @@ Scheduling
 `:program:`webchanges`` will check for changes every time you run it, but does not include a scheduler. We recommend
 using a system scheduler to automatically run :program:`webchanges` periodically:
 
-- In Linux, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for you. If you
-  have never used cron before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__.
+- In Linux/macOS, you can use cron; `crontab.guru <https://crontab.guru>`__ will build a schedule expression for you. If
+  you have never used crontab before, see `here <https://www.computerhope.com/unix/ucrontab.htm>`__.
 - On Windows, you can use the built-in `Windows Task Scheduler
   <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.

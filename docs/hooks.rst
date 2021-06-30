@@ -9,7 +9,7 @@
 Python code hooks
 =================
 Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing it into
-a ``hooks.py`` file and placing it into the same directory as the job and configuration files.  The code will be
+a ``hooks.py`` file and placing it into the same directory as the job and configuration files. The code will be
 automatically loaded at startup.
 
 Smaller code snippets can also be run using the :ref:`execute` filter, for example as used :ref:`here <json_dict>`

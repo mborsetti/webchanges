@@ -3,6 +3,7 @@
    This URL also needs to be added to the file tests/data/docs_filters_test.py along with the "before" and "after" data
    that will be used for testing.
    This ensures that all examples work now and in the future.
+   Please keep code_block line length to 106 to avoid horizontal scrolling lines
 
 .. _filters:
 
@@ -18,8 +19,9 @@ While creating your job pipeline, you might want to preview what the filtered ou
 to the data, you can run :program:`webchanges` with the ``--test-filter`` command-line option, passing in the index
 (from ``--list``) or the URL/command of the job to be tested::
 
-   webchanges --test 1   # Test the first job in the list and show the data colleted after it's filtered
+   webchanges --test 1   # Test the first job in the jobs list and show the data collected after it's filtered
    webchanges --test https://example.net/  # Test the job that matches the given URL
+   webchanges --test -1  # Test the last job in the jobs list
 
 This command will show the output that will be captured and stored, and used to compare to the old version stored from
 a previous run against the same url or shell command.
@@ -29,8 +31,8 @@ can start testing the effects of your ``diff_filter`` with the command-line opti
 index (from ``--list``) or the URL/command of the job to be tested, which using the historic data saved locally in
 the cache::
 
-   webchanges --test-diff 1   # Test the first job in the list and show the report
-
+   webchanges --test-diff 1    # Test the first job in the jobs list and show the report
+   webchanges --test-diff -2   # Test the second-to-last job in the jobs list and show the report
 
 At the moment, the following filters are available:
 
@@ -338,9 +340,7 @@ but may not yield the prettiest of results.
 
     url: https://example.com/html2text_strip_tags.html
     filter:
-      - xpath: '//section[@role="main"]'
-      - html2text:
-          method: strip_tags
+      - html2text: strip_tags
 
 
 ``bs4``
@@ -647,7 +647,7 @@ This filter displays the contents both in binary and ASCII using the hex dump fo
 
 sha1sum
 -----------
-This filter calculates a SHA-1 hash for the contents.  Useful to be notified when something has changed without any
+This filter calculates a SHA-1 hash for the contents. Useful to be notified when something has changed without any
 detail, or saving large snapshots of data.
 
 .. code-block:: yaml
@@ -942,30 +942,57 @@ Optional sub-directives
 
 execute
 ---------
-The data to be filtered is passed as the input to a command to be run, and the output from this is used in
-:program:`webchanges`'s next step. The environment variable ``URLWATCH_JOB_NAME`` will have the name of the job,
-``URLWATCH_JOB_LOCATION`` its 'location' (the value of either ``url`` or ``command``) and ``URLWATCH_JOB_NUMBER`` its
-index number.
+The data to be filtered is passed as the input to a command to be run, and the output from the command is used in
+:program:`webchanges`'s next step. All environment variables are preserved and the following ones added:
+
++-----------------------------+-------------------------------------------------------------------------+
+| Environment variable        | Description                                                             |
++=============================+=========================================================================+
+| ``WEBCHANGES_JOB_JSON``     | All job parameters in JSON format                                       |
++-----------------------------+-------------------------------------------------------------------------+
+| ``WEBCHANGES_JOB_LOCATION`` | Value of either ``url`` or ``command``                                  |
++-----------------------------+-------------------------------------------------------------------------+
+| ``WEBCHANGES_JOB_NAME``     | Name of the job                                                         |
++-----------------------------+-------------------------------------------------------------------------+
+| ``WEBCHANGES_JOB_NUMBER``   | The job's index number                                                  |
++-----------------------------+-------------------------------------------------------------------------+
+
+For example, we can execute a Python script:
 
 .. code-block:: yaml
 
+   name: Test execute filter
    url: https://example.net/execute.html
    filter:
-     - execute: "python3 -c \"import sys; print(f'I heard {sys.stdin.read()}', end='')\""
+     # For multiline, quote the string and unindent its continuation. A space is added at each eol.
+     # Pay attention to escaping!
+     - execute: "python3 -c \"import os, sys;
+     print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is
+     '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is
+     '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is
+     '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is
+     '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""
 
 If the command generates an error, the output of the error will be in the first line, before the traceback.
 
+.. versionchanged:: 3.8
+   Setting of WEBCHANGES_JOB_* environment variables.
 
 
 .. _shellpipe:
 
 shellpipe
 ---------
-This filter works like :ref:`execute`, except that an intermediate shell process is spawned and it will run the
-command. This opens up all sort of security issues, in addition to generating additional processing overhead, so the use
-of this filter should be avoided if possible in favor of ``execute``; however, there are certain situation (e.g.
-relying on variables, glob patterns, and other special shell features in the command) that require running within a
-shell, hence this filter.
+This filter works like :ref:`execute`, except that an intermediate shell process is spawned to run the command. This
+is to allow for certain corner situations (e.g. relying on variables, glob patterns, and other special shell features in
+the command) that the ``execute`` filter cannot handle.
+
+.. danger::
+
+   The execution of a shell command opens up all sort of security issues, in addition to generating additional
+   processing overhead, so the use of this filter should be avoided in favor of :ref:`execute`
+
+Example:
 
 .. code-block:: yaml
 
@@ -973,18 +1000,18 @@ shell, hence this filter.
    filter:
      - shellpipe: echo TEST
 
-If the command generates an error, the output of the error will be in the first line, before the traceback.
+.. warning::
 
-WARNING: On Linux and macOS systems, this filter will not run for security reasons unless both the config directory and
-the jobs file are owned by and writeable **only** by the user who is running the job, and not by the group or other
-users. To set this up:
+   On Linux and macOS systems, due to security reasons ``shellpipe`` will not run unless **both** the config directory
+   **and** the jobs file are **owned** by and **writeable** by **only** the user who is running the job (and not by the
+   group or by other users). To set this up:
 
-.. code-block:: bash
+   .. code-block:: bash
 
-   cd ~/.config/webchanges  # could be different
-   sudo chown $USER:$(id -g -n) *.yaml
-   sudo chmod go-w *.yaml
+      cd ~/.config/webchanges  # could be different
+      sudo chown $USER:$(id -g -n) *.yaml
+      sudo chmod go-w *.yaml
 
-* ``sudo`` may or may not be required
-* Replace ``$USER:$(id -g -n)`` with the username that runs :program:`webchanges` if different than the use you're
-  logged in when making the above changes
+   * ``sudo`` may or may not be required
+   * If making the change from a different account than the one you run :program:`webchanges` from, replace
+     ``$USER:$(id -g -n)`` with the username:group of that account

@@ -11,8 +11,8 @@ command ``webchanges --edit`` or using any text editor.
 
 **YAML tips**
 
-YAML has lots of idiosyncrasies that make it and finicky, and new users often have issues with it.  Here are some tips
-and things to look for when using YAML.  A more comprehensive syntax explanation is :ref:`here <yaml_syntax>`.
+YAML has lots of idiosyncrasies that make it and finicky, and new users often have issues with it. Here are some tips
+and things to look for when using YAML. A more comprehensive syntax explanation is :ref:`here <yaml_syntax>`.
 
 * Indentation: All indentation must be done with spaces (2 spaces is suggested); tabs are not recognized/allowed.
   Indentation is mandatory.
@@ -49,7 +49,7 @@ and things to look for when using YAML.  A more comprehensive syntax explanation
    name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
 
 * You can learn more about quoting special characters `here <https://www.yaml.info/learn/quote.html#flow>`__ (the
-  library we use supports YAML 1.1, and our examples use "flow scalars").  URLs and XPaths are always safe and don't
+  library we use supports YAML 1.1, and our examples use "flow scalars"). URLs and XPaths are always safe and don't
   need to be enclosed in quotes.
 
 For additional information on YAML, see the :ref:yaml_syntax and the references at the bottom of that page.

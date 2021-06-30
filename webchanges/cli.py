@@ -64,7 +64,7 @@ def python_version_warning() -> None:
 
 def migrate_from_urlwatch(config_file: Path, jobs_file: Path, hooks_file: Path, cache_file: Path) -> None:
     """Check for existence of legacy (urlwatch 2.23) config, jobs and hooks files and migrate them (i.e. make a copy to
-    new folder and or naming).  Original files are not deleted."""
+    new folder and or naming). Original files are not deleted."""
     uw_urlwatch_dir = Path.home().joinpath('.urlwatch')
     uw_config_file = uw_urlwatch_dir.joinpath('urlwatch.yaml')
     uw_urls_file = uw_urlwatch_dir.joinpath('urls.yaml')
@@ -84,11 +84,7 @@ def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
     """Set up the loggers for verbosity."""
     import platform
 
-    # logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s', level=log_level)
-    console = logging.StreamHandler()
-    console.setFormatter(logging.Formatter('%(asctime)s %(module)s %(levelname)s: %(message)s'))
-    logger.addHandler(console)
-    logger.setLevel(log_level)
+    logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s', level=log_level)
     logger.debug(f'{__project_name__}: {__version__} {__copyright__}')
     logger.debug(f'Python: {platform.python_build()}')
     logger.debug(f'System: {platform.platform()}')

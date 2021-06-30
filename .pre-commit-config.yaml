@@ -178,12 +178,12 @@ repos:
 #        entry: sphinx-apidoc
 #        args: [-f, -e, -T, -o, docs\_api, webchanges]
 #        language: system
-      - id: sphinx-build
-        name: Check documentation build (sphinx-build)
-        entry: python -m sphinx.cmd.build
-        args: [-W, docs, docs/_build]
-        language: system
-        pass_filenames: false
+#      - id: sphinx-build
+#        name: Check documentation build (sphinx-build)
+#        entry: python -m sphinx.cmd.build
+#        args: [-W, docs, docs/_build]
+#        language: system
+#        pass_filenames: false
 #      # https://www.sphinx-doc.org/en/master/usage/extensions/doctest.html#module-sphinx.ext.doctest
 #      - id: sphinx-doctest
 #        name: sphinx doctest

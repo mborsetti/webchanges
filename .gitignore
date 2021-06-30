@@ -8,6 +8,6 @@
 /dist/
 /docs/_build/
 /htmlcov/
-/venv/
+/venv*/
 /.coverage
 /coverage.xml

@@ -1,4 +1,4 @@
-.. The documentation is made with Sphynx, the Python document generator.  https://www.sphinx-doc.org/en/master/
+.. The documentation is made with Sphynx, the Python document generator. https://www.sphinx-doc.org/en/master/
    To see your changes before contributing, run `make html` (`make.bat html` in Windows) and check the html generated.
    Tutorial at https://sphinx-tutorial.readthedocs.io/start/
 

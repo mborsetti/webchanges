@@ -50,7 +50,7 @@ class JobState(object):
         try:
             self.job.main_thread_enter()
         except Exception as ex:
-            logger.info(f'Job {self.job.index_number}: Exception while creating resources for job', exc_info=True)
+            logger.info(f'Job {self.job._index_number}: Exception while creating resources for job', exc_info=True)
             self.exception = ex
             self.traceback = traceback.format_exc()
 
@@ -66,7 +66,7 @@ class JobState(object):
             self.job.main_thread_exit()
         except Exception:
             # We don't want exceptions from releasing resources to override job run results
-            logger.warning(f'Job {self.job.index_number}: Exception while releasing resources for job', exc_info=True)
+            logger.warning(f'Job {self.job._index_number}: Exception while releasing resources for job', exc_info=True)
 
     def load(self) -> None:
         """Loads new data for the job."""
@@ -92,7 +92,7 @@ class JobState(object):
 
     def process(self) -> 'JobState':
         """Processes the job: loads it and handles exceptions."""
-        logger.info(f'Job {self.job.index_number}: Processing job {self.job}')
+        logger.info(f'Job {self.job._index_number}: Processing job {self.job}')
 
         if self.exception:
             return self
@@ -121,7 +121,7 @@ class JobState(object):
                 if not (self.error_ignored or isinstance(e, NotModifiedError)):
                     self.tries += 1
                     logger.debug(
-                        f'Job {self.job.index_number}: Job ended with error; incrementing cumulative tries to '
+                        f'Job {self.job._index_number}: Job ended with error; incrementing cumulative tries to '
                         f'{self.tries} ({str(e).strip()})'
                     )
         except Exception as e:
@@ -132,7 +132,7 @@ class JobState(object):
             if not isinstance(e, NotModifiedError):
                 self.tries += 1
                 logger.debug(
-                    f'Job {self.job.index_number}: Job ended with error (internal handling failed); '
+                    f'Job {self.job._index_number}: Job ended with error (internal handling failed); '
                     f'incrementing cumulative tries to {self.tries} ({str(e).strip()})'
                 )
 
@@ -245,7 +245,7 @@ class Report(object):
     def _result(self, verb: str, job_state: JobState) -> None:
         if job_state.exception is not None and job_state.exception is not NotModifiedError:
             logger.debug(
-                f'Job {job_state.job.index_number}: Got exception while processing job {job_state.job}',
+                f'Job {job_state.job._index_number}: Got exception while processing job {job_state.job}',
                 exc_info=job_state.exception,
             )
 

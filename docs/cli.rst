@@ -68,14 +68,18 @@ Command line arguments
                           level of logging output if -v is selected (default: DEBUG)
 
 
+.. _job_subset:
+
 Select subset of jobs
 ---------------------
 Add job number(s) in the command line to run a subset of them; for example, run ``webchanges 2 3`` to only run jobs #2
-and #3 from your job list. Find the numbering of your jobs running``webchanges --list``. API is experimental and may
-change in the near future.
+and #3 from your job list, or ``webchanges -1`` to only run the last job on your jobs list. Find the numbering of your
+jobs by running``webchanges --list``. API is experimental and may change in the near future.
 
 .. versionadded:: 3.6
 
+.. versionchanged:: 3.8
+   Accepts negative indices
 
 Show errors and no-data jobs
 ----------------------------
@@ -88,8 +92,12 @@ resources as expected. No snapshots are saved from this run.
 Test run a job
 --------------
 You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
-its URL/command; :program:`webchanges` will display the filtered output. This allows to easily test changes in filters.
+its URL/command; :program:`webchanges` will display the filtered output. This allows to easily test changes in
+filters. Use a negative index number to select a job from the bottom of your job list (i.e. -1 is the last job, -2 is
+the second to last job, etc.)
 
+.. versionchanged:: 3.8
+   Accepts negative indices
 
 .. _test-diff:
 
@@ -98,11 +106,14 @@ Show diff from saved snapshots
 You can use the argument ``--test-diff`` followed by the job index number (from ``--list``) or its URL/command will
 display diffs and apply the :ref:`diff filters <diff_filters>` currently defined from all snapshots that have been
 saved; obviously a minimum of 2 saved snapshots are required. This allows you to test the effect of a diff filter and/or
-retrieve historical diffs (changes).
+retrieve historical diffs (changes). Use a negative index number to select a job from the bottom of your job list (i.e.
+-1 is the last job, -2 is the second to last job, etc.)
 
 .. versionchanged:: 3.3
-   Will now display all snapshots instead of only the latest 10`
+   Will now display all snapshots instead of only the latest 10
 
+.. versionchanged:: 3.8
+   Accepts negative indices
 
 .. _delete-snapshot:
 
@@ -188,8 +199,8 @@ be installed for this to work.
 Maximum number of snapshots to save
 -----------------------------------
 Each time you run :program:`webchanges` it captures the data downloaded from the URL (or the output of the command
-specified), applies filters, and saves the resulting snapshot to a database for future comparison.  By default¹ only
-the last 4 snapshots are kept, but this number can be changed with the ``--max-snapshots`` command line argument.  If
+specified), applies filters, and saves the resulting snapshot to a database for future comparison. By default¹ only
+the last 4 snapshots are kept, but this number can be changed with the ``--max-snapshots`` command line argument. If
 set to 0, all snapshots are retained (the database will grow unbounded).
 
 .. tip:: Changes (diffs) between old snapshots can be redisplayed with the ``--test-diff`` command line argument (see

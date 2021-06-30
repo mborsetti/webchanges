@@ -30,10 +30,16 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     """Process jobs."""
     cache_storage = urlwatcher.cache_storage
     if urlwatcher.urlwatch_config.joblist:
+        for idx in urlwatcher.urlwatch_config.joblist:
+            if not (-len(urlwatcher.jobs) <= idx <= -1 or 1 <= idx <= len(urlwatcher.jobs)):
+                raise IndexError(f'Job index {idx} out of range (found {len(urlwatcher.jobs)} jobs)')
+        urlwatcher.urlwatch_config.joblist = [
+            jn if jn > 0 else len(urlwatcher.jobs) + jn + 1 for jn in urlwatcher.urlwatch_config.joblist
+        ]
         jobs = [
             job.with_defaults(urlwatcher.config_storage.config)
             for job in urlwatcher.jobs
-            if job.index_number in urlwatcher.urlwatch_config.joblist
+            if job._index_number in urlwatcher.urlwatch_config.joblist
         ]
         logger.debug(f'Processing {len(jobs)} job as specified (# {urlwatcher.urlwatch_config.joblist})')
     else:
@@ -56,11 +62,12 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 # Oops, we have captured an error!
                 if job_state.error_ignored:
                     logger.info(
-                        f'Job {job_state.job.index_number}: Error while executing job was ignored due to job ' f'config'
+                        f'Job {job_state.job._index_number}: Error while executing job was ignored due to job '
+                        f'config'
                     )
                 elif isinstance(job_state.exception, NotModifiedError):
                     logger.info(
-                        f'Job {job_state.job.index_number}: Job has not changed (HTTP 304 response or same '
+                        f'Job {job_state.job._index_number}: Job has not changed (HTTP 304 response or same '
                         f'strong ETag)'
                     )
                     if job_state.tries > 0:
@@ -69,19 +76,19 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     report.unchanged(job_state)
                 elif job_state.tries < max_tries:
                     logger.debug(
-                        f'Job {job_state.job.index_number}: Error suppressed as cumulative number of '
+                        f'Job {job_state.job._index_number}: Error suppressed as cumulative number of '
                         f'failures ({job_state.tries}) does not exceed max_tries={max_tries}'
                     )
                     job_state.save()
                 elif job_state.tries >= max_tries:
                     logger.debug(
-                        f'Job {job_state.job.index_number}: Flag as error as max_tries={max_tries} has been '
+                        f'Job {job_state.job._index_number}: Flag as error as max_tries={max_tries} has been '
                         f'met or exceeded ({job_state.tries}'
                     )
                     job_state.save()
                     report.error(job_state)
                 else:
-                    logger.debug(f'Job {job_state.job.index_number}: Job finished with no exceptions')
+                    logger.debug(f'Job {job_state.job._index_number}: Job finished with no exceptions')
             elif job_state.old_data != '' or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
                 if job_state.old_timestamp:
