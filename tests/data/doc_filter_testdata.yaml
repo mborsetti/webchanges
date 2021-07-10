@@ -268,7 +268,11 @@ https://example.net/beautify.html:
       <meta charset="utf-8"/>
       <meta content="origin" name="referrer"/>
       <style data-iml="1618111006770">
-       .L3eUgb{display:flex;flex-direction:column;height:100%}
+       .L3eUgb {
+        display: flex;
+        flex-direction: column;
+        height: 100%
+    }
       </style>
      </head>
      <body>

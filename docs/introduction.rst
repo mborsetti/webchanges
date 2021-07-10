@@ -32,8 +32,10 @@ It can be edited with any text editor or with:
 
    webchanges --edit
 
-(Linux) If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment variable in your
-shell with a command such as ``export EDITOR=nano``.
+(Linux/macOS) If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment variable in
+your shell with a command such as ``export EDITOR=nano``.
+
+For examples of jobs, see :ref:`here <watching_sites>`.
 
 For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.
 

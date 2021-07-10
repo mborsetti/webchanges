@@ -1,105 +1,8 @@
 .. _advanced_topics:
 
 ==============
-Usage examples
+Advanced usage
 ==============
-
-Checking different sources at different intervals
--------------------------------------------------
-You can divide your jobs into multiple job lists depending on how often you want to check. For example, you can have
-a ``daily.yaml`` job list for daily jobs, and a ``weekly.yaml`` for weekly ones. You then set up the scheduler to
-run :program:`webchanges`, defining which job list to use, at different intervals. For example in Linux/macOS using
-crontab::
-
-  0 0 * * * webchanges --jobs daily.yaml
-  0 0 0 * * webchanges --jobs weekly  # alias for weekly.yaml (if 'weekly' isn't found)
-
-
-Alternatively, you can ref:`select of a subset of jobs<job_subset>` to run only a few jobs. For example, if you want
-to run all jobs every day at midnight and in addition you want to run jobs 1 and 4 also at noon, you can do (in
-Linux/macOS using crontab)::
-
-  0  0 * * * webchanges
-  0 12 * * * webchanges 1 4
-
-
-Getting reports via different channels for different sources
-------------------------------------------------------------
-Job-specific alerts (reports) is not a functionality of :program:`webchanges`, but you can work around this by creating
-multiple configurations and job lists, and run :program:`webchanges` multiple times specifying ``--jobs`` and
-``--config``.
-
-For example, you can create two configuration files, e.g. ``config-slack.yaml`` and ``config-email.yaml`` (the
-first set for slack reporting and the second for email reporting) and two job lists, e.g. ``slack.yaml`` and
-``email.yaml`` (the first containing jobs you want to be notified of via slack, the second for jobs you want to be
-notified of via email). You can then run :program:`webchanges` similarly to the below example (taken from Linux/macOS
-crontab)::
-
-  00 00 * * * webchanges --jobs slack.yaml --config config-slack.yaml
-  05 00 * * * webchanges --jobs email --config config-email  # .yaml not necessary if no conflict
-
-
-.. _timeout:
-
-Changing the default timeout
-----------------------------
-By default, url jobs timeout after 60 seconds. If you want a different timeout period, use the ``timeout`` directive to
-specify it in number of seconds, or set it to 0 to never timeout.
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   timeout: 300
-
-
-.. _headers:
-
-Setting default headers
------------------------
-It is possible to set default headers for HTTP requests by entering them in ``config.yaml`` under ``job_defaults``, as
-per the example below. If a ``headers`` key is also found in a job, for that job the headers will be merged
-(case-insensitively) one by one with any conflict resolved in favor of the header specified in the job.
-
-.. code-block:: yaml
-
-   job_defaults:
-     all:
-       headers:
-         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
-         Accept-Language: en-US,en
-         Device-Memory: '0.25'
-         DNT: '1'
-         Downlink: '0.384'
-         DPR: '1.5'
-         ECT: slow-2g
-         RTT: '250'
-         Sec-CH-UA: '"Google Chrome";v="89", "Chromium";v="89", ";Not A Brand";v="99"'
-         Sec-CH-UA-Mobile: '?0'
-         Sec-CH-UA-Platform: 'Windows'
-         Sec-CH-UA-Platform-Version: '10.0'
-         Sec-Fetch-Dest: document
-         Sec-Fetch-Mode: navigate
-         Sec-Fetch-Site: none
-         Sec-Fetch-User: '?1'
-         Sec-GPC: '1'
-         Upgrade-Insecure-Requests: '1'
-         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; 64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4389.114 Safari/537.36
-         Viewport-Width: '1707'
-
-
-.. _cookies:
-
-Supplying cookies
------------------
-It is possible to add cookies to HTTP requests for pages that need it, for example:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   cookies:
-       Key: ValueForKey
-       OtherKey: OtherValue
-
 
 .. _post:
 
@@ -141,80 +44,6 @@ if the webpage changes into a new unknown state. You can use ``compared_versions
 In this example, changes are only reported if the webpage becomes different from the latest three distinct states. The
 differences are shown relative to the closest match.
 
-.. _ssl_no_verify:
-
-Ignoring SSL errors
--------------------
-Setting `ssl_no_verify` to true may be useful during local development or testing.
-
-When set to true, :program:`webchanges` requests will accept any TLS certificate presented by the server, and will
-ignore hostname mismatches and/or expired certificates, which will make your application vulnerable to
-man-in-the-middle (MitM) attacks.
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   ssl_no_verify: true
-
-
-.. _ignore_errors:
-
-Ignoring connection errors
---------------------------
-In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While there is
-a ``display.error`` config option (defaulting to ``true``) to control reporting of errors globally, to ignore network
-errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration.
-For connection errors during local development or testing due to TLS/SSL use the ``ssl_no_verify`` directive above
-instead.
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   ignore_connection_errors: true
-
-Similarly, you might want to ignore some (temporary) HTTP errors on the server side:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   ignore_http_error_codes: 408, 429, 500, 502, 503, 504
-
-or ignore all HTTP errors if you like:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   ignore_http_error_codes: 4xx, 5xx
-
-
-.. _encoding:
-
-Overriding the content encoding
--------------------------------
-For web pages with missing or incorrect ``'Content-type'`` HTTP header or whose (rare) encoding cannot be
-`correctly guessed <https://docs.python-requests.org/en/master/api/#requests.Response.apparent_encoding>`__
-by the `chardet <https://chardet.readthedocs.io/en/latest/faq.html#what-is-character-encoding-auto-detection>`__
-library we use, it may be useful to explicitly specify an encoding as defined in Python’s `Standard Encodings
-<https://docs.python.org/3/library/codecs.html#standard-encodings>`__ like this:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   encoding: utf-8
-
-
-Receiving a report every time webchanges runs
----------------------------------------------
-If you are watching pages that change seldomly, but you still want to be notified evert time `:program:`webchanges``
-runs to know it's still working, you can monitor the output of the ``date`` command, for example:
-
-.. code-block:: yaml
-
-   name: webchanges run
-   command: date
-
-Since the output of ``date`` changes every second, this job should produce a report every time webchanges is run.
-
 
 .. _json_dict:
 
@@ -244,6 +73,22 @@ seemingly complex escaping as well how to inform the downstream html reporter th
    is_markdown: true
 
 
+.. _encoding:
+
+Overriding the content encoding
+-------------------------------
+For web pages with missing or incorrect ``'Content-type'`` HTTP header or whose (rare) encoding cannot be
+`correctly guessed <https://docs.python-requests.org/en/master/api/#requests.Response.apparent_encoding>`__
+by the `chardet <https://chardet.readthedocs.io/en/latest/faq.html#what-is-character-encoding-auto-detection>`__
+library we use, it may be useful to explicitly specify an encoding as defined in Python’s `Standard Encodings
+<https://docs.python.org/3/library/codecs.html#standard-encodings>`__ like this:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   encoding: utf-8
+
+.. _tor:
 
 Watching changes on .onion (Tor) pages
 --------------------------------------
@@ -258,50 +103,15 @@ If using `torify`, just prefix the :program:`webchanges` command with the `torif
 
    torify webchanges
 
+.. _custom_diff:
 
-Watching Facebook page events
------------------------------
-If you want to be notified of new events on a public Facebook page, you can use the following job pattern; just replace
-``PAGE`` with the name of the page (can be found by navigating to the events page on your browser):
+Customized diffing
+------------------
 
-.. code-block:: yaml
-
-   url: https://m.facebook.com/PAGE/pages/permalink/?view_type=tab_events
-   filter:
-     - css:
-         selector: div#objects_container
-         exclude: 'div.x, #m_more_friends_who_like_this, img'
-     - re.sub:
-         pattern: '(/events/\d*)[^"]*'
-         repl: '\1'
-     - html2text:
-   comparison_filter: additions
-
-
-Watching GitHub releases and GitLab tags
-----------------------------------------
-This is an example how to watch the GitHub “releases” page for a given project for the latest release version, to be
-notified of new releases:
-
-.. code-block:: yaml
-
-   url: https://github.com/git/git/releases
-   filter:
-     - xpath: (//div[contains(@class,"release-timeline-tags")]//h4)[1]/a
-     - html2text:
-
-This is the corresponding version for GitLab tags:
-
-.. code-block:: yaml
-
-   url: https://gitlab.com/gitlab-org/gitlab/-/tags
-   filter:
-     - xpath: (//a[contains(@class,"item-title ref-name")])[1]
-     - html2text:
-
+.. _diff_script:
 
 Passing diff output to a custom script
---------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In some situations, it might be useful to run a script with the diff as input when changes were detected (e.g. to start
 an update or process something). This can be done by combining ``diff_filter`` with the ``shellpipe`` filter, which
 can run any custom script.
@@ -324,7 +134,7 @@ If running on Linux/macOS, please read about file permission restrictions in the
 .. _word_based_differ:
 
 Using word-based differ (``wdiff``)
------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 You can also specify an **external** ``diff``-style tool (a tool that takes two filenames (old, new) as parameter and
 returns the difference of the files on its standard output). For example, to to get word-based differences instead of
 line-based difference, use GNU ``wdiff``:
@@ -338,36 +148,47 @@ In order for this to work, ``wdiff`` needs to  be installed separately (e.g. ``a
 ``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
 Windows).
 
-When using ``diff_tool: wdiff`` with an ``html`` report, the output of ``wdiff`` will be colorized.
+.. tip::
+   When using ``diff_tool: wdiff`` with an ``html`` report, the output of ``wdiff`` will be colorized.
 
 Note: the use of an external differ will override the ``diff`` setting of the ``html`` report.
 
+.. _pyppeteer:
 
-.. _chromium_revision:
+Jobs with use_browser: true (Pyppeteer)
+---------------------------------------
 
-Using a Chromium revision matching a Google Chrome / Chromium release
----------------------------------------------------------------------
+.. _pyppeteer_chromium_revision:
+
+Using a Chromium revision matching a Google Chrome release
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 `:program:`webchanges`` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72. If you
 want a different one, you can do so, but unfortunately the Chromium revision number does not match the Google Chrome /
-Chromium release one.
+Chromium release one, so you have to find out what the revision number is for a stable Chrome release.
 
-There are multiple ways of finding what the revision number is for a stable Chrome release; the
-one I found easiest is to go to https://chromium.cypress.io/, selecting the "stable" release channel `for the OS you
-need`, and clicking on "get downloads" for the one you want. At the top you will see something like "Base revision:
-843830. Found build artifacts at 843831 [browse files]". You want the revision with build artifacts, in this example
-843831.
+There are multiple ways of doing so; the one I found easiest is to go to https://chromium.cypress.io/, selecting the
+"stable" release channel `for the OS you need`, and clicking on "get downloads" for the one you want. At the top you
+will see something like "Base revision: 843830. Found build artifacts at 843831 [browse files]". You want the
+revision with build artifacts, in this example 843831.
 
-Be aware that the same Google Chrome / Chromium release may be based on a different Chromium revision on different OSs,
-and that not all Chromium revisions are available for all OS platforms (Linux_x64, Mac, Win and Win_x64). The full
-list of revisions available for download by `Pyppeteer` is at
-https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html.
-Specifying a release number that is not available for download is the cause of a ``zipfile.BadZipFile: File is not a zip
-file`` error from the `Pyppeteer` code.
 
-Please note that every time you change the chromium_revision, a new download is initiated and the old version is kept
-on your system, using up space. If you no longer need it you need to delete it manually; the the directory where it is
-stored can be found by running ``python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER;
-print(DOWNLOADS_FOLDER)"``
+.. attention::
+   The same Google Chrome / Chromium release may be based on a different Chromium revision on different OSs,
+   and not all Chromium revisions are available for all OS platforms (Linux_x64, Mac, Win and Win_x64). The full
+   list of revisions available for download by `Pyppeteer` is at
+   https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html. Specifying a release number that is
+   not available for download is the cause of a ``zipfile.BadZipFile: File is not a zip file`` error from the
+   `Pyppeteer` code.
+
+
+.. note::
+   Every time you change the chromium_revision, a new download is initiated and the old version is kept
+   on your system, using up space. You must delete it manually; you will find it in the directory specified by running
+
+   .. code-block:: bash
+
+      python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER; print(DOWNLOADS_FOLDER)"
+
 
 To specify the Chromium revision to use (and other defaults) globally, edit config.yaml:
 
@@ -411,8 +232,8 @@ default (like below) or in individual jobs:
 
 .. _pyppeteer_target_closed:
 
-Running ``use_browser: true`` jobs in low-memory environments
--------------------------------------------------------------
+Running in low-memory environments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In certain Linux environments with limited memory, jobs with ``use_browser: true`` may fail with a
 ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error.
 
@@ -431,10 +252,10 @@ This switch disables the use of the faster RAM-based temporary storage file syst
 to crash, forcing instead the use of the drive-based filesystem, which may be slower but of ampler capacity.
 
 
-.. _local_storage:
+.. _pyppeteer_local_storage:
 
-Browsing websites using local storage for authentication
----------------------------------------------------------
+Using local storage for authentication
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Some sites don't use cookies for authentication but store their functional equivalent using 'Local Storage'. In these
 circumstances, you can use :program:`webchanges` with ``use_browser: true`` directive and its ``user_data_dir``
 sub-directive to instruct it to use a pre-existing user directory.
@@ -458,15 +279,17 @@ You can now run a :program:`webchanges` job defined like this:
 
 .. _pyppeteer_block_elements:
 
-Speeding up ``use_browser: true`` jobs with ``block_elements``
---------------------------------------------------------------
+Speeding up jobs by blocking elements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-⚠ Experimental: on certain sites this seems to totally freeze execution; test before use
+.. danger::
 
-If you're not interested in all elements of a website, you can skip downloading the ones that you don't care, paying
-attention to do some testing as some elements may be required for the correct rendering of the website. Typical elements
-to skip include ``stylesheet``, ``font``, ``image``, and ``media`` (but use with caution) and can be specified like
-this on a job-by-job basis:
+   This feature is experimental and on certain sites it totally freeze execution; test before use
+
+If you're not interested in all elements of a website you can skip downloading the ones that you don't care, paying
+attention that some elements may be required for the correct rendering of the website (always test!). Typical elements
+to skip include ``stylesheet``, ``font``, ``image``, and ``media``, and they can be specified like this (on a
+job-by-job basis):
 
 .. code-block:: yaml
 

@@ -9,7 +9,7 @@ the destination of this output depends on the scheduler and its configuration).
 
 You can change the settings to change or add to where the report is sent to. Settings are contained in the
 configuration file ``config.yaml``, a text file located in the ``~/.config/webchanges`` directory for Linux or macOS,
-or in the `:program:`webchanges`` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
+or in the :program:`webchanges` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
 Windows, and is editable using any text editor or with the command ``webchanges --edit--config``. The configuration
 for the reporters will be listed under the ``reporters`` section.
 
@@ -18,6 +18,28 @@ for the reporters will be listed under the ``reporters`` section.
 
 .. tip:: To test a reporter, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.
    ``webchanges --test-reporter stdout``
+
+.. _tz:
+
+Time zone
+---------
+You can set the timezone for reports by entering a `IANA time zone name
+<https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`__ in the ``tz``directive of the ``report`` section.
+This is useful if for example you're running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC).
+Note that this directive is ignored by the ``diff_tool`` job directive.
+
+.. code-block:: yaml
+
+   report:
+     tz: America/New York
+
+If the directive is missing, or its value is null or blank, the timezone of the system that :program:`webchanges` runs
+on will be used.
+
+.. versionadded:: 3.8
+
+Testing
+-------
 
 :program:`webchanges` will generate test  ``new``, ``changed``, ``unchanged`` and ``error`` notifications and send (the
 ones configured to be sent under ``display``) via the ``stdout`` reporter (if it is enabled). Any reporter that is
@@ -30,7 +52,11 @@ detailed debug logs::
 
    webchanges --verbose --test-reporter email
 
-At the moment, the following reporters are available
+
+Reporters
+---------
+
+At the moment, the following reporters are available:
 
 * :ref:`stdout` (enabled by default): Display summary on stdout (the console)
 * :ref:`browser`: Display summary on the default web browser
@@ -44,12 +70,12 @@ At the moment, the following reporters are available
 * :ref:`matrix`: Send a message to a room using the Matrix protocol
 * :ref:`mailgun`: Send email via the Mailgun service
 * :ref:`prowl`: Send a message via prowlapp.com
+* :ref:`run_command`: Run a command on the local system
 
 .. To convert the "webchanges --features" output, use:
    webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
 
 Each reporter has a directive called ``enabled`` that can be toggled (true/false).
-
 
 Please note that many reporters need the installation of additional Python packages to work, as noted below and in
 :ref:`dependencies`.
@@ -59,7 +85,7 @@ Please note that many reporters need the installation of additional Python packa
 
 Browser
 -------
-Displays the summary in HTML format using the system's default web browser
+Displays the summary in HTML format using the system's default web browser.
 
 
 .. _email:
@@ -97,19 +123,20 @@ Example:
 .. code-block:: yaml
 
    report:
+     tz: null
      email:
-     enabled: true
-     from: 'webchanges <throwawayaccount@example.com>'  # (edit accordingly; don't use your primary account for this!!)
-     to: 'myself@example.com'  # The email address of where want to receive reports
-     subject: '[webchanges] {count} changes: {jobs}'
-     html: true
-     method: 'smtp'
-       host: 'smtp.example.com'
-       user: 'throwawayaccount@example.com'  # (edit accordingly; don't use your primary account for this!!)
-       port: 587
-       starttls: true
-       auth: true
-       insecure_password: 'this_is_my_secret_password'
+       enabled: true  # don't forget to set this to true! :)
+       from: 'webchanges <throwawayaccount@example.com>'  # (edit accordingly; don't use your primary account for this!!)
+       to: 'myself@example.com'  # The email address of where want to receive reports
+       subject: '[webchanges] {count} changes: {jobs}'
+       html: true
+       method: 'smtp'
+         host: 'smtp.example.com'
+         user: 'throwawayaccount@example.com'  # (edit accordingly; don't use your primary account for this!!)
+         port: 587
+         starttls: true
+         auth: true
+         insecure_password: 'this_is_my_secret_password'
 
 Once again, note that this makes it really easy for your password to be picked up by software running on your machine,
 by other users logged into the system and/or for the password to appear in log files accidentally, so it's **insecure**.
@@ -146,15 +173,18 @@ First configure your Gmail account to allow for "less secure" (password-based) a
 
 #. Go to https://myaccount.google.com/
 #. Click on "Security"
-#. Scroll all the way down to "less secure apps access" and turn it on
+#. Scroll all the way down to "Less secure apps access" and turn it on
+
+For more information, see `Google's help <https://support.google.com/accounts/answer/6010255>`__.
 
 Then configure these directives as follows:
 
 .. code-block:: yaml
 
    report:
+     tz: null
      email:
-       enabled: true
+       enabled: true  # don't forget to set this to true! :)
        from: 'your.username@gmail.com'  # (edit accordingly; don't use your primary account for this!!)
        to: 'your.destination@example.org'  # The email address of where want to receive reports
        subject: '[webchanges] {count} changes: {jobs}'
@@ -178,8 +208,9 @@ user/password leak from, e.g. from a scan of your jobs file), then configure the
 .. code-block:: yaml
 
    report:
+     tz: America/New_York
      email:
-       enabled: true
+       enabled: true  # don't forget to set this to true! :)
        from: you@verified_domain.com  # (edit accordingly)
        to: your.destination@example.org  # The email address you want to send reports to
        subject: '{count} changes: {jobs}'
@@ -234,7 +265,7 @@ In this URL, ``{key}`` is your API key. The configuration should look like this 
 .. code:: yaml
 
    ifttt:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      key: aA12abC3D456efgHIjkl7m
      event: event_name_you_want
 
@@ -246,7 +277,7 @@ The event will contain three values in the posted JSON:
 
 These values will be passed on to the Action in your Recipe.
 
-IFTT uses the :ref:`text` report type.
+IFTTT uses the :ref:`text` report type.
 
 
 .. _mailgun:
@@ -296,7 +327,7 @@ Here is a sample configuration:
 .. code:: yaml
 
    matrix:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      homeserver: https://matrix.org
      access_token: 'YOUR_TOKEN_HERE'
      room_id: '!roomroomroom:matrix.org'
@@ -307,7 +338,7 @@ notifications to a public Matrix room, as the messages quickly become noisy:
 .. code:: yaml
 
    markdown:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      details: false
      footer: false
      minimal: true
@@ -401,7 +432,7 @@ file (run ``webchanges --edit-config``) as ``chat_id``:
 .. code:: yaml
 
    telegram:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # replace with your bot api token
      chat_id: 88888888  # the chat id where the messages should be sent
      silent: false  # set to true to receive a notification with no sound
@@ -411,7 +442,7 @@ You may add multiple chat IDs as a YAML list:
 .. code:: yaml
 
    telegram:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # your bot api token
      chat_id:
        - 11111111
@@ -438,7 +469,7 @@ Services such as Slack, Discord, Mattermost etc. that support incoming webhooks 
 .. code:: yaml
 
    webhook:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
 
 ``webhook`` uses the :ref:`text` report type, while ``webhook_markdown`` uses the :ref:`markdown` one.
@@ -463,7 +494,7 @@ seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-I
 .. code:: yaml
 
    webhook:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
 
 Mattermost
@@ -475,7 +506,7 @@ using the ``webhook_markdown`` variant):
 .. code:: yaml
 
    webhook_markdown:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
 
 Sub-directives
@@ -502,7 +533,7 @@ Here is a sample configuration:
 .. code:: yaml
 
    xmpp:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      sender: 'BOT_ACCOUNT_NAME'
      recipient: 'YOUR_ACCOUNT_NAME'
 
@@ -515,7 +546,7 @@ scheduler), so you can save the password in the ``insecure_password`` directive 
 
    report:
      xmpp:
-       enabled: true
+       enabled: true  # don't forget to set this to true! :)
        sender: 'BOT_ACCOUNT_NAME'
        recipient: 'YOUR_ACCOUNT_NAME'
        insecure_password: 'this_is_my_secret_password'
@@ -573,7 +604,7 @@ Here is a sample configuration:
 .. code:: yaml
 
    prowl:
-     enabled: true
+     enabled: true  # don't forget to set this to true! :)
      api_key: '<your api key here>'
      priority: 2
      application: 'webchanges example'
@@ -584,4 +615,33 @@ shown as the source of the event in the Prowl App.
 
 Prowl uses the :ref:`text` report type.
 
-`Added in version 3.0.1:`
+.. versionadded:: 3.0.1
+
+.. _run_command:
+
+Run_Command
+-----------
+This reporter will run a command on your local system.  Any text in the command that matches the keywords below will
+be substituted as follows:
+
++------------------+------------------------------------------------------------------------------------+
+| Text in command  | Replacement                                                                        |
++==================+====================================================================================+
+| ``{count}``      | The number of reports                                                              |
++------------------+------------------------------------------------------------------------------------+
+| ``{jobs}``       | The titles of the jobs reported                                                    |
++------------------+------------------------------------------------------------------------------------+
+| ``{text}``       | The report in text format                                                          |
++------------------+------------------------------------------------------------------------------------+
+
+For example, in Windows we can make a MessageBox pop up:
+
+.. code-block:: yaml
+
+   run_command:
+     enabled: true  # don't forget to set this to true! :)
+     command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
+
+If the command generates an error, the output of the error will be in the first line, before the traceback.
+
+.. versionadded:: 3.8

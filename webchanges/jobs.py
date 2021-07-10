@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 from urllib.parse import urldefrag, urlparse, urlsplit
 
+import html2text
+
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from requests.structures import CaseInsensitiveDict
@@ -264,6 +266,19 @@ class JobBase(object, metaclass=TrackSubClasses):
     def __repr__(self) -> str:
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
+    def _dict_deep_merge(self, source: dict, destination: dict) -> dict:
+        """Deep merges source dict into destination dict."""
+        # https://stackoverflow.com/a/20666342
+        for key, value in source.items():
+            if isinstance(value, (dict, CaseInsensitiveDict)):
+                # get node or create one
+                node = destination.setdefault(key, {})
+                self._dict_deep_merge(value, node)
+            else:
+                destination[key] = value
+
+        return destination
+
     def _set_defaults(self, defaults: Optional[Dict[str, Any]]) -> None:
         """Merge Job attributes with defaults from the configuration."""
         # use case insensitive dict for headers
@@ -479,6 +494,17 @@ class UrlJob(Job):
             proxies=proxies,
             verify=(not self.ssl_no_verify),
         )
+
+        if 400 <= response.status_code <= 499:
+            print('Client error response:')
+            error_message = response.text
+            try:
+                parsed_json = json.loads(error_message)
+                error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+            except json.decoder.JSONDecodeError:
+                if '<html>' in error_message:
+                    error_message = html2text.HTML2Text().handle(error_message).strip()
+            print(error_message)
 
         response.raise_for_status()
         if response.status_code == requests.codes.not_modified:

@@ -1102,12 +1102,12 @@ def pipe_filter(f_cls: FilterBase, data: str, subfilter: Dict[str, Any]) -> str:
     try:
         return subprocess.run(
             command,
+            input=data,
             capture_output=True,
             shell=shell,
             check=True,
             text=True,
             env=env,
-            input=data,
         ).stdout
     except subprocess.CalledProcessError as e:
         logger.error(f"The '{f_cls.__kind__}' filter returned error ({f_cls.job.get_indexed_location()}):\n{e.stderr}")

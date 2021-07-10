@@ -150,8 +150,9 @@ class UrlwatchCommand:
             with JobState(self.urlwatcher.cache_storage, job) as job_state:
                 job_state.old_data, job_state.old_timestamp = history_data[i + 1]
                 job_state.new_data, job_state.new_timestamp = history_data[i]
+                tz = self.urlwatcher.config_storage.config['report']['tz']
                 print(f'=== Filtered diff between state {-i} and state {-(i + 1)} ===')
-                print(job_state.get_diff())
+                print(job_state.get_diff(tz))
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)

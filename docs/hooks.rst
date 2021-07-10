@@ -38,7 +38,7 @@ An example ``hooks.py`` file is below:
        __required__ = ('username', 'password')
 
        def retrieve(self, job_state: JobState) -> str:
-           ...  # custom code here
+           ...  # custom code here to actually do the login
            return f'Would log in to {self.url} with {self.username} and {self.password}\n'
 
 
@@ -48,8 +48,8 @@ An example ``hooks.py`` file is below:
        __kind__ = 'case'
 
        __supported_subfilters__ = {
-          'upper': 'Upper case (default)',
-          'lower': 'Lower case'
+           'upper': 'Upper case (default)',
+           'lower': 'Lower case'
        }
 
        __default_subfilter__ = 'upper'
@@ -71,7 +71,7 @@ An example ``hooks.py`` file is below:
        __kind__ = 'indent'
 
        __supported_subfilters__ = {
-          'indent': 'Number of spaces to indent (default 8)'
+           'indent': 'Number of spaces to indent (default 8)'
        }
 
        __default_subfilter__ = 'indent'
@@ -85,21 +85,20 @@ An example ``hooks.py`` file is below:
 
 
    class CustomMatchUrlFilter(AutoMatchFilter):
-       # The AutoMatchFilter will apply automatically to all filters
-       # that have the given properties set
+       """The AutoMatchFilter will apply automatically to all jobs that match the given properties set."""
+
        MATCH = {'url': 'https://example.org/'}
 
-       # An auto-match filter does not have any subfilters
        @staticmethod
        def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
            return data.replace('foo', 'bar')
 
 
    class CustomRegexMatchUrlFilter(RegexMatchFilter):
-       # Similar to AutoMatchFilter
-       MATCH = {'url': re.compile('https://example.org/.*')}
+       """The RegexMatchFilter will apply automatically to  all jobs that match the given properties set."""
 
-       # An auto-match filter does not have any subfilters
+       MATCH = {'url': re.compile(r'https://example.org/.*')}
+
        @staticmethod
        def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
            return data.replace('foo', 'bar')

@@ -3,10 +3,10 @@
 Code is loaded only:
 
 * when reading databases created in version < 3.2.0
-* when running with the '--dababase-engine minidb' switch
-* testing (to be deprecated)
+* when running with the '--database-engine minidb' switch
+* testing migration of legacy database
 
-Having it into a standalone module allows running the program without having the minidb package installed.
+Having it into a standalone module allows running the program without requiring minidb package to be installed.
 """
 from os import PathLike
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -95,7 +95,7 @@ class CacheMiniDBStorage(CacheStorage):
         self.db.commit()
 
     def delete_latest(self, guid: str) -> None:
-        raise NotImplementedError("Deleting of latest snapshot no supported by 'minidb' database engine")
+        raise NotImplementedError("Deleting of latest snapshot not supported by 'minidb' database engine")
 
     def clean(self, guid: str) -> int:
         keep_id = next(

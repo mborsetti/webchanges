@@ -9,9 +9,12 @@ import functools
 import getpass
 import html
 import itertools
+import json
 import logging
 import os
 import re
+import shlex
+import subprocess
 import sys
 import time
 from typing import Any, Callable, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Type, Union
@@ -74,7 +77,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         self.duration = duration
 
     def convert(self, othercls: Type['ReporterBase']) -> 'ReporterBase':
-        """Convert to a different ReporterBase class"""
+        """Convert to a different ReporterBase class."""
         if hasattr(othercls, '__kind__'):
             config: Dict[Any, str] = self.report.config['report'][othercls.__kind__]
         else:
@@ -84,7 +87,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def reporter_documentation(cls) -> str:
-        """Return listings of reporters used by --features command line argument"""
+        """Return listings of reporters used by --features command line argument."""
         result: List[str] = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
             result.extend((f'  * {sc.__kind__} - {sc.__doc__}',))
@@ -130,6 +133,7 @@ class HtmlReporter(ReporterBase):
     def _parts(self) -> Iterable[str]:
         """Generator yielding the HTML; called by submit. Calls _format_content."""
         cfg = self.report.config['report']['html']
+        tz = self.report.config['report']['tz']
 
         yield f"""
             <!DOCTYPE html>
@@ -142,7 +146,7 @@ class HtmlReporter(ReporterBase):
             <body style="font-family:Arial,Helvetica,sans-serif;font-size:13px;">"""
 
         for job_state in self.report.get_filtered_job_states(self.job_states):
-            content = self._format_content(job_state, cfg['diff'])
+            content = self._format_content(job_state, cfg['diff'], tz)
             if content is not None:
                 if hasattr(job_state.job, 'url'):
                     yield (
@@ -268,7 +272,7 @@ class HtmlReporter(ReporterBase):
                         yield f'<tr{style}><td>{linkify(line[1:])}</td></tr>'
             yield '</table>'
 
-    def _format_content(self, job_state: JobState, difftype: str) -> Optional[str]:
+    def _format_content(self, job_state: JobState, difftype: str, tz: Optional[str]) -> Optional[str]:
         """Generator yielding the HTML for a job; called by _parts. Calls _diff_to_html."""
         if job_state.verb == 'error':
             return f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
@@ -280,7 +284,7 @@ class HtmlReporter(ReporterBase):
             return '...'
 
         if difftype == 'unified':
-            diff = job_state.get_diff()
+            diff = job_state.get_diff(tz)
             if diff:
                 return '\n'.join(self._diff_to_html(diff, job_state.job))
             else:
@@ -313,6 +317,7 @@ class HtmlReporter(ReporterBase):
 class TextReporter(ReporterBase):
     def submit(self, **kwargs: Any) -> Iterable[str]:
         cfg = self.report.config['report']['text']
+        tz = self.report.config['report']['tz']
         line_length = cfg['line_length']
         show_details = cfg['details']
         show_footer = cfg['footer']
@@ -331,7 +336,7 @@ class TextReporter(ReporterBase):
         summary = []
         details = []
         for job_state in self.report.get_filtered_job_states(self.job_states):
-            summary_part, details_part = self._format_output(job_state, line_length)
+            summary_part, details_part = self._format_output(job_state, line_length, tz)
             summary.extend(summary_part)
             details.extend(details_part)
 
@@ -358,7 +363,7 @@ class TextReporter(ReporterBase):
             )
 
     @staticmethod
-    def _format_content(job_state: JobState) -> Optional[Union[str, bytes]]:
+    def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[Union[str, bytes]]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -368,9 +373,9 @@ class TextReporter(ReporterBase):
         if job_state.old_data in (None, job_state.new_data):
             return None
 
-        return job_state.get_diff()
+        return job_state.get_diff(tz)
 
-    def _format_output(self, job_state: JobState, line_length: int) -> Tuple[List[str], List[str]]:
+    def _format_output(self, job_state: JobState, line_length: int, tz: Optional[str]) -> Tuple[List[str], List[str]]:
         summary_part: List[str] = []
         details_part: List[str] = []
 
@@ -381,7 +386,7 @@ class TextReporter(ReporterBase):
 
         pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
         summary = ': '.join((job_state.verb.upper(), location))
-        content = self._format_content(job_state)
+        content = self._format_content(job_state, tz)
 
         if job_state.verb == 'changed,no_report':
             return [], []
@@ -410,6 +415,7 @@ class TextReporter(ReporterBase):
 class MarkdownReporter(ReporterBase):
     def submit(self, max_length: int = None, **kwargs: Any) -> Iterable[str]:
         cfg = self.report.config['report']['markdown']
+        tz = self.report.config['report']['tz']
         show_details = cfg['details']
         show_footer = cfg['footer']
 
@@ -427,7 +433,7 @@ class MarkdownReporter(ReporterBase):
         summary: List[str] = []
         details: List[Tuple[str, str]] = []
         for job_state in self.report.get_filtered_job_states(self.job_states):
-            summary_part, details_part = self._format_output(job_state)
+            summary_part, details_part = self._format_output(job_state, tz)
             summary.extend(summary_part)
             details.extend(details_part)
 
@@ -573,7 +579,7 @@ class MarkdownReporter(ReporterBase):
             return True, f'{trim_message}{s}'
 
     @staticmethod
-    def _format_content(job_state: JobState) -> Optional[Optional[Union[str, bytes]]]:
+    def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[Optional[Union[str, bytes]]]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -583,9 +589,9 @@ class MarkdownReporter(ReporterBase):
         if job_state.old_data in (None, job_state.new_data):
             return None
 
-        return job_state.get_diff()
+        return job_state.get_diff(tz)
 
-    def _format_output(self, job_state: JobState) -> Tuple[List[str], List[Tuple[str, str]]]:
+    def _format_output(self, job_state: JobState, tz: Optional[str]) -> Tuple[List[str], List[Tuple[str, str]]]:
         summary_part: List[str] = []
         details_part: List[Tuple[str, str]] = []
 
@@ -599,7 +605,7 @@ class MarkdownReporter(ReporterBase):
 
         pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
         summary = ': '.join((job_state.verb.upper(), location))
-        content = self._format_content(job_state)
+        content = self._format_content(job_state, tz)
 
         if job_state.verb == 'changed,no_report':
             return [], []
@@ -735,7 +741,8 @@ class IFTTTReport(TextReporter):
         for job_state in self.report.get_filtered_job_states(self.job_states):
             pretty_name = job_state.job.pretty_name()
             location = job_state.job.get_location()
-            _ = requests.post(
+            print(f'submitting {job_state}')
+            result = requests.post(
                 webhook_url,
                 json={
                     'value1': job_state.verb,
@@ -743,6 +750,8 @@ class IFTTTReport(TextReporter):
                     'value3': location,
                 },
             )
+            if result.status_code != requests.codes.ok:
+                raise RuntimeError(f'IFTTT error: {result.text}')
 
 
 class WebServiceReporter(TextReporter):
@@ -1227,7 +1236,7 @@ class BrowserReporter(HtmlReporter):
         f.write(body_html)
         f.close()
         webbrowser.open(f.name)
-        time.sleep(2)
+        time.sleep(1.5)
         os.remove(f.name)
 
 
@@ -1342,3 +1351,43 @@ class ProwlReporter(TextReporter):
                 f'Failed to parse Prowl response. HTTP status code: {result.status_code},'
                 f' content: {result.content}'  # type: ignore[str-bytes-safe]
             )
+
+
+class RunCommandReporter(TextReporter):
+    """Run a command."""
+
+    __kind__ = 'run_command'
+
+    def submit(self) -> None:  # type: ignore[override]
+
+        if not self.config['command']:
+            raise ValueError('Reporter "run_command" needs a command')
+
+        text = '\n'.join(super().submit())
+
+        if not text:
+            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            return
+
+        # Work on a copy to not modify the outside environment
+        env = dict(os.environ)
+        env.update({f'{__project_name__.upper()}_REPORT_CONFIG_JSON': json.dumps(self.report.config)})
+
+        command = shlex.split(self.config['command'].format(text=text, count=0, jobs=0))
+
+        try:
+            result = subprocess.run(
+                command,
+                input=text,
+                capture_output=True,
+                check=True,
+                text=True,
+                env=env,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.error(f"The '{self.__kind__}' filter with command {command} returned error:\n{e.stderr}")
+            raise e
+        except FileNotFoundError as e:
+            logger.error(f"The '{self.__kind__}' filter with command {command} returned error:\n{e}")
+            raise e
+        print(result.stdout, end='')

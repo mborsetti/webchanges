@@ -1,4 +1,5 @@
 appdirs
+backports.zoneinfo; python_version < "3.9"
 colorama; os_name == "nt"
 cssselect
 html2text
@@ -7,3 +8,4 @@ markdown2
 msgpack
 pyyaml
 requests
+tzdata; os_name == "nt"

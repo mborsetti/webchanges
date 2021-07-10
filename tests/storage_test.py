@@ -9,7 +9,7 @@ from typing import Optional
 
 import pytest
 
-from webchanges import __project_name__ as project_name
+from webchanges import __docs_url__, __project_name__
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
@@ -33,7 +33,7 @@ def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, Cache
     cache_storage = CacheSQLite3Storage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
 
-    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file, True)
+    urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file, True)
     if config_args:
         for k, v in config_args.items():
             setattr(urlwatch_config, k, v)
@@ -43,6 +43,27 @@ def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, Cache
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     return urlwatcher, cache_storage, cache_file
+
+
+def test_check_for_unrecognized_keys():
+    """Test if config has keys not in DEFAULT_CONFIG (i.e. typos)."""
+    config_storage = YamlConfigStorage(config_file)
+    config = config_storage.parse(config_file)
+    config['this_is_a_typo'] = True
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        config_storage.check_for_unrecognized_keys(config)
+    assert str(pytest_wrapped_e.value) == (
+        f'Unrecognized directive(s) in the configuration file {config_file}:\n'
+        f'this_is_a_typo: true\nCheck for typos (documentation at {__docs_url__})'
+    )
+
+
+def test_legacy_slack_keys():
+    """Test if legacy report 'slack' keys don't trigger a ValueError even if not in DEFAULT_CONFIG."""
+    config_storage = YamlConfigStorage(config_file)
+    config = config_storage.parse(config_file)
+    config['report']['slack'] = {'enabled': False}
+    config_storage.check_for_unrecognized_keys(config)
 
 
 # @py37_required
@@ -234,9 +255,9 @@ def get_empty_history_and_no_max_snapshots():
         cache_storage.close()
 
 
-def test_migrate_urlwatch_legacy_db():
+def test_migrate_urlwatch_legacy_db(tmp_path):
     orig_cache_file = data_dir.joinpath('cache-urlwatch_legacy.db')
-    temp_cache_file = data_dir.joinpath('cache-urlwatch_legacy-temp.db')
+    temp_cache_file = tmp_path.joinpath('cache-urlwatch_legacy-temp.db')
     shutil.copyfile(orig_cache_file, temp_cache_file)
     if minidb_is_installed:
         cache_storage = CacheSQLite3Storage(temp_cache_file)
@@ -273,7 +294,7 @@ def prepare_storage_test_minidb(config_args=None):
     cache_storage = CacheMiniDBStorage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
 
-    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file, True)
+    urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file, True)
     for k, v in config_args.items():
         setattr(urlwatch_config, k, v)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)

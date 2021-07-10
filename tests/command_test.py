@@ -1,7 +1,9 @@
 """Test commands."""
 import logging
 import os
+import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path, PurePath
 
@@ -23,10 +25,17 @@ from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsS
 here = Path(__file__).parent
 
 config_dir = here.joinpath('data')
-config_file = config_dir.joinpath('config.yaml')
-jobs_file = config_dir.joinpath('jobs-echo_test.yaml')
+tmp_path = Path(tempfile.mkdtemp())
+base_config_file = config_dir.joinpath('config.yaml')
+config_file = tmp_path.joinpath('config.yaml')
+shutil.copyfile(base_config_file, config_file)
+base_jobs_file = config_dir.joinpath('jobs-echo_test.yaml')
+jobs_file = tmp_path.joinpath('jobs-echo_test.yaml')
+shutil.copyfile(base_jobs_file, jobs_file)
 cache_file = ':memory:'
-hooks_file = config_dir.joinpath('hooks_test.py')
+base_hooks_file = config_dir.joinpath('hooks_test.py')
+hooks_file = tmp_path.joinpath('hooks_test.py')
+shutil.copyfile(base_hooks_file, hooks_file)
 
 config_storage = YamlConfigStorage(config_file)
 cache_storage = CacheSQLite3Storage(cache_file)

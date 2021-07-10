@@ -19,7 +19,7 @@ from webchanges.storage import DEFAULT_CONFIG
 logger = logging.getLogger(__name__)
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
-xmpp_is_installed = importlib.util.find_spec('xmpp') is not None
+aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
 
 DIFF_TO_HTML_TEST_DATA = [
     ('+Added line', '<tr style="background-color:#d1ffd1;color:#082b08"><td>Added line</td></tr>'),
@@ -74,7 +74,7 @@ DIFF_TO_HTML_TEST_DATA = [
 ]
 
 ALL_REPORTERS = [
-    reporter for reporter, v in DEFAULT_CONFIG['report'].items() if reporter not in ('html', 'text', 'markdown')
+    reporter for reporter, v in DEFAULT_CONFIG['report'].items() if reporter not in ('tz', 'html', 'text', 'markdown')
 ]
 
 
@@ -91,7 +91,7 @@ def test_diff_to_html(inpt, out):
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
     job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': False})
-    result = ''.join(list(HtmlReporter(report, {}, '', 0)._diff_to_html(inpt, job)))
+    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))
     assert result[250:-8] == out
 
 
@@ -99,7 +99,7 @@ def test_diff_to_htm_padded_table():
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
     job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': True})
-    result = ''.join(list(HtmlReporter(report, {}, '', 0)._diff_to_html(inpt, job)))
+    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))
     assert result[250:-8] == (
         '<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | ' 'row |</span></td></tr>'
     )
@@ -111,7 +111,7 @@ def test_diff_to_htm_wdiff():
     job = JobBase.unserialize(
         {'url': 'https://www.example.com', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'}
     )
-    result = ''.join(list(HtmlReporter(report, {}, '', 0)._diff_to_html(inpt, job)))
+    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))
     assert result == (
         '<span style="font-family:monospace;white-space:pre-wrap">'
         '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">[-old-]</span>'
@@ -129,7 +129,7 @@ def test_smtp_password():
 
 
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)
-def test_reporters(reporter):
+def test_reporters(reporter, capsys):
     def build_job(name, url, old, new):
         job = JobBase.unserialize({'name': name, 'url': url})
 
@@ -153,6 +153,7 @@ def test_reporters(reporter):
 
         return job_state
 
+    report = Report(UrlwatchTest)
     report.new(build_job('Newly Added', 'https://example.com/new', '', ''))
     report.changed(
         build_job(
@@ -188,7 +189,7 @@ def test_reporters(reporter):
             )
         )
     elif reporter == 'xmpp':
-        if not xmpp_is_installed:
+        if not aioxmpp_is_installed:
             logger.warning(f"Skipping {reporter} since 'aioxmpp' package is not installed")
             return
         else:
@@ -201,7 +202,7 @@ def test_reporters(reporter):
                     'No recommended backend was available.',
                 )
             )
-    elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'prowl'):
+    elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'ifttt', 'prowl'):
         if reporter == 'matrix' and not matrix_client_is_installed:
             logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
             return
@@ -212,5 +213,15 @@ def test_reporters(reporter):
         with pytest.raises(MissingSchema) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == "Invalid URL '': No schema supplied. Perhaps you meant http://?"
+    elif reporter == 'run_command':
+        with pytest.raises(ValueError) as pytest_wrapped_e:
+            report.finish_one(reporter, check_enabled=False)
+        assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
+        if os.name == 'nt':
+            report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
+        else:
+            report.config['report']['run_command']['command'] = 'echo TEST'
+        report.finish_one(reporter, check_enabled=False)
+        assert capsys.readouterr().out == 'TEST\n'
     elif reporter != 'browser' or 'PYCHARM_HOSTED' in os.environ:
         report.finish_one(reporter, check_enabled=False)

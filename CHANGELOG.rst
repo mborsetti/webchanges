@@ -31,24 +31,31 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.7.1.post0
+Version 3.8.0.rc0
 ====================
 Unreleased
 
 Added
 -----
-* Job indices can now be negative. For example, run ``webchanges -1`` to only run the last job of your jobs list, or
+* Filter ``execute`` (and ``shellpipe``) sets more environment variables; see improved `documentation
+  <https://webchanges.readthedocs.io/en/stable/filters.html#execute>`__ (including more examples)
+* Configuration file now has a ``report`` ``tz`` key to set the timezone for diff reports (useful if running e.g. on
+  cloud server in different timezone). See
+  `documentation <https://webchanges.readthedocs.io/en/stable/reporters.html#tz>`__
+* Error message is now displayed if configuration file has invalid directives (e.g. typos)
+* Job indices can now be negative; for example, run ``webchanges -1`` to only run the last job of your jobs list, or
   ``webchanges --test -2`` to test the second to last job of your jobs list
-* Filter ``execute`` sets more environment variables; see improved documentation (including examples)
+* If an HTTP client error response is received, the text of the response is now printed along with the error
 
 Fixed
 -----
-* The ``html2text`` filter's method ``strip_tags`` was returning HTML named and numeric character references (e.g. &gt;,
-  &#62;, &#x3e;) instead of the corresponding Unicode characters
+* The ``html2text`` filter's method ``strip_tags`` was returning HTML character references (e.g. &gt;, &#62;, &#x3e;)
+  instead of the corresponding Unicode characters
 
 Internals
 ---------
-* ``tox`` testing can now be run in parallel
+* ``--verbose`` will now list directives 'missing' from the configuration file for which default values have been used
+* ``tox`` testing can now be run in parallel using ``tox --parallel``
 
 Version 3.7.1
 ====================

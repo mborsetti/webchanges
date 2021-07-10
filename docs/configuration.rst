@@ -56,11 +56,13 @@ Reporters
 ---------
 Configuration of reporters is described in :ref:`reporters <reporters>`.
 
-Here is an example configuration that reports on standard output in color, as well as HTML email using an SMTP server:
+Here is an example configuration that reports using UTC timezone on standard output in color, as well as HTML email
+using an SMTP server:
 
 .. code:: yaml
 
    report:
+     tz: Etc/UTC
      text:
        details: true
        footer: true
@@ -88,8 +90,9 @@ Here is an example configuration that reports on standard output in color, as we
 
 Any reporter-specific configuration must be inside the ``report`` directive in the configuration.
 
-Reporter configuration settings for ``text`` and ``html`` apply to all reports that derive from that reporter (for
-example, the ``stdout`` reporter uses ``text``, while the ``email`` reporter with ``html: true`` uses ``html``).
+Reporter configuration settings for ``text``, ``html`` and ``markdown`` apply to all reports that derive from that
+reporter (for example, the ``stdout`` reporter uses ``text``, while the ``email`` reporter with ``html: true`` uses
+``html``; see :ref:`reporters <reporters>` for details).
 
 .. _job_defaults:
 
@@ -119,7 +122,7 @@ If you want to change some settings for all your jobs, edit the ``job_defaults``
          - '--window-size=1920,1080'
 
 The above config file sets all jobs to use the specified headers, and all ``url`` jobs with ``browser: true`` to
-use a specific Chromium :ref:`revision <chromium_revision>` and certain Chromium feature `switches
+use a specific Chromium :ref:`revision <pyppeteer_chromium_revision>` and certain Chromium feature `switches
 <https://peter.sh/experiments/chromium-command-line-switches/>`__.
 
 The possible sub-directives to ``job_defaults`` are:

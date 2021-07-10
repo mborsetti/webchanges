@@ -1,5 +1,4 @@
 """Handles all storage: job files, config files, hooks file, and cache database engines."""
-
 import copy
 import email.utils
 import getpass
@@ -11,13 +10,14 @@ import stat
 import threading
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, Union
 
 import msgpack
 import yaml
 
-from . import __docs_url__, __project_name__
+from . import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
 from .jobs import JobBase, ShellJob, UrlJob
 from .util import edit_file
@@ -41,31 +41,32 @@ DEFAULT_CONFIG = {
         'unchanged': False,
     },
     'report': {
-        # text, html and markdown are three content types of reports
+        'tz': None,  # the timezone as a IANA time zone name, e.g. 'America/Los_Angeles', or null for machine's'
+        # the directives below are for the report content types (text, html or markdown)
+        'text': {
+            'line_length': 75,
+            'details': True,  # whether the diff is sent
+            'footer': True,
+            'minimal': False,
+        },
         'html': {
             'diff': 'unified',  # 'unified' or 'table'
         },
-        'text': {
-            'line_length': 75,
-            'details': True,
-            'footer': True,
-            'minimal': False,
-        },
         'markdown': {
-            'details': True,
+            'details': True,  # whether the diff is sent
             'footer': True,
             'minimal': False,
         },
-        # the keys below control where a report is displayed and/or sent
-        'stdout': {  # the console / command line display
+        # the directives below control where a report is displayed and/or sent
+        'stdout': {  # the console / command line display; uses text
             'enabled': True,
             'color': True,
         },
-        'browser': {  # the system's default browser
+        'browser': {  # the system's default browser; uses html
             'enabled': False,
             'title': f'[{__project_name__}] {{count}} changes: {{jobs}}',
         },
-        'email': {  # email (except mailgun)
+        'email': {  # email (except mailgun); uses text or both html and text if 'html' is set to true
             'enabled': False,
             'html': True,
             'to': '',
@@ -84,7 +85,7 @@ DEFAULT_CONFIG = {
                 'path': 'sendmail',
             },
         },
-        'pushover': {
+        'pushover': {  # uses text
             'enabled': False,
             'app': '',
             'device': None,
@@ -92,33 +93,33 @@ DEFAULT_CONFIG = {
             'user': '',
             'priority': 'normal',
         },
-        'pushbullet': {
+        'pushbullet': {  # uses text
             'enabled': False,
             'api_key': '',
         },
-        'telegram': {
+        'telegram': {  # uses markdown (from 3.7)
             'enabled': False,
             'bot_token': '',
             'chat_id': '',
             'silent': False,
         },
-        'webhook': {
+        'webhook': {  # uses text
             'enabled': False,
             'webhook_url': '',
             'max_message_length': None,
         },
-        'webhook_markdown': {
+        'webhook_markdown': {  # uses markdown
             'enabled': False,
             'webhook_url': '',
             'max_message_length': None,
         },
-        'matrix': {
+        'matrix': {  # uses text
             'enabled': False,
             'homeserver': '',
             'access_token': '',
             'room_id': '',
         },
-        'mailgun': {
+        'mailgun': {  # uses text
             'enabled': False,
             'region': 'us',
             'api_key': '',
@@ -128,22 +129,26 @@ DEFAULT_CONFIG = {
             'to': '',
             'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
         },
-        'ifttt': {
+        'ifttt': {  # uses text
             'enabled': False,
             'key': '',
             'event': '',
         },
-        'xmpp': {
+        'xmpp': {  # uses text
             'enabled': False,
             'sender': '',
             'recipient': '',
         },
-        'prowl': {
+        'prowl': {  # uses text
             'enabled': False,
             'api_key': '',
             'priority': 0,
             'application': '',
             'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
+        },
+        'run_command': {  # uses text
+            'enabled': False,
+            'command': '',
         },
     },
     'job_defaults': {  # default settings for jobs
@@ -154,20 +159,6 @@ DEFAULT_CONFIG = {
         'shell': {},  # these are used for 'command' jobs
     },
 }
-
-
-def dict_deep_merge(source: dict, destination: dict) -> dict:
-    """Deep merges source dict into destination dict."""
-    # https://stackoverflow.com/a/20666342
-    for key, value in source.items():
-        if isinstance(value, dict):
-            # get node or create one
-            node = destination.setdefault(key, {})
-            dict_deep_merge(value, node)
-        else:
-            destination[key] = value
-
-    return destination
 
 
 class BaseStorage(ABC):
@@ -334,14 +325,84 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 
 
 class YamlConfigStorage(BaseYamlFileStorage):
+    def dict_deep_difference(self, d1: dict, d2: dict) -> dict:
+        """Return a new dict with elements in the first dict that are not in the second."""
+
+        def _sub_dict_deep_difference(d1: dict, d2: dict) -> dict:
+            for key, value in d1.copy().items():
+                if isinstance(value, dict) and isinstance(d2.get(key), dict):
+                    _sub_dict_deep_difference(value, d2[key])
+                    if not len(value):
+                        d1.pop(key)
+                else:
+                    if key in d2:
+                        d1.pop(key)
+            return d1
+
+        return _sub_dict_deep_difference(copy.deepcopy(d1), d2)
+
+    def dict_deep_merge(self, source: dict, destination: dict) -> dict:
+        """Deep merges source dict into destination dict."""
+        # https://stackoverflow.com/a/20666342
+
+        def _sub_dict_deep_merge(source: dict, destination: dict) -> dict:
+            for key, value in source.items():
+                if isinstance(value, dict):
+                    # get node or create one
+                    node = destination.setdefault(key, {})
+                    _sub_dict_deep_merge(value, node)
+                else:
+                    destination[key] = value
+
+            return destination
+
+        return _sub_dict_deep_merge(source, copy.deepcopy(destination))
+
+    def check_for_unrecognized_keys(self, config: Dict[str, Any]) -> None:
+        """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError."""
+
+        config_for_extras = copy.deepcopy(config)
+        if 'job_defaults' in config_for_extras:
+            for key in DEFAULT_CONFIG['job_defaults']:  # 'job_defaults' are not set in DEFAULT_CONFIG
+                config_for_extras['job_defaults'][key] = {}
+        if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
+            config_for_extras['report'].pop('slack')
+        extras = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG)
+        if extras:
+            raise ValueError(
+                f'Unrecognized directive(s) in the configuration file {self.filename}:\n'
+                f'{yaml.safe_dump(extras)}Check for typos (documentation at {__docs_url__})'
+            )
+
     def load(self, *args: Any) -> None:
-        """Load configuration file from self.filename into self.config after merging it into DEFAULT_CONFIG."""
-        self.config: Dict[str, Any] = dict_deep_merge(self.parse(self.filename) or {}, copy.deepcopy(DEFAULT_CONFIG))
+        """Load configuration file from self.filename into self.config with missing keys from DEFAULT_CONFIG."""
+        config: Dict[str, Any] = self.parse(self.filename)
+
+        if config:
+            self.check_for_unrecognized_keys(config)
+
+            # If config is missing keys in DEFAULT_CONFIG, log the missing keys and deep merge DEFAULT_CONFIG
+            missing = self.dict_deep_difference(DEFAULT_CONFIG, config)
+            if missing:
+                logger.info(
+                    f'Default values used for the missing directive(s) in the configuration file {self.filename}:\n'
+                    f'{yaml.safe_dump(missing)}See documentation at {__docs_url__}'
+                )
+                config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
+        else:
+            logger.info(f'No directives found in the configuration file {self.filename}; using default directives.')
+            config = DEFAULT_CONFIG
+
+        self.config = config
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save self.config into self.filename using YAML."""
         with open(self.filename, 'w') as fp:
-            fp.write(f'# {__project_name__} configuration file. See ' f'{__docs_url__}configuration.html\n')
+            fp.write(
+                f'# {__project_name__} configuration file. See {__docs_url__}\n'
+                f'# Written on {datetime.now().replace(microsecond=0).isoformat()} using version {__version__}\n'
+                f'\n'
+            )
             yaml.safe_dump(self.config, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 

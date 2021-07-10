@@ -30,6 +30,12 @@
 
 .. toctree::
    :hidden:
+   :caption: Examples
+
+   examples
+
+.. toctree::
+   :hidden:
    :caption: Advanced
 
    advanced

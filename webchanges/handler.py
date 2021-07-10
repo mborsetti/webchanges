@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import difflib
-import email.utils
 import logging
 import shlex
 import subprocess
@@ -11,6 +10,7 @@ import tempfile
 import time
 import timeit
 import traceback
+from datetime import datetime
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, Type, Union
@@ -19,6 +19,11 @@ from .filters import FilterBase
 from .jobs import JobBase, NotModifiedError
 from .reporters import ReporterBase
 from .storage import CacheStorage
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports import zoneinfo as ZoneInfo
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -138,12 +143,12 @@ class JobState(object):
 
         return self
 
-    def get_diff(self) -> Optional[str]:
+    def get_diff(self, tz: Optional[str] = None) -> Optional[str]:
         """Generates the job's diff and applies diff_filters."""
         if self._generated_diff != '':
             return self._generated_diff
 
-        _generated_diff = self._generate_diff()
+        _generated_diff = self._generate_diff(tz)
         # Apply any specified diff filters
         if isinstance(_generated_diff, str):
             for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.diff_filter):
@@ -154,9 +159,25 @@ class JobState(object):
 
         return self._generated_diff
 
-    def _generate_diff(self) -> Optional[Union[str, bool]]:
+    def _generate_diff(self, tz: Optional[str] = None) -> Optional[Union[str, bool]]:
         """Generates the job's diff."""
+        if tz:
+            tz_info = ZoneInfo(tz)
+        else:
+            tz_info = None
+        timestamp_old = (
+            (datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d2 %b %Y %H:%M:%S %z'))
+            if self.old_timestamp
+            else ''
+        )
+        timestamp_new = (
+            (datetime.fromtimestamp(self.new_timestamp).astimezone(tz=tz_info).strftime('%a, %d2 %b %Y %H:%M:%S %z'))
+            if self.new_timestamp
+            else ''
+        )
+
         if self.job.diff_tool is not None:
+            # External diff tool
             with tempfile.TemporaryDirectory() as tmp_dir:
                 tmpdir = Path(tmp_dir)
                 old_file_path = tmpdir.joinpath('old_file')
@@ -169,16 +190,15 @@ class JobState(object):
                 if proc.returncode == 0:
                     return False
                 elif proc.returncode == 1:
-                    head = f'Using external diff tool "{self.job.diff_tool}"\n'
-                    head += f'Old: {email.utils.formatdate(self.old_timestamp, localtime=True)}\n'
-                    head += f'New: {email.utils.formatdate(self.new_timestamp, localtime=True)}\n'
-                    head += '-' * 36 + '\n'
+                    head = (
+                        f'Using external diff tool "{self.job.diff_tool}"\n'
+                        f'Old: {timestamp_old}\n'
+                        f'New: {timestamp_new}\n' + '-' * 36 + '\n'
+                    )
                     return head + proc.stdout
                 else:
                     raise RuntimeError(proc.stderr) from subprocess.CalledProcessError(proc.returncode, cmdline)
 
-        timestamp_old = email.utils.formatdate(self.old_timestamp, localtime=True)
-        timestamp_new = email.utils.formatdate(self.new_timestamp, localtime=True)
         if self.job.contextlines is not None:
             contextlines = self.job.contextlines
         else:

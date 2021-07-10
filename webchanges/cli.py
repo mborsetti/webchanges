@@ -129,7 +129,7 @@ def first_run(command_config: CommandConfig) -> None:
             print(f'> Edit it with {__project_name__} --edit-config')
     if not command_config.jobs.is_file():
         command_config.jobs.parent.mkdir(parents=True, exist_ok=True)
-        command_config.jobs.write_text(f'# {__project_name__} jobs file. See {__docs_url__}jobs.html\n')
+        command_config.jobs.write_text(f'# {__project_name__} jobs file. See {__docs_url__}\n')
         command_config.edit = True
         print(f'Created default jobs file at {command_config.jobs}')
         if not command_config.edit:

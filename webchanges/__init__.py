@@ -15,7 +15,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * PATCH version when you make backwards compatible bug fixes
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.7.1.post0'
+__version__ = '3.8.0.rc0'
 __description__ = 'Check web (or commands) for changes since last run and notify'
 __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'

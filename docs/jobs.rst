@@ -154,7 +154,6 @@ Optional directives
 For all ``url`` jobs:
 
 - ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
-- ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
 - ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`). `Changed in version 3.0:` Works
   for all ``url`` jobs.
 - ``headers``: Headers to send along with the request (a dict)  (see :ref:`here <headers>`). `Changed in version 3.0:`
@@ -193,9 +192,10 @@ For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
 For ``url`` jobs that have ``use_browser: true``:
 
-- ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here <chromium_revision>`).
-  This can be different for different OSs, in which case is a list of one or more of the following keys: ``linux``,
-  ``mac``, ``win32`` and ``win64``. `New in version 3.0.` `Changed in version 3.1:` Added keys for different OSs.
+- ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here
+  <pyppeteer_chromium_revision>`). This can be different for different OSs, in which case is a list of one or more of
+  the following keys: ``linux``, ``mac``, ``win32`` and ``win64``. `New in version 3.0.` `Changed in version 3.1:` Added
+  keys for different OSs.
 - ``ignore_https_errors``: Ignore HTTPs errors (true/false). `New in version 3.0.`
 - ``user_data_dir``: A path to a pre-existing user directory that Chromium should be using. `New in version 3.0.`
 - ``switches``: Additional command line `switch(es) for Chromium
@@ -278,7 +278,7 @@ These optional directives apply to all job types:
 
 - ``name``: Human-readable name/label of the job (if not specified and the job is ``url`` and the content is HTML or
   XML, the title (up to 60 characters) will be used; otherwise the URL or command). `Changed in version 3.0:`
-  Added auto-detect from HTML or XML.
+  Added auto-detect <title> tag in HTML or XML.
 - ``max_tries``: Number of consecutive times the job has to fail before reporting an error (default: 1); see
   :ref:`below <max_tries>`
 - ``diff_tool``: Command to an external tool for generating diff text. See example usage :ref:`here <word_based_differ>`
