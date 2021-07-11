@@ -283,7 +283,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         shelljob_errors = self.shelljob_security_checks()
         if shelljob_errors and any(is_shell_job(job) for job in jobs):
             print(
-                f"Removing 'command' job(s) because {' and '.join(shelljob_errors)} (see "
+                f"Removing 'command' job(s) and/or jobs with 'diff_tool' because  {' and '.join(shelljob_errors)} (see "
                 f'{__docs_url__}jobs.html#important-note-for-command-jobs)'
             )
             jobs = [job for job in jobs if not is_shell_job(job)]
@@ -291,7 +291,9 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         return jobs
 
 
-class BaseTxtFileStorage(BaseTextualFileStorage, ABC):
+class BaseTxtFileStorage(BaseTextualFileStorage, ABC):  # pragma: no cover  # code not invoked
+    """Obsolete, no longer used."""
+
     @classmethod
     def parse(cls, *args: Any) -> Iterator[JobBase]:
         filename = args[0]
@@ -536,7 +538,7 @@ class CacheStorage(BaseFileStorage, ABC):
         else:
             for guid in known_guids:
                 count = self.clean(guid)
-                if count > 0:
+                if count:
                     print(f'Deleted {count} old snapshots of {guid}')
 
     def rollback_cache(self, timestamp: float) -> None:
@@ -553,6 +555,13 @@ class CacheStorage(BaseFileStorage, ABC):
             print(f'No snapshots found after {timestamp_date}')
 
 
+class Snapshot(NamedTuple):
+    data: Union[str, bytes]
+    timestamp: float
+    tries: int
+    etag: str
+
+
 class CacheDirStorage(CacheStorage):
     """Stores the information in individual files in a directory 'dirname'"""
 
@@ -565,15 +574,15 @@ class CacheDirStorage(CacheStorage):
         return
 
     def _get_filename(self, guid: str) -> Path:
-        return self.filename.joinpath(guid)
+        return self.filename.joinpath(guid)  # filename is a dir (confusing!)
 
     def get_guids(self) -> List[str]:
         return [str(filename) for filename in self.filename.iterdir()]
 
-    def load(self, guid: str) -> Tuple[Union[str, bytes], float, int, str]:
+    def load(self, guid: str) -> Snapshot:
         filename = self._get_filename(guid)
         if not filename.is_file():
-            return '', 0, 0, ''
+            return Snapshot('', 0, 0, '')
 
         try:
             data = filename.read_text()
@@ -583,11 +592,14 @@ class CacheDirStorage(CacheStorage):
 
         timestamp = filename.stat().st_mtime
 
-        return data, timestamp, 0, ''
+        return Snapshot(data, timestamp, 0, '')
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
-        """We only store the latest version, no history data"""
-        return {}
+        if isinstance(count, int) and count < 1:
+            return {}
+        else:
+            data, timestamp, tries, etag = self.load(guid)
+            return {data: timestamp} if data and timestamp else {}
 
     def save(
         self,
@@ -624,13 +636,6 @@ class CacheDirStorage(CacheStorage):
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("'textfiles' databases cannot be rolled back as new snapshots overwrite old ones")
-
-
-class Snapshot(NamedTuple):
-    data: Union[str, bytes]
-    timestamp: float
-    tries: int
-    etag: str
 
 
 class CacheSQLite3Storage(CacheStorage):
@@ -720,7 +725,7 @@ class CacheSQLite3Storage(CacheStorage):
             return self.cur.execute(sql, args)
 
     def _temp_execute(self, sql: str, args: Optional[tuple] = None) -> sqlite3.Cursor:
-        """Execute SQL command on temp database"""
+        """Execute SQL command on temp database."""
         if args is None:
             logger.debug(f"Executing (temp) '{sql}'")
             return self.temp_cur.execute(sql)
@@ -729,7 +734,10 @@ class CacheSQLite3Storage(CacheStorage):
             return self.temp_cur.execute(sql, args)
 
     def _copy_temp_to_permanent(self, delete: bool = False) -> None:
-        """Copy contents of temporary database to permanent one."""
+        """Copy contents of temporary database to permanent one.
+
+        :param:delete: also delete contents of temporary cache (used for testing)
+        """
         logger.debug('Saving new snapshots to permanent sqlite3 database')
         # with self.temp_lock:
         #     self.temp_db.commit()
@@ -1002,8 +1010,8 @@ class CacheSQLite3Storage(CacheStorage):
 
         print("Found 'minidb' database and upgrading it to the new engine (note: only the last snapshot is retained).")
         logger.info(
-            "Found legacy 'minidb' database and converting it to 'sqlite3' and new schema. "
-            "Package 'minidb' needs to be installed for the conversion."
+            "Found legacy 'minidb' database and converting it to 'sqlite3' and new schema. Package 'minidb' needs to be"
+            ' installed for the conversion.'
         )
 
         from .storage_minidb import CacheMiniDBStorage
@@ -1011,8 +1019,8 @@ class CacheSQLite3Storage(CacheStorage):
         legacy_db = CacheMiniDBStorage(minidb_filename)
         self.restore(legacy_db.backup())
         legacy_db.close()
-        print(f'Database upgrade finished; the following backup file can be safely deleted: {minidb_filename}')
-        print("and the 'minidb' package can be removed (unless used by another program): $ pip uninstall minidb")
+        print(f'Database upgrade finished; the following backup file can be safely deleted: {minidb_filename}\n')
+        print("The 'minidb' package can be removed (unless used by another program): $ pip uninstall minidb")
         print('-' * 80)
 
 
@@ -1039,15 +1047,15 @@ class CacheRedisStorage(CacheStorage):
             guids.append(str(guid[len('guid:') :]))
         return guids
 
-    def load(self, guid: str) -> Tuple[Union[str, bytes], float, int, str]:
+    def load(self, guid: str) -> Snapshot:
         key = self._make_key(guid)
         data = self.db.lindex(key, 0)
 
         if data:
             r = msgpack.unpackb(data)
-            return r['data'], r['timestamp'], r['tries'], r['etag']
+            return Snapshot(r['data'], r['timestamp'], r['tries'], r['etag'])
 
-        return '', 0, 0, ''
+        return Snapshot('', 0, 0, '')
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         history: Dict[str, float] = {}
@@ -1101,4 +1109,4 @@ class CacheRedisStorage(CacheStorage):
         return 0
 
     def rollback(self, timestamp: float) -> None:
-        raise NotImplementedError("Rolling back of 'redis' databases is not supported")
+        raise NotImplementedError("Rolling back the database is not supported by 'redis' database engine")

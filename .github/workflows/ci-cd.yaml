@@ -78,6 +78,7 @@ jobs:
         # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
+      TEELGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
 
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout

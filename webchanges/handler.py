@@ -10,6 +10,7 @@ import tempfile
 import time
 import timeit
 import traceback
+from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
@@ -36,7 +37,6 @@ class JobState(object):
     verb = ''
     old_data: Union[bytes, str] = ''
     new_data: Union[bytes, str] = ''
-    history_data: Dict[str, float] = {}
     old_timestamp: Optional[float] = 0.0
     new_timestamp = 0.0
     exception: Optional[Exception] = None
@@ -77,8 +77,6 @@ class JobState(object):
         """Loads new data for the job."""
         guid = self.job.get_guid()
         self.old_data, self.old_timestamp, self.tries, self.old_etag = self.cache_storage.load(guid)
-        if self.job.compared_versions and self.job.compared_versions > 1:
-            self.history_data = self.cache_storage.get_history_data(guid, self.job.compared_versions)
 
     def save(self) -> None:
         """Saves any new data already loaded for the job."""
@@ -256,6 +254,8 @@ class JobState(object):
 
 
 class Report(object):
+    new_release_future: Future[str]
+
     def __init__(self, urlwatch_config: Urlwatch) -> None:
         self.config: Dict[str, Any] = urlwatch_config.config_storage.config
 

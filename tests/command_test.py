@@ -221,44 +221,84 @@ def test_test_job(capsys):
     )
 
 
-def test_test_diff(capsys):
-    jobs_file = config_dir.joinpath('jobs-time.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
-    command_config = CommandConfig(__project_name__, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    if os.name == 'nt':
-        urlwatcher.jobs[0].command = 'echo %time% %random%'
+def test_test_diff_and_joblist(capsys):
+    try:
+        jobs_file = config_dir.joinpath('jobs-time.yaml')
+        jobs_storage = YamlJobsStorage(jobs_file)
+        command_config = CommandConfig(
+            __project_name__, config_dir, config_file, jobs_file, hooks_file, cache_file, False
+        )
+        urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+        if os.name == 'nt':
+            urlwatcher.jobs[0].command = 'echo %time% %random%'
 
-    setattr(command_config, 'test_diff', 1)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
-    setattr(command_config, 'test_diff', None)
-    assert pytest_wrapped_e.value.code == 1
-    message = capsys.readouterr().out
-    assert message == 'Not enough historic data available (need at least 2 different snapshots)\n'
+        setattr(command_config, 'test_diff', 1)
+        urlwatch_command = UrlwatchCommand(urlwatcher)
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            urlwatch_command.handle_actions()
+        setattr(command_config, 'test_diff', None)
+        assert pytest_wrapped_e.value.code == 1
+        message = capsys.readouterr().out
+        assert message == 'Not enough historic data available (need at least 2 different snapshots)\n'
 
-    # run once
-    urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+        # run once
+        # also testing joblist
+        urlwatcher.urlwatch_config.joblist = [1]
+        urlwatcher.run_jobs()
+        cache_storage._copy_temp_to_permanent(delete=True)
+        urlwatcher.urlwatch_config.joblist = None
 
-    # run twice
-    time.sleep(0.0001)
-    urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
-    guid = urlwatcher.jobs[0].get_guid()
-    history = cache_storage.get_history_data(guid)
-    assert len(history) == 2
+        # test invalid joblist
+        urlwatcher.urlwatch_config.joblist = [999]
+        with pytest.raises(IndexError) as pytest_wrapped_e:
+            urlwatcher.run_jobs()
+        assert pytest_wrapped_e.value.args[0] == 'Job index 999 out of range (found 1 jobs)'
+        urlwatcher.urlwatch_config.joblist = None
 
-    setattr(command_config, 'test_diff', 1)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
-    setattr(command_config, 'test_diff', None)
-    urlwatcher.cache_storage.delete(guid)
-    assert pytest_wrapped_e.value.code is None
-    message = capsys.readouterr().out
-    assert '=== Filtered diff between state 0 and state -1 ===\n' in message
+        # run twice
+        time.sleep(0.0001)
+        urlwatcher.run_jobs()
+        cache_storage._copy_temp_to_permanent(delete=True)
+        guid = urlwatcher.jobs[0].get_guid()
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 2
+
+        # test diff (unified) with diff_filter, tz, and contextlines
+        setattr(command_config, 'test_diff', 1)
+        urlwatcher.jobs[0].diff_filter = {'strip': ''}
+        urlwatcher.jobs[0].tz = 'Etc/UTC'
+        urlwatcher.jobs[0].contextlines = 2
+        urlwatch_command = UrlwatchCommand(urlwatcher)
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            urlwatch_command.handle_actions()
+        setattr(command_config, 'test_diff', None)
+        assert pytest_wrapped_e.value.code is None
+        message = capsys.readouterr().out
+        assert '=== Filtered diff between state 0 and state -1 ===\n' in message
+        # rerun to reuse cached _generated_diff
+        setattr(command_config, 'test_diff', 1)
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            urlwatch_command.handle_actions()
+        setattr(command_config, 'test_diff', None)
+        message = capsys.readouterr().out
+        assert '=== Filtered diff between state 0 and state -1 ===\n' in message
+
+        # test diff (using outside differ)
+        setattr(command_config, 'test_diff', 1)
+        # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
+        if os.name == 'nt':
+            urlwatcher.jobs[0].diff_tool = 'cmd /C exit 1 & rem '
+        else:
+            urlwatcher.jobs[0].diff_tool = 'bash -c exit 1 # '
+        urlwatch_command = UrlwatchCommand(urlwatcher)
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            urlwatch_command.handle_actions()
+        setattr(command_config, 'test_diff', None)
+        assert pytest_wrapped_e.value.code is None
+        message = capsys.readouterr().out
+        assert '=== Filtered diff between state 0 and state -1 ===\n' in message
+    finally:
+        urlwatcher.cache_storage.delete(guid)
 
 
 def test_list_error_jobs(capsys):
@@ -443,6 +483,7 @@ def test_check_telegram_chats(capsys):
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
     assert message == 'You need to set up your bot token first (see documentation)\n'
+
     setattr(command_config, 'telegram_chats', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.check_telegram_chats()
@@ -450,13 +491,49 @@ def test_check_telegram_chats(capsys):
     message = capsys.readouterr().out
     assert message == 'You need to set up your bot token first (see documentation)\n'
 
+    urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # nosec
+    setattr(command_config, 'telegram_chats', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.check_telegram_chats()
+    assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert message == 'Error with token bogus: Not Found\n'
 
-def test_check_test_reporter():
+    if os.getenv('TELEGRAM_TOKEN'):
+        urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = os.getenv(
+            'TELEGRAM_TOKEN'
+        )
+        setattr(command_config, 'telegram_chats', True)
+        with pytest.raises(SystemExit):
+            urlwatch_command.check_telegram_chats()
+        message = capsys.readouterr().out
+        assert 'Say hello to your bot at https://t.me/' in message
+    else:
+        print('Cannot fully test Telegram as no TELEGRAM_TOKEN environment variable found')
+
+
+def test_check_test_reporter(capsys):
     urlwatch_command = UrlwatchCommand(urlwatcher)
     setattr(command_config, 'test_reporter', 'stdout')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.check_test_reporter()
     assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert '01. NEW: Newly Added\n' in message
+
+    urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.check_test_reporter()
+    assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert 'Reporter is not enabled/configured: stdout\n' in message
+
+    setattr(command_config, 'test_reporter', 'does_not_exist')
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.check_test_reporter()
+    assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert 'No such reporter: does_not_exist\n' in message
 
 
 def test_check_smtp_login():
@@ -492,3 +569,100 @@ def test_setup_logger_verbose(caplog):
 def test_locate_storage_file():
     file = locate_storage_file(Path('test'), Path('nowhere'), '.noext')
     assert file == PurePath('test')
+
+
+def test_job_states_verb():
+    jobs_file = config_dir.joinpath('jobs-time.yaml')
+    jobs_storage = YamlJobsStorage(jobs_file)
+    cache_storage = CacheSQLite3Storage(cache_file)
+    command_config = CommandConfig(__project_name__, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher.jobs[0].command = 'echo TEST'
+
+    # run once
+    urlwatcher.run_jobs()
+    cache_storage._copy_temp_to_permanent(delete=True)
+    assert urlwatcher.report.job_states[0].verb == 'new'
+
+    # run twice
+    urlwatcher.run_jobs()
+    assert urlwatcher.report.job_states[1].verb == 'unchanged'
+
+
+def test_job_states_verb_notimestamp_unchanged():
+    jobs_file = config_dir.joinpath('jobs-time.yaml')
+    jobs_storage = YamlJobsStorage(jobs_file)
+    cache_storage = CacheSQLite3Storage(cache_file)
+    command_config = CommandConfig(__project_name__, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher.jobs[0].command = 'echo TEST'
+
+    # run once
+    urlwatcher.run_jobs()
+    cache_storage._copy_temp_to_permanent(delete=True)
+    assert urlwatcher.report.job_states[0].verb == 'new'
+
+    # modify database
+    guid = urlwatcher.cache_storage.get_guids()[0]
+    data, timestamp, tries, etag = urlwatcher.cache_storage.load(guid)
+    urlwatcher.cache_storage.delete(guid)
+    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=0, tries=1, etag=etag)
+    cache_storage._copy_temp_to_permanent(delete=True)
+
+    # run twice
+    urlwatcher.run_jobs()
+    assert urlwatcher.report.job_states[1].verb == 'unchanged'
+
+
+def test_job_states_verb_notimestamp_changed():
+    jobs_file = config_dir.joinpath('jobs-time.yaml')
+    jobs_storage = YamlJobsStorage(jobs_file)
+    cache_storage = CacheSQLite3Storage(cache_file)
+    command_config = CommandConfig(__project_name__, config_dir, config_file, jobs_file, hooks_file, cache_file, False)
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher.jobs[0].command = 'echo TEST'
+
+    # run once
+    urlwatcher.run_jobs()
+    cache_storage._copy_temp_to_permanent(delete=True)
+    assert urlwatcher.report.job_states[-1].verb == 'new'
+
+    # modify database (save no timestamp)
+    guid = urlwatcher.jobs[0].get_guid()
+    data, timestamp, tries, etag = urlwatcher.cache_storage.load(guid)
+    urlwatcher.cache_storage.delete(guid)
+    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=0, tries=tries, etag=etag)
+    cache_storage._copy_temp_to_permanent(delete=True)
+
+    # run twice
+    urlwatcher.run_jobs()
+    cache_storage._copy_temp_to_permanent(delete=True)
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+    # modify database to 1 try
+    data, timestamp, tries, etag = urlwatcher.cache_storage.load(guid)
+    urlwatcher.cache_storage.delete(guid)
+    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=timestamp, tries=1, etag=etag)
+    cache_storage._copy_temp_to_permanent(delete=True)
+    # run again
+    urlwatcher.run_jobs()
+    cache_storage._copy_temp_to_permanent(delete=True)
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+    # modify database to no timestamp
+    urlwatcher.cache_storage.delete(guid)
+    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=0, tries=tries, etag=etag)
+    cache_storage._copy_temp_to_permanent(delete=True)
+    # run again
+    urlwatcher.run_jobs()
+    cache_storage._copy_temp_to_permanent(delete=True)
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+    # modify database to no timestamp and 1 try
+    urlwatcher.cache_storage.delete(guid)
+    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=0, tries=1, etag=etag)
+    cache_storage._copy_temp_to_permanent(delete=True)
+    # run again
+    urlwatcher.run_jobs()
+    cache_storage._copy_temp_to_permanent(delete=True)
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'

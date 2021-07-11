@@ -48,6 +48,7 @@ Added
 * Neegative job indices; for example, run ``webchanges -1`` to only run the last job of your jobs list, or
   ``webchanges --test -2`` to test the second to last job of your jobs list.
 * Print text of response whenever a HTTP client error (4xx) response is received.
+* Report footer (if enabled) will contain an alert if a new version of :program:`wechanges` has been released to PyPi
 
 Fixed
 -----
@@ -58,6 +59,7 @@ Internals
 ---------
 * ``--verbose`` will now list configuration keys 'missing' from the file for which default values have been used.
 * ``tox`` testing can now be run in parallel using ``tox --parallel``.
+* Additional testing adding 3 percentage points of coverage to 78%
 
 
 Version 3.7.1

@@ -62,7 +62,7 @@ Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), a
   the new sub-directive ``sort_keys``
 * More reliable releases due to:
 
-  * A 33 percentage point increase in code testing coverage (to 75%)
+  * A 36 percentage point increase in code testing coverage (to 78%)
   * Completely new continuous integration (CI) and continuous delivery (CD) pipeline (GitHub Actions with pre-commit)
   * Uses of flake8 and doc8 linters and pre-commit checks
   * Code security checks using bandit
@@ -254,7 +254,7 @@ Relative to :program:`urlwatch` 2.23:
     <https://docs.python.org/3/library/email.message.html#email.message.EmailMessage>`__
   * Reports' elapsed time now always has at least 2 significant digits
   * Unicode is supported throughout, including in filters and jobs and configuration YAML files
-  * A 33 percentage point increase in code testing coverage (to 75%), a completely new continuous integration
+  * A 36 percentage point increase in code testing coverage (to 78%), a completely new continuous integration
     (CI) and continuous delivery (CD) pipeline (`GitHub Actions <https://github.com/features/actions>`__), and testing
     on both Ubuntu **and** macOS (Windows 10 x64 to come) increase reliability of new releases
   * Using `flake8 <https://pypi.org/project/flake8/>`__ to check PEP-8 compliance and more

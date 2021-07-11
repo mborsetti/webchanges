@@ -1,14 +1,18 @@
-"""The worker that runs jobs in parallel."""
+"""The worker that runs jobs in parallel.  Called from main.py"""
 
 from __future__ import annotations
 
-import difflib
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
-from typing import Callable, Iterable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
+from packaging.version import parse as parse_version
+
+import requests
+
+from . import __project_name__, __version__
 from .handler import JobState
 from .jobs import BrowserJob, NotModifiedError
 
@@ -19,11 +23,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def run_parallel(func: Callable, items: Iterable, max_workers: Optional[int] = None) -> Iterable[JobState]:
-    """Convenience function to run parallel threads."""
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for result in executor.map(func, items):
-            yield result
+def new_release_version() -> str:
+    """Returns the release version if a higher version is available to upgrade into."""
+    r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=1)
+    if r.ok:
+        last_release = list(r.json()['releases'].keys())[-1]
+        if parse_version(last_release) > parse_version(__version__):
+            return last_release
+
+    return ''
 
 
 def run_jobs(urlwatcher: Urlwatch) -> None:
@@ -50,10 +58,14 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     with ExitStack() as stack:
         max_workers = min(32, os.cpu_count() or 1) if any(type(job) == BrowserJob for job in jobs) else None
         logger.debug(f'Max_workers set to {max_workers}')
-        for job_state in run_parallel(
+        executor = ThreadPoolExecutor(max_workers=max_workers)
+
+        # launch future to retrieve if new version is available
+        urlwatcher.report.new_release_future = executor.submit(new_release_version)
+
+        for job_state in executor.map(
             lambda jobstate: jobstate.process(),
             (stack.enter_context(JobState(cache_storage, job)) for job in jobs),
-            max_workers=max_workers,
         ):
 
             max_tries = 0 if not job_state.job.max_tries else job_state.job.max_tries
@@ -91,34 +103,15 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     logger.debug(f'Job {job_state.job._index_number}: Job finished with no exceptions')
             elif job_state.old_data != '' or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
-                if job_state.old_timestamp:
-                    if job_state.new_data == job_state.old_data:
-                        if job_state.tries > 0:
-                            job_state.tries = 0
-                            job_state.save()
-                        report.unchanged(job_state)
-                    else:
+                if job_state.new_data == job_state.old_data:
+                    if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save()
-                        report.changed(job_state)
+                    report.unchanged(job_state)
                 else:
-                    # timestamp was not saved
-                    matched_history_time = job_state.history_data.get(job_state.new_data)
-                    if matched_history_time:
-                        job_state.old_timestamp = matched_history_time
-                    if matched_history_time or job_state.new_data == job_state.old_data:
-                        if job_state.tries > 0:
-                            job_state.tries = 0
-                            job_state.save()
-                        report.unchanged(job_state)
-                    else:
-                        close_matches = difflib.get_close_matches(job_state.new_data, job_state.history_data, n=1)
-                        if close_matches:
-                            job_state.old_data = close_matches[0]
-                            job_state.old_timestamp = job_state.history_data[close_matches[0]]
-                        job_state.tries = 0
-                        job_state.save()
-                        report.changed(job_state)
+                    job_state.tries = 0
+                    job_state.save()
+                    report.changed(job_state)
             else:
                 # We have never run this job before (there are no snapshots)
                 job_state.tries = 0

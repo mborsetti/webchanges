@@ -29,22 +29,6 @@ For a string (e.g. JSON-encoded data, if supported by the server):
    data: '{"Element1": "Data", "Element2": "OtherData"}'
 
 
-.. _compared_versions:
-
-Comparing with several latest snapshots
----------------------------------------
-If a webpage frequently changes between several known stable states, it may be desirable to have changes reported only
-if the webpage changes into a new unknown state. You can use ``compared_versions`` to do this:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   compared_versions: 3
-
-In this example, changes are only reported if the webpage becomes different from the latest three distinct states. The
-differences are shown relative to the closest match.
-
-
 .. _json_dict:
 
 Selecting items from a JSON dictionary

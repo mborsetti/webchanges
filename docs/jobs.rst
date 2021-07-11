@@ -448,10 +448,10 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
 
 .. _important_note_for_command_jobs:
 
-.. important:: When :program:`webchanges` is run in Linux, for security purposes a ``command`` job will only run if
-   the job file is both owned by the same user running :program:`webchanges` and can **only** be written by such user.
-   To change the ownership and the access permissions of the file (i.e. remove write permission for the group and all
-   other users), run the following commands:
+.. important:: When :program:`webchanges` is run in Linux, for security purposes a ``command`` job or a job with
+   ``diff_tool`` will only run if the job file is both owned by the same user running :program:`webchanges` and
+   can **only** be written by such user. To change the ownership and the access permissions of the file (i.e. remove
+   write permission for the group and all other users), run the following commands:
 
    .. code-block:: bash
 
@@ -510,17 +510,14 @@ diff_tool
 ---------
 Command to an external tool for generating diff text (a string).
 
+Please see warning :ref:`above <important_note_for_command_jobs>` for file security required to run jobs with this
+directive in Linux.
+
 See example usage :ref:`here <word_based_differ>`.
 
 .. versionchanged:: 3.0.1
    * Reports now show date/time of diffs generated using ``diff_tool``.
    * Output from ``diff_tool: wdiff`` is colorized in html reports.
-
-compared_versions
------------------
-Number of stored versions to compare to for similarity (an integer).
-
-See :ref:`here <compared_versions>`.
 
 diff_filter
 -----------

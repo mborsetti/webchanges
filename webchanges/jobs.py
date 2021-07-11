@@ -98,7 +98,6 @@ class JobBase(object, metaclass=TrackSubClasses):
     additions_only: Optional[bool] = None
     block_elements: List[str] = []
     chromium_revision: Optional[Union[Dict[str, int], Dict[str, str], str, int]] = None
-    compared_versions: Optional[int] = None
     contextlines: Optional[int] = None
     cookies: Optional[Dict[str, str]] = None
     data: Optional[Union[str, Dict[str, str]]] = None
@@ -335,7 +334,6 @@ class Job(JobBase):
         'name',
         'note',
         'additions_only',
-        'compared_versions',
         'contextlines',
         'deletions_only',
         'diff_filter',

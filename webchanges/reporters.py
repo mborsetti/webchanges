@@ -135,15 +135,16 @@ class HtmlReporter(ReporterBase):
         cfg = self.report.config['report']['html']
         tz = self.report.config['report']['tz']
 
-        yield f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-            <title>{__project_name__} report</title>
-            <meta http-equiv="content-type" content="text/html; charset=utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            </head>
-            <body style="font-family:Arial,Helvetica,sans-serif;font-size:13px;">"""
+        yield (
+            f'<!DOCTYPE html>\n'
+            f'<html>\n'
+            f'<head>\n'
+            f'<title>{__project_name__} report</title>\n'
+            f'<meta http-equiv="content-type" content="text/html; charset=utf-8">\n'
+            f'<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+            f'</head>\n'
+            f'<body style="font-family:Arial,Helvetica,sans-serif;font-size:13px;">\n'
+        )
 
         for job_state in self.report.get_filtered_job_states(self.job_states):
             content = self._format_content(job_state, cfg['diff'], tz)
@@ -168,15 +169,14 @@ class HtmlReporter(ReporterBase):
 
         duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
         yield (
-            f"""
-            <div style="font-style:italic">
-            Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}
-            seconds with <a href="{html.escape(__url__)}">
-            {html.escape(__project_name__)}</a></address> {html.escape(__version__)}
-            </div>
-            </body>
-            </html>"""
+            f'<div style="font-style:italic">\n'
+            f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
+            f'seconds with <a href="{html.escape(__url__)}">'
+            f'{html.escape(__project_name__)}</a></address> {html.escape(__version__)}.<br>\n'
         )
+        if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
+            yield (f'<b>New release {self.report.new_release_future.result()} is available; we recommend updating.</b>')
+        yield '</div>\n</body>\n</html>\n'
 
     @staticmethod
     def _diff_to_html(diff: str, job: JobBase) -> Iterable[str]:
@@ -359,8 +359,10 @@ class TextReporter(ReporterBase):
             duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
             yield (
                 f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-                f' seconds with {__project_name__} {__version__}'
+                f' seconds with {__project_name__} {__version__}.\n'
             )
+            if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
+                yield (f'New release {self.report.new_release_future.result()} is available; we recommend updating.')
 
     @staticmethod
     def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[Union[str, bytes]]:
@@ -441,10 +443,12 @@ class MarkdownReporter(ReporterBase):
             duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
             footer = (
                 f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in"
-                f' {duration} seconds with {__project_name__} {__version__}'
+                f' {duration} seconds with {__project_name__} {__version__}.\n'
             )
         else:
             footer = ''
+        if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
+            footer += f'*New release {self.report.new_release_future.result()} is available; we recommend updating.*'
 
         trimmed_msg = '*Parts of the report were omitted due to message length.*\n'
         if max_length:

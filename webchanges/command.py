@@ -2,24 +2,25 @@
 
 import contextlib
 import logging
+import os
 import shutil
 import sys
 import timeit
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional, Union
 
 import requests
 
-from . import __docs_url__
+from . import __project_name__, __docs_url__
 from .filters import FilterBase
 from .handler import JobState, Report
-from .jobs import JobBase, UrlJob
+from .jobs import BrowserJob, JobBase, UrlJob
 from .mailer import SMTPMailer, smtp_have_password, smtp_set_password
 from .main import Urlwatch
 from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from .util import edit_file, import_module_from_source
-from .worker import run_parallel
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class UrlwatchCommand:
     def list_jobs(self) -> None:
         for job in self.urlwatcher.jobs:
             if self.urlwatch_config.verbose:
-                print(f'{job._index_number:3}: {repr(job)}')
+                print(f'{job._index_number:3}: {job!r}')
             else:
                 pretty_name = job.pretty_name()
                 location = job.get_location()
@@ -92,10 +93,13 @@ class UrlwatchCommand:
     def _find_job(self, query: Union[str, int]) -> Optional[JobBase]:
         try:
             index = int(query)
-            if index <= 0:
+            if index == 0:
                 return None
             try:
-                return self.urlwatcher.jobs[index - 1]
+                if index <= 0:
+                    return self.urlwatcher.jobs[index]
+                else:
+                    return self.urlwatcher.jobs[index - 1]
             except IndexError:
                 return None
         except ValueError:
@@ -166,16 +170,20 @@ class UrlwatchCommand:
         for job in jobs:
             # Force re-retrieval of job, as we're testing for errors
             job.ignore_cached = True
-        with contextlib.ExitStack() as exit_stack:
-            for job_state in run_parallel(
+        with contextlib.ExitStack() as stack:
+            max_workers = min(32, os.cpu_count() or 1) if any(type(job) == BrowserJob for job in jobs) else None
+            logger.debug(f'Max_workers set to {max_workers}')
+            executor = ThreadPoolExecutor(max_workers=max_workers)
+
+            for job_state in executor.map(
                 lambda jobstate: jobstate.process(),
-                (exit_stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
+                (stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
             ):
                 if job_state.exception is not None:
                     print(f'{job_state.job._index_number:3}: Error: {job_state.exception.args[0]}')
                 elif len(job_state.new_data.strip()) == 0:
                     if self.urlwatch_config.verbose:
-                        print(f'{job_state.job._index_number:3}: No data: {repr(job_state.job)}')
+                        print(f'{job_state.job._index_number:3}: No data: {job_state.job!r}')
                     else:
                         pretty_name = job_state.job.pretty_name()
                         location = job_state.job.get_location()
@@ -233,9 +241,6 @@ class UrlwatchCommand:
 
     def check_telegram_chats(self) -> None:
         config = self.urlwatcher.config_storage.config['report'].get('telegram')
-        if not config:
-            print('You need to configure telegram in your config first (see documentation)')
-            sys.exit(1)
 
         bot_token = config.get('bot_token')
         if not bot_token:
@@ -243,12 +248,15 @@ class UrlwatchCommand:
             sys.exit(1)
 
         info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe').json()
+        if not info['ok']:
+            print(f"Error with token {bot_token}: {info['description']}")
+            sys.exit(1)
 
         chats = {}
         for chat_info in requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates').json()['result']:
             chat = chat_info['message']['chat']
             if chat['type'] == 'private':
-                chats[str(chat['id'])] = (
+                chats[chat['id']] = (
                     ' '.join((chat['first_name'], chat['last_name'])) if 'last_name' in chat else chat['first_name']
                 )
 
@@ -278,7 +286,7 @@ class UrlwatchCommand:
         cfg = self.urlwatcher.config_storage.config['report'].get(name, {'enabled': False})
         if not cfg.get('enabled', False):
             print(f'Reporter is not enabled/configured: {name}')
-            print(f'Use {sys.argv[0]} --edit-config to configure reporters')
+            print(f'Use {__project_name__} --edit-config to configure reporters')
             sys.exit(1)
 
         report = Report(self.urlwatcher)

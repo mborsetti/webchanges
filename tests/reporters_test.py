@@ -4,15 +4,17 @@ import logging
 import os
 import traceback
 
-import pytest
-
 from keyring.errors import NoKeyringError
+
+import pytest
 
 from requests.exceptions import MissingSchema
 
+from smtplib import SMTPAuthenticationError
+
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
-from webchanges.mailer import smtp_have_password, smtp_set_password
+from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
 from webchanges.reporters import HtmlReporter
 from webchanges.storage import DEFAULT_CONFIG
 
@@ -225,3 +227,17 @@ def test_reporters(reporter, capsys):
         assert capsys.readouterr().out == 'TEST\n'
     elif reporter != 'browser' or 'PYCHARM_HOSTED' in os.environ:
         report.finish_one(reporter, check_enabled=False)
+
+
+def test_mailer_send():
+    mailer = SMTPMailer(  # nosec B106:hardcoded_password_funcarg
+        smtp_user='test@gmail.com',
+        smtp_server='smtp.gmail.com',
+        smtp_port=587,
+        tls=True,
+        auth=True,
+        insecure_password='password',
+    )
+    with pytest.raises(SMTPAuthenticationError) as pytest_wrapped_e:
+        mailer.send(msg=None)
+    assert pytest_wrapped_e.value.smtp_code == 535

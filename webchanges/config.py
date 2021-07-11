@@ -2,6 +2,7 @@
 
 import argparse
 import os
+from concurrent.futures import Future
 from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Union
@@ -33,6 +34,8 @@ class BaseConfig(object):
 
 class CommandConfig(BaseConfig):
     """Command line arguments configuration."""
+
+    release_upgrade: Future
 
     def __init__(
         self,

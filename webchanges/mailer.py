@@ -50,7 +50,7 @@ class SMTPMailer(Mailer):
         smtp_server: str,
         smtp_port: int,
         tls: bool,
-        auth: Optional[str],
+        auth: bool,
         insecure_password: Optional[str] = None,
     ) -> None:
         self.smtp_server = smtp_server

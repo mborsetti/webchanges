@@ -12,7 +12,7 @@ import pytest
 from webchanges import __docs_url__, __project_name__
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import CacheDirStorage, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
 
@@ -99,6 +99,7 @@ def test_keep_latest():
         # is it the most recent?
         assert timestamp == timestamps[0]
     finally:
+        cache_storage.max_snapshots = None  # try this code once
         cache_storage.close()
 
 
@@ -154,7 +155,7 @@ def test_clean_cache():
         assert timestamps[1] < timestamps[0]
 
         # clean cache
-        cache_storage.clean_cache(guid)
+        cache_storage.clean_cache([guid])
         history = cache_storage.get_history_data(guid)
         assert len(history) == 1
         timestamp = list(history.values())[0]
@@ -194,6 +195,36 @@ def test_clean_all_and_delete():
         cache_storage.delete(guid)
         history = cache_storage.get_history_data(guid)
         assert len(history) == 0
+    finally:
+        cache_storage.close()
+
+
+def test_clean_cache_no_clean_all():
+    urlwatcher, cache_storage, cache_file = prepare_storage_test()
+    try:
+        # run once
+        urlwatcher.run_jobs()
+        cache_storage._copy_temp_to_permanent(delete=True)
+
+        # run twice
+        time.sleep(0.0001)
+        urlwatcher.run_jobs()
+        cache_storage._copy_temp_to_permanent(delete=True)
+        guid = urlwatcher.jobs[0].get_guid()
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 2
+        timestamps = list(history.values())
+        # returned in reverse order
+        assert timestamps[1] < timestamps[0]
+
+        # clean cache without using clean_all
+        delattr(CacheSQLite3Storage, 'clean_all')
+        cache_storage.clean_cache([guid])
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 1
+        timestamp = list(history.values())[0]
+        # is it the most recent?
+        assert timestamp == timestamps[0]
     finally:
         cache_storage.close()
 
@@ -327,5 +358,60 @@ def test_clean_and_history_data_minidb():
         # get history with zero count
         history = cache_storage.get_history_data(guid, count=0)
         assert history == {}
+
+        # delete
+        cache_storage.delete(guid)
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 0
+    finally:
+        cache_storage.close()
+
+
+def test_cache_dir_storage(tmp_path):
+    jobs_file = data_dir.joinpath('jobs-time.yaml')
+
+    config_storage = YamlConfigStorage(config_file)
+    cache_storage = CacheDirStorage(tmp_path)
+    jobs_storage = YamlJobsStorage(jobs_file)
+
+    urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file, True)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+
+    if os.name == 'nt':
+        urlwatcher.jobs[0].command = 'echo %time% %random%'
+
+    try:
+        # run once
+        urlwatcher.run_jobs()
+
+        # run twice
+        time.sleep(0.0001)
+        urlwatcher.run_jobs()
+        guid = urlwatcher.jobs[0].get_guid()
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 1
+
+        # clean
+        cache_storage.clean(guid)
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 1
+
+        # delete
+        cache_storage.delete(guid)
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 0
+
+        # run once and delete_latest
+        urlwatcher.run_jobs()
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 1
+        cache_storage.delete_latest(guid)
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 0
+
+        # get history with zero count
+        history = cache_storage.get_history_data(guid, count=0)
+        assert history == {}
+
     finally:
         cache_storage.close()
