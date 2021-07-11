@@ -17,7 +17,7 @@ from ftplib import FTP  # nosec: B402
 from http.client import responses as response_names
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
-from urllib.parse import urldefrag, urlparse, urlsplit
+from urllib.parse import urldefrag, urlencode, urlparse, urlsplit
 
 import html2text
 
@@ -101,7 +101,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     compared_versions: Optional[int] = None
     contextlines: Optional[int] = None
     cookies: Optional[Dict[str, str]] = None
-    data: Optional[Union[bytes, str]] = None
+    data: Optional[Union[str, Dict[str, str]]] = None
     deletions_only: Optional[bool] = None
     diff_filter: Optional[Union[str, List[Union[str, Dict[str, Any]]]]] = None
     diff_tool: Optional[str] = None
@@ -413,15 +413,15 @@ class UrlJob(Job):
             self.headers['Cache-Control'] = 'max-age=172800'
             self.headers['Expires'] = email.utils.formatdate()
 
-        if self.method is None:
-            self.method = 'GET'
-
         if self.data is not None:
             if self.method is None:
                 self.method = 'POST'
             if 'Content-Type' not in self.headers:
                 self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
             logger.info(f'Job {self._index_number}: Sending POST request to {self.url}')
+
+        if self.method is None:
+            self.method = 'GET'
 
         if self.http_proxy is not None:
             proxies['http'] = self.http_proxy
@@ -584,10 +584,12 @@ class BrowserJob(Job):
         'block_elements',
         'chromium_revision',
         'cookies',
+        'data',
         'headers',
         'http_proxy',
         'https_proxy',
         'ignore_https_errors',
+        'method',
         'navigate',
         'switches',
         'timeout',
@@ -662,8 +664,6 @@ class BrowserJob(Job):
         import pyppeteer.network_manager
         from pyppeteer.errors import PageError
 
-        headers = self.headers if self.headers else {}
-
         # Setting of 'If-None-Match' or 'If-Modified-Since' headers can trigger a 'net::ERR_ABORTED [...]'
         # browsing error that is returned by page.goto as a PageError(); cannot find a workable way to determine whether
         # it's due to an HTTP 304 Not Modified code (goto) or something else (bad) as PageError only passes the text,
@@ -692,8 +692,10 @@ class BrowserJob(Job):
                     f':{urlsplit(proxy).port}' if urlsplit(proxy).port else ''
                 )
                 args.append(f'--proxy-server={proxy_server}')
+
         if self.user_data_dir:
             args.append(f'--user-data-dir={self.user_data_dir}')
+
         if self.switches:
             if isinstance(self.switches, str):
                 self.switches = self.switches.split(',')
@@ -718,11 +720,24 @@ class BrowserJob(Job):
         # browse to page and get content
         page = await browser.newPage()
 
-        if headers:
-            logger.debug(f'Job {self._index_number}: setExtraHTTPHeaders={headers}')
-            await page.setExtraHTTPHeaders(headers)
+        self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
+        if 'User-Agent' not in self.headers:
+            self.headers['User-Agent'] = __user_agent__
+
+        if self.data is not None:
+            if self.method is None:
+                self.method = 'POST'
+            if 'Content-Type' not in self.headers:
+                self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            logger.info(f'Job {self._index_number}: Sending POST request to {self.url}')
+
+        if self.headers:
+            logger.debug(f'Job {self._index_number}: setExtraHTTPHeaders={self.headers}')
+            await page.setExtraHTTPHeaders(self.headers)
+
         if self.cookies:
             await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
+
         if self.http_proxy or self.https_proxy:
             proxy_username = urlsplit(proxy).username if urlsplit(proxy).username else ''
             proxy_password = urlsplit(proxy).password if urlsplit(proxy).password else ''
@@ -733,11 +748,30 @@ class BrowserJob(Job):
                     f'username={proxy_username}, password={proxy_password}'  # type: ignore[str-bytes-safe]
                 )
         options: Dict[str, Any] = {}
+
         if self.timeout:
             options['timeout'] = self.timeout * 1000
+
         if self.wait_until:
             options['waitUntil'] = self.wait_until
-        if self.block_elements:  # FIXME: Pyppeteer freezes on certain sites if this is on; contribute if you know why
+
+        if self.method and self.method != 'GET':
+
+            async def post_intercept(request_event: pyppeteer.network_manager.Request) -> None:
+                logger.info(
+                    f'Job {self._index_number}: intercepted request with resource_type'
+                    f'={request_event.resourceType}; overriding request method to {self.method}'
+                )
+                data = urlencode(self.data)
+                await request_event.continue_(overrides={'method': self.method, 'postData': data})
+
+            await page.setRequestInterception(True)
+            page.on(
+                'request', lambda request_event: asyncio.create_task(post_intercept(request_event))
+            )  # inherited from pyee.EventEmitter
+
+        if self.block_elements and not self.method or self.method == 'GET':
+            # FIXME: Pyppeteer freezes on certain sites if this is on; contribute if you know why
             if isinstance(self.block_elements, str):
                 self.block_elements = self.block_elements.split(',')
             if not isinstance(self.block_elements, list):

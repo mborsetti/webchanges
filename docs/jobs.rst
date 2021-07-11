@@ -1,8 +1,8 @@
 .. _jobs:
 
-====
+****
 Jobs
-====
+****
 Each job contains the source of the data to be monitored (:ref:`URL <url>` or :ref:`command <command>`) and related
 directives, plus directives on transformations to apply to the data (:ref:`filters <filters>`) once retrieved.
 
@@ -26,7 +26,7 @@ and things to look for when using YAML. A more comprehensive syntax explanation 
 
 
 * There must be a space after the ``:`` between the key name and its value. The lack of such space is often the
-  reason behind "Unknown filter kind" errors with no arguments
+  reason behind ^Unknown filter kind^ errors with no arguments
 
 .. code-block:: yaml
 
@@ -45,11 +45,11 @@ and things to look for when using YAML. A more comprehensive syntax explanation 
 .. code-block:: yaml
 
    name: This is a human-readable name/label of the job  # and this is a remark
-   name: "This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark"
-   name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
+   name: ^This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark^
+   name: ^I can escape \^double\^ quotes within a double quoted string which also has a colon: followed by a space^
 
 * You can learn more about quoting special characters `here <https://www.yaml.info/learn/quote.html#flow>`__ (the
-  library we use supports YAML 1.1, and our examples use "flow scalars"). URLs and XPaths are always safe and don't
+  library we use supports YAML 1.1, and our examples use ^flow scalars^). URLs and XPaths are always safe and don't
   need to be enclosed in quotes.
 
 For additional information on YAML, see the :ref:yaml_syntax and the references at the bottom of that page.
@@ -72,9 +72,9 @@ HTML or XML, :program:`webchanges` will automatically use the pages' title (up t
 .. _url:
 
 URL
----
-This is the main job type -- it retrieves a document, generally from a web server but in addition to the ``http`` and
-``https`` URL schemes,  ``file``, which retrieves a file and ``ftp`` are supported as well.
+===
+This is the main job type. It retrieves a document from a web server (``https://`` and ``http://``), an ftp server
+(``ftp://``), or a local file (``file://``).
 
 .. code-block:: yaml
 
@@ -92,8 +92,9 @@ This is the main job type -- it retrieves a document, generally from a web serve
 
 
 .. caution:: Due to a legacy architectural choice, URLs must be **unique** to each job. If for some reason you want to
-   monitor the same resource multiple times, make each job's URL unique by adding # at the end of the link followed by a
-   unique remark (the # and everything after is discarded by a web server, but captured by :program:`webchanges`):
+   monitor the same resource multiple times, make each job's URL unique by e.g. adding # at the end of the link
+   followed by a unique remark (the # and everything after is discarded by a web server, but captured by
+   :program:`webchanges`):
 
    .. code-block:: yaml
 
@@ -104,13 +105,13 @@ This is the main job type -- it retrieves a document, generally from a web serve
       url: https://example.org/#2
 
 .. versionchanged:: 3.6
-   Added support for URLs starting with ``ftp://``.
+   Added support for ``ftp://`` URIs.
 
 
 .. _use_browser:
 
-JavaScript rendering
-""""""""""""""""""""
+JavaScript rendering (``use_browser: true``)
+--------------------------------------------
 If you're monitoring a website that requires for its content to be rendered with JavaScript in order to monitor the data
 you are interested in, add the directive ``use_browser: true`` to the job:
 
@@ -120,125 +121,325 @@ you are interested in, add the directive ``use_browser: true`` to the job:
    url: https://example.org/
    use_browser: true
 
-Important notes for use_browser directive
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* The optional `Pyppeteer <https://github.com/pyppeteer/pyppeteer>`__ Python package must be installed; run
-  ``pip install webchanges[use_browser]`` to install it
-* Additional OS-specific dependencies may be required as well (see :ref:`here <optional_packages>`);
-  missing dependencies are often the cause of the ``pyppeteer.errors.BrowserError:
-  Browser closed unexpectedly`` error; see `here
-  <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`__
-* As this job type
-  renders the page in a headless Chromium instance, it requires **massively more resources** and time than a simple
-  ``url`` job; use it only on pages where omitting ``use_browser: true`` does not give the right results
-* **Pro tip**: in many instances you can get the data you want to monitor from an API (URL) called by the site during
-  page loading instead of using ``use_browser: true`` on a page; monitor page load with a browser's Developer's Tools
-  (e.g. `Chrome DevTools  <https://developers.google.com/web/tools/chrome-devtools>`__) to see if this is the case
-* The first time you run a job with ``use_browser:true``, `Pyppeteer` needs to download the `Chromium browser
-  <https://www.chromium.org/getting-involved/download-chromium>`__ (~150 MiB) if it is not found on the system, and
-  therefore it could take some time (and bandwidth); to avoid this, ensure that a suitable Chromium binary is
-  pre-installed; one way to do this is to run ``pyppeteer-install``
-* At the moment, the Chromium version used by `Pyppeteer` does not support ARM devices (e.g. Raspberry Pi) but only
-  supports Linux (x86_64), macOS (x86_64) and Windows (both x86 and x64); see `this issue
-  <https://github.com/pyppeteer/pyppeteer/issues/155>`__ in the `Pyppeteer` project.
-* If you get ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error, see
-  :ref:`here <pyppeteer_target_closed>` for a potential solution
+.. warning::
+   As this job type renders the page in a headless Chromium instance, it requires **massively more resources** and
+   time than a simple ``url`` job; use it only on pages where omitting ``use_browser: true`` does not give the right
+   results.
+
+.. tip::
+   In many instances you can get the data you want to monitor from a REST API (URL) called by the site during its
+   page loading. Monitor the page load with a browser's Developer's Tools (e.g. `Chrome DevTools
+   <https://developers.google.com/web/tools/chrome-devtools>`__) to see if this is the case.
+
+.. important::
+   * The optional `Pyppeteer <https://github.com/pyppeteer/pyppeteer>`__ Python package must be installed; run
+     ``pip install webchanges[use_browser]`` to install it.
+   * Additional OS-specific dependencies may be required as well (see :ref:`here <optional_packages>`);
+     missing dependencies are often the cause of the ``pyppeteer.errors.BrowserError:
+     Browser closed unexpectedly`` error; see `here
+     <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch>`__.
+   * The first time you run a job with ``use_browser:true``, :program:`Pyppeteer` needs to download the `Chromium
+     browser <https://www.chromium.org/getting-involved/download-chromium>`__ (~150 MiB) if it is not found on the
+     system, and therefore it could take some time (and bandwidth).
+   * If you receive ``pyppeteer.errors.NetworkError: Protocol error Runtime.callFunctionOn: Target closed.`` error, see
+     :ref:`here <pyppeteer_target_closed>` for a potential solution.
+
+.. note::
+   * At the moment, the Chromium project does not provide builds for ARM devices (e.g. Raspberry Pi) but only for
+     Linux (x86_64), macOS (x86_64) and Windows (both x86 and x64); see `this issue
+     <https://github.com/pyppeteer/pyppeteer/issues/155>`__.
 
 
 Required directives
-"""""""""""""""""""
-- ``url``: The URL to the web document to monitor
+-------------------
+url
+^^^
+The URI to resource to monitor.  ``https://``, ``http://``, ``ftp://`` and ``file://`` are supported.
 
-Optional directives
-"""""""""""""""""""
-For all ``url`` jobs:
 
-- ``use_browser``: If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering
-- ``cookies``: Cookies to send with the request (a dict) (see :ref:`here <cookies>`). `Changed in version 3.0:` Works
-  for all ``url`` jobs.
-- ``headers``: Headers to send along with the request (a dict)  (see :ref:`here <headers>`). `Changed in version 3.0:`
-  Works for all ``url`` jobs.
-- ``http_proxy``: Proxy server to use for HTTP requests (e.g. \http://username:password@proxy.com:8080). `Changed in
-  version 3.0:` Works for all ``url`` jobs.
-- ``https_proxy``: Proxy server to use for HTTPS requests. `Changed in version 3.0:` Works for all ``url`` jobs.
-- ``timeout``: Override the default timeout, in seconds (see :ref:`here <timeout>`). `Changed in version 3.0:` Works for
-  all ``url`` jobs.
-- ``user_visible_url``: Use this text in reports (e.g. when watched URL is a REST API endpoint but you want to link to
-  the webpage instead). `New in version 3.0.3.`
-- ``note``: Information added under the header in reports. `New in version 3.2.`
-- ``ignore_connection_errors``: Ignore (temporary) connection errors (true/false) (see :ref:`here <ignore_errors>`).
-  `Changed in version 3.5:` Works with ``use_browser: true``.
-- ``ignore_timeout_errors``: Do not report errors when the timeout is hit (true/false) (see :ref:`here
-  <ignore_errors>`). `Changed in version 3.5:` Works with ``use_browser: true``.
-- ``ignore_too_many_redirects``: Ignore redirect loops (true/false) (see :ref:`here <ignore_errors>`). `Changed in
-  version 3.5:` Works with ``use_browser: true``.
-- ``ignore_http_error_codes``: List of HTTP errors to ignore (see :ref:`here <ignore_errors>`). `Changed in version
-  3.5:` Works with ``use_browser: true``.
+Optional directives - all ``url`` jobs
+--------------------------------------
+These directives are available for all ``url`` jobs:
 
-For ``url`` jobs that do not have ``use_browser`` (or it is set to ``false``):
 
-- ``method``: `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use
-  (one of ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``; default: ``GET``, unless
-  the ``data`` directive, below, is set)
-- ``data``: form-encoded data to send with a ``POST`` `HTTP request method
-  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ (see :ref:`here <post>`); also sets
-  ``method`` directive  to ``POST`` and a `Content-type
-  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` to
-  ``application/x-www-form-urlencoded``)
-- ``no_redirects``: Disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection (true/false). `New in version 3.2.7`
-- ``ssl_no_verify``: Do not verify SSL certificates (true/false) (see :ref:`here <ssl_no_verify>`)
-- ``ignore_cached``: Do not use cache control (ETag/Last-Modified) values (true/false)
-- ``encoding``: Override the character encoding from the server (see :ref:`here <encoding>`)
+use_browser
+^^^^^^^^^^^
+Whether to use a Chromium web browser (true/false). Defaults to false.
 
-For ``url`` jobs that have ``use_browser: true``:
+If true, renders the URL via a JavaScript-enabled web browser and extracts HTML after rendering (see
+:ref:`above <use_browser>`).
 
-- ``chromium_revision``: The revision number of the Chromium browser to use (see note :ref:`here
-  <pyppeteer_chromium_revision>`). This can be different for different OSs, in which case is a list of one or more of
-  the following keys: ``linux``, ``mac``, ``win32`` and ``win64``. `New in version 3.0.` `Changed in version 3.1:` Added
-  keys for different OSs.
-- ``ignore_https_errors``: Ignore HTTPs errors (true/false). `New in version 3.0.`
-- ``user_data_dir``: A path to a pre-existing user directory that Chromium should be using. `New in version 3.0.`
-- ``switches``: Additional command line `switch(es) for Chromium
-  <https://peter.sh/experiments/chromium-command-line-switches/>`__ (list). `New in version 3.0.`
-- ``wait_until``: When to consider navigation succeeded (``load``, ``domcontentloaded``, ``networkidle0``, or
-  ``networkidle2``) (see
-  `documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__). `New in version
-  3.0.`
-- ``wait_for_navigation``: Wait until navigation lands on a URL starting with this text (e.g. due to redirects); helps
-  to avoid the ``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation``
-  error. If ``wait_for`` is also used, ``wait_for_navigation`` is applied first. Cannot be used with ``block_elements``.
-  `New in version 3.2.`
-- ``wait_for``: Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath
-  string is matched, before getting the HTML content (see `documentation
-  <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds). If
-  ``wait_for_navigation`` is also used, ``wait_for`` is applied after. Cannot be used with ``block_elements``.
-- ``block_elements`` (⚠ experimental feature): Do not request (download) specified `resource types
-  <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ as to
-  speed up retrieval of the content (list). Only resource types `supported by Chromium
-  <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed. See
-  :ref:`here <pyppeteer_block_elements>`. `New in version 3.2.`
-- Setting the system environment variable ``PYPPETEER_NO_PROGRESS_BAR`` to true will prevent showing a download
-  progress bar if `Pyppeteer` needs to be downloaded; however, this will cause a `crash
-  <https://github.com/pyppeteer/pyppeteer/pull/224>`__ in Pyppetter ≤ 0.2.25
+cookies
+^^^^^^^
+Cookies to send with the request (a dict).
 
-Known issues
-""""""""""""
-* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
-  stdout (terminal console). This does not affect :program:`webchanges` as all data is downloaded, and hopefully it will
-  be fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+See examples :ref:`here <cookies>`.
 
-  ``Future exception was never retrieved``
-  ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
-  ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
+.. versionchanged:: 3.0
+   Works for all url jobs, including those with use_browser: true.
 
+
+headers
+^^^^^^^
+Headers to send along with the request (a dict).
+
+See examples :ref:`here <headers>`.
+
+.. versionchanged:: 3.0
+   Works for all url jobs, including those with use_browser: true.
+
+http_proxy
+^^^^^^^^^^
+Proxy server to use for HTTP requests (a string).
+
+E.g. \http://username:password@proxy.com:8080.
+
+.. versionchanged:: 3.0
+   Works for all url jobs, including those with use_browser: true.
+
+https_proxy
+^^^^^^^^^^^
+Proxy server to use for HTTPS (i.e. secure) requests (a string).
+
+E.g. \https://username:password@proxy.com:8080.
+
+.. versionchanged:: 3.0
+   Works for all url jobs, including those with use_browser: true.
+
+timeout
+^^^^^^^
+Override the default timeout, in seconds (a number).
+
+See example :ref:`here <timeout>`.
+
+.. versionchanged:: 3.0
+   Works for all url jobs, including those with use_browser: true.
+
+method
+^^^^^^
+`HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use (one of ``GET``,
+``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``).
+
+Defaults to ``GET``, unless the ``data`` directive, below, is set.
+
+.. versionchanged:: 3.8
+   Works for all url jobs, including those with use_browser: true.
+
+data
+^^^^
+Data to send with a ``POST`` `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ (a
+dict or a string).
+
+This directive also sets the ``method`` directive  to ``POST`` and, if no `Content-type
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header is otherwise specified, such header
+to ``application/x-www-form-urlencoded``.
+
+See example :ref:`here <post>`.
+
+.. versionchanged:: 3.8
+   Works for all url jobs, including those with use_browser: true.
+
+user_visible_url
+^^^^^^^^^^^^^^^^
+Text to use in reports instead of contents of ``url`` (a string).
+
+Useful e.g. when watched URL is a REST API endpoint but you want to link to the webpage instead.
+
+.. versionadded:: 3.0.3
+
+note
+^^^^
+Informational note added under the header in reports (a string).
+
+.. versionadded:: 3.2
+
+ignore_connection_errors
+^^^^^^^^^^^^^^^^^^^^^^^^
+Ignore (temporary) connection errors (true/false). Defaults to false.
+
+See more :ref:`here <ignore_errors>`.
+
+.. versionchanged:: 3.5
+   Works for all url jobs, including those with use_browser: true.
+
+ignore_timeout_errors
+^^^^^^^^^^^^^^^^^^^^^
+Do not report errors when the timeout is hit (true/false). Defaults to false.
+
+See more "ref:`here <ignore_errors>`.
+
+.. versionchanged:: 3.5
+   Works for all url jobs, including those with use_browser: true.
+
+ignore_too_many_redirects
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Ignore redirect loops (true/false). Defaults to false.
+
+See more `here <ignore_errors>`.
+
+.. versionchanged:: 3.5
+   Works for all url jobs, including those with use_browser: true.
+
+ignore_http_error_codes
+^^^^^^^^^^^^^^^^^^^^^^^
+List of HTTP errors to ignore (a list).
+
+See more :ref:`here <ignore_errors>`.
+
+.. versionchanged:: 3.5
+   Works for all url jobs, including those with use_browser: true.
+
+
+Optional directives - without ``use_browser: true``
+---------------------------------------------------
+These directives are available only for ``url`` without ``use_browser: true``:
+
+no_redirects
+^^^^^^^^^^^^
+Disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection (true/false). Defaults to false.
+
+.. versionadded:: 3.2.7
+
+ssl_no_verify
+^^^^^^^^^^^^^
+Do not verify SSL certificates (true/false).
+
+See more :ref:`here <ssl_no_verify>`.
+
+ignore_cached
+^^^^^^^^^^^^^
+Do not use cache control values (ETag/Last-Modified) (true/false). Defaults to false.
+
+encoding
+^^^^^^^^
+Character encoding to use, overriding the character encoding from the server (a string).
+
+See more :ref:`here <encoding>`.
+
+Optional directives - with ``use_browser: true``
+---------------------------------------------------
+These directives are available only for ``url`` jobs with ``use_browser: true`` (i.e. using :program:`Pyppeteer`):
+
+chromium_revision
+^^^^^^^^^^^^^^^^^
+The revision number of the Chromium browser to use (a string, number or dict).
+
+This can be different for different OSs, in which case is a dict with of one or more of the following keys: ``linux``,
+``mac``, ``win32`` and ``win64``.
+
+See note :ref:`here <pyppeteer_chromium_revision>`.
+
+.. versionadded:: 3.0
+.. versionchanged:: 3.1
+   Added keys for different OSs.
+
+ignore_https_errors
+^^^^^^^^^^^^^^^^^^^
+Ignore HTTPs errors (true/false). Defaults to false.
+
+.. versionadded:: 3.0
+
+user_data_dir
+^^^^^^^^^^^^^^^^^^^
+A path to a pre-existing user directory that Chromium should be using (a string).
+
+.. versionadded:: 3.0
+
+switches
+^^^^^^^^^^^^^^^^^^^
+Additional command line `switch(es) for Chromium
+<https://peter.sh/experiments/chromium-command-line-switches/>`__ (a list).
+
+.. versionadded:: 3.0
+
+wait_until
+^^^^^^^^^^^^^^^^^^^
+The value of when to consider navigation succeeded (a string).
+
+Must be one of ``load``, ``domcontentloaded``, ``networkidle0``, or ``networkidle2``.
+
+See `documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__.
+
+.. versionadded:: 3.0
+
+wait_for_navigation
+^^^^^^^^^^^^^^^^^^^
+Wait until navigation lands on a URL starting with this text (a string).
+
+Useful to avoid capturing intermediate to redirects.
+
+If ``wait_for`` is also used, ``wait_for_navigation`` is applied first.
+
+Cannot be used with ``block_elements``.
+
+Also helps to avoid the
+``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation`` error.
+
+.. versionadded:: 3.2
+
+wait_for
+^^^^^^^^^^^^^^^^^^^
+Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath string is matched,
+before getting the HTML content (a number or string).
+
+See `documentation
+<https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds).
+
+If ``wait_for_navigation`` is also used, ``wait_for`` is applied after.
+
+Cannot be used with ``block_elements``.
+
+.. versionadded:: 3.2
+
+block_elements
+^^^^^^^^^^^^^^^^^^^
+⚠ experimental feature
+
+Do not request (download) specified `resource types
+<https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (a list of
+strings).
+
+Only resource types `supported by Chromium
+<https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed.
+
+In most instances, it speeds up retrieval of the content.
+
+See :ref:`here <pyppeteer_block_elements>`.
+
+.. versionadded:: 3.2
+
+
+System environment values - ``use_browser: true``
+-------------------------------------------------
+
+PYPPETEER_NO_PROGRESS_BAR
+^^^^^^^^^^^^^^^^^^^^^^^^^
+When set to true, it will prevent showing a download progress bar if :program:`Pyppeteer` needs to download the Chromium
+executable.
+
+.. warning::
+   Setting ``PYPPETEER_NO_PROGRESS_BAR`` to true with Pyppetter ≤ 0.2.25 will cause it to `crash
+   <https://github.com/pyppeteer/pyppeteer/pull/224>`__.
+
+
+Known issues - ``use_browser: true``
+-------------------------------------------------
+``url`` jobs with ``use_browser: true`` will at times display the below error message in stdout (terminal console)::
+
+   Future exception was never retrieved
+   future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>
+   pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.
+
+The error does not affect :program:`webchanges` at all, and hopefully it will be fixed in the future (see
+`Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
 
 .. _command:
 
 Command
--------
-This job type allows you to watch the output of arbitrary shell commands, which is useful for e.g. monitoring files
-in a folder, output of scripts that query external devices (RPi GPIO), etc.
+=======
+This job type allows you to watch the output of arbitrary shell commands. This could be useful for monitoring files
+in a folder, output of scripts that query external devices (RPi GPIO), and many other applications.
 
 .. code-block:: yaml
 
@@ -247,8 +448,6 @@ in a folder, output of scripts that query external devices (RPi GPIO), etc.
 
 .. _important_note_for_command_jobs:
 
-Important note for command jobs
-"""""""""""""""""""""""""""""""
 .. important:: When :program:`webchanges` is run in Linux, for security purposes a ``command`` job will only run if
    the job file is both owned by the same user running :program:`webchanges` and can **only** be written by such user.
    To change the ownership and the access permissions of the file (i.e. remove write permission for the group and all
@@ -265,44 +464,94 @@ Important note for command jobs
      making the above changes, similarly with ``$(id -g -n)`` for the group.
 
 Required directives
-"""""""""""""""""""
-- ``command``: The shell command to execute
-
-Optional directives
-"""""""""""""""""""
-- none
+-------------------
+command
+^^^^^^^
+The shell command to execute.
 
 Optional directives (for all job types)
----------------------------------------
+=======================================
 These optional directives apply to all job types:
 
-- ``name``: Human-readable name/label of the job (if not specified and the job is ``url`` and the content is HTML or
-  XML, the title (up to 60 characters) will be used; otherwise the URL or command). `Changed in version 3.0:`
-  Added auto-detect <title> tag in HTML or XML.
-- ``max_tries``: Number of consecutive times the job has to fail before reporting an error (default: 1); see
-  :ref:`below <max_tries>`
-- ``diff_tool``: Command to an external tool for generating diff text. See example usage :ref:`here <word_based_differ>`
-- ``compared_versions``: Number of :ref:`versions to compare <compared_versions>` for similarity
-- ``filter``: :ref:`filters` (if any) to apply to the output (can be tested with ``--test``)
-- ``diff_filter``: :ref:`diff_filters` (if any) applied to the diff result (can be tested with ``--test-diff``)
-- ``additions_only``: Filters unified diff output to keep only :ref:`addition lines <additions_only>`
-- ``deletions_only``: Filters unified diff output to keep only :ref:`deleted lines <deletions_only>`
-- ``is_markdown``: Lets html reporter know that data is markdown and should be reconstructed (default: false, but could
-  be set by a filter such as ``html2text``)
+name
+----
+Human-readable name/label of the job used in reports (a string).
 
-.. _max_tries:
+If this directive is not specified, the label used in reports will either be the ``url`` or the ``command`` itself or,
+for ``url`` jobs retrieving HTML or XML data, up to 60 character of the contents of the <title> field if one is found.
+
+.. versionchanged:: 3.0
+   Added auto-detect <title> tag in HTML or XML.
 
 max_tries
-"""""""""
+---------
+Number of consecutive times the job has to fail before reporting an error (an integer). Defaults to 1.
+
 Due to legacy naming, this directive doesn't do what intuition would tell you it should do, rather, it tells
 :program:`webchanges` **not** to report a job error until the job has failed for the number of consecutive times of
-``max_tries``. Specifically, when a job fails for `any` reason, :program:`webchanges` increases an internal counter;
+``max_tries``.
+
+Specifically, when a job fails for `any` reason, :program:`webchanges` increases an internal counter;
 it will report an error only when this counter reaches or exceeds the number of ``max_tries`` (default: 1, i.e.
 at the first error encountered). The internal counter is reset to 0 when the job succeeds.
 
 For example, if you set a job with ``max_tries: 12`` and run :program:`webchanges` every 5 minutes, you will only get
 notified if the job has failed every single time during the span of one hour (5 minutes * 12).
 
+filter
+------
+Filter(s) to apply to the data retrieved (a list of dicts).
+
+See :ref:`here <filters>`.
+
+Can be tested with ``--test``.
+
+diff_tool
+---------
+Command to an external tool for generating diff text (a string).
+
+See example usage :ref:`here <word_based_differ>`.
+
+.. versionchanged:: 3.0.1
+   * Reports now show date/time of diffs generated using ``diff_tool``.
+   * Output from ``diff_tool: wdiff`` is colorized in html reports.
+
+compared_versions
+-----------------
+Number of stored versions to compare to for similarity (an integer).
+
+See :ref:`here <compared_versions>`.
+
+diff_filter
+-----------
+Filter(s) to be applied to the diff result (a list of dicts).
+
+See :ref:`here <diff_filters>`.
+
+Can be tested with ``--test-diff``.
+
+additions_only
+--------------
+Filter the unified diff output to keep only addition lines.
+
+See :ref:`here <additions_only>`.
+
+.. versionadded:: 3.0
+
+deletions_only
+--------------
+Filter the unified diff output to keep only deleted lines.
+
+See :ref:`here <deletions_only>`.
+
+.. versionadded:: 3.0
+
+is_markdown
+-----------
+Lets html reporter know that data is markdown and should be reconstructed. Defaults to false unless set by a filter
+such as ``html2text``.
+
+
 Setting default directives
-""""""""""""""""""""""""""
-See :ref:`job_defaults` for how to set default directives for all jobs
+==========================
+See :ref:`here <job_defaults>` for how to set default directives for all jobs.

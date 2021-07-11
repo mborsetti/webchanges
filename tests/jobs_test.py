@@ -97,6 +97,23 @@ TEST_JOBS = [
     ),
     (
         {
+            'url': 'https://postman-echo.com/post',
+            'name': 'testing POST job without use_browser',
+            'data': {'fieldname': 'fieldvalue'},
+        },
+        '"json":{"fieldname":"fieldvalue"}',
+    ),
+    (
+        {
+            'url': 'https://postman-echo.com/post',
+            'name': 'testing POST job with use_browser',
+            'use_browser': True,
+            'data': {'fieldname': 'fieldvalue'},
+        },
+        '"json":{"fieldname":"fieldvalue"}',
+    ),
+    (
+        {
             'url': data_dir.joinpath('file-test.txt').as_uri(),
         },
         'This is text\n',

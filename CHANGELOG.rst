@@ -37,25 +37,28 @@ Unreleased
 
 Added
 -----
-* Filter ``execute`` (and ``shellpipe``) sets more environment variables; see improved `documentation
-  <https://webchanges.readthedocs.io/en/stable/filters.html#execute>`__ (including more examples)
-* Configuration file now has a ``report`` ``tz`` key to set the timezone for diff reports (useful if running e.g. on
+* ``url`` jobs having ``use_browser: true`` (i.e. using `Pyppeteer`) now recognize ``data`` and ``method`` directives,
+  e.g. to make a ``POST`` HTTP request using a browser with JavaScript support.
+* ``execute`` filter (and ``shellpipe``) sets more environment variables; see improved `documentation
+  <https://webchanges.readthedocs.io/en/stable/filters.html#execute>`__ (including more examples).
+* ``tz`` key for  ``report`` in configuration file to set the timezone for diff reports (useful if running e.g . on
   cloud server in different timezone). See
-  `documentation <https://webchanges.readthedocs.io/en/stable/reporters.html#tz>`__
-* Error message is now displayed if configuration file has invalid directives (e.g. typos)
-* Job indices can now be negative; for example, run ``webchanges -1`` to only run the last job of your jobs list, or
-  ``webchanges --test -2`` to test the second to last job of your jobs list
-* If an HTTP client error response is received, the text of the response is now printed along with the error
+  `documentation <https://webchanges.readthedocs.io/en/stable/reporters.html#tz>`__.
+* Check configuration file for invalid directives (e.g. typos).
+* Neegative job indices; for example, run ``webchanges -1`` to only run the last job of your jobs list, or
+  ``webchanges --test -2`` to test the second to last job of your jobs list.
+* Print text of response whenever a HTTP client error (4xx) response is received.
 
 Fixed
 -----
 * The ``html2text`` filter's method ``strip_tags`` was returning HTML character references (e.g. &gt;, &#62;, &#x3e;)
-  instead of the corresponding Unicode characters
+  instead of the corresponding Unicode characters.
 
 Internals
 ---------
-* ``--verbose`` will now list directives 'missing' from the configuration file for which default values have been used
-* ``tox`` testing can now be run in parallel using ``tox --parallel``
+* ``--verbose`` will now list configuration keys 'missing' from the file for which default values have been used.
+* ``tox`` testing can now be run in parallel using ``tox --parallel``.
+
 
 Version 3.7.1
 ====================
@@ -557,8 +560,9 @@ Relative to `urlwatch` 2.21:
 * Chromium can be directed to ignore HTTPs errors with ``ignore_https_errors``
 * Chromium can be directed as to when to consider a page loaded with ``wait_until``
 * Additional command line arguments can be passed to Chromium with ``switches``
-* New report filters ``additions_only`` and ``deletions_only`` allow to track only content that was added (or
-  deleted) from the source
+* New ``additions_only`` directive to report only added lines (useful when monitoring only new content)
+* New ``deletions_only`` directive to report only deleted lines
+* New ``contextlines`` directive to set the number of context lines in the unified diff
 * Support for Python 3.9
 * Backward compatibility with `urlwatch` 2.21 (except running on Python 3.5 or using ``lynx``, which is replaced by
   internal ``html2text`` filter)
@@ -576,9 +580,6 @@ Relative to `urlwatch` 2.21:
   where they can be more easily edited (they are indexed there) and backed up
 * The ``html2text`` filter defaults to using the Python ``html2text`` package (with optimized defaults) instead of
   ``re``
-* New ``additions_only`` directive to report only added lines (useful when monitoring only new content)
-* New ``deletions_only`` directive to report only deleted lines
-* New ``context_line`` directive to set the number of context lines in the unified diff
 * ``keyring`` Python package is no longer installed by default
 * ``html2text`` and ``markdown2`` Python packages are installed by default
 * Installation of Python packages required by a feature is now made easier with pip extras (e.g. ``pip install -U

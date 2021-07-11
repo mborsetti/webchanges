@@ -3,7 +3,7 @@
    This URL also needs to be added to the file tests/data/docs_filters_test.py along with the "before" and "after" data
    that will be used for testing.
    This ensures that all examples work now and in the future.
-   Please keep code_block line length to 106 to avoid horizontal scrolling lines
+   Please keep code_block line length to 106 to avoid horizontal scrolling lines.
 
 .. _filters:
 
@@ -12,8 +12,8 @@ Filters
 =======
 Filters can be applied at either of two stages of processing:
 
-* Applied to the downloaded data before storing it and diffing for changes (``filter``)
-* Applied to the diff result before reporting the changes (``diff_filter``)
+* Applied to the downloaded data before storing it and diffing for changes (``filter``).
+* Applied to the diff result before reporting the changes (``diff_filter``).
 
 While creating your job pipeline, you might want to preview what the filtered output looks like. For filters applied
 to the data, you can run :program:`webchanges` with the ``--test-filter`` command-line option, passing in the index
@@ -41,63 +41,63 @@ At the moment, the following filters are available:
 
 * To select HTML (or XML) elements:
 
-  - :ref:`css <css-and-xpath>`: Filter XML/HTML using CSS selectors
-  - :ref:`xpath <css-and-xpath>`: Filter XML/HTML using XPath expressions
-  - :ref:`element-by-class <element-by-…>`: Get all HTML elements by class
-  - :ref:`element-by-id <element-by-…>`: Get an HTML element by its ID
-  - :ref:`element-by-style <element-by-…>`: Get all HTML elements by style
-  - :ref:`element-by-tag <element-by-…>`: Get an HTML element by its tag
+  - :ref:`css <css-and-xpath>`: Filter XML/HTML using CSS selectors.
+  - :ref:`xpath <css-and-xpath>`: Filter XML/HTML using XPath expressions.
+  - :ref:`element-by-class <element-by-…>`: Get all HTML elements by class.
+  - :ref:`element-by-id <element-by-…>`: Get an HTML element by its ID.
+  - :ref:`element-by-style <element-by-…>`: Get all HTML elements by style.
+  - :ref:`element-by-tag <element-by-…>`: Get an HTML element by its tag.
 
 * To make HTML more readable:
 
-  - :ref:`html2text`: Convert HTML to plaintext
-  - :ref:`beautify`: Beautify HTML
+  - :ref:`html2text`: Convert HTML to plaintext.
+  - :ref:`beautify`: Beautify HTML.
 
 * To make PDFs readable:
 
-  - :ref:`pdf2text`: Convert PDF to plaintext
+  - :ref:`pdf2text`: Convert PDF to plaintext.
 
 * To extract text from images:
 
-  - :ref:`ocr`: Extract text from images
+  - :ref:`ocr`: Extract text from images.
 
 * To filter and/or make JSON more readable:
 
-  - :ref:`jq`: Filter ASCII JSON
-  - :ref:`format-json`: Reformat (pretty-print) JSON
+  - :ref:`jq`: Filter ASCII JSON.
+  - :ref:`format-json`: Reformat (pretty-print) JSON.
 
 * To make XML more readable:
 
-  - :ref:`format-xml`: Reformat (pretty-print) XML (using lxml.etree)
-  - :ref:`pretty-xml`: Reformat (pretty-print) XML (using Python's xml.minidom)
+  - :ref:`format-xml`: Reformat (pretty-print) XML (using lxml.etree).
+  - :ref:`pretty-xml`: Reformat (pretty-print) XML (using Python's xml.minidom).
 
 * To make iCal more readable:
 
-  - :ref:`ical2text`: Convert iCalendar to plaintext
+  - :ref:`ical2text`: Convert iCalendar to plaintext.
 
 * To make binary readable:
 
-  - :ref:`hexdump`: Display data in hex dump format
+  - :ref:`hexdump`: Display data in hex dump format.
 
 * To just detect changes:
 
-  - :ref:`sha1sum`: Calculate the SHA-1 checksum of the data
+  - :ref:`sha1sum`: Calculate the SHA-1 checksum of the data.
 
 * To edit/filter text:
 
   - :ref:`keep_lines_containing`: Keep only lines containing specified text or matching a `Python regular expression
-    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`delete_lines_containing`: Delete lines containing specified text or matching a `Python regular expression
-    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`re.sub`: Replace or remove text matching a `Python regular expression
-    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`strip`: Strip leading and/or trailing whitespace or specified characters (entire document, not line-by-line)
-  - :ref:`sort`: Sort lines
-  - :ref:`reverse`: Reverse the order of items (lines)
+  - :ref:`sort`: Sort lines.
+  - :ref:`reverse`: Reverse the order of items (lines).
 
 * Any custom script or program:
 
-  - :ref:`execute`: Run a program that filters the data (see also :ref:`shellpipe`, to be avoided)
+  - :ref:`execute`: Run a program that filters the data (see also :ref:`shellpipe`, to be avoided).
 
 Python programmers can write their own plug-in that could include filters; see :ref:`hooks`.
 
@@ -198,8 +198,8 @@ Limiting the returned items from a CSS Selector or XPath
 If you only want to return a subset of the items returned by a CSS selector or XPath filter, you can use two additional
 subfilters:
 
-* ``skip``: How many elements to skip from the beginning (default: 0)
-* ``maxitems``: How many elements to return at most (default: no limit)
+* ``skip``: How many elements to skip from the beginning (default: 0).
+* ``maxitems``: How many elements to return at most (default: no limit).
 
 For example, if the page has multiple elements, but you only want to select the second and third matching element (skip
 the first, and return at most two elements), you can use this filter:
@@ -222,12 +222,12 @@ desktop version in the same HTML document, and shows/hides one via CSS depending
 
 Optional directives
 """""""""""""""""""
-* ``selector`` (for css) or ``path`` (for xpath) [can be entered as the value of the `xpath` or `css` directive]
-* ``method``: Either of ``html`` (default) or ``xml``
-* ``namespaces`` Mapping of XML namespaces for matching
-* ``exclude``: Elements to remove from the final result
-* ``skip``: Number of elements to skip from the beginning (default: 0)
-* ``maxitems``: Maximum number of items to return (default: all)
+* ``selector`` (for css) or ``path`` (for xpath) [can be entered as the value of the `xpath` or `css` directive].
+* ``method``: Either of ``html`` (default) or ``xml``.
+* ``namespaces`` Mapping of XML namespaces for matching.
+* ``exclude``: Elements to remove from the final result.
+* ``skip``: Number of elements to skip from the beginning (default: 0).
+* ``maxitems``: Maximum number of items to return (default: all).
 
 
 
@@ -297,16 +297,15 @@ Optional sub-directives
 * ``method``: One of:
 
  - ``html2text`` (default): Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package and retains
-   some simple formatting (Markup language)
+   some simple formatting (Markup language).
  - ``bs4``: Uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
- - ``strip_tags``: Uses regex to strip tags
+ - ``strip_tags``: Uses regex to strip tags.
 
 
 ``html2text``
 ^^^^^^^^^^^^^
-This filter method is the default (does not need to be specified) and converts HTML into
-`Markdown <https://www.markdownguide.org/>`__ using the
-`html2text <https://pypi.org/project/html2text/>`__ Python package.
+This filter method is the default (does not need to be specified) and converts HTML into `Markdown
+<https://www.markdownguide.org/>`__ using the `html2text <https://pypi.org/project/html2text/>`__ Python package.
 
 It is the recommended option to convert all types of HTML into readable text.
 
@@ -324,11 +323,10 @@ Example configuration:
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* See `documentation <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__
+* See `documentation <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__.
 * Note that the following options are set by default (but can be overridden): ensure that accented
-  characters are kept as they are (`unicode_snob: true`), lines aren't chopped up
-  (`body_width: 0`), additional empty lines aren't added between sections
-  (`single_line_break: true`), and images are ignored (`ignore_images: true`).
+  characters are kept as they are (`unicode_snob: true`), lines aren't chopped up (`body_width: 0`), additional empty
+  lines aren't added between sections (`single_line_break: true`), and images are ignored (`ignore_images: true`).
 
 
 ``strip_tags``
@@ -364,7 +362,7 @@ This filter method extracts unformatted text from HTML using the `Beautiful Soup
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
 * ``parser``: As per `documentation
-  <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__  (default: ``lxml``)
+  <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__  (default: ``lxml``).
 
 Required packages
 ~~~~~~~~~~~~~~~~~
@@ -378,12 +376,12 @@ follows:
 
 
 .. versionchanged:: 3.0
-   Method renamed to ``strip_tags`` from ``re``.
-
-.. versionchanged:: 3.0
    Filter defaults to the use of Python ``html2text`` package.
 
-.. deprecated:: 3.0
+.. versionchanged:: 3.0
+   Method renamed to ``strip_tags`` from ``re``.
+
+.. deprecated:: urlwatch
    Removed method ``lynx`` (external OS-specific dependency).
 
 
@@ -442,22 +440,22 @@ If the PDF file is password protected, you can specify its password:
 
 .. tip:: Since Poppler tries to keep the layout of the original document by using spaces, and these may change when a
    document is updated, you can chain a ``re.sub`` filter to replace all multiple Unicode whitespaces with a single
-   one, such that, for example, a change from ``Column A   Column B`` to ``Column A        Column B`` isn't reported (as
-   multiple spaces get collapsed into one, both instances become ``Column A Column B`` which are identical):
+   one. For example, a change from ``Column A   Column B`` to ``Column A        Column B`` won't be reported since
+   multiple spaces get collapsed into one, so both instances become ``Column A Column B``, which are identical.
 
-.. code-block:: yaml
+   .. code-block:: yaml
 
-   url: https://example.net/pdf-collapse_whitespace.pdf
-   filter:
-     - pdf2text
-     - re.sub:
-         pattern: '(?:(?!\n)\s)'
-         repl: ' '
+      url: https://example.net/pdf-collapse_whitespace.pdf
+      filter:
+        - pdf2text
+        - re.sub:
+            pattern: '(?:(?!\n)\s)'
+            repl: ' '
 
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``password``: Password for a password-protected PDF file
+* ``password``: Password for a password-protected PDF file.
 
 Required packages
 """""""""""""""""
@@ -492,8 +490,8 @@ This filter *must* be the first filter in a chain of filters, since it consumes 
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``timeout``: Timeout for the recognition, in seconds (default: 10 seconds)
-* ``language``: Text language (e.g. ``fra`` or ``eng+fra``) (default: ``eng``)
+* ``timeout``: Timeout for the recognition, in seconds (default: 10 seconds).
+* ``language``: Text language (e.g. ``fra`` or ``eng+fra``) (default: ``eng``).
 
 Required packages
 """""""""""""""""
@@ -518,9 +516,12 @@ This filter deserializes a JSON object and formats it using Python's `json.dumps
 Optional sub-directives
 """""""""""""""""""""""
 * ``indentation``: Number of characters indent to pretty-print JSON array elements; ``None`` selects the most compact
-  representation (default: 4)
-* ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false)
+  representation (default: 4).
+* ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false).
 
+
+.. versionadded:: 3.0.1
+   ``sort_keys`` subdirective.
 
 
 .. _jq:
@@ -598,7 +599,6 @@ This filter deserializes an XML object and pretty-prints it. It uses Python's xm
    url: https://example.com/pretty_xml.xml
    filter:
      - pretty-xml:
-
 
 .. versionadded:: 3.3
 
@@ -690,9 +690,9 @@ Note: in regex ``(?i)`` is the inline flag for `case-insensitive matching
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``text`` (default): Match the text provided
+* ``text`` (default): Match the text provided.
 * ``re``: Match the the Python `regular
-  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
+  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
 
 .. versionchanged:: 3.0
    Renamed from ``grep``.
@@ -731,9 +731,9 @@ Notes: in regex, ``(?i)`` is the inline flag for `case-insensitive matching
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``text`` (default): Match the text provided
+* ``text`` (default): Match the text provided.
 * ``re``: Match the the Python `regular
-  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided
+  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
 
 .. versionchanged:: 3.0
    Renamed from ``grepi``.
@@ -789,9 +789,9 @@ Optional sub-directives
 """""""""""""""""""""""
 * ``pattern``: Regular expression to match for replacement; this sub-directive must be specified when using the ``repl``
   sub-directive, otherwise the pattern can be specified as the value of ``re.sub`` (in which case a match will be
-  deleted)
+  deleted).
 * ``repl``: The string for replacement. If this sub-directive is missing, defaults to empty string (i.e. deletes the
-  string matched in ``pattern``)
+  string matched in ``pattern``).
 
 
 
@@ -842,11 +842,11 @@ includes the characters space, tab, linefeed, return, formfeed, and vertical tab
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``chars`` (default): A string specifying the set of characters to be removed instead of the default whitespace
+* ``chars`` (default): A string specifying the set of characters to be removed instead of the default whitespace.
 * ``side``: For one-sided removal: either ``left`` (strip only leading whitespace or matching characters)
-  or ``right`` (strip only trailing whitespace or matching characters)
+  or ``right`` (strip only trailing whitespace or matching characters).
 * ``splitlines``: Apply the filter on each line of text (true/false) (default: false, apply to the entire data as a
-  block)
+  block).
 
 .. versionchanged:: 3.5
    Added optional sub-directives ``chars``, ``side`` and ``splitlines``.
@@ -893,8 +893,8 @@ separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1`
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``separator``: The string used to separate items to be sorted (default: ``\n``, i.e. line-based sorting)
-* ``reverse`` (true/false): Whether the sorting direction is reversed (default: false)
+* ``separator``: The string used to separate items to be sorted (default: ``\n``, i.e. line-based sorting).
+* ``reverse`` (true/false): Whether the sorting direction is reversed (default: false).
 
 
 
@@ -934,7 +934,7 @@ paragraphs (items that are separated by an empty line):
 Optional sub-directives
 """""""""""""""""""""""
 * ``separator`` (optional): The string used to separate items whose order is to be reversed (default: ``\n``, i.e.
-  line-based reversing); it can also be specified inline as the value of ``reverse``
+  line-based reversing); it can also be specified inline as the value of ``reverse``.
 
 
 
@@ -1012,6 +1012,6 @@ Example:
       sudo chown $USER:$(id -g -n) *.yaml
       sudo chmod go-w *.yaml
 
-   * ``sudo`` may or may not be required
+   * ``sudo`` may or may not be required.
    * If making the change from a different account than the one you run :program:`webchanges` from, replace
-     ``$USER:$(id -g -n)`` with the username:group of that account
+     ``$USER:$(id -g -n)`` with the username:group of that account.
