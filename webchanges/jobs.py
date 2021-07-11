@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import email.utils
 import hashlib
 import json
@@ -297,7 +298,7 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     def with_defaults(self, config: Dict[str, Dict[str, Any]]) -> 'JobBase':
         """return a Job class from a configuration that also contains defaults from the configuration"""
-        new_job = JobBase.unserialize(self.serialize())
+        new_job = copy.deepcopy(self)
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
             new_job._set_defaults(cfg.get(self.__kind__))

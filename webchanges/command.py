@@ -165,7 +165,10 @@ class UrlwatchCommand:
 
     def list_error_jobs(self) -> None:
         start = timeit.default_timer()
-        print(f'Jobs, if any, with errors or returning no data after filtering in "{self.urlwatch_config.jobs}":\n')
+        print(
+            f'Jobs, if any, with errors or returning no data after filtering.\n'
+            f'Jobs file: {self.urlwatch_config.jobs}\n'
+        )
         jobs = [job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs]
         for job in jobs:
             # Force re-retrieval of job, as we're testing for errors
