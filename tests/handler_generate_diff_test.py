@@ -9,7 +9,8 @@ here = Path(__file__).parent
 data_dir = here.joinpath('data')
 cache_storage = CacheSQLite3Storage(':memory:')
 job_state = JobState(cache_storage, ShellJob(command=''))
-job_state.old_timestamp = 0
+job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
+job_state.new_timestamp = 1605147837.511478
 
 
 def test_generate_diff_normal():
@@ -87,8 +88,7 @@ def test_generate_diff_additions_only_deletions():
     job_state.old_data = 'a\nb\nc\nd\n'
     job_state.new_data = 'a\nb\nc\n'
     job_state.job.additions_only = True
-    expected = None
-    assert job_state._generate_diff() == expected
+    assert job_state._generate_diff() == ''
 
 
 def test_generate_diff_deletions_only_additions():
@@ -97,5 +97,4 @@ def test_generate_diff_deletions_only_additions():
     job_state.new_data = 'a\nb\n'
     job_state.job.additions_only = False
     job_state.job.deletions_only = True
-    expected = None
-    assert job_state._generate_diff() == expected
+    assert job_state._generate_diff() == ''

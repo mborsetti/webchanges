@@ -183,7 +183,7 @@ class UrlwatchCommand:
                 (stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
             ):
                 if job_state.exception is not None:
-                    print(f'{job_state.job._index_number:3}: Error: {job_state.exception.args[0]}')
+                    print(f'{job_state.job._index_number:3}: Error: {job_state.exception}')
                 elif len(job_state.new_data.strip()) == 0:
                     if self.urlwatch_config.verbose:
                         print(f'{job_state.job._index_number:3}: No data: {job_state.job!r}')
@@ -302,7 +302,9 @@ class UrlwatchCommand:
             job_state = JobState(None, job)  # type: ignore[arg-type]
 
             job_state.old_data = old
+            job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
             job_state.new_data = new
+            job_state.new_timestamp = 1605147837.511478
 
             return job_state
 

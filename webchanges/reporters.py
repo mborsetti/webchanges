@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import difflib
-import email.utils
 import functools
 import getpass
 import html
@@ -17,6 +16,7 @@ import shlex
 import subprocess
 import sys
 import time
+from datetime import datetime
 from typing import Any, Callable, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Type, Union
 from warnings import warn
 
@@ -63,6 +63,11 @@ if os.name == 'nt':
         from colorama import AnsiToWin32
     except ImportError:
         AnsiToWin32 = None
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports import zoneinfo as ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +176,7 @@ class HtmlReporter(ReporterBase):
         yield (
             f'<div style="font-style:italic">\n'
             f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-            f'seconds with <a href="{html.escape(__url__)}">'
+            f' seconds with <a href="{html.escape(__url__)}">'
             f'{html.escape(__project_name__)}</a></address> {html.escape(__version__)}.<br>\n'
         )
         if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
@@ -291,8 +296,16 @@ class HtmlReporter(ReporterBase):
                 return None
 
         elif difftype == 'table':
-            timestamp_old = email.utils.formatdate(job_state.old_timestamp, localtime=True)
-            timestamp_new = email.utils.formatdate(time.time(), localtime=True)
+            if tz:
+                tz_info = ZoneInfo(tz)
+            else:
+                tz_info = None
+            timestamp_old = (
+                (datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z'))
+                if self.old_timestamp
+                else ''
+            )
+            timestamp_new = datetime.now(tz=tz).strftime('%a, %d %b %Y %H:%M:%S %z')
             html_diff = difflib.HtmlDiff()
             table = html_diff.make_table(
                 str(job_state.old_data).splitlines(keepends=True),

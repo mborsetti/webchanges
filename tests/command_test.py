@@ -309,7 +309,7 @@ def test_list_error_jobs(capsys):
     setattr(command_config, 'errors', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert 'Jobs, if any, with errors or returning no data after filtering in ' in message
+    assert 'Jobs, if any, with errors or returning no data after filtering.\n' in message
 
 
 def test_modify_urls(capsys):
@@ -354,7 +354,7 @@ def test_delete_snapshot():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    assert 'No snapshots found to be deleted for Job 0:' in pytest_wrapped_e.value.code
+    assert 'No snapshots found to be deleted for Job 1:' in pytest_wrapped_e.value.code
 
     # run once
     urlwatcher.run_jobs()
@@ -376,7 +376,7 @@ def test_delete_snapshot():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    assert 'Deleted last snapshot of Job 0:' in pytest_wrapped_e.value.code
+    assert 'Deleted last snapshot of Job 1:' in pytest_wrapped_e.value.code
 
     # delete twice
     setattr(command_config, 'delete_snapshot', True)
@@ -384,7 +384,7 @@ def test_delete_snapshot():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    assert 'Deleted last snapshot of Job 0:' in pytest_wrapped_e.value.code
+    assert 'Deleted last snapshot of Job 1:' in pytest_wrapped_e.value.code
 
     # test all empty
     setattr(command_config, 'delete_snapshot', True)
@@ -392,7 +392,7 @@ def test_delete_snapshot():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
-    assert 'No snapshots found to be deleted for Job 0:' in pytest_wrapped_e.value.code
+    assert 'No snapshots found to be deleted for Job 1:' in pytest_wrapped_e.value.code
 
 
 def test_gc_cache(capsys):

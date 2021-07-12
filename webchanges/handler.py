@@ -34,18 +34,18 @@ logger = logging.getLogger(__name__)
 
 
 class JobState(object):
-    verb = ''
-    old_data: Union[bytes, str] = ''
-    new_data: Union[bytes, str] = ''
-    old_timestamp: Optional[float] = 0.0
-    new_timestamp = 0.0
+    verb: str
+    old_data: str = ''
+    new_data: str
+    old_timestamp: float = 1605147837.511478  # initial release of webchanges!
+    new_timestamp: float
     exception: Optional[Exception] = None
-    traceback: str = ''
-    tries = 0
+    traceback: str
+    tries: int = 0
     old_etag: str = ''
-    new_etag: str = ''
+    new_etag: str
     error_ignored: Union[bool, str] = False
-    _generated_diff: Optional[str] = ''
+    _generated_diff: Optional[str] = None
 
     def __init__(self, cache_storage: CacheStorage, job: JobBase) -> None:
         self.cache_storage = cache_storage
@@ -141,37 +141,38 @@ class JobState(object):
 
         return self
 
-    def get_diff(self, tz: Optional[str] = None) -> Optional[str]:
-        """Generates the job's diff and applies diff_filters."""
-        if self._generated_diff != '':
+    def get_diff(self, tz: Optional[str] = None) -> str:
+        """Generates the job's diff and applies diff_filters.
+
+        Uses self._generated_diff as a cache (initialized as None)
+
+        """
+        if self._generated_diff is not None:
             return self._generated_diff
 
         _generated_diff = self._generate_diff(tz)
-        # Apply any specified diff filters
-        if isinstance(_generated_diff, str):
+        if _generated_diff:
+            # Apply any specified diff_filters
             for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.diff_filter):
                 _generated_diff = FilterBase.process(filter_kind, subfilter, self, _generated_diff)
-            self._generated_diff = str(_generated_diff)
-        else:
-            self._generated_diff = None
+        self._generated_diff = _generated_diff
 
         return self._generated_diff
 
-    def _generate_diff(self, tz: Optional[str] = None) -> Optional[Union[str, bool]]:
-        """Generates the job's diff."""
+    def _generate_diff(self, tz: Optional[str] = None) -> str:
+        """Generates the job's diff.
+
+        :returns: a str with the diff; the str is empty if no change.
+        """
         if tz:
             tz_info = ZoneInfo(tz)
         else:
             tz_info = None
         timestamp_old = (
-            (datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d2 %b %Y %H:%M:%S %z'))
-            if self.old_timestamp
-            else ''
+            datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z')
         )
         timestamp_new = (
-            (datetime.fromtimestamp(self.new_timestamp).astimezone(tz=tz_info).strftime('%a, %d2 %b %Y %H:%M:%S %z'))
-            if self.new_timestamp
-            else ''
+            datetime.fromtimestamp(self.new_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z')
         )
 
         if self.job.diff_tool is not None:
@@ -186,7 +187,7 @@ class JobState(object):
                 proc = subprocess.run(cmdline, capture_output=True, text=True)
                 # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
                 if proc.returncode == 0:
-                    return False
+                    return ''
                 elif proc.returncode == 1:
                     head = (
                         f'Using external diff tool "{self.job.diff_tool}"\n'
@@ -234,7 +235,7 @@ class JobState(object):
                 diff = diff[:-1] if diff[-1].startswith('@') else diff
                 if len(diff) == 1 or len([line for line in diff if line.lstrip('+').rstrip()]) == 2:
                     self.verb = 'changed,no_report'
-                    return None
+                    return ''
                 diff = [head, diff[0], '/**Comparison type: Additions only**'] + diff[1:]
         elif self.job.deletions_only:
             head = '...' + diff[1][3:]
@@ -247,7 +248,7 @@ class JobState(object):
             diff = diff[:-1] if diff[-1].startswith('@') else diff
             if len(diff) == 1 or len([line for line in diff if line.lstrip('-').rstrip()]) == 2:
                 self.verb = 'changed,no_report'
-                return None
+                return ''
             diff = [diff[0], head, '/**Comparison type: Deletions only**'] + diff[1:]
 
         return '\n'.join(diff)

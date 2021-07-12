@@ -91,12 +91,16 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         f'Job {job_state.job._index_number}: Error suppressed as cumulative number of '
                         f'failures ({job_state.tries}) does not exceed max_tries={max_tries}'
                     )
+                    job_state.new_data = ''
+                    job_state.new_etag = ''
                     job_state.save()
                 elif job_state.tries >= max_tries:
                     logger.debug(
                         f'Job {job_state.job._index_number}: Flag as error as max_tries={max_tries} has been '
                         f'met or exceeded ({job_state.tries}'
                     )
+                    job_state.new_data = ''
+                    job_state.new_etag = ''
                     job_state.save()
                     report.error(job_state)
                 else:

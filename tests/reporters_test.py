@@ -142,7 +142,9 @@ def test_reporters(reporter, capsys):
         job_state = JobState(None, job)
 
         job_state.old_data = old
+        job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
         job_state.new_data = new
+        job_state.new_timestamp = 1605147837.511478
 
         return job_state
 

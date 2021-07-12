@@ -19,7 +19,7 @@ import yaml
 
 from . import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
-from .jobs import JobBase, ShellJob, UrlJob
+from .jobs import JobBase, ShellJob
 from .util import edit_file
 
 try:
@@ -162,6 +162,8 @@ DEFAULT_CONFIG = {
 
 
 class BaseStorage(ABC):
+    """Base class for storage."""
+
     @abstractmethod
     def load(self, *args: Any) -> Any:
         ...
@@ -172,6 +174,8 @@ class BaseStorage(ABC):
 
 
 class BaseFileStorage(BaseStorage, ABC):
+    """Base class for file storage."""
+
     def __init__(self, filename: Optional[Union[str, os.PathLike]]) -> None:
         if isinstance(filename, (str, bytes, Path)):
             self.filename = Path(filename)
@@ -180,6 +184,8 @@ class BaseFileStorage(BaseStorage, ABC):
 
 
 class BaseTextualFileStorage(BaseFileStorage, ABC):
+    """Base class for textual files."""
+
     def __init__(self, filename: Optional[Union[str, os.PathLike]]) -> None:
         super().__init__(filename)
         self.config: Dict[str, Any] = {}
@@ -235,6 +241,8 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
 
 
 class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
+    """Class for jobs textual files storage."""
+
     def __init__(self, filename: Path) -> None:
         super().__init__(filename)
         self.filename = filename
@@ -268,6 +276,9 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         jobs: List[JobBase] = self.load()
 
         def is_shell_job(job: JobBase) -> bool:
+            """Check if the job uses subprocess.run(Shell=True) (insecure).
+
+            :return: True if subprocess.run(Shell=True) is invoked by job."""
             if isinstance(job, ShellJob):
                 return True
 
@@ -291,32 +302,9 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         return jobs
 
 
-class BaseTxtFileStorage(BaseTextualFileStorage, ABC):  # pragma: no cover  # code not invoked
-    """Obsolete, no longer used."""
-
-    @classmethod
-    def parse(cls, *args: Any) -> Iterator[JobBase]:
-        filename = args[0]
-        if filename is not None and filename.is_file():
-            with open(filename) as fp:
-                for line in fp:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-
-                    if line.startswith('|'):
-                        yield ShellJob(command=line[1:])
-                    else:
-                        items = line.split(None, 2)
-                        if len(items) == 1:
-                            yield UrlJob(url=items[0])
-                        elif len(items) == 2:
-                            yield UrlJob(url=items[0], post=items[1])
-                        else:
-                            raise ValueError(f'Unsupported line format: {line}')
-
-
 class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
+    """Base class for YAML textual files storage."""
+
     @classmethod
     def parse(cls, *args: Any) -> Any:
         """Return contents of YAML file if it exists"""
@@ -327,6 +315,8 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 
 
 class YamlConfigStorage(BaseYamlFileStorage):
+    """Class for configuration file (is a YAML textual file)."""
+
     def dict_deep_difference(self, d1: dict, d2: dict) -> dict:
         """Return a new dict with elements in the first dict that are not in the second."""
 
@@ -409,6 +399,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
 
 class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
+    """Class for jobs file (is a YAML textual file)."""
+
     @classmethod
     def _parse(cls, fp: TextIO) -> List[JobBase]:
         jobs = []
@@ -457,6 +449,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
 
 
 class CacheStorage(BaseFileStorage, ABC):
+    """Base class for snapshots storage."""
+
     @abstractmethod
     def close(self) -> None:
         ...
@@ -474,9 +468,7 @@ class CacheStorage(BaseFileStorage, ABC):
         ...
 
     @abstractmethod
-    def save(
-        self, *args: Any, guid: str, data: Union[str, bytes], timestamp: float, tries: int, etag: str, **kwargs: Any
-    ) -> None:
+    def save(self, *args: Any, guid: str, data: str, timestamp: float, tries: int, etag: str, **kwargs: Any) -> None:
         ...
 
     @abstractmethod
@@ -556,14 +548,16 @@ class CacheStorage(BaseFileStorage, ABC):
 
 
 class Snapshot(NamedTuple):
-    data: Union[str, bytes]
+    """Type for Snapshot object."""
+
+    data: str
     timestamp: float
     tries: int
     etag: str
 
 
 class CacheDirStorage(CacheStorage):
-    """Stores the information in individual files in a directory 'dirname'"""
+    """Class for snapshots stored as individual textual files in a directory 'dirname'"""
 
     def __init__(self, dirname: Union[str, os.PathLike]) -> None:
         super().__init__(dirname)
@@ -605,7 +599,7 @@ class CacheDirStorage(CacheStorage):
         self,
         *args: Any,
         guid: str,
-        data: Union[str, bytes],
+        data: str,
         timestamp: float,
         tries: int,
         etag: Optional[str],
@@ -848,7 +842,7 @@ class CacheSQLite3Storage(CacheStorage):
         self,
         *args: Any,
         guid: str,
-        data: Union[str, bytes],
+        data: str,
         timestamp: float,
         tries: int,
         etag: Optional[str],
@@ -1025,6 +1019,8 @@ class CacheSQLite3Storage(CacheStorage):
 
 
 class CacheRedisStorage(CacheStorage):
+    """Class for storing snapshots using redis."""
+
     def __init__(self, filename: Union[str, os.PathLike]) -> None:
         super().__init__(filename)
 
@@ -1077,7 +1073,7 @@ class CacheRedisStorage(CacheStorage):
         self,
         *args: Any,
         guid: str,
-        data: Union[str, bytes],
+        data: str,
         timestamp: float,
         tries: int,
         etag: Optional[str],

@@ -109,7 +109,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
         return '\n'.join(result)
 
     @classmethod
-    def auto_process(cls, state: JobState, data: Union[bytes, str]) -> Union[bytes, str]:
+    def auto_process(cls, state: JobState, data: Union[bytes, str]) -> str:
         filters = itertools.chain(
             (filtercls for _, filtercls in sorted(cls.__subclasses__.items(), key=lambda k_v: k_v[0])),
             cls.__anonymous_subclasses__,
@@ -263,7 +263,7 @@ class BeautifyFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
         if BeautifulSoup is None:
             raise ImportError(
                 f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}' "
@@ -815,7 +815,7 @@ class Sha1Filter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
         if isinstance(data, str):
             data = data.encode(errors='ignore')
         return hashlib.sha1(data).hexdigest()  # noqa: DUO130 insecure use of "hashlib" module  # nosec: B303

@@ -63,7 +63,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.9, 3.8, 3.7]
+        # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
+        python-version: [3.9, 3.8, 3.7, 3.10.0-beta.4]
 #        os: [windows-latest]
 #        python-version: [3.9]
         include:
@@ -75,7 +76,6 @@ jobs:
 #                              # https://github.com/pytest-dev/pytest/discussions/6349
 #          pipcachepath: ~\AppData\Local\pip\cache
 
-        # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
       TEELGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
