@@ -56,6 +56,16 @@ DEFAULT_CONFIG = {
             'footer': True,
             'minimal': False,
         },
+        'colors': {
+            'add': 'green',
+            'delete': 'red',
+            'context': 'default',
+            'separator': 'default',
+            'status_new': 'lightgreen',
+            'status_changed': 'lightblue',
+            'status_unchanged': 'darkgray',
+            'status_error': 'lightred',
+        },
         # the keys below control where a report is displayed and/or sent
         'stdout': {  # the console / command line display
             'enabled': True,

@@ -621,23 +621,36 @@ class StdoutReporter(TextReporter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._has_color = sys.stdout.isatty() and self.config.get('color', False)
+        color_map = {
+            'default': 39,
+            'black': 30,
+            'red': 31,
+            'green': 32,
+            'yellow': 33,
+            'blue': 34,
+            'magenta': 35,
+            'cyan': 36,
+            'lightgray': 37,
+            'darkgray': 90,
+            'lightred': 91,
+            'lightgreen': 92,
+            'lightyellow': 93,
+            'lightblue': 94,
+            'lightmagenta': 95,
+            'lightcyan': 96,
+            'white': 97,
+        }
+        self._colors = {k: color_map[v] for k, v in self.report.config['report']['colors'].items()}
 
-    def _incolor(self, color_id: int, s: str) -> str:
+    def _incolor(self, color: str, s: str) -> str:
+        color_id = self._colors[color]
+        if color_id in range(90, 98):
+            style = ';1'
+        else:
+            style = ''
         if self._has_color:
-            return f'\033[9{color_id}m{s}\033[0m'
+            return f'\033[{color_id}{style}m{s}\033[0m'
         return s
-
-    def _red(self, s: str) -> str:
-        return self._incolor(1, s)
-
-    def _green(self, s: str) -> str:
-        return self._incolor(2, s)
-
-    def _yellow(self, s: str) -> str:
-        return self._incolor(3, s)
-
-    def _blue(self, s: str) -> str:
-        return self._incolor(4, s)
 
     def _get_print(self) -> Callable:
         if os.name == 'nt' and self._has_color and AnsiToWin32 is not None:
@@ -658,25 +671,31 @@ class StdoutReporter(TextReporter):
             for diff_tool in (job_state.job.diff_tool for job_state in self.job_states if job_state.job.diff_tool)
         ):
             # wdiff colorization
-            body = re.sub(r'[{][+].*?[+][}]', lambda x: self._green(x.group(0)), body, flags=re.DOTALL)
-            body = re.sub(r'[\[][-].*?[-][]]', lambda x: self._red(x.group(0)), body, flags=re.DOTALL)
+            body = re.sub(r'[{][+].*?[+][}]', lambda x: self._incolor('add', x.group(0)), body, flags=re.DOTALL)
+            body = re.sub(r'[\[][-].*?[-][]]', lambda x: self._incolor('delete', x.group(0)), body, flags=re.DOTALL)
             separators = (*separators, '-' * 36)
 
         for line in body.splitlines():
             if line in separators:
-                print_color(line)
+                print_color(self._incolor('separator', line))
             elif line.startswith('+'):
-                print_color(self._green(line))
+                print_color(self._incolor('add', line))
             elif line.startswith('-'):
-                print_color(self._red(line))
+                print_color(self._incolor('delete', line))
             elif any(line.startswith(prefix) for prefix in ('NEW: ', 'CHANGED: ', 'UNCHANGED: ', 'ERROR: ')):
                 first, second = line.split(' ', 1)
-                if line.startswith('ERROR: '):
-                    print_color(first, self._red(second))
+                if first == 'NEW:':
+                    print_color(first, self._incolor('status_new', second))
+                elif first == 'CHANGED:':
+                    print_color(first, self._incolor('status_changed', second))
+                elif first == 'UNCHANGED:':
+                    print_color(first, self._incolor('status_unchanged', second))
+                elif first == 'ERROR:':
+                    print_color(first, self._incolor('status_error', second))
                 else:
-                    print_color(first, self._blue(second))
+                    print_color(first, self._incolor('context', second))
             else:
-                print_color(line)
+                print_color(self._incolor('context', line))
 
 
 class EMailReporter(TextReporter):
