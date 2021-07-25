@@ -1025,7 +1025,10 @@ class CacheRedisStorage(CacheStorage):
         self.db.delete(self._make_key(guid))
 
     def delete_latest(self, guid: str) -> None:
-        raise NotImplementedError("Deleting of latest snapshot no supported by 'redis' database engine")
+        if self.db.lpop(self._make_key(guid)) is None:
+            return 0
+
+        return 1
 
     def clean(self, guid: str) -> int:
         key = self._make_key(guid)
