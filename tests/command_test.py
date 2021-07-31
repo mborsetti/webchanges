@@ -412,10 +412,13 @@ def test_gc_cache(capsys):
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
+    guid = urlwatcher.jobs[0].get_guid()
 
-    # run once to save 'jobs-time.yaml'
+    # run once to save the job from 'jobs-time.yaml'
     urlwatcher.run_jobs()
     cache_storage._copy_temp_to_permanent(delete=True)
+    history = cache_storage.get_history_data(guid)
+    assert len(history) == 1
 
     # set job file to a different one
     jobs_file = config_path.joinpath('jobs-echo_test.yaml')
@@ -423,17 +426,14 @@ def test_gc_cache(capsys):
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)
 
-    # run gc_cache and check it deletes the snapshot of the job no longer being tracked
+    # run gc_cache and check that it deletes the snapshot of the job no longer being tracked
     setattr(command_config, 'gc_cache', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'gc_cache', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    if os.name == 'nt':
-        assert message == 'Deleting: 695925f99befa832d8aeae8c0f1836a59942866d (no longer being tracked)\n'
-    else:
-        assert message == 'Deleting: 2f540ba442cd4a368fd3eb918dbe6d621ccae30b (no longer being tracked)\n'
+    assert message == f'Deleting: {guid} (no longer being tracked)\n'
 
 
 def test_clean_cache(capsys):
