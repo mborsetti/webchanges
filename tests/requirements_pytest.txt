@@ -8,7 +8,7 @@ coverage_conditional_plugin
 cssbeautifier
 docutils
 flake8
-jq; os_name != "nt"
+jq; os_name != 'nt' and python_version < '3.10'
 jsbeautifier
 keyring
 matrix_client
