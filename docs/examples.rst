@@ -1,7 +1,7 @@
 .. _examples:
 
 ===================
-Examples and issues
+Examples
 ===================
 
 Running webchanges
@@ -95,7 +95,7 @@ This is an example how to anonymously watch the GitHub “releases” page of a 
 
    url: https://github.com/git/git/releases
    filter:
-     - xpath: (//div[contains(@class,"release-timeline-tags")]//h4)[1]/a
+     - xpath: //div[contains(@class,"release-")]//h4[1]/a|//div[contains(@class,"release-header")]/div/div/a
      - html2text:
 
 Note that the easiest way to be notified if you have a GitHub account is to simply "watch" the project and subscribe
@@ -231,8 +231,3 @@ or ignore all HTTP errors if you like:
 
    url: https://example.com/
    ignore_http_error_codes: 4xx, 5xx
-
-
-Advanced topics
----------------
-Please see :ref:`advanced_topics`.

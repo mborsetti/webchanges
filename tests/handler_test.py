@@ -23,10 +23,9 @@ if minidb_is_installed:
 minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
 
 here = Path(__file__).parent
-data_dir = here.joinpath('data')
-docs_dir = here.joinpath('..').resolve().joinpath('docs')
+data_path = here.joinpath('data')
 
-config_file = data_dir.joinpath('config.yaml')
+config_file = data_path.joinpath('config.yaml')
 cache_file = ':memory:'
 hooks_file = Path('')
 
@@ -73,7 +72,7 @@ def test_load_config_yaml():
 
 
 def test_load_jobs_yaml():
-    jobs_file = data_dir.joinpath('jobs.yaml')
+    jobs_file = data_path.joinpath('jobs.yaml')
     if jobs_file.is_file():
         assert len(YamlJobsStorage(jobs_file).load_secure()) > 0
     else:
@@ -81,7 +80,7 @@ def test_load_jobs_yaml():
 
 
 def test_duplicates_in_jobs_yaml():
-    jobs_file = data_dir.joinpath('jobs-duplicate_url.broken_yaml')
+    jobs_file = data_path.joinpath('jobs-duplicate_url.broken_yaml')
     if jobs_file.is_file():
         with pytest.raises(ValueError) as pytest_wrapped_e:
             YamlJobsStorage(jobs_file).load_secure()
@@ -94,7 +93,7 @@ def test_duplicates_in_jobs_yaml():
 
 
 def test_load_hooks_py():
-    hooks_file = data_dir.joinpath('hooks_test.py')
+    hooks_file = data_path.joinpath('hooks_test.py')
     if hooks_file.is_file():
         import_module_from_source('hooks', hooks_file)
     else:
@@ -102,7 +101,7 @@ def test_load_hooks_py():
 
 
 def test_run_watcher_sqlite3():
-    jobs_file = data_dir.joinpath('jobs.yaml')
+    jobs_file = data_path.joinpath('jobs.yaml')
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage(jobs_file)
@@ -117,7 +116,7 @@ def test_run_watcher_sqlite3():
 
 @minidb_required
 def test_run_watcher_minidb():
-    jobs_file = data_dir.joinpath('jobs.yaml')
+    jobs_file = data_path.joinpath('jobs.yaml')
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage(jobs_file)
@@ -131,7 +130,7 @@ def test_run_watcher_minidb():
 
 
 def prepare_retry_test_sqlite3():
-    jobs_file = data_dir.joinpath('jobs-invalid_url.yaml')
+    jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheSQLite3Storage(cache_file)
@@ -211,7 +210,7 @@ def test_reset_tries_to_zero_when_successful_sqlite3():
 
 @minidb_required
 def prepare_retry_test_minidb():
-    jobs_file = data_dir.joinpath('jobs-invalid_url.yaml')
+    jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheMiniDBStorage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
@@ -275,7 +274,7 @@ def test_reset_tries_to_zero_when_successful_minidb():
 
         # use an url that definitely exists
         job = urlwatcher.jobs[0]
-        job.url = data_dir.joinpath('jobs.yaml').as_uri()
+        job.url = data_path.joinpath('jobs.yaml').as_uri()
 
         urlwatcher.run_jobs()
 

@@ -25,7 +25,7 @@ from webchanges.jobs import JobBase
 logger = logging.getLogger(__name__)
 
 here = Path(__file__).parent
-docs_dir = here.joinpath('..').resolve().joinpath('docs')
+docs_path = here.joinpath('..').resolve().joinpath('docs')
 
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
 jq_is_installed = importlib.util.find_spec('jq') is not None
@@ -63,7 +63,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
 def load_filter_doc_jobs() -> List[JobBase]:
     """Load YAML code blocks from rst file."""
-    doc = parse_rst(open(docs_dir.joinpath('filters.rst')).read())
+    doc = parse_rst(open(docs_path.joinpath('filters.rst')).read())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
 
@@ -71,7 +71,7 @@ def load_filter_doc_jobs() -> List[JobBase]:
     jobs_by_guid = defaultdict(list)
     for i, job_data in enumerate(job for job in visitor.jobs if 'url' in job):
         if job_data is not None:
-            job_data['_index_number'] = i + 1
+            job_data['index_number'] = i + 1
             job = JobBase.unserialize(job_data)
             jobs.append(job)
             jobs_by_guid[job.get_guid()].append(job)

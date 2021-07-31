@@ -25,12 +25,13 @@ from markdown2 import Markdown
 from requests import Response
 
 from . import __project_name__, __url__, __version__
-from .jobs import JobBase, UrlJob
+from .jobs import UrlJob
 from .mailer import SMTPMailer, SendmailMailer
 from .util import TrackSubClasses, chunk_string, linkify
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from .jobs import JobBase
     from .handler import JobState, Report
 
 try:
@@ -73,16 +74,29 @@ logger = logging.getLogger(__name__)
 
 
 class ReporterBase(object, metaclass=TrackSubClasses):
-    __subclasses__: Dict[str, 'ReporterBase'] = {}
+    """Base class for reporting."""
+
+    __subclasses__: Dict[str, Type['ReporterBase']] = {}
 
     def __init__(self, report: Report, config: Dict[str, Any], job_states: List[JobState], duration: float) -> None:
+        """
+
+        :param report: The Report object containing information about the report.
+        :param config: The configuration of the run (typically from config.yaml).
+        :param job_states: The list of JobState objects containing the information about the jobs that were retrieved.
+        :param duration: The duration of the retrieval of jobs.
+        """
         self.report = report
         self.config = config
         self.job_states = job_states
         self.duration = duration
 
     def convert(self, othercls: Type['ReporterBase']) -> 'ReporterBase':
-        """Convert to a different ReporterBase class."""
+        """Convert self to a different ReporterBase class (object typecasting).
+
+        :param othercls: The ReporterBase class the be cast into.
+        :returns: The typecasted object.
+        """
         if hasattr(othercls, '__kind__'):
             config: Dict[Any, str] = self.report.config['report'][othercls.__kind__]
         else:
@@ -92,7 +106,10 @@ class ReporterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def reporter_documentation(cls) -> str:
-        """Return listings of reporters used by --features command line argument."""
+        """Generates simple reporter documentation for use in the --features command line argument.
+
+        :returns: A string to display.
+        """
         result: List[str] = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
             result.extend((f'  * {sc.__kind__} - {sc.__doc__}',))
@@ -107,6 +124,15 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         duration: float,
         check_enabled: Optional[bool] = True,
     ) -> None:
+        """Run a single named report.
+
+        :param name: The name of report to run.
+        :param report: The Report object with the information of all the reports.
+        :param job_states: The list of JobState objects containing the information about each job retrieved.
+        :param duration: The duration of the retrieval of jobs.
+        :param check_enabled: Whether to check if the report is markeed "enabled" in the configuration (used for
+           testing)
+        """
         subclass = cls.__subclasses__[name]
         cfg: Dict[str, bool] = report.config['report'].get(name, {'enabled': False})
         if cfg['enabled'] or not check_enabled:
@@ -116,6 +142,13 @@ class ReporterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def submit_all(cls, report: Report, job_states: List[JobState], duration: float) -> None:
+        """Run all (enabled) reports.
+
+        :param report: The Report object with the information of all the reports.
+        :param job_states: The list of JobState objects containing the information about about each job retrieved.
+        :param duration: The duration of the retrieval of jobs.
+        """
+
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
             cfg = report.config['report'].get(name, {'enabled': False})
@@ -128,15 +161,28 @@ class ReporterBase(object, metaclass=TrackSubClasses):
             logger.warning('No reporters enabled.')
 
     def submit(self, **kwargs: Any) -> Iterable[str]:
+        """Submit a job to generate the report.
+
+        :returns: The content of the report.
+        """
         raise NotImplementedError()
 
 
 class HtmlReporter(ReporterBase):
+    """The base class for all reports using HTML."""
+
     def submit(self, **kwargs: Any) -> Iterable[str]:
+        """Submit a job to generate the report.
+
+        :returns: The content of the HTML report.
+        """
         yield from self._parts()
 
     def _parts(self) -> Iterable[str]:
-        """Generator yielding the HTML; called by submit. Calls _format_content."""
+        """Generator yielding the HTML; called by submit. Calls _format_content.
+
+        :returns: The content of the report.
+        """
         cfg = self.report.config['report']['html']
         tz = self.report.config['report']['tz']
 
@@ -180,12 +226,18 @@ class HtmlReporter(ReporterBase):
             f'{html.escape(__project_name__)}</a></address> {html.escape(__version__)}.<br>\n'
         )
         if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
-            yield (f'<b>New release {self.report.new_release_future.result()} is available; we recommend updating.</b>')
+            yield (
+                f'<b>New release version {self.report.new_release_future.result()} is available; we recommend '
+                f'updating.</b>'
+            )
         yield '</div>\n</body>\n</html>\n'
 
     @staticmethod
     def _diff_to_html(diff: str, job: JobBase) -> Iterable[str]:
-        """Generator yielding the HTML-formatted unified diff; called by _format_content."""
+        """Generator yielding the HTML-formatted unified diff; called by _format_content.
+
+        :returns: HTML-formatted unified diff.
+        """
         mark_to_html = None  # PyCharm
         if job.diff_tool and job.diff_tool.startswith('wdiff'):
             # wdiff colorization
@@ -221,13 +273,13 @@ class HtmlReporter(ReporterBase):
                         return '-' * 80
                     pre = ''
                     post = ''
-                    if text.lstrip().startswith('* '):  # item of unordered list
+                    if text.lstrip()[:2] == '* ':  # item of unordered list
                         lstripped = text.lstrip(' ')
                         indent = len(text) - len(lstripped)
                         pre += '&nbsp;' * indent
                         pre += '● ' if indent == 2 else '⯀ ' if indent == 4 else '○ '
                         text = text.split('* ', 1)[1]
-                    elif text.startswith(' '):  # replace leading spaces or converter will strip
+                    if text[:1] == ' ':  # replace leading spaces or converter will strip
                         lstripped = text.lstrip()
                         text = '&nbsp;' * (len(text) - len(lstripped)) + lstripped
                     if job.markdown_padded_tables and '|' in text:
@@ -278,7 +330,10 @@ class HtmlReporter(ReporterBase):
             yield '</table>'
 
     def _format_content(self, job_state: JobState, difftype: str, tz: Optional[str]) -> Optional[str]:
-        """Generator yielding the HTML for a job; called by _parts. Calls _diff_to_html."""
+        """Generator yielding the HTML for a job; called by _parts. Calls _diff_to_html.
+
+        :returns: HTML for a single job.
+        """
         if job_state.verb == 'error':
             return f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
 
@@ -301,8 +356,12 @@ class HtmlReporter(ReporterBase):
             else:
                 tz_info = None
             timestamp_old = (
-                (datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z'))
-                if self.old_timestamp
+                (
+                    datetime.fromtimestamp(job_state.old_timestamp)
+                    .astimezone(tz=tz_info)
+                    .strftime('%a, %d %b %Y %H:%M:%S %z')
+                )
+                if job_state.old_timestamp
                 else ''
             )
             timestamp_new = datetime.now(tz=tz).strftime('%a, %d %b %Y %H:%M:%S %z')
@@ -328,7 +387,13 @@ class HtmlReporter(ReporterBase):
 
 
 class TextReporter(ReporterBase):
+    """The base class for all reports using plain text."""
+
     def submit(self, **kwargs: Any) -> Iterable[str]:
+        """Submit a job to generate the report.
+
+        :returns: The content of the plain text report.
+        """
         cfg = self.report.config['report']['text']
         tz = self.report.config['report']['tz']
         line_length = cfg['line_length']
@@ -375,7 +440,10 @@ class TextReporter(ReporterBase):
                 f' seconds with {__project_name__} {__version__}.\n'
             )
             if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
-                yield (f'New release {self.report.new_release_future.result()} is available; we recommend updating.')
+                yield (
+                    f'New release version {self.report.new_release_future.result()} is available; we recommend '
+                    f'updating.'
+                )
 
     @staticmethod
     def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[Union[str, bytes]]:
@@ -429,6 +497,11 @@ class TextReporter(ReporterBase):
 
 class MarkdownReporter(ReporterBase):
     def submit(self, max_length: int = None, **kwargs: Any) -> Iterable[str]:
+        """Submit a job to generate the report.
+
+        :param max_length: The maximum length of the report. Unlimited if not specified.
+        :returns: The content of the Markdown report.
+        """
         cfg = self.report.config['report']['markdown']
         tz = self.report.config['report']['tz']
         show_details = cfg['details']
@@ -461,7 +534,10 @@ class MarkdownReporter(ReporterBase):
         else:
             footer = ''
         if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
-            footer += f'*New release {self.report.new_release_future.result()} is available; we recommend updating.*'
+            footer += (
+                f'*New release version {self.report.new_release_future.result()} is available; we recommend '
+                f'updating.*'
+            )
 
         trimmed_msg = '*Parts of the report were omitted due to message length.*\n'
         if max_length:
@@ -487,15 +563,18 @@ class MarkdownReporter(ReporterBase):
 
     @classmethod
     def _render(
-        cls, max_length: Optional[int], summary: List[str], details: List[Tuple[str, str]], footer: str
+        cls, max_length: Optional[int], summary: Iterable[str], details: List[Tuple[str, str]], footer: str
     ) -> Tuple[bool, List[str], List[Tuple[str, str]], str]:
         """Render the report components, trimming them if the available length is insufficient.
 
+        :param max_length: The maximum length of the report.
+        :param summary: The summary block of the report.
+        :param details: The details block of the report.
+        :param footer: The footer of the report.
         :returns: a tuple (trimmed, summary, details, footer).
 
-        The first element of the tuple indicates whether any part of the report
-        was omitted due to message length. The other elements are the
-        potentially trimmed report components.
+        The first element of the tuple (trimmed) indicates whether any part of the report  was omitted due to
+        maximum length. The other elements are the potentially trimmed report components (summary, details, and footer).
         """
 
         # The footer/summary lengths are the sum of the length of their parts
@@ -568,6 +647,12 @@ class MarkdownReporter(ReporterBase):
 
     @staticmethod
     def _format_details_body(s: str, max_length: Optional[int] = None) -> Tuple[bool, str]:
+        """Trim the details to fit the maximum length available; add a message when so done.
+
+        :param s: The details text to fit into the maximum length.
+        :param max_length: The maximum length.
+        :returns: The fitted string.
+        """
 
         if any(s[:3] == x for x in ('+++', '---', '...')):  # is a unified diff (with our '...' modification)
             lines = s.splitlines()
@@ -808,14 +893,14 @@ class PushoverReport(WebServiceReporter):
 
     __kind__ = 'pushover'
 
-    def web_service_get(self) -> 'chump.Application':
+    def web_service_get(self) -> 'chump.User':
         if chump is None:
             raise ImportError('Python module "chump" not installed')
 
         app = chump.Application(self.config['app'])
         return app.get_user(self.config['user'])
 
-    def web_service_submit(self, service: 'chump.Application', title: str, body: str) -> None:
+    def web_service_submit(self, service: 'chump.User', title: str, body: str) -> None:
         sound = self.config['sound']
         # If device is the empty string or not specified at all, use None to send to all devices
         # (see https://github.com/thp/urlwatch/issues/372)
@@ -853,7 +938,7 @@ class MailGunReporter(TextReporter):
 
     __kind__ = 'mailgun'
 
-    def submit(self) -> None:  # type: ignore[override]
+    def submit(self) -> Optional[str]:  # type: ignore[override]
         region = self.config.get('region', '')
         domain = self.config['domain']
         api_key = self.config['api_key']
@@ -915,7 +1000,7 @@ class TelegramReporter(MarkdownReporter):
 
     __kind__ = 'telegram'
 
-    def submit(self, max_length: int = 4096) -> None:  # type: ignore[override]
+    def submit(self, max_length: int = 4096, **kwargs: Any) -> None:  # type: ignore[override]
         """Submit report."""
         bot_token = self.config['bot_token']
         chat_ids = self.config['chat_id']
@@ -1133,7 +1218,7 @@ class WebhookMarkdownReporter(MarkdownReporter):
         else:
             self.max_length = default_max_length
 
-    def submit(self) -> None:  # type: ignore[override]
+    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
@@ -1169,7 +1254,7 @@ class MatrixReporter(MarkdownReporter):
 
     __kind__ = 'matrix'
 
-    def submit(self, max_length: int = None) -> None:  # type: ignore[override]
+    def submit(self, max_length: int = None, **kwargs: Any) -> None:  # type: ignore[override]
         if matrix_client is None:
             raise ImportError('Python module "matrix_client" not installed')
 

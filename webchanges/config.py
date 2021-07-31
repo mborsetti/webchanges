@@ -2,7 +2,6 @@
 
 import argparse
 import os
-from concurrent.futures import Future
 from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Union
@@ -16,15 +15,25 @@ class BaseConfig(object):
     def __init__(
         self,
         project_name: str,
-        config_dir: Path,
+        config_path: Path,
         config: Path,
         jobs: Path,
         hooks: Path,
         cache: Union[str, PathLike],
         verbose: bool,
     ) -> None:
+        """
+
+        :param project_name: The name of the project.
+        :param config_path: The path of the configuration directory.
+        :param config: The path of the configuration file.
+        :param jobs: The path of the jobs file.
+        :param hooks: The path of the Python hooks file.
+        :param cache: The path of the snapshots database file.
+        :param verbose: Whether to run in verbose mode (e.g. --verbose has been selected)
+        """
         self.project_name = project_name
-        self.config_dir = config_dir
+        self.config_path = config_path
         self.config = config
         self.jobs = jobs
         self.hooks = hooks
@@ -35,19 +44,27 @@ class BaseConfig(object):
 class CommandConfig(BaseConfig):
     """Command line arguments configuration."""
 
-    release_upgrade: Future
-
     def __init__(
         self,
         project_name: str,
-        config_dir: Path,
+        config_path: Path,
         config: Path,
         jobs: Path,
         hooks: Path,
         cache: Union[str, PathLike],
         verbose: bool,
     ) -> None:
-        super().__init__(project_name, config_dir, config, jobs, hooks, cache, verbose)
+        """
+
+        :param project_name: The name of the project.
+        :param config_path: The path of the configuration directory.
+        :param config: The path of the configuration file.
+        :param jobs: The path of the jobs file.
+        :param hooks: The path of the Python hooks file.
+        :param cache: The path of the snapshots database file.
+        :param verbose: Whether to run in verbose mode (e.g. --verbose has been selected)
+        """
+        super().__init__(project_name, config_path, config, jobs, hooks, cache, verbose)
         self.joblist: Optional[List[int]] = None
         self.list: bool = False
         self.errors: bool = False
@@ -74,7 +91,10 @@ class CommandConfig(BaseConfig):
         self.parse_args()
 
     def parse_args(self) -> argparse.ArgumentParser:
-        """Python arguments parser."""
+        """Set up the Python arguments parser.
+
+        :returns: The Python arguments parser.
+        """
         parser = argparse.ArgumentParser(
             description=__doc__.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--', '\n\n'),
             epilog=f'Full documentation is at {__docs_url__}',

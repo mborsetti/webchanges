@@ -6,6 +6,8 @@ import traceback
 
 from keyring.errors import NoKeyringError
 
+from matrix_client.errors import MatrixError
+
 import pytest
 
 from requests.exceptions import MissingSchema
@@ -206,13 +208,17 @@ def test_reporters(reporter, capsys):
                     'No recommended backend was available.',
                 )
             )
-    elif reporter in ('pushover', 'pushbullet', 'telegram', 'matrix', 'mailgun', 'ifttt', 'prowl'):
-        if reporter == 'matrix' and not matrix_client_is_installed:
-            logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
-            return
+    elif reporter in ('pushover', 'pushbullet', 'telegram', 'mailgun', 'ifttt', 'prowl'):
         with pytest.raises(RuntimeError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert reporter in str(pytest_wrapped_e.value).lower()
+    elif reporter == 'matrix':
+        if not matrix_client_is_installed:
+            logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
+            return
+        with pytest.raises(MatrixError) as pytest_wrapped_e:
+            report.finish_one(reporter, check_enabled=False)
+        assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
     elif reporter in ('webhook', 'webhook_markdown'):
         with pytest.raises(MissingSchema) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)

@@ -6,6 +6,3 @@ webchanges.cli module
     Please consider :ref:`contributing <contributing>` to this project.
 
 .. automodule:: webchanges.cli
-   :members:
-   :undoc-members:
-   :show-inheritance:

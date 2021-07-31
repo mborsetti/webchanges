@@ -42,8 +42,8 @@ like the one below:
 
    url: https://example.com/api_data.json
    user_visible_url: https://example.com
-   execute: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
-
+   filter:
+     - execute: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
 
 Escaping of the Python is a bit complex due to being inside a double quoted shell string inside a double quoted YAML
 string. For example, ``"`` code becomes ``\\\"`` and ``\n`` becomes ``\\n`` -- and so on. The example below provides
@@ -53,11 +53,81 @@ seemingly complex escaping as well how to inform the downstream html reporter th
 
    url: https://example.com/api_data.json
    user_visible_url: https://example.com
-   execute: "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\\\"[{v['Title']}]\\n({v['DownloadUrl']})\\\") for v in d['value']]\""
+   filter:
+     - execute: "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\\\"[{v['Title']}]\\n({v['DownloadUrl']})\\\") for v in d['value']]\""
    is_markdown: true
+
+Alternatively, you could run a script like this
+
+.. code-block:: yaml
+
+   url: https://example.com/api_data.json
+   user_visible_url: https://example.com
+   filter:
+     - execute: python3 ~/.config/webchanges/parse.py
+   is_markdown: true
+
+With the script file ~/.config/webchanges/parse.py containing the following:
+
+.. code-block:: python
+
+   # ~/.config/webchanges/parse.py
+   import json
+   import sys
+
+   data = json.load(sys.stdin)
+   for v in d['value']:
+       print(f"[{v['Title']}]\n({v['DownloadUrl']})")
+
 
 
 .. _encoding:
+
+Selecting HTML elements with wildcards
+--------------------------------------
+Some pages appends/generates random characters to the end of the class name, which change every time it's loaded. For
+example:
+contentWrap--qVat7asG
+contentWrap--wSlxapCk
+contentWrap--JV0HGsqD
+etc.
+
+``element-by-class`` does not support this, but XPATH does:
+
+.. code-block:: yaml
+
+   filter:
+     - xpath: //div[contains(@class, 'contentWrap-')]
+     - html2text
+
+Alternatively, especially if you want to do more custom filtering, you can write an external Python script that uses
+e.g. Beautiful Soup and call it:
+
+.. code-block:: yaml
+
+   filter:
+     - execute: python3 ~/.config/webchanges/content_wrap.py
+     - html2text
+
+With the script file ~/.config/webchanges/content_wrap.py containing the following:
+
+.. code-block:: python
+
+   # ~/.config/webchanges/content_wrap.py
+   import os
+   import re
+   import sys
+
+   from bs4 import BeautifulSoup
+
+   data = sys.stdin.read()
+   soup = BeautifulSoup(data, 'lxml')
+
+   # search for "div" elements with the according class
+   for element in soup.find_all('div', {'class' : re.compile(r'contentWrap-*')}):
+       print(element)
+
+
 
 Overriding the content encoding
 -------------------------------

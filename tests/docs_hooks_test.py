@@ -24,8 +24,8 @@ from webchanges.storage import YamlJobsStorage
 logger = logging.getLogger(__name__)
 
 here = Path(__file__).parent
-data_dir = here.joinpath('data')
-docs_dir = here.joinpath('..').resolve().joinpath('docs')
+data_path = here.joinpath('data')
+docs_path = here.joinpath('..').resolve().joinpath('docs')
 
 latest_py_only = pytest.mark.skipif(sys.version_info < (3, 9), reason='Only needs to run once')
 
@@ -59,19 +59,19 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
 def load_hooks_from_doc() -> str:
     """Load YAML code blocks from rst file."""
-    doc = parse_rst(open(docs_dir.joinpath('hooks.rst')).read())
+    doc = parse_rst(open(docs_path.joinpath('hooks.rst')).read())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
     return visitor.code[0]
 
 
 def load_hooks_testdata() -> Dict[str, Any]:
-    yaml_data = Path(data_dir.joinpath('doc_hooks_testdata.yaml')).read_text()
+    yaml_data = Path(data_path.joinpath('doc_hooks_testdata.yaml')).read_text()
     return yaml.safe_load(yaml_data)
 
 
 def load_hooks_jobs() -> List[JobBase]:
-    jobs_file = data_dir.joinpath('doc_hooks_jobs.yaml')
+    jobs_file = data_path.joinpath('doc_hooks_jobs.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)
     return jobs_storage.load()
 

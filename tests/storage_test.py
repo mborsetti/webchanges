@@ -20,14 +20,14 @@ minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires '
 # py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
 
 here = Path(__file__).parent
-data_dir = here.joinpath('data')
-config_file = data_dir.joinpath('config.yaml')
+data_path = here.joinpath('data')
+config_file = data_path.joinpath('config.yaml')
 cache_file = ':memory:'
 hooks_file = Path('')
 
 
 def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, CacheSQLite3Storage, str):
-    jobs_file = data_dir.joinpath('jobs-time.yaml')
+    jobs_file = data_path.joinpath('jobs-time.yaml')
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheSQLite3Storage(cache_file)
@@ -287,7 +287,7 @@ def get_empty_history_and_no_max_snapshots():
 
 
 def test_migrate_urlwatch_legacy_db(tmp_path):
-    orig_cache_file = data_dir.joinpath('cache-urlwatch_legacy.db')
+    orig_cache_file = data_path.joinpath('cache-urlwatch_legacy.db')
     temp_cache_file = tmp_path.joinpath('cache-urlwatch_legacy-temp.db')
     shutil.copyfile(orig_cache_file, temp_cache_file)
     if minidb_is_installed:
@@ -319,7 +319,7 @@ def prepare_storage_test_minidb(config_args=None):
         config_args = {}
     from webchanges.storage_minidb import CacheMiniDBStorage
 
-    jobs_file = data_dir.joinpath('jobs-time.yaml')
+    jobs_file = data_path.joinpath('jobs-time.yaml')
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheMiniDBStorage(cache_file)
@@ -368,7 +368,7 @@ def test_clean_and_history_data_minidb():
 
 
 def test_cache_dir_storage(tmp_path):
-    jobs_file = data_dir.joinpath('jobs-time.yaml')
+    jobs_file = data_path.joinpath('jobs-time.yaml')
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheDirStorage(tmp_path)
@@ -405,7 +405,15 @@ def test_cache_dir_storage(tmp_path):
         urlwatcher.run_jobs()
         history = cache_storage.get_history_data(guid)
         assert len(history) == 1
-        cache_storage.delete_latest(guid)
+        with pytest.raises(NotImplementedError) as pytest_wrapped_e:
+            cache_storage.delete_latest(guid)
+        assert str(pytest_wrapped_e.value) == (
+            "Deleting of latest snapshot not supported by 'textfiles' database engine since only one snapshot is saved."
+            " Delete all snapshots if that's what you are trying to do."
+        )
+
+        # delete all
+        cache_storage.delete(guid)
         history = cache_storage.get_history_data(guid)
         assert len(history) == 0
 

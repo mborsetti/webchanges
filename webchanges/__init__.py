@@ -10,12 +10,13 @@ __min_python_version__ = (3, 7)  # minimum version of Python required to run; su
 
 
 __project_name__ = __package__
+# Version numbering is PEP440-compliant https://www.python.org/dev/peps/pep-0440/
 # Release numbering largely follows Semantic Versioning https://semver.org/spec/v2.0.0.html#semantic-versioning-200
 # * MAJOR version when you make incompatible API changes,
 # * MINOR version when you add functionality in a backwards compatible manner, and
-# * PATCH version when you make backwards compatible bug fixes
+# * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.8.0.rc0'
+__version__ = '3.8rc1'
 __description__ = 'Check web (or commands) for changes since last run and notify'
 __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'
@@ -31,6 +32,6 @@ from typing import Dict, Union
 def init_data() -> Dict[str, Union[str, tuple]]:
     """Returns dict of globals (used in testing).
 
-    :return: dict of globals()
+    :returns: dict of globals()
     """
     return {k: v for k, v in globals().items()}

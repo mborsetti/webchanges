@@ -6,6 +6,3 @@ webchanges.command module
     Please consider :ref:`contributing <contributing>` to this project.
 
 .. automodule:: webchanges.command
-   :members:
-   :undoc-members:
-   :show-inheritance:

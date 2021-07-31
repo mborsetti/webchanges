@@ -17,9 +17,10 @@ from os import PathLike
 from types import ModuleType
 from typing import Callable, Dict, Iterable, List, Match, TYPE_CHECKING, Tuple, Type, Union
 
-# https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    # https://stackoverflow.com/questions/39740632
     from .filters import FilterBase
+    from .jobs import JobBase
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class TrackSubClasses(type):
     __supported_subfilters__: Dict[str, str] = {}
 
     @staticmethod
-    def sorted_by_kind(cls: Type[FilterBase]) -> List[FilterBase]:
+    def sorted_by_kind(cls: Type[FilterBase, JobBase]) -> List[Union[FilterBase, JobBase]]:
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
     def __init__(cls, name: str, bases: Tuple[type], namespace: dict) -> None:

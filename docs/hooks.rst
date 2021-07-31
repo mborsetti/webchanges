@@ -6,7 +6,7 @@
 .. _hooks:
 
 =================
-Python code hooks
+Python code hook
 =================
 Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing it into
 a ``hooks.py`` file and placing it into the same directory as the job and configuration files. The code will be
@@ -85,7 +85,8 @@ An example ``hooks.py`` file is below:
 
 
    class CustomMatchUrlFilter(AutoMatchFilter):
-       """The AutoMatchFilter will apply automatically to all jobs that match the given properties set."""
+       """The AutoMatchFilter will apply automatically to all jobs that match the given properties
+       set."""
 
        MATCH = {'url': 'https://example.org/'}
 
@@ -95,7 +96,8 @@ An example ``hooks.py`` file is below:
 
 
    class CustomRegexMatchUrlFilter(RegexMatchFilter):
-       """The RegexMatchFilter will apply automatically to  all jobs that match the given properties set."""
+       """The RegexMatchFilter will apply automatically to  all jobs that match the given properties
+       set."""
 
        MATCH = {'url': re.compile(r'https://example.org/.*')}
 

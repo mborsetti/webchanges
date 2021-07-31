@@ -15,7 +15,7 @@ Upgrading from urlwatch
 =======================
 
 :program:`webchanges` |version| is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as suggested by its author
-to optimize it for HTML, and is backward-compatible with `urlwatch 2.23`'s job and configuration files.
+to optimize it for HTML, and is backward-compatible with :program:`urlwatch` 2.23's job and configuration files.
 
 Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), and gives you:
 
@@ -32,7 +32,7 @@ Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), a
   * Other legibility improvements
 * Improved ``telegram`` reporter now uses MarkdownV2 and preserves most formatting of HTML sites including clickable
   links, bolding, underlining, italics and strikethrough.
-* Multiple upgrades in `Pyppeteer`-based browsing (called ``navigate`` in :program:`urlwatch`) to render JavaScript,
+* Multiple upgrades in **Pyppeteer**-based browsing (called ``navigate`` in :program:`urlwatch`) to render JavaScript,
   including:
 
   * Upgraded browser engine (same as Chrome 89)
@@ -91,25 +91,28 @@ just fine as is. It may complain about some directive name being changed for cla
 If you encounter any problems or have any suggestions please open an issue `here
 <https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.
 
-If you are upgrading from a version of :program:`urlwatch` prior to 2.23, before running :program:`webchanges` make sure
-that you have implemented all :program:`urlwatch` breaking changes in your job and configuration files and can run
-:program:`urlwatch` 2.23 successfully.
+.. note::
 
-For example, per :program:`urlwatch` issue `#600 <https://github.com/thp/urlwatch/pull/600#issuecomment-753944678>`__),
+   If you are upgrading from a version of :program:`urlwatch` prior to 2.23, before running :program:`webchanges` make
+   sure that you can run :program:`urlwatch` 2.23 successfully having implemented all :program:`urlwatch` breaking
+   changes in your job and configuration files.
 
-.. code-block:: yaml
+   For example, per :program:`urlwatch` issue `#600
+   <https://github.com/thp/urlwatch/pull/600#issuecomment-753944678>`__
 
-   url: https://example.com/
-   filter: html2text
+   .. code-block:: yaml
 
-no longer works in :program:`urlwatch` 2.23, and therefore in :program:`webchanges`, as all filters must be specified as
-sub-filters like this:
+      url: https://example.com/
+      filter: html2text
 
-.. code-block:: yaml
+   no longer works in :program:`urlwatch` 2.23, and therefore in :program:`webchanges`, as all filters must be
+   specified as sub-filters like this:
 
-   url: https://example.com/
-   filter:
-     - html2text:
+   .. code-block:: yaml
+
+      url: https://example.com/
+      filter:
+        - html2text:
 
 
 .. _migration_changes:
@@ -123,14 +126,15 @@ as long as you run it in Python 3.7 or higher, and you can switch back whenever 
 ~~~~~~~~~~~~~~~~~~
 Relative to :program:`urlwatch` 2.23:
 
+* Must run on Python version 3.7 or higher.
 * By default a new much improved database engine is used; run with ``--database-engine minidb`` command line argument to
-  preserve backwards-compatibility
+  preserve backwards-compatibility.
 * By default only 4 snapshots are kept with the new database engine, and older ones are purged after every run; run
-  with ``--max-snapshots 0`` command line argument to keep the existing behavior (but beware of infinite database
-  growth)
+  with ``--max-snapshots 0`` command line argument to keep the existing behavior (but beware of its infinite database
+  growth!).
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python packages; use the
-  default method instead or construct a custom ``execute`` command
-* Must run on Python version 3.7 or higher
+  default method instead or construct a custom command using the :ref:`execute` filter.
+
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -138,20 +142,17 @@ Relative to :program:`urlwatch` 2.23:
 
 * Installation and command line
 
-  * Installation of optional Python packages required by a feature is now made easier with pip `extras
-    <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`__  (e.g. ``pip
-    install -U webchanges[ocr,pdf2text]``)
-  * ``html2text``, ``markdown2`` and ``msgpack`` Python packages are now installed by default, while ``keyring`` and
-    ``minidb`` Python are no longer installed by default
   * New ``--errors`` command line argument will let you know the jobs that result in an error or have empty responses
-    after filters are applied
+    after filters are applied.
   * ``--test`` command line argument is used to test a job (formerly ``--test-filter``, deprecated and will be removed
-    in a future release)
+    in a future release).
   * ``--test-diff`` command line argument is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated and
-    will be removed in a future release) and display diff history
-  * ``--test-diff`` command line argument is no longer limited to displaying the last 10 snapshots
-  * Add job number(s) in command line to run a subset of them; for example, run ``webchanges 2 3`` to only run jobs #2
-    and #3 of your jobs list (find job numbers by running``webchanges --list``)
+    will be removed in a future release) and display diff history.
+  * ``--test-diff`` command line argument is no longer limited to displaying the last 10 snapshots.
+  * Add job number(s) in command line to run a subset of jobs; for example, run ``webchanges 2 3`` to only run jobs #2
+    and #3 of your jobs list (find job numbers by running ``webchanges --list``). Negative job indices are allowed; for
+    example, run ``webchanges -1`` to only run the last job of your jobs list, or ``webchanges --test -2`` to test
+    the second to last job of your jobs list.
   * New ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults
     to 4. If set to 0, and unlimited number of snapshots will be kept. Only works if the default ``sqlite3`` database
     is being used.
@@ -159,133 +160,166 @@ Relative to :program:`urlwatch` 2.23:
     smaller database due to data compression with `msgpack <https://msgpack.org/index.html>`__, higher speed due to
     indexing, and offers additional features and flexibility; migration from old 'minidb' database is done automatically
     and the old database preserved for manual deletion. Specify ``minidb`` to continue using the legacy database used
-    by :program:`urlwatch`
+    by :program:`urlwatch`.
   * New ``--rollback-cache TIMESTAMP`` new command line argument to rollback the snapshot database to a previous time,
     useful when you lose notifications. Does not work with database engine ``minidb`` or ``textfiles``.
   * New ``--delete-snapshot`` command line argument to removes the latest saved snapshot of a job from the database;
     useful if a change in a website (e.g. layout) requires modifying filters as invalid snapshot can be deleted and
-    :program:`webchanges` rerun to create a truthful diff
-
-  * New ``-V`` command line argument, as an alias to ``--version``
-  * New ``--log-level`` command line argument to control the amount of logging displayed by the ``-v`` argument
+    :program:`webchanges` rerun to create a truthful diff.
+  * New ``-V`` command line argument, as an alias to ``--version``.
+  * New ``--log-level`` command line argument to control the amount of logging displayed by the ``-v`` argument.
   * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
-    the current directory, :program:`webchanges` now looks for it in the default configuration directory
+    the current directory, :program:`webchanges` now looks for it in the default configuration directory.
   * If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' extension, or a filename for ``--hooks``
-    without a '.py' extension, :program:`webchanges` now also looks for one with such an extension appended to it
+    without a '.py' extension, :program:`webchanges` now also looks for one with such an extension appended to it.
   * In Windows, ``--edit`` defaults to using the built-in notepad.exe text editor if both the %EDITOR% and %VISUAL%
-    environment variables are not set
+    environment variables are not set.
   * Run a subset of jobs by adding their index number(s) as command line arguments. For example, run
     ``webchanges 2 3`` to only run jobs #2 and #3 of your jobs list. Run ``webchanges --list`` to find the job numbers.
     API is experimental and may change in the near future.
+  * Installation of optional Python packages required by a feature or filter is now made easier with pip `extras
+    <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`__  (e.g. ``pip
+    install -U webchanges[ocr,pdf2text]``).
+  * ``html2text``, ``markdown2`` and ``msgpack`` Python packages are now installed by default, while ``keyring`` and
+    ``minidb`` Python are no longer installed by default.
 
 * Files and location
 
-  * The name of the default jobs file has been changed to ``jobs.yaml``; if at program launch ``urls.yaml`` is found
-    and no ``jobs.yaml`` exists, this is copied into a newly created ``jobs.yaml`` file for backward-compatibility
-  * The name of the default program configuration file has been changed to ``config.yaml``; if at program launch
-    ``urlwatch.yaml`` is found and no ``config.yaml`` exists, this is copied into a newly created ``config.yaml`` file
-    for backward-compatibility
+  * The default name of the jobs file has been changed to ``jobs.yaml``; for backward-compatibility if at program launch
+    no ``jobs.yaml`` exists but ``urls.yaml`` is found, its contents are copied into a newly created ``jobs.yaml`` file
+    and the original preserved for manual deletion.
+  * The default name of the program configuration file has been changed to ``config.yaml``; for backward-compatibility
+    if at program launch no ``config.yaml`` exists but ``urlwatch.yaml`` is found, its contents are copied into a
+    newly created ``config.yaml`` file and the original preserved for manual deletion.
   * In Windows, the location of the jobs and configuration files has been moved to
     ``%USERPROFILE%\Documents\webchanges``, where they can be more easily edited (they are indexed there) and backed up;
     if at program launch jobs and configurations files are only found in the old location (such as during an upgrade),
-    these will be copied to the new directory automatically and the old ones preserved for manual deletion
+    these will be copied to the new directory automatically and the old ones preserved for manual deletion.
   * Legacy ``lib/hooks.py`` file location is no longer supported: ``hooks.py`` needs to be in the same directory as the
-    configuration files
+    job and configuration files.
 
 * Directives
 
   * Navigation by full browser is now accomplished by specifying the ``url`` and adding the ``use_browser: true``
     directive. The use of the ``navigate`` directive instead of the ``url`` one has been deprecated for clarity and will
-    trigger a warning; this directive will be removed in a future release
+    trigger a warning; this directive will be removed in a future release.
   * The ``html2text`` filter defaults to using the Python ``html2text`` package (with optimized defaults) instead of
-    ``re`` (now renamed `strip_tags`` for clarity)
-  * New ``additions_only`` directive to report only added lines (useful when monitoring only new content)
-  * New ``deletions_only`` directive to report only deleted lines
-  * New ``contextlines`` directive to specify the number of context lines in a unified diff
-  * New ``no_redirects`` job directive (for ``url`` jobs) to disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection
-  * New directives for ``use_browser: true`` (`Pyppeteer`) jobs to allow more flexibility and control:
+    ``re`` (now renamed `strip_tags`` for clarity).
+  * New ``additions_only`` directive to report only added lines (useful when monitoring only new content).
+  * New ``deletions_only`` directive to report only deleted lines.
+  * New ``contextlines`` directive to specify the number of context lines in a unified diff.
+  * New ``no_redirects`` job directive (for ``url`` jobs) to disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection.
+  * New directives for ``use_browser: true`` (**Pyppeteer**) jobs to allow more flexibility and control:
     ``chromium_revision``, ``switches``, ``wait_until``, ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``,
-    ``user_data_dir``, ``block_elements``, ``cookies``, ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``
-  * New ``note`` job directive to ad a freetext note appearing in the report after the job header
-  * New sub-directives for the ``strip`` filter: ``chars``, ``side`` and ``splitlines``
+    ``user_data_dir``, ``block_elements``, ``cookies``, ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``.
+  * New ``note`` job directive to ad a freetext note appearing in the report after the job header.
+  * New sub-directives for the ``strip`` filter: ``chars``, ``side`` and ``splitlines``.
   * The ``html2text`` filter's ``re`` method has been renamed ``strip_tags`` for clarity, the old name is deprecated and
-    will trigger a warning
-  * New sub-directives to the ``strip`` filter:
-
-    * ``chars``: Set of characters to be removed (default: whitespace)
-    * ``side``: One-sided removal, either ``left`` (leading characters) or ``right`` (trailing characters)
-    * ``splitlines``: Whether to apply the filter on each line of text (true/false) (default: ``false``, i.e. apply to
-      the entire data)
+    will trigger a warning.
   * New ``format-xml`` filter to pretty-print xml using the lxml Python package’s etree.tostring pretty_print function
-  * ``url`` directive supports ``ftp://`` URLs
+  * ``url`` directive supports ``ftp://`` URLs.
+  * The ``user_visible_url`` job directive now applies to all type of jobs, including ``command`` ones.
   * The ``grep`` filter has been renamed ``keep_lines_containing`` for clarity, the old name is deprecated and will
-    trigger a warning; it will be removed in a future release
+    trigger a warning; it will be removed in a future release.
   * The ``grepi`` filter has been renamed ``delete_lines_containing`` for clarity, the old name deprecated and will
-    trigger a warning; it will be removed in a future release
+    trigger a warning; it will be removed in a future release.
   * Both the ``keep_lines_containing`` and ``delete_lines_containing`` accept ``text`` (default) in addition to ``re``
-    (regular expressions)
+    (regular expressions).
   * New filter ``execute`` to filter the data using an executable without invoking the shell (as ``shellpipe`` does)
-    and therefore exposing to additional security risks
-  * Support for ``ftp://`` URLs to download a file from an ftp server
+    and therefore exposing to additional security risks.
+  * Support for ``ftp://`` URLs to download a file from an ftp server.
   * The use of the ``kind`` directive in ``jobs.yaml`` configuration files has been deprecated for simplicity (but is,
-    for now, still used internally); it will be removed in a future release
-  * New sub-directive ``silent`` for ``telegram`` reporter to receive a notification with no sound (true/false)
-    (default: false)
+    for now, still used internally); it will be removed in a future release.
+  * The ``telegram`` reporter now uses MarkdownV2 and preserves most formatting of HTML sites processed by the
+    ``html2text`` filter, e.g. clickable links, bolding, underlining, italics and strikethrough.
+  * New sub-directive ``silent`` for ``telegram`` reporter to receive a notification with no sound.
   * The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
-    ``max_message_length`` sub-directive
-  * The user is now alerted when the job file contains unrecognized directives (e.g. typo)
-  * Reduction in concurrency for higher stability
+    ``max_message_length`` sub-directive.
+  * ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) now recognize ``data`` and ``method`` directives,
+    enabling e.g. to make a ``POST`` HTTP request using a browser with JavaScript support.
+  * New ``tz`` key for  ``report`` in configuration file sets the timezone for the diff in reports (useful if running
+    e.g. on a cloud server in a different timezone).
+  * New ``run_command`` reporter to execute a command and pass the report text as its input.
+  * New ``remove_repeated`` filter to remove repeated lines (similar to Unix's ``uniq``).
+  * The ``execute`` filter (and ``shellpipe``) sets more environment variables to allow for more flexibility.
+  * Whenever a HTTP client error (4xx) response is received, in ``--verbose`` mode the content of the response is
+    displayed with the error.
+  * The user is now alerted when the job file and/or configuration file contains unrecognized directives (e.g. typo).
+  * If a newer version of :program:`webchanges` has been released to PyPi, an advisory notice is printed to stdout and
+    added to the report footer (if footer is enabled).
 
 
 * Internals
 
+  * Reduction in concurrency with `use_browser: true`` (i.e. using  **Pyppeteer**) jobs for higher stability.
   * Increased reliability by using Python's built-in ``asyncio.run()`` to manage the asyncio event loop, finalizing
-    asynchronous generators, and closing the threadpool instead of legacy custom code
+    asynchronous generators, and closing the threadpool instead of legacy custom code.
   * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
-    <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__
-  * A new, more efficient indexed database no longer requiring external Python package
+    <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__.
+  * A new, more efficient indexed database no longer requiring external Python package.
   * Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`__ to `timeit.default_timer
-    <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__
+    <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__.
   * Using Chromium revisions equivalent to Chrome 89.0.4389.72 for jobs with ``use_browser: true`` (i.e. using
-    `Pyppeteer`)
-  * Replaced custom atomic_rename function with built-in `os.replace()
-    <https://docs.python.org/3/library/os.html#os.replace>`__ (new in Python 3.3) that does the same thing
+    **Pyppeteer**).
+  * Replaced custom atomic_rename function with built-in `os.replace().
+    <https://docs.python.org/3/library/os.html#os.replace>`__ (new in Python 3.3) that does the same thing.
   * Upgraded email construction from using ``email.mime`` (obsolete) to `email.message.EmailMessage
-    <https://docs.python.org/3/library/email.message.html#email.message.EmailMessage>`__
-  * Reports' elapsed time now always has at least 2 significant digits
-  * Unicode is supported throughout, including in filters and jobs and configuration YAML files
+    <https://docs.python.org/3/library/email.message.html#email.message.EmailMessage>`__.
+  * Reports' elapsed time now always has at least 2 significant digits.
+  * Unicode is supported throughout, including in filters and jobs and configuration YAML files.
   * A 36 percentage point increase in code testing coverage (to 78%), a completely new continuous integration
     (CI) and continuous delivery (CD) pipeline (`GitHub Actions <https://github.com/features/actions>`__), and testing
-    on both Ubuntu **and** macOS (Windows 10 x64 to come) increase reliability of new releases
-  * Using `flake8 <https://pypi.org/project/flake8/>`__ to check PEP-8 compliance and more
-  * Using `coverage <https://pypi.org/project/coverage/>`__ to check unit testing coverage
-  * Added type hinting to the entire code
-  * Strengthened security with `bandit <https://pypi.org/project/bandit/>`__ to catch common security issues
-  * Standardized code formatting with `black <https://pypi.org/project/black/>`__
-  * A vast improvement in documentation and error text
-  * The support for Python 3.9
+    on both Ubuntu **and** macOS (Windows 10 x64 to come) increase reliability of new releases.
+  * Using `flake8 <https://pypi.org/project/flake8/>`__ to check PEP-8 compliance and more.
+  * Using `coverage <https://pypi.org/project/coverage/>`__ to check unit testing coverage.
+  * Added type hinting to the entire code.
+  * Strengthened security with `bandit <https://pypi.org/project/bandit/>`__ to catch common security issues.
+  * Standardized code formatting with `black <https://pypi.org/project/black/>`__.
+  * A vast improvement in documentation and error text.
+  * The support for Python 3.9.
 
 Fixed
 ~~~~~
 Relative to :program:`urlwatch` 2.23:
 
 * Diff (change) data is no longer lost if :program:`webchanges` is interrupted mid-execution or encounters an error in
-  reporting: the permanent database is updated only at the very end (after reports are sent)
+  reporting: the permanent database is updated only at the very end (after reports are sent).
 * The database no longer grows unbounded to infinity. Fix only works when using the new, default, ``sqlite3`` database
   engine. In this scenario only the latest 4 snapshots are kept, and older ones are purged after every run; the number
   is selectable with the new ``--max-snapshots`` command line argument. To keep the existing grow-to-infinity behavior,
   run :program:`webchanges` with ``--max-snapshots 0``.
-* The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
-* HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
+* The ``html2text`` filter's ``html2text`` method defaults to Unicode handling.
+* The ``html2text`` filter's ``strip_tags`` method is no longer returning HTML character references (e.g. &gt;, &#62;
+  , &#x3e;) but the corresponding Unicode characters.
+* HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`.
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
-  the first sub-directive for a reporter)
-* The presence of the ``data`` directive in a job would force the method to POST, impeding the ability to do PUTs
+  the first sub-directive for a reporter).
+* The presence of the ``data`` directive in a job no longer forces the method to POST allowing e.g. PUTs.
 * ``format-json`` filter no longer unexpectedly reorders contents of dictionaries, but the new sub-directive
-  ``sort_keys`` allows you to set it to do so
-* Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
+  ``sort_keys`` allows you to set it to do so if you want to.
+* When using the ``--edit`` or ``--edit-config`` command line arguments to edit jobs or configuration files, symbolic
+  file links are maintained (no longer overwritten by the file).
+* Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run.
 * Fixed various system errors and freezes when running ``url`` jobs with ``use_browser: true`` (formerly ``navigate``
-  jobs)
-* Fixed multiple error messages for clarity
+  jobs).
+* Job ``headers`` stored in the configuration file (``config.yaml``) are now merged correctly and case-insensitively
+  with those present in the job (in ``jobs.yaml``). A header in the job replaces a header by the same name if already
+  present in the configuration file, otherwise is added to the ones present in the configuration file.
+* Fixed ``TypeError: expected string or bytes-like object`` error in cookiejar (called by requests module) caused by
+  some ``cookies`` being read from the jobs YAML file in other formats.
+* Use same retrieval duration precision in all reports.
+* Fixed a rare case when html report would not correctly reconstruct a clickable link from Markdown for (an) item(s)
+  inside an element in a list.
+* No longer errors out when ``telegram`` reporter's ``chat_id`` is numeric.
+* ``test-diff`` command line argument was showing historical diffs in wrong order; now showing most recent first
+* An error is now raised when a ``url`` job with ``use_browser: true`` returns no data due to an HTTP error (e.g.
+  proxy_authentication_required).
+* Jobs were included in email subject line even if there was nothing to report after filtering with ``additions_only``
+  or ``deletions_only``.
+* ``hexdump`` filter now correctly formats lines with less than 16 bytes.
+* ``sha1sum`` and ``hexdump`` filters now accept data that is bytes (not just text).
+* Fixed case of wrong ETag being captured and saved when a URL redirection took place.
+* Rewrote most error messages for increased clarity.
 
 
 .. _migration_deprecations:
@@ -295,32 +329,31 @@ Deprecations
 Relative to :program:`urlwatch` 2.23:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
-  default method instead or construct a custom ``execute`` command
+  default method instead or construct a custom ``execute`` command.
+* The following deprecations are (for now) still working but will issue a warning:
 
-* The following deprecations are (for now) still working with a warning:
-
-  * Job directive ``kind`` is unused: remove from job
-  * Job directive ``navigate`` is deprecated: use ``url`` and add ``use_browser: true``
+  * Job directive ``kind`` is unused: remove from job.
+  * Job directive ``navigate`` is deprecated: use ``url`` and add ``use_browser: true``.
   * Method ``pyhtml2text`` of filter ``html2text`` is deprecated; since that method is now the default, remove the
-    method's sub-directive
-  * Method ``re`` of filter ``html2text`` is renamed to ``strip_tags``
-  * Filter ``grep`` is renamed to ``keep_lines_containing``
-  * Filter ``grepi`` is renamed to ``delete_lines_containing``
-  * Command line ``--test-filter`` argument is renamed to ``--test``
-  * Command line ``--test-diff-filter`` argument is renamed to ``--test-diff``
+    method's sub-directive.
+  * Method ``re`` of filter ``html2text`` is renamed to ``strip_tags`` for clarity.
+  * Filter ``grep`` is renamed to ``keep_lines_containing`` for clarity.
+  * Filter ``grepi`` is renamed to ``delete_lines_containing`` for clarity.
+  * Command line ``--test-filter`` argument is renamed to ``--test`` for clarity.
+  * Command line ``--test-diff-filter`` argument is renamed to ``--test-diff`` for clarity.
 
 * Also be aware that:
 
   * The name of the default job file has changed to ``jobs.yaml``; if not found, legacy ``urls.yaml`` will be
-    automatically copied into it
+    automatically copied into it.
   * The name of the default configuration file has changed to ``config.yaml``; if not found, legacy ``urlwatch.yaml``
-    will be automatically copied into it
+    will be automatically copied into it.
   * The location of configuration and jobs files in Windows has changed to ``%USERPROFILE%/Documents/webchanges``
-    where they can be more easily edited and backed up
+    where they can be more easily edited and backed up.
 
 Known issues
 ~~~~~~~~~~~~
-* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
+* ``url`` jobs with ``use_browser: true`` (i.e. using **Pyppeteer**) will at times display the below error message in
   stdout (terminal console). This does not affect :program:`webchanges` as all data is downloaded, and hopefully it will
   be fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 

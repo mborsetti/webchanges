@@ -6,6 +6,3 @@ webchanges.storage module
     Please consider :ref:`contributing <contributing>` to this project.
 
 .. automodule:: webchanges.storage
-   :members:
-   :undoc-members:
-   :show-inheritance:

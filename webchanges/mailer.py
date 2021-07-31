@@ -17,14 +17,20 @@ logger = logging.getLogger(__name__)
 
 
 class Mailer(object):
+    """Mailer class."""
+
     def send(self, msg: Union[EmailMessage]) -> None:
+        """Send a message.
+
+        :param msg: The message to be sent.
+        """
         raise NotImplementedError
 
     @staticmethod
     def msg(
         from_email: str, to_email: str, subject: str, text_body: str, html_body: Optional[str] = None
     ) -> EmailMessage:
-        """Create an Email object for a message
+        """Create an Email object for a message.
 
         :param from_email: The 'from' email address
         :param to_email: The 'to' email address
@@ -44,6 +50,8 @@ class Mailer(object):
 
 
 class SMTPMailer(Mailer):
+    """The Mailer class for SMTP."""
+
     def __init__(
         self,
         smtp_user: str,
@@ -53,6 +61,15 @@ class SMTPMailer(Mailer):
         auth: bool,
         insecure_password: Optional[str] = None,
     ) -> None:
+        """The Mailer class for SMTP.
+
+        :param smtp_user: The username for the SMTP server.
+        :param smtp_server: The address of the SMTP server.
+        :param smtp_port: The port of the SMTP server.
+        :param tls: Whether tls is to be used to connect to the SMTP server.
+        :param auth: Whether authentication is to be used with the SMTP server.
+        :param insecure_password: The password for the SMTP server (optional, to be used only if no keyring is present).
+        """
         self.smtp_server = smtp_server
         self.smtp_user = smtp_user
         self.smtp_port = smtp_port
@@ -61,6 +78,10 @@ class SMTPMailer(Mailer):
         self.insecure_password = insecure_password
 
     def send(self, msg: Optional[EmailMessage]) -> None:
+        """Send a message via the SMTP server.
+
+        :param msg: The message to be sent.
+        """
         passwd = ''  # nosec: B105 Possible hardcoded password
         if self.auth:
             if self.insecure_password:
@@ -86,10 +107,16 @@ class SMTPMailer(Mailer):
 
 
 class SendmailMailer(Mailer):
+    """The Mailer class to use sendmail executable."""
+
     def __init__(self, sendmail_path: str) -> None:
         self.sendmail_path = sendmail_path
 
     def send(self, msg: Union[EmailMessage]) -> None:
+        """Send a message via the sendmail executable.
+
+        :param msg: The message to be sent.
+        """
         p = subprocess.run(
             [self.sendmail_path, '-oi', msg['To']],
             input=msg.as_string(),
@@ -101,7 +128,12 @@ class SendmailMailer(Mailer):
 
 
 def smtp_have_password(smtp_server: str, from_email: str) -> bool:
-    """Check whether the keyring password is set for the email service."""
+    """Check whether the keyring password is set for the email service.
+
+    :param smtp_server: The address of the SMTP server.
+    :param from_email: The email address of the sender.
+    :returns: True if the keyring password is set.
+    """
     if keyring is None:
         return False
 
@@ -109,7 +141,11 @@ def smtp_have_password(smtp_server: str, from_email: str) -> bool:
 
 
 def smtp_set_password(smtp_server: str, from_email: str) -> None:
-    """Set the keyring password for the email service. Interactive."""
+    """Set the keyring password for the email service. Interactive.
+
+    :param smtp_server: The address of the SMTP server.
+    :param from_email: The email address of the sender.
+    """
     if keyring is None:
         raise ImportError('keyring module missing - service unsupported')
 

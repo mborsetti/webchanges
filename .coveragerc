@@ -10,6 +10,7 @@ omit =
     tests/*
     setup.py
     webchanges.py
+    webchanges/_vendored/*
 relative_files = True
 command_line = -m pytest -v
 plugins =

@@ -4,15 +4,15 @@
 Jobs
 ****
 Each job contains the source of the data to be monitored (:ref:`URL <url>` or :ref:`command <command>`) and related
-directives, plus directives on transformations to apply to the data (:ref:`filters <filters>`) once retrieved.
+directives, plus eventual directives on transformations (:ref:`filters <filters>`) to apply to the data once retrieved.
 
 The list of jobs is contained in the jobs file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable with the
 command ``webchanges --edit`` or using any text editor.
 
 **YAML tips**
 
-YAML has lots of idiosyncrasies that make it and finicky, and new users often have issues with it. Here are some tips
-and things to look for when using YAML. A more comprehensive syntax explanation is :ref:`here <yaml_syntax>`.
+The YAML syntax has lots of idiosyncrasies that make it and finicky, and new users often have issues with it. Here are
+some tips and things to look for when using YAML. A more comprehensive syntax explanation is :ref:`here <yaml_syntax>`.
 
 * Indentation: All indentation must be done with spaces (2 spaces is suggested); tabs are not recognized/allowed.
   Indentation is mandatory.
@@ -26,7 +26,7 @@ and things to look for when using YAML. A more comprehensive syntax explanation 
 
 
 * There must be a space after the ``:`` between the key name and its value. The lack of such space is often the
-  reason behind ^Unknown filter kind^ errors with no arguments
+  reason behind "Unknown filter kind" errors with no arguments
 
 .. code-block:: yaml
 
@@ -45,11 +45,11 @@ and things to look for when using YAML. A more comprehensive syntax explanation 
 .. code-block:: yaml
 
    name: This is a human-readable name/label of the job  # and this is a remark
-   name: ^This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark^
-   name: ^I can escape \^double\^ quotes within a double quoted string which also has a colon: followed by a space^
+   name: "This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark"
+   name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
 
 * You can learn more about quoting special characters `here <https://www.yaml.info/learn/quote.html#flow>`__ (the
-  library we use supports YAML 1.1, and our examples use ^flow scalars^). URLs and XPaths are always safe and don't
+  library we use supports YAML 1.1, and our examples use "flow scalars"). URLs and XPaths are always safe and don't
   need to be enclosed in quotes.
 
 For additional information on YAML, see the :ref:yaml_syntax and the references at the bottom of that page.
@@ -154,12 +154,12 @@ Required directives
 -------------------
 url
 ^^^
-The URI to resource to monitor.  ``https://``, ``http://``, ``ftp://`` and ``file://`` are supported.
+The URI of the resource to monitor.  ``https://``, ``http://``, ``ftp://`` and ``file://`` are supported.
 
 
 Optional directives - all ``url`` jobs
 --------------------------------------
-These directives are available for all ``url`` jobs:
+The following optional directives are available for all ``url`` jobs:
 
 
 use_browser
@@ -176,7 +176,7 @@ Cookies to send with the request (a dict).
 See examples :ref:`here <cookies>`.
 
 .. versionchanged:: 3.0
-   Works for all url jobs, including those with use_browser: true.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
 headers
@@ -186,7 +186,7 @@ Headers to send along with the request (a dict).
 See examples :ref:`here <headers>`.
 
 .. versionchanged:: 3.0
-   Works for all url jobs, including those with use_browser: true.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 http_proxy
 ^^^^^^^^^^
@@ -195,7 +195,7 @@ Proxy server to use for HTTP requests (a string).
 E.g. \http://username:password@proxy.com:8080.
 
 .. versionchanged:: 3.0
-   Works for all url jobs, including those with use_browser: true.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 https_proxy
 ^^^^^^^^^^^
@@ -204,7 +204,7 @@ Proxy server to use for HTTPS (i.e. secure) requests (a string).
 E.g. \https://username:password@proxy.com:8080.
 
 .. versionchanged:: 3.0
-   Works for all url jobs, including those with use_browser: true.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 timeout
 ^^^^^^^
@@ -213,7 +213,7 @@ Override the default timeout, in seconds (a number).
 See example :ref:`here <timeout>`.
 
 .. versionchanged:: 3.0
-   Works for all url jobs, including those with use_browser: true.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 method
 ^^^^^^
@@ -238,14 +238,6 @@ See example :ref:`here <post>`.
 
 .. versionchanged:: 3.8
    Works for all url jobs, including those with use_browser: true.
-
-user_visible_url
-^^^^^^^^^^^^^^^^
-Text to use in reports instead of contents of ``url`` (a string).
-
-Useful e.g. when watched URL is a REST API endpoint but you want to link to the webpage instead.
-
-.. versionadded:: 3.0.3
 
 note
 ^^^^
@@ -282,7 +274,8 @@ See more `here <ignore_errors>`.
 
 ignore_http_error_codes
 ^^^^^^^^^^^^^^^^^^^^^^^
-List of HTTP errors to ignore (a list).
+List of HTTP errors to ignore (a list).  Also accepts 2xx, 3xx, 4xx, and 5xx for the entire class of response status
+codes.
 
 See more :ref:`here <ignore_errors>`.
 
@@ -482,6 +475,19 @@ for ``url`` jobs retrieving HTML or XML data, up to 60 character of the contents
 
 .. versionchanged:: 3.0
    Added auto-detect <title> tag in HTML or XML.
+
+user_visible_url
+^^^^^^^^^^^^^^^^
+URL or text to use in reports instead of contents of ``url`` or ``command`` (a string).
+
+Useful e.g. when a watched URL is a REST API endpoint or you are using a custom script but you want a link to the
+webpage on your report.
+
+.. versionadded:: 3.0.3
+
+.. versionchanged:: 3.8
+   Added support for ``command`` jobs; previously worked only with ``url`` jobs.
+
 
 max_tries
 ---------

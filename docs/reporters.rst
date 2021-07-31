@@ -58,19 +58,19 @@ Reporters
 
 At the moment, the following reporters are available:
 
-* :ref:`stdout` (enabled by default): Display summary on stdout (the console)
-* :ref:`browser`: Display summary on the default web browser
-* :ref:`email`: Send summary via email (including SMTP)
+* :ref:`stdout` (enabled by default): Display on stdout (the console)
+* :ref:`browser`: Display on the default web browser
+* :ref:`email`: Send via email (SMTP or sendmail)
 * :ref:`xmpp`: Send a message using the Extensible Messaging and Presence Protocol (XMPP)
-* :ref:`webhook`: Send a message to a Slack or Discord channel using the service's webhook
-* :ref:`telegram`: Send a message using Telegram
-* :ref:`pushbullet`: Send summary via pushbullet.com
-* :ref:`pushover`: Send summary via pushover.net
-* :ref:`ifttt`: Send summary via IFTTT
-* :ref:`matrix`: Send a message to a room using the Matrix protocol
-* :ref:`mailgun`: Send email via the Mailgun service
-* :ref:`prowl`: Send a message via prowlapp.com
-* :ref:`run_command`: Run a command on the local system
+* :ref:`webhook`: Send to a Slack or Discord channel using the service's webhook
+* :ref:`telegram`: Send via Telegram
+* :ref:`pushbullet`: Send via pushbullet.com
+* :ref:`pushover`: Send via pushover.net
+* :ref:`ifttt`: Send via IFTTT
+* :ref:`matrix`: Send to a room using the Matrix protocol
+* :ref:`mailgun`: Send via email using the Mailgun service
+* :ref:`prowl`: Send via prowlapp.com
+* :ref:`run_command`: Run a command on the local system to take care of the notification
 
 .. To convert the "webchanges --features" output, use:
    webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
@@ -641,6 +641,14 @@ For example, in Windows we can make a MessageBox pop up:
    run_command:
      enabled: true  # don't forget to set this to true! :)
      command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
+
+All environment variables are preserved and the following one added:
+
++------------------------------------+------------------------------------------------------------------+
+| Environment variable               | Description                                                      |
++====================================+==================================================================+
+| ``WEBCHANGES_REPORT_CONFIG_JSON``  | All report parameters in JSON format                             |
++------------------------------------+------------------------------------------------------------------+
 
 If the command generates an error, the output of the error will be in the first line, before the traceback.
 

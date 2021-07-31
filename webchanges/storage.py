@@ -164,19 +164,36 @@ DEFAULT_CONFIG = {
 class BaseStorage(ABC):
     """Base class for storage."""
 
+    filename: Optional[Path]
+
     @abstractmethod
     def load(self, *args: Any) -> Any:
+        """Load from storage.
+
+        :param args: Specified by the subclass.
+        :return: Specified by the subclass.
+        """
         ...
 
     @abstractmethod
     def save(self, *args: Any, **kwargs: Any) -> Any:
+        """Save to storage.
+
+        :param args: Specified by the subclass.
+        :param kwargs: Specified by the subclass.
+        :return: Specified by the subclass.
+        """
         ...
 
 
 class BaseFileStorage(BaseStorage, ABC):
     """Base class for file storage."""
 
-    def __init__(self, filename: Optional[Union[str, os.PathLike]]) -> None:
+    def __init__(self, filename: Union[str, os.PathLike]) -> None:
+        """
+
+        :param filename: The filename or directory name to storage.
+        """
         if isinstance(filename, (str, bytes, Path)):
             self.filename = Path(filename)
         else:
@@ -187,6 +204,10 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
     """Base class for textual files."""
 
     def __init__(self, filename: Optional[Union[str, os.PathLike]]) -> None:
+        """
+
+        :param filename: The filename or directory name to storage.
+        """
         super().__init__(filename)
         self.config: Dict[str, Any] = {}
         if not isinstance(self, JobsBaseFileStorage):
@@ -195,16 +216,26 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
     @classmethod
     @abstractmethod
     def parse(cls, *args: Any) -> Any:
+        """Parse storage contents.
+
+        :param args: Specified by the subclass.
+        :return: Specified by the subclass.
+        """
         ...
 
-    def edit(self, example_file: Optional[Union[str, os.PathLike]] = None) -> int:
+    def edit(self, example_file: Optional[Union[str, os.PathLike]] = None) -> Optional[int]:
+        """Edit file.
+
+        :returns: None if edit is successful, 1 otherwise.
+        """
+        # Similar code to UrlwatchCommand.edit_hooks()
         # Python 3.9: file_edit = self.filename.with_stem(self.filename.stem + '_edit')
         file_edit = self.filename.parent.joinpath(self.filename.stem + '_edit' + ''.join(self.filename.suffixes))
 
         if self.filename.is_file():
             shutil.copy(self.filename, file_edit)
-        elif example_file is not None and Path(example_file).is_file():
-            shutil.copy(example_file, file_edit)
+        # elif example_file is not None and Path(example_file).is_file():
+        #     shutil.copy(example_file, file_edit, follow_symlinks=False)
 
         while True:
             try:
@@ -222,21 +253,30 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
                 print(e)
                 print('======')
                 print('')
-                print('The file', self.filename, 'was NOT updated.')
+                print(f'The file {self.filename} was NOT updated.')
                 user_input = input('Do you want to retry the same edit? (Y/n)')
                 if not user_input or user_input.lower()[0] == 'y':
                     continue
-                print('Your changes have been saved in', file_edit)
+                file_edit.unlink()
+                print('No changes have been saved.')
                 return 1
 
-        file_edit.replace(self.filename)
-        print('Saving edit changes in', self.filename)
-        return 0
+        if self.filename.is_symlink():
+            self.filename.write_text(file_edit.read_text())
+        else:
+            file_edit.replace(self.filename)
+        # Python 3.8: replace with file_edit.unlink(missing_ok=True)
+        if file_edit.is_file():
+            file_edit.unlink()
+        print('Saved edits in', self.filename)
 
     @classmethod
     def write_default_config(cls, filename: Path) -> None:
-        config_storage = cls(cls)
-        config_storage.filename = filename
+        """Write default configuration to file.
+
+        :param filename: The filename.
+        """
+        config_storage = cls(filename)
         config_storage.save()
 
 
@@ -244,12 +284,19 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
     """Class for jobs textual files storage."""
 
     def __init__(self, filename: Path) -> None:
+        """
+
+        :param filename: The filename of the jobs file.
+        """
         super().__init__(filename)
         self.filename = filename
 
     def shelljob_security_checks(self) -> List[str]:
         """Check security of jobs file and its directory, i.e. that they belong to the current UID and only the owner
-        can write to. Return list of errors if any. Linux only."""
+        can write to them. Return list of errors if any. Linux only.
+
+        :returns: List of errors encountered (if any).
+        """
 
         if os.name == 'nt':
             return []
@@ -273,12 +320,18 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         return shelljob_errors
 
     def load_secure(self) -> List[JobBase]:
+        """Load the jobs from a text file checking that the file is secure (i.e. belongs to the current UID and only
+        the owner can write to it - Linux only).
+
+        :return: List of JobBase objects.
+        """
         jobs: List[JobBase] = self.load()
 
         def is_shell_job(job: JobBase) -> bool:
             """Check if the job uses subprocess.run(Shell=True) (insecure).
 
-            :return: True if subprocess.run(Shell=True) is invoked by job."""
+            :returns: True if subprocess.run(Shell=True) is invoked by job, False otherwise.
+            """
             if isinstance(job, ShellJob):
                 return True
 
@@ -307,7 +360,11 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 
     @classmethod
     def parse(cls, *args: Any) -> Any:
-        """Return contents of YAML file if it exists"""
+        """Return contents of YAML file if it exists
+
+        :param args: Specified by the subclass.
+        :return: Specified by the subclass.
+        """
         filename = args[0]
         if filename is not None and filename.is_file():
             with open(filename) as fp:
@@ -318,9 +375,20 @@ class YamlConfigStorage(BaseYamlFileStorage):
     """Class for configuration file (is a YAML textual file)."""
 
     def dict_deep_difference(self, d1: dict, d2: dict) -> dict:
-        """Return a new dict with elements in the first dict that are not in the second."""
+        """Recursively find elements in the first dict that are not in the second.
+
+        :param d1: The first dict.
+        :param d2: The second dict.
+        :return: A dict with all the elements on the first dict that are not in the second.
+        """
 
         def _sub_dict_deep_difference(d1: dict, d2: dict) -> dict:
+            """Recursive sub-function to find elements in the first dict that are not in the second.
+
+            :param d1: The first dict.
+            :param d2: The second dict.
+            :return: A dict with elements on the first dict that are not in the second.
+            """
             for key, value in d1.copy().items():
                 if isinstance(value, dict) and isinstance(d2.get(key), dict):
                     _sub_dict_deep_difference(value, d2[key])
@@ -334,10 +402,22 @@ class YamlConfigStorage(BaseYamlFileStorage):
         return _sub_dict_deep_difference(copy.deepcopy(d1), d2)
 
     def dict_deep_merge(self, source: dict, destination: dict) -> dict:
-        """Deep merges source dict into destination dict."""
+        """Recursively deep merges source dict into destination dict.
+
+        :param source: The first dict.
+        :param destination: The second dict.
+        :return: The deep merged dict.
+        """
+
         # https://stackoverflow.com/a/20666342
 
         def _sub_dict_deep_merge(source: dict, destination: dict) -> dict:
+            """Recursive sub-function to merges source dict into destination dict.
+
+            :param source: The first dict.
+            :param destination: The second dict.
+            :return: The merged dict.
+            """
             for key, value in source.items():
                 if isinstance(value, dict):
                     # get node or create one
@@ -351,7 +431,11 @@ class YamlConfigStorage(BaseYamlFileStorage):
         return _sub_dict_deep_merge(source, copy.deepcopy(destination))
 
     def check_for_unrecognized_keys(self, config: Dict[str, Any]) -> None:
-        """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError."""
+        """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError.
+
+        :param config: The configuration.
+        :raises ValueError: If the configuration has keys not in DEFAULT_CONFIG (bad keys, e.g. typos)
+        """
 
         config_for_extras = copy.deepcopy(config)
         if 'job_defaults' in config_for_extras:
@@ -367,7 +451,10 @@ class YamlConfigStorage(BaseYamlFileStorage):
             )
 
     def load(self, *args: Any) -> None:
-        """Load configuration file from self.filename into self.config with missing keys from DEFAULT_CONFIG."""
+        """Load configuration file from self.filename into self.config adding missing keys from DEFAULT_CONFIG.
+
+        :param args: None used.
+        """
         config: Dict[str, Any] = self.parse(self.filename)
 
         if config:
@@ -388,7 +475,11 @@ class YamlConfigStorage(BaseYamlFileStorage):
         self.config = config
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Save self.config into self.filename using YAML."""
+        """Save self.config into self.filename using YAML.
+
+        :param args: None used.
+        :param kwargs: None used.
+        """
         with open(self.filename, 'w') as fp:
             fp.write(
                 f'# {__project_name__} configuration file. See {__docs_url__}\n'
@@ -403,10 +494,15 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
 
     @classmethod
     def _parse(cls, fp: TextIO) -> List[JobBase]:
+        """Parse the contents of a YAML file.
+
+        :param fp: The text stream to parse.
+        :return: A list of JobBase objects.
+        """
         jobs = []
         jobs_by_guid = defaultdict(list)
         for i, job_data in enumerate((job for job in yaml.safe_load_all(fp) if job)):
-            job_data['_index_number'] = i + 1
+            job_data['index_number'] = i + 1
             job = JobBase.unserialize(job_data)
             jobs.append(job)
             jobs_by_guid[job.get_guid()].append(job)
@@ -427,7 +523,12 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         return jobs
 
     @classmethod
-    def parse(cls, *args: Any) -> List[JobBase]:
+    def parse(cls, *args: Path) -> List[JobBase]:
+        """Parse the contents of the job YAML file and return a list of jobs.
+
+        :param args: The filename.
+        :return: A list of JobBase objects.
+        """
         filename = args[0]
         if filename is not None and filename.is_file():
             with open(filename) as fp:
@@ -435,10 +536,18 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         return []
 
     def load(self, *args: Any) -> List[JobBase]:
+        """Parse the contents of the job YAML file and return a list of jobs.
+
+        :return: A list of JobBase objects.
+        """
         with open(self.filename) as fp:
             return self._parse(fp)
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(self, *args: Iterable[JobBase], **kwargs: Any) -> None:
+        """Save jobs to the job YAML file.
+
+        :param args: An iterable of JobBase objects to be written.
+        """
         jobs = args[0]
         print(f'Saving updated list to {self.filename}')
 
@@ -476,7 +585,13 @@ class CacheStorage(BaseFileStorage, ABC):
         ...
 
     @abstractmethod
-    def delete_latest(self, guid: str) -> Optional[int]:
+    def delete_latest(self, guid: str) -> int:
+        """For the given 'guid', delete only the latest entry and keep all other (older) ones.
+
+        :param guid: The guid.
+
+        :returns: Number of records deleted.
+        """
         ...
 
     @abstractmethod
@@ -557,7 +672,7 @@ class Snapshot(NamedTuple):
 
 
 class CacheDirStorage(CacheStorage):
-    """Class for snapshots stored as individual textual files in a directory 'dirname'"""
+    """Class for snapshots stored as individual textual files in a directory 'dirname'."""
 
     def __init__(self, dirname: Union[str, os.PathLike]) -> None:
         super().__init__(dirname)
@@ -618,11 +733,16 @@ class CacheDirStorage(CacheStorage):
         return
 
     def delete_latest(self, guid: str) -> int:
-        filename = self._get_filename(guid)
-        if filename.is_file():
-            filename.unlink()
-            return 1
-        return 0
+        """For the given 'guid', delete the latest entry and keep all other (older) ones.
+
+        :param guid: The guid.
+
+        :raises NotImplementedError: This function is not implemented for 'textfiles' databases.
+        """
+        raise NotImplementedError(
+            "Deleting of latest snapshot not supported by 'textfiles' database engine since only one snapshot is "
+            "saved. Delete all snapshots if that's what you are trying to do."
+        )
 
     def clean(self, guid: str) -> int:
         # We only store the latest version, no need to clean
@@ -637,15 +757,15 @@ class CacheSQLite3Storage(CacheStorage):
     Handles storage of the snapshot as a SQLite database in the 'filename' file using Python's built-in sqlite3 module
     and the msgpack package.
 
-    A temporary database is created by __init__ and will be written by the 'save()' function (unless temporaru=False).
-    This data will be written to the permanent one bythe 'close()' function, which is called at the end of program
+    A temporary database is created by __init__ and will be written by the 'save()' function (unless temporary=False).
+    This data will be written to the permanent one by the 'close()' function, which is called at the end of program
     execution.
 
     The database contains the 'webchanges' table with the following columns:
 
     * guid: unique hash of the "location", i.e. the URL/command; indexed
     * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
-    * msgpack_data: a msgpack blob containing 'data' 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
+    * msgpack_data: a msgpack blob containing 'data', 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
     """
 
     def __init__(self, filename: Union[str, os.PathLike], max_snapshots: int = 4) -> None:
@@ -671,7 +791,7 @@ class CacheSQLite3Storage(CacheStorage):
         self.cur.execute('PRAGMA temp_store = MEMORY;')
         tables = self._execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
 
-        def _initialize_table(self: CacheSQLite3Storage) -> None:
+        def _initialize_table() -> None:
             logger.debug('Initializing sqlite3 database')
             self._execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
             self._execute('CREATE INDEX idx_uuid_time ON webchanges(uuid, timestamp)')
@@ -679,7 +799,7 @@ class CacheSQLite3Storage(CacheStorage):
 
         if tables == ('CacheEntry',):
             logger.info("Found legacy 'minidb' database to convert")
-            # found a minidb legacy database; close it, rename it for migration and create new sqlite3 one
+            # Found a minidb legacy database; close it, rename it for migration and create new sqlite3 one
             import importlib.util
 
             if importlib.util.find_spec('minidb') is None:
@@ -695,13 +815,13 @@ class CacheSQLite3Storage(CacheStorage):
             self.filename.replace(minidb_filename)
             self.db = sqlite3.connect(filename, check_same_thread=False)
             self.cur = self.db.cursor()
-            _initialize_table(self)
-            # migrate the minidb legacy database renamed above
+            _initialize_table()
+            # Migrate the minidb legacy database renamed above
             self.migrate_from_minidb(minidb_filename)
         elif tables != ('webchanges',):
-            _initialize_table(self)
+            _initialize_table()
 
-        # create temporary database in memory for writing during execution (fault tolerance)
+        # Create temporary database in memory for writing during execution (fault tolerance)
         logger.debug('Creating temp sqlite3 database file in memory')
         self.temp_lock = threading.RLock()
         self.temp_db = sqlite3.connect('', check_same_thread=False)
@@ -730,7 +850,7 @@ class CacheSQLite3Storage(CacheStorage):
     def _copy_temp_to_permanent(self, delete: bool = False) -> None:
         """Copy contents of temporary database to permanent one.
 
-        :param:delete: also delete contents of temporary cache (used for testing)
+        :param delete: also delete contents of temporary cache (used for testing)
         """
         logger.debug('Saving new snapshots to permanent sqlite3 database')
         # with self.temp_lock:
@@ -777,7 +897,7 @@ class CacheSQLite3Storage(CacheStorage):
     def get_guids(self) -> List[str]:
         """Lists the unique 'guid's contained in the database.
 
-        :returns: A list of guids
+        :returns: A list of guids.
         """
         with self.lock:
             self.cur.row_factory = lambda cursor, row: row[0]
@@ -788,14 +908,15 @@ class CacheSQLite3Storage(CacheStorage):
     def load(self, guid: str) -> Snapshot:
         """Return the most recent entry matching a 'guid'.
 
-        :param guid: The guid
+        :param guid: The guid.
 
         :returns: A tuple (data, timestamp, tries, etag)
             WHERE
-            data is the data;
-            timestamp is the timestamp;
-            tries is the number of tries;
-            etag is the ETag.
+
+            - data is the data;
+            - timestamp is the timestamp;
+            - tries is the number of tries;
+            - etag is the ETag.
         """
         with self.lock:
             row = self._execute(
@@ -812,13 +933,14 @@ class CacheSQLite3Storage(CacheStorage):
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         """Return data and timestamp from the last 'count' (None = all) entries matching a 'guid'.
 
-        :param guid: The guid
-        :param count: The maximum number of entries to return; if None return all
+        :param guid: The guid.
+        :param count: The maximum number of entries to return; if None return all.
 
         :returns: A dict (key: value)
             WHERE
-            key is the data;
-            value is the timestamp.
+
+            - key is the data;
+            - value is the timestamp.
         """
         history: Dict[str, float] = {}
         if isinstance(count, int) and count < 1:
@@ -854,12 +976,12 @@ class CacheSQLite3Storage(CacheStorage):
         By default it is saved into the temporary database. Call close() to transfer the contents of the temporary
         database to the permanent one.
 
-        :param guid: The guid
-        :param data: The data
-        :param timestamp: The timestamp
-        :param tries: The number of tries
-        :param etag: The ETag (could be empty string)
-        :param temporary: If true, saved to temporary database (default)
+        :param guid: The guid.
+        :param data: The data.
+        :param timestamp: The timestamp.
+        :param tries: The number of tries.
+        :param etag: The ETag (could be empty string).
+        :param temporary: If true, saved to temporary database (default).
         """
         c = {
             'd': data,
@@ -879,20 +1001,19 @@ class CacheSQLite3Storage(CacheStorage):
     def delete(self, guid: str) -> None:
         """Delete all entries matching a 'guid'.
 
-        :param guid: The guid
+        :param guid: The guid.
         """
         with self.lock:
             self._execute('DELETE FROM webchanges WHERE uuid = ?', (guid,))
             self.db.commit()
 
     def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
-        """For the given 'guid', delete only the latest 'delete_entries' number of entries and keep all other (older)
-        ones.
+        """For the given 'guid', delete the latest 'delete_entries' number of entries and keep all other (older) ones.
 
-        :param guid: The guid
-        :param delete_entries: Number of most recent entries to delete
+        :param guid: The guid.
+        :param delete_entries: Number of most recent entries to delete.
 
-        :returns: Number of records deleted
+        :returns: Number of records deleted.
         """
         with self.lock:
             self._execute(
@@ -913,10 +1034,10 @@ class CacheSQLite3Storage(CacheStorage):
         """For the given 'guid', keep only the latest 'keep_entries' number of entries and delete all other (older)
         ones. To delete older entries from all guids, use clean_all() instead.
 
-        :param guid: The guid
-        :param keep_entries: Number of entries to keep after deletion
+        :param guid: The guid.
+        :param keep_entries: Number of entries to keep after deletion.
 
-        :returns: Number of records deleted
+        :returns: Number of records deleted.
         """
         with self.lock:
             self._execute(
@@ -936,7 +1057,7 @@ class CacheSQLite3Storage(CacheStorage):
     def clean_all(self) -> int:
         """Delete all older entries for each 'guid' (keep only last one).
 
-        :returns: Number of records deleted
+        :returns: Number of records deleted.
         """
         with self.lock:
             self._execute(
@@ -953,9 +1074,9 @@ class CacheSQLite3Storage(CacheStorage):
     def keep_latest(self, keep_entries: int = 1) -> int:
         """Delete all older entries keeping only the 'keep_num' per guid.
 
-        :param keep_entries: Number of entries to keep after deletion
+        :param keep_entries: Number of entries to keep after deletion.
 
-        :returns: Number of records deleted
+        :returns: Number of records deleted.
         """
         with self.lock:
             self._execute(
@@ -977,11 +1098,11 @@ class CacheSQLite3Storage(CacheStorage):
         return num_del
 
     def rollback(self, timestamp: float) -> int:
-        """Rollback database to timestamp.
+        """Rollback database to the entries present at timestamp.
 
-        :param timestamp: The timestamp
+        :param timestamp: The timestamp.
 
-        :returns: Number of records deleted
+        :returns: Number of records deleted.
         """
         with self.lock:
             self._execute(
@@ -999,7 +1120,7 @@ class CacheSQLite3Storage(CacheStorage):
     def migrate_from_minidb(self, minidb_filename: Union[str, os.PathLike]) -> None:
         """Migrate the data of a legacy minidb database to the current database.
 
-        :param minidb_filename: The filename of the legacy minidb database
+        :param minidb_filename: The filename of the legacy minidb database.
         """
 
         print("Found 'minidb' database and upgrading it to the new engine (note: only the last snapshot is retained).")
@@ -1090,7 +1211,14 @@ class CacheRedisStorage(CacheStorage):
     def delete(self, guid: str) -> None:
         self.db.delete(self._make_key(guid))
 
-    def delete_latest(self, guid: str) -> None:
+    def delete_latest(self, guid: str) -> int:
+        """For the given 'guid', delete the latest entry and keep all other (older) ones.
+
+        :param guid: The guid.
+
+        :returns: Number of records deleted.
+        """
+
         if self.db.lpop(self._make_key(guid)) is None:
             return 0
 

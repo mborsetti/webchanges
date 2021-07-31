@@ -22,15 +22,15 @@ from docutils.nodes import Element, Node
 from sphinx.writers.html import HTMLTranslator
 
 # below required to import project_data module
-current_dir = os.path.dirname(__file__)
-target_dir = os.path.abspath(os.path.join(current_dir, '..'))
-sys.path.insert(1, target_dir)
+current_path = os.path.dirname(__file__)
+target_path = os.path.abspath(os.path.join(current_path, '..'))
+sys.path.insert(1, target_path)
 
 import webchanges as project_data  # noqa: E402 module level import not at top of file
 
 # below required for autosummary build on GitHub actions's pre-commit and on readthedocs.io
-target_dir = os.path.abspath(os.path.join(current_dir, 'webchanges'))
-sys.path.insert(1, target_dir)
+target_path = os.path.abspath(os.path.join(current_path, 'webchanges'))
+sys.path.insert(1, target_path)
 
 # -- Project information -----------------------------------------------------
 
@@ -197,13 +197,16 @@ autodoc_member_order = 'groupwise'
 # See https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#directives
 autodoc_default_options = {
     'members': True,
+    'member-order': 'bysource',  # 'alphabetical' (def), 'groupwise' or 'bysource'
     'undoc-members': True,
     # 'private-members': False,  # default
     # 'special-members': False,  # default
     'inherited-members': True,
     'show-inheritance': True,
     # 'ignore-module-all': False,  # default
+    # 'imported-members': False, # default
     # 'exclude-members': '',  # default
+    # 'class-doc-from': '',  # default
 }
 # autodoc_docstring_signature = True  # default
 # autodoc_mock_imports = []  # default

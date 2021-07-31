@@ -2,14 +2,11 @@
 Changelog
 *********
 
-This changelog mostly follows `keep a changelog <https://keepachangelog.com/en/1.0.0/>`__. Release numbering mostly
+This changelog mostly follows '`keep a changelog <https://keepachangelog.com/en/1.0.0/>`__'. Release numbering mostly
 follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__. Release date is UTC.
 Documentation updates and improvements are ongoing and not always listed here.
 
 **Development**
-
-`Contributions <https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__ are always welcomed, and you
-can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__ for inspiration.
 
 The unreleased versions can be installed as follows (`git
 <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`__ needs to be installed):
@@ -19,6 +16,9 @@ The unreleased versions can be installed as follows (`git
    pip install git+https://github.com/mborsetti/webchanges.git@unreleased
 
 Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleased/>`__.
+
+`Contributions <https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__ are always welcomed, and you
+can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__ for inspiration.
 
 .. Categories used (in order):
    ⚠ Breaking Changes, for changes that break existing functionality. [minor revision or, if to API, major revision]
@@ -31,38 +31,62 @@ Unreleased documentation is `here <https://webchanges.readthedocs.io/en/unreleas
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.8.0.rc0
+3.8rc1
 ====================
 Unreleased
 
 Added
 -----
-* ``url`` jobs having ``use_browser: true`` (i.e. using `Pyppeteer`) now recognize ``data`` and ``method`` directives,
-  e.g. to make a ``POST`` HTTP request using a browser with JavaScript support.
-* ``execute`` filter (and ``shellpipe``) sets more environment variables; see improved `documentation
-  <https://webchanges.readthedocs.io/en/stable/filters.html#execute>`__ (including more examples).
-* ``tz`` key for  ``report`` in configuration file to set the timezone for diff reports (useful if running e.g . on
-  cloud server in different timezone). See
-  `documentation <https://webchanges.readthedocs.io/en/stable/reporters.html#tz>`__.
-* Check configuration file for invalid directives (e.g. typos).
-* Neegative job indices; for example, run ``webchanges -1`` to only run the last job of your jobs list, or
+* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) now recognize ``data`` and ``method`` directives,
+  enabling e.g. to make a ``POST`` HTTP request using a browser with JavaScript support.
+* New ``tz`` key for  ``report`` in the configuration sets the timezone for the diff in reports (useful if running
+  e.g. on a cloud server in a different timezone). See `documentation
+  <https://webchanges.readthedocs.io/en/stable/reporters.html#tz>`__.
+* New ``run_command`` reporter to execute a command and pass the report text as its input. Suggested by `Marcos Alano
+  <https://github.com/mhalano>`__ upstream `here <https://github.com/thp/urlwatch/issues/650>`__.
+* New ``remove_repeated`` filter to remove repeated lines (similar to Unix's ``uniq``). Suggested by `Michael
+  Sverdlin <https://github.com/Sveder>`__ upstream `here <https://github.com/thp/urlwatch/pull/653>`__.
+* The ``user_visible_url`` job directive now applies to all type of jobs, including ``command`` ones. Suggested by
+  `kongomongo <https://github.com/kongomongo>`__ upstream `here <https://github.com/thp/urlwatch/issue/608>`__.
+* The ``--delete-snapshot`` command line argument now works with Redis database engine (``--database-engine redis``).
+  Contributed by `Scott MacVicar <https://github.com/scottmac>`__ with pull request
+  #`13 <https://github.com/mborsetti/webchanges/pull/13>`__.
+* The ``execute`` filter (and ``shellpipe``) sets more environment variables to allow for more flexibility; see improved
+  `documentation <https://webchanges.readthedocs.io/en/stable/filters.html#execute>`__ (including more examples).
+* Negative job indices are allowed; for example, run ``webchanges -1`` to only run the last job of your jobs list, or
   ``webchanges --test -2`` to test the second to last job of your jobs list.
-* Print text of response whenever a HTTP client error (4xx) response is received.
-* Report footer (if enabled) will contain an alert if a new version of :program:`wechanges` has been released to PyPi
+* Configuration file is now checked for invalid directives (e.g. typos) when program is run.
+* Whenever a HTTP client error (4xx) response is received, in ``--verbose`` mode the content of the response is
+  displayed with the error.
+* If a newer version of :program:`webchanges` has been released to PyPi, an advisory notice is printed to stdout and
+  added to the report footer (if footer is enabled).
 
 Fixed
 -----
 * The ``html2text`` filter's method ``strip_tags`` was returning HTML character references (e.g. &gt;, &#62;, &#x3e;)
   instead of the corresponding Unicode characters.
+* Fixed a rare case when html report would not correctly reconstruct a clickable link from Markdown for items inside
+  elements in a list.
+* When using the ``--edit`` or ``--edit-config`` command line arguments to edit jobs or configuration files, symbolic
+  links are no longer overwritten. Reported by `snowman <https://github.com/snowman>`__ upstream
+  `here <https://github.com/thp/urlwatch/issues/604>`__.
 
 Internals
 ---------
-* ``--verbose`` will now list configuration keys 'missing' from the file for which default values have been used.
+* ``--verbose`` command line argument will now list configuration keys 'missing' from the file, keys for which default
+  values have been used.
 * ``tox`` testing can now be run in parallel using ``tox --parallel``.
-* Additional testing adding 3 percentage points of coverage to 78%
+* Additional testing, adding 3 percentage points of coverage to 78%.
+* bump2version now follows `PEP440 <https://www.python.org/dev/peps/pep-0440/>`__ and has new documentation in
+  the file ``.bumpversion.txt`` (cannot document ``.bumpversion.cfg`` as remarks get deleted at every version bump).
+* Added a vendored version of packaging.version.parse() from `Packaging <https://www.pypi.com/project/packaging/>`__
+  20.9, released on 2021-02-20, used to check if the version in PyPi is higher than the current one.
+* Migrated from unmaintained Python package AppDirs to its friendly fork `platformdirs
+  <https://github.com/platformdirs/platformdirs>`__, which is maintained and offers more functionality. Unless used
+  by another package, you can uninstall appdirs with ``pip uninstall appdirs``.
 
 
-Version 3.7.1
+3.7
 ====================
 2021-06-27
 
@@ -101,7 +125,7 @@ Internals
 * Removed module jobs_browser.py (needed only for Python 3.6)
 
 
-Version 3.6.1
+3.6.1
 ====================
 2021-05-28
 
@@ -121,7 +145,7 @@ Fixed
 * Use same run duration precision in all reports
 
 
-Version 3.6.0
+3.6
 ====================
 2021-05-14
 
@@ -149,7 +173,7 @@ Internals
 * Migrated to using the `pathlib <https://docs.python.org/3/library/pathlib.html>`__ standard library
 
 
-Version 3.5.1
+3.5.1
 ====================
 2021-05-06
 
@@ -159,7 +183,7 @@ Fixed
 * Autodoc not building API documentation
 
 
-Version 3.5.0
+3.5
 ====================
 2021-05-04
 
@@ -227,7 +251,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-Version 3.4.1
+3.4.1
 ====================
 2021-04-17
 
@@ -247,7 +271,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-Version 3.4.0
+3.4
 ====================
 2021-04-12
 
@@ -310,7 +334,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-Version 3.2.6
+3.2.6
 ===================
 2021-03-21
 
@@ -340,7 +364,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-Version 3.2.4
+3.2
 ===================
 2021-03-08
 
@@ -415,7 +439,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-Version 3.1.1
+3.1.1
 =================
 2021-02-08
 
@@ -424,7 +448,7 @@ Fixed
 * Documentation was failing to build at https://webchanges.readthedocs.io/
 
 
-Version 3.1.0
+3.1
 =================
 2021-02-07
 
@@ -452,7 +476,7 @@ Internals
 * Added continuous integration (CI) testing on macOS platform
 
 
-Version 3.0.3
+3.0.3
 =============
 2020-12-21
 
@@ -492,7 +516,7 @@ Internals
 * Upgraded to use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__
 
 
-Version 3.0.2
+3.0.2
 =============
 2020-12-06
 
@@ -502,7 +526,7 @@ Fixed
   contributed by `MazdaFunSun <https://github.com/mazdafunsunn>`__)
 
 
-Version 3.0.1
+3.0.1
 =============
 2020-12-05
 
@@ -532,7 +556,7 @@ Fixed
   <https://github.com/monperrus>`__)
 
 
-Version 3.0.0
+3.0
 =============
 2020-11-12
 

@@ -1,4 +1,5 @@
 @ECHO OFF
+setlocal EnableDelayedExpansion
 pushd %~dp0
 
 REM Command file to generate Sphinx documentation
@@ -22,12 +23,20 @@ if errorlevel 9009 (
     exit /b 1
 )
 
-%SPHINXBUILD% -b html %SOURCEDIR% %BUILDDIR% -E -W -v %SPHINXOPTS% %O%
-echo %errorlevel%
+:sphinxbuild
+%SPHINXBUILD% -b html %SOURCEDIR% %BUILDDIR% -E -W -j auto -v %SPHINXOPTS% %O%
 
-if %errorlevel% equ 0 start "" "file://%~dp0_build\index.html"
+if %errorlevel% equ 0 (
+  start "" "file://%~dp0_build\index.html"
+  popd
+) else (
+  set /p r=Do you want to try again? [Y/n]? || set r=y
+  if !r! EQU Y i=y
+  echo.
+  if !r! EQU y goto sphinxbuild
+  popd
+  exit /b %errorlevel%
+)
 
 :end
-pause
-popd
 exit

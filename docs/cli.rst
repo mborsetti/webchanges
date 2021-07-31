@@ -79,7 +79,7 @@ jobs by running``webchanges --list``. API is experimental and may change in the 
 .. versionadded:: 3.6
 
 .. versionchanged:: 3.8
-   Accepts negative indices
+   Accepts negative indices.
 
 Show errors and no-data jobs
 ----------------------------
@@ -97,7 +97,7 @@ filters. Use a negative index number to select a job from the bottom of your job
 the second to last job, etc.)
 
 .. versionchanged:: 3.8
-   Accepts negative indices
+   Accepts negative indices.
 
 .. _test-diff:
 
@@ -110,10 +110,11 @@ retrieve historical diffs (changes). Use a negative index number to select a job
 -1 is the last job, -2 is the second to last job, etc.)
 
 .. versionchanged:: 3.3
-   Will now display all snapshots instead of only the latest 10
+   Will now display all snapshots instead of only the latest 10.
 
 .. versionchanged:: 3.8
-   Accepts negative indices
+   Accepts negative indices.
+
 
 .. _delete-snapshot:
 
@@ -123,13 +124,18 @@ You can delete the latest saved snapshot of a job by running :program:`webchange
 argument followed by the job index number (from ``--list``) or its URL/command. This is extremely useful when a website
 is redesigned and your filters behave in unexpected ways (for example, by capturing nothing):
 
-* Update your filters to once again capture the content you're monitoring
-* Test it running :program:`webchanges` with the ``test`` command line argument (see :ref:`here <test>`)
-* Delete the latest job's snapshot
+* Update your filters to once again capture the content you're monitoring, testing the job by running
+  :program:`webchanges` with the ``--test`` command line argument (see :ref:`here <test>`);
+* Delete the latest job's snapshot using ``--delete-snapshot``;
 * Run :program:`webchanges` again; this time the diff report will contain useful information on whether any content has
-  changed
+  changed.
+
+This feature does not work with database engines ``textfiles`` and ``minidb``.
 
 .. versionadded:: 3.5
+
+.. versionchanged:: 3.8
+   Also works with ``redis`` database engine.
 
 
 .. _rollback-cache:
@@ -149,7 +155,6 @@ You can find multiple sites that calculate Unix time for you, such as `www.unixt
 up the database before doing a rollback in case of a mistake (or fat-finger).
 
 This feature does not work with database engines ``redis``, ``textfiles`` or ``minidb``.
-
 
 .. versionadded:: 3.2
 

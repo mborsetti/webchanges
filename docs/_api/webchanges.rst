@@ -1,9 +1,6 @@
 webchanges package
 ==================
 
-Submodules
-----------
-
 .. toctree::
    :maxdepth: 4
 
@@ -19,11 +16,5 @@ Submodules
    webchanges.storage
    webchanges.util
    webchanges.worker
-
-Module contents
----------------
-
-.. automodule:: webchanges
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   webchanges._vendored
+   exceptions

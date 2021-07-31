@@ -6,6 +6,3 @@ webchanges.reporters module
     Please consider :ref:`contributing <contributing>` to this project.
 
 .. automodule:: webchanges.reporters
-   :members:
-   :undoc-members:
-   :show-inheritance:

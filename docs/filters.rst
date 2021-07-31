@@ -48,12 +48,15 @@ At the moment, the following filters are available:
   - :ref:`element-by-style <element-by-…>`: Get all HTML elements by style.
   - :ref:`element-by-tag <element-by-…>`: Get an HTML element by its tag.
 
-* To make HTML more readable:
+* To extract text from HTML:
 
   - :ref:`html2text`: Convert HTML to plaintext.
+
+* To make HTML more readable:
+
   - :ref:`beautify`: Beautify HTML.
 
-* To make PDFs readable:
+* To extract text from PDFs:
 
   - :ref:`pdf2text`: Convert PDF to plaintext.
 
@@ -61,9 +64,12 @@ At the moment, the following filters are available:
 
   - :ref:`ocr`: Extract text from images.
 
-* To filter and/or make JSON more readable:
+* To extract ASCII text from JSON:
 
   - :ref:`jq`: Filter ASCII JSON.
+
+* To make JSON more readable:
+
   - :ref:`format-json`: Reformat (pretty-print) JSON.
 
 * To make XML more readable:
@@ -79,11 +85,11 @@ At the moment, the following filters are available:
 
   - :ref:`hexdump`: Display data in hex dump format.
 
-* To just detect changes:
+* To just detect if anything changed:
 
   - :ref:`sha1sum`: Calculate the SHA-1 checksum of the data.
 
-* To edit/filter text:
+* To filter and/or edit text:
 
   - :ref:`keep_lines_containing`: Keep only lines containing specified text or matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
@@ -93,9 +99,10 @@ At the moment, the following filters are available:
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`strip`: Strip leading and/or trailing whitespace or specified characters (entire document, not line-by-line)
   - :ref:`sort`: Sort lines.
+  - :ref:`remove_repeated`: Remove repeated items (lines).
   - :ref:`reverse`: Reverse the order of items (lines).
 
-* Any custom script or program:
+* To run any custom script or program:
 
   - :ref:`execute`: Run a program that filters the data (see also :ref:`shellpipe`, to be avoided).
 
@@ -107,11 +114,11 @@ Python programmers can write their own plug-in that could include filters; see :
 
 css and xpath
 -------------
-The ``css`` filter extracts content based on a `CSS selector <https://www.w3.org/TR/selectors/>`__. It uses the
-`cssselect <https://pypi.org/project/cssselect/>`__ Python package, which has limitations and extensions as explained
-in its `documentation <https://cssselect.readthedocs.io/en/latest/#supported-selectors>`__.
+The ``css`` filter extracts HTML or XML content based on a `CSS selector <https://www.w3.org/TR/selectors/>`__. It uses
+the `cssselect <https://pypi.org/project/cssselect/>`__ Python package, which has limitations and extensions as
+explained in its `documentation <https://cssselect.readthedocs.io/en/latest/#supported-selectors>`__.
 
-The ``xpath`` filter extracts content based on a `XPath <https://www.w3.org/TR/xpath>`__ expression.
+The ``xpath`` filter extracts HTML or XML content based on a `XPath <https://www.w3.org/TR/xpath>`__ expression.
 
 Examples: to filter only the ``<body>`` element of the HTML document, stripping out everything else:
 
@@ -127,15 +134,16 @@ Examples: to filter only the ``<body>`` element of the HTML document, stripping 
    filter:
      - xpath: /html/body/marquee
 
-See Microsoft’s `XPath Examples <https://msdn.microsoft.com/en-us/library/ms256086(v=vs.110).aspx>`__ page for some
-other examples
+See Microsoft’s `XPath Examples
+<https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ms256086(v=vs.100)>`__ page for additional
+examples.
 
 Using CSS and XPath filters with XML and exclusions
 """""""""""""""""""""""""""""""""""""""""""""""""""
 By default, CSS and XPath filters are set up for HTML documents, but it is possible to use them for XML documents as
 well.
 
-Example to parse an RSS feed and filter only the titles and publication dates:
+For example, to parse an RSS feed and filter only the titles and publication dates, use:
 
 .. code-block:: yaml
 
@@ -893,8 +901,60 @@ separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1`
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``separator``: The string used to separate items to be sorted (default: ``\n``, i.e. line-based sorting).
+* ``separator`` (default): The string used to separate items to be sorted (default: ``\n``, i.e. line-based sorting).
 * ``reverse`` (true/false): Whether the sorting direction is reversed (default: false).
+
+
+
+.. _remove_repeated:
+
+remove_repeated
+---------------
+
+This filter compares adjacent items (lines), and the second and succeeding copies of repeated items (lines) are
+removed. Repeated items (lines) must be adjacent in order to be found. Works similarly to Unix's ``uniq``.
+
+By default, it acts over adjacent lines.  Three lines consisting of ``dog`` - ``dog`` - ``cat`` will be turned into
+``dog`` - ``cat``, while ``dog`` - ``cat`` - ``dog`` will stay the same
+
+.. code:: yaml
+
+   url: https://example.com/remove-repeated.txt
+   filter:
+     - remove_repeated
+
+
+Prepend it with :ref:`sort` to capture globally unique lines, e.g. to turn ``dog`` - ``cat`` - ``dog`` to ``cat`` -
+``dog``:
+
+.. code:: yaml
+
+   url: https://example.com/remove-repeated-sorted.txt
+   filter:
+     - sort
+     - remove_repeated
+
+
+This behavior can be changed by using an optional ``separator`` string argument. Also, ``ignore_case`` will tell it to
+ignore differences in case and of leading and/or trailing whitespace when comparing. For example, the below will turn
+mixed-case items separated by a pipe (``|``) ``a|b|B |c`` into ``a|b|c``:
+
+.. code:: yaml
+
+   url: https://example.net/remove-repeated-separator.txt
+   filter:
+     - remove_repeated:
+         separator: '|'
+         ignore_case: true
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``separator`` (default): The string used to separate items whose order is to be reversed (default: ``\n``, i.e.
+  line-based); it can also be specified inline as the value of ``remove_repeated``.
+* ``ignore_case``: Ignore differences in case and of leading and/or trailing whitespace when comparing (true/false)
+  (default: false).
+
+.. versionadded:: 3.8
 
 
 
@@ -911,7 +971,7 @@ This filter reverses the order of items (lines) without sorting:
    filter:
      - reverse
 
-This behavior can be changed by using an optional separator string argument (e.g. items separated by a pipe (``|``)
+This behavior can be changed by using an optional ``separator`` string argument (e.g. items separated by a pipe (``|``)
 symbol, as in ``1|4|2|3``, which would be reversed to ``3|2|4|1``):
 
 .. code:: yaml
@@ -933,8 +993,8 @@ paragraphs (items that are separated by an empty line):
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``separator`` (optional): The string used to separate items whose order is to be reversed (default: ``\n``, i.e.
-  line-based reversing); it can also be specified inline as the value of ``reverse``.
+* ``separator``: The string used to separate items whose order is to be reversed (default: ``\n``, i.e. line-based
+  reversing); it can also be specified inline as the value of ``reverse``.
 
 
 
@@ -973,10 +1033,12 @@ For example, we can execute a Python script:
      '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is
      '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""
 
+Or instead we cam call a script we have saved, e.g. ``-execute: python3 myscript.py``.
+
 If the command generates an error, the output of the error will be in the first line, before the traceback.
 
 .. versionchanged:: 3.8
-   Setting of WEBCHANGES_JOB_* environment variables.
+   Added additional WEBCHANGES_JOB_* environment variables.
 
 
 .. _shellpipe:

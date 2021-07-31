@@ -48,15 +48,22 @@ DEFAULT_CHROMIUM_REVISION = {
 
 
 class NotModifiedError(Exception):
-    """Exception raised on HTTP 304 responses."""
+    """Raised when an HTTP 304 response status code (Not Modified client redirection) is received or the strong
+    validation ETag matches the previous one; this indicates that there was no change in content."""
 
     ...
 
 
 class BrowserResponseError(Exception):
-    """Exception for use_browser: true jobs with error HTTP response code."""
+    """Raised by 'url' jobs with 'use_browser: true' (i.e. using Pyppeteer) when a HTTP error response status code is
+    received."""
 
-    def __init__(self, args: tuple, status_code: int) -> None:
+    def __init__(self, args: Tuple[str], status_code: int) -> None:
+        """
+
+        :param args: Tuple with the underlying error args, typically a string with the error text.
+        :param status_code: The HTTP status code received.
+        """
         Exception.__init__(self)
         self.args = args
         self.status_code = status_code
@@ -69,9 +76,13 @@ class BrowserResponseError(Exception):
 
 
 class ShellError(Exception):
-    """Exception for shell commands with non-zero exit code."""
+    """Raised by 'command' jobs when a non-zero execution exit code is received."""
 
-    def __init__(self, result: int) -> None:
+    def __init__(self, result: str) -> None:
+        """
+
+        :param result: The contents of stderr.
+        """
         Exception.__init__(self)
         self.result = result
 
@@ -80,6 +91,8 @@ class ShellError(Exception):
 
 
 class JobBase(object, metaclass=TrackSubClasses):
+    """The base class for Jobs."""
+
     __subclasses__: Dict[str, 'JobBase'] = {}
 
     __required__: Tuple[str, ...] = ()
@@ -88,7 +101,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     # PyCharm IDE compatibility
     __kind__: str = ''
 
-    _index_number: int = 0  # added at job loading
+    index_number: int = 0  # added at job loading
 
     # __required__ in derived classes
     url: str = ''
@@ -150,6 +163,10 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def job_documentation(cls) -> str:
+        """Generates simple jobs documentation for use in the --features command line argument.
+
+        :returns: A string to display.
+        """
         result = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
             if sc.__doc__:
@@ -165,24 +182,42 @@ class JobBase(object, metaclass=TrackSubClasses):
         return '\n'.join(result)
 
     def get_location(self) -> str:
+        """Get the 'location' of a job, i.e. the URL or command.
+
+        :returns: A string with user_visible_url or the URL or command of the job.
+        """
         raise NotImplementedError()
 
     def get_indexed_location(self) -> str:
-        """Returns the Job's index and url/command.
-        Typically used in error displays."""
+        """Get the job number plus its 'location', i.e. the URL or command. Typically used in error displays.
+
+        :returns: A string with the job number and the URL or command of the job.
+        """
         raise NotImplementedError()
 
     def pretty_name(self) -> str:
+        """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (URL or command).
+
+        :returns: A string with the 'pretty name' the job.
+        """
         raise NotImplementedError()
 
     def serialize(self) -> dict:
-        """Serialize the Job, excluding its _index_number (e.g. for saving)."""
+        """Serialize the Job object, excluding its index_number (e.g. for saving).
+
+        :returns: A dict with the Job object serialized.
+        """
         d = self.to_dict()
-        d.pop('_index_number', None)
+        d.pop('index_number', None)
         return d
 
     @classmethod
     def unserialize(cls, data: dict) -> 'JobBase':
+        """Unserialize a dict with job data (e.g. from the YAML jobs file) into a JobBase type object.
+
+        :param data: The dict with job data (e.g. from the YAML jobs file).
+        :returns: A JobBase type object.
+        """
         # Backwards compatibility with 'navigate' directive (deprecated)
         if data.get('navigate') and not data.get('use_browser'):
             warnings.warn(
@@ -210,9 +245,10 @@ class JobBase(object, metaclass=TrackSubClasses):
         if len(matched_subclasses) == 1:
             job_subclass = matched_subclasses[0]
         elif len(matched_subclasses) > 1:
-            number_matched = {}
+            number_matched: Dict[JobBase, int] = {}
             for match in matched_subclasses:
                 number_matched[match] = [data.get(required) is not None for required in match.__required__].count(True)
+            # noinspection PyUnresolvedReferences
             job_subclass = sorted(number_matched.items(), key=lambda x: x[1], reverse=True)[0][0]
         else:
             if len(data) == 1:
@@ -224,7 +260,7 @@ class JobBase(object, metaclass=TrackSubClasses):
                     f"Job directives (with values) don't match a job type; check for errors/typos/escaping:\n{data}"
                 )
 
-        # remove extra required directives ("falsy")
+        # Remove extra required directives ("Falsy")
         other_subclasses = list(cls.__subclasses__.values())[1:]
         other_subclasses.remove(job_subclass)
         for other_subclass in other_subclasses:
@@ -235,7 +271,10 @@ class JobBase(object, metaclass=TrackSubClasses):
         return job_subclass.from_dict(data)
 
     def to_dict(self) -> dict:
-        """Return all defined Job directives (required and optional) as a serializable dict."""
+        """Return all defined Job object directives (required and optional) as a serializable dict.
+
+        :returns: A dict with all job directives as keys, ignoring those that are extras.
+        """
         return {
             k: getattr(self, k)
             for keys in (self.__required__, self.__optional__)
@@ -246,14 +285,21 @@ class JobBase(object, metaclass=TrackSubClasses):
     @classmethod
     def from_dict(cls, data: dict) -> 'JobBase':
         """Create a JobBase class from a dict, checking that all keys are recognized (i.e. listed in __required__ or
-        __optional__)."""
+        __optional__).
+
+        :param data: Job data in dict format (e.g. from the YAML jobs file).
+        :returns: A JobBase type object.
+        """
         for k in data.keys():
             if k not in (cls.__required__ + cls.__optional__):
                 raise ValueError(f"Job directive '{k}' is unrecognized; check for errors/typos/escaping:\n{data}")
         return cls(**{k: v for k, v in list(data.items())})
 
     def to_json(self) -> str:
-        """Return all defined Job directives (required and optional) as a JSON string."""
+        """Represent all defined Job directives (required and optional) as a JSON string.
+
+        :returns: A JSON formatted string representing the Job.
+        """
         return json.dumps(
             {
                 k: dict(getattr(self, k)) if isinstance(getattr(self, k), CaseInsensitiveDict) else getattr(self, k)
@@ -264,10 +310,19 @@ class JobBase(object, metaclass=TrackSubClasses):
         )
 
     def __repr__(self) -> str:
+        """Represent the Job object as a string.
+
+        :returns: A string representing the Job.
+        """
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
     def _dict_deep_merge(self, source: dict, destination: dict) -> dict:
-        """Deep merges source dict into destination dict."""
+        """Deep merges source dict into destination dict.
+
+        :param source: The source dict.
+        :param destination: The destination dict.
+        :returns: The merged dict.
+        """
         # https://stackoverflow.com/a/20666342
         for key, value in source.items():
             if isinstance(value, (dict, CaseInsensitiveDict)):
@@ -280,7 +335,11 @@ class JobBase(object, metaclass=TrackSubClasses):
         return destination
 
     def _set_defaults(self, defaults: Optional[Dict[str, Any]]) -> None:
-        """Merge Job attributes with defaults from the configuration."""
+        """Merge default attributes (e.g. from configuration) into those of the Job object.
+
+        :param defaults: The default Job parameters.
+        """
+
         # use case insensitive dict for headers
         self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if isinstance(defaults, dict):
@@ -297,41 +356,67 @@ class JobBase(object, metaclass=TrackSubClasses):
                                 getattr(self, key)[subkey] = subvalue
 
     def with_defaults(self, config: Dict[str, Dict[str, Any]]) -> 'JobBase':
-        """return a Job class from a configuration that also contains defaults from the configuration"""
-        new_job = copy.deepcopy(self)
+        """Obtain a Job object that also contains defaults from the configuration.
+
+        :param config: The configuration as a dict.
+        :returns: A JobBase object.
+        """
+        job_with_defaults = copy.deepcopy(self)
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
-            new_job._set_defaults(cfg.get(self.__kind__))
-            new_job._set_defaults(cfg.get('all'))
-        return new_job
+            job_with_defaults._set_defaults(cfg.get(self.__kind__))
+            job_with_defaults._set_defaults(cfg.get('all'))
+        return job_with_defaults
 
     def get_guid(self) -> str:
+        """Calculate the GUID, currently a simple SHA1 hash of the location (URL or command).
+
+        :returns: the GUID.
+        """
         location = self.get_location()
         return hashlib.sha1(location.encode()).hexdigest()  # nosec: B303
 
     def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
-        """Runs job and returns data and etag"""
+        """Runs job to retrieve the data, and returns data and ETag.
+
+        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :returns: The data retrieved and the ETag.
+        """
         raise NotImplementedError()
 
     def main_thread_enter(self) -> None:
-        """Called from the main thread before running the job"""
+        """Called from the main thread before running the job. Does nothing."""
         ...
 
     def main_thread_exit(self) -> None:
-        """Called from the main thread after running the job"""
+        """Called from the main thread after running the job. Does nothing."""
         ...
 
     def format_error(self, exception: Exception, tb: str) -> str:
+        """Format the error of the job if one is encountered.
+
+        :param exception: The exception.
+        :param tb: The traceback.
+        :returns: A string to display and/or use in reports.
+        """
         return tb
 
     def ignore_error(self, exception: Exception) -> Union[bool, str]:
+        """Determine whether the error of the job should be ignored.
+
+        :param exception: The exception.
+        :returns: True or the string with the number of the HTTPError code if the error should be ignored,
+           False otherwise.
+        """
         return False
 
 
 class Job(JobBase):
+    """Job class for jobs."""
+
     __required__: Tuple[str, ...] = ()
     __optional__: Tuple[str, ...] = (
-        '_index_number',
+        'index_number',
         'name',
         'note',
         'additions_only',
@@ -347,18 +432,36 @@ class Job(JobBase):
         'ignore_http_error_codes',
         'ignore_timeout_errors',
         'ignore_too_many_redirects',
+        'user_visible_url',
     )
 
     def get_location(self) -> str:
+        """Get the 'location' of a job, i.e. the URL or command.
+
+        :returns: A string with user_visible_url or the URL or command of the job.
+        """
         pass
 
     def get_indexed_location(self) -> str:
-        return f'Job {self._index_number}: {self.get_location()}'
+        """Get the job number plus its 'location', i.e. the URL or command. Typically used in error displays.
+
+        :returns: A string with the job number and the URL or command of the job.
+        """
+        return f'Job {self.index_number}: {self.get_location()}'
 
     def pretty_name(self) -> str:
+        """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (URL or command).
+
+        :returns: A string with the 'pretty name' the job.
+        """
         return self.name or self.get_location()
 
     def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+        """Runs job to retrieve the data, and returns data and ETag.
+
+        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :returns: The data retrieved and the ETag.
+        """
         pass
 
 
@@ -383,13 +486,22 @@ class UrlJob(Job):
         'no_redirects',
         'ssl_no_verify',
         'timeout',
-        'user_visible_url',
     )
 
     def get_location(self) -> str:
+        """Get the 'location' of a job, i.e. the URL or command.
+
+        :returns: A string with user_visible_url or the URL of the job.
+        """
         return self.user_visible_url or self.url
 
     def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+        """Runs job to retrieve the data, and returns data and ETag.
+
+        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :returns: The data retrieved and the ETag.
+        :raises NotModifiedError: If an HTTP 304 response is received.
+        """
         self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if 'User-Agent' not in self.headers:
             self.headers['User-Agent'] = __user_agent__
@@ -417,7 +529,7 @@ class UrlJob(Job):
                 self.method = 'POST'
             if 'Content-Type' not in self.headers:
                 self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
-            logger.info(f'Job {self._index_number}: Sending POST request to {self.url}')
+            logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
 
         if self.method is None:
             self.method = 'GET'
@@ -428,7 +540,7 @@ class UrlJob(Job):
             proxies['https'] = self.https_proxy
 
         if urlparse(self.url).scheme == 'file':
-            logger.info(f'Job {self._index_number}: Using local filesystem (file URI scheme)')
+            logger.info(f'Job {self.index_number}: Using local filesystem (file URI scheme)')
 
             if os.name == 'nt':
                 filename = Path(str(urlparse(self.url).path).lstrip('/'))
@@ -450,6 +562,7 @@ class UrlJob(Job):
                     data_bytes = b''
 
                     def callback_bytes(dt: bytes) -> None:
+                        """Handle FTP callback."""
                         nonlocal data_bytes
                         data_bytes += dt
 
@@ -460,6 +573,7 @@ class UrlJob(Job):
                     data: List[str] = []
 
                     def callback(dt: str) -> None:
+                        """Handle FTP callback."""
                         data.append(dt)
 
                     ftp.retrlines(f'RETR {url.path}', callback)
@@ -495,15 +609,16 @@ class UrlJob(Job):
         )
 
         if 400 <= response.status_code <= 499:
-            print('Client error response:')
+            logger.info(
+                f'Received HTTP status code {response.status_code} ({response.reason}) with the following ' f'content:'
+            )
             error_message = response.text
             try:
                 parsed_json = json.loads(error_message)
                 error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
             except json.decoder.JSONDecodeError:
-                if '<html>' in error_message:
-                    error_message = html2text.HTML2Text().handle(error_message).strip()
-            print(error_message)
+                error_message = html2text.HTML2Text().handle(error_message).strip()
+            logger.info(error_message)
 
         response.raise_for_status()
         if response.status_code == requests.codes.not_modified:
@@ -524,7 +639,7 @@ class UrlJob(Job):
             # and the Content-Type header contains text, but this IRL is often wrong; the below updates it with
             # whatever response detects it to be by its use of the chardet library
             logger.debug(
-                f'Job {self._index_number}: Encoding updated to {response.apparent_encoding} from '
+                f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from '
                 f'{response.encoding}'
             )
             response.encoding = response.apparent_encoding
@@ -548,12 +663,24 @@ class UrlJob(Job):
     #     headers.update(self.headers)
 
     def format_error(self, exception: Exception, tb: str) -> str:
+        """Format the error of the job if one is encountered.
+
+        :param exception: The exception.
+        :param tb: The traceback.
+        :returns: A string to display and/or use in reports.
+        """
         if isinstance(exception, requests.exceptions.RequestException):
             # Instead of a full traceback, just show the HTTP error
             return str(exception)
         return tb
 
     def ignore_error(self, exception: Exception) -> Union[bool, str]:
+        """Determine whether the error of the job should be ignored.
+
+        :param exception: The exception.
+        :returns: True or the string with the number of the HTTPError code if the error should be ignored,
+           False otherwise.
+        """
         if isinstance(exception, requests.exceptions.ConnectionError) and self.ignore_connection_errors:
             return True
         if isinstance(exception, requests.exceptions.Timeout) and self.ignore_timeout_errors:
@@ -603,9 +730,18 @@ class BrowserJob(Job):
     proxy_password: str = ''
 
     def get_location(self) -> str:
+        """Get the 'location' of a job, i.e. the URL or command.
+
+        :returns: A string with user_visible_url or the URL of the job.
+        """
         return self.user_visible_url or self.url
 
     def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+        """Runs job to retrieve the data, and returns data and ETag.
+
+        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :returns: The data retrieved and the ETag.
+        """
         response, etag = asyncio.run(self._retrieve())
 
         # if no name is found, set it to the title of the page if found
@@ -620,7 +756,10 @@ class BrowserJob(Job):
     def current_platform() -> str:
         """Get current platform name by short string as used by Pyppeteer for downloading Chromium.
         Originally from pyppeteer.chromium_downloader, but we cannot simply import it as it will trigger
-        pyppeteer reading os.environ['PYPPETEER_CHROMIUM_REVISION'] before we can modify it ourselves."""
+        pyppeteer reading os.environ['PYPPETEER_CHROMIUM_REVISION'] before we can modify it ourselves.
+
+        :raises OSError: If the platform is not supported by Pyppeteer.
+        """
         if sys.platform.startswith('linux'):
             return 'linux'
         elif sys.platform.startswith('darwin'):
@@ -632,6 +771,15 @@ class BrowserJob(Job):
         raise OSError(f'Platform unsupported by Pyppeteer (use_browser: true): {sys.platform}')
 
     async def _retrieve(self) -> Tuple[str, str]:
+        """
+
+        :raises KeyError: If chromium_revision is specified but not for the current operating system.
+        :raises ValueError: If there is a problem with the value supplied in one of the keys in the configuration file.
+        :raises TypeError: If the value provided in one of the directives is not in the correct type.
+        :raises ImportError: If the pyppeteer package is not installed.
+        :raises BrowserResponseError: If an HTTP response code between 400 and 599 is received.
+        :raises PageError: If another response code or error is received.
+        """
         # launch browser
         if not self.chromium_revision:
             self.chromium_revision = DEFAULT_CHROMIUM_REVISION
@@ -648,7 +796,7 @@ class BrowserJob(Job):
         os.environ['PYPPETEER_CHROMIUM_REVISION'] = str(_revision)
 
         logger.info(
-            f'Job {self._index_number}: '
+            f'Job {self.index_number}: '
             f"PYPPETEER_CHROMIUM_REVISION={os.environ.get('PYPPETEER_CHROMIUM_REVISION')}, "
             f"PYPPETEER_NO_PROGRESS_BAR={os.environ.get('PYPPETEER_NO_PROGRESS_BAR')}, "
             f"PYPPETEER_DOWNLOAD_HOST={os.environ.get('PYPPETEER_DOWNLOAD_HOST')}"
@@ -714,7 +862,7 @@ class BrowserJob(Job):
             handleSIGHUP=False,
             loop=asyncio.get_running_loop(),
         )  # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
-        logger.debug(f'Job {self._index_number}: Launched browser with args={args}')
+        logger.debug(f'Job {self.index_number}: Launched browser with args={args}')
 
         # browse to page and get content
         page = await browser.newPage()
@@ -728,11 +876,11 @@ class BrowserJob(Job):
                 self.method = 'POST'
             if 'Content-Type' not in self.headers:
                 self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
-            logger.info(f'Job {self._index_number}: Sending POST request to {self.url}')
+            logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
 
         if self.headers:
-            logger.debug(f'Job {self._index_number}: setExtraHTTPHeaders={self.headers}')
-            await page.setExtraHTTPHeaders(self.headers)
+            logger.debug(f'Job {self.index_number}: setExtraHTTPHeaders={self.headers}')
+            await page.setExtraHTTPHeaders(dict(self.headers))
 
         if self.cookies:
             await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
@@ -743,7 +891,7 @@ class BrowserJob(Job):
             if proxy_username or proxy_password:
                 await page.authenticate({'username': proxy_username, 'password': proxy_password})
                 logger.debug(
-                    f'Job {self._index_number}: Set page.authenticate with '
+                    f'Job {self.index_number}: Set page.authenticate with '
                     f'username={proxy_username}, password={proxy_password}'  # type: ignore[str-bytes-safe]
                 )
         options: Dict[str, Any] = {}
@@ -757,8 +905,9 @@ class BrowserJob(Job):
         if self.method and self.method != 'GET':
 
             async def post_intercept(request_event: pyppeteer.network_manager.Request) -> None:
+                """Handle pyee.EventEmitter callback."""
                 logger.info(
-                    f'Job {self._index_number}: intercepted request with resource_type'
+                    f'Job {self.index_number}: intercepted request with resource_type'
                     f'={request_event.resourceType}; overriding request method to {self.method}'
                 )
                 data = urlencode(self.data)
@@ -805,15 +954,15 @@ class BrowserJob(Job):
             async def handle_request(
                 request_event: pyppeteer.network_manager.Request, block_elements: List[str]
             ) -> None:
+                """Handle pyee.EventEmitter callback."""
                 logger.info(
-                    f'Job {self._index_number}: resource_type={request_event.resourceType} '
-                    f'elements={block_elements}'
+                    f'Job {self.index_number}: resource_type={request_event.resourceType} ' f'elements={block_elements}'
                 )
                 if any(request_event.resourceType == el for el in block_elements):
-                    logger.info(f'Job {self._index_number}: Aborting request {request_event.resourceType}')
+                    logger.info(f'Job {self.index_number}: Aborting request {request_event.resourceType}')
                     await request_event.abort()
                 else:
-                    logger.info(f'Job {self._index_number}: Continuing request {request_event.resourceType}')
+                    logger.info(f'Job {self.index_number}: Continuing request {request_event.resourceType}')
                     await request_event.continue_()  # broken -- many sites hang here!
 
             await page.setRequestInterception(True)
@@ -826,7 +975,7 @@ class BrowserJob(Job):
             nonlocal etag  # type: ignore[misc]
             nonlocal response_code  # type: ignore[misc]
             logger.debug(
-                f'Job {self._index_number}: response.status={response_event.status} '
+                f'Job {self.index_number}: response.status={response_event.status} '
                 f'response.url={response_event.url}'
             )
             if urldefrag(response_event.url)[0] == urldefrag(self.url)[0]:
@@ -842,10 +991,10 @@ class BrowserJob(Job):
         page.on('response', lambda response_event: asyncio.create_task(store_etag(response_event)))
 
         try:
-            logger.debug(f'Job {self._index_number}: page.goto options={options}')
+            logger.debug(f'Job {self.index_number}: page.goto options={options}')
             await page.goto(self.url, options=options)
         except PageError as e:
-            logger.debug(f'Job {self._index_number}: Page returned error {str(e.args)}')
+            logger.debug(f'Job {self.index_number}: Page returned error {str(e.args)}')
             await browser.close()
             if response_code and 400 <= response_code < 600:
                 raise BrowserResponseError(e.args, response_code)
@@ -856,13 +1005,13 @@ class BrowserJob(Job):
         # Modified is returned
         # page_response = await page.goto(self.url, options=options)
         # if not request_response and response_code == requests.codes.not_modified:
-        #     logger.debug(f'Job {self._index_number}: page_response={page_response}; response_code={response_code}')
+        #     logger.debug(f'Job {self.index_number}: page_response={page_response}; response_code={response_code}')
         #     await browser.close()
         #     raise NotModifiedError(response_code)
 
         if self.wait_for_navigation:
             while not page.url.startswith(self.wait_for_navigation):
-                logger.info(f'Job {self._index_number}: Waiting for redirection from {page.url}')
+                logger.info(f'Job {self.index_number}: Waiting for redirection from {page.url}')
                 await page.waitForNavigation(option=options)
         if self.wait_for:
             if isinstance(self.wait_for, (int, float, complex)) and not isinstance(self.wait_for, bool):
@@ -876,12 +1025,18 @@ class BrowserJob(Job):
             raise BrowserResponseError(('',), response_code)
         elif response_code is not None and response_code != requests.codes.ok:
             logger.info(
-                f'Job {self._index_number}: Received response HTTP {response_code} ' f'{response_names[response_code]}'
+                f'Job {self.index_number}: Received response HTTP {response_code} ' f'{response_names[response_code]}'
             )
 
         return content, etag
 
     def ignore_error(self, exception: Exception) -> Union[bool, str]:
+        """Determine whether the error of the job should be ignored.
+
+        :param exception: The exception.
+        :returns: True or the string with the number of the HTTPError code if the error should be ignored,
+           False otherwise.
+        """
         from pyppeteer.errors import PageError  # pyppeteer must be imported after setting os.environ variables
 
         if isinstance(exception, PageError):
@@ -990,9 +1145,19 @@ class ShellJob(Job):
     __optional__ = ()
 
     def get_location(self) -> str:
-        return self.command
+        """Get the 'location' of a job, i.e. the URL or command.
+
+        :returns: A string with user_visible_url or the command of the job.
+        """
+        return self.user_visible_url or self.command
 
     def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+        """Runs job to retrieve the data, and returns data and ETag.
+
+        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :returns: The data retrieved and the ETag.
+        :raises ShellError: If the subprocess fails.
+        """
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         try:
             return (

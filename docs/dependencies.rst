@@ -81,12 +81,12 @@ Installed packages
 ------------------
 These Python packages are installed automatically by `pip`:
 
-* `appdirs <https://github.com/ActiveState/appdirs>`__
 * `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect)
 * `html2text <https://github.com/Alir3z4/html2text>`__
 * `lxml <https://lxml.de>`__
 * `markdown2 <https://github.com/trentm/python-markdown2>`__
 * `msgpack <https://msgpack.org/>`__
+* `platformdirs <https://github.com/platformdirs/platformdirs>`__
 * `PyYAML <https://pyyaml.org/>`__
 * `requests <https://requests.readthedocs.io/>`__
 * `colorama <https://github.com/tartley/colorama>`__  (only in Windows installations)

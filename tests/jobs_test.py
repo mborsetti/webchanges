@@ -30,7 +30,7 @@ from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsS
 logger = logging.getLogger(__name__)
 
 here = Path(__file__).parent
-data_dir = here.joinpath('data')
+data_path = here.joinpath('data')
 cache_file = ':memory:'
 cache_storage = CacheSQLite3Storage(cache_file)
 
@@ -114,13 +114,13 @@ TEST_JOBS = [
     ),
     (
         {
-            'url': data_dir.joinpath('file-test.txt').as_uri(),
+            'url': data_path.joinpath('file-test.txt').as_uri(),
         },
         'This is text\n',
     ),
     (
         {
-            'url': data_dir.joinpath('file-test.txt').as_uri(),
+            'url': data_path.joinpath('file-test.txt').as_uri(),
             'filter': [{'pdf2text': {}}],
         },
         b'This is text\n',
@@ -263,8 +263,8 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
 # Legacy code for Pyppeteer is not optimized for concurrency and fails in Github Actions with error
 # pyppeteer.errors.BrowserError: Browser closed unexpectedly.
 def test_stress_use_browser() -> None:
-    jobs_file = data_dir.joinpath('jobs-use_browser.yaml')
-    config_file = data_dir.joinpath('config.yaml')
+    jobs_file = data_path.joinpath('jobs-use_browser.yaml')
+    config_file = data_path.joinpath('config.yaml')
     hooks_file = Path('')
 
     config_storage = YamlConfigStorage(config_file)
