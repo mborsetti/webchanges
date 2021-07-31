@@ -107,13 +107,13 @@ jobs:
           python -m pip install -U pip setuptools wheel
 
       - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
-        if: matrix.python-version == '3.10' && runner.os == 'Linux'
+        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'Linux'
         run: |
           sudo apt-get -y update
           sudo apt-get -y install libxml2-dev libxslt-dev python-dev
 
       - name: Install wheel-less lxml for Python 3.10 (MacOS)
-        if: matrix.python-version == '3.10' && runner.os == 'macOS'
+        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'macOS'
         run: |
           STATIC_DEPS=true sudo pip install lxml
 
@@ -175,14 +175,6 @@ jobs:
 #          name: ${{ env.commitmsg }}
 #          fail_ci_if_error: true
 ##          verbose: true # optional (default = false)
-
-#      # below not working as pytest-cov does not create the ./coverage/lcov.info file!
-#      - name: Upload LCOV coverage data to Coveralls
-#        uses: coverallsapp/github-action@master
-#        with:
-#          github-token: ${{ secrets.github_token }}
-#          flag-name: tests-${{ matrix.python-version }}-${{ matrix.os }}
-#          parallel: true
 
       - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
