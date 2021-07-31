@@ -109,7 +109,7 @@ def test_execute_inherits_environment_but_does_not_modify_it():
     # Set a specific value to check it doesn't overwrite the current env
     os.environ['URLWATCH_JOB_NAME'] = 'should-not-be-overwritten'
 
-    # See if the execute and shellpipe processes can use a variable from the outside
+    # See if the execute process can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
     if os.name != 'nt':
@@ -118,10 +118,11 @@ def test_execute_inherits_environment_but_does_not_modify_it():
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('execute')
     result = filtercls(job, None).filter('input-string', {'command': command})
-    # Check that the inherited value and the job name is set properly
 
+    # Check that the inherited value and the job name are set properly
     assert result.rstrip('"') == 'parent-process/test\n'
-    # Check that outside the variable wasn't overwritten by the filter
+
+    # Check that the outside variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
 
 
@@ -131,7 +132,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it():
     # Set a specific value to check it doesn't overwrite the current env
     os.environ['URLWATCH_JOB_NAME'] = 'should-not-be-overwritten'
 
-    # See if the execute and shellpipe processes can use a variable from the outside
+    # See if the shellpipe process can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
     if os.name != 'nt':
@@ -140,10 +141,11 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it():
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('shellpipe')
     result = filtercls(job, None).filter('input-string', {'command': command})
-    # Check that the inherited value and the job name is set properly
 
+    # Check that the inherited value and the job name are set properly
     assert result.rstrip('"') == 'parent-process/test\n'
-    # Check that outside the variable wasn't overwritten by the filter
+
+    # Check that the outside variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
 
 
