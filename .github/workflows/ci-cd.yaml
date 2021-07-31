@@ -148,8 +148,6 @@ jobs:
       - name: Install all other dependencies
         run: |
           pip install -U -r requirements.txt -r tests/requirements_pytest.txt coveralls
-        env:
-          -
 
       - name: Run tests (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
