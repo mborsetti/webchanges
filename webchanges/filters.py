@@ -1257,16 +1257,17 @@ def pipe_filter(f_cls: FilterBase, data: str, subfilter: Dict[str, Any]) -> str:
 
     # Work on a copy to not modify the outside environment
     env = dict(os.environ)
-    env.update(
-        {
-            f'{__project_name__.upper()}_JOB_JSON': f_cls.job.to_json() if f_cls.job else None,
-            f'{__project_name__.upper()}_JOB_NAME': f_cls.job.pretty_name(),
-            f'{__project_name__.upper()}_JOB_LOCATION': f_cls.job.get_location(),
-            f'{__project_name__.upper()}_JOB_INDEX_NUMBER': str(f_cls.job.index_number),
-            'URLWATCH_JOB_NAME': f_cls.job.pretty_name() if f_cls.job else '',  # urlwatch 2 compatibility
-            'URLWATCH_JOB_LOCATION': f_cls.job.get_location() if f_cls.job else '',  # urlwatch 2 compatibility
-        }
-    )
+    if f_cls.job:  # For testing  TODO: create a dummy job in test suite and remove this
+        env.update(
+            {
+                f'{__project_name__.upper()}_JOB_JSON': f_cls.job.to_json(),
+                f'{__project_name__.upper()}_JOB_NAME': f_cls.job.pretty_name(),
+                f'{__project_name__.upper()}_JOB_LOCATION': f_cls.job.get_location(),
+                f'{__project_name__.upper()}_JOB_INDEX_NUMBER': str(f_cls.job.index_number),
+                'URLWATCH_JOB_NAME': f_cls.job.pretty_name(),  # urlwatch 2 compatibility
+                'URLWATCH_JOB_LOCATION': f_cls.job.get_location(),  # urlwatch 2 compatibility
+            }
+        )
 
     if f_cls.__kind__ == 'execute':
         command = shlex.split(subfilter['command'])
