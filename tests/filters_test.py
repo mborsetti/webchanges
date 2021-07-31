@@ -103,27 +103,46 @@ def test_providing_unknown_subfilter_raises_valueerror():
     )
 
 
-def test_shellpipe_inherits_environment_but_does_not_modify_it():
+def test_execute_inherits_environment_but_does_not_modify_it():
     # https://github.com/thp/urlwatch/issues/541
 
-    # if os.name != 'nt':
     # Set a specific value to check it doesn't overwrite the current env
     os.environ['URLWATCH_JOB_NAME'] = 'should-not-be-overwritten'
 
-    # See if the shellpipe process can use a variable from the outside
+    # See if the execute and shellpipe processes can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
-    filtercls = FilterBase.__subclasses__.get('shellpipe')
+    if os.name != 'nt':
+        command = 'bash echo "$INHERITED_FROM/$URLWATCH_JOB_NAME"'
+    else:
+        command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
+    filtercls = FilterBase.__subclasses__.get('execute')
+    result = filtercls(job, None).filter('input-string', {'command': command})
+    # Check that the inherited value and the job name is set properly
 
+    assert result.rstrip('"') == 'parent-process/test\n'
+    # Check that outside the variable wasn't overwritten by the filter
+    assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
+
+
+def test_shellpipe_inherits_environment_but_does_not_modify_it():
+    # https://github.com/thp/urlwatch/issues/541
+
+    # Set a specific value to check it doesn't overwrite the current env
+    os.environ['URLWATCH_JOB_NAME'] = 'should-not-be-overwritten'
+
+    # See if the execute and shellpipe processes can use a variable from the outside
+    os.environ['INHERITED_FROM'] = 'parent-process'
+    job = UrlJob(url='test')
     if os.name != 'nt':
         command = 'echo "$INHERITED_FROM/$URLWATCH_JOB_NAME"'
     else:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
-
+    filtercls = FilterBase.__subclasses__.get('shellpipe')
     result = filtercls(job, None).filter('input-string', {'command': command})
     # Check that the inherited value and the job name is set properly
-    assert result == 'parent-process/test\n'
 
+    assert result.rstrip('"') == 'parent-process/test\n'
     # Check that outside the variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
 
