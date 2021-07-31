@@ -116,7 +116,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it():
     filtercls = FilterBase.__subclasses__.get('shellpipe')
 
     if os.name != 'nt':
-        command = 'echo "$INHERITED_FROM/$URLWATCH_JOB_NAME'
+        command = 'echo "$INHERITED_FROM/$URLWATCH_JOB_NAME"'
     else:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
 
