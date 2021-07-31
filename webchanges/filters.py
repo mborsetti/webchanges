@@ -1255,8 +1255,8 @@ def pipe_filter(f_cls: FilterBase, data: str, subfilter: Dict[str, Any]) -> str:
     if 'command' not in subfilter:
         raise ValueError(f"The '{f_cls.__kind__}' filter needs a command ({f_cls.job.get_indexed_location()})")
 
-    # Work on a copy to not modify the outside environment
-    env = dict(os.environ)
+    # Work on a copy of the environment as not to modify the outside environment
+    env = os.environ.copy()
     env.update(
         {
             f'{__project_name__.upper()}_JOB_JSON': f_cls.job.to_json(),

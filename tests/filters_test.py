@@ -113,7 +113,7 @@ def test_execute_inherits_environment_but_does_not_modify_it():
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
     if os.name != 'nt':
-        command = 'bash echo "$INHERITED_FROM/$URLWATCH_JOB_NAME"'
+        command = 'bash -c "echo $INHERITED_FROM/$URLWATCH_JOB_NAME"'
     else:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('execute')
@@ -135,7 +135,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it():
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
     if os.name != 'nt':
-        command = 'echo "$INHERITED_FROM/$URLWATCH_JOB_NAME"'
+        command = 'echo $INHERITED_FROM/$URLWATCH_JOB_NAME'
     else:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('shellpipe')
