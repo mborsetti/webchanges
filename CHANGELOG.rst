@@ -31,7 +31,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-3.8rc1
+Version 3.8rc1
 ====================
 2021-07-31
 
@@ -86,7 +86,7 @@ Internals
   by another package, you can uninstall appdirs with ``pip uninstall appdirs``.
 
 
-3.7
+Version 3.7
 ====================
 2021-06-27
 
@@ -125,7 +125,7 @@ Internals
 * Removed module jobs_browser.py (needed only for Python 3.6)
 
 
-3.6.1
+Version 3.6.1
 ====================
 2021-05-28
 
@@ -145,7 +145,7 @@ Fixed
 * Use same run duration precision in all reports
 
 
-3.6
+Version 3.6
 ====================
 2021-05-14
 
@@ -173,7 +173,7 @@ Internals
 * Migrated to using the `pathlib <https://docs.python.org/3/library/pathlib.html>`__ standard library
 
 
-3.5.1
+Version 3.5.1
 ====================
 2021-05-06
 
@@ -183,7 +183,7 @@ Fixed
 * Autodoc not building API documentation
 
 
-3.5
+Version 3.5
 ====================
 2021-05-04
 
@@ -251,7 +251,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-3.4.1
+Version 3.4.1
 ====================
 2021-04-17
 
@@ -271,7 +271,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-3.4
+Version 3.4
 ====================
 2021-04-12
 
@@ -334,7 +334,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-3.2.6
+Version 3.2.6
 ===================
 2021-03-21
 
@@ -364,7 +364,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-3.2
+Version 3.2
 ===================
 2021-03-08
 
@@ -439,7 +439,7 @@ Known issues
   ``Future exception was never retrieved``
 
 
-3.1.1
+Version 3.1.1
 =================
 2021-02-08
 
@@ -448,7 +448,7 @@ Fixed
 * Documentation was failing to build at https://webchanges.readthedocs.io/
 
 
-3.1
+Version 3.1
 =================
 2021-02-07
 
@@ -476,7 +476,7 @@ Internals
 * Added continuous integration (CI) testing on macOS platform
 
 
-3.0.3
+Version 3.0.3
 =============
 2020-12-21
 
@@ -516,7 +516,7 @@ Internals
 * Upgraded to use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__
 
 
-3.0.2
+Version 3.0.2
 =============
 2020-12-06
 
@@ -526,7 +526,7 @@ Fixed
   contributed by `MazdaFunSun <https://github.com/mazdafunsunn>`__)
 
 
-3.0.1
+Version 3.0.1
 =============
 2020-12-05
 
@@ -556,7 +556,7 @@ Fixed
   <https://github.com/monperrus>`__)
 
 
-3.0
+Version 3.0
 =============
 2020-11-12
 
