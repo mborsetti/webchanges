@@ -218,7 +218,7 @@ def test_clean_cache_no_clean_all():
         assert timestamps[1] < timestamps[0]
 
         # clean cache without using clean_all
-        delattr(CacheSQLite3Storage, 'clean_all')
+        # delattr(CacheSQLite3Storage, 'clean_all')
         cache_storage.clean_cache([guid])
         history = cache_storage.get_history_data(guid)
         assert len(history) == 1

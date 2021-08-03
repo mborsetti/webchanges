@@ -388,7 +388,6 @@ def test_browser_block_elements_not_str_or_list():
     job = JobBase.unserialize(job_data)
     job_state = JobState(cache_storage, job)
     job_state.process()
-    print('job_state.exception', job_state.exception)
     assert isinstance(job_state.exception, TypeError)
 
 

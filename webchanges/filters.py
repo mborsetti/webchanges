@@ -16,7 +16,7 @@ import warnings
 from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
-from typing import Any, Dict, Iterable, Iterator, List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, TYPE_CHECKING, Tuple, Type, Union
 from xml.dom import minidom  # nosec: B408 Replace minidom with the equivalent defusedxml package TODO
 
 import html2text
@@ -81,13 +81,15 @@ logger = logging.getLogger(__name__)
 class FilterBase(object, metaclass=TrackSubClasses):
     """The base class for filters."""
 
-    __subclasses__: Dict[str, TrackSubClasses] = {}
-    __anonymous_subclasses__: Iterable[TrackSubClasses] = []
+    __subclasses__: Dict[str, Type[FilterBase]] = {}
+    __anonymous_subclasses__: List[Type[FilterBase]] = []
+
+    __kind__: str = ''
 
     # Typing
-    __kind__: str
-    __no_subfilter__: bool
     __supported_subfilters__: Dict[str, str]
+    __default_subfilter__: str
+    __no_subfilter__: bool
     __uses_bytes__: bool
     method: str
 
@@ -120,7 +122,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
         return '\n'.join(result)
 
     @classmethod
-    def auto_process(cls, state: JobState, data: Union[bytes, str]) -> str:
+    def auto_process(cls, state: JobState, data: Union[str, bytes]) -> str:
         """Processes all automatic filters (those with "MATCH" set) in JobState.Job over the data.
 
         :param state: The JobState object.
@@ -138,11 +140,11 @@ class FilterBase(object, metaclass=TrackSubClasses):
                 logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
                 data = filter_instance.filter(data, {})  # All filters take a subfilter
 
-        return data
+        return str(data)
 
     @classmethod
     def normalize_filter_list(
-        cls, filter_spec: Optional[Union[str, List[Union[str, Dict[str, Any]]]]]
+        cls, filter_spec: Union[str, List[Union[str, Dict[str, Any]]]]
     ) -> Iterator[Tuple[str, Dict[str, Any]]]:
         """Generates a list of filters that has been checked for its validity.
 
@@ -173,8 +175,8 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
     @classmethod
     def _internal_normalize_filter_list(
-        cls, filter_spec: Optional[Union[str, List[Union[str, Dict[str, Any]]]]]
-    ) -> Optional[Iterator[Tuple[str, Dict[str, Any]]]]:
+        cls, filter_spec: Union[str, List[Union[str, Dict[str, Any]]]]
+    ) -> Iterator[Tuple[str, Dict[str, Any]]]:
         """Generates a list of filters with its default subfilter if not supplied.
 
         :param filter_spec: A list of either filter_kind, subfilter (where subfilter is a dict) or a legacy
@@ -187,7 +189,9 @@ class FilterBase(object, metaclass=TrackSubClasses):
             # Legacy string-based filter list specification:
             # "filter1:param1,filter2,filter3,filter4:param4"
             filter_spec = [
-                {filter_kind.split(':', 1)} if ':' in filter_kind else filter_kind
+                {filter_kind.split(':', maxsplit=1)[0]: filter_kind.split(':', maxsplit=1)[1]}
+                if ':' in filter_kind
+                else {filter_kind: ''}
                 for filter_kind in old_filter_spec.split(',')
             ]
             warnings.warn(
@@ -217,18 +221,21 @@ class FilterBase(object, metaclass=TrackSubClasses):
                     yield filter_kind, subfilter
 
     @classmethod
-    def process(cls, filter_kind: str, subfilter: Dict[str, Any], state: JobState, data: Union[bytes, str]) -> str:
-        """Process al filters.
+    def process(cls, filter_kind: str, subfilter: Dict[str, Any], state: JobState, data: Union[str, bytes]) -> str:
+        """Process the filter.
 
         :param filter_kind: The name of the filter.
         :param subfilter: The subfilter information.
-        :param state: The JobState object (containing the Job)
-        :param data: The data upon which to apply the filer.
-        :returns: The data after filters have been applied.
+        :param state: The JobState object (containing the Job).
+        :param data: The data upon which to apply the filter.
+        :returns: The data after the filter has been applied.
         """
         logger.info(f'Job {state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
-        filtercls: TrackSubClasses = cls.__subclasses__.get(filter_kind, None)
-        return filtercls(state.job, state).filter(data, subfilter)
+        filtercls: Optional[Type[FilterBase]] = cls.__subclasses__.get(filter_kind)
+        if filtercls:
+            return filtercls(state.job, state).filter(data, subfilter)
+        else:
+            return str(data)
 
     @classmethod
     def filter_chain_needs_bytes(cls, filter_name: Union[str, List[Union[str, Dict[str, Any]]]]) -> bool:
@@ -262,7 +269,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
         """
         return False
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Method used by the filter to process data.
 
         :param data: The data to be filtered (processed).
@@ -290,7 +297,7 @@ class AutoMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
@@ -323,7 +330,7 @@ class RegexMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
@@ -340,7 +347,7 @@ class BeautifyFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -528,7 +535,7 @@ class Ical2TextFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -585,7 +592,7 @@ class JsonFormatFilter(FilterBase):
 
     __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -613,7 +620,7 @@ class XMLFormatFilter(FilterBase):
     #
     # __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -635,7 +642,7 @@ class PrettyXMLFilter(FilterBase):
 
     __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -659,7 +666,9 @@ class KeepLinesFilter(FilterBase):
     __default_subfilter__ = 'text'
 
     def filter(  # type: ignore[override]
-        self: Union['KeepLinesFilter', 'GrepFilter'], data: str, subfilter: Dict[str, Any]
+        self: Union['KeepLinesFilter', 'GrepFilter'],
+        data: str,
+        subfilter: Dict[str, Any],
     ) -> str:
         if 'text' in subfilter:
             return '\n'.join(line for line in data.splitlines() if subfilter['text'] in line)
@@ -942,7 +951,7 @@ class Sha1Filter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -961,7 +970,7 @@ class HexdumpFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -983,6 +992,14 @@ class LxmlParser:
         'css': 'a CSS selector',
         'xpath': 'an XPath expression',
     }
+
+    expression: str
+    method: str
+    exclude: Optional[str]
+    namespaces: Optional[Dict[str, str]]
+    skip: int
+    maxitems: int
+    job: JobBase
 
     def __init__(
         self: Union['LxmlParser', 'CssFilter', 'XPathFilter'],
@@ -1136,6 +1153,13 @@ class CssFilter(FilterBase):
 
     __default_subfilter__ = 'selector'
 
+    EXPR_NAMES: Dict[str, str]
+    expression: str
+    exclude: str
+    namespaces: Dict[str, str]
+    skip: int
+    maxitems: int
+
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         lxml_parser = LxmlParser('css', subfilter, 'selector')
         lxml_parser.feed(data)
@@ -1153,6 +1177,13 @@ class XPathFilter(FilterBase):
     }
 
     __default_subfilter__ = 'path'
+
+    EXPR_NAMES: Dict[str, str]
+    expression: str
+    exclude: str
+    namespaces: Dict[str, str]
+    skip: int
+    maxitems: int
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         lxml_parser = LxmlParser('xpath', subfilter, 'path')
@@ -1172,7 +1203,7 @@ class RegexSub(FilterBase):
 
     __default_subfilter__ = 'pattern'
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -1246,12 +1277,12 @@ class ReverseFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         separator = subfilter.get('separator', '\n')
         return separator.join(reversed(data.split(separator)))
 
 
-def pipe_filter(f_cls: FilterBase, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+def pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
     if 'command' not in subfilter:
         raise ValueError(f"The '{f_cls.__kind__}' filter needs a command ({f_cls.job.get_indexed_location()})")
 
@@ -1301,7 +1332,7 @@ class ExecutePipeFilter(FilterBase):
 
     __default_subfilter__ = 'command'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         return pipe_filter(self, data, subfilter)
 
 
@@ -1316,7 +1347,7 @@ class ShellPipeFilter(FilterBase):
 
     __default_subfilter__ = 'command'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         return pipe_filter(self, data, subfilter)
 
 
@@ -1374,7 +1405,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
 
     __default_subfilter__ = 'query'
 
-    def filter(self, data: Union[bytes, str], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).

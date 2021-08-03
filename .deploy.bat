@@ -12,6 +12,11 @@ REM 4) run this file!
 REM To bump version from x.x.x.rc0 onwards:
 REM > bump2version --verbose --allow-dirty --no-commit --no-tag pre --dry-run
 
+REM For manual release in PyCharm:
+REM 1) Commit the release; comment is 'Release x.x'
+REM 2) In PyCharm Git (ALT+F9) -> Log, right click on the release and select New Tag. Enter tag in format vx.x
+REM 3) > git push origin unreleased:main --tags
+
 set "project=%~dp0"
 set "project=%project:~0,-1%"
 set "project=%project:\=" & set "project=%"
@@ -51,21 +56,14 @@ if %r% EQU N r=n
 if %r% EQU n exit /b
 
 echo.
-echo Bumping version to next %v%
+echo Bumping version to next %v%; this will also commit the changes.
 echo.
 bump2version --commit --tag --no-sign-tags %v%
-if NOT ["%errorlevel%"]==["0"] (
-    echo.
-    echo.
-    echo errorlevel: "%errorlevel%"
-    echo make sure to commit all files (other than those that will be modified by bump2version)
-    echo before rerunning this script
-    pause
-    exit /b %errorlevel%
-)
+
+pause
 
 echo.
-echo Pushing branch to main and setting release tag
+echo Pushing branch to main including release tag
 git push origin unreleased:main --tags
 if NOT ["%errorlevel%"]==["0"] (
     pause

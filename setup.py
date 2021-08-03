@@ -58,6 +58,7 @@ SETUP = {
     'license': project.__license__,
     # Below to include in sdist the files read above (see https://stackoverflow.com/questions/37753833)
     # data_files is deprecated. It does not work with wheels, so it should be avoided.
+    'zip_safe': True,
     'install_requires': list(requirements),
     'entry_points': {'console_scripts': [f'{project.__project_name__}={project.__package__}.cli:main']},
     'extras_require': {
@@ -81,6 +82,7 @@ SETUP = {
         'CI': f'{project.__code_url__}actions',
         'Documentation': project.__docs_url__,
         'Source Code': project.__code_url__,
+        'Changelog': f'{project.__docs_url__}changelog.html',
     },
 }
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))

@@ -15,12 +15,7 @@ import textwrap
 from math import floor, log10
 from os import PathLike
 from types import ModuleType
-from typing import Callable, Dict, Iterable, List, Match, TYPE_CHECKING, Tuple, Type, Union
-
-if TYPE_CHECKING:
-    # https://stackoverflow.com/questions/39740632
-    from .filters import FilterBase
-    from .jobs import JobBase
+from typing import Callable, Dict, Iterable, List, Match, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +23,20 @@ logger = logging.getLogger(__name__)
 class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
 
-    # Typing
-    # __kind__: str = ''   # issue: confuses converting to a different ReporterBase class
-    __supported_subfilters__: Dict[str, str] = {}
+    # __subclasses__ gets redefined in a non-Pythonic way from default "Callable[[_TT], List[_TT]]
+    __subclasses__: Dict[str, TrackSubClasses]  # type: ignore[assignment]
+    __anonymous_subclasses__: List[TrackSubClasses]
+    __required__: Tuple[str, ...] = ()
+    __optional__: Tuple[str, ...] = ()
+
+    __kind__: str
+    __supported_subfilters__: Dict[str, str]
 
     @staticmethod
-    def sorted_by_kind(cls: Type[FilterBase, JobBase]) -> List[Union[FilterBase, JobBase]]:
+    def sorted_by_kind(cls: TrackSubClasses) -> List[TrackSubClasses]:
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
-    def __init__(cls, name: str, bases: Tuple[type], namespace: dict) -> None:
+    def __init__(cls, name: str, bases: Tuple[type, ...], namespace: dict) -> None:
         for base in bases:
             if base == object:
                 continue
@@ -57,14 +57,14 @@ class TrackSubClasses(type):
             if hasattr(cls, '__kind__'):
                 subclasses = getattr(base, '__subclasses__', None)
                 if subclasses is not None:
-                    # see https://github.com/thp/urlwatch/issues/634
+                    # TODO https://github.com/thp/urlwatch/issues/634
                     logger.info(f'Registering {cls} as {cls.__kind__}')
                     subclasses[cls.__kind__] = cls
                     break
             else:
                 anonymous_subclasses = getattr(base, '__anonymous_subclasses__', None)
                 if anonymous_subclasses is not None:
-                    # see https://github.com/thp/urlwatch/issues/634
+                    # TODO https://github.com/thp/urlwatch/issues/634
                     logger.info(f'Registering {cls}')
                     anonymous_subclasses.append(cls)
                     break
@@ -181,16 +181,16 @@ def linkify(
         extra_params = f' {extra_params.strip()}'
 
     def make_link(m: Match) -> str:
-        """Replacement function for re.sub to convert plain text into HTML with links."""
-        url = m.group(1)
-        proto = m.group(2)
+        """Replacement function for re.sub using re.match as input to convert plain text into HTML with links."""
+        url: str = m.group(1)
+        proto: str = m.group(2)
         if require_protocol and not proto:
             return url  # not protocol, no linkify
 
         if proto and proto not in permitted_protocols:
             return url  # bad protocol, no linkify
 
-        href = m.group(1)
+        href: str = m.group(1)
         if not proto:
             href = f'http://{href}'  # no proto specified, use http
 

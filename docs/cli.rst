@@ -94,7 +94,10 @@ Test run a job
 You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
 its URL/command; :program:`webchanges` will display the filtered output. This allows to easily test changes in
 filters. Use a negative index number to select a job from the bottom of your job list (i.e. -1 is the last job, -2 is
-the second to last job, etc.)
+the second to last job, etc.).  Combine ``--test`` with ``--verbose`` to get more information, for example the text
+returned from a website with a 4xx (client error) status code::
+
+   webchanges --verbose --test 1
 
 .. versionchanged:: 3.8
    Accepts negative indices.

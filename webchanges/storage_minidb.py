@@ -9,9 +9,9 @@ Code is loaded only:
 Having it into a standalone module allows running the program without requiring minidb package to be installed.
 """
 from os import PathLike
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
-from .storage import CacheStorage
+from .storage import CacheStorage, Snapshot
 
 try:
     import minidb
@@ -30,7 +30,7 @@ class CacheMiniDBStorage(CacheStorage):
         tries = int
         etag = str
 
-    def __init__(self, filename: Optional[Union[str, PathLike]]) -> None:
+    def __init__(self, filename: Union[str, PathLike]) -> None:
         super().__init__(filename)
 
         if isinstance(minidb, type):
@@ -48,7 +48,7 @@ class CacheMiniDBStorage(CacheStorage):
     def get_guids(self) -> List[str]:
         return [guid for guid, in self.CacheEntry.query(self.db, minidb.Function('distinct', self.CacheEntry.c.guid))]
 
-    def load(self, guid: str) -> Tuple[str, float, int, str]:
+    def load(self, guid: str) -> Snapshot:
         for data, timestamp, tries, etag in self.CacheEntry.query(
             self.db,
             self.CacheEntry.c.data // self.CacheEntry.c.timestamp // self.CacheEntry.c.tries // self.CacheEntry.c.etag,
@@ -56,9 +56,9 @@ class CacheMiniDBStorage(CacheStorage):
             where=self.CacheEntry.c.guid == guid,
             limit=1,
         ):
-            return data, timestamp, tries, etag
+            return Snapshot(data, timestamp, tries, etag)
 
-        return '', 0, 0, ''
+        return Snapshot('', 0, 0, '')
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         history: Dict[str, float] = {}
@@ -84,7 +84,7 @@ class CacheMiniDBStorage(CacheStorage):
         data: str,
         timestamp: float,
         tries: int,
-        etag: str,
+        etag: Optional[str],
         **kwargs: Any,
     ) -> None:
         self.db.save(self.CacheEntry(guid=guid, timestamp=timestamp, data=data, tries=tries, etag=etag))
@@ -94,7 +94,7 @@ class CacheMiniDBStorage(CacheStorage):
         self.CacheEntry.delete_where(self.db, self.CacheEntry.c.guid == guid)
         self.db.commit()
 
-    def delete_latest(self, guid: str) -> None:
+    def delete_latest(self, guid: str) -> int:
         raise NotImplementedError("Deleting of latest snapshot not supported by 'minidb' database engine")
 
     def clean(self, guid: str) -> int:

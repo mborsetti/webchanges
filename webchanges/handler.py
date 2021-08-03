@@ -22,7 +22,7 @@ from .reporters import ReporterBase
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
-    from backports import zoneinfo as ZoneInfo
+    from backports import zoneinfo as ZoneInfo  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -90,7 +90,7 @@ class JobState(ContextManager):
             # We don't want exceptions from releasing resources to override job run results
             logger.warning(f'Job {self.job.index_number}: Exception while releasing resources for job', exc_info=True)
 
-        return
+        return None
 
     def load(self) -> None:
         """Loads form the database the last snapshot for the job."""

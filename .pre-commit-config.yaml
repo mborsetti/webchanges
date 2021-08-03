@@ -13,6 +13,11 @@
 
 # NOTE: in this package tox runs 'pre-commit run -a'
 
+# Force all unspecified python hooks to run python3
+default_language_version:
+    python: python3
+
+
 # A list of repository mappings.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -39,8 +44,8 @@ repos:
 #        description: Checks that scripts with shebangs are executable
 #      - id: check-symlinks
 #        description: Checks for symlinks which do not point to anything
-#      - id: check-toml
-#        description: Attempts to load all TOML files to verify syntax.
+      - id: check-toml
+        description: Attempts to load all TOML files to verify syntax.
       - id: check-vcs-permalinks
         description: Ensures that links to vcs websites are permalinks
 #      - id: check-xml
@@ -123,8 +128,7 @@ repos:
         name: Find common security issues in Python code (bandit)
         entry: bandit
         language: python
-        language_version: python3
-        types: [ python ]
+        types: [python]
         args:  [--ini, .bandit, --recursive]
 #  isort not needed if running black
 #      - id: isort  # https://github.com/PyCQA/isort
@@ -139,7 +143,6 @@ repos:
         name: Convert % strings to f-strings (flynt)
         entry: flynt
         language: python
-        language_version: python3
         require_serial: true
         types: [python]
         args: [--fail-on-change]
@@ -147,29 +150,27 @@ repos:
         name: Uncompromising code formatting (black)
         entry: black
         language: python
-        language_version: python3
         types: [python]
       - id: flake8
         name: Check for errors, style, [and over-complexity] (flake8)
         description: Code linter
         entry: flake8  # https://gitlab.com/pycqa/flake8
         language: python
-        language_version: python3
         types: [python]
         require_serial: true
         args: [--max-line-length, '120']
-#      - id: mypy  # https://github.com/python/mypy
-#        name: Static Typing for Python (mypy)
-#        entry: mypy
-#        language: python
-#        language_version: python3
-#        types: [python]
+      - id: mypy  # https://github.com/python/mypy
+        name: Static Typing for Python (mypy)
+        entry: mypy
+        language: python
+        types: [python]
+        pass_filenames: false
+        args: [-p, webchanges]
       - id: doc8  # https://github.com/pycqa/doc8
         name: Check for style in rst documentation (doc8)
         description: Documentation linter
         entry: doc8
         language: python
-        language_version: python3
         types: [rst]
         require_serial: true
         args: [--max-line-length, '120']

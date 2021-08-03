@@ -68,7 +68,7 @@ if os.name == 'nt':
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
-    from backports import zoneinfo as ZoneInfo
+    from backports import zoneinfo as ZoneInfo  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,8 @@ logger = logging.getLogger(__name__)
 class ReporterBase(object, metaclass=TrackSubClasses):
     """Base class for reporting."""
 
-    __subclasses__: Dict[str, Type['ReporterBase']] = {}
+    __subclasses__: Dict[str, Type[ReporterBase]] = {}
+    __anonymous_subclasses__: List[Type[ReporterBase]] = []
 
     def __init__(self, report: Report, config: Dict[str, Any], job_states: List[JobState], duration: float) -> None:
         """
@@ -91,7 +92,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         self.job_states = job_states
         self.duration = duration
 
-    def convert(self, othercls: Type['ReporterBase']) -> 'ReporterBase':
+    def convert(self, othercls: Type[ReporterBase]) -> ReporterBase:
         """Convert self to a different ReporterBase class (object typecasting).
 
         :param othercls: The ReporterBase class the be cast into.
@@ -364,7 +365,7 @@ class HtmlReporter(ReporterBase):
                 if job_state.old_timestamp
                 else ''
             )
-            timestamp_new = datetime.now(tz=tz).strftime('%a, %d %b %Y %H:%M:%S %z')
+            timestamp_new = datetime.now(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z')
             html_diff = difflib.HtmlDiff()
             table = html_diff.make_table(
                 str(job_state.old_data).splitlines(keepends=True),
@@ -496,7 +497,7 @@ class TextReporter(ReporterBase):
 
 
 class MarkdownReporter(ReporterBase):
-    def submit(self, max_length: int = None, **kwargs: Any) -> Iterable[str]:
+    def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> Iterable[str]:
         """Submit a job to generate the report.
 
         :param max_length: The maximum length of the report. Unlimited if not specified.
@@ -563,7 +564,7 @@ class MarkdownReporter(ReporterBase):
 
     @classmethod
     def _render(
-        cls, max_length: Optional[int], summary: Iterable[str], details: List[Tuple[str, str]], footer: str
+        cls, max_length: Optional[int], summary: List[str], details: List[Tuple[str, str]], footer: str
     ) -> Tuple[bool, List[str], List[Tuple[str, str]], str]:
         """Render the report components, trimming them if the available length is insufficient.
 
@@ -681,7 +682,7 @@ class MarkdownReporter(ReporterBase):
             return True, f'{trim_message}{s}'
 
     @staticmethod
-    def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[Optional[Union[str, bytes]]]:
+    def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[str]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -716,7 +717,7 @@ class MarkdownReporter(ReporterBase):
             summary_part.append(pretty_summary)
 
             if content is not None:
-                details_part.append(('### ' + summary, content))
+                details_part.append((f'### {summary}', content))
 
             return summary_part, details_part
 
@@ -990,6 +991,7 @@ class MailGunReporter(TextReporter):
             raise RuntimeError(
                 f'Failed to parse Mailgun response. HTTP status code: {result.status_code}, content: {result.text}'
             )
+        return None
 
 
 class TelegramReporter(MarkdownReporter):
@@ -1210,11 +1212,13 @@ class WebhookMarkdownReporter(MarkdownReporter):
 
     __kind__ = 'webhook_markdown'
 
+    max_length: int
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
         if isinstance(self.config.get('max_message_length'), int):
-            self.max_length: int = self.config.get('max_message_length')
+            self.max_length = self.config.get('max_message_length')  # type: ignore[assignment]
         else:
             self.max_length = default_max_length
 
@@ -1254,7 +1258,7 @@ class MatrixReporter(MarkdownReporter):
 
     __kind__ = 'matrix'
 
-    def submit(self, max_length: int = None, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> None:  # type: ignore[override]
         if matrix_client is None:
             raise ImportError('Python module "matrix_client" not installed')
 
@@ -1343,7 +1347,7 @@ class BrowserReporter(HtmlReporter):
 
 
 class XMPP(object):
-    def __init__(self, sender: str, recipient: str, insecure_password: str = None) -> None:
+    def __init__(self, sender: str, recipient: str, insecure_password: Optional[str] = None) -> None:
         if aioxmpp is None:
             raise ImportError('Python package "aioxmpp" is not installed; cannot use the "xmpp" reporter')
 

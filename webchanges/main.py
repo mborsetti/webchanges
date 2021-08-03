@@ -4,7 +4,7 @@ For the entrypoint, see cli.py.
 """
 
 import logging
-from typing import List, Optional
+from typing import List
 
 from . import __project_name__, __version__
 from .config import CommandConfig
@@ -53,7 +53,7 @@ class Urlwatch(object):
         self.report = Report(self)
         self.jobs: List[JobBase] = []
 
-        self._latest_release: Optional[str] = None
+        self._latest_release: str = None  # type: ignore[assignment]
 
         self.check_directories()
 
@@ -105,7 +105,7 @@ class Urlwatch(object):
 
         r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=1)
         if r.ok:
-            latest_release = list(r.json()['releases'].keys())[-1]
+            latest_release: str = list(r.json()['releases'].keys())[-1]
             if parse_version(latest_release) > parse_version(__version__):
                 self._latest_release = latest_release
             else:

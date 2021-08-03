@@ -351,12 +351,12 @@ but may not yield the prettiest of results.
 
 ``bs4``
 ^^^^^^^
-This filter method extracts unformatted text from HTML using the `Beautiful Soup
-<https://pypi.org/project/beautifulsoup4/>`__, specifically its `get_text(strip=True)
+This filter method extracts human-readable text from HTML using the `Beautiful Soup
+<https://pypi.org/project/beautifulsoup4/>`__ Python package, specifically its `get_text(strip=True)
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
 
 .. note:: As of Beautiful Soup version 4.9.0, when using the ``lxml`` or ``html.parser`` parser (see optional
-   sub-directive below), the contents of <script>, <style>, and <template> tags are not considered to be ‘text’, since
+   sub-directive below), the contents of <script>, <style>, and <template> tags are not considered to be ‘text’ since
    those tags are not part of the human-visible content of the page.
 
 .. code-block:: yaml

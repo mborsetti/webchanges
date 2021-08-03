@@ -164,7 +164,35 @@ DEFAULT_CONFIG = {
 class BaseStorage(ABC):
     """Base class for storage."""
 
-    filename: Optional[Path]
+    filename: Path
+
+
+class BaseFileStorage(BaseStorage, ABC):
+    """Base class for file storage."""
+
+    def __init__(self, filename: Union[str, os.PathLike]) -> None:
+        """
+
+        :param filename: The filename or directory name to storage.
+        """
+        if isinstance(filename, (str, bytes, Path)):
+            self.filename = Path(filename)
+        else:
+            self.filename = None  # type: ignore[assignment]
+
+
+class BaseTextualFileStorage(BaseFileStorage, ABC):
+    """Base class for textual files."""
+
+    def __init__(self, filename: Union[str, os.PathLike]) -> None:
+        """
+
+        :param filename: The filename or directory name to storage.
+        """
+        super().__init__(filename)
+        self.config: Dict[str, Any] = {}
+        if not isinstance(self, JobsBaseFileStorage):
+            self.load()
 
     @abstractmethod
     def load(self, *args: Any) -> Any:
@@ -185,34 +213,6 @@ class BaseStorage(ABC):
         """
         ...
 
-
-class BaseFileStorage(BaseStorage, ABC):
-    """Base class for file storage."""
-
-    def __init__(self, filename: Union[str, os.PathLike]) -> None:
-        """
-
-        :param filename: The filename or directory name to storage.
-        """
-        if isinstance(filename, (str, bytes, Path)):
-            self.filename = Path(filename)
-        else:
-            self.filename = None  # type: ignore[assignment]
-
-
-class BaseTextualFileStorage(BaseFileStorage, ABC):
-    """Base class for textual files."""
-
-    def __init__(self, filename: Optional[Union[str, os.PathLike]]) -> None:
-        """
-
-        :param filename: The filename or directory name to storage.
-        """
-        super().__init__(filename)
-        self.config: Dict[str, Any] = {}
-        if not isinstance(self, JobsBaseFileStorage):
-            self.load()
-
     @classmethod
     @abstractmethod
     def parse(cls, *args: Any) -> Any:
@@ -222,8 +222,9 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         :return: Specified by the subclass.
         """
         ...
+        return
 
-    def edit(self, example_file: Optional[Union[str, os.PathLike]] = None) -> Optional[int]:
+    def edit(self, example_file: Optional[Union[str, os.PathLike]] = None) -> int:
         """Edit file.
 
         :returns: None if edit is successful, 1 otherwise.
@@ -269,6 +270,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         if file_edit.is_file():
             file_edit.unlink()
         print('Saved edits in', self.filename)
+        return 0
 
     @classmethod
     def write_default_config(cls, filename: Path) -> None:
@@ -439,7 +441,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         config_for_extras = copy.deepcopy(config)
         if 'job_defaults' in config_for_extras:
-            for key in DEFAULT_CONFIG['job_defaults']:  # 'job_defaults' are not set in DEFAULT_CONFIG
+            # 'job_defaults' not set in DEFAULT_CONFIG
+            for key in DEFAULT_CONFIG['job_defaults']:  # type: ignore[attr-defined]
                 config_for_extras['job_defaults'][key] = {}
         if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
             config_for_extras['report'].pop('slack')
@@ -480,7 +483,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param args: None used.
         :param kwargs: None used.
         """
-        with open(self.filename, 'w') as fp:
+        with self.filename.open('w') as fp:
             fp.write(
                 f'# {__project_name__} configuration file. See {__docs_url__}\n'
                 f'# Written on {datetime.now().replace(microsecond=0).isoformat()} using version {__version__}\n'
@@ -557,6 +560,15 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             )
 
 
+class Snapshot(NamedTuple):
+    """Type for Snapshot object."""
+
+    data: str
+    timestamp: float
+    tries: int
+    etag: str
+
+
 class CacheStorage(BaseFileStorage, ABC):
     """Base class for snapshots storage."""
 
@@ -569,7 +581,7 @@ class CacheStorage(BaseFileStorage, ABC):
         ...
 
     @abstractmethod
-    def load(self, *args: Any) -> Tuple[Union[str, bytes], float, int, str]:
+    def load(self, guid: str) -> Snapshot:
         ...
 
     @abstractmethod
@@ -639,7 +651,7 @@ class CacheStorage(BaseFileStorage, ABC):
         :param known_guids: An iterable of guids
         """
         if hasattr(self, 'clean_all'):
-            count = self.clean_all()
+            count = self.clean_all()  # type: ignore[attr-defined]
             if count:
                 print(f'Deleted {count} old snapshots')
         else:
@@ -660,15 +672,6 @@ class CacheStorage(BaseFileStorage, ABC):
             print(f'Deleted {count} snapshots taken after {timestamp_date}')
         else:
             print(f'No snapshots found after {timestamp_date}')
-
-
-class Snapshot(NamedTuple):
-    """Type for Snapshot object."""
-
-    data: str
-    timestamp: float
-    tries: int
-    etag: str
 
 
 class CacheDirStorage(CacheStorage):
@@ -1219,7 +1222,7 @@ class CacheRedisStorage(CacheStorage):
         :returns: Number of records deleted.
         """
 
-        if self.db.lpop(self._make_key(guid)) is None:
+        if self.db.lpop(self._make_key(guid)) is None:  # type: ignore[no-untyped-call]
             return 0
 
         return 1

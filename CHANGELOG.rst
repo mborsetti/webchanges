@@ -31,6 +31,15 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.8.2a0
+====================
+Unreleased
+
+Internals
+---------
+* Added mypy testing for type hint checks
+
+
 Version 3.8.1
 ====================
 2021-08-03

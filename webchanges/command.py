@@ -34,11 +34,12 @@ class UrlwatchCommand:
         new_release = self.urlwatcher.get_new_release_version()
         if new_release:
             print(f'\nNew release version {new_release} is available; we recommend updating.')
+        return
 
-    def edit_hooks(self) -> Optional[int]:
+    def edit_hooks(self) -> int:
         """Edit hooks file.
 
-        :returns: None if edit is successful, 1 otherwise.
+        :returns: 0 if edit is successful, 1 otherwise.
         """
         # Similar code to BaseTextualFileStorage.edit()
         # Python 3.9: hooks_edit = self.urlwatch_config.hooks.with_stem(self.urlwatch_config.hooks.stem + '_edit')
@@ -82,8 +83,9 @@ class UrlwatchCommand:
         if hooks_edit.is_file():
             hooks_edit.unlink()
         print(f'Saved edits in {self.urlwatch_config.hooks}')
+        return 0
 
-    def show_features(self) -> None:
+    def show_features(self) -> int:
         print()
         print(f'Please see full documentation at {__docs_url__}')
 
@@ -100,6 +102,7 @@ class UrlwatchCommand:
         print(f'Please see full documentation at {__docs_url__}')
 
         self.print_new_version()
+        return 0
 
     def list_jobs(self) -> None:
         for job in self.urlwatcher.jobs:
@@ -174,11 +177,12 @@ class UrlwatchCommand:
             print(job_state.new_data)
 
         self.print_new_version()
+        return
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
-    def test_diff(self, job_id: str) -> Optional[int]:
+    def test_diff(self, job_id: str) -> int:
         job = self._get_job(job_id)
 
         history_data = list(self.urlwatcher.cache_storage.get_history_data(job.get_guid()).items())
@@ -200,6 +204,7 @@ class UrlwatchCommand:
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
         self.print_new_version()
+        return 0
 
     def list_error_jobs(self) -> None:
         start = time.perf_counter()

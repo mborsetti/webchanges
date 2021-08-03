@@ -114,7 +114,7 @@ def test_edit_hooks(capsys):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'edit_hooks', False)
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message == f'Saved edits in {urlwatch_command.urlwatch_config.hooks}\n'
 
@@ -147,7 +147,7 @@ def test_show_features_and_verbose(capsys):
         urlwatch_command.handle_actions()
     setattr(command_config, 'features', False)
     setattr(command_config, 'verbose', False)
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert '* browser - Retrieve a URL, emulating a real web browser (use_browser: true).' in message
 
@@ -274,7 +274,7 @@ def test_test_diff_and_joblist(capsys):
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_diff', None)
-        assert pytest_wrapped_e.value.code is None
+        assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert '=== Filtered diff between state 0 and state -1 ===\n' in message
         # rerun to reuse cached _generated_diff
@@ -296,7 +296,7 @@ def test_test_diff_and_joblist(capsys):
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_diff', None)
-        assert pytest_wrapped_e.value.code is None
+        assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert '=== Filtered diff between state 0 and state -1 ===\n' in message
     finally:
@@ -470,7 +470,7 @@ def test_check_edit_config():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.check_edit_config()
     setattr(command_config, 'edit_config', False)
-    assert pytest_wrapped_e.value.code is None
+    assert pytest_wrapped_e.value.code == 0
 
 
 def test_check_edit_config_fail(capsys):

@@ -28,10 +28,9 @@ from .storage import (
     YamlJobsStorage,
 )
 
-# directory where the config, jobs and hooks files are located
+# Directory where the config, jobs and hooks files are located
 if os.name != 'nt':
-    # typically ~/.config/{__project_name__}
-    config_path = user_config_path(__project_name__)
+    config_path = user_config_path(__project_name__)  # typically ~/.config/{__project_name__}
 else:
     config_path = Path.home().joinpath('Documents').joinpath(__project_name__)
 
@@ -39,12 +38,9 @@ else:
 # typically ~/.cache/{__project_name__} or %LOCALAPPDATA%\{__project_name__}\{__project_name__}\Cache
 cache_path = user_cache_path(__project_name__)
 
-# Ignore SIGPIPE for stdout (see https://github.com/thp/urlwatch/issues/77)
-try:
+# Ignore signal SIGPIPE ("broken pipe") for stdout (see https://github.com/thp/urlwatch/issues/77)
+if os.name != 'nt':  # Windows does not have signal.SIGPIPE
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # type: ignore[attr-defined]  # not defined in Windows
-except AttributeError:
-    # Windows does not have signal.SIGPIPE
-    pass
 
 logger = logging.getLogger(__name__)
 

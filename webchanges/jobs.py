@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from .handler import JobState
 
 # required to suppress warnings with 'ssl_no_verify: true'
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: ignore[no-untyped-call]
 
 logger = logging.getLogger(__name__)
 
@@ -94,12 +94,11 @@ class JobBase(object, metaclass=TrackSubClasses):
     """The base class for Jobs."""
 
     __subclasses__: Dict[str, 'JobBase'] = {}
+    __anonymous_subclasses__: List['JobBase'] = []
 
-    __required__: Tuple[str, ...] = ()
-    __optional__: Tuple[str, ...] = ()
-
-    # PyCharm IDE compatibility
-    __kind__: str = ''
+    __kind__: str = ''  # no longer set at the subclass level
+    __required__: Tuple[str, ...]
+    __optional__: Tuple[str, ...]
 
     index_number: int = 0  # added at job loading
 
@@ -114,12 +113,12 @@ class JobBase(object, metaclass=TrackSubClasses):
     chromium_revision: Optional[Union[Dict[str, int], Dict[str, str], str, int]] = None
     contextlines: Optional[int] = None
     cookies: Optional[Dict[str, str]] = None
-    data: Optional[Union[str, Dict[str, str]]] = None
+    data: Union[str, Dict[str, str]] = None  # type: ignore[assignment]
     deletions_only: Optional[bool] = None
-    diff_filter: Optional[Union[str, List[Union[str, Dict[str, Any]]]]] = None
+    diff_filter: Union[str, List[Union[str, Dict[str, Any]]]] = None  # type: ignore[assignment]
     diff_tool: Optional[str] = None
     encoding: Optional[str] = None
-    filter: Optional[Union[str, List[Union[str, Dict[str, Any]]]]] = None
+    filter: Union[str, List[Union[str, Dict[str, Any]]]] = None  # type: ignore[assignment]
     headers: Optional[CaseInsensitiveDict] = None
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
@@ -316,7 +315,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         """
         return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
-    def _dict_deep_merge(self, source: dict, destination: dict) -> dict:
+    def _dict_deep_merge(self, source: Union[dict, CaseInsensitiveDict], destination: dict) -> dict:
         """Deep merges source dict into destination dict.
 
         :param source: The source dict.
@@ -376,7 +375,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         location = self.get_location()
         return hashlib.sha1(location.encode()).hexdigest()  # nosec: B303
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the sate of the retrieval.
@@ -456,7 +455,7 @@ class Job(JobBase):
         """
         return self.name or self.get_location()
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the sate of the retrieval.
@@ -495,7 +494,7 @@ class UrlJob(Job):
         """
         return self.user_visible_url or self.url
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the sate of the retrieval.
@@ -557,7 +556,12 @@ class UrlJob(Job):
             username = url.username or 'anonymous'
             password = url.password or 'anonymous'
 
-            with FTP(str(url.hostname), str(username), str(password), timeout=self.timeout) as ftp:  # nosec: B321
+            with FTP(
+                str(url.hostname),
+                str(username),
+                str(password),
+                timeout=self.timeout,  # type: ignore[arg-type]
+            ) as ftp:  # nosec: B321
                 if FilterBase.filter_chain_needs_bytes(self.filter):
                     data_bytes = b''
 
@@ -585,7 +589,7 @@ class UrlJob(Job):
 
         if self.timeout is None:
             # default timeout
-            timeout = 60.0
+            timeout: Optional[float] = 60.0
         elif self.timeout == 0:
             # never timeout
             timeout = None
@@ -736,7 +740,7 @@ class BrowserJob(Job):
         """
         return self.user_visible_url or self.url
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the sate of the retrieval.
@@ -910,7 +914,8 @@ class BrowserJob(Job):
                     f'Job {self.index_number}: intercepted request with resource_type'
                     f'={request_event.resourceType}; overriding request method to {self.method}'
                 )
-                data = urlencode(self.data)
+                if isinstance(self.data, dict):
+                    data = urlencode(self.data)
                 await request_event.continue_(overrides={'method': self.method, 'postData': data})
 
             await page.setRequestInterception(True)
@@ -1151,7 +1156,7 @@ class ShellJob(Job):
         """
         return self.user_visible_url or self.command
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[bytes, str], str]:
+    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the sate of the retrieval.
