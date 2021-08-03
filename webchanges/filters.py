@@ -16,15 +16,13 @@ import warnings
 from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
-from typing import Any, Dict, Iterator, List, Optional, TYPE_CHECKING, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
 from xml.dom import minidom  # nosec: B408 Replace minidom with the equivalent defusedxml package TODO
 
 import html2text
-
+import yaml
 from lxml import etree  # noqa: DUO107 insecure use of XML modules, prefer "defusedxml"  # nosec: B410 TODO
 from lxml.cssselect import CSSSelector  # noqa: DUO107 insecure use of XML ... "defusedxml"  # nosec: B410 TODO
-
-import yaml
 
 from . import __project_name__
 from .util import TrackSubClasses

@@ -12,11 +12,11 @@ from typing import Optional, Union
 
 import requests
 
-from . import __project_name__, __docs_url__
+from . import __docs_url__, __project_name__
 from .filters import FilterBase
 from .handler import JobState, Report
 from .jobs import BrowserJob, JobBase, UrlJob
-from .mailer import SMTPMailer, smtp_have_password, smtp_set_password
+from .mailer import smtp_have_password, smtp_set_password, SMTPMailer
 from .main import Urlwatch
 from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from .util import edit_file, import_module_from_source

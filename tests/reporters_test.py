@@ -3,20 +3,16 @@ import importlib.util
 import logging
 import os
 import traceback
-
-from keyring.errors import NoKeyringError
-
-from matrix_client.errors import MatrixError
+from smtplib import SMTPAuthenticationError
 
 import pytest
-
+from keyring.errors import NoKeyringError
+from matrix_client.errors import MatrixError
 from requests.exceptions import MissingSchema
-
-from smtplib import SMTPAuthenticationError
 
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
-from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
+from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
 from webchanges.reporters import HtmlReporter
 from webchanges.storage import DEFAULT_CONFIG
 

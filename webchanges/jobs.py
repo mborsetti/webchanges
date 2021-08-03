@@ -17,11 +17,10 @@ import warnings
 from ftplib import FTP  # nosec: B402
 from http.client import responses as response_names
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
 from urllib.parse import urldefrag, urlencode, urlparse, urlsplit
 
 import html2text
-
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from requests.structures import CaseInsensitiveDict

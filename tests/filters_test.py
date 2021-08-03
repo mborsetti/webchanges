@@ -6,7 +6,6 @@ import os
 import sys
 
 import pytest
-
 import yaml
 
 from webchanges.filters import FilterBase

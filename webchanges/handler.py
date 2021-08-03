@@ -13,7 +13,7 @@ from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Dict, Iterable, List, Optional, TYPE_CHECKING, Type, Union
+from typing import Any, ContextManager, Dict, Iterable, List, Optional, Type, TYPE_CHECKING, Union
 
 from .filters import FilterBase
 from .jobs import NotModifiedError

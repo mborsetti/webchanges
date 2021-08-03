@@ -7,9 +7,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from pyppeteer.chromium_downloader import current_platform
-
 import pytest
+from pyppeteer.chromium_downloader import current_platform
 
 from webchanges import __project_name__ as project_name
 from webchanges.config import CommandConfig

@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-from typing import Any, Callable, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, TYPE_CHECKING, Union
 from warnings import warn
 
 import requests
@@ -26,13 +26,13 @@ from requests import Response
 
 from . import __project_name__, __url__, __version__
 from .jobs import UrlJob
-from .mailer import SMTPMailer, SendmailMailer
-from .util import TrackSubClasses, chunk_string, linkify
+from .mailer import SendmailMailer, SMTPMailer
+from .util import chunk_string, linkify, TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    from .jobs import JobBase
     from .handler import JobState, Report
+    from .jobs import JobBase
 
 try:
     import aioxmpp

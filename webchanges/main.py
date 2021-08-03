@@ -6,17 +6,16 @@ For the entrypoint, see cli.py.
 import logging
 from typing import List
 
+import requests
+
 from . import __project_name__, __version__
+from ._vendored.packaging_version import parse as parse_version
 from .config import CommandConfig
 from .handler import Report
 from .jobs import JobBase
 from .storage import CacheStorage, YamlConfigStorage, YamlJobsStorage
 from .util import import_module_from_source
 from .worker import run_jobs
-from ._vendored.packaging_version import parse as parse_version
-
-
-import requests
 
 logger = logging.getLogger(__name__)
 

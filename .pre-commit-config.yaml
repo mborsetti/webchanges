@@ -13,10 +13,11 @@
 
 # NOTE: in this package tox runs 'pre-commit run -a'
 
+minimum_pre_commit_version: 2.13.0
+
 # Force all unspecified python hooks to run python3
 default_language_version:
     python: python3
-
 
 # A list of repository mappings.
 repos:
@@ -130,15 +131,13 @@ repos:
         language: python
         types: [python]
         args:  [--ini, .bandit, --recursive]
-#  isort not needed if running black
-#      - id: isort  # https://github.com/PyCQA/isort
-#        name: isort your imports, so you don't have to (isort)
-#        entry: isort
-#        require_serial: true
-#        language: python
-#        language_version: python3
-#        types_or: [cython, pyi, python]
-#        args: [--filter-files]
+      - id: isort  # https://github.com/PyCQA/isort
+        name: isort your imports, so you don't have to (isort)
+        entry: isort
+        require_serial: true
+        language: python
+        types_or: [cython, pyi, python]
+        args: [--filter-files]
       - id: flynt  # https://github.com/ikamensh/flynt
         name: Convert % strings to f-strings (flynt)
         entry: flynt

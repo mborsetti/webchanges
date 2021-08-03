@@ -37,7 +37,7 @@ Unreleased
 
 Internals
 ---------
-* Added mypy testing for type hint checks
+* Added mypy testing for type hint checks and isort to arrange imports
 
 
 Version 3.8.1

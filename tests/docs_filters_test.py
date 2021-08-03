@@ -11,11 +11,8 @@ import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
 import docutils.utils
-
 import html2text
-
 import pytest
-
 import yaml
 
 from webchanges.filters import FilterBase
