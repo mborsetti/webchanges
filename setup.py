@@ -5,7 +5,7 @@
 import re
 import sys
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 import webchanges as project
 
@@ -32,7 +32,7 @@ SETUP = {
     'author': re.match(r'(.*) <(.*)>', project.__author__).groups()[0],
     'author_email': re.match(r'(.*) <(.*)>', project.__author__).groups()[1],
     'url': project.__url__,
-    'packages': [project.__project_name__],
+    'packages': find_packages(),
     'classifiers': [
         'Environment :: Console',
         'Topic :: Internet',

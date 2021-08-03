@@ -31,6 +31,16 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.8.1
+====================
+2021-08-03
+
+Fixed
+-----
+* Files in the new _vendored directory are now installed correctly.
+
+
+
 Version 3.8
 ====================
 2021-07-31
@@ -58,7 +68,7 @@ Added
 * Configuration file is now checked for invalid directives (e.g. typos) when program is run.
 * Whenever a HTTP client error (4xx) response is received, in ``--verbose`` mode the content of the response is
   displayed with the error.
-* If a newer version of :program:`webchanges` has been released to PyPi, an advisory notice is printed to stdout and
+* If a newer version of **webchanges** has been released to PyPi, an advisory notice is printed to stdout and
   added to the report footer (if footer is enabled).
 
 Fixed
