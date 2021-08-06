@@ -79,12 +79,11 @@ jobs:
         ports:
           # Maps port 6379 on service container to the host
           - 6379:6379
-        env:
-          REDIS_URI: redis://localhost:6379
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
+      REDIS_URI: redis://localhost:6379
 
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
