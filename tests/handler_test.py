@@ -64,6 +64,7 @@ def test_save_load_jobs():
 def test_load_config_yaml():
     if config_file.is_file():
         config = YamlConfigStorage(config_file)
+        config.load()
         assert config is not None
         assert config.config is not None
         assert config.config == DEFAULT_CONFIG

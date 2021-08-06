@@ -4,69 +4,71 @@
 Command line arguments
 ======================
 
-.. code block to column 105 only; beyond has horizontal scroll bar
+.. code block to column ~103 only; beyond has horizontal scroll bar
+   1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
 
 .. code-block::
 
-  positional arguments:
-    joblist               job(s) to run (by index as per --list) (default: run all jobs)
+   positional arguments:
+     JOB                   job(s) to run (by index as per --list) (default: run all jobs)
 
-  optional arguments:
-    -h, --help            show this help message and exit
-    -V, --version         show program's version number and exit
-    -v, --verbose         show debug output
+   optional arguments:
+     -h, --help            show this help message and exit
+     -V, --version         show program's version number and exit
+     -v, --verbose         show logging output
 
-  override file defaults:
-    --jobs FILE, --urls FILE
-                          read job list (URLs) from FILE
-    --config FILE         read configuration from FILE
-    --hooks FILE          use FILE as hooks.py module
-    --cache FILE          use FILE as a cache (snapshots database) or directory, alternatively a redis
-                          URI
+   override file defaults:
+     --jobs FILE, --urls FILE
+                           read job list (URLs) from FILE
+     --config FILE         read configuration from FILE
+     --hooks FILE          use FILE as hooks.py module
+     --cache FILE          use FILE as cache (snapshots database) or directory, alternatively a redis
+                           URI
 
-  job management:
-    --list                list jobs and their index number
-    --errors              list jobs with errors or no data captured
-    --test JOB, --test-filter JOB
-                          test a job (by index or URL/command) and show filtered output
-    --test-diff JOB, --test-diff-filter JOB
-                          test and show diff using existing saved snapshots of a job (by index or URL/command)
-    --add JOB             add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from
-                          jobs file; use --edit instead!
-    --delete JOB          delete job by URL/command or index number. WARNING: all remarks are deleted
-                          from jobs file; use --edit instead!
+   job management:
+     --list                list jobs and their index number
+     --errors              list jobs with errors or no data captured
+     --test JOB, --test-filter JOB
+                           test a job (by index or URL/command) and show filtered output
+     --test-diff JOB, --test-diff-filter JOB
+                           test and show diff using existing saved snapshots of a job (by index or
+                           URL/command)
+     --add JOB             add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from
+                           jobs file; use --edit instead!
+     --delete JOB          delete job by URL/command or index number. WARNING: all remarks are deleted
+                           from jobs file; use --edit instead!
 
-  reporters:
-    --test-reporter REPORTER
-                          send a test notification
-    --smtp-login          verify SMTP login credentials with server and, if stored in keyring, enter or
-                          check password
-    --telegram-chats      list telegram chats the bot is joined to
-    --xmpp-login          enter or check password for XMPP (stored in keyring)
+   reporters:
+     --test-reporter REPORTER
+                           send a test notification
+     --smtp-login          verify SMTP login credentials with server and, if stored in keyring, enter or
+                           check password
+     --telegram-chats      list telegram chats program is joined to
+     --xmpp-login          enter or check password for XMPP (stored in keyring)
 
-  launch editor ($EDITOR/$VISUAL):
-    --edit                edit job (URL/command) list
-    --edit-config         edit configuration file
-    --edit-hooks          edit hooks script
+   launch editor ($EDITOR/$VISUAL):
+     --edit                edit job (URL/command) list
+     --edit-config         edit configuration file
+     --edit-hooks          edit hooks script
 
-  database:
-    --gc-cache            garbage collect the cache database by removing old snapshots plus all data of
-                          jobs not in the jobs file
-    --clean-cache         remove old snapshots from the cache database
-    --rollback-cache TIMESTAMP
-                          delete recent snapshots > timestamp; backup the database before using!
-    --delete-snapshot JOB
-                          delete the last saved snapshot of job (URL/command)
-    --database-engine {sqlite3,redis,minidb,textfiles}
-                          database engine to use (default: sqlite3 unless redis URI in --cache)
-    --max-snapshots NUM_SNAPSHOTS
-                          maximum number of snapshots to retain in sqlite3 database (default: 4)
+   database:
+     --gc-cache            garbage collect the cache database by removing old snapshots plus all data of
+                           jobs not in the jobs file
+     --clean-cache         remove old snapshots from the cache database
+     --rollback-cache TIMESTAMP
+                           delete recent snapshots > timestamp; backup the database before using!
+     --delete-snapshot JOB
+                           delete the last saved snapshot of job (URL/command)
+     --database-engine {sqlite3,redis,minidb,textfiles}
+                           database engine to use (default: sqlite3 unless redis URI in --cache)
+     --max-snapshots NUM_SNAPSHOTS
+                           maximum number of snapshots to retain in sqlite3 database (default: 4)
 
-  miscellaneous:
-    --features            list supported job types, filters and reporters
-    --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                          level of logging output if -v is selected (default: DEBUG)
-
+   miscellaneous:
+     --features            list supported job types, filters and reporters
+     --chromium-directory  show directory where Chromium is installed
+     --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                           level of logging output if -v is selected (default: DEBUG)
 
 .. _job_subset:
 
@@ -220,6 +222,18 @@ set to 0, all snapshots are retained (the database will grow unbounded).
 
 .. versionadded:: 3.3
    for Python 3.7 or higher and default ``sqlite3`` database engine only.`
+
+
+Chromium downloads
+------------------
+Every time you change the chromium_revision, a new download is initiated and the old version is kept on your system,
+using up space. You must delete it manually; you will find it in the directory specified by running:
+
+.. code-block:: bash
+
+    webchanges --chromium-directory
+
+.. versionadded:: 3.8.2
 
 
 .. todo::

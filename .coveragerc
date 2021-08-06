@@ -1,5 +1,6 @@
-# .coveragerc file for pytest-cov (i.e. coverage) (see https://coverage.readthedocs.io/en/latest/config.html)
-# runs in Github Actions .github/workflows/ci-cd.yaml and tox.ini
+# .coveragerc file for pytest-cov (i.e. coverage).
+# Runs in Github Actions .github/workflows/ci-cd.yaml and tox.ini.
+# Config file documentation at https://coverage.readthedocs.io/en/latest/config.html
 
 [coverage:run]
 branch = True

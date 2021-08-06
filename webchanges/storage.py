@@ -191,8 +191,8 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         """
         super().__init__(filename)
         self.config: Dict[str, Any] = {}
-        if not isinstance(self, JobsBaseFileStorage):
-            self.load()
+        # if not isinstance(self, JobsBaseFileStorage):
+        #     self.load()
 
     @abstractmethod
     def load(self, *args: Any) -> Any:
@@ -369,7 +369,7 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
         """
         filename = args[0]
         if filename is not None and filename.is_file():
-            with open(filename) as fp:
+            with filename.open() as fp:
                 return yaml.safe_load(fp)
 
 
@@ -534,7 +534,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         """
         filename = args[0]
         if filename is not None and filename.is_file():
-            with open(filename) as fp:
+            with filename.open() as fp:
                 return cls._parse(fp)
         return []
 
@@ -543,7 +543,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
 
         :return: A list of JobBase objects.
         """
-        with open(self.filename) as fp:
+        with self.filename.open() as fp:
             return self._parse(fp)
 
     def save(self, *args: Iterable[JobBase], **kwargs: Any) -> None:
@@ -554,7 +554,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         jobs = args[0]
         print(f'Saving updated list to {self.filename}')
 
-        with open(self.filename, 'w') as fp:
+        with self.filename.open('w') as fp:
             yaml.safe_dump_all(
                 [job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False, allow_unicode=True
             )
@@ -725,7 +725,7 @@ class CacheDirStorage(CacheStorage):
     ) -> None:
         # Timestamp is not saved as is read from the file's timestamp; ETag is ignored
         filename = self._get_filename(guid)
-        with open(filename, 'w+') as fp:
+        with filename.open('w+') as fp:
             fp.write(data)
 
     def delete(self, guid: str) -> None:

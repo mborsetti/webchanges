@@ -216,7 +216,7 @@ Jobs with use_browser: true (Pyppeteer)
 
 Using a Chromium revision matching a Google Chrome release
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-`:program:`webchanges`` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72. If you
+:program:`webchanges` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72. If you
 want a different one, you can do so, but unfortunately the Chromium revision number does not match the Google Chrome /
 Chromium release one, so you have to find out what the revision number is for a stable Chrome release.
 
@@ -237,11 +237,12 @@ revision with build artifacts, in this example 843831.
 
 .. note::
    Every time you change the chromium_revision, a new download is initiated and the old version is kept
-   on your system, using up space. You must delete it manually; you will find it in the directory specified by running
+   on your system, using up space. You must delete unused executables manually; you will find it in the directory
+   specified by running:
 
    .. code-block:: bash
 
-      python3 -c "from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER; print(DOWNLOADS_FOLDER)"
+      webchanges --chromium-directory
 
 
 To specify the Chromium revision to use (and other defaults) globally, edit config.yaml:
@@ -269,7 +270,7 @@ To specify the same on an individual job:
      - '--window-size=1298,1406'
 
 
-If you use multiple OSs, you can specify different Chromium revisions to use based on the OS `:program:`webchanges`` is
+If you use multiple OSs, you can specify different Chromium revisions to use based on the OS :program:`webchanges` is
 running in by using a dict with one or more of ``linux``, ``mac``, ``win32`` and/or ``win64`` keys, either as a global
 default (like below) or in individual jobs:
 
@@ -338,12 +339,12 @@ Speeding up jobs by blocking elements
 
 .. danger::
 
-   This feature is experimental and on certain sites it totally freeze execution; test before use
+   This feature is experimental and on certain sites it totally freeze execution; test before use!
 
 If you're not interested in all elements of a website you can skip downloading the ones that you don't care, paying
 attention that some elements may be required for the correct rendering of the website (always test!). Typical elements
-to skip include ``stylesheet``, ``font``, ``image``, and ``media``, and they can be specified like this (on a
-job-by-job basis):
+to skip include ``stylesheet``, ``font``, ``image``, and ``media``, and they can be specified like this on a
+job-by-job basis:
 
 .. code-block:: yaml
 
@@ -357,7 +358,7 @@ job-by-job basis):
      - image
      - media
 
-or in the config file (for all ``use_browser: true`` jobs):
+or like this in the config file for all ``use_browser: true`` jobs:
 
 .. code-block:: yaml
 

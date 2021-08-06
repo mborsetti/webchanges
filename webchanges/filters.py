@@ -120,7 +120,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
         return '\n'.join(result)
 
     @classmethod
-    def auto_process(cls, state: JobState, data: Union[str, bytes]) -> str:
+    def auto_process(cls, state: JobState, data: Union[str, bytes]) -> Union[str, bytes]:
         """Processes all automatic filters (those with "MATCH" set) in JobState.Job over the data.
 
         :param state: The JobState object.
@@ -138,7 +138,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
                 logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
                 data = filter_instance.filter(data, {})  # All filters take a subfilter
 
-        return str(data)
+        return data
 
     @classmethod
     def normalize_filter_list(
@@ -497,7 +497,7 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
     # Note: check pdftotext website for OS-specific dependencies for install
 
     __kind__ = 'pdf2text'
-    __uses_bytes__ = True  # Requires data to be in bytes (not unicode)
+    __uses_bytes__ = True
 
     __supported_subfilters__ = {
         'password': 'PDF password for decryption',

@@ -38,6 +38,7 @@ hooks_file = tmp_path.joinpath('hooks_test.py')
 shutil.copyfile(base_hooks_file, hooks_file)
 
 config_storage = YamlConfigStorage(config_file)
+config_storage.load()
 cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = YamlJobsStorage(jobs_file)
 command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file, True)

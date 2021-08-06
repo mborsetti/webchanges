@@ -64,12 +64,12 @@ def load_hooks_from_doc() -> str:
 
 
 def load_hooks_testdata() -> Dict[str, Any]:
-    yaml_data = Path(data_path.joinpath('doc_hooks_testdata.yaml')).read_text()
+    yaml_data = Path(data_path.joinpath('docs_hooks_testdata.yaml')).read_text()
     return yaml.safe_load(yaml_data)
 
 
 def load_hooks_jobs() -> List[JobBase]:
-    jobs_file = data_path.joinpath('doc_hooks_jobs.yaml')
+    jobs_file = data_path.joinpath('docs_hooks_jobs.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)
     return jobs_storage.load()
 

@@ -86,6 +86,7 @@ class CommandConfig(BaseConfig):
         self.database_engine: str = 'sqlite3'
         self.max_snapshots: int = 4
         self.features: bool = False
+        self.chromium_directory: bool = False
         self.log_level: str = 'DEBUG'
 
         self.parse_args()
@@ -131,6 +132,8 @@ class CommandConfig(BaseConfig):
             help='use FILE as cache (snapshots database) or directory, alternatively a redis URI',
             metavar='FILE',
         )
+
+        group = parser.add_argument_group('job management')
         group.add_argument('--list', action='store_true', help='list jobs and their index number')
         group.add_argument('--errors', action='store_true', help='list jobs with errors or no data captured')
         group.add_argument(
@@ -209,6 +212,9 @@ class CommandConfig(BaseConfig):
 
         group = parser.add_argument_group('miscellaneous')
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
+        group.add_argument(
+            '--chromium-directory', action='store_true', help='show directory where Chromium is installed'
+        )
         group.add_argument(
             '--log-level',
             default='DEBUG',

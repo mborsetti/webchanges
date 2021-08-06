@@ -245,7 +245,7 @@ Relative to :program:`urlwatch` 2.23:
   * Whenever a HTTP client error (4xx) response is received, in ``--verbose`` mode the content of the response is
     displayed with the error.
   * The user is now alerted when the job file and/or configuration file contains unrecognized directives (e.g. typo).
-  * If a newer version of :program:`webchanges` has been released to PyPi, an advisory notice is printed to stdout and
+  * If a newer version of :program:`webchanges` has been released to PyPI, an advisory notice is printed to stdout and
     added to the report footer (if footer is enabled).
 
 

@@ -8,6 +8,7 @@ import sys
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Optional, Union
 
 import requests
@@ -102,6 +103,24 @@ class UrlwatchCommand:
         print(f'Please see full documentation at {__docs_url__}')
 
         self.print_new_version()
+        return 0
+
+    @staticmethod
+    def show_chromium_directory() -> int:
+        try:
+            from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER
+        except ImportError:
+            print("'pyppeteer' module is not installed.")
+            return 1
+
+        chromium_folder = Path(DOWNLOADS_FOLDER)
+        print()
+        print('Chromium executables are stored in the following directory:')
+        print(chromium_folder)
+        print()
+        print(f"Current revisions installed: {', '.join(d.name for d in chromium_folder.iterdir())}")
+        print('You can delete the ones not in use by deleting the entire directory bearing the revision number')
+
         return 0
 
     def list_jobs(self) -> None:
@@ -492,55 +511,76 @@ class UrlwatchCommand:
         sys.exit(0)
 
     def handle_actions(self) -> None:
-        if self.urlwatch_config.features:
-            sys.exit(self.show_features())
-        if self.urlwatch_config.gc_cache:
-            self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
-            self.urlwatcher.cache_storage.close()
-            sys.exit(0)
-        if self.urlwatch_config.clean_cache:
-            self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
-            self.urlwatcher.cache_storage.close()
-            sys.exit(0)
-        if self.urlwatch_config.delete_snapshot:
-            self.delete_snapshot(self.urlwatch_config.delete_snapshot)
-            sys.exit(0)
-        if self.urlwatch_config.rollback_cache:
-            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
-            self.urlwatcher.cache_storage.close()
-            sys.exit(0)
-        if self.urlwatch_config.edit:
-            result = self.urlwatcher.jobs_storage.edit()
-            self.print_new_version()
-            sys.exit(result)
-        if self.urlwatch_config.edit_hooks:
-            sys.exit(self.edit_hooks())
-        if self.urlwatch_config.test_job:
-            self.test_job(self.urlwatch_config.test_job)
-            sys.exit(0)
-        if self.urlwatch_config.test_diff:
-            sys.exit(self.test_diff(self.urlwatch_config.test_diff))
-        if self.urlwatch_config.errors:
-            self.list_error_jobs()
-            sys.exit(0)
         if self.urlwatch_config.list:
             self.list_jobs()
             sys.exit(0)
+
+        if self.urlwatch_config.errors:
+            self.list_error_jobs()
+            sys.exit(0)
+
+        if self.urlwatch_config.test_job:
+            self.test_job(self.urlwatch_config.test_job)
+            sys.exit(0)
+
+        if self.urlwatch_config.test_diff:
+            sys.exit(self.test_diff(self.urlwatch_config.test_diff))
+
         if self.urlwatch_config.add or self.urlwatch_config.delete:
             self.modify_urls()
             sys.exit(0)
 
+        if self.urlwatch_config.test_reporter:
+            self.check_test_reporter()
+
+        if self.urlwatch_config.smtp_login:
+            self.check_smtp_login()
+
+        if self.urlwatch_config.telegram_chats:
+            self.check_telegram_chats()
+
+        if self.urlwatch_config.xmpp_login:
+            self.check_xmpp_login()
+
+        if self.urlwatch_config.edit:
+            result = self.urlwatcher.jobs_storage.edit()
+            self.print_new_version()
+            sys.exit(result)
+
+        if self.urlwatch_config.edit_hooks:
+            sys.exit(self.edit_hooks())
+
+        if self.urlwatch_config.gc_cache:
+            self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
+            self.urlwatcher.cache_storage.close()
+            sys.exit(0)
+
+        if self.urlwatch_config.clean_cache:
+            self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
+            self.urlwatcher.cache_storage.close()
+            sys.exit(0)
+
+        if self.urlwatch_config.rollback_cache:
+            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
+            self.urlwatcher.cache_storage.close()
+            sys.exit(0)
+
+        if self.urlwatch_config.delete_snapshot:
+            self.delete_snapshot(self.urlwatch_config.delete_snapshot)
+            sys.exit(0)
+
+        if self.urlwatch_config.features:
+            sys.exit(self.show_features())
+
+        if self.urlwatch_config.chromium_directory:
+            sys.exit(self.show_chromium_directory())
+
     def run(self) -> None:  # pragma: no cover
         if self.urlwatch_config.edit_config:
             self.check_edit_config()
-        if self.urlwatch_config.smtp_login:
-            self.check_smtp_login()
-        if self.urlwatch_config.telegram_chats:
-            self.check_telegram_chats()
-        if self.urlwatch_config.xmpp_login:
-            self.check_xmpp_login()
-        if self.urlwatch_config.test_reporter:
-            self.check_test_reporter()
+
+        self.urlwatcher.config_storage.load()
+        self.urlwatcher.report.config = self.urlwatcher.config_storage.config
 
         self.handle_actions()
 

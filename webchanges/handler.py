@@ -139,7 +139,7 @@ class JobState(ContextManager):
                 for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filter):
                     filtered_data = FilterBase.process(filter_kind, subfilter, self, filtered_data)
 
-                self.new_data = filtered_data
+                self.new_data = str(filtered_data)
 
             except Exception as e:
                 # Job has a chance to format and ignore its error
@@ -169,7 +169,8 @@ class JobState(ContextManager):
     def get_diff(self, tz: Optional[str] = None) -> str:
         """Generates the job's diff and applies diff_filters to it (if any). Memoized.
 
-        :parameter tz: The IANA tz_info name of the timezone to use for diff in the job's report (e.g. 'Etc/UTC')
+        :parameter tz: The IANA tz_info name of the timezone to use for diff in the job's report (e.g. 'Etc/UTC').
+        :returns: The job's diff.
         """
         # Must be initialized as None
         if self._generated_diff is not None:

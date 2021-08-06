@@ -52,6 +52,11 @@ Please keep in mind PEP-20's `Zen of Python <https://www.python.org/dev/peps/pep
 - Namespaces are one honking great idea -- let's do more of those!
 
 
+If you are contributing a filter, please make sure that you add an example to the documentation (``/docs/filters.rst``)
+and the relevant data to ``/tests/data/docs_filters_testdata.yaml`` file to allow the example to be automatically
+tested by ``/tests/docs_filters_test.py``.
+
+
 Testing contributions
 ---------------------
 

@@ -1,6 +1,8 @@
 [flake8]
-# Check for errors, style, [and over-complexity]
-# Runs as part of pre-commit
+# Check for errors, style, [and over-complexity].
+# Runs as part of pre-commit.
+# Config file documentation at https://flake8.pycqa.org/en/latest/user/configuration.html
+
 ignore = E203,I100,I101,I201,W503
   # E203 whitespace before ':'  [black conflict]
   # I100 Import statements are in the wrong order. [black conflict]

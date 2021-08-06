@@ -85,7 +85,7 @@ def load_filter_doc_jobs() -> List[JobBase]:
 
 
 def load_filter_testdata() -> Dict[str, Any]:
-    yaml_data = Path(here.joinpath('data').joinpath('doc_filter_testdata.yaml')).read_text()
+    yaml_data = Path(here.joinpath('data').joinpath('docs_filters_testdata.yaml')).read_text()
     return yaml.safe_load(yaml_data)
 
 
@@ -96,7 +96,7 @@ testdata = load_filter_testdata()
 @pytest.mark.parametrize('job', FILTER_DOC_JOBS)
 def test_url(job):
     """Test the yaml code in docs/filters.rst against the source and expected results contained
-    in tests/data/doc_filter_testdata.yaml using 'url' as the key)."""
+    in tests/data/docs_filters_testdata.yaml using 'url' as the key)."""
     # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
     # installations beyond pip)
     if job.url != 'https://example.com/html2text.html' or html2text.__version__ <= (2020, 1, 16):

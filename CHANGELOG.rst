@@ -35,9 +35,21 @@ Version 3.8.2a0
 ====================
 Unreleased
 
+Added
+-----
+* New ``--chromium-directory`` command line displays the directory containing downloaded Chromium executables to
+  facilitate deleting of older revisions.
+
+Fixed
+-----
+* Changed legacy code handling ``--edit-config`` command line argument to allow editing of a configuration file
+  having YAML syntax errors (`#15 <https://github.com/mborsetti/webchanges/issues/15>`__ by
+  `Markus Weimar <https://github.com/Markus00000>`__).
+
 Internals
 ---------
-* Added mypy testing for type hint checks and isort to arrange imports
+* Type hints are checked during pre-commit by `mypy <http://www.mypy-lang.org/>`__.
+* Imports are rearranged during pre-commit by `isort <https://pycqa.github.io/isort/>`__.
 
 
 Version 3.8.1
@@ -77,7 +89,7 @@ Added
 * Configuration file is now checked for invalid directives (e.g. typos) when program is run.
 * Whenever a HTTP client error (4xx) response is received, in ``--verbose`` mode the content of the response is
   displayed with the error.
-* If a newer version of **webchanges** has been released to PyPi, an advisory notice is printed to stdout and
+* If a newer version of **webchanges** has been released to PyPI, an advisory notice is printed to stdout and
   added to the report footer (if footer is enabled).
 
 Fixed
@@ -99,7 +111,7 @@ Internals
 * bump2version now follows `PEP440 <https://www.python.org/dev/peps/pep-0440/>`__ and has new documentation in
   the file ``.bumpversion.txt`` (cannot document ``.bumpversion.cfg`` as remarks get deleted at every version bump).
 * Added a vendored version of packaging.version.parse() from `Packaging <https://www.pypi.com/project/packaging/>`__
-  20.9, released on 2021-02-20, used to check if the version in PyPi is higher than the current one.
+  20.9, released on 2021-02-20, used to check if the version in PyPI is higher than the current one.
 * Migrated from unmaintained Python package AppDirs to its friendly fork `platformdirs
   <https://github.com/platformdirs/platformdirs>`__, which is maintained and offers more functionality. Unless used
   by another package, you can uninstall appdirs with ``pip uninstall appdirs``.
@@ -486,7 +498,7 @@ Fixed
 
 Internals
 ---------
-* First PyPi release with new continuous integration (CI) and continuous delivery (CD) pipeline based on `bump2version
+* First PyPI release with new continuous integration (CI) and continuous delivery (CD) pipeline based on `bump2version
   <https://pypi.org/project/bump2version/>`__, git tags, and `GitHub Actions <https://docs.github.com/en/actions>`__
 * Moved continuous integration (CI) testing from Travis to `GitHub Actions <https://docs.github.com/en/actions>`__
 * Moved linting (flake8) and documentation build testing from pytest to the `pre-commit
@@ -659,7 +671,7 @@ Relative to `urlwatch` 2.21:
   files.
 * The database (cache) file is backed up at every run to `*.bak`
 * The mix of default and optional dependencies has been updated (see documentation) to enable "Just works"
-* Dependencies are now specified as PyPi `extras
+* Dependencies are now specified as PyPI `extras
   <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`__ to simplify their installation
 * Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`__ to `timeit.default_timer
   <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__

@@ -1,6 +1,6 @@
 # .readthedocs.yml
-# Read the Docs configuration file
-# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+# Configuration file for Read the Docs (hosted documentation)
+# Config file documentation at https://docs.readthedocs.io/en/stable/config-file/v2.html
 
 # Required
 version: 2

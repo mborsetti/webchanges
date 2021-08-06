@@ -50,7 +50,7 @@ def test_normalize_filter_list(input, output):
     assert list(FilterBase.normalize_filter_list(input)) == output
 
 
-FILTER_TESTS = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), 'data/filter_tests.yaml'), 'r'))
+FILTER_TESTS = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), 'data/filters_test.yaml'), 'r'))
 
 
 class FakeJob:
@@ -154,3 +154,8 @@ def test_deprecated_filters():
 
     filtercls = FilterBase.__subclasses__.get('grepi')
     assert filtercls(FakeJob(), None).filter('a\nb', {'text': 'b'}) == 'a'
+
+
+def test_filter_requires_bytes():
+    filtercls = FilterBase.__subclasses__.get('pdf2text')
+    assert filtercls(FakeJob(), None).is_bytes_filter_kind('pdf2text') is True
