@@ -70,28 +70,28 @@ jobs:
         include:
         - os: ubuntu-latest
           pipcachepath: ~/.cache/pip
+            # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
+            # Service containers to run with `container-job`
+          services:
+            # Label used to access the service container
+            redis:
+              # Docker Hub image
+              image: redis
+              # Set health checks to wait until redis has started
+              options: >-
+                --health-cmd "redis-cli ping"
+                --health-interval 10s
+                --health-timeout 5s
+                --health-retries 5
+              ports:
+                # Maps port 6379 on service container to the host
+                - 6379:6379
         - os: macos-latest
           pipcachepath: ~/Library/Caches/pip
 #        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 27-Jun-21
 #                              # https://github.com/pytest-dev/pytest/discussions/6349
 #          pipcachepath: ~\AppData\Local\pip\cache
 
-    # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
-    # Service containers to run with `container-job`
-    services:
-      # Label used to access the service container
-      redis:
-        # Docker Hub image
-        image: redis
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          # Maps port 6379 on service container to the host
-          - 6379:6379
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
