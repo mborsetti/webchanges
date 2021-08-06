@@ -118,8 +118,9 @@ class UrlwatchCommand:
         print('Chromium executables are stored in the following directory:')
         print(chromium_folder)
         print()
-        print(f"Current revisions installed: {', '.join(d.name for d in chromium_folder.iterdir())}")
-        print('You can delete the ones not in use by deleting the entire directory bearing the revision number')
+        if chromium_folder.is_dir():
+            print(f"Current revisions installed: {', '.join(d.name for d in chromium_folder.iterdir())}")
+            print('You can delete the ones not in use by deleting the entire directory bearing the revision number')
 
         return 0
 

@@ -48,7 +48,7 @@ Fixed
 
 Internals
 ---------
-* Testing all database engines, including redis, bringing testing coverage to 79%
+* Testing all database engines, including redis, and more, adding 3 percentage points to coverage to 80%.
 * Type hints are checked during pre-commit by `mypy <http://www.mypy-lang.org/>`__.
 * Imports are rearranged during pre-commit by `isort <https://pycqa.github.io/isort/>`__.
 
