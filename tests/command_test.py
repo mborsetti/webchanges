@@ -22,28 +22,38 @@ from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
+# Paths
 here = Path(__file__).parent
-
 config_path = here.joinpath('data')
 tmp_path = Path(tempfile.mkdtemp())
+
+# Copy config file to temporary directory
 base_config_file = config_path.joinpath('config.yaml')
 config_file = tmp_path.joinpath('config.yaml')
 shutil.copyfile(base_config_file, config_file)
+
+# Copy jobs file to temporary directory
 base_jobs_file = config_path.joinpath('jobs-echo_test.yaml')
 jobs_file = tmp_path.joinpath('jobs-echo_test.yaml')
 shutil.copyfile(base_jobs_file, jobs_file)
+
 cache_file = ':memory:'
+
+# Copy hooks file to temporary directory
 base_hooks_file = config_path.joinpath('hooks_test.py')
 hooks_file = tmp_path.joinpath('hooks_test.py')
 shutil.copyfile(base_hooks_file, hooks_file)
 
+# Set up classes
+command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file, True)
 config_storage = YamlConfigStorage(config_file)
 config_storage.load()
 cache_storage = CacheSQLite3Storage(cache_file)
 jobs_storage = YamlJobsStorage(jobs_file)
-command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file, True)
 urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+urlwatch_command = UrlwatchCommand(urlwatcher)
 
+# Set up dummy editor
 editor = os.getenv('EDITOR')
 if os.name == 'nt':
     os.environ['EDITOR'] = 'rundll32'
@@ -70,12 +80,6 @@ def cleanup(request):
             pass
         # Python 3.9: config_edit = config_file.with_stem(config_file.stem + '_edit')
         # Python 3.9: hooks_edit = hooks_file.with_stem(hooks_file.stem + '_edit')
-        config_edit = config_file.joinpath(config_file.stem + '_edit' + ''.join(config_file.suffixes))
-        hooks_edit = hooks_file.joinpath(hooks_file.stem + '_edit' + ''.join(hooks_file.suffixes))
-        for filename in (config_edit, hooks_edit):
-            # Python 3.8: replace with filename.unlink(missing_ok=True)
-            if filename.is_file():
-                filename.unlink()
 
     request.addfinalizer(finalizer)
 
@@ -109,9 +113,72 @@ def test_first_run(capsys, tmp_path):
     assert 'Created default jobs file at ' in message
 
 
+def test_edit():
+    setattr(command_config, 'edit', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.run()
+    setattr(command_config, 'edit', False)
+    assert pytest_wrapped_e.value.code == 0
+
+
+def test_edit_using_visual():
+    os.environ['VISUAL'] = os.environ['EDITOR']
+    del os.environ['EDITOR']
+    setattr(command_config, 'edit', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.run()
+    setattr(command_config, 'edit', False)
+    os.environ['EDITOR'] = os.environ['VISUAL']
+    del os.environ['VISUAL']
+    assert pytest_wrapped_e.value.code == 0
+
+
+def test_edit_fail(capsys):
+    editor = os.getenv('EDITOR')
+    os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
+    setattr(command_config, 'edit', True)
+    with pytest.raises(OSError) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'edit', False)
+    os.environ['EDITOR'] = editor
+    # Python 3.9: jobs_edit = jobs_file.with_stem(jobs_file.stem + '_edit')
+    jobs_edit = jobs_file.parent.joinpath(jobs_file.stem + '_edit' + ''.join(jobs_file.suffixes))
+    jobs_edit.unlink()
+    assert pytest_wrapped_e.value.args[0] == (
+        'pytest: reading from stdin while output is captured!  Consider using `-s`.'
+    )
+    message = capsys.readouterr().out
+    assert 'Errors in file:' in message
+
+
+def test_edit_config():
+    setattr(command_config, 'edit_config', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.run()
+    setattr(command_config, 'edit_config', False)
+    assert pytest_wrapped_e.value.code == 0
+
+
+def test_edit_config_fail(capsys):
+    editor = os.getenv('EDITOR')
+    os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
+    setattr(command_config, 'edit_config', True)
+    with pytest.raises(OSError) as pytest_wrapped_e:
+        urlwatch_command.run()
+    setattr(command_config, 'edit_config', False)
+    os.environ['EDITOR'] = editor
+    # Python 3.9: config_edit = config_file.with_stem(config_file.stem + '_edit')
+    config_edit = config_file.parent.joinpath(config_file.stem + '_edit' + ''.join(config_file.suffixes))
+    config_edit.unlink()
+    assert pytest_wrapped_e.value.args[0] == (
+        'pytest: reading from stdin while output is captured!  Consider using `-s`.'
+    )
+    message = capsys.readouterr().out
+    assert 'Errors in file:' in message
+
+
 def test_edit_hooks(capsys):
     setattr(command_config, 'edit_hooks', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'edit_hooks', False)
@@ -124,14 +191,12 @@ def test_edit_hooks_fail(capsys):
     editor = os.getenv('EDITOR')
     os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
     setattr(command_config, 'edit_hooks', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(OSError) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'edit_hooks', False)
     os.environ['EDITOR'] = editor
-    hooks_edit = urlwatch_command.urlwatch_config.hooks.parent.joinpath(
-        urlwatch_command.urlwatch_config.hooks.stem + '_edit' + ''.join(urlwatch_command.urlwatch_config.hooks.suffixes)
-    )
+    # Python 3.9: hooks_edit = hooks_file.with_stem(hooks_file.stem + '_edit')
+    hooks_edit = hooks_file.parent.joinpath(hooks_file.stem + '_edit' + ''.join(hooks_file.suffixes))
     hooks_edit.unlink()
     assert pytest_wrapped_e.value.args[0] == (
         'pytest: reading from stdin while output is captured!  Consider using `-s`.'
@@ -143,7 +208,6 @@ def test_edit_hooks_fail(capsys):
 def test_show_features_and_verbose(capsys):
     setattr(command_config, 'features', True)
     setattr(command_config, 'verbose', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'features', False)
@@ -157,7 +221,6 @@ def test_list_jobs_verbose(capsys):
     setattr(command_config, 'list', True)
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
     urlwatcher.urlwatch_config.verbose = False
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'list', False)
@@ -171,7 +234,6 @@ def test_list_jobs_not_verbose(capsys):
     setattr(command_config, 'list', True)
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
     urlwatcher.urlwatch_config.verbose = False
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'list', False)
@@ -182,22 +244,18 @@ def test_list_jobs_not_verbose(capsys):
 
 
 def test__find_job():
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     assert urlwatch_command._find_job('https://example.com/') is None
 
 
 def test__find_job_index_error():
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     assert urlwatch_command._find_job(100) is None
 
 
 def test__get_job():
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     assert urlwatch_command._get_job(1).get_location() == 'echo test'
 
 
 def test__get_job_index_error(capsys):
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command._get_job(100).get_location()
     assert pytest_wrapped_e.value.code == 1
@@ -207,7 +265,6 @@ def test__get_job_index_error(capsys):
 
 def test_test_job(capsys):
     setattr(command_config, 'test_job', 1)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'test_job', None)
@@ -271,7 +328,6 @@ def test_test_diff_and_joblist(capsys):
         urlwatcher.jobs[0].diff_filter = {'strip': ''}
         urlwatcher.jobs[0].tz = 'Etc/UTC'
         urlwatcher.jobs[0].contextlines = 2
-        urlwatch_command = UrlwatchCommand(urlwatcher)
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_diff', None)
@@ -293,7 +349,6 @@ def test_test_diff_and_joblist(capsys):
             urlwatcher.jobs[0].diff_tool = 'cmd /C exit 1 & rem '
         else:
             urlwatcher.jobs[0].diff_tool = 'bash -c exit 1 # '
-        urlwatch_command = UrlwatchCommand(urlwatcher)
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_diff', None)
@@ -306,7 +361,6 @@ def test_test_diff_and_joblist(capsys):
 
 def test_list_error_jobs(capsys):
     setattr(command_config, 'errors', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'errors', False)
@@ -322,7 +376,6 @@ def test_modify_urls(capsys):
 
     # add new job
     setattr(command_config, 'add', 'url=https://www.example.com/#test_modify_urls')
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'add', None)
@@ -377,7 +430,6 @@ def test_delete_snapshot(capsys):
 
     # delete once
     setattr(command_config, 'delete_snapshot', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
@@ -387,7 +439,6 @@ def test_delete_snapshot(capsys):
 
     # delete twice
     setattr(command_config, 'delete_snapshot', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
@@ -397,7 +448,6 @@ def test_delete_snapshot(capsys):
 
     # test all empty
     setattr(command_config, 'delete_snapshot', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
@@ -444,7 +494,6 @@ def test_gc_cache(capsys):
 def test_clean_cache(capsys):
     setattr(command_config, 'clean_cache', True)
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'clean_cache', False)
@@ -456,7 +505,6 @@ def test_clean_cache(capsys):
 def test_rollback_cache(capsys):
     setattr(command_config, 'rollback_cache', True)
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'rollback_cache', False)
@@ -465,43 +513,11 @@ def test_rollback_cache(capsys):
     assert 'No snapshots found after' in message
 
 
-def test_check_edit_config():
-    setattr(command_config, 'edit_config', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_edit_config()
-    setattr(command_config, 'edit_config', False)
-    assert pytest_wrapped_e.value.code == 0
-
-
-def test_check_edit_config_fail(capsys):
-    editor = os.getenv('EDITOR')
-    os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
-    setattr(command_config, 'edit_config', True)
-    urlwatch_command = UrlwatchCommand(urlwatcher)
-    with pytest.raises(OSError):
-        urlwatch_command.check_edit_config()
-    setattr(command_config, 'edit_config', False)
-    os.environ['EDITOR'] = editor
-    filename = urlwatcher.config_storage.filename
-    file_edit = filename.parent.joinpath(filename.stem + '_edit' + ''.join(filename.suffixes))
-    file_edit.unlink()
-    message = capsys.readouterr().out
-    assert 'Errors in file:' in message
-
-
 def test_check_telegram_chats(capsys):
-    urlwatch_command = UrlwatchCommand(urlwatcher)
-    setattr(command_config, 'telegram_chats', False)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_telegram_chats()
-    assert pytest_wrapped_e.value.code == 1
-    message = capsys.readouterr().out
-    assert message == 'You need to set up your bot token first (see documentation)\n'
-
     setattr(command_config, 'telegram_chats', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_telegram_chats()
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'telegram_chats', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
     assert message == 'You need to set up your bot token first (see documentation)\n'
@@ -509,7 +525,8 @@ def test_check_telegram_chats(capsys):
     urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # nosec
     setattr(command_config, 'telegram_chats', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_telegram_chats()
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'telegram_chats', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
     assert message == 'Error with token bogus: Not Found\n'
@@ -521,6 +538,7 @@ def test_check_telegram_chats(capsys):
         setattr(command_config, 'telegram_chats', True)
         with pytest.raises(SystemExit):
             urlwatch_command.check_telegram_chats()
+        setattr(command_config, 'telegram_chats', False)
         message = capsys.readouterr().out
         assert 'Say hello to your bot at https://t.me/' in message
     else:
@@ -528,50 +546,45 @@ def test_check_telegram_chats(capsys):
 
 
 def test_check_test_reporter(capsys):
-    urlwatch_command = UrlwatchCommand(urlwatcher)
     setattr(command_config, 'test_reporter', 'stdout')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_test_reporter()
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert '01. NEW: Newly Added\n' in message
 
+    setattr(command_config, 'test_reporter', 'stdout')
     urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_test_reporter()
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
     assert 'Reporter is not enabled/configured: stdout\n' in message
 
     setattr(command_config, 'test_reporter', 'does_not_exist')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_test_reporter()
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
     assert 'No such reporter: does_not_exist\n' in message
 
 
 def test_check_smtp_login():
-    urlwatch_command = UrlwatchCommand(urlwatcher)
-    setattr(command_config, 'smtp_login', False)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_smtp_login()
-    assert pytest_wrapped_e.value.code == 1
     setattr(command_config, 'smtp_login', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_smtp_login()
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'smtp_login', False)
     assert pytest_wrapped_e.value.code == 1
 
 
 def test_check_xmpp_login():
-    urlwatch_command = UrlwatchCommand(urlwatcher)
-    setattr(command_config, 'xmpp_login', False)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_xmpp_login()
-    assert pytest_wrapped_e.value.code == 1
     setattr(command_config, 'xmpp_login', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.check_xmpp_login()
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'xmpp_login', False)
     assert pytest_wrapped_e.value.code == 1
 
 
@@ -681,3 +694,9 @@ def test_job_states_verb_notimestamp_changed():
     urlwatcher.run_jobs()
     cache_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+
+def test_show_chromium_directory(capsys):
+    urlwatch_command.show_chromium_directory()
+    message = capsys.readouterr().out
+    assert message[:61] == '\nChromium executables are stored in the following directory:\n'

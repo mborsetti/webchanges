@@ -54,7 +54,7 @@ jobs:
           PYTHONUTF8: 1
 
   test_linux:
-    name: "Test ${{ matrix.python-version }} on ubuntu-latest)"
+    name: "Test ${{ matrix.python-version }} on ubuntu-latest"
     runs-on: ubuntu-latest
     # Identifies any jobs that must complete successfully before this job will run
     needs: [pre-commit]

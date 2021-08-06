@@ -310,10 +310,10 @@ class UrlwatchCommand:
 
         self.print_new_version()
 
-    def check_edit_config(self) -> None:
+    def edit_config(self) -> int:
         result = self.urlwatcher.config_storage.edit()
         self.print_new_version()
-        sys.exit(result)
+        return result
 
     def check_telegram_chats(self) -> None:
         config = self.urlwatcher.config_storage.config['report'].get('telegram')
@@ -577,7 +577,7 @@ class UrlwatchCommand:
 
     def run(self) -> None:  # pragma: no cover
         if self.urlwatch_config.edit_config:
-            self.check_edit_config()
+            sys.exit(self.edit_config())
 
         self.urlwatcher.config_storage.load()
         self.urlwatcher.report.config = self.urlwatcher.config_storage.config

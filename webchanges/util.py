@@ -192,7 +192,7 @@ def linkify(
 
         href: str = m.group(1)
         if not proto:
-            href = f'http://{href}'  # no proto specified, use http
+            href = f'https://{href}'  # no proto specified, use https
 
         if callable(extra_params):
             params = f' {extra_params(href).strip()}'
