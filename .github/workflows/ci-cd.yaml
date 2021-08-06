@@ -258,7 +258,7 @@ jobs:
 
   coveralls:
     name: Indicate completion to coveralls.io
-    needs: [test]
+    needs: [test_linux, test_other]
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls parallel finished
@@ -272,7 +272,7 @@ jobs:
     runs-on: ubuntu-latest
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
-    needs: [test]
+    needs: [test_linux, test_other]
     steps:
       - name: Check out repo
         uses: actions/checkout@main
