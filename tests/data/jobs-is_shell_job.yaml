@@ -1,0 +1,14 @@
+name: This job is a shelljob (command)
+command: job1
+---
+name: This job is a shelljob (shellpipe)
+url: job2
+filter:
+  - shellpipe: anything
+---
+name: This job is a shelljob (diff_tool)
+url: job3
+diff_tool: anything
+---
+name: This job is *not* a shelljob
+url: job4

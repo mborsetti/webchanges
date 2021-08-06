@@ -8,7 +8,7 @@ Code is loaded only:
 
 Having it into a standalone module allows running the program without requiring minidb package to be installed.
 """
-from os import PathLike
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from .storage import CacheStorage, Snapshot
@@ -30,7 +30,7 @@ class CacheMiniDBStorage(CacheStorage):
         tries = int
         etag = str
 
-    def __init__(self, filename: Union[str, PathLike]) -> None:
+    def __init__(self, filename: Union[str, Path]) -> None:
         super().__init__(filename)
 
         if isinstance(minidb, type):
@@ -94,10 +94,13 @@ class CacheMiniDBStorage(CacheStorage):
         self.CacheEntry.delete_where(self.db, self.CacheEntry.c.guid == guid)
         self.db.commit()
 
-    def delete_latest(self, guid: str) -> int:
+    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
         raise NotImplementedError("Deleting of latest snapshot not supported by 'minidb' database engine")
 
-    def clean(self, guid: str) -> int:
+    def clean(self, guid: str, keep_entries: int = 1) -> int:
+        if keep_entries != 1:
+            raise NotImplementedError("Only keeping latest 1 entry is supported by 'minidb' database engine")
+
         keep_id = next(
             (
                 self.CacheEntry.query(
@@ -122,3 +125,8 @@ class CacheMiniDBStorage(CacheStorage):
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("Rolling back of legacy 'minidb' databases is not supported")
+
+    def flushdb(self) -> None:
+        """Delete all entries of the database.  Use with care, there is no undo!"""
+        for guid in self.get_guids():
+            self.delete(guid)

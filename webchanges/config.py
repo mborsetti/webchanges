@@ -2,7 +2,6 @@
 
 import argparse
 import os
-from os import PathLike
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -19,7 +18,7 @@ class BaseConfig(object):
         config: Path,
         jobs: Path,
         hooks: Path,
-        cache: Union[str, PathLike],
+        cache: Union[str, Path],
         verbose: bool,
     ) -> None:
         """
@@ -51,7 +50,7 @@ class CommandConfig(BaseConfig):
         config: Path,
         jobs: Path,
         hooks: Path,
-        cache: Union[str, PathLike],
+        cache: Union[str, Path],
         verbose: bool,
     ) -> None:
         """

@@ -1,9 +1,15 @@
-"""Test storage."""
+"""Test storage.
+
+To test Redis, set an environment variable REDIS_URI with the URI to the Redis server.  E.g.:
+$ export REDIS_URI=redis://localhost:6379
+"""
 
 import importlib.util
 import os
 import shutil
+import tempfile
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -12,26 +18,62 @@ import pytest
 from webchanges import __docs_url__, __project_name__
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheDirStorage, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import (
+    BaseTextualFileStorage,
+    CacheDirStorage,
+    CacheRedisStorage,
+    CacheSQLite3Storage,
+    CacheStorage,
+    Snapshot,
+    YamlConfigStorage,
+    YamlJobsStorage,
+)
 
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
 
 minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
 # py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
 
+tmp_path = Path(tempfile.mkdtemp())
+
 here = Path(__file__).parent
 data_path = here.joinpath('data')
 config_file = data_path.joinpath('config.yaml')
-cache_file = ':memory:'
 hooks_file = Path('')
+jobs_file = data_path.joinpath('jobs-time.yaml')
+config_storage = YamlConfigStorage(config_file)
+jobs_storage = YamlJobsStorage(jobs_file)
+
+DATABASE_ENGINES = (
+    CacheDirStorage(tmp_path),
+    CacheSQLite3Storage(':memory:'),
+)
+
+if os.getenv('REDIS_URI') and importlib.util.find_spec('redis') is not None:
+    DATABASE_ENGINES += (CacheRedisStorage(os.getenv('REDIS_URI')),)
+
+if importlib.util.find_spec('minidb') is not None:
+    from webchanges.storage_minidb import CacheMiniDBStorage
+
+    DATABASE_ENGINES += (CacheMiniDBStorage(':memory:'),)
 
 
-def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, CacheSQLite3Storage, str):
-    jobs_file = data_path.joinpath('jobs-time.yaml')
+def test_all_database_engines():
+    if not os.getenv('REDIS_URI') or importlib.util.find_spec('redis') is None:
+        pytest.mark.xfail(
+            'Cannot test the CacheRedisStorage class. The REDIS_URI environment variable is not set or '
+            "the 'redis' package is not installed"
+        )
+    if importlib.util.find_spec('minidb') is None:
+        pytest.mark.xfail("Cannot test the CacheMiniDBStorage class. The 'minidb' package is not installed")
 
-    config_storage = YamlConfigStorage(config_file)
-    cache_storage = CacheSQLite3Storage(cache_file)
-    jobs_storage = YamlJobsStorage(jobs_file)
+
+def prepare_storage_test(cache_storage: CacheStorage, config_args: Optional[dict] = None) -> (Urlwatch, CacheStorage):
+    """Set up storage."""
+    cache_file = cache_storage.filename
+
+    if hasattr(cache_storage, 'flushdb'):
+        cache_storage.flushdb()
 
     urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file, True)
     if config_args:
@@ -42,7 +84,7 @@ def prepare_storage_test(config_args: Optional[dict] = None) -> (Urlwatch, Cache
     if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
-    return urlwatcher, cache_storage, cache_file
+    return urlwatcher, cache_storage
 
 
 def test_check_for_unrecognized_keys():
@@ -58,6 +100,32 @@ def test_check_for_unrecognized_keys():
     )
 
 
+def test_empty_config_file():
+    """Test if config is empyty and DEFAULT_CONFIG is used."""
+    config_storage = YamlConfigStorage('')
+    config_storage.load()
+    assert config_storage.config['report']
+
+
+def test_jobs_parse():
+    """Test if a job is a shell job."""
+    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs = jobs_storage.parse(jobs_file)
+    assert len(jobs) == 1
+    assert jobs[0].command == "perl -MTime::HiRes -e 'printf \"%f\n\",Time::HiRes::time()'"
+
+
+def test_check_for_shell_job():
+    """Test if a job is a shell job."""
+    jobs_file = data_path.joinpath('jobs-is_shell_job.yaml')
+    if os.name != 'nt':
+        os.chown(jobs_file, 65534, 65534)
+    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs = jobs_storage.load_secure()
+    if os.name != 'nt':
+        assert len(jobs) == 1
+
+
 def test_legacy_slack_keys():
     """Test if legacy report 'slack' keys don't trigger a ValueError even if not in DEFAULT_CONFIG."""
     config_storage = YamlConfigStorage(config_file)
@@ -68,17 +136,24 @@ def test_legacy_slack_keys():
 
 # @py37_required
 # CacheSQLite3Storage.keep_latest() requires Python 3.7 to work (returns 0 otherwise).
-def test_keep_latest():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test()
-    try:
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_keep_latest(database_engine):
+    if not hasattr(database_engine, 'keep_latest'):
+        pytest.skip(f'database_engine {database_engine.__class__.__name__} has no keep_latest method')
+    else:
+        urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
         # run once
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
-        time.sleep(0.0001)
+        if isinstance(database_engine, CacheSQLite3Storage):
+            time.sleep(0.0001)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
         history = cache_storage.get_history_data(guid)
         assert len(history) == 2
@@ -98,28 +173,33 @@ def test_keep_latest():
         timestamp = list(history.values())[0]
         # is it the most recent?
         assert timestamp == timestamps[0]
-    finally:
-        cache_storage.max_snapshots = None  # try this code once
-        cache_storage.close()
 
 
-def test_clean():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test()
-    try:
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_clean(database_engine):
+    if isinstance(database_engine, CacheDirStorage):
+        pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
+    else:
+        urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
         # run once
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
-        time.sleep(0.0001)
+        if isinstance(database_engine, CacheSQLite3Storage):
+            time.sleep(0.0001)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
         history = cache_storage.get_history_data(guid)
         assert len(history) == 2
         timestamps = list(history.values())
         # returned in reverse order
-        assert timestamps[1] < timestamps[0]
+        if not isinstance(database_engine, CacheMiniDBStorage):  # rounds to the closest second
+            assert timestamps[1] < timestamps[0]
 
         # check that history matches load
         data, timestamp, tries, etag = cache_storage.load(guid)
@@ -132,27 +212,33 @@ def test_clean():
         timestamp = list(history.values())[0]
         # is it the most recent?
         assert timestamp == timestamps[0]
-    finally:
-        cache_storage.close()
 
 
-def test_clean_cache():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test()
-    try:
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_clean_cache(database_engine):
+    if isinstance(database_engine, CacheDirStorage):
+        pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
+    else:
+        urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
         # run once
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
-        time.sleep(0.0001)
+        if isinstance(database_engine, CacheSQLite3Storage):
+            time.sleep(0.0001)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
         history = cache_storage.get_history_data(guid)
         assert len(history) == 2
         timestamps = list(history.values())
         # returned in reverse order
-        assert timestamps[1] < timestamps[0]
+        if not isinstance(database_engine, CacheMiniDBStorage):  # rounds to the closest second
+            assert timestamps[1] < timestamps[0]
 
         # clean cache
         cache_storage.clean_cache([guid])
@@ -161,27 +247,61 @@ def test_clean_cache():
         timestamp = list(history.values())[0]
         # is it the most recent?
         assert timestamp == timestamps[0]
-    finally:
-        cache_storage.close()
 
 
-def test_clean_all_and_delete():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test()
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_clean_and_delete(database_engine):
+    urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
+    # run once
+    urlwatcher.run_jobs()
+    if hasattr(cache_storage, '_copy_temp_to_permanent'):
+        cache_storage._copy_temp_to_permanent(delete=True)
+    guid = urlwatcher.jobs[0].get_guid()
+
+    # clean guid
+    deleted = cache_storage.clean(guid)
+    assert deleted == 0
+    history = cache_storage.get_history_data(guid)
+    assert len(history) == 1
+
+    # delete guid
+    cache_storage.delete(guid)
+    history = cache_storage.get_history_data(guid)
+    assert len(history) == 0
+
+    # clean too much
     try:
+        cache_storage.clean(guid, 10)
+    except NotImplementedError:
+        pass
+
+
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_clean_all(database_engine):
+    if not hasattr(database_engine, 'clean_all'):
+        pytest.skip(f'database_engine {database_engine.__class__.__name__} has no clean_all method')
+    else:
+        urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
         # run once
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
-        time.sleep(0.0001)
+        if isinstance(database_engine, CacheSQLite3Storage):
+            time.sleep(0.0001)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
         history = cache_storage.get_history_data(guid)
         assert len(history) == 2
         timestamps = list(history.values())
         # returned in reverse order
-        assert timestamps[1] <= timestamps[0]
+        if not isinstance(database_engine, CacheMiniDBStorage):  # rounds to the closest second
+            assert timestamps[1] <= timestamps[0]
 
         # clean all
         cache_storage.clean_all()
@@ -191,31 +311,32 @@ def test_clean_all_and_delete():
         # is it the most recent?
         assert timestamp == timestamps[0]
 
-        # delete guid
-        cache_storage.delete(guid)
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 0
-    finally:
-        cache_storage.close()
 
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_clean_cache_no_clean_all(database_engine):
+    if isinstance(database_engine, CacheDirStorage):
+        pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
+    else:
+        urlwatcher, cache_storage = prepare_storage_test(database_engine)
 
-def test_clean_cache_no_clean_all():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test()
-    try:
         # run once
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
-        time.sleep(0.0001)
+        if isinstance(database_engine, CacheSQLite3Storage):
+            time.sleep(0.0001)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
         history = cache_storage.get_history_data(guid)
         assert len(history) == 2
         timestamps = list(history.values())
         # returned in reverse order
-        assert timestamps[1] < timestamps[0]
+        if not isinstance(database_engine, CacheMiniDBStorage):  # rounds to the closest second
+            assert timestamps[1] < timestamps[0]
 
         # clean cache without using clean_all
         # delattr(CacheSQLite3Storage, 'clean_all')
@@ -225,65 +346,147 @@ def test_clean_cache_no_clean_all():
         timestamp = list(history.values())[0]
         # is it the most recent?
         assert timestamp == timestamps[0]
-    finally:
-        cache_storage.close()
 
 
-def test_rollback_cache():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test()
-    try:
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_delete_latest(database_engine):
+    if isinstance(database_engine, CacheDirStorage):
+        pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
+    else:
+        urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
         # run once
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
-        run_time = time.time()
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
 
         # run twice
-        time.sleep(0.0001)
+        if isinstance(database_engine, CacheSQLite3Storage):
+            time.sleep(0.0001)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
         history = cache_storage.get_history_data(guid)
         assert len(history) == 2
 
         # rollback
-        num_del = cache_storage.rollback(run_time)
+        try:
+            num_del = cache_storage.delete_latest(guid)
+        except NotImplementedError:
+            pytest.skip(f'database_engine {database_engine.__class__.__name__} does not implement delete_latest')
+            return
+
         assert num_del == 1
-        cache_storage._copy_temp_to_permanent(delete=True)
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
         history = cache_storage.get_history_data(guid)
         assert len(history) == 1
-    finally:
-        cache_storage.close()
 
 
-def test_restore_and_backup():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test()
-    try:
-        cache_storage.restore([('guid', 'data', 1618105974, 0, None)])
-        cache_storage._copy_temp_to_permanent(delete=True)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_rollback_cache(database_engine):
+    if isinstance(database_engine, CacheDirStorage):
+        pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
+    else:
+        urlwatcher, cache_storage = prepare_storage_test(database_engine)
 
-        entry = cache_storage.load('guid')
-        assert entry == ('data', 1618105974, 0, None)
-
-        entries = cache_storage.backup()
-        entry = entries.__next__()
-        assert entry == ('guid', 'data', 1618105974, 0, None)
-    finally:
-        cache_storage.close()
-
-
-def get_empty_history_and_no_max_snapshots():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test({'max_snapshots': 0})
-    try:
         # run once
         urlwatcher.run_jobs()
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
+        run_time = time.time()
+
+        # run twice
+        if isinstance(database_engine, CacheSQLite3Storage):
+            time.sleep(0.0001)
+        urlwatcher.run_jobs()
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
+        guid = urlwatcher.jobs[0].get_guid()
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 2
+
+        # rollback
+        try:
+            num_del = cache_storage.rollback(run_time)
+        except NotImplementedError:
+            pytest.skip(f'database_engine {database_engine.__class__.__name__} does not implement rollback')
+            return
+
+        assert num_del == 1
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 1
+
+
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_restore_and_backup(database_engine):
+    urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
+    cache_storage.restore([('myguid', 'mydata', 1618105974, 0, '')])
+    if hasattr(cache_storage, '_copy_temp_to_permanent'):
         cache_storage._copy_temp_to_permanent(delete=True)
 
-        # get history with zero count
+    entry = cache_storage.load('myguid')
+    assert entry == Snapshot('mydata', 1618105974, 0, '')
+
+    entries = cache_storage.backup()
+    entry = entries.__next__()
+    assert entry == ('myguid', 'mydata', 1618105974, 0, '')
+
+
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_get_empty_history_and_no_max_snapshots(database_engine):
+    urlwatcher, cache_storage = prepare_storage_test(database_engine, {'max_snapshots': 0})
+
+    # run once
+    urlwatcher.run_jobs()
+    if hasattr(cache_storage, '_copy_temp_to_permanent'):
+        cache_storage._copy_temp_to_permanent(delete=True)
+
+    # get history with zero count
+    guid = urlwatcher.jobs[0].get_guid()
+    history = cache_storage.get_history_data(guid, count=0)
+    assert history == {}
+
+
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+def test_clean_and_history_data(database_engine):
+    if isinstance(database_engine, CacheDirStorage):
+        pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
+    else:
+        urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
+        # run once
+        urlwatcher.run_jobs()
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
+
+        # run twice
+        if isinstance(database_engine, CacheSQLite3Storage):
+            time.sleep(0.0001)
+        urlwatcher.run_jobs()
+        if hasattr(cache_storage, '_copy_temp_to_permanent'):
+            cache_storage._copy_temp_to_permanent(delete=True)
         guid = urlwatcher.jobs[0].get_guid()
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 2
+
+        # clean
+        cache_storage.clean(guid)
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 1
+
+        # get history with zero count
         history = cache_storage.get_history_data(guid, count=0)
         assert history == {}
-    finally:
-        cache_storage.close()
+
+        # delete
+        cache_storage.delete(guid)
+        history = cache_storage.get_history_data(guid)
+        assert len(history) == 0
 
 
 def test_migrate_urlwatch_legacy_db(tmp_path):
@@ -312,114 +515,39 @@ def test_migrate_urlwatch_legacy_db(tmp_path):
         )
 
 
-# Legacy testing
-@minidb_required
-def prepare_storage_test_minidb(config_args=None):
-    if config_args is None:
-        config_args = {}
-    from webchanges.storage_minidb import CacheMiniDBStorage
-
-    jobs_file = data_path.joinpath('jobs-time.yaml')
-
-    config_storage = YamlConfigStorage(config_file)
-    cache_storage = CacheMiniDBStorage(cache_file)
-    jobs_storage = YamlJobsStorage(jobs_file)
-
-    urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file, True)
-    for k, v in config_args.items():
-        setattr(urlwatch_config, k, v)
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
-
-    if os.name == 'nt':
-        urlwatcher.jobs[0].command = 'echo %time%'
-
-    return urlwatcher, cache_storage, cache_file
+def test_max_snapshots():
+    cache_storage = CacheSQLite3Storage(':memory:')
+    cache_storage.max_snapshots = None
+    cache_storage.close()
 
 
-@minidb_required
-def test_clean_and_history_data_minidb():
-    urlwatcher, cache_storage, cache_file = prepare_storage_test_minidb()
-    try:
-        # run once
-        urlwatcher.run_jobs()
+def test_abstractmethods():
+    BaseTextualFileStorage.__abstractmethods__ = set()
 
-        # run twice
-        time.sleep(0.0001)
-        urlwatcher.run_jobs()
-        guid = urlwatcher.jobs[0].get_guid()
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 2
+    @dataclass
+    class Dummy(BaseTextualFileStorage):
+        filename: Path
 
-        # clean
-        cache_storage.clean(guid)
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 1
+    filename = Path('test')
+    d = Dummy(filename)
+    assert d.load() is None
+    assert d.save() is None
+    assert d.parse() is None
 
-        # get history with zero count
-        history = cache_storage.get_history_data(guid, count=0)
-        assert history == {}
+    CacheStorage.__abstractmethods__ = set()
 
-        # delete
-        cache_storage.delete(guid)
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 0
-    finally:
-        cache_storage.close()
+    @dataclass
+    class Dummy(CacheStorage):
+        filename: Path
 
-
-def test_cache_dir_storage(tmp_path):
-    jobs_file = data_path.joinpath('jobs-time.yaml')
-
-    config_storage = YamlConfigStorage(config_file)
-    cache_storage = CacheDirStorage(tmp_path)
-    jobs_storage = YamlJobsStorage(jobs_file)
-
-    urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file, True)
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
-
-    if os.name == 'nt':
-        urlwatcher.jobs[0].command = 'echo %time% %random%'
-
-    try:
-        # run once
-        urlwatcher.run_jobs()
-
-        # run twice
-        time.sleep(0.0001)
-        urlwatcher.run_jobs()
-        guid = urlwatcher.jobs[0].get_guid()
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 1
-
-        # clean
-        cache_storage.clean(guid)
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 1
-
-        # delete
-        cache_storage.delete(guid)
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 0
-
-        # run once and delete_latest
-        urlwatcher.run_jobs()
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 1
-        with pytest.raises(NotImplementedError) as pytest_wrapped_e:
-            cache_storage.delete_latest(guid)
-        assert str(pytest_wrapped_e.value) == (
-            "Deleting of latest snapshot not supported by 'textfiles' database engine since only one snapshot is saved."
-            " Delete all snapshots if that's what you are trying to do."
-        )
-
-        # delete all
-        cache_storage.delete(guid)
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 0
-
-        # get history with zero count
-        history = cache_storage.get_history_data(guid, count=0)
-        assert history == {}
-
-    finally:
-        cache_storage.close()
+    filename = Path('test')
+    d = Dummy(filename)
+    assert d.close() is None
+    assert d.get_guids() is None
+    assert d.load('guid') is None
+    assert d.get_history_data('guid') is None
+    assert d.save(guid='guid', data='data', timestamp=0, tries=0, etag='etag') is None
+    assert d.delete('guid') is None
+    assert d.delete_latest('guid') is None
+    assert d.clean('guid') is None
+    assert d.rollback(0) is None

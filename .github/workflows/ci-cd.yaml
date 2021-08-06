@@ -76,9 +76,26 @@ jobs:
 #                              # https://github.com/pytest-dev/pytest/discussions/6349
 #          pipcachepath: ~\AppData\Local\pip\cache
 
+    # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      redis:
+        # Docker Hub image
+        image: redis
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps port 6379 on service container to the host
+          - 6379:6379
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
-      TEELGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
+      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
+      REDIS_URI: redis://localhost:6379
 
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout

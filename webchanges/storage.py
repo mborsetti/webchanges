@@ -170,21 +170,21 @@ class BaseStorage(ABC):
 class BaseFileStorage(BaseStorage, ABC):
     """Base class for file storage."""
 
-    def __init__(self, filename: Union[str, os.PathLike]) -> None:
+    def __init__(self, filename: Union[str, Path]) -> None:
         """
 
         :param filename: The filename or directory name to storage.
         """
-        if isinstance(filename, (str, bytes, Path)):
+        if isinstance(filename, str):
             self.filename = Path(filename)
         else:
-            self.filename = None  # type: ignore[assignment]
+            self.filename = filename
 
 
 class BaseTextualFileStorage(BaseFileStorage, ABC):
     """Base class for textual files."""
 
-    def __init__(self, filename: Union[str, os.PathLike]) -> None:
+    def __init__(self, filename: Union[str, Path]) -> None:
         """
 
         :param filename: The filename or directory name to storage.
@@ -201,7 +201,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         :param args: Specified by the subclass.
         :return: Specified by the subclass.
         """
-        ...
+        pass
 
     @abstractmethod
     def save(self, *args: Any, **kwargs: Any) -> Any:
@@ -211,7 +211,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         :param kwargs: Specified by the subclass.
         :return: Specified by the subclass.
         """
-        ...
+        pass
 
     @classmethod
     @abstractmethod
@@ -221,10 +221,9 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         :param args: Specified by the subclass.
         :return: Specified by the subclass.
         """
-        ...
-        return
+        pass
 
-    def edit(self, example_file: Optional[Union[str, os.PathLike]] = None) -> int:
+    def edit(self) -> int:
         """Edit file.
 
         :returns: None if edit is successful, 1 otherwise.
@@ -376,7 +375,8 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 class YamlConfigStorage(BaseYamlFileStorage):
     """Class for configuration file (is a YAML textual file)."""
 
-    def dict_deep_difference(self, d1: dict, d2: dict) -> dict:
+    @staticmethod
+    def dict_deep_difference(d1: dict, d2: dict) -> dict:
         """Recursively find elements in the first dict that are not in the second.
 
         :param d1: The first dict.
@@ -384,26 +384,27 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :return: A dict with all the elements on the first dict that are not in the second.
         """
 
-        def _sub_dict_deep_difference(d1: dict, d2: dict) -> dict:
+        def _sub_dict_deep_difference(d1_: dict, d2_: dict) -> dict:
             """Recursive sub-function to find elements in the first dict that are not in the second.
 
-            :param d1: The first dict.
-            :param d2: The second dict.
+            :param d1_: The first dict.
+            :param d2_: The second dict.
             :return: A dict with elements on the first dict that are not in the second.
             """
-            for key, value in d1.copy().items():
-                if isinstance(value, dict) and isinstance(d2.get(key), dict):
-                    _sub_dict_deep_difference(value, d2[key])
+            for key, value in d1_.copy().items():
+                if isinstance(value, dict) and isinstance(d2_.get(key), dict):
+                    _sub_dict_deep_difference(value, d2_[key])
                     if not len(value):
-                        d1.pop(key)
+                        d1_.pop(key)
                 else:
-                    if key in d2:
-                        d1.pop(key)
-            return d1
+                    if key in d2_:
+                        d1_.pop(key)
+            return d1_
 
         return _sub_dict_deep_difference(copy.deepcopy(d1), d2)
 
-    def dict_deep_merge(self, source: dict, destination: dict) -> dict:
+    @staticmethod
+    def dict_deep_merge(source: dict, destination: dict) -> dict:
         """Recursively deep merges source dict into destination dict.
 
         :param source: The first dict.
@@ -413,22 +414,22 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         # https://stackoverflow.com/a/20666342
 
-        def _sub_dict_deep_merge(source: dict, destination: dict) -> dict:
-            """Recursive sub-function to merges source dict into destination dict.
+        def _sub_dict_deep_merge(source_: dict, destination_: dict) -> dict:
+            """Recursive sub-function to merges source_ dict into destination_ dict.
 
-            :param source: The first dict.
-            :param destination: The second dict.
+            :param source_: The first dict.
+            :param destination_: The second dict.
             :return: The merged dict.
             """
-            for key, value in source.items():
+            for key, value in source_.items():
                 if isinstance(value, dict):
                     # get node or create one
-                    node = destination.setdefault(key, {})
+                    node = destination_.setdefault(key, {})
                     _sub_dict_deep_merge(value, node)
                 else:
-                    destination[key] = value
+                    destination_[key] = value
 
-            return destination
+            return destination_
 
         return _sub_dict_deep_merge(source, copy.deepcopy(destination))
 
@@ -574,45 +575,46 @@ class CacheStorage(BaseFileStorage, ABC):
 
     @abstractmethod
     def close(self) -> None:
-        ...
+        pass
 
     @abstractmethod
     def get_guids(self) -> List[str]:
-        ...
+        pass
 
     @abstractmethod
     def load(self, guid: str) -> Snapshot:
-        ...
+        pass
 
     @abstractmethod
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
-        ...
+        pass
 
     @abstractmethod
     def save(self, *args: Any, guid: str, data: str, timestamp: float, tries: int, etag: str, **kwargs: Any) -> None:
-        ...
+        pass
 
     @abstractmethod
     def delete(self, guid: str) -> None:
-        ...
+        pass
 
     @abstractmethod
-    def delete_latest(self, guid: str) -> int:
-        """For the given 'guid', delete only the latest entry and keep all other (older) ones.
+    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
+        """For the given 'guid', delete only the latest 'delete_entries' entries and keep all other (older) ones.
 
         :param guid: The guid.
+        :param delete_entries: The number of most recent entries to delete.
 
         :returns: Number of records deleted.
         """
-        ...
+        pass
 
     @abstractmethod
-    def clean(self, guid: str) -> int:
-        ...
+    def clean(self, guid: str, keep_entries: int = 1) -> int:
+        pass
 
     @abstractmethod
     def rollback(self, timestamp: float) -> Optional[int]:
-        ...
+        pass
 
     def backup(self) -> Iterator[Tuple[str, str, float, int, str]]:
         """Return the most recent entry for each 'guid'.
@@ -623,7 +625,7 @@ class CacheStorage(BaseFileStorage, ABC):
             data, timestamp, tries, etag = self.load(guid)
             yield guid, data, timestamp, tries, etag
 
-    def restore(self, entries: Iterator[Tuple[str, str, float, int, str]]) -> None:
+    def restore(self, entries: Iterable[Tuple[str, str, float, int, str]]) -> None:
         """Save multiple entries into the database.
 
         :param entries: An iterator of tuples WHERE each consists of (guid, data, timestamp, tries, etag)
@@ -677,7 +679,7 @@ class CacheStorage(BaseFileStorage, ABC):
 class CacheDirStorage(CacheStorage):
     """Class for snapshots stored as individual textual files in a directory 'dirname'."""
 
-    def __init__(self, dirname: Union[str, os.PathLike]) -> None:
+    def __init__(self, dirname: Union[str, Path]) -> None:
         super().__init__(dirname)
         self.filename.mkdir(parents=True, exist_ok=True)  # filename is a dir (confusing!)
 
@@ -689,7 +691,7 @@ class CacheDirStorage(CacheStorage):
         return self.filename.joinpath(guid)  # filename is a dir (confusing!)
 
     def get_guids(self) -> List[str]:
-        return [str(filename) for filename in self.filename.iterdir()]
+        return [filename.name for filename in self.filename.iterdir()]
 
     def load(self, guid: str) -> Snapshot:
         filename = self._get_filename(guid)
@@ -723,10 +725,11 @@ class CacheDirStorage(CacheStorage):
         etag: Optional[str],
         **kwargs: Any,
     ) -> None:
-        # Timestamp is not saved as is read from the file's timestamp; ETag is ignored
+        # ETag is ignored
         filename = self._get_filename(guid)
         with filename.open('w+') as fp:
             fp.write(data)
+        os.utime(filename, times=(datetime.now().timestamp(), timestamp))
 
     def delete(self, guid: str) -> None:
         filename = self._get_filename(guid)
@@ -735,10 +738,11 @@ class CacheDirStorage(CacheStorage):
             filename.unlink()
         return
 
-    def delete_latest(self, guid: str) -> int:
+    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
         """For the given 'guid', delete the latest entry and keep all other (older) ones.
 
         :param guid: The guid.
+        :param delete_entries: The number of most recent entries to delete.
 
         :raises NotImplementedError: This function is not implemented for 'textfiles' databases.
         """
@@ -747,7 +751,9 @@ class CacheDirStorage(CacheStorage):
             "saved. Delete all snapshots if that's what you are trying to do."
         )
 
-    def clean(self, guid: str) -> int:
+    def clean(self, guid: str, keep_entries: int = 1) -> int:
+        if keep_entries != 1:
+            raise NotImplementedError('Only keeping latest 1 entry is supported.')
         # We only store the latest version, no need to clean
         return 0
 
@@ -771,7 +777,7 @@ class CacheSQLite3Storage(CacheStorage):
     * msgpack_data: a msgpack blob containing 'data', 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
     """
 
-    def __init__(self, filename: Union[str, os.PathLike], max_snapshots: int = 4) -> None:
+    def __init__(self, filename: Union[str, Path], max_snapshots: int = 4) -> None:
         """
         :param filename: The full filename of the database file
         :param max_snapshots: The maximum number of snapshots to retain in the database for each 'guid'
@@ -1014,7 +1020,7 @@ class CacheSQLite3Storage(CacheStorage):
         """For the given 'guid', delete the latest 'delete_entries' number of entries and keep all other (older) ones.
 
         :param guid: The guid.
-        :param delete_entries: Number of most recent entries to delete.
+        :param delete_entries: The number of most recent entries to delete.
 
         :returns: Number of records deleted.
         """
@@ -1120,7 +1126,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
         return num_del
 
-    def migrate_from_minidb(self, minidb_filename: Union[str, os.PathLike]) -> None:
+    def migrate_from_minidb(self, minidb_filename: Union[str, Path]) -> None:
         """Migrate the data of a legacy minidb database to the current database.
 
         :param minidb_filename: The filename of the legacy minidb database.
@@ -1141,11 +1147,17 @@ class CacheSQLite3Storage(CacheStorage):
         print("The 'minidb' package can be removed (unless used by another program): $ pip uninstall minidb")
         print('-' * 80)
 
+    def flushdb(self) -> None:
+        """Delete all entries of the database.  Use with care, there is no undo!"""
+        with self.lock:
+            self._execute('DELETE FROM webchanges')
+            self.db.commit()
+
 
 class CacheRedisStorage(CacheStorage):
     """Class for storing snapshots using redis."""
 
-    def __init__(self, filename: Union[str, os.PathLike]) -> None:
+    def __init__(self, filename: Union[str, Path]) -> None:
         super().__init__(filename)
 
         if redis is None:
@@ -1163,8 +1175,8 @@ class CacheRedisStorage(CacheStorage):
 
     def get_guids(self) -> List[str]:
         guids = []
-        for guid in self.db.keys(b'guid:*'):
-            guids.append(str(guid[len('guid:') :]))
+        for guid in self.db.keys('guid:*'):
+            guids.append(guid.decode()[5:])
         return guids
 
     def load(self, guid: str) -> Snapshot:
@@ -1214,20 +1226,26 @@ class CacheRedisStorage(CacheStorage):
     def delete(self, guid: str) -> None:
         self.db.delete(self._make_key(guid))
 
-    def delete_latest(self, guid: str) -> int:
-        """For the given 'guid', delete the latest entry and keep all other (older) ones.
+    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
+        """For the given 'guid', delete the latest 'delete_entries' entry and keep all other (older) ones.
 
         :param guid: The guid.
+        :param delete_entries: The number of most recent entries to delete (only 1 is supported by this Redis code).
 
         :returns: Number of records deleted.
         """
+        if delete_entries != 1:
+            raise NotImplementedError('Only deleting of the latest 1 entry is supported by this Redis code.')
 
         if self.db.lpop(self._make_key(guid)) is None:  # type: ignore[no-untyped-call]
             return 0
 
         return 1
 
-    def clean(self, guid: str) -> int:
+    def clean(self, guid: str, keep_entries: int = 1) -> int:
+        if keep_entries != 1:
+            raise NotImplementedError('Only keeping latest 1 entry is supported by this Redis code.')
+
         key = self._make_key(guid)
         i = self.db.llen(key)
         if self.db.ltrim(key, 0, 0):
@@ -1237,3 +1255,7 @@ class CacheRedisStorage(CacheStorage):
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("Rolling back the database is not supported by 'redis' database engine")
+
+    def flushdb(self) -> None:
+        """Delete all entries of the database.  Use with care, there is no undo!"""
+        self.db.flushdb()
