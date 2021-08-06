@@ -6,6 +6,8 @@ docutils
 flake8
 flake8-quotes
 flynt
+isort
+mypy
 pre-commit
 types-PyYAML
 types-redis
