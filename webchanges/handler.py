@@ -365,21 +365,25 @@ class Report(object):
             ):
                 yield job_state
 
-    def finish(self) -> None:
+    def finish(self, jobs_file: Optional[Path] = None) -> None:
         """Finish job run: determine its duration and generate reports by submitting job_states to
-        :py:Class:`ReporterBase` :py:func:`submit_all`."""
+        :py:Class:`ReporterBase` :py:func:`submit_all`.
+
+        :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
+        """
         end = time.perf_counter()
         duration = end - self.start
 
-        ReporterBase.submit_all(self, self.job_states, duration)
+        ReporterBase.submit_all(self, self.job_states, duration, jobs_file)
 
-    def finish_one(self, name: str, check_enabled: Optional[bool] = True) -> None:
+    def finish_one(self, name: str, jobs_file: Optional[Path] = None, check_enabled: Optional[bool] = True) -> None:
         """Finish job run of one: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_one`.  Used in testing.
 
+        :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
         :param check_enabled: If True (default), run reports only if they are enabled in the configuration.
         """
         end = time.perf_counter()
         duration = end - self.start
 
-        ReporterBase.submit_one(name, self, self.job_states, duration, check_enabled)
+        ReporterBase.submit_one(name, self, self.job_states, duration, jobs_file, check_enabled)

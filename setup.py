@@ -82,7 +82,7 @@ SETUP = {
         'CI': f'{project.__code_url__}actions',
         'Documentation': project.__docs_url__,
         'Source Code': project.__code_url__,
-        'Changelog': f'{project.__docs_url__}changelog.html',
+        'Changelog': f'{project.__docs_url__}en/stable/changelog.html',
     },
 }
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))

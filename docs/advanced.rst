@@ -144,18 +144,38 @@ library we use, it may be useful to explicitly specify an encoding as defined in
 
 .. _tor:
 
-Watching changes on .onion (Tor) pages
---------------------------------------
-Since pages on the `Tor Network <https://www.torproject.org>`__ are not accessible via public DNS and TCP, you need to
-either configure a Tor client as an HTTP/HTTPS proxy or, in Linux/macOS, use the `torify` tool from the `tor` package
-(installable using ``apt install tor`` on Debian or Ubuntu or ``brew install tor`` on macOS). Setting up Tor is out of
-scope for this document.
+.onion (Tor) top level domain name
+----------------------------------
+.onion is a special-use top level domain name designating an anonymous onion service reachable only via the `Tor
+network <https://www.torproject.org>`__. As sites with URLs in the .onion pseudo-TLD are not accessible via public DNS
+and TCP, you need to run a Tor service as a SOCKS5 proxy service and use it to proxy these websites through it. Note the
+"h" in ``socks5h//``, which tells the underlying urllib3 library to resolve the hostname using the SOCKS5 server (see
+`here <https://github.com/urllib3/urllib3/issues/1035>`__):
 
-If using `torify`, just prefix the :program:`webchanges` command with the `torify` wrapper to access .onion pages:
+.. code-block:: yaml
+
+   name: A .onion website (unencrypted http)
+   url: http://www.example.onion
+   http_proxy: socks5h://localhost:9050
+   ---
+   name: Another .onion website
+   url: https://www.example2.onion
+   https_proxy: socks5h://localhost:9050
+
+Setting up Tor is out of scope for this document, but in Windows install the Windows Expert Bundle from `here
+<https://www.torproject.org/download/tor/>`__ and execute ``tor --service install`` as an Administrator per
+instructions `here <https://www.torproject.org/docs/faq#NTService>`__; in Linux the installation of the `tor` package
+usually is sufficient to create a SOCKS5 proxy service, otherwise run with ``tor --options RunAsDaemon 1``.  Some
+useful options may be ``HardwareAccel 1 CircuitPadding 0 ConnectionPadding 0 ClientUseIPv6 1 FascistFirewall 1``
+(check documentation)
+
+Alternatively (Linux/macOS only), instead of proxying those sites you can use the `torsocks` tool (fka `torify`) from
+the `tor` package to to make every Internet communication go through the Tor network. Just run :program:`webchanges`
+within the `torsocks` wrapper:
 
 .. code-block:: bash
 
-   torify webchanges
+   torsocks webchanges
 
 .. _custom_diff:
 

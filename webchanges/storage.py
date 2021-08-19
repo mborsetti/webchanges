@@ -468,8 +468,10 @@ class YamlConfigStorage(BaseYamlFileStorage):
             missing = self.dict_deep_difference(DEFAULT_CONFIG, config)
             if missing:
                 logger.info(
-                    f'Default values used for the missing directive(s) in the configuration file {self.filename}:\n'
-                    f'{yaml.safe_dump(missing)}See documentation at {__docs_url__}'
+                    f'The configuration file {self.filename} is missing directive(s); the following default '
+                    f'values are being used:\n'
+                    f'{yaml.safe_dump(missing)}'
+                    'See documentation at {__docs_url__}'
                 )
                 config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
         else:
@@ -786,7 +788,7 @@ class CacheSQLite3Storage(CacheStorage):
 
         self.max_snapshots = max_snapshots
 
-        logger.debug(f'sqlite3.version={sqlite3.version}, sqlite3.sqlite_version={sqlite3.sqlite_version}')
+        logger.debug(f'Run-time SQLite library: {sqlite3.sqlite_version}')
         logger.info(f'Opening permanent sqlite3 database file {filename}')
         super().__init__(filename)
 

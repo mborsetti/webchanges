@@ -9,6 +9,7 @@ flynt
 isort
 mypy
 pre-commit
+types-backports
 types-PyYAML
 types-redis
 types-requests

@@ -39,10 +39,10 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: igno
 logger = logging.getLogger(__name__)
 
 DEFAULT_CHROMIUM_REVISION = {
-    'linux': 843831,
-    'win64': 843846,
-    'win32': 843832,
-    'mac': 843846,
+    'linux': 885292,  # https://chromium.cypress.io/linux/stable/92.0.4515.131
+    'win64': 885298,  # https://chromium.cypress.io/win64/stable/92.0.4515.131
+    'win32': 885290,  # https://chromium.cypress.io/win/stable/92.0.4515.131
+    'mac': 885289,  # https://chromium.cypress.io/mac/stable/92.0.4515.131
 }
 
 
@@ -758,7 +758,7 @@ class BrowserJob(Job):
     @staticmethod
     def current_platform() -> str:
         """Get current platform name by short string as used by Pyppeteer for downloading Chromium.
-        Originally from pyppeteer.chromium_downloader, but we cannot simply import it as it will trigger
+        Code originally from pyppeteer.chromium_downloader, but we cannot simply import it as it will trigger
         pyppeteer reading os.environ['PYPPETEER_CHROMIUM_REVISION'] before we can modify it ourselves.
 
         :raises OSError: If the platform is not supported by Pyppeteer.
@@ -894,8 +894,8 @@ class BrowserJob(Job):
             if proxy_username or proxy_password:
                 await page.authenticate({'username': proxy_username, 'password': proxy_password})
                 logger.debug(
-                    f'Job {self.index_number}: Set page.authenticate with '
-                    f'username={proxy_username}, password={proxy_password}'  # type: ignore[str-bytes-safe]
+                    f'Job {self.index_number}: Set page.authenticate with '  # type: ignore[str-bytes-safe]
+                    f'username={proxy_username}, password={proxy_password}'
                 )
         options: Dict[str, Any] = {}
 
@@ -910,7 +910,7 @@ class BrowserJob(Job):
             async def post_intercept(request_event: pyppeteer.network_manager.Request) -> None:
                 """Handle pyee.EventEmitter callback."""
                 logger.info(
-                    f'Job {self.index_number}: intercepted request with resource_type'
+                    f'Job {self.index_number}: Intercepted request with resource_type'
                     f'={request_event.resourceType}; overriding request method to {self.method}'
                 )
                 if isinstance(self.data, dict):

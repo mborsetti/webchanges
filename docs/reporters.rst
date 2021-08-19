@@ -4,46 +4,30 @@
 Reporters
 =========
 By default :program:`webchanges` prints out information about changes to the data collected to standard output
-(``stdout``), which is your terminal if you run it interactively (if running via cron or another scheduler service,
-the destination of this output depends on the scheduler and its configuration).
+(``stdout``), which is your terminal if you run it interactively.
+
+.. note::
+   If running via cron or another scheduler service, the destination of this output depends on the scheduler and its
+   configuration.
 
 You can change the settings to change or add to where the report is sent to. Settings are contained in the
-configuration file ``config.yaml``, a text file located in the ``~/.config/webchanges`` directory for Linux or macOS,
+configuration file ``config.yaml`` (a text file located in the ``~/.config/webchanges`` directory for Linux or macOS,
 or in the :program:`webchanges` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
-Windows, and is editable using any text editor or with the command ``webchanges --edit--config``. The configuration
-for the reporters will be listed under the ``reporters`` section.
+Windows) which is editable using any text editor or with the command ``webchanges --edit--config``. The
+configuration for the reporters will be listed under the ``reporters`` section.
 
 .. note::
    The ``config.yaml`` file is created at the first run of ``webchanges --edit`` or ``webchanges --edit--config``.
 
-.. tip:: To test a reporter, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.
-   ``webchanges --test-reporter stdout``
+.. tip:: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:tz
+   below to set the report's time zone.
 
-.. _tz:
+To **test a reporter**, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.
+``webchanges --test-reporter stdout``. :program:`webchanges` will generate test  ``new``, ``changed``, ``unchanged``
+and ``error`` notifications and send (the ones configured to be sent under ``display``) via the ``stdout`` reporter
+(if it is enabled). Any reporter that is configured and enabled can be tested.
 
-Time zone
----------
-You can set the timezone for reports by entering a `IANA time zone name
-<https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`__ in the ``tz``directive of the ``report`` section.
-This is useful if for example you're running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC).
-Note that this directive is ignored by the ``diff_tool`` job directive.
-
-.. code-block:: yaml
-
-   report:
-     tz: America/New York
-
-If the directive is missing, or its value is null or blank, the timezone of the system that :program:`webchanges` runs
-on will be used.
-
-.. versionadded:: 3.8
-
-Testing
--------
-
-:program:`webchanges` will generate test  ``new``, ``changed``, ``unchanged`` and ``error`` notifications and send (the
-ones configured to be sent under ``display``) via the ``stdout`` reporter (if it is enabled). Any reporter that is
-configured and enabled can be tested. To test if your email reporter is configured correctly, you use::
+For example to test if your email reporter is configured correctly, use::
 
    webchanges --test-reporter email
 
@@ -53,24 +37,21 @@ detailed debug logs::
    webchanges --verbose --test-reporter email
 
 
-Reporters
----------
-
 At the moment, the following reporters are available:
 
 * :ref:`stdout` (enabled by default): Display on stdout (the console)
-* :ref:`browser`: Display on the default web browser
+* :ref:`browser`: Launch the default web browser
 * :ref:`email`: Send via email (SMTP or sendmail)
-* :ref:`xmpp`: Send a message using the Extensible Messaging and Presence Protocol (XMPP)
-* :ref:`webhook`: Send to a Slack or Discord channel using the service's webhook
-* :ref:`telegram`: Send via Telegram
-* :ref:`pushbullet`: Send via pushbullet.com
-* :ref:`pushover`: Send via pushover.net
 * :ref:`ifttt`: Send via IFTTT
-* :ref:`matrix`: Send to a room using the Matrix protocol
 * :ref:`mailgun`: Send via email using the Mailgun service
+* :ref:`matrix`: Send to a room using the Matrix protocol
 * :ref:`prowl`: Send via prowlapp.com
-* :ref:`run_command`: Run a command on the local system to take care of the notification
+* :ref:`pushbullet`: Send via Pushbullet
+* :ref:`pushover`: Send via Pushover
+* :ref:`run_command`: Run a custom command on the local system
+* :ref:`telegram`: Send via Telegram
+* :ref:`webhook`: Send to an e.g. Slack or Discord channel using the service's webhook
+* :ref:`xmpp`: Send using the Extensible Messaging and Presence Protocol (XMPP)
 
 .. To convert the "webchanges --features" output, use:
    webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
@@ -78,7 +59,26 @@ At the moment, the following reporters are available:
 Each reporter has a directive called ``enabled`` that can be toggled (true/false).
 
 Please note that many reporters need the installation of additional Python packages to work, as noted below and in
-:ref:`dependencies`.
+:ref:`dependencies <dependencies>`.
+
+.. _tz:
+
+Time zone (global setting)
+--------------------------
+You can set the timezone for reports by entering a `IANA time zone name
+<https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`__ in the ``tz`` directive of the ``report`` section.
+This is useful if for example you are running :program:`webchanges` on a cloud server on a different timezone (e.g.
+UTC). Note that this directive is ignored by the ``diff_tool`` job directive.
+
+.. code-block:: yaml
+
+   report:
+     tz: America/New York
+
+If the directive is missing, or its value is null or blank, the timezone of the system that :program:`webchanges` runs
+on will be used in reports.
+
+.. versionadded:: 3.8
 
 
 .. _browser:
@@ -92,33 +92,28 @@ Displays the summary in HTML format using the system's default web browser.
 
 Email
 -----
-Sends email, via smtp or sendmail.
+Sends email (via SMTP or the sendmail external program).
 
 Sub-directives
 ~~~~~~~~~~~~~~
-* ``method``: Either `smtp` or `sendmail`
+* ``method``: Either `smtp` or `sendmail`.
 * ``from``: The sender's email address. **Do not use your main email address** but create a throwaway one!
-* ``to``: The destination email address
-* ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported
-* ``html``: Whether the email includes HTML (true/false)
-
+* ``to``: The destination email address.
+* ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported.
+* ``html``: Whether the email includes HTML (true/false).
 
 .. _smtp:
 
 SMTP
 ~~~~
 
-Login with plaintext password
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You can save a password in the ``insecure_password`` directive in the SMTP to enable unattended scheduled runs of
-:program:`webchanges`. As the name says, storing the password as plaintext in the configuration is insecure and bad
-practice, yet for a throwaway account that is only used for sending these reports this might be a low-risk way to run
-unattended.
+Plaintext password
+^^^^^^^^^^^^^^^^^^
+You can save a password in the ``insecure_password`` directive in the SMTP configuration section to enable unattended
+scheduled runs of :program:`webchanges`. As the name says, storing the password as plaintext in the configuration is
+insecure and bad practice, yet for a throwaway account that is only used for sending these reports this might be a
+low-risk way to run unattended.
 
-**Never ever use this method with your your primary email account!**  Seriously! Create a throw-away free email
-account just for sending out these emails; see below for an example on how to do so with :ref:`Gmail <gmail>`.
-
-Example:
 
 .. code-block:: yaml
 
@@ -138,19 +133,22 @@ Example:
          auth: true
          insecure_password: 'this_is_my_secret_password'
 
-Once again, note that this makes it really easy for your password to be picked up by software running on your machine,
-by other users logged into the system and/or for the password to appear in log files accidentally, so it's **insecure**.
-
+.. warning::
+   **Never ever use this method with your your primary email account!**  Seriously! This method makes it really easy
+   for your password to be picked up by software (e.g. a virus) running on your machine, by other users logged into
+   the system, and/or for the password to appear in log files accidentally, so it's **insecure**. Create a throw-away
+   free email account just for sending out these emails; see below for an example on how to do so with
+   :ref:`Gmail <gmail>`.
 
 .. _smtp-login-with-keychain:
 
-Login with keyring
-^^^^^^^^^^^^^^^^^^^
+Keyring password
+^^^^^^^^^^^^^^^^
 A secure way to store your password is to use a keyring by running ``webchanges --smtp-login`` after configuring your
 ``host`` and ``user``; this requires installing the optional ``safe_password`` dependencies (see optional packages
 below). Be aware that the use of keyring won't allow you to run :program:`webchanges` unattended (e.g. from a
-scheduler). If you're using a keychain, the ``insecure_password`` key is ignored and can be left blank.
-
+scheduler). If you're storing the password in a keyring, the ``insecure_password`` key is ignored and can be left
+blank.
 
 SMTP sub-directives
 ^^^^^^^^^^^^^^^^^^^
@@ -165,9 +163,10 @@ SMTP sub-directives
 
 Gmail example
 ^^^^^^^^^^^^^
-WARNING: You **do not want to do this with your primary Google account**, but rather get a free separate one just for
-sending mails from :program:`webchanges` and similar programs. Allowing less secure apps and storing the password (even
-if it's in the keychain) is not good security practice for your primary account. You have been warned!
+.. warning::
+   You **do not want to do this with your primary Google account**, but rather get a free separate one just for
+   sending mails from :program:`webchanges` and similar programs. Allowing less secure apps and storing the password
+   (even if it's in the keychain) is not good security practice for your primary account. You have been warned!
 
 First configure your Gmail account to allow for "less secure" (password-based) apps to login:
 
@@ -223,7 +222,6 @@ user/password leak from, e.g. from a scan of your jobs file), then configure the
          port: 587  # (25 or 465 also work)
          starttls: true
 
-
 .. _sendmail:
 
 sendmail
@@ -231,7 +229,6 @@ sendmail
 
 Calls the external `sendmail <https://www.proofpoint.com/us/products/email-protection/open-source-email-solution>`__
 program, which must already be installed and configured.
-
 
 Optional packages
 ~~~~~~~~~~~~~~~~~
@@ -254,7 +251,7 @@ IFTTT
 -----
 To configure IFTTT events, you need to retrieve your key from `<https://ifttt.com/maker_webhooks/settings>`__.
 
-The URL shown in "Account Info" has the following format:
+The URL is shown in "Account Info" and has the following format:
 
 .. code::
 
@@ -312,15 +309,15 @@ You first need to register a Matrix account for the bot on any home server.
 You then need to acquire an access token and room ID, using the following instructions adapted from `this
 guide <https://t2bot.io/docs/access_tokens/>`__:
 
-1. Open `Riot.im <https://riot.im/app/>`__ in a private browsing window
-2. Register/Log in as your bot, using its user ID and password.
-3. Set the display name and avatar, if desired.
-4. In the settings page, select the "Help & About" tab, scroll down to the bottom and click Access Token:
+#. Open `Riot.im <https://riot.im/app/>`__ in a private browsing window
+#. Register/Log in as your bot, using its user ID and password.
+#. Set the display name and avatar, if desired.
+#. In the settings page, select the "Help & About" tab, scroll down to the bottom and click Access Token:
    <click to reveal>.
-5. Copy the highlighted text to your configuration.
-6. Join the room that you wish to send notifications to.
-7. Go to the Room Settings (gear icon) and copy the *Internal Room ID* from the bottom.
-8. Close the private browsing window **but do not log out, as this invalidates the Access Token**.
+#. Copy the highlighted text to your configuration.
+#. Join the room that you wish to send notifications to.
+#. Go to the Room Settings (gear icon) and copy the *Internal Room ID* from the bottom.
+#. Close the private browsing window **but do not log out, as this invalidates the Access Token**.
 
 Here is a sample configuration:
 
@@ -346,12 +343,49 @@ notifications to a public Matrix room, as the messages quickly become noisy:
 Matrix uses the :ref:`text` report type.
 
 
+.. _prowl:
+
+Prowl
+-----
+You can have notifications sent to you through the `Prowl <https://www.prowlapp.com>`__ push notification service to
+receive the notification on iOS (only).
+
+To achieve this, you should register a new Prowl account, and have the Prowl application installed on your iOS device.
+
+To create an API key:
+
+#. Log into the Prowl website at https://www.prowlapp.com/api_settings.php.
+#. If needed, navigate to the "API Keys" tab.
+#. Scroll to the "Generate a new API key" section.
+#. Give the key a note that will remind you you've used it for this service.
+#. Press "Generate Key".
+#. Copy the resulting key.
+
+Here is a sample configuration:
+
+.. code:: yaml
+
+   prowl:
+     enabled: true  # don't forget to set this to true! :)
+     api_key: '<your api key here>'
+     priority: 2
+     application: 'webchanges example'
+     subject: '{count} changes: {jobs}'
+
+The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
+shown as the source of the event in the Prowl App.
+
+Prowl uses the :ref:`text` report type.
+
+.. versionadded:: 3.0.1
+
+
 .. _pushbullet:
 
 Pushbullet
 ----------
 Pushbullet notifications are configured similarly to Pushover (see above). You’ll need to add to the config your
-Pushbullet Access Token, which you can generate at https://www.pushbullet.com/#settings
+Pushbullet Access Token, which you can generate at https://www.pushbullet.com/#settings.
 
 Required packages
 ~~~~~~~~~~~~~~~~~
@@ -363,15 +397,15 @@ To use this report you need to install :ref:`optional_packages`. Install them us
 
 Pushbullet uses the :ref:`text` report type.
 
+
 .. _pushover:
 
 Pushover
 --------
 You can configure webchanges to send real time notifications about changes via `Pushover <https://pushover.net/>`__.
-To enable this, ensure you
-have the ``chump`` python package installed (see :doc:`dependencies`). Then edit your config (``webchanges
---edit-config``) and enable pushover. You will also need to add to the config your Pushover user key and a unique app
-key (generated by registering webchanges as an application on your `Pushover account
+Firsly, make sure you have the required packages installed (see below). Then edit your configuration file
+(``webchanges --edit-config``) and enable pushover. You will also need to add to the config your Pushover user key
+and a unique app key (generated by registering webchanges as an application on your `Pushover account
 <https://pushover.net/apps/build>`__.
 
 You can send to a specific device by using the device name, as indicated when you add or view your list of devices in
@@ -392,7 +426,6 @@ To use this report you need to install :ref:`optional_packages`. Install them us
    pip install --upgrade webchanges[pushover]
 
 
-
 .. _stdout:
 
 stdout
@@ -406,34 +439,76 @@ Optional sub-directives
 * ``color``: Uses color (green for additions, red for deletions) (true/false)
 
 
+.. _run_command:
+
+run_command
+-----------
+This reporter will run a command on your local system.  Any text in the command that matches the keywords below will
+be substituted as follows:
+
++------------------+------------------------------------------------------------------------------------+
+| Text in command  | Replacement                                                                        |
++==================+====================================================================================+
+| ``{count}``      | The number of reports                                                              |
++------------------+------------------------------------------------------------------------------------+
+| ``{jobs}``       | The titles of the jobs reported                                                    |
++------------------+------------------------------------------------------------------------------------+
+| ``{text}``       | The report in text format                                                          |
++------------------+------------------------------------------------------------------------------------+
+
+For example, in Windows we can make a MessageBox pop up:
+
+.. code-block:: yaml
+
+   run_command:
+     enabled: true  # don't forget to set this to true! :)
+     command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
+
+All environment variables are preserved and the following one added:
+
++------------------------------------+------------------------------------------------------------------+
+| Environment variable               | Description                                                      |
++====================================+==================================================================+
+| ``WEBCHANGES_REPORT_CONFIG_JSON``  | All report parameters in JSON format                             |
++------------------------------------+------------------------------------------------------------------+
+
+If the command generates an error, the output of the error will be in the first line, before the traceback.
+
+.. versionadded:: 3.8
+
 
 .. _telegram:
 
 Telegram
 --------
-Telegram notifications are configured using the Telegram `Bot API <https://core.telegram.org/bots>`__).
+Telegram notifications are made using Telegram's `Bot API <https://core.telegram.org/bots/api>`__.
 
-To set up Telegram, from your Telegram app chat up BotFather (New Message, Search, “BotFather”), then say ``/newbot``
-and follow the instructions. Eventually it will tell you the bot token (in the form ``<number>:<random string>``); add
-it to your configuration file (run ``webchanges --edit-config``) as below, and save the file.
+Groups
+~~~~~~
+A Telegram `group <https://telegram.org/tour/groups>`__ is the standard method used to receive notifications from
+:program:`webchanges`. To create one, from your Telegram app chat up `BotFather
+<https://core.telegram.org/bots#6-botfather>`__ (New Message, Search, “BotFather”),
+then say ``/newbot`` and follow the instructions. Eventually it will tell you the bot's unique authentication token
+(along the lines of ``110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw``); add it to your configuration file (run
+``webchanges --edit-config``) as below, and save the file.
 
 .. code:: yaml
 
    telegram:
      enabled: true  # don't forget to set this to true! :)
-     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # replace your bot api token
+     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot api token
      chat_id: ''  # empty for now
 
-Next click on the link of your bot (starts with https://t.me/) and, on the new screen, click on start (which will send
-the message ``/start``) and enter any text ("Hello" is fine). Then run ``webchanges --telegram-chats``, which will list
-the private chats the bot is involved with. This will list the chat ID that you need to put into the configuration
-file (run ``webchanges --edit-config``) as ``chat_id``:
+Next click on the link of your chat bot (starts with https://t.me/) and, on the new screen, click on start (which will
+send the message ``/start``) and enter any text ("Hello" is fine). Then run ``webchanges --telegram-chats``, which
+will list the group(s) the bot is involved with as well as their unique identifier(s). Enter the identifier(s) of the
+group(s) you want to be notified into the configuration file (run ``webchanges --edit-config``) as ``chat_id``:
 
 .. code:: yaml
 
    telegram:
      enabled: true  # don't forget to set this to true! :)
-     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # replace with your bot api token
+     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's authentication token
      chat_id: 88888888  # the chat id where the messages should be sent
      silent: false  # set to true to receive a notification with no sound
 
@@ -443,11 +518,34 @@ You may add multiple chat IDs as a YAML list:
 
    telegram:
      enabled: true  # don't forget to set this to true! :)
-     bot_token: '999999999:3tOhy2CuZE0pTaCtszRfKpnagOG8IQbP5gf'  # your bot api token
+     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's authentication token
      chat_id:
-       - 11111111
-       - 22222222
+       - 11111111  # positive chat IDs are private groups
+       - -22222222  # negative chat IDs are public groups
      silent: true  # set to false to receive a notification with sound
+
+.. hint::
+
+   Public groups have chat IDs starting with a -(negative) sign; make sure you don't leave this out by mistake!
+
+.. note::
+
+   Before adding a group to :program:`webchanges`, make sure that it has at least one message in it
+
+Telegram uses the :ref:`markdown` report type.
+
+Channels
+~~~~~~~~
+To notify a Telegram `channel <https://telegram.org/tour/channels>__` of which the bot is admin of, enter the the
+username of the channel (the text after https://t.me/s/, prefixed by an @) as a ``chat_id``, like this:
+
+.. code:: yaml
+
+   telegram:
+     enabled: true  # don't forget to set this to true! :)
+     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's authentication token
+     chat_id:
+       - '@channelusername'  # replace with your channel's username
 
 Telegram uses the :ref:`markdown` report type.
 
@@ -457,7 +555,9 @@ Optional sub-directives
 
 
 .. versionchanged:: 3.7
-   Added `silent` sub-directive and switched from the `text` to the `markdown` report type.
+   Added `silent` sub-directive.
+   Switched from the `text` to the `markdown` report type.
+
 
 .. _webhook:
 
@@ -519,7 +619,6 @@ Sub-directives
    Added ``webhook_markdown`` variant
 
 
-
 .. _xmpp:
 
 XMPP
@@ -577,79 +676,3 @@ If using a keychain to store the password, you also need to:
 .. code-block:: bash
 
    pip install --upgrade webchanges[safe_password]
-
-
-
-.. _prowl:
-
-Prowl
------
-
-You can have notifications sent to you through the `Prowl <https://www.prowlapp.com>`__ push notification service to
-receive the notification on iOS (only).
-
-To achieve this, you should register a new Prowl account, and have the Prowl application installed on your iOS device.
-
-To create an API key:
-
-1. Log into the Prowl website at https://www.prowlapp.com/api_settings.php
-2. If needed, navigate to the "API Keys" tab.
-3. Scroll to the "Generate a new API key" section.
-4. Give the key a note that will remind you you've used it for this service.
-5. Press "Generate Key".
-6. Copy the resulting key.
-
-Here is a sample configuration:
-
-.. code:: yaml
-
-   prowl:
-     enabled: true  # don't forget to set this to true! :)
-     api_key: '<your api key here>'
-     priority: 2
-     application: 'webchanges example'
-     subject: '{count} changes: {jobs}'
-
-The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
-shown as the source of the event in the Prowl App.
-
-Prowl uses the :ref:`text` report type.
-
-.. versionadded:: 3.0.1
-
-.. _run_command:
-
-Run_Command
------------
-This reporter will run a command on your local system.  Any text in the command that matches the keywords below will
-be substituted as follows:
-
-+------------------+------------------------------------------------------------------------------------+
-| Text in command  | Replacement                                                                        |
-+==================+====================================================================================+
-| ``{count}``      | The number of reports                                                              |
-+------------------+------------------------------------------------------------------------------------+
-| ``{jobs}``       | The titles of the jobs reported                                                    |
-+------------------+------------------------------------------------------------------------------------+
-| ``{text}``       | The report in text format                                                          |
-+------------------+------------------------------------------------------------------------------------+
-
-For example, in Windows we can make a MessageBox pop up:
-
-.. code-block:: yaml
-
-   run_command:
-     enabled: true  # don't forget to set this to true! :)
-     command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
-
-All environment variables are preserved and the following one added:
-
-+------------------------------------+------------------------------------------------------------------+
-| Environment variable               | Description                                                      |
-+====================================+==================================================================+
-| ``WEBCHANGES_REPORT_CONFIG_JSON``  | All report parameters in JSON format                             |
-+------------------------------------+------------------------------------------------------------------+
-
-If the command generates an error, the output of the error will be in the first line, before the traceback.
-
-.. versionadded:: 3.8

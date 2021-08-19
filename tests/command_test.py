@@ -272,7 +272,6 @@ def test_test_job(capsys):
     message = capsys.readouterr().out
     message = message.replace('\n\n ', '\n').replace('\r', '')  # Python 3.6
     assert message == (
-        '\n'
         'Sample webchanges job; used by command_test.py\n'
         '----------------------------------------------\n'
         '\n'
@@ -552,7 +551,7 @@ def test_check_test_reporter(capsys):
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert '01. NEW: Newly Added\n' in message
+    assert '01. NEW: Sample job that was newly added\n' in message
 
     setattr(command_config, 'test_reporter', 'stdout')
     urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
@@ -699,4 +698,4 @@ def test_job_states_verb_notimestamp_changed():
 def test_show_chromium_directory(capsys):
     urlwatch_command.show_chromium_directory()
     message = capsys.readouterr().out
-    assert message[:61] == '\nChromium executables are stored in the following directory:\n'
+    assert message[:74] == 'Downloaded Chromium executables are installed in the following directory:\n'

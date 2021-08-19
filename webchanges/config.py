@@ -166,7 +166,7 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--smtp-login',
             action='store_true',
-            help='verify SMTP login credentials with server and, if stored in keyring, enter or check ' 'password',
+            help='verify SMTP login credentials with server (and enter or check password if using keyring)',
         )
         group.add_argument('--telegram-chats', action='store_true', help='list telegram chats program is joined to')
         group.add_argument(
@@ -189,7 +189,7 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--rollback-cache',
             type=int,
-            help='delete recent snapshots > timestamp; backup the database before using!',
+            help='delete recent snapshots since TIMESTAMP (backup the database before using!)',
             metavar='TIMESTAMP',
         )
         group.add_argument(
@@ -199,7 +199,7 @@ class CommandConfig(BaseConfig):
             '--database-engine',
             default='sqlite3',
             choices=['sqlite3', 'redis', 'minidb', 'textfiles'],
-            help='database engine to use (default: %(default)s unless redis URI in --cache)',
+            help='database engine to use (default: %(default)s, unless redis URI in --cache)',
         )
         group.add_argument(
             '--max-snapshots',
@@ -210,15 +210,15 @@ class CommandConfig(BaseConfig):
         )
 
         group = parser.add_argument_group('miscellaneous')
-        group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
         group.add_argument(
             '--chromium-directory', action='store_true', help='show directory where Chromium is installed'
         )
+        group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
         group.add_argument(
             '--log-level',
             default='DEBUG',
             choices=('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'),
-            help='level of logging output if -v is selected (default: %(default)s)',
+            help='level of logging output when -v is selected (default: %(default)s)',
         )
 
         # workaround for avoiding triggering error when invoked by pytest

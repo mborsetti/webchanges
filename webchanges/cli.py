@@ -96,7 +96,10 @@ def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
 
     logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s', level=log_level)
     logger.debug(f'{__project_name__}: {__version__} {__copyright__}')
-    logger.debug(f'Python: {platform.python_build()}')
+    logger.debug(
+        f'{platform.python_implementation()}: {platform.python_version()} '
+        f'{platform.python_build()} {platform.python_compiler()}'
+    )
     logger.debug(f'System: {platform.platform()}')
 
 

@@ -388,27 +388,7 @@ class BeautifyFilter(FilterBase):
 
 
 class Html2TextFilter(FilterBase):
-    """Convert a string consisting of HTML to Unicode plain text for easy difference checking.
-    Method may be one of:
-
-    - 'html2text' (DEFAULT): Use html2text library to extract text (in Markdown) from html.
-
-      - options: see https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options
-      - by default these options are set:
-
-        - parser.unicode_snob = True
-        - parser.body_width = 0
-        - parser.single_line_break = True
-        - parser.ignore_images = True
-
-    - 'bs4': Use Beautiful Soup library to prettify the HTML
-
-      - options:
-        - parser: one of "lxml", "html5lib", and "html.parser" (default: "lxml");
-        see https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use
-
-    - 'strip_tags': A simple regex-based HTML tag stripper
-    """
+    """Convert a string consisting of HTML to Unicode plain text for easy difference checking."""
 
     __kind__ = 'html2text'
 
@@ -421,6 +401,22 @@ class Html2TextFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         """Filter (process) the data.
+
+        Subfilter key can be 'method' and any mehtod-specific option to be passed to it.
+        The following 'method's are supported:
+        • 'html2text' (default): Use html2text Python library to extract text (in Markdown).
+          - options (see
+            https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options):
+          - the following options are set to non-default values:
+            . parser.unicode_snob = True
+            . parser.body_width = 0
+            . parser.single_line_break = True
+            . parser.ignore_images = True
+        • 'bs4': Use Beautiful Soup Python library to prettify the HTML.
+          - options:
+            . parser: one of "lxml", "html5lib", and "html.parser" (default: "lxml"); see
+              https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use.
+        • 'strip_tags': A simple and fast regex-based HTML tag stripper.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
@@ -669,13 +665,24 @@ class KeepLinesFilter(FilterBase):
         subfilter: Dict[str, Any],
     ) -> str:
         if 'text' in subfilter:
-            return '\n'.join(line for line in data.splitlines() if subfilter['text'] in line)
+            if isinstance(subfilter['text'], str):
+                return '\n'.join(line for line in data.splitlines() if subfilter['text'] in line)
+            else:
+                raise TypeError(
+                    f"The '{self.__kind__}' filter requires a string but you provided a"
+                    f" {type(subfilter['text']).__name__}"
+                )
         if 're' in subfilter:
-            return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line))
+            if isinstance(subfilter['re'], str):
+                return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line))
+            else:
+                raise TypeError(
+                    f"The '{self.__kind__}' filter requires a string but you provided a"
+                    f" {type(subfilter['text']).__name__}"
+                )
         else:
             raise ValueError(
-                f'The keep_lines_containing filter needs a text or re expression'
-                f' ({self.job.get_indexed_location()})'
+                f"The '{self.__kind__}' filter needs a text or re expression ({self.job.get_indexed_location()})"
             )
 
 
@@ -692,7 +699,7 @@ class GrepFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         warnings.warn(
-            f"'grep' filter is deprecated; replace with 'keep_lines_containing' (+ 're' subfilter)"
+            f"The 'grep' filter is deprecated; replace with 'keep_lines_containing' (+ 're' subfilter)"
             f' ({self.job.get_indexed_location()})',
             DeprecationWarning,
         )
@@ -717,12 +724,24 @@ class DeleteLinesFilter(FilterBase):
         subfilter: Dict[str, Any],
     ) -> str:
         if 'text' in subfilter:
-            return '\n'.join(line for line in data.splitlines() if subfilter['text'] not in line)
+            if isinstance(subfilter['text'], str):
+                return '\n'.join(line for line in data.splitlines() if subfilter['text'] not in line)
+            else:
+                raise TypeError(
+                    f"The '{self.__kind__}' filter requires a string but you provided a"
+                    f" {type(subfilter['text']).__name__}"
+                )
         if 're' in subfilter:
-            return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line) is None)
+            if isinstance(subfilter['re'], str):
+                return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line) is None)
+            else:
+                raise TypeError(
+                    f"The '{self.__kind__}' filter requires a string but you provided a"
+                    f" {type(subfilter['re']).__name__}"
+                )
         else:
             raise ValueError(
-                f'The delete_lines_containing filter needs a text or re expression ({self.job.get_indexed_location()})'
+                f"The '{self.__kind__}' filter needs a text or re expression ({self.job.get_indexed_location()})"
             )
 
 
@@ -739,7 +758,7 @@ class InverseGrepFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         warnings.warn(
-            f"'grepi' filter is deprecated; replace with 'delete_lines_containing (+ 're' subfilter')"
+            f"The 'grepi' filter is deprecated; replace with 'delete_lines_containing (+ 're' subfilter')"
             f' ({self.job.get_indexed_location()})',
             DeprecationWarning,
         )

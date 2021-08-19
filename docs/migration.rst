@@ -62,7 +62,7 @@ Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), a
   the new sub-directive ``sort_keys``
 * More reliable releases due to:
 
-  * A 38 percentage point increase in code testing coverage (to 80%)
+  * A 39 percentage point increase in code testing coverage (to 81%)
   * Completely new continuous integration (CI) and continuous delivery (CD) pipeline (GitHub Actions with pre-commit)
   * Uses of flake8 and doc8 linters and pre-commit checks
   * Code security checks using bandit
@@ -269,7 +269,7 @@ Relative to :program:`urlwatch` 2.23:
   * Unicode is supported throughout, including in filters and jobs and configuration YAML files.
   * Implemented `pathlib <https://docs.python.org/3/library/pathlib.html>`__ (new in Python 3.4) for better
     code readability and functionality.
-  * A 38 percentage point increase in code testing coverage (to 80%), a completely new continuous integration
+  * A 39 percentage point increase in code testing coverage (to 81%), a completely new continuous integration
     (CI) and continuous delivery (CD) pipeline (`GitHub Actions <https://github.com/features/actions>`__), and testing
     on both Ubuntu **and** macOS (Windows 10 x64 to come) increase reliability of new releases.
   * Using `flake8 <https://pypi.org/project/flake8/>`__ to check PEP-8 compliance and more.

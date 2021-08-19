@@ -31,26 +31,36 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.8.2a0
+Version 3.8.2rc0
 ====================
 Unreleased
 
+Changed
+-------
+* Updated default Chromium executables to revisions equivalent to Chromium 92.0.4515.131 (latest stable release); use
+  ``webchanges --chromium-directory`` to locate where older revision were downloaded to delete them manually.  Fixes
+  unsupported browser error thrown by certain websites.
+
 Added
 -----
-* New ``--chromium-directory`` command line displays the directory containing downloaded Chromium executables to
-  facilitate deleting of older revisions.
+* New ``--chromium-directory`` command line displays the directory where the downloaded Chromium executables are
+  located to facilitate the deletion of older revisions.
+* Footer now indicates if the run was made with a jobs file whose stem name is not the default 'jobs', to ease
+  identification when running *webchanges* with a variety of jobs files.
 
 Fixed
 -----
-* Changed legacy code handling ``--edit-config`` command line argument to allow editing of a configuration file
-  having YAML syntax errors (`#15 <https://github.com/mborsetti/webchanges/issues/15>`__ by
+* Fixed legacy code handling ``--edit-config`` command line argument to allow editing of a configuration file
+  with YAML syntax errors (`#15 <https://github.com/mborsetti/webchanges/issues/15>`__ by
   `Markus Weimar <https://github.com/Markus00000>`__).
+* Telegram reporter documentation was missing instructions on how to notify channels (`#16
+  <https://github.com/mborsetti/webchanges/issues/16>`__ by `Sean Tauber <https://github.com/buzzeddesign>`__).
 
 Internals
 ---------
-* Testing all database engines, including redis, and more, adding 3 percentage points to coverage to 80%.
 * Type hints are checked during pre-commit by `mypy <http://www.mypy-lang.org/>`__.
 * Imports are rearranged during pre-commit by `isort <https://pycqa.github.io/isort/>`__.
+* Now testing all database engines, including redis, and more, adding 4 percentage points of code coverage to 81%.
 
 
 Version 3.8.1

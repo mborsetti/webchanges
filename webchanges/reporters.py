@@ -17,12 +17,12 @@ import subprocess
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, TYPE_CHECKING, Union
 from warnings import warn
 
 import requests
 from markdown2 import Markdown
-from requests import Response
 
 from . import __project_name__, __url__, __version__
 from .jobs import UrlJob
@@ -79,18 +79,27 @@ class ReporterBase(object, metaclass=TrackSubClasses):
     __subclasses__: Dict[str, Type[ReporterBase]] = {}
     __anonymous_subclasses__: List[Type[ReporterBase]] = []
 
-    def __init__(self, report: Report, config: Dict[str, Any], job_states: List[JobState], duration: float) -> None:
+    def __init__(
+        self,
+        report: Report,
+        config: Dict[str, Any],
+        job_states: List[JobState],
+        duration: float,
+        jobs_file: Optional[Path] = None,
+    ) -> None:
         """
 
         :param report: The Report object containing information about the report.
         :param config: The configuration of the run (typically from config.yaml).
         :param job_states: The list of JobState objects containing the information about the jobs that were retrieved.
         :param duration: The duration of the retrieval of jobs.
+        :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
         """
         self.report = report
         self.config = config
         self.job_states = job_states
         self.duration = duration
+        self.jobs_file = jobs_file
 
     def convert(self, othercls: Type[ReporterBase]) -> ReporterBase:
         """Convert self to a different ReporterBase class (object typecasting).
@@ -103,7 +112,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         else:
             config = {}
 
-        return othercls(self.report, config, self.job_states, self.duration)
+        return othercls(self.report, config, self.job_states, self.duration, self.jobs_file)
 
     @classmethod
     def reporter_documentation(cls) -> str:
@@ -123,6 +132,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         report: Report,
         job_states: List[JobState],
         duration: float,
+        jobs_file: Optional[Path] = None,
         check_enabled: Optional[bool] = True,
     ) -> None:
         """Run a single named report.
@@ -131,23 +141,31 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         :param report: The Report object with the information of all the reports.
         :param job_states: The list of JobState objects containing the information about each job retrieved.
         :param duration: The duration of the retrieval of jobs.
-        :param check_enabled: Whether to check if the report is markeed "enabled" in the configuration (used for
+        :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
+        :param check_enabled: Whether to check if the report is marked "enabled" in the configuration (used for
            testing)
         """
         subclass = cls.__subclasses__[name]
         cfg: Dict[str, bool] = report.config['report'].get(name, {'enabled': False})
         if cfg['enabled'] or not check_enabled:
-            subclass(report, cfg, job_states, duration).submit()
+            subclass(report, cfg, job_states, duration, jobs_file).submit()
         else:
             raise ValueError(f'Reporter not enabled: {name}')
 
     @classmethod
-    def submit_all(cls, report: Report, job_states: List[JobState], duration: float) -> None:
+    def submit_all(
+        cls,
+        report: Report,
+        job_states: List[JobState],
+        duration: float,
+        jobs_file: Optional[Path] = None,
+    ) -> None:
         """Run all (enabled) reports.
 
         :param report: The Report object with the information of all the reports.
         :param job_states: The list of JobState objects containing the information about about each job retrieved.
         :param duration: The duration of the retrieval of jobs.
+        :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
         """
 
         any_enabled = False
@@ -156,7 +174,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
             if cfg['enabled']:
                 any_enabled = True
                 logger.info(f'Submitting with {name} ({subclass})')
-                subclass(report, cfg, job_states, duration).submit()
+                subclass(report, cfg, job_states, duration, jobs_file).submit()
 
         if not any_enabled:
             logger.warning('No reporters enabled.')
@@ -219,12 +237,18 @@ class HtmlReporter(ReporterBase):
 
                 yield '<hr>'
 
+        # HTML footer
         duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
         yield (
             f'<div style="font-style:italic">\n'
             f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-            f' seconds with <a href="{html.escape(__url__)}">'
-            f'{html.escape(__project_name__)}</a></address> {html.escape(__version__)}.<br>\n'
+            f' seconds with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a>'
+            f' {html.escape(__version__)}'
+            + (
+                f' ({self.jobs_file.stem}).<br>\n'
+                if self.jobs_file is not None and self.jobs_file.stem != 'jobs'
+                else '.<br>\n'
+            )
         )
         if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
             yield (
@@ -435,10 +459,12 @@ class TextReporter(ReporterBase):
             yield from details
 
         if summary and show_footer:
+            # Text footer
             duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
             yield (
                 f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-                f' seconds with {__project_name__} {__version__}.\n'
+                f' seconds with {__project_name__} {__version__}'
+                + (f' ({self.jobs_file.stem}).\n' if self.jobs_file and self.jobs_file.name != 'jobs' else '.\n')
             )
             if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
                 yield (
@@ -498,7 +524,8 @@ class TextReporter(ReporterBase):
 
 class MarkdownReporter(ReporterBase):
     def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> Iterable[str]:
-        """Submit a job to generate the report.
+        """Submit a job to generate the report in Markdown format.
+        We use the CommonMark spec: https://spec.commonmark.org/
 
         :param max_length: The maximum length of the report. Unlimited if not specified.
         :returns: The content of the Markdown report.
@@ -527,20 +554,23 @@ class MarkdownReporter(ReporterBase):
             details.extend(details_part)
 
         if summary and show_footer:
+            # Markdown footer
             duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
             footer = (
-                f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in"
-                f' {duration} seconds with {__project_name__} {__version__}.\n'
+                f"--\n_Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in"
+                f' {duration} seconds with {__project_name__} {__version__}'
             )
+            footer += f' ({self.jobs_file.stem})_.\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '_.\n'
+
+            if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
+                footer += (
+                    f'**New release version {self.report.new_release_future.result()} is available; we recommend '
+                    f'updating.**\n'
+                )
         else:
             footer = ''
-        if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
-            footer += (
-                f'*New release version {self.report.new_release_future.result()} is available; we recommend '
-                f'updating.*'
-            )
 
-        trimmed_msg = '*Parts of the report were omitted due to message length.*\n'
+        trimmed_msg = '**Parts of the report were omitted due to message length.**\n'
         if max_length:
             max_length -= len(trimmed_msg)
 
@@ -825,7 +855,7 @@ class EMailReporter(TextReporter):
             raise ValueError(f"Unknown email reporter method: {self.config['method']}")
 
         if self.config['html']:
-            html_reporter = HtmlReporter(self.report, {}, self.job_states, self.duration)
+            html_reporter = HtmlReporter(self.report, {}, self.job_states, self.duration, self.jobs_file)
             body_html = '\n'.join(html_reporter.submit())
             msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html)
         else:
@@ -995,10 +1025,9 @@ class MailGunReporter(TextReporter):
 
 
 class TelegramReporter(MarkdownReporter):
-    """Send a Markdown message using Telegram.
+    """Send a Markdown message using Telegram."""
 
-    See https://core.telegram.org/bots/api#formatting-options
-    """
+    # See https://core.telegram.org/bots/api#formatting-options
 
     __kind__ = 'telegram'
 
@@ -1020,7 +1049,7 @@ class TelegramReporter(MarkdownReporter):
             for chunk in chunks:
                 self.submit_to_telegram(bot_token, chat_id, chunk)
 
-    def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str) -> Response:
+    def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str) -> requests.Response:
         """Submit to Telegram."""
         logger.info(f"Sending telegram message to chat id: '{chat_id}'")
 
@@ -1042,8 +1071,8 @@ class TelegramReporter(MarkdownReporter):
                 raise RuntimeError(f"Telegram error: {json_res['description']}")
         except ValueError:
             logger.error(
-                f'Failed to parse telegram response. HTTP status code: {result.status_code}, content:'
-                f' {result.content}'  # type: ignore[str-bytes-safe]
+                f'Failed to parse telegram response. HTTP status code:'  # type: ignore[str-bytes-safe]
+                f' {result.status_code}, content: {result.content}'
             )
 
         return result
@@ -1163,7 +1192,7 @@ class WebhookReporter(TextReporter):
         else:
             self.max_length = default_max_length
 
-    def submit(self) -> Optional[Response]:  # type: ignore[override]
+    def submit(self) -> Optional[requests.Response]:  # type: ignore[override]
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
@@ -1180,7 +1209,7 @@ class WebhookReporter(TextReporter):
         return result
 
     @staticmethod
-    def submit_to_webhook(webhook_url: str, text: str) -> Response:
+    def submit_to_webhook(webhook_url: str, text: str) -> requests.Response:
         logger.debug(f'Sending request to webhook with text:{text}')
         post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
@@ -1191,8 +1220,8 @@ class WebhookReporter(TextReporter):
                 raise RuntimeError(f'Webhook server error: {result.text}')
         except ValueError:
             logger.error(
-                f'Failed to parse webhook server response. HTTP status code: {result.status_code}, content:'
-                f' {result.content}'  # type: ignore[str-bytes-safe]
+                f'Failed to parse webhook server response. HTTP status code:'  # type: ignore[str-bytes-safe]
+                f' {result.status_code}, content: {result.content}'
             )
         return result
 
@@ -1245,8 +1274,8 @@ class WebhookMarkdownReporter(MarkdownReporter):
                 raise RuntimeError(f'Webhook_markdown server error: {result.text}')
         except ValueError:
             logger.error(
-                f'Failed to parse webhook_markdown server response. HTTP status code: {result.status_code}, '
-                f'content: {result.content}'  # type: ignore[str-bytes-safe]
+                f'Failed to parse webhook_markdown server response. HTTP status code:'  # type: ignore[str-bytes-safe]
+                f' {result.status_code}, content: {result.content}'
             )
         return result
 
@@ -1326,7 +1355,7 @@ class BrowserReporter(HtmlReporter):
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
-        html_reporter = HtmlReporter(self.report, {}, self.job_states, self.duration)
+        html_reporter = HtmlReporter(self.report, {}, self.job_states, self.duration, self.jobs_file)
         body_html = '\n'.join(html_reporter.submit())
 
         # recheck after running as diff_filters can modify job_states.verb
@@ -1454,8 +1483,8 @@ class ProwlReporter(TextReporter):
                 raise RuntimeError(f'Prowl error: {result.text}')
         except ValueError:
             logger.error(
-                f'Failed to parse Prowl response. HTTP status code: {result.status_code},'
-                f' content: {result.content}'  # type: ignore[str-bytes-safe]
+                f'Failed to parse Prowl response. HTTP status code:'  # type: ignore[str-bytes-safe]
+                f' {result.status_code}, content: {result.content}'
             )
 
 

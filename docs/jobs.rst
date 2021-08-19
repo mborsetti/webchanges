@@ -222,6 +222,13 @@ method
 
 Defaults to ``GET``, unless the ``data`` directive, below, is set.
 
+.. error::
+
+   Setting a method other than ``GET`` with `use_browser: true` will result in any 3xx redirections received by the
+   website to be ignored and the job hanging forever. This is due to bug `#937719
+   <https://bugs.chromium.org/p/chromium/issues/detail?id=937719>`__ in Chromium. Please take the time to add a star to
+   the bug report so it will be prioritized for a faster fix.
+
 .. versionchanged:: 3.8
    Works for all url jobs, including those with use_browser: true.
 

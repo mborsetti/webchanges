@@ -37,6 +37,10 @@ class UrlwatchCommand:
             print(f'\nNew release version {new_release} is available; we recommend updating.')
         return
 
+    def _exit(self, arg: object) -> None:
+        self.print_new_version()
+        sys.exit(arg)
+
     def edit_hooks(self) -> int:
         """Edit hooks file.
 
@@ -62,7 +66,6 @@ class UrlwatchCommand:
                 self.print_new_version()
                 raise
             except Exception as e:
-                print()
                 print('Parsing failed:')
                 print('======')
                 print(e)
@@ -87,13 +90,10 @@ class UrlwatchCommand:
         return 0
 
     def show_features(self) -> int:
-        print()
         print(f'Please see full documentation at {__docs_url__}')
-
         print()
         print('Supported jobs:\n')
         print(JobBase.job_documentation())
-
         print('Supported filters:\n')
         print(FilterBase.filter_documentation())
         print()
@@ -102,7 +102,6 @@ class UrlwatchCommand:
         print()
         print(f'Please see full documentation at {__docs_url__}')
 
-        self.print_new_version()
         return 0
 
     @staticmethod
@@ -114,14 +113,18 @@ class UrlwatchCommand:
             return 1
 
         chromium_folder = Path(DOWNLOADS_FOLDER)
-        print()
-        print('Chromium executables are stored in the following directory:')
+        print('Downloaded Chromium executables are installed in the following directory:')
         print(chromium_folder)
-        print()
-        if chromium_folder.is_dir():
-            print(f"Current revisions installed: {', '.join(d.name for d in chromium_folder.iterdir())}")
-            print('You can delete the ones not in use by deleting the entire directory bearing the revision number')
-
+        revisions = list(chromium_folder.iterdir()) if chromium_folder.is_dir() else None
+        if revisions:
+            print(f"Current revisions installed: {', '.join(d.name for d in revisions)}")
+            if len(revisions) > 1:
+                print(
+                    'You can delete revisions not in use by removing the entire subdirectory bearing the revision '
+                    'number'
+                )
+                if os.name == 'posix':
+                    print(f'For example: $ rm -r {revisions[0]}')
         return 0
 
     def list_jobs(self) -> None:
@@ -135,7 +138,6 @@ class UrlwatchCommand:
                     print(f'{job.index_number:3}: {pretty_name} ({location})')
                 else:
                     print(f'{job.index_number:3}: {pretty_name}')
-        self.print_new_version()
 
     def _find_job(self, query: Union[str, int]) -> Optional[JobBase]:
         try:
@@ -168,6 +170,7 @@ class UrlwatchCommand:
         job = self._find_job(job_id)
         if job is None:
             print(f'Job not found: {job_id}')
+            self.print_new_version()
             raise SystemExit(1)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
@@ -187,8 +190,8 @@ class UrlwatchCommand:
         with JobState(self.urlwatcher.cache_storage, job) as job_state:
             job_state.process()
             if job_state.exception is not None:
+                self.print_new_version()
                 raise job_state.exception
-            print()
             print(job_state.job.pretty_name())
             print('-' * len(job_state.job.pretty_name()))
             if hasattr(job_state.job, 'note') and job_state.job.note:
@@ -196,7 +199,6 @@ class UrlwatchCommand:
             print()
             print(job_state.new_data)
 
-        self.print_new_version()
         return
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
@@ -223,7 +225,6 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
-        self.print_new_version()
         return 0
 
     def list_error_jobs(self) -> None:
@@ -263,8 +264,6 @@ class UrlwatchCommand:
         dur_str = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
         print(f"--\nChecked {len(jobs)} job{'s' if len(jobs) else ''} in {dur_str} seconds")
 
-        self.print_new_version()
-
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
 
@@ -272,15 +271,12 @@ class UrlwatchCommand:
         job = self._get_job(job_id)
 
         deleted = self.urlwatcher.cache_storage.delete_latest(job.get_guid())
-        self.print_new_version()
         if deleted:
             print(f'Deleted last snapshot of {job.get_indexed_location()}')
-            self.print_new_version()
-            sys.exit(0)
+            self._exit(0)
         else:
             print(f'No snapshots found to be deleted for {job.get_indexed_location()}')
-            self.print_new_version()
-            sys.exit(1)
+            self._exit(1)
 
     def modify_urls(self) -> None:
         save = True
@@ -309,11 +305,8 @@ class UrlwatchCommand:
         if save:
             self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
-        self.print_new_version()
-
     def edit_config(self) -> int:
         result = self.urlwatcher.config_storage.edit()
-        self.print_new_version()
         return result
 
     def check_telegram_chats(self) -> None:
@@ -322,14 +315,12 @@ class UrlwatchCommand:
         bot_token = config.get('bot_token')
         if not bot_token:
             print('You need to set up your bot token first (see documentation)')
-            self.print_new_version()
-            sys.exit(1)
+            self._exit(1)
 
         info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe').json()
         if not info['ok']:
             print(f"Error with token {bot_token}: {info['description']}")
-            self.print_new_version()
-            sys.exit(1)
+            self._exit(1)
 
         chats = {}
         for chat_info in requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates').json()['result']:
@@ -341,8 +332,7 @@ class UrlwatchCommand:
 
         if not chats:
             print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}")
-            self.print_new_version()
-            sys.exit(1)
+            self._exit(1)
 
         headers = ('Chat ID', 'Name')
         maxchat = max(len(headers[0]), max((len(k) for k, v in chats.items()), default=0))
@@ -354,8 +344,7 @@ class UrlwatchCommand:
             print(fmt % (k, v))
         print(f"\nChat up your bot here: https://t.me/{info['result']['username']}")
 
-        self.print_new_version()
-        sys.exit(0)
+        self._exit(0)
 
     def check_test_reporter(self) -> None:
         name = self.urlwatch_config.test_reporter
@@ -363,15 +352,13 @@ class UrlwatchCommand:
         if name not in ReporterBase.__subclasses__:
             print(f'No such reporter: {name}')
             print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
-            self.print_new_version()
-            sys.exit(1)
+            self._exit(1)
 
         cfg = self.urlwatcher.config_storage.config['report'].get(name, {'enabled': False})
         if not cfg.get('enabled', False):
             print(f'Reporter is not enabled/configured: {name}')
             print(f'Use {__project_name__} --edit-config to configure reporters')
-            self.print_new_version()
-            sys.exit(1)
+            self._exit(1)
 
         report = Report(self.urlwatcher)
 
@@ -398,24 +385,46 @@ class UrlwatchCommand:
 
             return job_state
 
-        report.new(build_job('Newly Added', 'http://example.com/new', '', ''))
+        report.new(
+            build_job(
+                'Sample job that was newly added',
+                'https://example.com/new',
+                '',
+                '',
+            )
+        )
         report.changed(
             build_job(
-                'Something Changed',
-                'http://example.com/changed',
+                'Sample job where something changed',
+                'https://example.com/changed',
                 'Unchanged Line\nPrevious Content\nAnother Unchanged Line\n',
                 'Unchanged Line\nUpdated Content\nAnother Unchanged Line\n',
             )
         )
         report.unchanged(
-            build_job('Same As Before', 'http://example.com/unchanged', 'Same Old, Same Old\n', 'Same Old, Same Old\n')
+            build_job(
+                'Sample job where nothing changed',
+                'http://example.com/unchanged',
+                'Same Old, Same Old\n',
+                'Same Old, Same Old\n',
+            )
         )
-        report.error(set_error(build_job('Error Reporting', 'http://example.com/error', '', ''), 'Oh Noes!'))
+        report.error(
+            set_error(
+                build_job(
+                    'Sample job where an error was encountered',
+                    'https://example.com/error',
+                    '',
+                    '',
+                ),
+                'The error message would appear here.',
+            )
+        )
 
-        report.finish_one(name)
+        if name:  # required for type checking
+            report.finish_one(name, jobs_file=self.urlwatch_config.jobs)
 
-        self.print_new_version()
-        sys.exit(0)
+        self._exit(0)
 
     def check_smtp_login(self) -> None:
         config = self.urlwatcher.config_storage.config['report']['email']
@@ -447,8 +456,7 @@ class UrlwatchCommand:
             success = False
 
         if not success:
-            self.print_new_version()
-            sys.exit(1)
+            self._exit(1)
 
         insecure_password = smtp_config.get('insecure_password')
         if insecure_password:
@@ -468,8 +476,7 @@ class UrlwatchCommand:
         mailer.send(None)
         print('Successfully logged into SMTP server')
 
-        self.print_new_version()
-        sys.exit(0)
+        self._exit(0)
 
     def check_xmpp_login(self) -> None:
         xmpp_config = self.urlwatcher.config_storage.config['report']['xmpp']
@@ -490,46 +497,42 @@ class UrlwatchCommand:
             success = False
 
         if not success:
-            self.print_new_version()
-            sys.exit(1)
+            self._exit(1)
 
         if 'insecure_password' in xmpp_config:
             print('The XMPP password is already set in the config (key "insecure_password").')
-            self.print_new_version()
-            sys.exit(0)
+            self._exit(0)
 
         if xmpp_have_password(xmpp_sender):
             message = f'Password for {xmpp_sender} already set, update? [y/N] '
             if input(message).lower() != 'y':
                 print('Password unchanged.')
-                self.print_new_version()
-                sys.exit(0)
+                self._exit(0)
 
         if success:
             xmpp_set_password(xmpp_sender)
 
-        self.print_new_version()
-        sys.exit(0)
+        self._exit(0)
 
     def handle_actions(self) -> None:
         if self.urlwatch_config.list:
             self.list_jobs()
-            sys.exit(0)
+            self._exit(0)
 
         if self.urlwatch_config.errors:
             self.list_error_jobs()
-            sys.exit(0)
+            self._exit(0)
 
         if self.urlwatch_config.test_job:
             self.test_job(self.urlwatch_config.test_job)
-            sys.exit(0)
+            self._exit(0)
 
         if self.urlwatch_config.test_diff:
-            sys.exit(self.test_diff(self.urlwatch_config.test_diff))
+            self._exit(self.test_diff(self.urlwatch_config.test_diff))
 
         if self.urlwatch_config.add or self.urlwatch_config.delete:
             self.modify_urls()
-            sys.exit(0)
+            self._exit(0)
 
         if self.urlwatch_config.test_reporter:
             self.check_test_reporter()
@@ -545,40 +548,39 @@ class UrlwatchCommand:
 
         if self.urlwatch_config.edit:
             result = self.urlwatcher.jobs_storage.edit()
-            self.print_new_version()
-            sys.exit(result)
+            self._exit(result)
 
         if self.urlwatch_config.edit_hooks:
-            sys.exit(self.edit_hooks())
+            self._exit(self.edit_hooks())
 
         if self.urlwatch_config.gc_cache:
             self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
             self.urlwatcher.cache_storage.close()
-            sys.exit(0)
+            self._exit(0)
 
         if self.urlwatch_config.clean_cache:
             self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
             self.urlwatcher.cache_storage.close()
-            sys.exit(0)
+            self._exit(0)
 
         if self.urlwatch_config.rollback_cache:
             self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
             self.urlwatcher.cache_storage.close()
-            sys.exit(0)
+            self._exit(0)
 
         if self.urlwatch_config.delete_snapshot:
             self.delete_snapshot(self.urlwatch_config.delete_snapshot)
-            sys.exit(0)
+            self._exit(0)
 
         if self.urlwatch_config.features:
-            sys.exit(self.show_features())
+            self._exit(self.show_features())
 
         if self.urlwatch_config.chromium_directory:
-            sys.exit(self.show_chromium_directory())
+            self._exit(self.show_chromium_directory())
 
     def run(self) -> None:  # pragma: no cover
         if self.urlwatch_config.edit_config:
-            sys.exit(self.edit_config())
+            self._exit(self.edit_config())
 
         self.urlwatcher.config_storage.load()
         self.urlwatcher.report.config = self.urlwatcher.config_storage.config
@@ -589,4 +591,4 @@ class UrlwatchCommand:
 
         self.urlwatcher.close()
 
-        self.print_new_version()
+        self._exit(0)

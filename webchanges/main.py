@@ -118,5 +118,5 @@ class Urlwatch(object):
 
     def close(self) -> None:
         """Finalizer. Create reports ands close snapshots database."""
-        self.report.finish()
+        self.report.finish(jobs_file=self.jobs_storage.filename)
         self.cache_storage.close()
