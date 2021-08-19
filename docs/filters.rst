@@ -1029,8 +1029,8 @@ For example, we can execute a Python script:
    name: Test execute filter
    url: https://example.net/execute.html
    filter:
-     # For multiline, quote the string and unindent its continuation. A space is added at each eol.
-     # Pay attention to escaping!
+     # For multiline YAML, quote the string and unindent its continuation. A space is added at the end
+     # of each line. Pay attention to escaping!
      - execute: "python3 -c \"import os, sys;
      print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is
      '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is
@@ -1038,7 +1038,7 @@ For example, we can execute a Python script:
      '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is
      '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""
 
-Or instead we cam call a script we have saved, e.g. ``-execute: python3 myscript.py``.
+Or instead we can call a script we have saved, e.g. ``- execute: python3 myscript.py``.
 
 If the command generates an error, the output of the error will be in the first line, before the traceback.
 
