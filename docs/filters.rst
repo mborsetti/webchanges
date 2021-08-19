@@ -305,21 +305,19 @@ Optional sub-directives
 * ``method``: One of:
 
  - ``html2text`` (default): Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package and retains
-   some simple formatting (Markup language).
- - ``bs4``: Uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
+   some simple formatting (Markup language);
+ - ``bs4``: Uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text;
  - ``strip_tags``: Uses regex to strip tags.
 
 
 ``html2text``
 ^^^^^^^^^^^^^
-This filter method is the default (does not need to be specified) and converts HTML into `Markdown
+This method is the default (does not need to be specified) and converts HTML into `Markdown
 <https://www.markdownguide.org/>`__ using the `html2text <https://pypi.org/project/html2text/>`__ Python package.
 
 It is the recommended option to convert all types of HTML into readable text.
 
 Example configuration:
-
-.. note:: If the content has tables, adding the sub-directive `pad_tables: true` *may* improve readability.
 
 .. code-block:: yaml
 
@@ -329,12 +327,18 @@ Example configuration:
       - html2text:
           pad_tables: true
 
+.. note:: If the content has tables, adding the sub-directive ``pad_tables: true`` *may* improve readability.
+
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* See `documentation <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__.
-* Note that the following options are set by default (but can be overridden): ensure that accented
-  characters are kept as they are (`unicode_snob: true`), lines aren't chopped up (`body_width: 0`), additional empty
-  lines aren't added between sections (`single_line_break: true`), and images are ignored (`ignore_images: true`).
+* See the optional subdirectives in the html2text Python package's `documentation
+  <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__. The following options are set
+  by :program:`webchanges` but can be overridden:
+
+  * ``unicode_snob: true`` to ensure that accented characters are kept as they are;
+  * ``body_width: 0`` to ensure that lines aren't chopped up;
+  * ``single_line_break: true`` to ensure that additional empty lines aren't added between sections;
+  * ``ignore_images: true`` to ignore images (since we're dealing with text).
 
 
 ``strip_tags``
@@ -356,8 +360,8 @@ This filter method extracts human-readable text from HTML using the `Beautiful S
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
 
 .. note:: As of Beautiful Soup version 4.9.0, when using the ``lxml`` or ``html.parser`` parser (see optional
-   sub-directive below), the contents of <script>, <style>, and <template> tags are not considered to be ‘text’ since
-   those tags are not part of the human-visible content of the page.
+   sub-directive below), only human-visible content of the page is returned and the contents of <script>, <style>, and
+   <template> tags is not included.
 
 .. code-block:: yaml
 
@@ -369,8 +373,9 @@ This filter method extracts human-readable text from HTML using the `Beautiful S
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``parser``: As per `documentation
+* ``parser``: One of ``lxml``, ``html.parser``, ``xml`` or ``html5lib`` as per `documentation
   <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__  (default: ``lxml``).
+  ``html5lib``requires having the ``html5lib`` Python package installed.
 
 Required packages
 ~~~~~~~~~~~~~~~~~
@@ -380,7 +385,6 @@ follows:
 .. code-block:: bash
 
    pip install --upgrade webchanges[bs4]
-
 
 
 .. versionchanged:: 3.0
