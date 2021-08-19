@@ -33,8 +33,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
 
 Version 3.8.2rc0
 ====================
-Unreleased
-
+2021-08-19
 
 ⚠ Breaking Changes (dependencies)
 ---------------------------------
@@ -42,8 +41,8 @@ Unreleased
   version 2.2.0 has changed the way it displays text to no longer try to emulate formatting (columns etc.). This is
   generally a welcome improvement as changes in formatting no longer trigger change reports, but if you want to
   return to the previous layout we have added a ``physical`` sub-directive which you need to set to ``true`` on the
-  jobs affected. **Note that all your** ``pdf2text`` **jobs will report changes (in formatting) the first time they
-  are run after the pdftotext Python package is updated**.
+  jobs affected. **Note that otherwise all your** ``pdf2text`` **jobs will report changes (in formatting) the first
+  time they are run after the pdftotext Python package is updated**.
 
 Changed
 -------
@@ -54,7 +53,7 @@ Changed
 Added
 -----
 * Filter ``pdf2text`` now supports the ``raw`` and ``physical`` sub-directives, which are passed to the underlying
-  Python package `pdftotext <https://github.com/jalan/pdftotext>`__.
+  Python package `pdftotext <https://github.com/jalan/pdftotext>`__ (version 2.2.0 or higher).
 * New ``--chromium-directory`` command line displays the directory where the downloaded Chromium executables are
   located to facilitate the deletion of older revisions.
 * Footer now indicates if the run was made with a jobs file whose stem name is not the default 'jobs', to ease

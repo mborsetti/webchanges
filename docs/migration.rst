@@ -35,7 +35,7 @@ Upgrading from a :program:`urlwatch` 2.23 setup is automatic (see more below), a
 * Multiple upgrades in **Pyppeteer**-based browsing (called ``navigate`` in :program:`urlwatch`) to render JavaScript,
   including:
 
-  * Upgraded browser engine (same as Chrome 89)
+  * Upgraded browser engine (same as Chrome 92)
   * Increased reliability with the use of Python's built-in ``asyncio.run()`` to manage the asyncio event loop,
     finalizing asynchronous generators, and closing the threadpool instead of custom code
   * Higher stability by optimizing of concurrency
@@ -166,6 +166,8 @@ Relative to :program:`urlwatch` 2.23:
   * New ``--delete-snapshot`` command line argument to removes the latest saved snapshot of a job from the database;
     useful if a change in a website (e.g. layout) requires modifying filters as invalid snapshot can be deleted and
     :program:`webchanges` rerun to create a truthful diff.
+  * New ``--chromium-directory`` command line displays the directory where the downloaded Chromium executables are
+    located to facilitate the deletion of older revisions.
   * New ``-V`` command line argument, as an alias to ``--version``.
   * New ``--log-level`` command line argument to control the amount of logging displayed by the ``-v`` argument.
   * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
@@ -216,6 +218,8 @@ Relative to :program:`urlwatch` 2.23:
   * New sub-directives for the ``strip`` filter: ``chars``, ``side`` and ``splitlines``.
   * The ``html2text`` filter's ``re`` method has been renamed ``strip_tags`` for clarity, the old name is deprecated and
     will trigger a warning.
+  * The ``pdf2text`` filter now supports the ``raw`` and ``physical`` sub-directives, which are passed to the underlying
+    Python package `pdftotext <https://github.com/jalan/pdftotext>`__ (version 2.2.0 or higher).
   * New ``format-xml`` filter to pretty-print xml using the lxml Python package’s etree.tostring pretty_print function
   * ``url`` directive supports ``ftp://`` URLs.
   * The ``user_visible_url`` job directive now applies to all type of jobs, including ``command`` ones.
@@ -259,7 +263,7 @@ Relative to :program:`urlwatch` 2.23:
   * A new, more efficient indexed database no longer requiring external Python package.
   * Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`__ to `timeit.default_timer
     <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__.
-  * Using Chromium revisions equivalent to Chrome 89.0.4389.72 for jobs with ``use_browser: true`` (i.e. using
+  * Using Chromium revisions equivalent to Chrome 92.0.4515.131 for jobs with ``use_browser: true`` (i.e. using
     **Pyppeteer**).
   * Replaced custom atomic_rename function with built-in `os.replace().
     <https://docs.python.org/3/library/os.html#os.replace>`__ (new in Python 3.3) that does the same thing.
@@ -276,6 +280,7 @@ Relative to :program:`urlwatch` 2.23:
   * Using `coverage <https://pypi.org/project/coverage/>`__ to check unit testing coverage.
   * Strengthened security with `bandit <https://pypi.org/project/bandit/>`__ to catch common security issues.
   * Standardized code formatting with `black <https://pypi.org/project/black/>`__.
+  * Properly arranging imports with `isort <https://pycqa.github.io/isort/>`__.
   * Added type hinting to the entire code and using `mypy <https://pypi.org/project/mypy/>`__ to check it.
   * A vast improvement in documentation and error text.
   * The support for Python 3.9.
