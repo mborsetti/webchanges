@@ -73,6 +73,8 @@ Internals
 * Type hints are checked during pre-commit by `mypy <http://www.mypy-lang.org/>`__.
 * Imports are rearranged during pre-commit by `isort <https://pycqa.github.io/isort/>`__.
 * Now testing all database engines, including redis, and more, adding 4 percentage points of code coverage to 81%.
+* The name of a FilterBase subclass is always its __kind__ + Filter (e.g. the class for ``element-by-id`` filter is
+  named ElementByIDFilter and not GetElementByID)
 
 
 Version 3.8.1

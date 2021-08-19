@@ -1057,7 +1057,7 @@ the command) that the ``execute`` filter cannot handle.
 .. danger::
 
    The execution of a shell command opens up all sort of security issues, in addition to generating additional
-   processing overhead, so the use of this filter should be avoided in favor of :ref:`execute`
+   processing overhead, so the use of this filter should be avoided in favor of the :ref:`execute` filter.
 
 Example:
 
@@ -1070,8 +1070,8 @@ Example:
 .. warning::
 
    On Linux and macOS systems, due to security reasons ``shellpipe`` will not run unless **both** the config directory
-   **and** the jobs file are **owned** by and **writeable** by **only** the user who is running the job (and not by the
-   group or by other users). To set this up:
+   **and** the jobs file are both **owned** and **writeable** by **only** the user who is running the job (and not by
+   its group or by other users). To set this up:
 
    .. code-block:: bash
 
@@ -1079,6 +1079,6 @@ Example:
       sudo chown $USER:$(id -g -n) *.yaml
       sudo chmod go-w *.yaml
 
-   * ``sudo`` may or may not be required.
+   * ``sudo`` may or may not be required;
    * If making the change from a different account than the one you run :program:`webchanges` from, replace
-     ``$USER:$(id -g -n)`` with the username:group of that account.
+     ``$USER:$(id -g -n)`` with the username:group of the account running :program:`webchanges`.
