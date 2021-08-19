@@ -436,7 +436,6 @@ This filter *must* be the first filter in a chain of filters, since it consumes 
    filter:
      - pdf2text
 
-
 If the PDF file is password protected, you can specify its password:
 
 .. code-block:: yaml
@@ -446,24 +445,30 @@ If the PDF file is password protected, you can specify its password:
      - pdf2text:
          password: webchangessecret
 
-.. tip:: Since Poppler tries to keep the layout of the original document by using spaces, and these may change when a
-   document is updated, you can chain a ``re.sub`` filter to replace all multiple Unicode whitespaces with a single
-   one. For example, a change from ``Column A   Column B`` to ``Column A        Column B`` won't be reported since
-   multiple spaces get collapsed into one, so both instances become ``Column A Column B``, which are identical.
 
-   .. code-block:: yaml
+To keep the layout of the original document by using spaces, use ``physical: true``. However, be aware that these
+spaces may change when a document is updated, so you may get reports containing a lot of changes consisting of
+nothing but changes in the spacing between the columns.
 
-      url: https://example.net/pdf-collapse_whitespace.pdf
-      filter:
-        - pdf2text
-        - re.sub:
-            pattern: '(?:(?!\n)\s)'
-            repl: ' '
+.. code-block:: yaml
+
+   url: https://example.net/pdf-test-keep-physical-layout.pdf
+   filter:
+     - pdf2text:
+         physical: true
 
 
 Optional sub-directives
 """""""""""""""""""""""
 * ``password``: Password for a password-protected PDF file.
+* ``raw`` (true/false): If true, page text is output in the order it appears in the content stream (default: false).
+  Only one of ``raw`` and ``physical`` can be set to true.
+* ``physical`` (true/false): If true, page text is output in the order it appears on the page, regardless of columns or
+  other layout features (default: false). Only one of ``raw`` and ``physical`` can be set to true.
+
+.. versionadded:: 3.8.2
+   ``raw`` and ``physical`` sub-directives.
+
 
 Required packages
 """""""""""""""""
@@ -529,7 +534,7 @@ Optional sub-directives
 
 
 .. versionadded:: 3.0.1
-   ``sort_keys`` subdirective.
+   ``sort_keys`` sub-directive.
 
 
 .. _jq:

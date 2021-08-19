@@ -497,7 +497,11 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
 
     __supported_subfilters__ = {
         'password': 'PDF password for decryption',
+        'raw': 'If true, output text in same order as in PDF content stream',
+        'physical': 'If true, try to format text to look the same (columns etc.)',
     }
+
+    __default_subfilter__ = 'password'
 
     def filter(self, data: bytes, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         """Filter (process) the data.
@@ -519,7 +523,14 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
                 f' ({self.job.get_indexed_location()})'
             )
 
-        return '\n\n'.join(pdftotext.PDF(io.BytesIO(data), password=subfilter.get('password', '')))
+        return '\n'.join(
+            pdftotext.PDF(
+                io.BytesIO(data),
+                password=subfilter.get('password', ''),
+                raw=subfilter.get('method', False),
+                physical=subfilter.get('physical', True),
+            ),
+        )
 
 
 class Ical2TextFilter(FilterBase):

@@ -285,7 +285,7 @@ https://example.net/pdf-test.pdf:
 https://example.net/pdf-test-password.pdf:
   filename: pdf-test-password.pdf
   output: "A password-protected PDF Document that can be turned into plain text."
-https://example.net/pdf-collapse_whitespace.pdf:
+https://example.net/pdf-test-keep-physical-layout.pdf:
   filename: pdf-test.pdf
   output: "A PDF Document that can be turned into plain text."
 https://example.net/ocr-test.png:
