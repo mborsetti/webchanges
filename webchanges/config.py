@@ -19,7 +19,6 @@ class BaseConfig(object):
         jobs: Path,
         hooks: Path,
         cache: Union[str, Path],
-        verbose: bool,
     ) -> None:
         """
 
@@ -29,7 +28,6 @@ class BaseConfig(object):
         :param jobs: The path of the jobs file.
         :param hooks: The path of the Python hooks file.
         :param cache: The path of the snapshots database file.
-        :param verbose: Whether to run in verbose mode (e.g. --verbose has been selected)
         """
         self.project_name = project_name
         self.config_path = config_path
@@ -37,11 +35,10 @@ class BaseConfig(object):
         self.jobs = jobs
         self.hooks = hooks
         self.cache = cache
-        self.verbose = verbose
 
 
 class CommandConfig(BaseConfig):
-    """Command line arguments configuration."""
+    """Command line arguments configuration; the arguments are stored as class attributes."""
 
     def __init__(
         self,
@@ -51,7 +48,6 @@ class CommandConfig(BaseConfig):
         jobs: Path,
         hooks: Path,
         cache: Union[str, Path],
-        verbose: bool,
     ) -> None:
         """
 
@@ -61,10 +57,10 @@ class CommandConfig(BaseConfig):
         :param jobs: The path of the jobs file.
         :param hooks: The path of the Python hooks file.
         :param cache: The path of the snapshots database file.
-        :param verbose: Whether to run in verbose mode (e.g. --verbose has been selected)
         """
-        super().__init__(project_name, config_path, config, jobs, hooks, cache, verbose)
+        super().__init__(project_name, config_path, config, jobs, hooks, cache)
         self.joblist: Optional[List[int]] = None
+        self.verbose: bool = False
         self.list: bool = False
         self.errors: bool = False
         self.test_job: Optional[str] = None

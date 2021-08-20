@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Module containing the entry point."""
+"""Module containing the entry point main()."""
 
 # See config module for the command line arguments
 
@@ -156,6 +156,7 @@ def main() -> None:  # pragma: no cover
     """The entry point run when __name__ == '__main__'.
 
     Contains all the high-level logic to instantiate all classes that run the program.
+
     :raises NotImplementedError: If a `--database-engine` is specified that is not supported.
     :raises RuntimeError: If `--database-engine redis` is selected but `--cache` with a redis URI is not provided.
     """
@@ -182,7 +183,6 @@ def main() -> None:  # pragma: no cover
         default_jobs_file,
         default_hooks_file,
         default_cache_file,
-        verbose=False,
     )
 
     # set up the logger to verbose if needed

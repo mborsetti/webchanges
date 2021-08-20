@@ -75,7 +75,7 @@ def prepare_storage_test(cache_storage: CacheStorage, config_args: Optional[dict
     if hasattr(cache_storage, 'flushdb'):
         cache_storage.flushdb()
 
-    urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file, True)
+    urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file)
     if config_args:
         for k, v in config_args.items():
             setattr(urlwatch_config, k, v)
