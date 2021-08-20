@@ -14,7 +14,7 @@ detected. **webchanges** can also check the output of local commands. The notifi
 command and a summary of what has changed. This project is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as
 suggested by its author to optimize it for HTML.
 
-**webchanges** `anonymously` alerts you of webpage changes.
+**webchanges** *anonymously* alerts you of webpage changes.
 
 
 

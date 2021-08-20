@@ -55,7 +55,7 @@ An example ``hooks.py`` file is below:
        __default_subfilter__ = 'upper'
 
        @staticmethod
-       def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+       def filter(data: str, subfilter: Optional[Dict[str, Any]] = None) -> str:
 
            if not subfilter or subfilter.get('upper'):
                return data.upper()
@@ -77,7 +77,7 @@ An example ``hooks.py`` file is below:
        __default_subfilter__ = 'indent'
 
        @staticmethod
-       def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+       def filter(data: str, subfilter: Optional[Dict[str, Any]] = None) -> str:
 
            indent = int(subfilter.get('indent', 8))
 
@@ -91,7 +91,7 @@ An example ``hooks.py`` file is below:
        MATCH = {'url': 'https://example.org/'}
 
        @staticmethod
-       def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+       def filter(data: str, subfilter: Optional[Dict[str, Any]] = None) -> str:
            return data.replace('foo', 'bar')
 
 
@@ -102,7 +102,7 @@ An example ``hooks.py`` file is below:
        MATCH = {'url': re.compile(r'https://example.org/.*')}
 
        @staticmethod
-       def filter(data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+       def filter(data: str, subfilter: Optional[Dict[str, Any]] = None) -> str:
            return data.replace('foo', 'bar')
 
 

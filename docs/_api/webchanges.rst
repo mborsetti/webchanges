@@ -2,7 +2,6 @@ webchanges package
 ==================
 
 .. toctree::
-   :maxdepth: 4
 
    webchanges.cli
    webchanges.command

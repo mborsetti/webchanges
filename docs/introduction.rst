@@ -18,14 +18,14 @@ it finds changes. Specifically, every time you run :program:`webchanges`, it:
 -----------
 Each web source or command to be monitored is a "job".
 
-The instructions for each such job are contained in a file in the **:ref:`YAML format <yaml_syntax>`** called
+The instructions for each such job are contained in a file in the :ref:`YAML format <yaml_syntax>` called
 ``jobs.yaml`` and located in the following directory:
 
 * Linux: ``~/.config/webchanges``
 * MacOS: ``~/Library/Preferences/webchanges``
 * Windows: ``%USERPROFILE%/Documents/webchanges`` (the webchanges folder within your Documents folder)
 
-It can be edited with any text editor or by the following command:
+It can be edited with any text editor or using the following command:
 
 .. code:: bash
 
@@ -82,10 +82,11 @@ You can enter remarks in your YAML configuration file by using ``#``:
 .. code-block:: yaml
 
    # I am monitoring this site because I expect it to change for the better
-   name: Sample  # One more remark
+   name: Sample  # Here I have an end of line remark
    url: https://example.com/
 
-Finally, you have a choice of many and many options to finely control the data acquisition; see :ref:`here <jobs>`.
+Finally, you have a choice of many and many directives to finely control the data acquisition step; all directives
+are listed and explained :ref:`here <jobs>`.
 
 
 :ref:`Filters`
@@ -148,14 +149,14 @@ Filters are explained :ref:`here <filters>`.
 Comparison
 ----------
 Once all filters (if any) are applied, :program:`webchanges` then automatically performs a comparison between the
-filtered data collected in this run with the one saved from a prior run, computing a diff in the `unified format
-<https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ('unified diff') (default--can be changed).
+filtered data collected in this run with the one saved from a prior run, by default computing a diff in the `unified
+format <https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ('unified diff').
 
 
 :ref:`Diff filters <diff_filters>`
 ----------------------------------
-After the comparison is generated, you can apply *any* of the filters above to the diff itself or one of the
-additional diff-specific ones to:
+After the comparison is generated, you can apply *any* of the filters above to the diff itself, or one of the additional
+diff-specific ones that:
 
 * Only show lines representing additions: ``additions_only``;
 * Only show lines representing deletions: ``deletions_only``.
@@ -169,21 +170,21 @@ If all you're doing is monitoring the text of a website to see if anything was a
     url: https://example.com/
     filters:
       - html2text:  # notice the 2 empty spaces before the hyphen and the colon at the end
-    additions_only:
+    additions_only:  # notice the colon at the end
 
 
 :ref:`Reports`
 --------------
-This `diff` is turned into a report of one or more of the formats ``text``, ``html`` and ``markdown``. You can
-select settings to tailor what elements are included in the report.
+The *diffs* from all jobs are collected and turned into a report of one or more of the formats ``text``, ``html``
+and ``markdown``. You can select settings to tailor what elements are included in the report.
 
 Reports are explained :ref:`here <reports>`.
 
 
 :ref:`Reporters`
 ----------------
-Finally, the report is `reported`, by default displaying it on the ``stdout`` console, but you can add (or change
-to) one or more to:
+Finally, the report is *reported* using a *reporter*, by default displaying it on the ``stdout`` console, but you can
+add (or change to) one or more to:
 
 * Display on stdout (the console): ``stdout``;
 * Display on the default web browser: ``browser``;

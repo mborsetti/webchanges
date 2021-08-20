@@ -230,7 +230,7 @@ desktop version in the same HTML document, and shows/hides one via CSS depending
 
 Optional directives
 """""""""""""""""""
-* ``selector`` (for css) or ``path`` (for xpath) [can be entered as the value of the `xpath` or `css` directive].
+* ``selector`` (for css) or ``path`` (for xpath) [can be entered as the value of the ``xpath`` or ``css`` directive].
 * ``method``: Either of ``html`` (default) or ``xml``.
 * ``namespaces`` Mapping of XML namespaces for matching.
 * ``exclude``: Elements to remove from the final result.
@@ -391,7 +391,7 @@ follows:
    Filter defaults to the use of Python ``html2text`` package.
 
 .. versionchanged:: 3.0
-   Method renamed to ``strip_tags`` from ``re``.
+   Method ``re`` renamed to ``strip_tags``.
 
 .. deprecated:: urlwatch
    Removed method ``lynx`` (external OS-specific dependency).
@@ -588,6 +588,8 @@ Python programmers on all OSs can use an advanced technique to select only certa
 
 format-xml
 ----------
+.. versionadded:: 3.0
+
 This filter deserializes an XML object and reformats it. It uses the `lxml <https://lxml.de>`__ Python package's
 etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ function.
 
@@ -599,14 +601,13 @@ etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.
      - format-xml:
 
 
-.. versionadded:: 3.0
-
-
 
 .. _pretty-xml:
 
 pretty-xml
 ----------
+.. versionadded:: 3.3
+
 This filter deserializes an XML object and pretty-prints it. It uses Python's xml.dom.minidom `toprettyxml
 <https://docs.python.org/3/library/xml.dom.minidom.html#xml.dom.minidom.Node.toprettyxml>`__ function.
 
@@ -616,8 +617,6 @@ This filter deserializes an XML object and pretty-prints it. It uses Python's xm
    url: https://example.com/pretty_xml.xml
    filter:
      - pretty-xml:
-
-.. versionadded:: 3.3
 
 
 
@@ -682,7 +681,7 @@ keep_lines_containing
 ---------------------
 This filter keeps only lines that contain the text specified (default) or match the Python `regular
 expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified, discarding the others.
-Note that while this filter emulates Linux's `grep`, it **does not** use the executable `grep`.
+Note that while this filter emulates Linux's *grep*, it **does not** use the executable *grep*.
 
 Examples:
 
@@ -919,6 +918,7 @@ Optional sub-directives
 
 remove_repeated
 ---------------
+.. versionadded:: 3.8
 
 This filter compares adjacent items (lines), and the second and succeeding copies of repeated items (lines) are
 removed. Repeated items (lines) must be adjacent in order to be found. Works similarly to Unix's ``uniq``.
@@ -962,8 +962,6 @@ Optional sub-directives
   line-based); it can also be specified inline as the value of ``remove_repeated``.
 * ``ignore_case``: Ignore differences in case and of leading and/or trailing whitespace when comparing (true/false)
   (default: false).
-
-.. versionadded:: 3.8
 
 
 

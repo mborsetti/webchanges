@@ -234,12 +234,13 @@ Relative to :program:`urlwatch` 2.23:
   * Support for ``ftp://`` URLs to download a file from an ftp server.
   * The use of the ``kind`` directive in ``jobs.yaml`` configuration files has been deprecated for simplicity (but is,
     for now, still used internally); it will be removed in a future release.
+  * New ``browser`` reporter to display HTML-formatted report on a local browser.
   * The ``telegram`` reporter now uses MarkdownV2 and preserves most formatting of HTML sites processed by the
     ``html2text`` filter, e.g. clickable links, bolding, underlining, italics and strikethrough.
   * New sub-directive ``silent`` for ``telegram`` reporter to receive a notification with no sound.
   * The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
     ``max_message_length`` sub-directive.
-  * ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) now recognize ``data`` and ``method`` directives,
+  * ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) now recognize ``data`` and ``method`` directives,
     enabling e.g. to make a ``POST`` HTTP request using a browser with JavaScript support.
   * New ``tz`` key for  ``report`` in configuration file sets the timezone for the diff in reports (useful if running
     e.g. on a cloud server in a different timezone).
@@ -255,7 +256,7 @@ Relative to :program:`urlwatch` 2.23:
 
 * Internals
 
-  * Reduction in concurrency with `use_browser: true`` (i.e. using  **Pyppeteer**) jobs for higher stability.
+  * Reduction in concurrency with ``use_browser: true`` (i.e. using  *Pyppeteer*) jobs for higher stability.
   * Increased reliability by using Python's built-in ``asyncio.run()`` to manage the asyncio event loop, finalizing
     asynchronous generators, and closing the threadpool instead of legacy custom code.
   * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
@@ -298,7 +299,7 @@ Relative to :program:`urlwatch` 2.23:
 * The ``html2text`` filter's ``html2text`` method defaults to Unicode handling.
 * The ``html2text`` filter's ``strip_tags`` method is no longer returning HTML character references (e.g. &gt;, &#62;
   , &#x3e;) but the corresponding Unicode characters.
-* HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`.
+* HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with ``%20``.
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
   the first sub-directive for a reporter).
 * The presence of the ``data`` directive in a job no longer forces the method to POST allowing e.g. PUTs.

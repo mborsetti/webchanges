@@ -65,6 +65,8 @@ Please note that many reporters need the installation of additional Python packa
 
 Time zone (global setting)
 --------------------------
+.. versionadded:: 3.8
+
 You can set the timezone for reports by entering a `IANA time zone name
 <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`__ in the ``tz`` directive of the ``report`` section.
 This is useful if for example you are running :program:`webchanges` on a cloud server on a different timezone (e.g.
@@ -78,13 +80,13 @@ UTC). Note that this directive is ignored by the ``diff_tool`` job directive.
 If the directive is missing, or its value is null or blank, the timezone of the system that :program:`webchanges` runs
 on will be used in reports.
 
-.. versionadded:: 3.8
-
 
 .. _browser:
 
 Browser
 -------
+.. versionadded:: 3.0
+
 Displays the summary in HTML format using the system's default web browser.
 
 
@@ -96,7 +98,7 @@ Sends email (via SMTP or the sendmail external program).
 
 Sub-directives
 ~~~~~~~~~~~~~~
-* ``method``: Either `smtp` or `sendmail`.
+* ``method``: Either ``smtp`` or ``sendmail``.
 * ``from``: The sender's email address. **Do not use your main email address** but create a throwaway one!
 * ``to``: The destination email address.
 * ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported.
@@ -347,6 +349,8 @@ Matrix uses the :ref:`text` report type.
 
 Prowl
 -----
+.. versionadded:: 3.0.1
+
 You can have notifications sent to you through the `Prowl <https://www.prowlapp.com>`__ push notification service to
 receive the notification on iOS (only).
 
@@ -376,8 +380,6 @@ The "subject" field will be used as the name of the Prowl event. The application
 shown as the source of the event in the Prowl App.
 
 Prowl uses the :ref:`text` report type.
-
-.. versionadded:: 3.0.1
 
 
 .. _pushbullet:
@@ -443,6 +445,8 @@ Optional sub-directives
 
 run_command
 -----------
+.. versionadded:: 3.8
+
 This reporter will run a command on your local system.  Any text in the command that matches the keywords below will
 be substituted as follows:
 
@@ -474,14 +478,14 @@ All environment variables are preserved and the following one added:
 
 If the command generates an error, the output of the error will be in the first line, before the traceback.
 
-.. versionadded:: 3.8
-
 
 .. _telegram:
 
 Telegram
 --------
 Telegram notifications are made using Telegram's `Bot API <https://core.telegram.org/bots/api>`__.
+
+Telegram uses the :ref:`markdown` report type.
 
 Groups
 ~~~~~~
@@ -496,10 +500,10 @@ then say ``/newbot`` and follow the instructions. Eventually it will tell you th
 
    telegram:
      enabled: true  # don't forget to set this to true! :)
-     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot api token
+     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
      chat_id: ''  # empty for now
 
-Next click on the link of your chat bot (starts with https://t.me/) and, on the new screen, click on start (which will
+Next click on the link of your chat bot (starts with \https://t.me/) and, on the new screen, click on start (which will
 send the message ``/start``) and enter any text ("Hello" is fine). Then run ``webchanges --telegram-chats``, which
 will list the group(s) the bot is involved with as well as their unique identifier(s). Enter the identifier(s) of the
 group(s) you want to be notified into the configuration file (run ``webchanges --edit-config``) as ``chat_id``:
@@ -508,9 +512,9 @@ group(s) you want to be notified into the configuration file (run ``webchanges -
 
    telegram:
      enabled: true  # don't forget to set this to true! :)
-     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's authentication token
+     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
      chat_id: 88888888  # the chat id where the messages should be sent
-     silent: false  # set to true to receive a notification with no sound
+     silent: false  # set to true to receive a notification without any sound
 
 You may add multiple chat IDs as a YAML list:
 
@@ -518,45 +522,43 @@ You may add multiple chat IDs as a YAML list:
 
    telegram:
      enabled: true  # don't forget to set this to true! :)
-     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's authentication token
+     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
      chat_id:
        - 11111111  # positive chat IDs are private groups
        - -22222222  # negative chat IDs are public groups
      silent: true  # set to false to receive a notification with sound
 
-.. hint::
-
-   Public groups have chat IDs starting with a -(negative) sign; make sure you don't leave this out by mistake!
-
 .. note::
 
-   Before adding a group to :program:`webchanges`, make sure that it has at least one message in it
+   Before adding a group to :program:`webchanges`, make sure that it has at least one message in it.
 
-Telegram uses the :ref:`markdown` report type.
+.. hint::
+
+   Public groups have chat IDs starting with a ``-`` (negative) sign; make sure you don't leave this out by mistake!
 
 Channels
 ~~~~~~~~
-To notify a Telegram `channel <https://telegram.org/tour/channels>__` of which the bot is admin of, enter the the
-username of the channel (the text after https://t.me/s/, prefixed by an @) as a ``chat_id``, like this:
+To notify a Telegram `channel <https://telegram.org/tour/channels>`__ of which the bot is admin of, enter the the
+username of the channel (the text after \https://t.me/s/, prefixed by an @) as a ``chat_id``, like this:
 
 .. code:: yaml
 
    telegram:
      enabled: true  # don't forget to set this to true! :)
-     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's authentication token
+     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
      chat_id:
        - '@channelusername'  # replace with your channel's username
 
-Telegram uses the :ref:`markdown` report type.
-
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``silent``: Receive a notification with no sound (true/false) (default: false)
+* ``silent``: Receive a notification without any sound (true/false) (default: false)
 
 
 .. versionchanged:: 3.7
-   Added `silent` sub-directive.
-   Switched from the `text` to the `markdown` report type.
+   Switched from the ``text`` to the ``markdown`` report type.
+
+.. versionadded:: 3.7
+   ``silent`` sub-directive.
 
 
 .. _webhook:
@@ -583,7 +585,7 @@ then click **Authorize** (see `here
 paste it into the configuration as seen above.
 
 .. versionchanged:: 3.0.1
-   Renamed from ``slack`` to ``webhook``
+   Renamed from ``slack`` to ``webhook``.
 
 Discord
 ~~~~~~~
@@ -613,17 +615,17 @@ Sub-directives
 ~~~~~~~~~~~~~~
 * ``webhook_url`` (required): the webhook URL
 * ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
-  with \https://discordapp.com, then 2,000). `New in version 3.0.`
+  with \https://discordapp.com, then 2,000).
 
-.. versionchanged:: 3.0.1
-   Added ``webhook_markdown`` variant
+.. versionadded:: 3.0.1
+   ``webhook_markdown`` variant.
 
 
 .. _xmpp:
 
 XMPP
 ----
-You can have notifications sent to you through the `XMPP protocol`.
+You can have notifications sent to you through the XMPP protocol.
 
 To achieve this, you should register a new XMPP account that is just used for :program:`webchanges`.
 

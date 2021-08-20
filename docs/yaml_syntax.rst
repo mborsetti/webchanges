@@ -187,7 +187,7 @@ Not valid::
     foo: "E:\\path\\"rest\\of\\path
 
 In addition to ``'`` and ``"`` there are a number of characters that are special (or reserved) and cannot be used
-as the first character of an unquoted scalar: ``[] {} > | * & ! % # ` @ ,``.
+as the first character of an unquoted scalar: ``[] {} > | * & ! % # \` @ ,``.
 
 You should also be aware of ``? : -``. In YAML, they are allowed at the beginning of a string if a non-space
 character follows, but YAML processor implementations differ, so it's better to use quotes.
@@ -198,13 +198,13 @@ In Flow Collections, the rules are a bit more strict::
 
     flow mapping: { key: "you { should [ use , quotes here" }
 
-Boolean conversion is helpful, but this can be a problem when you want a literal `yes` or other boolean values as a
+Boolean conversion is helpful, but this can be a problem when you want a literal 'yes' or other boolean values as a
 string. In these cases just use quotes::
 
     non_boolean: "yes"
     other_string: "False"
 
-YAML converts certain strings into floating-point values, such as the string `1.0`. If you need to specify a version
+YAML converts certain strings into floating-point values, such as the string '1.0'. If you need to specify a version
 number (in a requirements.yml file, for example), you will need to quote the value if it looks like a floating-point
 value::
 

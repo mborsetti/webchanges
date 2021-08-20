@@ -9,7 +9,7 @@ Dependencies
 Optional packages
 -----------------
 The use of certain features require additional Python packages to work. These optional packages are installed with
-`pip` by appending to the name :program:`webchanges` the name of the feature (from the table below) inside square
+*pip* by appending to the name :program:`webchanges` the name of the feature (from the table below) inside square
 brackets, like this::
 
     pip install --upgrade webchanges[use_browser]
@@ -64,9 +64,9 @@ brackets, like this::
 
 .. rubric:: Footnotes
 
-.. [#f1] `Pyppeteer`'s OS-specific dependencies (only Linux requires them) are listed `here
+.. [#f1] *Pyppeteer*'s OS-specific dependencies (only Linux requires them) are listed `here
    <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch-on-unix>`__
-   (yes, it's a page from puppeteer, which is the project upon which `Pyppeteer` is created). A missing dependency is
+   (yes, it's a page from puppeteer, which is the project upon which *Pyppeteer* is created). A missing dependency is
    often the cause of the error ``pyppeteer.errors.BrowserError: Browser closed unexpectedly``. Also pay close
    attention to the documentation if you're running in `Docker
    <https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#running-puppeteer-in-docker>`__ or other
@@ -79,7 +79,7 @@ brackets, like this::
 
 Installed packages
 ------------------
-These Python packages are installed automatically by `pip`:
+These Python packages are installed automatically by *pip*:
 
 * `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect)
 * `html2text <https://github.com/Alir3z4/html2text>`__

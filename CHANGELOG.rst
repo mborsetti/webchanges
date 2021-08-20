@@ -91,7 +91,7 @@ Version 3.8
 
 Added
 -----
-* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) now recognize ``data`` and ``method`` directives,
+* ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) now recognize ``data`` and ``method`` directives,
   enabling e.g. to make a ``POST`` HTTP request using a browser with JavaScript support.
 * New ``tz`` key for  ``report`` in the configuration sets the timezone for the diff in reports (useful if running
   e.g. on a cloud server in a different timezone). See `documentation
@@ -250,11 +250,11 @@ Added
   * ``splitlines``: Whether to apply the filter on each line of text (true/false) (default: ``false``, i.e. apply to
     the entire data)
 * ``--delete-snapshot`` command line argument: Removes the latest saved snapshot of a job from the database; useful
-  if a change in a website (e.g. layout) requires modifying filters as invalid snapshot can be deleted and `webchanges`
-  rerun to create a truthful diff
+  if a change in a website (e.g. layout) requires modifying filters as invalid snapshot can be deleted and
+  **webchanges** rerun to create a truthful diff
 * ``--log-level`` command line argument to control the amount of logging displayed by the ``-v`` argument
 * ``ignore_connection_errors``, ``ignore_timeout_errors``, ``ignore_too_many_redirects`` and ``ignore_http_error_codes``
-  directives now work with ``url`` jobs having ``use_browser: true`` (i.e. using `Pyppeteer`) when running in Python
+  directives now work with ``url`` jobs having ``use_browser: true`` (i.e. using *Pyppeteer* when running in Python
   3.7 or higher
 
 Changed
@@ -268,7 +268,7 @@ Changed
 
 Fixed
 -----
-* First run after install was not creating new files correctly (inherited from `urlwatch`); now `webwatcher` creates
+* First run after install was not creating new files correctly (inherited from *urlwatch*); now **webchanges** creates
   the default directory, config and/or jobs files if not found when running (issue `#8
   <https://github.com/mborsetti/webchanges/issues/8>`__, contributed  by `rtfgvb01 <https://github.com/rtfgvb01>`__)
 * ``test-diff`` command line argument was showing historical diffs in wrong order; now showing most recent first
@@ -285,7 +285,7 @@ Fixed
 
 Internals
 ---------
-* `Pyppeteer` (``url`` jobs using ``use_browser: true``) now capture and save the ETag
+* ``url`` jobs using ``use_browser: true`` (i.e. using *Pyppeteer*) now capture and save the ETag
 * Snapshot timestamps are more accurate (reflect when the job was launched)
 * Each job now has a run-specific unique index_number, which is assigned sequentially when loading jobs, to use in
   errors and logs for clarity
@@ -296,9 +296,9 @@ Internals
 
 Known issues
 ------------
-* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
-  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
-  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
+  stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
+  fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
@@ -316,9 +316,9 @@ Internals
 
 Known issues
 ------------
-* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
-  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
-  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
+  stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
+  fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
@@ -334,7 +334,7 @@ Version 3.4
 * Fixed the database from growing unbounded to infinity. Fix only works when running in Python 3.7 or higher and using
   the new, default, ``sqlite3`` database engine. In this scenario only the latest 4 snapshots are kept, and older ones
   are purged after every run; the number is selectable with the new ``--max-snapshots`` command line argument. To keep
-  the existing grow-to-infinity behavior, run `webchanges` with ``--max-snapshots 0``.
+  the existing grow-to-infinity behavior, run **webchanges** with ``--max-snapshots 0``.
 
 Added
 -----
@@ -348,7 +348,7 @@ Added
   by `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
 * Filter ``jq`` to parse, transform, and extract ASCII JSON data. Contributed by `robgmills
   <https://github.com/robgmills>`__ upstream in PR `626 <https://github.com/thp/urlwatch/pull/626>`__.
-* Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with `urlwatch` 2.23)
+* Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with *urlwatch* 2.23)
 * Alert user when the jobs file contains unrecognized directives (e.g. typo)
 
 Changed
@@ -359,8 +359,8 @@ Changed
 
 Fixed
 -----
-* Diff (change) data is no longer lost if `webchanges` is interrupted mid-execution or encounters an error in reporting:
-  the permanent database is updated only at the very end (after reports are dispatched)
+* Diff (change) data is no longer lost if **webchanges** is interrupted mid-execution or encounters an error in
+  reporting: the permanent database is updated only at the very end (after reports are dispatched)
 * ``use_browser: false`` was not being interpreted correctly
 * Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
 
@@ -379,9 +379,9 @@ Internals
 
 Known issues
 ------------
-* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
-  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
-  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
+  stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
+  fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
@@ -407,11 +407,11 @@ Internal
 
 Known issues
 ------------
-* Discovered that upstream (legacy) `urlwatch` 2.22 code has the database growing to infinity; run ``webchanges
+* Discovered that upstream (legacy) *urlwatch* 2.22 code has the database growing to infinity; run ``webchanges
   --clean-cache`` periodically to discard old snapshots until this is addressed in a future release
-* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
-  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
-  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
+  stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
+  fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
@@ -425,17 +425,17 @@ Version 3.2
 Added
 -----
 * Job directive ``note``: adds a freetext note appearing in the report after the job header
-* Job directive ``wait_for_navigation`` for URL jobs with ``use_browser: true`` (i.e. using `Pyppeteer`): wait for
+* Job directive ``wait_for_navigation`` for URL jobs with ``use_browser: true`` (i.e. using *Pyppeteer*): wait for
   navigation to reach a URL starting with the specified one before extracting content. Useful when the URL redirects
-  elsewhere before displaying content you're interested in and `Pyppeteer` would capture the intermediate page.
+  elsewhere before displaying content you're interested in and *Pyppeteer* would capture the intermediate page.
 * command line argument ``--rollback-cache TIMESTAMP``: rollback the snapshot database to a previous time, useful when
   you miss notifications; see `here <https://webchanges.readthedocs.io/en/stable/cli.html#rollback-cache>`__. Does not
   work with database engine ``minidb`` or ``textfiles``.
 * command line argument ``--cache-engine ENGINE``: specify ``minidb`` to continue using the database structure used
-  in prior versions and `urlwatch` 2. New default ``sqlite3`` creates a smaller database due to data compression with
+  in prior versions and *urlwatch* 2. New default ``sqlite3`` creates a smaller database due to data compression with
   `msgpack <https://msgpack.org/index.html>`__ and offers additional features; migration from old minidb database is
   done automatically and the old database preserved for manual deletion.
-* Job directive ``block_elements`` for URL jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) (⚠ ignored in Python
+* Job directive ``block_elements`` for URL jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) (⚠ ignored in Python
   < 3.7) (experimental feature): specify `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (elements) to
   skip requesting (downloading) in order to speed up retrieval of the content; only resource types `supported by
@@ -449,12 +449,12 @@ Changes
   run this version. This has no effect on the ordinary use of the program other than reducing the number of historical
   results from ``--test-diffs`` util more snapshots are captured. To continue using the legacy database format, launch
   with ``database-engine minidb`` and ensure that the package ``minidb`` is installed.
-* If any jobs have ``use_browser: true`` (i.e. are using `Pyppeteer`), the maximum number of concurrent threads is set
+* If any jobs have ``use_browser: true`` (i.e. are using *Pyppeteer*), the maximum number of concurrent threads is set
   to the number of available CPUs instead of the `default
   <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`__ to avoid
-  instability due to `Pyppeteer`'s high usage of CPU
+  instability due to *Pyppeteer*'s high usage of CPU
 * Default configuration now specifies the use of Chromium revisions equivalent to Chrome 89.0.4389.72
-  for URL jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) to increase stability. Note: if you already have a
+  for URL jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) to increase stability. Note: if you already have a
   configuration file and want to upgrade to this version, see `here
   <https://webchanges.readthedocs.io/en/stable/advanced.html#using-a-chromium-revision-matching-a-google-chrome-chromium-release>`__.
   The Chromium revisions used now are 'linux': 843831, 'win64': 843846, 'win32': 843832, and 'mac': 843846.
@@ -472,21 +472,21 @@ Internals
 * Database is now smaller due to data compression with `msgpack <https://msgpack.org/index.html>`__
 * Migration from an old schema database is automatic and the last snapshot for each job will be migrated to the new one,
   preserving the old database file for manual deletion
-* No longer backing up database to `*.bak` now that it can be rolled back
+* No longer backing up database to \*.bak now that it can be rolled back
 * New command line argument ``--database-engine`` allows selecting engine and accepts ``sqlite3`` (default),
   ``minidb`` (legacy compatibility, requires package by the same name) and ``textfiles`` (creates a text file of the
   latest snapshot for each job)
-* When running in Python 3.7 or higher, jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) are a bit more reliable
+* When running in Python 3.7 or higher, jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) are a bit more reliable
   as they are now launched using ``asyncio.run()``, and therefore Python takes care of managing the asyncio event loop,
   finalizing asynchronous generators, and closing the threadpool, tasks that previously were handled by custom code
 * 11 percentage point increase in code testing coverage, now also testing jobs that retrieve content from the internet
-  and (for Python 3.7 and up) use `Pyppeteer`
+  and (for Python 3.7 and up) use *Pyppeteer*
 
 Known issues
 ------------
-* ``url`` jobs with ``use_browser: true`` (i.e. using `Pyppeteer`) will at times display the below error message in
-  stdout (terminal console). This does not affect `webchanges` as all data is downloaded, and hopefully it will be fixed
-  in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
+* ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
+  stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
+  fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
 
   ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
   ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
@@ -509,7 +509,7 @@ Version 3.1
 Added
 -----
 * Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. using
-  `Pyppeteer`) based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
+  *Pyppeteer*) based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
 * If ``shellpipe`` filter returns an error it now shows the error text
 * Show deprecation warning if running on the lowest Python version supported (mentioning the 3 years support from the
   release date of the next major version)
@@ -536,7 +536,7 @@ Version 3.0.3
 
 ⚠ Breaking Changes
 ------------------
-* Compatibility with `urlwatch` 2.22, including the ⚠ breaking change of removing the ability to write custom filters
+* Compatibility with *urlwatch* 2.22, including the ⚠ breaking change of removing the ability to write custom filters
   that do not take a subfilter as argument (see `here
   <https://urlwatch.readthedocs.io/en/latest/deprecated.html#filters-without-subfilters-since-2-22>`__ upstream)
 * Inadvertently released as a PATCH instead of a MAJOR release as it should have been under `Semantic Versioning
@@ -616,11 +616,11 @@ Version 3.0
 
 Milestone
 ---------
-Initial release of `webchanges` as a reworked fork of `urlwatch` 2.21
+Initial release of **webchanges** as a reworked fork of *urlwatch* 2.21
 
 Added
 -----
-Relative to `urlwatch` 2.21:
+Relative to *urlwatch* 2.21:
 
 * If no job ``name`` is provided, the title of an HTML page will be used for a job name in reports
 * The Python ``html2text`` package (used by the ``html2text`` filter, previously known as ``pyhtml2text``) is now
@@ -640,20 +640,22 @@ Relative to `urlwatch` 2.21:
 * Chromium can be directed to ignore HTTPs errors with ``ignore_https_errors``
 * Chromium can be directed as to when to consider a page loaded with ``wait_until``
 * Additional command line arguments can be passed to Chromium with ``switches``
+* New ``browser`` reporter to display HTML-formatted report on a local browser
+  when monitoring only new content)
 * New ``additions_only`` directive to report only added lines (useful when monitoring only new content)
 * New ``deletions_only`` directive to report only deleted lines
 * New ``contextlines`` directive to set the number of context lines in the unified diff
 * Support for Python 3.9
-* Backward compatibility with `urlwatch` 2.21 (except running on Python 3.5 or using ``lynx``, which is replaced by
-  internal ``html2text`` filter)
+* Backward compatibility with *urlwatch* 2.21 (except running on Python 3.5 or using ``lynx``, which is replaced by
+  the built-in ``html2text`` filter)
 
 Changed and deprecated
 ----------------------
-Relative to `urlwatch` 2.21:
+Relative to *urlwatch* 2.21:
 
 * Navigation by full browser is now accomplished by specifying the ``url`` and adding the ``use_browser: true``
-  directive. The `navigate` directive has been deprecated for clarity and will trigger a warning; it will be removed in
-  a future release
+  directive. The ``navigate`` directive has been deprecated for clarity and will trigger a warning; it will be
+  removed in a future release
 * The name of the default program configuration file has been changed to ``config.yaml``; if at program launch
   ``urlwatch.yaml`` is found and no ``config.yaml`` exists, it is copied over for backward-compatibility.
 * In Windows, the location of config files has been moved to ``%USERPROFILE%\Documents\webchanges``
@@ -680,9 +682,9 @@ Relative to `urlwatch` 2.21:
   will be removed in a future release)
 * ``-V`` command line argument added as an alias to ``--version``
 * If a filename for ``--jobs``, ``--config`` or ``--hooks`` is supplied without a path and the file is not present in
-  the current directory, `webchanges` now looks for it in the default configuration directory
-* If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' suffix, `webchanges` now looks for one with
-  such a suffix
+  the current directory, **webchanges** now looks for it in the default configuration directory
+* If a filename for ``--jobs`` or ``--config`` is supplied without a '.yaml' suffix, **webchanges** now looks for one
+  with such a suffix
 * In Windows, ``--edit`` defaults to using built-in notepad.exe if %EDITOR% or %VISUAL% are not set
 * When using ``--job`` command line argument, if there's no file by that name in the specified directory will look in
   the default one before giving up.
@@ -690,9 +692,9 @@ Relative to `urlwatch` 2.21:
   used internally); it will be removed in a future release
 * The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
   ``max_message_length`` sub-directive
-* Legacy lib/hooks.py file no longer supported. ``hooks.py`` needs to be in the same directory as the configuration
-  files.
-* The database (cache) file is backed up at every run to `*.bak`
+* Legacy ``lib/hooks.py`` file is no longer supported; ``hooks.py`` needs to be in the same directory as the
+  configuration files.
+* The database (cache) file is backed up at every run to \*.bak
 * The mix of default and optional dependencies has been updated (see documentation) to enable "Just works"
 * Dependencies are now specified as PyPI `extras
   <https://stackoverflow.com/questions/52474931/what-is-extra-in-pypi-dependency>`__ to simplify their installation
@@ -708,30 +710,30 @@ Relative to `urlwatch` 2.21:
 
 Removed
 -------
-Relative to `urlwatch` 2.21:
+Relative to *urlwatch* 2.21:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported; use ``html2text`` instead
 * Python 3.5 (obsoleted by 3.6 on December 23, 2016) is no longer supported
 
 Fixed
 -----
-Relative to `urlwatch` 2.21:
+Relative to *urlwatch* 2.21:
 
 * The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
-* HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with `%20`
+* HTML href links ending with spaces are no longer broken by ``xpath`` replacing spaces with ``%20``
 * Initial config file no longer has directives sorted alphabetically, but are saved logically (e.g. 'enabled' is always
   the first sub-directive)
 * The presence of the ``data`` directive in a job would force the method to POST preventing PUTs
 
 Security
 --------
-Relative to `urlwatch` 2.21:
+Relative to *urlwatch* 2.21:
 
 * None
 
 Documentation changes
 ---------------------
-Relative to `urlwatch` 2.21:
+Relative to *urlwatch* 2.21:
 
 * Complete rewrite of the documentation
 

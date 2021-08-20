@@ -3,15 +3,16 @@
 ****
 Jobs
 ****
-Each job contains the source of the data to be monitored (:ref:`URL <url>` or :ref:`command <command>`) and related
-directives, plus eventual directives on transformations (:ref:`filters <filters>`) to apply to the data once retrieved.
+Each job contains the pointer to the source of the data to be monitored (:ref:`URL <url>` or :ref:`command <command>`)
+and related directives, plus eventual directives on transformations (:ref:`filters <filters>`) to apply to the data
+(and/or diff) once retrieved.
 
 The list of jobs is contained in the jobs file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable with the
 command ``webchanges --edit`` or using any text editor.
 
 **YAML tips**
 
-The YAML syntax has lots of idiosyncrasies that make it and finicky, and new users often have issues with it. Here are
+The YAML syntax has lots of idiosyncrasies that make it finicky, and new users often have issues with it. Below are
 some tips and things to look for when using YAML. A more comprehensive syntax explanation is :ref:`here <yaml_syntax>`.
 
 * Indentation: All indentation must be done with spaces (2 spaces is suggested); tabs are not recognized/allowed.
@@ -149,6 +150,10 @@ you are interested in, add the directive ``use_browser: true`` to the job:
      Linux (x86_64), macOS (x86_64) and Windows (both x86 and x64); see `this issue
      <https://github.com/pyppeteer/pyppeteer/issues/155>`__.
 
+.. versionchanged:: 3.0
+   JavaScript rendering is done using the ``use_browser: true`` directive instead of replacing the ``url`` directive
+   with ``browser``, which is now deprecated.
+
 
 Required directives
 -------------------
@@ -224,7 +229,7 @@ Defaults to ``GET``, unless the ``data`` directive, below, is set.
 
 .. error::
 
-   Setting a method other than ``GET`` with `use_browser: true` will result in any 3xx redirections received by the
+   Setting a method other than ``GET`` with ``use_browser: true`` will result in any 3xx redirections received by the
    website to be ignored and the job hanging forever. This is due to bug `#937719
    <https://bugs.chromium.org/p/chromium/issues/detail?id=937719>`__ in Chromium. Please take the time to add a star to
    the bug report so it will be prioritized for a faster fix.
@@ -265,7 +270,7 @@ ignore_timeout_errors
 ^^^^^^^^^^^^^^^^^^^^^
 Do not report errors when the timeout is hit (true/false). Defaults to false.
 
-See more "ref:`here <ignore_errors>`.
+See more :ref:`here <ignore_errors>`.
 
 .. versionchanged:: 3.5
    Works for all url jobs, including those with use_browser: true.
@@ -274,7 +279,7 @@ ignore_too_many_redirects
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Ignore redirect loops (true/false). Defaults to false.
 
-See more `here <ignore_errors>`.
+See more :ref:`here <ignore_errors>`.
 
 .. versionchanged:: 3.5
    Works for all url jobs, including those with use_browser: true.
@@ -358,7 +363,7 @@ The value of when to consider navigation succeeded (a string).
 
 Must be one of ``load``, ``domcontentloaded``, ``networkidle0``, or ``networkidle2``.
 
-See `documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__.
+See `Pyppeteer documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__.
 
 .. versionadded:: 3.0
 
@@ -372,8 +377,8 @@ If ``wait_for`` is also used, ``wait_for_navigation`` is applied first.
 
 Cannot be used with ``block_elements``.
 
-Also helps to avoid the
-``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a navigation`` error.
+Also helps to avoid the ``pyppeteer.errors.NetworkError: Execution context was destroyed, most likely because of a
+navigation`` error.
 
 .. versionadded:: 3.2
 
@@ -382,8 +387,8 @@ wait_for
 Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath string is matched,
 before getting the HTML content (a number or string).
 
-See `documentation
-<https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds).
+See `Pyppeteer documentation
+<https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.waitFor>`__ - but we use seconds.
 
 If ``wait_for_navigation`` is also used, ``wait_for`` is applied after.
 
@@ -393,7 +398,8 @@ Cannot be used with ``block_elements``.
 
 block_elements
 ^^^^^^^^^^^^^^^^^^^
-⚠ experimental feature
+.. warning::
+   This is an experimental feature. Please see :ref:`here <pyppeteer_block_elements>`.
 
 Do not request (download) specified `resource types
 <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (a list of
@@ -504,12 +510,13 @@ Due to legacy naming, this directive doesn't do what intuition would tell you it
 :program:`webchanges` **not** to report a job error until the job has failed for the number of consecutive times of
 ``max_tries``.
 
-Specifically, when a job fails for `any` reason, :program:`webchanges` increases an internal counter;
+Specifically, when a job fails for *any* reason, :program:`webchanges` increases an internal counter;
 it will report an error only when this counter reaches or exceeds the number of ``max_tries`` (default: 1, i.e.
 at the first error encountered). The internal counter is reset to 0 when the job succeeds.
 
 For example, if you set a job with ``max_tries: 12`` and run :program:`webchanges` every 5 minutes, you will only get
-notified if the job has failed every single time during the span of one hour (5 minutes * 12).
+notified if the job has failed every single time during the span of one hour (5 minutes * 12 = 60 minutes) and then at
+every run until it succeeds again.
 
 filter
 ------
@@ -558,8 +565,10 @@ See :ref:`here <deletions_only>`.
 
 is_markdown
 -----------
-Lets html reporter know that data is markdown and should be reconstructed. Defaults to false unless set by a filter
-such as ``html2text``.
+Data is in Markdown format (true/false).
+
+Lets the code building an ``html`` report know that the data is markdown and should be reconstructed into HTML. Defaults
+to false unless set by a filter such as ``html2text``.
 
 
 Setting default directives

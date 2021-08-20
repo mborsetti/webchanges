@@ -46,7 +46,7 @@ crontab)::
 
 Receiving a report every time webchanges runs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If you are watching pages that change seldomly, but you still want to be notified evert time `:program:`webchanges``
+If you are watching pages that change seldomly, but you still want to be notified evert time :program:`webchanges`
 runs to know it's still working, you can monitor the output of the ``date`` command, for example:
 
 .. code-block:: yaml
@@ -191,7 +191,7 @@ It is possible to add cookies to HTTP requests for pages that need them, for exa
 
 Ignoring TLS/SSL errors
 ^^^^^^^^^^^^^^^^^^^^^^^
-Setting `ssl_no_verify` to true may be useful during local development or testing.
+Setting ``ssl_no_verify`` to true may be useful during local development or testing.
 
 When set to true, :program:`webchanges` requests will accept any TLS certificate presented by the server, and will
 ignore hostname mismatches and/or expired certificates, which will make your application vulnerable to

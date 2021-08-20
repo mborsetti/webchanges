@@ -32,6 +32,8 @@ to the result from the diff:
 
 additions_only
 ---------------
+.. versionadded:: 3.0
+
 The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the
 diff (no deletions). This is extremely useful for monitoring new content on sites where content gets added while old
 content "scrolls" away.
@@ -104,8 +106,6 @@ or (text):
 Note: When using ``additions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
 course, this can be changed by specifying the key with the desired value in the job.
 
-.. versionadded:: 3.0
-
 .. versionchanged:: 3.5
    Additions consisting of only empty lines are not reported.
 
@@ -113,6 +113,8 @@ course, this can be changed by specifying the key with the desired value in the 
 
 deletions_only
 --------------
+.. versionadded:: 3.0
+
 The ``deletions_only: true`` directive causes the report for that source to contain only lines that are deleted by the
 diff (no additions).
 
@@ -148,8 +150,6 @@ or (text):
 Note: When using ``deletions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
 course, this can be changed by specifying the key with the desired value in the job.
 
-.. versionadded:: 3.0
-
 .. versionchanged:: 3.5
    Deletions consisting of only empty lines are not reported.
 
@@ -158,6 +158,8 @@ course, this can be changed by specifying the key with the desired value in the 
 
 contextlines
 ------------
+.. versionadded:: 3.0
+
 The ``contextlines`` directive causes a unified diffs to have a set number of context lines that might be different than
 than Python's default of 3 (or as set by the filters above).
 
@@ -216,5 +218,3 @@ Output:
     This is line 16
     This is line 17
     This is line 18
-
-.. versionadded:: 3.0

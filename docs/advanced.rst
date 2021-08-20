@@ -164,14 +164,14 @@ and TCP, you need to run a Tor service as a SOCKS5 proxy service and use it to p
 
 Setting up Tor is out of scope for this document, but in Windows install the Windows Expert Bundle from `here
 <https://www.torproject.org/download/tor/>`__ and execute ``tor --service install`` as an Administrator per
-instructions `here <https://www.torproject.org/docs/faq#NTService>`__; in Linux the installation of the `tor` package
+instructions `here <https://www.torproject.org/docs/faq#NTService>`__; in Linux the installation of the *tor* package
 usually is sufficient to create a SOCKS5 proxy service, otherwise run with ``tor --options RunAsDaemon 1``.  Some
 useful options may be ``HardwareAccel 1 CircuitPadding 0 ConnectionPadding 0 ClientUseIPv6 1 FascistFirewall 1``
 (check documentation)
 
-Alternatively (Linux/macOS only), instead of proxying those sites you can use the `torsocks` tool (fka `torify`) from
-the `tor` package to to make every Internet communication go through the Tor network. Just run :program:`webchanges`
-within the `torsocks` wrapper:
+Alternatively (Linux/macOS only), instead of proxying those sites you can use the *torsocks* (fka *torify*) tool from
+the *tor* package to to make every Internet communication go through the Tor network. Just run :program:`webchanges`
+within the *torsocks* wrapper:
 
 .. code-block:: bash
 
@@ -241,7 +241,7 @@ want a different one, you can do so, but unfortunately the Chromium revision num
 Chromium release one, so you have to find out what the revision number is for a stable Chrome release.
 
 There are multiple ways of doing so; the one I found easiest is to go to https://chromium.cypress.io/, selecting the
-"stable" release channel `for the OS you need`, and clicking on "get downloads" for the one you want. At the top you
+"stable" release channel *for the OS you need*, and clicking on "get downloads" for the one you want. At the top you
 will see something like "Base revision: 843830. Found build artifacts at 843831 [browse files]". You want the
 revision with build artifacts, in this example 843831.
 
@@ -249,10 +249,10 @@ revision with build artifacts, in this example 843831.
 .. attention::
    The same Google Chrome / Chromium release may be based on a different Chromium revision on different OSs,
    and not all Chromium revisions are available for all OS platforms (Linux_x64, Mac, Win and Win_x64). The full
-   list of revisions available for download by `Pyppeteer` is at
+   list of revisions available for download by *Pyppeteer* is at
    https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html. Specifying a release number that is
    not available for download is the cause of a ``zipfile.BadZipFile: File is not a zip file`` error from the
-   `Pyppeteer` code.
+   *Pyppeteer* code.
 
 
 .. note::
