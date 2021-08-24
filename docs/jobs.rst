@@ -490,7 +490,7 @@ for ``url`` jobs retrieving HTML or XML data, up to 60 character of the contents
    Added auto-detect <title> tag in HTML or XML.
 
 user_visible_url
-^^^^^^^^^^^^^^^^
+----------------
 URL or text to use in reports instead of contents of ``url`` or ``command`` (a string).
 
 Useful e.g. when a watched URL is a REST API endpoint or you are using a custom script but you want a link to the
