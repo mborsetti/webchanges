@@ -250,7 +250,11 @@ class HtmlReporter(ReporterBase):
                 else '.<br>\n'
             )
         )
-        if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
+        if (
+            hasattr(self.report, 'new_release_future')
+            and self.report.new_release_future.done()
+            and self.report.new_release_future.result()
+        ):
             yield (
                 f'<b>New release version {self.report.new_release_future.result()} is available; we recommend '
                 f'updating.</b>'
@@ -466,7 +470,11 @@ class TextReporter(ReporterBase):
                 f' seconds with {__project_name__} {__version__}'
                 + (f' ({self.jobs_file.stem}).\n' if self.jobs_file and self.jobs_file.name != 'jobs' else '.\n')
             )
-            if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
+            if (
+                hasattr(self.report, 'new_release_future')
+                and self.report.new_release_future.done()
+                and self.report.new_release_future.result()
+            ):
                 yield (
                     f'New release version {self.report.new_release_future.result()} is available; we recommend '
                     f'updating.'
@@ -562,7 +570,11 @@ class MarkdownReporter(ReporterBase):
             )
             footer += f' ({self.jobs_file.stem})_.\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '_.\n'
 
-            if hasattr(self.report, 'new_release_future') and self.report.new_release_future.result():
+            if (
+                hasattr(self.report, 'new_release_future')
+                and self.report.new_release_future.done()
+                and self.report.new_release_future.result()
+            ):
                 footer += (
                     f'**New release version {self.report.new_release_future.result()} is available; we recommend '
                     f'updating.**\n'

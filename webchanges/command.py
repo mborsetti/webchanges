@@ -32,7 +32,7 @@ class UrlwatchCommand:
 
     def print_new_version(self) -> None:
         """Will print alert message if a newer version is found on PyPi."""
-        new_release = self.urlwatcher.get_new_release_version()
+        new_release = self.urlwatcher.get_new_release_version(timeout=1)
         if new_release:
             print(f'\nNew release version {new_release} is available; we recommend updating.')
         return

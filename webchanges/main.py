@@ -4,7 +4,7 @@ For the entrypoint, see cli.py.
 """
 
 import logging
-from typing import List
+from typing import List, Optional, Tuple, Union
 
 import requests
 
@@ -94,7 +94,7 @@ class Urlwatch(object):
 
         self.jobs = jobs
 
-    def get_new_release_version(self) -> str:
+    def get_new_release_version(self, timeout: Optional[Union[float, Tuple[float, float]]] = None) -> str:
         """Check PyPi to see if we're running the latest version.  Memoized.
 
         :returns: Empty string if no higher version is available, otherwise the new version number.
@@ -103,7 +103,7 @@ class Urlwatch(object):
             return self._latest_release
 
         try:
-            r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=1)
+            r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
         except requests.exceptions.ReadTimeout:
             return ''
 
