@@ -102,7 +102,11 @@ class Urlwatch(object):
         if self._latest_release is not None:
             return self._latest_release
 
-        r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=1)
+        try:
+            r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=1)
+        except requests.exceptions.ReadTimeout:
+            return ''
+
         if r.ok:
             latest_release: str = list(r.json()['releases'].keys())[-1]
             if parse_version(latest_release) > parse_version(__version__):
