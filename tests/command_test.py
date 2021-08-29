@@ -355,6 +355,7 @@ def test_test_diff_and_joblist(capsys):
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert '=== Filtered diff between state 0 and state -1 ===\n' in message
+        print(message)
         assert message.splitlines()[2][-6:] == ' +0000'
 
         # Try another timezone
