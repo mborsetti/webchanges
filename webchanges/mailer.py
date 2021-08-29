@@ -6,6 +6,7 @@ import smtplib
 import subprocess
 from email import policy
 from email.message import EmailMessage
+from pathlib import Path
 from typing import Optional, Union
 
 try:
@@ -109,7 +110,7 @@ class SMTPMailer(Mailer):
 class SendmailMailer(Mailer):
     """The Mailer class to use sendmail executable."""
 
-    def __init__(self, sendmail_path: str) -> None:
+    def __init__(self, sendmail_path: Union[str, Path]) -> None:
         self.sendmail_path = sendmail_path
 
     def send(self, msg: Union[EmailMessage]) -> None:

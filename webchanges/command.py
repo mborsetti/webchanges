@@ -9,7 +9,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, TYPE_CHECKING, Union
 
 import requests
 
@@ -23,6 +23,10 @@ from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from .util import edit_file, import_module_from_source
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from .reporters import ConfigReportersList
+    from .storage import ConfigReportEmail, ConfigReportEmailSmtp, ConfigReportTelegram, ConfigReportXmpp
 
 
 class UrlwatchCommand:
@@ -89,7 +93,8 @@ class UrlwatchCommand:
         print(f'Saved edits in {self.urlwatch_config.hooks}')
         return 0
 
-    def show_features(self) -> int:
+    @staticmethod
+    def show_features() -> int:
         print(f'Please see full documentation at {__docs_url__}')
         print()
         print('Supported jobs:\n')
@@ -310,9 +315,9 @@ class UrlwatchCommand:
         return result
 
     def check_telegram_chats(self) -> None:
-        config = self.urlwatcher.config_storage.config['report'].get('telegram')
+        config: ConfigReportTelegram = self.urlwatcher.config_storage.config['report']['telegram']
 
-        bot_token = config.get('bot_token')
+        bot_token = config['bot_token']
         if not bot_token:
             print('You need to set up your bot token first (see documentation)')
             self._exit(1)
@@ -354,8 +359,8 @@ class UrlwatchCommand:
             print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
             self._exit(1)
 
-        cfg = self.urlwatcher.config_storage.config['report'].get(name, {'enabled': False})
-        if not cfg.get('enabled', False):
+        cfg: ConfigReportersList = self.urlwatcher.config_storage.config['report'][name]  # type: ignore[misc]
+        if not cfg['enabled']:
             print(f'Reporter is not enabled/configured: {name}')
             print(f'Use {__project_name__} --edit-config to configure reporters')
             self._exit(1)
@@ -427,30 +432,30 @@ class UrlwatchCommand:
         self._exit(0)
 
     def check_smtp_login(self) -> None:
-        config = self.urlwatcher.config_storage.config['report']['email']
-        smtp_config = config['smtp']
+        config: ConfigReportEmail = self.urlwatcher.config_storage.config['report']['email']
+        smtp_config: ConfigReportEmailSmtp = config['smtp']
 
         success = True
 
-        if not config.get('enabled'):
+        if not config['enabled']:
             print('Please enable e-mail reporting in the config first.')
             success = False
 
-        if config.get('method') != 'smtp':
+        if config['method'] != 'smtp':
             print('Please set the method to SMTP for the e-mail reporter.')
             success = False
 
-        smtp_auth = smtp_config.get('auth')
+        smtp_auth = smtp_config['auth']
         if not smtp_auth:
             print('Authentication must be enabled for SMTP.')
             success = False
 
-        smtp_hostname = smtp_config.get('host')
+        smtp_hostname = smtp_config['host']
         if not smtp_hostname:
             print('Please configure the SMTP hostname in the config first.')
             success = False
 
-        smtp_username = smtp_config.get('user') or config['from']
+        smtp_username = smtp_config['user'] or config['from']
         if not smtp_username:
             print('Please configure the SMTP user in the config first.')
             success = False
@@ -458,7 +463,7 @@ class UrlwatchCommand:
         if not success:
             self._exit(1)
 
-        insecure_password = smtp_config.get('insecure_password')
+        insecure_password = smtp_config['insecure_password']
         if insecure_password:
             print('The SMTP password is set in the config file (key "insecure_password")')
         elif smtp_have_password(smtp_hostname, smtp_username):
@@ -468,8 +473,8 @@ class UrlwatchCommand:
             else:
                 smtp_set_password(smtp_hostname, smtp_username)
 
-        smtp_port = smtp_config.get('port')
-        smtp_tls = smtp_config.get('starttls')
+        smtp_port = smtp_config['port']
+        smtp_tls = smtp_config['starttls']
 
         mailer = SMTPMailer(smtp_username, smtp_hostname, smtp_port, smtp_tls, smtp_auth, insecure_password)
         print('Trying to log into the SMTP server...')
@@ -479,7 +484,7 @@ class UrlwatchCommand:
         self._exit(0)
 
     def check_xmpp_login(self) -> None:
-        xmpp_config = self.urlwatcher.config_storage.config['report']['xmpp']
+        xmpp_config: ConfigReportXmpp = self.urlwatcher.config_storage.config['report']['xmpp']
 
         success = True
 
@@ -487,12 +492,12 @@ class UrlwatchCommand:
             print('Please enable XMPP reporting in the config first.')
             success = False
 
-        xmpp_sender = xmpp_config.get('sender')
+        xmpp_sender = xmpp_config['sender']
         if not xmpp_sender:
             print('Please configure the XMPP sender in the config first.')
             success = False
 
-        if not xmpp_config.get('recipient'):
+        if not xmpp_config['recipient']:
             print('Please configure the XMPP recipient in the config first.')
             success = False
 

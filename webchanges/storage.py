@@ -1,4 +1,6 @@
 """Handles all storage: job files, config files, hooks file, and cache database engines."""
+from __future__ import annotations
+
 import copy
 import email.utils
 import getpass
@@ -12,7 +14,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, TYPE_CHECKING, Union
 
 import msgpack
 import yaml
@@ -34,7 +36,219 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CONFIG = {
+if TYPE_CHECKING:
+    # TypedDicts only work on Python >= 3.8
+    from typing import TypedDict
+
+    ConfigDisplay = TypedDict(
+        'ConfigDisplay',
+        {
+            'new': bool,
+            'error': bool,
+            'unchanged': bool,
+        },
+    )
+    ConfigReportText = TypedDict(
+        'ConfigReportText',
+        {
+            'line_length': int,
+            'details': bool,
+            'footer': bool,
+            'minimal': bool,
+        },
+    )
+    ConfigReportHtml = TypedDict(
+        'ConfigReportHtml',
+        {
+            'diff': str,
+        },
+    )
+    ConfigReportMarkdown = TypedDict(
+        'ConfigReportMarkdown',
+        {
+            'details': bool,
+            'footer': bool,
+            'minimal': bool,
+        },
+    )
+    ConfigReportStdout = TypedDict(
+        'ConfigReportStdout',
+        {
+            'enabled': bool,
+            'color': bool,
+        },
+    )
+    ConfigReportBrowser = TypedDict(
+        'ConfigReportBrowser',
+        {
+            'enabled': bool,
+            'title': str,
+        },
+    )
+    ConfigReportEmailSmtp = TypedDict(
+        'ConfigReportEmailSmtp',
+        {
+            'host': str,
+            'user': str,
+            'port': int,
+            'starttls': bool,
+            'auth': bool,
+            'insecure_password': str,
+        },
+    )
+    ConfigReportEmailSendmail = TypedDict(
+        'ConfigReportEmailSendmail',
+        {
+            'path': Union[str, Path],
+        },
+    )
+    ConfigReportEmail = TypedDict(
+        'ConfigReportEmail',
+        {
+            'enabled': bool,
+            'html': bool,
+            'to': str,
+            'from': str,
+            'subject': str,
+            'method': str,
+            'smtp': ConfigReportEmailSmtp,
+            'sendmail': ConfigReportEmailSendmail,
+        },
+    )
+    ConfigReportPushover = TypedDict(
+        'ConfigReportPushover',
+        {
+            'enabled': bool,
+            'app': str,
+            'device': Optional[str],
+            'sound': str,
+            'user': str,
+            'priority': str,
+        },
+    )
+    ConfigReportPushbullet = TypedDict(
+        'ConfigReportPushbullet',
+        {
+            'enabled': bool,
+            'api_key': str,
+        },
+    )
+    ConfigReportTelegram = TypedDict(
+        'ConfigReportTelegram',
+        {
+            'enabled': bool,
+            'bot_token': str,
+            'chat_id': Union[str, int, list[Union[str, int]]],
+            'silent': bool,
+        },
+    )
+    ConfigReportWebhook = TypedDict(
+        'ConfigReportWebhook',
+        {
+            'enabled': bool,
+            'webhook_url': str,
+            'max_message_length': Optional[int],
+        },
+    )
+    ConfigReportMatrix = TypedDict(
+        'ConfigReportMatrix',
+        {
+            'enabled': bool,
+            'homeserver': str,
+            'access_token': str,
+            'room_id': str,
+        },
+    )
+    ConfigReportMailgun = TypedDict(
+        'ConfigReportMailgun',
+        {
+            'enabled': bool,
+            'region': str,
+            'api_key': str,
+            'domain': str,
+            'from_mail': str,
+            'from_name': str,
+            'to': str,
+            'subject': str,
+        },
+    )
+    ConfigReportIfttt = TypedDict(
+        'ConfigReportIfttt',
+        {
+            'enabled': bool,
+            'key': str,
+            'event': str,
+        },
+    )
+    ConfigReportXmpp = TypedDict(
+        'ConfigReportXmpp',
+        {
+            'enabled': bool,
+            'sender': str,
+            'recipient': str,
+            'insecure_password': Optional[str],
+        },
+    )
+    ConfigReportProwl = TypedDict(
+        'ConfigReportProwl',
+        {
+            'enabled': bool,
+            'api_key': str,
+            'priority': int,
+            'application': str,
+            'subject': str,
+        },
+    )
+    ConfigReportRunCommand = TypedDict(
+        'ConfigReportRunCommand',
+        {
+            'enabled': bool,
+            'command': str,
+        },
+    )
+
+    ConfigReport = TypedDict(
+        'ConfigReport',
+        {
+            'tz': Optional[str],
+            'text': ConfigReportText,
+            'html': ConfigReportHtml,
+            'markdown': ConfigReportMarkdown,
+            'stdout': ConfigReportStdout,
+            'browser': ConfigReportBrowser,
+            'email': ConfigReportEmail,
+            'pushover': ConfigReportPushover,
+            'pushbullet': ConfigReportPushbullet,
+            'telegram': ConfigReportTelegram,
+            'webhook': ConfigReportWebhook,
+            'webhook_markdown': ConfigReportWebhook,
+            'matrix': ConfigReportMatrix,
+            'mailgun': ConfigReportMailgun,
+            'ifttt': ConfigReportIfttt,
+            'xmpp': ConfigReportXmpp,
+            'prowl': ConfigReportProwl,
+            'run_command': ConfigReportRunCommand,
+        },
+    )
+    ConfigJobDefaults = TypedDict(
+        'ConfigJobDefaults',
+        {
+            'all': dict[str, Any],
+            'url': dict[str, Any],
+            'browser': dict[str, Any],
+            'shell': dict[str, Any],
+        },
+    )
+    Config = TypedDict(
+        'Config',
+        {
+            'display': ConfigDisplay,
+            'report': ConfigReport,
+            'job_defaults': ConfigJobDefaults,
+        },
+    )
+
+DEFAULT_CONFIG: Config = {
     'display': {  # select whether the report include the categories below
         'new': True,
         'error': True,
@@ -57,7 +271,7 @@ DEFAULT_CONFIG = {
             'footer': True,
             'minimal': False,
         },
-        # the directives below control where a report is displayed and/or sent
+        # the directives below control 'reporters', i.e. where a report is displayed and/or sent
         'stdout': {  # the console / command line display; uses text
             'enabled': True,
             'color': True,
@@ -138,6 +352,7 @@ DEFAULT_CONFIG = {
             'enabled': False,
             'sender': '',
             'recipient': '',
+            'insecure_password': '',
         },
         'prowl': {  # uses text
             'enabled': False,
@@ -190,7 +405,6 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         :param filename: The filename or directory name to storage.
         """
         super().__init__(filename)
-        self.config: Dict[str, Any] = {}
         # if not isinstance(self, JobsBaseFileStorage):
         #     self.load()
 
@@ -375,8 +589,10 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 class YamlConfigStorage(BaseYamlFileStorage):
     """Class for configuration file (is a YAML textual file)."""
 
+    config: Config = {}  # type: ignore[typeddict-item]
+
     @staticmethod
-    def dict_deep_difference(d1: dict, d2: dict) -> dict:
+    def dict_deep_difference(d1: Config, d2: Config) -> Config:
         """Recursively find elements in the first dict that are not in the second.
 
         :param d1: The first dict.
@@ -384,7 +600,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :return: A dict with all the elements on the first dict that are not in the second.
         """
 
-        def _sub_dict_deep_difference(d1_: dict, d2_: dict) -> dict:
+        def _sub_dict_deep_difference(d1_: Config, d2_: Config) -> Config:
             """Recursive sub-function to find elements in the first dict that are not in the second.
 
             :param d1_: The first dict.
@@ -392,19 +608,19 @@ class YamlConfigStorage(BaseYamlFileStorage):
             :return: A dict with elements on the first dict that are not in the second.
             """
             for key, value in d1_.copy().items():
-                if isinstance(value, dict) and isinstance(d2_.get(key), dict):
-                    _sub_dict_deep_difference(value, d2_[key])
+                if isinstance(value, dict) and isinstance(d2_.get(key), dict):  # type: ignore[misc]
+                    _sub_dict_deep_difference(value, d2_[key])  # type: ignore[arg-type,misc]
                     if not len(value):
-                        d1_.pop(key)
+                        d1_.pop(key)  # type: ignore[misc]
                 else:
                     if key in d2_:
-                        d1_.pop(key)
+                        d1_.pop(key)  # type: ignore[misc]
             return d1_
 
         return _sub_dict_deep_difference(copy.deepcopy(d1), d2)
 
     @staticmethod
-    def dict_deep_merge(source: dict, destination: dict) -> dict:
+    def dict_deep_merge(source: Config, destination: Config) -> Config:
         """Recursively deep merges source dict into destination dict.
 
         :param source: The first dict.
@@ -414,7 +630,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         # https://stackoverflow.com/a/20666342
 
-        def _sub_dict_deep_merge(source_: dict, destination_: dict) -> dict:
+        def _sub_dict_deep_merge(source_: Config, destination_: Config) -> Config:
             """Recursive sub-function to merges source_ dict into destination_ dict.
 
             :param source_: The first dict.
@@ -424,16 +640,16 @@ class YamlConfigStorage(BaseYamlFileStorage):
             for key, value in source_.items():
                 if isinstance(value, dict):
                     # get node or create one
-                    node = destination_.setdefault(key, {})
-                    _sub_dict_deep_merge(value, node)
+                    node = destination_.setdefault(key, {})  # type: ignore[misc]
+                    _sub_dict_deep_merge(value, node)  # type: ignore[arg-type]
                 else:
-                    destination_[key] = value
+                    destination_[key] = value  # type: ignore[misc]
 
             return destination_
 
         return _sub_dict_deep_merge(source, copy.deepcopy(destination))
 
-    def check_for_unrecognized_keys(self, config: Dict[str, Any]) -> None:
+    def check_for_unrecognized_keys(self, config: Config) -> None:
         """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError.
 
         :param config: The configuration.
@@ -442,12 +658,12 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         config_for_extras = copy.deepcopy(config)
         if 'job_defaults' in config_for_extras:
-            # 'job_defaults' not set in DEFAULT_CONFIG
-            for key in DEFAULT_CONFIG['job_defaults']:  # type: ignore[attr-defined]
-                config_for_extras['job_defaults'][key] = {}
+            # 'job_defaults' is not set in DEFAULT_CONFIG
+            for key in DEFAULT_CONFIG['job_defaults']:
+                config_for_extras['job_defaults'][key] = {}  # type: ignore[misc]
         if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
-            config_for_extras['report'].pop('slack')
-        extras = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG)
+            config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
+        extras: Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG)
         if extras:
             raise ValueError(
                 f'Unrecognized directive(s) in the configuration file {self.filename}:\n'
@@ -459,7 +675,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         :param args: None used.
         """
-        config: Dict[str, Any] = self.parse(self.filename)
+        config: Config = self.parse(self.filename)
 
         if config:
             self.check_for_unrecognized_keys(config)

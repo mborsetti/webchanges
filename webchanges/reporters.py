@@ -34,6 +34,40 @@ if TYPE_CHECKING:
     from .handler import JobState, Report
     from .jobs import JobBase
 
+    # TypedDicts only work on Python >= 3.8
+    from .storage import (
+        ConfigReportBrowser,
+        ConfigReportEmail,
+        ConfigReportIfttt,
+        ConfigReportMailgun,
+        ConfigReportMatrix,
+        ConfigReportProwl,
+        ConfigReportPushbullet,
+        ConfigReportPushover,
+        ConfigReportRunCommand,
+        ConfigReportStdout,
+        ConfigReportTelegram,
+        ConfigReportWebhook,
+        ConfigReportXmpp,
+    )
+
+    ConfigReportersList = Union[
+        ConfigReportStdout,
+        ConfigReportBrowser,
+        ConfigReportEmail,
+        ConfigReportPushover,
+        ConfigReportPushbullet,
+        ConfigReportTelegram,
+        ConfigReportWebhook,
+        ConfigReportWebhook,
+        ConfigReportMatrix,
+        ConfigReportMailgun,
+        ConfigReportIfttt,
+        ConfigReportXmpp,
+        ConfigReportProwl,
+        ConfigReportRunCommand,
+    ]
+
 try:
     import aioxmpp
 except ImportError:
@@ -68,7 +102,7 @@ if os.name == 'nt':
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
-    from backports import zoneinfo as ZoneInfo  # type: ignore[no-redef]
+    from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +116,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
     def __init__(
         self,
         report: Report,
-        config: Dict[str, Any],
+        config: ConfigReportersList,
         job_states: List[JobState],
         duration: float,
         jobs_file: Optional[Path] = None,
@@ -108,9 +142,9 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         :returns: The typecasted object.
         """
         if hasattr(othercls, '__kind__'):
-            config: Dict[Any, str] = self.report.config['report'][othercls.__kind__]
+            config: ConfigReportersList = self.report.config['report'][othercls.__kind__]  # type: ignore[misc]
         else:
-            config = {}
+            config = {}  # type: ignore[assignment]
 
         return othercls(self.report, config, self.job_states, self.duration, self.jobs_file)
 
@@ -146,7 +180,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
            testing)
         """
         subclass = cls.__subclasses__[name]
-        cfg: Dict[str, bool] = report.config['report'].get(name, {'enabled': False})
+        cfg = report.config['report'][name]  # type: ignore[misc]
         if cfg['enabled'] or not check_enabled:
             subclass(report, cfg, job_states, duration, jobs_file).submit()
         else:
@@ -170,7 +204,9 @@ class ReporterBase(object, metaclass=TrackSubClasses):
 
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
-            cfg = report.config['report'].get(name, {'enabled': False})
+            cfg: ConfigReportersList = report.config['report'].get(  # type: ignore[misc]
+                name, {'enabled': False}  # type: ignore[assignment]
+            )  # type: ignore[misc]
             if cfg['enabled']:
                 any_enabled = True
                 logger.info(f'Submitting with {name} ({subclass})')
@@ -383,7 +419,7 @@ class HtmlReporter(ReporterBase):
             if tz:
                 tz_info = ZoneInfo(tz)
             else:
-                tz_info = None
+                tz_info = None  # type: ignore[assignment]
             timestamp_old = (
                 (
                     datetime.fromtimestamp(job_state.old_timestamp)
@@ -769,9 +805,11 @@ class StdoutReporter(TextReporter):
 
     __kind__ = 'stdout'
 
+    config: ConfigReportStdout
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._has_color = sys.stdout.isatty() and self.config.get('color', False)
+        self._has_color = sys.stdout.isatty() and self.config['color']
 
     def _incolor(self, color_id: int, s: str) -> str:
         if self._has_color:
@@ -835,6 +873,8 @@ class EMailReporter(TextReporter):
 
     __kind__ = 'email'
 
+    config: ConfigReportEmail
+
     def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
 
         body_text = '\n'.join(super().submit())
@@ -851,15 +891,16 @@ class EMailReporter(TextReporter):
         subject = self.config['subject'].format(**subject_args)
 
         if self.config['method'] == 'smtp':
-            smtp_user = self.config['smtp'].get('user', None) or self.config['from']
-            use_auth = self.config['smtp'].get('auth', False)
+            smtp_config = self.config['smtp']
+            smtp_user = smtp_config['user'] or self.config['from']
+            use_auth = smtp_config['auth']
             mailer: Union[SMTPMailer, SendmailMailer] = SMTPMailer(
                 smtp_user,
-                self.config['smtp']['host'],
-                self.config['smtp']['port'],
-                self.config['smtp']['starttls'],
+                smtp_config['host'],
+                smtp_config['port'],
+                smtp_config['starttls'],
                 use_auth,
-                self.config['smtp'].get('insecure_password'),
+                smtp_config['insecure_password'],
             )
         elif self.config['method'] == 'sendmail':
             mailer = SendmailMailer(self.config['sendmail']['path'])
@@ -867,7 +908,7 @@ class EMailReporter(TextReporter):
             raise ValueError(f"Unknown email reporter method: {self.config['method']}")
 
         if self.config['html']:
-            html_reporter = HtmlReporter(self.report, {}, self.job_states, self.duration, self.jobs_file)
+            html_reporter = HtmlReporter(self.report, self.config, self.job_states, self.duration, self.jobs_file)
             body_html = '\n'.join(html_reporter.submit())
             msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html)
         else:
@@ -880,6 +921,8 @@ class IFTTTReport(TextReporter):
     """Send summary via IFTTT."""
 
     __kind__ = 'ifttt'
+
+    config: ConfigReportIfttt
 
     def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
         webhook_url = 'https://maker.ifttt.com/trigger/{event}/with/key/{key}'.format(**self.config)
@@ -903,6 +946,7 @@ class WebServiceReporter(TextReporter):
     """Base class for other reporters, such as Pushover and Pushbullet."""
 
     __kind__ = ''
+
     MAX_LENGTH = 1024
 
     def web_service_get(self) -> str:
@@ -936,6 +980,8 @@ class PushoverReport(WebServiceReporter):
 
     __kind__ = 'pushover'
 
+    config: ConfigReportPushover
+
     def web_service_get(self) -> 'chump.User':
         if chump is None:
             raise ImportError('Python module "chump" not installed')
@@ -947,14 +993,14 @@ class PushoverReport(WebServiceReporter):
         sound = self.config['sound']
         # If device is the empty string or not specified at all, use None to send to all devices
         # (see https://github.com/thp/urlwatch/issues/372)
-        device = self.config.get('device', None) or None
+        device = self.config['device']
         priority = {
             'lowest': chump.LOWEST,
             'low': chump.LOW,
             'normal': chump.NORMAL,
             'high': chump.HIGH,
             'emergency': chump.EMERGENCY,
-        }.get(self.config.get('priority', None), chump.NORMAL)
+        }.get(self.config['priority'], chump.NORMAL)
         msg = service.create_message(
             title=title, message=body, html=True, sound=sound, device=device, priority=priority
         )
@@ -966,6 +1012,8 @@ class PushbulletReport(WebServiceReporter):
 
     __kind__ = 'pushbullet'
 
+    config: ConfigReportPushbullet
+
     def web_service_get(self) -> 'Pushbullet':
         if Pushbullet is None:
             raise ImportError('Python module "pushbullet" not installed')
@@ -976,13 +1024,15 @@ class PushbulletReport(WebServiceReporter):
         service.push_note(title, body)
 
 
-class MailGunReporter(TextReporter):
+class MailgunReporter(TextReporter):
     """Send e-mail via the Mailgun service."""
 
     __kind__ = 'mailgun'
 
+    config: ConfigReportMailgun
+
     def submit(self) -> Optional[str]:  # type: ignore[override]
-        region = self.config.get('region', '')
+        region = self.config['region']
         domain = self.config['domain']
         api_key = self.config['api_key']
         from_name = self.config['from_name']
@@ -1043,11 +1093,13 @@ class TelegramReporter(MarkdownReporter):
 
     __kind__ = 'telegram'
 
+    config: ConfigReportTelegram
+
     def submit(self, max_length: int = 4096, **kwargs: Any) -> None:  # type: ignore[override]
         """Submit report."""
         bot_token = self.config['bot_token']
         chat_ids = self.config['chat_id']
-        chat_ids = [chat_ids] if not isinstance(chat_ids, list) else chat_ids
+        chat_ids_list = [chat_ids] if not isinstance(chat_ids, list) else chat_ids
 
         text = '\n'.join(super().submit())  # no max_length here as we will chunk later
 
@@ -1057,7 +1109,7 @@ class TelegramReporter(MarkdownReporter):
 
         chunks = self.telegram_chunk_by_line(text, max_length)
 
-        for chat_id in chat_ids:
+        for chat_id in chat_ids_list:
             for chunk in chunks:
                 self.submit_to_telegram(bot_token, chat_id, chunk)
 
@@ -1196,11 +1248,13 @@ class WebhookReporter(TextReporter):
 
     __kind__ = 'webhook'
 
+    config: ConfigReportWebhook
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
-        if isinstance(self.config.get('max_message_length'), int):
-            self.max_length = int(self.config.get('max_message_length'))  # type: ignore[arg-type]
+        if isinstance(self.config['max_message_length'], int):
+            self.max_length = int(self.config['max_message_length'])  # type: ignore[arg-type]
         else:
             self.max_length = default_max_length
 
@@ -1253,13 +1307,14 @@ class WebhookMarkdownReporter(MarkdownReporter):
 
     __kind__ = 'webhook_markdown'
 
+    config: ConfigReportWebhook
     max_length: int
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
-        if isinstance(self.config.get('max_message_length'), int):
-            self.max_length = self.config.get('max_message_length')  # type: ignore[assignment]
+        if isinstance(self.config['max_message_length'], int):
+            self.max_length = self.config['max_message_length']  # type: ignore[assignment]
         else:
             self.max_length = default_max_length
 
@@ -1295,9 +1350,10 @@ class WebhookMarkdownReporter(MarkdownReporter):
 class MatrixReporter(MarkdownReporter):
     """Send a message to a room using the Matrix protocol."""
 
-    MAX_LENGTH = 16384
-
     __kind__ = 'matrix'
+
+    config: ConfigReportMatrix
+    MAX_LENGTH = 16384
 
     def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> None:  # type: ignore[override]
         if matrix_client is None:
@@ -1335,9 +1391,10 @@ class MatrixReporter(MarkdownReporter):
 class XMPPReporter(TextReporter):
     """Send a message using the XMPP Protocol."""
 
-    MAX_LENGTH = 262144
-
     __kind__ = 'xmpp'
+
+    config: ConfigReportXmpp
+    MAX_LENGTH = 262144
 
     def submit(self) -> None:  # type: ignore[override]
 
@@ -1350,7 +1407,7 @@ class XMPPReporter(TextReporter):
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
-        xmpp = XMPP(sender, recipient, self.config.get('insecure_password'))
+        xmpp = XMPP(sender, recipient, self.config['insecure_password'])
 
         for chunk in chunk_string(text, self.MAX_LENGTH, numbering=True):
             asyncio.run(xmpp.send(chunk))
@@ -1361,13 +1418,15 @@ class BrowserReporter(HtmlReporter):
 
     __kind__ = 'browser'
 
+    config: ConfigReportBrowser
+
     def submit(self) -> None:  # type: ignore[override]
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
         if not filtered_job_states:
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
-        html_reporter = HtmlReporter(self.report, {}, self.job_states, self.duration, self.jobs_file)
+        html_reporter = HtmlReporter(self.report, self.config, self.job_states, self.duration, self.jobs_file)
         body_html = '\n'.join(html_reporter.submit())
 
         # recheck after running as diff_filters can modify job_states.verb
@@ -1445,6 +1504,8 @@ class ProwlReporter(TextReporter):
 
     __kind__ = 'prowl'
 
+    config: ConfigReportProwl
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
@@ -1470,7 +1531,7 @@ class ProwlReporter(TextReporter):
         # 'application' is prepended to the message in prowl,
         # to show the source of the notification. this too,
         # is user configurable, and may reference subject args
-        application = self.config.get('application')
+        application = self.config['application']
         if application is not None:
             application = application.format(**subject_args)
         else:
@@ -1504,6 +1565,8 @@ class RunCommandReporter(TextReporter):
     """Run a command."""
 
     __kind__ = 'run_command'
+
+    config: ConfigReportRunCommand
 
     def submit(self) -> None:  # type: ignore[override]
 

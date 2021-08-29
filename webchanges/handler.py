@@ -13,7 +13,7 @@ from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Dict, Iterable, List, Optional, Type, TYPE_CHECKING, Union
+from typing import ContextManager, Iterable, List, Optional, Type, TYPE_CHECKING, Union
 
 from .filters import FilterBase
 from .jobs import NotModifiedError
@@ -22,13 +22,13 @@ from .reporters import ReporterBase
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
-    from backports import zoneinfo as ZoneInfo  # type: ignore[no-redef]
+    from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from .jobs import JobBase
     from .main import Urlwatch
-    from .storage import CacheStorage
+    from .storage import CacheStorage, Config
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +196,7 @@ class JobState(ContextManager):
         if tz:
             tz_info = ZoneInfo(tz)
         else:
-            tz_info = None
+            tz_info = None  # type: ignore[assignment]
         timestamp_old = (
             datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z')
         )
@@ -295,7 +295,7 @@ class Report(object):
         """
         self.start = time.perf_counter()
 
-        self.config: Dict[str, Any] = urlwatch_config.config_storage.config
+        self.config: Config = urlwatch_config.config_storage.config
         self.job_states: List[JobState] = []
 
     def _result(self, verb: str, job_state: JobState) -> None:
@@ -358,7 +358,7 @@ class Report(object):
         for job_state in job_states:
             if (
                 not any(
-                    job_state.verb == verb and not self.config['display'][verb]
+                    job_state.verb == verb and not self.config['display'][verb]  # type: ignore[misc]
                     for verb in ('unchanged', 'new', 'error')
                 )
                 and job_state.verb != 'changed,no_report'

@@ -32,6 +32,7 @@ from .util import TrackSubClasses
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from .handler import JobState
+    from .storage import Config
 
 # required to suppress warnings with 'ssl_no_verify: true'
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: ignore[no-untyped-call]
@@ -353,7 +354,7 @@ class JobBase(object, metaclass=TrackSubClasses):
                             if hasattr(self, key) and subkey not in getattr(self, key):
                                 getattr(self, key)[subkey] = subvalue
 
-    def with_defaults(self, config: Dict[str, Dict[str, Any]]) -> 'JobBase':
+    def with_defaults(self, config: Config) -> 'JobBase':
         """Obtain a Job object that also contains defaults from the configuration.
 
         :param config: The configuration as a dict.
@@ -362,7 +363,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         job_with_defaults = copy.deepcopy(self)
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
-            job_with_defaults._set_defaults(cfg.get(self.__kind__))
+            job_with_defaults._set_defaults(cfg.get(self.__kind__))  # type: ignore[arg-type]
             job_with_defaults._set_defaults(cfg.get('all'))
         return job_with_defaults
 
