@@ -274,7 +274,7 @@ def test_stress_use_browser() -> None:
 
         setup_logger_verbose()
 
-    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file, True)
+    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
     urlwatcher.run_jobs()
 

@@ -31,6 +31,15 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.8.3rc0
+====================
+2021-08-29
+
+Fixed
+-----
+* Fixed incorrect handling of timeout when checking if new version has been released.
+
+
 Version 3.8.2
 ====================
 2021-08-19
