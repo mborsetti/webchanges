@@ -348,14 +348,13 @@ def test_test_diff_and_joblist(capsys):
         if os.name == 'nt':
             urlwatcher.jobs[0].diff_tool = 'cmd /C exit 1 & rem '
         else:
-            urlwatcher.jobs[0].diff_tool = 'bash -c exit 1 # '
+            urlwatcher.jobs[0].diff_tool = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert '=== Filtered diff between state 0 and state -1 ===\n' in message
-        print(message)
         assert message.splitlines()[2][-6:] == ' +0000'
 
         # Try another timezone
