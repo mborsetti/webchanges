@@ -134,6 +134,10 @@ Examples: to filter only the ``<body>`` element of the HTML document, stripping 
    filter:
      - xpath: /html/body/marquee
 
+.. tip:: If you are looking at a website using Google Chrome, you can find the XPath of an HTML node in DevTools
+   (Ctrl+Shift+I) by right clicking on the element and selecting 'Copy -> Copy XPath', or its css by selecting 'Copy
+   -> Copy selector'. You can learn more about Chrome DevTools `here <https://developer.chrome.com/docs/devtools/>`__.
+
 See Microsoft’s `XPath Examples
 <https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ms256086(v=vs.100)>`__ page for additional
 examples.
@@ -186,7 +190,6 @@ expression.
          path: '//item/media:keywords/text()'
          namespaces:
            media: http://search.yahoo.com/mrss/
-
 
 Alternatively, use the XPath expression ``//*[name()='<tag_name>']`` to bypass the namespace entirely.
 

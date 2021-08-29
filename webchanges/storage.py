@@ -138,7 +138,7 @@ if TYPE_CHECKING:
         {
             'enabled': bool,
             'bot_token': str,
-            'chat_id': Union[str, int, list[Union[str, int]]],
+            'chat_id': Union[str, int, List[Union[str, int]]],
             'silent': bool,
         },
     )
@@ -233,10 +233,10 @@ if TYPE_CHECKING:
     ConfigJobDefaults = TypedDict(
         'ConfigJobDefaults',
         {
-            'all': dict[str, Any],
-            'url': dict[str, Any],
-            'browser': dict[str, Any],
-            'shell': dict[str, Any],
+            'all': Dict[str, Any],
+            'url': Dict[str, Any],
+            'browser': Dict[str, Any],
+            'shell': Dict[str, Any],
         },
     )
     Config = TypedDict(
