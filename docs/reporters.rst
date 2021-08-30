@@ -338,6 +338,7 @@ notifications to a public Matrix room, as the messages quickly become noisy:
 
    markdown:
      enabled: true  # don't forget to set this to true! :)
+     markdown: false
      details: false
      footer: false
      minimal: true
@@ -566,7 +567,7 @@ Optional sub-directives
 Webhook (Slack, Discord, Mattermost etc.)
 -----------------------------------------
 Services such as Slack, Discord, Mattermost etc. that support incoming webhooks can be used for notifications using the
-``webhook`` or ``webhook_markdown`` reporters:
+``webhook`` reporter:
 
 .. code:: yaml
 
@@ -574,7 +575,8 @@ Services such as Slack, Discord, Mattermost etc. that support incoming webhooks 
      enabled: true  # don't forget to set this to true! :)
      webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
 
-``webhook`` uses the :ref:`text` report type, while ``webhook_markdown`` uses the :ref:`markdown` one.
+``webhook`` uses the :ref:`text` report type unless the sub-directive ``markdown: true`` is present, in which case
+it uses the :ref:`markdown` one.
 
 Slack
 ~~~~~
@@ -583,9 +585,6 @@ Webhooks** on in the Features page, click **Add New Webhook to Workspace**, pick
 then click **Authorize** (see `here
 <https://slack.com/intl/en-sg/help/articles/115005265063-Incoming-webhooks-for-Slack>`__). Copy the webhook URL and
 paste it into the configuration as seen above.
-
-.. versionchanged:: 3.0.1
-   Renamed from ``slack`` to ``webhook``.
 
 Discord
 ~~~~~~~
@@ -603,22 +602,25 @@ Mattermost
 ~~~~~~~~~~
 To set up Mattermost follow the documentation `here <https://docs.mattermost.com/developer/webhooks-incoming.html>`__
 to generate a webhook URL and paste it into the configuration as such (note that Mattermost prefers markdown so we're
-using the ``webhook_markdown`` variant):
+setting ``markdown: true``):
 
 .. code:: yaml
 
-   webhook_markdown:
+   webhook:
      enabled: true  # don't forget to set this to true! :)
      webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
+     markdown: true  # Mattermost prefers markdown
 
 Sub-directives
 ~~~~~~~~~~~~~~
-* ``webhook_url`` (required): the webhook URL
-* ``max_message_length``: the maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
+* ``webhook_url`` (required): the webhook URL.
+* ``markdown`` (default: false): Whether to send Markdown instead of plain text (true/false).
+* ``max_message_length``: The maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
   with \https://discordapp.com, then 2,000).
 
-.. versionadded:: 3.0.1
-   ``webhook_markdown`` variant.
+
+.. versionchanged:: 3.0.1
+   Renamed from ``slack`` to ``webhook`` and added the ``markdown`` sub-directive.
 
 
 .. _xmpp:

@@ -59,7 +59,6 @@ if TYPE_CHECKING:
         ConfigReportPushbullet,
         ConfigReportTelegram,
         ConfigReportWebhook,
-        ConfigReportWebhook,
         ConfigReportMatrix,
         ConfigReportMailgun,
         ConfigReportIfttt,
@@ -1244,7 +1243,8 @@ class TelegramReporter(MarkdownReporter):
 
 
 class WebhookReporter(TextReporter):
-    """Send a text message to a webhook such as Slack or Discord channel."""
+    """Send a text message to a webhook such as Slack, Discord channel, or Mattermost.  For Mattermost,
+    set 'markdown' to true."""
 
     __kind__ = 'webhook'
 
@@ -1260,7 +1260,14 @@ class WebhookReporter(TextReporter):
 
     def submit(self) -> Optional[requests.Response]:  # type: ignore[override]
         webhook_url = self.config['webhook_url']
-        text = '\n'.join(super().submit())
+
+        if self.config['markdown']:
+            markdown_reporter = MarkdownReporter(
+                self.report, self.config, self.job_states, self.duration, self.jobs_file
+            )
+            text = '\n'.join(markdown_reporter.submit())
+        else:
+            text = '\n'.join(super().submit())
 
         if not text:
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
@@ -1300,51 +1307,6 @@ class SlackReporter(WebhookReporter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         warn("'slack' reporter is deprecated; replace with 'webhook' (same exact keys)", DeprecationWarning)
         super().__init__(*args, **kwargs)
-
-
-class WebhookMarkdownReporter(MarkdownReporter):
-    """Send a Markdown message to a webhook such as a Mattermost channel."""
-
-    __kind__ = 'webhook_markdown'
-
-    config: ConfigReportWebhook
-    max_length: int
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
-        if isinstance(self.config['max_message_length'], int):
-            self.max_length = self.config['max_message_length']  # type: ignore[assignment]
-        else:
-            self.max_length = default_max_length
-
-    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
-        webhook_url = self.config['webhook_url']
-        text = '\n'.join(super().submit())
-
-        if not text:
-            logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
-            return None
-
-        for chunk in chunk_string(text, self.max_length, numbering=True):
-            self.submit_to_webhook(webhook_url, chunk)
-
-    @staticmethod
-    def submit_to_webhook(webhook_url: str, text: str) -> requests.Response:
-        logger.debug(f'Sending request to webhook_markdown with text:{text}')
-        post_data = {'text': text}
-        result = requests.post(webhook_url, json=post_data)
-        try:
-            if result.status_code == requests.codes.ok:
-                logger.info('Webhook_markdown server response: ok')
-            else:
-                raise RuntimeError(f'Webhook_markdown server error: {result.text}')
-        except ValueError:
-            logger.error(
-                f'Failed to parse webhook_markdown server response. HTTP status code:'  # type: ignore[str-bytes-safe]
-                f' {result.status_code}, content: {result.content}'
-            )
-        return result
 
 
 class MatrixReporter(MarkdownReporter):

@@ -146,6 +146,7 @@ if TYPE_CHECKING:
         'ConfigReportWebhook',
         {
             'enabled': bool,
+            'markdown': bool,
             'webhook_url': str,
             'max_message_length': Optional[int],
         },
@@ -221,7 +222,6 @@ if TYPE_CHECKING:
             'pushbullet': ConfigReportPushbullet,
             'telegram': ConfigReportTelegram,
             'webhook': ConfigReportWebhook,
-            'webhook_markdown': ConfigReportWebhook,
             'matrix': ConfigReportMatrix,
             'mailgun': ConfigReportMailgun,
             'ifttt': ConfigReportIfttt,
@@ -290,48 +290,19 @@ DEFAULT_CONFIG: Config = {
             'smtp': {
                 'host': 'localhost',
                 'user': '',
+                'insecure_password': '',
+                'auth': True,
                 'port': 25,
                 'starttls': True,
-                'auth': True,
-                'insecure_password': '',
             },
             'sendmail': {
                 'path': 'sendmail',
             },
         },
-        'pushover': {  # uses text
+        'ifttt': {  # uses text
             'enabled': False,
-            'app': '',
-            'device': None,
-            'sound': 'spacealarm',
-            'user': '',
-            'priority': 'normal',
-        },
-        'pushbullet': {  # uses text
-            'enabled': False,
-            'api_key': '',
-        },
-        'telegram': {  # uses markdown (from 3.7)
-            'enabled': False,
-            'bot_token': '',
-            'chat_id': '',
-            'silent': False,
-        },
-        'webhook': {  # uses text
-            'enabled': False,
-            'webhook_url': '',
-            'max_message_length': None,
-        },
-        'webhook_markdown': {  # uses markdown
-            'enabled': False,
-            'webhook_url': '',
-            'max_message_length': None,
-        },
-        'matrix': {  # uses text
-            'enabled': False,
-            'homeserver': '',
-            'access_token': '',
-            'room_id': '',
+            'key': '',
+            'event': '',
         },
         'mailgun': {  # uses text
             'enabled': False,
@@ -343,16 +314,11 @@ DEFAULT_CONFIG: Config = {
             'to': '',
             'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
         },
-        'ifttt': {  # uses text
+        'matrix': {  # uses text
             'enabled': False,
-            'key': '',
-            'event': '',
-        },
-        'xmpp': {  # uses text
-            'enabled': False,
-            'sender': '',
-            'recipient': '',
-            'insecure_password': '',
+            'homeserver': '',
+            'access_token': '',
+            'room_id': '',
         },
         'prowl': {  # uses text
             'enabled': False,
@@ -361,9 +327,39 @@ DEFAULT_CONFIG: Config = {
             'application': '',
             'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
         },
+        'pushbullet': {  # uses text
+            'enabled': False,
+            'api_key': '',
+        },
+        'pushover': {  # uses text
+            'enabled': False,
+            'app': '',
+            'user': '',
+            'device': None,
+            'sound': 'spacealarm',
+            'priority': 'normal',
+        },
         'run_command': {  # uses text
             'enabled': False,
             'command': '',
+        },
+        'telegram': {  # uses markdown (from 3.7)
+            'enabled': False,
+            'bot_token': '',
+            'chat_id': '',
+            'silent': False,
+        },
+        'webhook': {
+            'enabled': False,
+            'webhook_url': '',
+            'markdown': False,
+            'max_message_length': None,
+        },
+        'xmpp': {  # uses text
+            'enabled': False,
+            'sender': '',
+            'recipient': '',
+            'insecure_password': '',
         },
     },
     'job_defaults': {  # default settings for jobs
@@ -687,7 +683,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     f'The configuration file {self.filename} is missing directive(s); the following default '
                     f'values are being used:\n'
                     f'{yaml.safe_dump(missing)}'
-                    'See documentation at {__docs_url__}'
+                    f'See documentation at {__docs_url__}/en/stable/configuration.html'
                 )
                 config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
         else:

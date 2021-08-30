@@ -83,8 +83,8 @@ If you want to be notified of new posts on a public Facebook page, you can use t
 
 .. _facebook_events:
 
-Facebook page events
-^^^^^^^^^^^^^^^^^^^^
+Facebook events
+^^^^^^^^^^^^^^^
 If you want to be notified of new events on a public Facebook page, you can use the following job pattern; just replace
 ``USERNAME`` with the name of the user (which can be found by navigating to the user's page on your browser):
 
@@ -212,8 +212,8 @@ Ignoring TLS/SSL errors
 Setting ``ssl_no_verify`` to true may be useful during local development or testing.
 
 When set to true, :program:`webchanges` requests will accept any TLS certificate presented by the server, and will
-ignore hostname mismatches and/or expired certificates, which will make your application vulnerable to
-man-in-the-middle (MitM) attacks.
+ignore hostname mismatches and/or expired certificates. Because this will make your application vulnerable to
+man-in-the-middle (MitM) attacks, never use it outside of local development or testing.
 
 .. code-block:: yaml
 
@@ -225,11 +225,11 @@ man-in-the-middle (MitM) attacks.
 
 Ignoring HTTP connection errors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While there is
-a ``display.error`` config option (defaulting to ``true``) to control reporting of errors globally, to ignore network
-errors for specific jobs only, you can use the ``ignore_connection_errors`` directive in the job list configuration.
-For connection errors during local development or testing due to TLS/SSL use the ``ssl_no_verify`` directive above
-instead.
+In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While
+you can set the ``errors`` directive of the ``display`` section to ``false`` in the ref:`configuration file
+<configuration_display>` to suppress global reporting of all jobs that end up with any type of error, to ignore
+network errors for specific jobs only you can use the ``ignore_connection_errors`` directive in the job. For
+connection errors during local development or testing due to TLS/SSL use the ``ssl_no_verify`` directive above instead.
 
 .. code-block:: yaml
 

@@ -215,7 +215,7 @@ def test_reporters(reporter, capsys):
         with pytest.raises(MatrixError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
-    elif reporter in ('webhook', 'webhook_markdown'):
+    elif reporter == 'webhook':
         with pytest.raises(MissingSchema) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == "Invalid URL '': No schema supplied. Perhaps you meant http://?"

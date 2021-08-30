@@ -609,7 +609,8 @@ Version 3.0.1
 Added
 -----
 * New ``format-json`` sub-directive ``sort_keys`` sets whether JSON dictionaries should be sorted (defaults to false)
-* New ``webhook_markdown`` reporter for services such as Mattermost, which expects Markdown-formatted text
+* New ``markdown`` directive for ``webhook`` reporter for services such as Mattermost, which expects
+  Markdown-formatted text
 * Code autodoc, highlighting just how badly the code needs documentation!
 * Output from ``diff_tool: wdiff`` is colorized in html reports
 * Reports now show date/time of diffs when using an external ``diff_tool``

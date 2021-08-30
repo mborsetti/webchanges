@@ -65,7 +65,8 @@ Optional sub-directives
 
 Markdown
 --------
-Markdown text, used for the ``matrix`` and ``webhook_markdown`` reporters
+Markdown text, used for the ``matrix`` and ``webhook`` reporters (if the latter has the sub-directive
+``markdown: true``)
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
