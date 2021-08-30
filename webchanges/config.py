@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 from . import __doc__, __docs_url__, __project_name__, __version__
+from .util import get_new_version_number
 
 
 class BaseConfig(object):
@@ -91,9 +92,14 @@ class CommandConfig(BaseConfig):
 
         :returns: The Python arguments parser.
         """
+
+        new_version = get_new_version_number(timeout=0.5)
+        new_version_text = (
+            f'\nNew release version {new_version} is available; we recommend updating.' if new_version else ''
+        )
         parser = argparse.ArgumentParser(
             description=__doc__.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--', '\n\n'),
-            epilog=f'Full documentation is at {__docs_url__}',
+            epilog=f'Full documentation is at {__docs_url__}{new_version_text}\n',
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         parser.add_argument(

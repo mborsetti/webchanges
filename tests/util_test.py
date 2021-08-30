@@ -2,7 +2,7 @@
 
 import pytest
 
-from webchanges.util import chunk_string, linkify
+from webchanges.util import chunk_string, get_new_version_number, linkify
 
 CHUNK_TEST_DATA = [
     # Numbering for just one item doesn't add the numbers
@@ -78,3 +78,8 @@ def test_linkify():
         linkify('www.56789012345678901234567.com/&amp;&copy;', shorten=True)
         == '<a href="https://www.56789012345678901234567.com/">www.56789012345678901234567.com/</a>&amp;amp;&amp;copy;'
     )
+
+
+def test_get_new_version_number():
+    version = get_new_version_number(timeout=1)
+    assert not version  # this version should be higher than the one in PyPi!

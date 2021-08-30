@@ -15,7 +15,12 @@ import textwrap
 from math import floor, log10
 from os import PathLike
 from types import ModuleType
-from typing import Callable, Dict, Iterable, List, Match, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Match, Optional, Tuple, Union
+
+import requests
+
+from . import __project_name__, __version__
+from ._vendored.packaging_version import parse as parse_version
 
 logger = logging.getLogger(__name__)
 
@@ -237,3 +242,24 @@ def linkify(
 
     text = html.escape(text)
     return _URL_RE.sub(make_link, text)
+
+
+def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] = None) -> str:
+    """Check PyPi for newer version of project.
+
+    :parameter timeout: Timeout in seconds after which empty string is returned.
+    :returns: The new version number if a newer version of project is found on PyPi, empty string otherwise.
+    """
+    try:
+        r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
+    except requests.exceptions.ReadTimeout:
+        return ''
+
+    if r.ok:
+        latest_release: str = list(r.json()['releases'].keys())[-1]
+        if parse_version(latest_release) > parse_version(__version__):
+            return latest_release
+    else:
+        logger.error(f'PyPi error when querying for latest release: {r}')
+
+    return ''

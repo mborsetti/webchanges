@@ -30,6 +30,16 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
+Version 3.9a0
+===================
+Unreleased
+
+Added
+-----
+* Test jobs generated using the command line argument ``--test`` can now be sent to a specific reporter by combining
+  this with ``--test-reporter``. For example, if running on a machine with a web browser, you can see how job 1 looks
+  like in HTML by running ``webchanges --test 1 --test-reporter browser``.
+
 
 Version 3.8.3
 ====================

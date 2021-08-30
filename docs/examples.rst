@@ -64,16 +64,34 @@ Since the output of ``date`` changes every second, this job should produce a rep
 Watching specific sites
 -----------------------
 
-.. _facebook:
+.. _facebook_posts:
+
+Facebook posts
+^^^^^^^^^^^^^^
+If you want to be notified of new posts on a public Facebook page, you can use the following job pattern; just replace
+``USERNAME`` with the name of the user (which can be found by navigating to user's page on your browser):
+
+.. code-block:: yaml
+
+   name: USERNAME's Facebook posts
+   url: https://m.facebook.com/USERNAME/pages/permalink/?view_type=tab_posts
+   filter:
+     - xpath: //div[@class="story_body_container"]
+     - html2text:
+   additions_only:
+
+
+.. _facebook_events:
 
 Facebook page events
 ^^^^^^^^^^^^^^^^^^^^
 If you want to be notified of new events on a public Facebook page, you can use the following job pattern; just replace
-``PAGE`` with the name of the page (which can be found by navigating to the events page on your browser):
+``USERNAME`` with the name of the user (which can be found by navigating to the user's page on your browser):
 
 .. code-block:: yaml
 
-   url: https://m.facebook.com/PAGE/pages/permalink/?view_type=tab_events
+   name: USERNAME's Facebook events
+   url: https://m.facebook.com/USERNAME/pages/permalink/?view_type=tab_events
    filter:
      - css:
          selector: div#objects_container
@@ -82,7 +100,7 @@ If you want to be notified of new events on a public Facebook page, you can use 
          pattern: '(/events/\d*)[^"]*'
          repl: '\1'
      - html2text:
-   comparison_filter: additions
+   additions_only:
 
 
 .. _github:

@@ -101,8 +101,17 @@ returned from a website with a 4xx (client error) status code::
 
    webchanges --verbose --test 1
 
+You can test how this job looks like with a reporter by combining this with ``--test-reporter``. For example, to see
+how job 1 looks like in HTML if running on a machine with a web browser, run this::
+
+   webchanges --test 1 --test-reporter browser
+
+
 .. versionchanged:: 3.8
    Accepts negative indices.
+
+.. versionchanged:: 3.9
+   Can be used in combination with ``--test-reporter``.
 
 .. _test-diff:
 
@@ -119,6 +128,21 @@ retrieve historical diffs (changes). Use a negative index number to select a job
 
 .. versionchanged:: 3.8
    Accepts negative indices.
+
+
+.. _test-reporter:
+
+Test a reporter
+---------------
+You can test a reporter by using the argument ``--test-reporter`` followed by the reporter name;
+:program:`webchanges` will create a dummy report and send it through the selected reporter. This will help in
+debugging issues, especially when used in conjunction with ``--verbose``::
+
+   webchanges --verbose --test-reporter telegram
+
+
+.. versionchanged:: 3.9
+   Can be used in combination with ``--test`` to send the output of the job being tested.
 
 
 .. _delete-snapshot:

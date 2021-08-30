@@ -280,6 +280,31 @@ def test_test_job(capsys):
     )
 
 
+def test_test_job_with_test_reporter(capsys):
+    setattr(command_config, 'test_job', 1)
+    setattr(command_config, 'test_reporter', 'stdout')
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'test_job', None)
+    setattr(command_config, 'test_reporter', None)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    message = message.replace('\n\n ', '\n').replace('\r', '')  # Python 3.6
+    assert message.startswith(
+        'Sample webchanges job; used by command_test.py\n'
+        '----------------------------------------------\n'
+        '\n'
+        '===========================================================================\n'
+        '01. TEST: Sample webchanges job; used by command_test.py\n'
+        '===========================================================================\n'
+        '\n'
+        '---------------------------------------------------------------------------\n'
+        'TEST: Sample webchanges job; used by command_test.py (echo test)\n'
+        '---------------------------------------------------------------------------\n'
+        '\n'
+    )
+
+
 def test_test_diff_and_joblist(capsys):
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage(jobs_file)

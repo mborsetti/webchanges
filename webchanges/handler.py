@@ -20,12 +20,14 @@ from .jobs import NotModifiedError
 from .reporters import ReporterBase
 
 try:
-    from zoneinfo import ZoneInfo
+    from zoneinfo import ZoneInfo  # not available in Python < 3.9
 except ImportError:
     from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from typing import Literal  # not available in Python < 3.8
+
     from .jobs import JobBase
     from .main import Urlwatch
     from .storage import CacheStorage, Config
@@ -36,7 +38,7 @@ logger = logging.getLogger(__name__)
 class JobState(ContextManager):
     """The JobState class, which contains run information about a job."""
 
-    verb: str
+    verb: Literal['new', 'changed', 'changed,no_report', 'unchanged', 'error', 'test']
     old_data: str = ''
     new_data: str
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
@@ -298,11 +300,12 @@ class Report(object):
         self.config: Config = urlwatch_config.config_storage.config
         self.job_states: List[JobState] = []
 
-    def _result(self, verb: str, job_state: JobState) -> None:
+    def _result(
+        self, verb: Literal['new', 'changed', 'changed,no_report', 'unchanged', 'error', 'test'], job_state: JobState
+    ) -> None:
         """Logs error and appends the verb to the job_state.
 
-        :param verb: One of 'changed', 'error', 'new', 'unchanged', plus optionally 'no_report' joined by a
-           comma, describing the result of the job run.
+        :param verb: Description of the result of the job run.
         :param job_state: The JobState object with the information of the job run.
         """
         if job_state.exception is not None and job_state.exception is not NotModifiedError:
@@ -349,10 +352,18 @@ class Report(object):
         """
         self._result('error', job_state)
 
+    def test(self, job_state: JobState) -> None:
+        """Sets the verb of the job in job_state to 'test'. Called by :py:func:`UrlwatchCommand.check_test_reporter`
+        and tests.
+
+        :param job_state: The JobState object with the information of the job run.
+        """
+        self._result('test', job_state)
+
     def get_filtered_job_states(self, job_states: List[JobState]) -> Iterable[JobState]:
         """Returns JobStates that have reportable changes per config['display'].  Called from :py:Class:`ReporterBase`.
 
-        :param job_state: The JobState objects with the information of the job runs.
+        :param job_states: The list of JobState objects with the information of the job runs.
         :returns: An iterable of JobState objects that have reportable changes per config['display'].
         """
         for job_state in job_states:
@@ -380,6 +391,7 @@ class Report(object):
         """Finish job run of one: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_one`.  Used in testing.
 
+        :param name: The name of the reporter to run.
         :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
         :param check_enabled: If True (default), run reports only if they are enabled in the configuration.
         """

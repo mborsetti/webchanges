@@ -202,7 +202,10 @@ class UrlwatchCommand:
             if hasattr(job_state.job, 'note') and job_state.job.note:
                 print(job_state.job.note)
             print()
-            print(job_state.new_data)
+            if self.urlwatch_config.test_reporter:
+                self.check_test_reporter(job_state)
+            else:
+                print(job_state.new_data)
 
         return
 
@@ -351,7 +354,7 @@ class UrlwatchCommand:
 
         self._exit(0)
 
-    def check_test_reporter(self) -> None:
+    def check_test_reporter(self, job_state: Optional[JobState] = None) -> None:
         name = self.urlwatch_config.test_reporter
 
         if name not in ReporterBase.__subclasses__:
@@ -360,6 +363,14 @@ class UrlwatchCommand:
             self._exit(1)
 
         cfg: ConfigReportersList = self.urlwatcher.config_storage.config['report'][name]  # type: ignore[misc]
+        if job_state:  # we want a full report
+            cfg['enabled'] = True  # type: ignore[index]
+            self.urlwatcher.config_storage.config['report']['text']['details'] = True
+            self.urlwatcher.config_storage.config['report']['text']['footer'] = True
+            self.urlwatcher.config_storage.config['report']['text']['minimal'] = False
+            self.urlwatcher.config_storage.config['report']['markdown']['details'] = True
+            self.urlwatcher.config_storage.config['report']['markdown']['footer'] = True
+            self.urlwatcher.config_storage.config['report']['markdown']['minimal'] = False
         if not cfg['enabled']:
             print(f'Reporter is not enabled/configured: {name}')
             print(f'Use {__project_name__} --edit-config to configure reporters')
@@ -377,7 +388,7 @@ class UrlwatchCommand:
             job_state.old_data = old
             job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
             job_state.new_data = new
-            job_state.new_timestamp = 1605147837.511478
+            job_state.new_timestamp = time.time()
 
             return job_state
 
@@ -390,41 +401,46 @@ class UrlwatchCommand:
 
             return job_state
 
-        report.new(
-            build_job(
-                'Sample job that was newly added',
-                'https://example.com/new',
-                '',
-                '',
-            )
-        )
-        report.changed(
-            build_job(
-                'Sample job where something changed',
-                'https://example.com/changed',
-                'Unchanged Line\nPrevious Content\nAnother Unchanged Line\n',
-                'Unchanged Line\nUpdated Content\nAnother Unchanged Line\n',
-            )
-        )
-        report.unchanged(
-            build_job(
-                'Sample job where nothing changed',
-                'http://example.com/unchanged',
-                'Same Old, Same Old\n',
-                'Same Old, Same Old\n',
-            )
-        )
-        report.error(
-            set_error(
+        if not job_state:
+            report.new(
                 build_job(
-                    'Sample job where an error was encountered',
-                    'https://example.com/error',
+                    'Sample job that was newly added',
+                    'https://example.com/new',
                     '',
                     '',
-                ),
-                'The error message would appear here.',
+                )
             )
-        )
+            report.changed(
+                build_job(
+                    'Sample job where something changed',
+                    'https://example.com/changed',
+                    'Unchanged Line\nPrevious Content\nAnother Unchanged Line\n',
+                    'Unchanged Line\nUpdated Content\nAnother Unchanged Line\n',
+                )
+            )
+            report.unchanged(
+                build_job(
+                    'Sample job where nothing changed',
+                    'http://example.com/unchanged',
+                    'Same Old, Same Old\n',
+                    'Same Old, Same Old\n',
+                )
+            )
+            report.error(
+                set_error(
+                    build_job(
+                        'Sample job where an error was encountered',
+                        'https://example.com/error',
+                        '',
+                        '',
+                    ),
+                    'The error message would appear here.',
+                )
+            )
+        else:
+            job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
+            job_state.new_timestamp = time.time()
+            report.test(job_state)
 
         if name:  # required for type checking
             report.finish_one(name, jobs_file=self.urlwatch_config.jobs)

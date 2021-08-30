@@ -6,15 +6,11 @@ For the entrypoint, see cli.py.
 import logging
 from typing import List, Optional, Tuple, Union
 
-import requests
-
-from . import __project_name__, __version__
-from ._vendored.packaging_version import parse as parse_version
 from .config import CommandConfig
 from .handler import Report
 from .jobs import JobBase
 from .storage import CacheStorage, YamlConfigStorage, YamlJobsStorage
-from .util import import_module_from_source
+from .util import get_new_version_number, import_module_from_source
 from .worker import run_jobs
 
 logger = logging.getLogger(__name__)
@@ -95,25 +91,14 @@ class Urlwatch(object):
         self.jobs = jobs
 
     def get_new_release_version(self, timeout: Optional[Union[float, Tuple[float, float]]] = None) -> str:
-        """Check PyPi to see if we're running the latest version.  Memoized.
+        """Check PyPi to see if we're running the latest version. Memoized.
 
         :returns: Empty string if no higher version is available, otherwise the new version number.
         """
         if self._latest_release is not None:
             return self._latest_release
 
-        try:
-            r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
-        except requests.exceptions.ReadTimeout:
-            return ''
-
-        if r.ok:
-            latest_release: str = list(r.json()['releases'].keys())[-1]
-            if parse_version(latest_release) > parse_version(__version__):
-                self._latest_release = latest_release
-            else:
-                self._latest_release = ''
-
+        self._latest_release = get_new_version_number(timeout)
         return self._latest_release
 
     def run_jobs(self) -> None:
