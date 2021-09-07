@@ -252,7 +252,7 @@ def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] 
     """
     try:
         r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
-    except requests.exceptions.ReadTimeout:
+    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
         return ''
 
     if r.ok:
