@@ -106,33 +106,32 @@ def test_url(job):
             data = here.joinpath('data').joinpath(d['filename']).read_bytes()
         else:
             data = d['input']
-        job_state = JobState(None, job)
+        with JobState(None, job) as job_state:
+            for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
+                # skip if package is not installed
+                if (
+                    filter_kind == 'beautify' or filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
+                ) and not bs4_is_installed:
+                    logger.warning(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
+                    return
+                if filter_kind == 'ical2text' and not vobject_is_installed:
+                    logger.warning(f"Skipping {job.url} since 'vobject' package is not installed")
+                    return
+                elif filter_kind == 'ocr' and not pytesseract_is_installed:
+                    logger.warning(f"Skipping {job.url} since 'pytesseract' package is not installed")
+                    return
+                elif filter_kind == 'jq' and not jq_is_installed:
+                    logger.warning(f"Skipping {job.url} since 'jq' package is not installed")
+                    return
+                elif filter_kind == 'pdf2text' and not pdftotext_is_installed:
+                    logger.warning(f"Skipping {job.url} since 'pdftotext' package is not installed")
+                    return
+                data = FilterBase.process(filter_kind, subfilter, job_state, data)
+                if filter_kind in ('pdf2text', 'shellpipe'):  # fix for macOS or OS-specific end of line
+                    data = data.rstrip()
 
-        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
-            # skip if package is not installed
-            if (
-                filter_kind == 'beautify' or filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
-            ) and not bs4_is_installed:
-                logger.warning(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
-                return
-            if filter_kind == 'ical2text' and not vobject_is_installed:
-                logger.warning(f"Skipping {job.url} since 'vobject' package is not installed")
-                return
-            elif filter_kind == 'ocr' and not pytesseract_is_installed:
-                logger.warning(f"Skipping {job.url} since 'pytesseract' package is not installed")
-                return
-            elif filter_kind == 'jq' and not jq_is_installed:
-                logger.warning(f"Skipping {job.url} since 'jq' package is not installed")
-                return
-            elif filter_kind == 'pdf2text' and not pdftotext_is_installed:
-                logger.warning(f"Skipping {job.url} since 'pdftotext' package is not installed")
-                return
-            data = FilterBase.process(filter_kind, subfilter, job_state, data)
-            if filter_kind in ('pdf2text', 'shellpipe'):  # fix for macOS or OS-specific end of line
-                data = data.rstrip()
-
-        expected_output_data = d['output']
-        assert data == expected_output_data
+            expected_output_data = d['output']
+            assert data == expected_output_data
 
     else:
         logger.warning("Skipping https://example.com/html2text.html since 'html2text' > (2020, 1, 16)")

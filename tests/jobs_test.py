@@ -137,38 +137,34 @@ TEST_ALL_URL_JOBS = [{}, {'use_browser': True}]
 
 @connection_required
 @pytest.mark.parametrize('input_job, output', TEST_JOBS)
-def test_run_job(input_job: Dict[str, Any], output: str) -> None:
+def test_run_job(input_job: Dict[str, Any], output: str, caplog) -> None:
     job = JobBase.unserialize(input_job)
-    job_state = JobState(cache_storage, job)
-    job.main_thread_enter()
-    data, etag = job.retrieve(job_state)
-    if job.filter == [{'pdf2text': {}}]:
-        assert isinstance(data, bytes)
-    assert output in data
-    job.main_thread_exit()
+    if sys.version_info >= (3, 10):
+        caplog.set_level(logging.DEBUG)
+    with JobState(cache_storage, job) as job_state:
+        data, etag = job.retrieve(job_state)
+        if job.filter == [{'pdf2text': {}}]:
+            assert isinstance(data, bytes)
+        assert output in data
 
 
 @connection_required
 @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))
 def test_run_ftp_job() -> None:
     job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt', 'timeout': 2})
-    job_state = JobState(cache_storage, job)
-    job.main_thread_enter()
-    data, etag = job.retrieve(job_state)
-    assert len(data) == 319
-    job.main_thread_exit()
+    with JobState(cache_storage, job) as job_state:
+        data, etag = job.retrieve(job_state)
+        assert len(data) == 319
 
 
 @connection_required
 @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
 def test_run_ftp_job_needs_bytes() -> None:
     job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
-    job_state = JobState(cache_storage, job)
-    job.main_thread_enter()
-    data, etag = job.retrieve(job_state)
-    assert isinstance(data, bytes)
-    assert len(data) == 1024
-    job.main_thread_exit()
+    with JobState(cache_storage, job) as job_state:
+        data, etag = job.retrieve(job_state)
+        assert isinstance(data, bytes)
+        assert len(data) == 1024
 
 
 @connection_required
@@ -176,11 +172,9 @@ def test_run_ftp_job_needs_bytes() -> None:
 def test_check_etag(job_data: Dict[str, Any]) -> None:
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job.main_thread_enter()
-    data, etag = job.retrieve(job_state)
-    assert etag
-    job.main_thread_exit()
+    with JobState(cache_storage, job) as job_state:
+        data, etag = job.retrieve(job_state)
+        assert etag
 
 
 @connection_required
@@ -195,19 +189,16 @@ def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job.main_thread_enter()
+    with JobState(cache_storage, job) as job_state:
+        job.index_number = 1
+        data, etag = job.retrieve(job_state)
+        job_state.old_etag = etag
 
-    job.index_number = 1
-    data, etag = job.retrieve(job_state)
-    job_state.old_etag = etag
+        job.index_number = 2
+        with pytest.raises(NotModifiedError) as pytest_wrapped_e:
+            job.retrieve(job_state)
 
-    job.index_number = 2
-    with pytest.raises(NotModifiedError) as pytest_wrapped_e:
-        job.retrieve(job_state)
-
-    job.main_thread_exit()
-    assert str(pytest_wrapped_e.value) == '304'
+        assert str(pytest_wrapped_e.value) == '304'
 
 
 @connection_required
@@ -223,17 +214,17 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) 
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
     job_data['timeout'] = 0.001
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    if not isinstance(job_state.exception, BrowserResponseError):
-        assert 'Max retries exceeded' in str(job_state.exception.args)
-    assert job_state.error_ignored is False
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        if not isinstance(job_state.exception, BrowserResponseError):
+            assert 'Max retries exceeded' in str(job_state.exception.args)
+        assert job_state.error_ignored is False
 
-    job_data['ignore_connection_errors'] = True
-    job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    assert job_state.error_ignored is True
+        job_data['ignore_connection_errors'] = True
+        job = JobBase.unserialize(job_data)
+        with JobState(cache_storage, job) as job_state:
+            job_state.process()
+            assert job_state.error_ignored is True
 
 
 @connection_required
@@ -242,19 +233,19 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    if isinstance(job_state.exception, BrowserResponseError):
-        assert job_state.exception.status_code == 418
-    else:
-        assert any(x in str(job_state.exception.args) for x in ("I'm a Teapot", '418'))
-    assert job_state.error_ignored is False
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        if isinstance(job_state.exception, BrowserResponseError):
+            assert job_state.exception.status_code == 418
+        else:
+            assert any(x in str(job_state.exception.args) for x in ("I'm a Teapot", '418'))
+        assert job_state.error_ignored is False
 
-    job_data['ignore_http_error_codes'] = [418]
-    job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    assert job_state.error_ignored is True
+        job_data['ignore_http_error_codes'] = [418]
+        job = JobBase.unserialize(job_data)
+        with JobState(cache_storage, job) as job_state:
+            job_state.process()
+            assert job_state.error_ignored is True
 
 
 @connection_required
@@ -282,10 +273,10 @@ def test_stress_use_browser() -> None:
 def test_shell_exception_and_with_defaults() -> None:
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    assert isinstance(job_state.exception, Exception)
-    assert str(job_state.exception)
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, Exception)
+        assert str(job_state.exception)
 
 
 def test_no_required_directive() -> None:
@@ -376,32 +367,32 @@ def test_ignore_error():
 def test_browser_switches_not_str_or_list():
     job_data = {'url': 'https://www.example.com', 'use_browser': True, 'switches': {'dict key': ''}}
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    assert isinstance(job_state.exception, TypeError)
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TypeError)
 
 
 # @py37_required
 def test_browser_block_elements_not_str_or_list():
     job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': {'dict key': ''}}
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    assert isinstance(job_state.exception, TypeError)
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TypeError)
 
 
 # @py37_required
 def test_browser_block_elements_invalid():
     job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': ['fake element']}
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    assert isinstance(job_state.exception, ValueError)
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, ValueError)
 
 
 def test_shell_error():
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
-    job_state = JobState(cache_storage, job)
-    job_state.process()
-    assert isinstance(job_state.exception, ShellError)
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, ShellError)

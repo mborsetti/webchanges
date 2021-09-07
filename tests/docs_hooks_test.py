@@ -99,10 +99,10 @@ def test_flake8(tmp_path):
 def test_url(job: JobBase):
     d = testdata[job.url]
     data = d['input']
-    job_state = JobState(None, job)
-    data = FilterBase.auto_process(job_state, data)
-    for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
-        data = FilterBase.process(filter_kind, subfilter, job_state, data)
+    with JobState(None, job) as job_state:
+        data = FilterBase.auto_process(job_state, data)
+        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
+            data = FilterBase.process(filter_kind, subfilter, job_state, data)
 
-    expected_output_data = d['output']
-    assert data == expected_output_data
+        expected_output_data = d['output']
+        assert data == expected_output_data
