@@ -31,6 +31,8 @@ from .util import TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from typing import Literal  # not available in Python < 3.8
+
     from .handler import JobState
     from .storage import Config
 
@@ -58,7 +60,7 @@ class BrowserResponseError(Exception):
     """Raised by 'url' jobs with 'use_browser: true' (i.e. using Pyppeteer) when a HTTP error response status code is
     received."""
 
-    def __init__(self, args: Tuple[str], status_code: int) -> None:
+    def __init__(self, args: Tuple[Any, ...], status_code: int) -> None:
         """
 
         :param args: Tuple with the underlying error args, typically a string with the error text.
@@ -132,7 +134,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     loop: Optional[asyncio.AbstractEventLoop] = None
     markdown_padded_tables: Optional[bool] = None
     max_tries: Optional[int] = None
-    method: Optional[str] = None
+    method: Optional[Literal['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']] = None
     name: Optional[str] = None
     navigate: Optional[str] = None  # backwards compatibility (deprecated)
     no_redirects: Optional[bool] = None
@@ -144,7 +146,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     user_visible_url: Optional[str] = None
     wait_for: Optional[Union[int, str]] = None
     wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None
-    wait_until: Optional[str] = None
+    wait_until: Optional[Literal['load', 'domcontentloaded', 'networkidle0', 'networkidle2']] = None
 
     def __init__(self, **kwargs: Any) -> None:
         # # Set optional keys to None -- legacy (explicit declarations added to support typing)
@@ -384,11 +386,11 @@ class JobBase(object, metaclass=TrackSubClasses):
         raise NotImplementedError()
 
     def main_thread_enter(self) -> None:
-        """Called from the main thread before running the job. Does nothing."""
+        """Called from the main thread before running the job. No longer needed (does nothing)."""
         ...
 
     def main_thread_exit(self) -> None:
-        """Called from the main thread after running the job. Does nothing."""
+        """Called from the main thread after running the job. No longer needed (does nothing)."""
         ...
 
     def format_error(self, exception: Exception, tb: str) -> str:
@@ -678,12 +680,11 @@ class UrlJob(Job):
             return str(exception)
         return tb
 
-    def ignore_error(self, exception: Exception) -> Union[bool, str]:
+    def ignore_error(self, exception: Exception) -> bool:
         """Determine whether the error of the job should be ignored.
 
         :param exception: The exception.
-        :returns: True or the string with the number of the HTTPError code if the error should be ignored,
-           False otherwise.
+        :returns: True if the error should be ignored, False otherwise.
         """
         if isinstance(exception, requests.exceptions.ConnectionError) and self.ignore_connection_errors:
             return True
@@ -700,7 +701,7 @@ class UrlJob(Job):
                 ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
             elif isinstance(self.ignore_http_error_codes, list):
                 ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
-            return str(status_code) in ignored_codes or f'{(status_code // 100) in ignored_codes}xx'
+            return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
         return False
 
 
@@ -858,6 +859,7 @@ class BrowserJob(Job):
             self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
             args.extend(self.switches)
 
+        logger.debug(f'Job {self.index_number}: About to launch browser with args={args}')
         browser = await launch(
             ignoreHTTPSErrors=self.ignore_https_errors,
             args=args,
@@ -866,7 +868,7 @@ class BrowserJob(Job):
             handleSIGHUP=False,
             loop=asyncio.get_running_loop(),
         )  # as signals only work single-threaded, must set handleSIGINT, handleSIGTERM and handleSIGHUP to False
-        logger.debug(f'Job {self.index_number}: Launched browser with args={args}')
+        logger.debug(f'Job {self.index_number}: Browser launched')
 
         # browse to page and get content
         page = await browser.newPage()
