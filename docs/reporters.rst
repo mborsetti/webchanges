@@ -129,11 +129,11 @@ low-risk way to run unattended.
        html: true
        method: 'smtp'
          host: 'smtp.example.com'
-         user: 'throwawayaccount@example.com'  # (edit accordingly; don't use your primary account for this!!)
          port: 587
          starttls: true
-         auth: true
+         user: 'throwawayaccount@example.com'  # (edit accordingly; don't use your primary account for this!!)
          insecure_password: 'this_is_my_secret_password'
+         auth: true
 
 .. warning::
    **Never ever use this method with your your primary email account!**  Seriously! This method makes it really easy
@@ -154,12 +154,12 @@ blank.
 
 SMTP sub-directives
 ^^^^^^^^^^^^^^^^^^^
-* ``host``: The address of the SMTP server
-* ``port``: The port used to communicate with the server
-* ``starttls``: Whether the server uses SSL/TLS encryption (true/false)
-* ``auth``: Whether authentication via username/password is required (true/false)
-* ``user``: The username used to authenticate
-* ``insecure_password``: The password used to authenticate (if no keyring)
+* ``host``: The address of the SMTP server. Default is 'localhost'
+* ``port``: The port used to communicate with the server. Default is 25.
+* ``starttls``: Whether the server uses SSL/TLS encryption (true/false). Default is true.
+* ``user``: The username used to authenticate.
+* ``auth``: Whether authentication via username/password is required (true/false). Default is true.
+* ``insecure_password``: The password used to authenticate (if keyring is not used).
 
 .. _gmail:
 

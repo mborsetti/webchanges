@@ -107,7 +107,7 @@ If you want to be notified of new events on a public Facebook page, you can use 
 
 GitHub releases
 ^^^^^^^^^^^^^^^
-This is an example how to anonymously watch the GitHub “releases” page of a project to be notified of new releases:
+This is an example how to anonymously watch the GitHub "releases" page of a project to be notified of new releases:
 
 .. code-block:: yaml
 
@@ -126,7 +126,7 @@ to email notifications (see `here
 
 GitLab tags (releases)
 ^^^^^^^^^^^^^^^^^^^^^^
-This is an example how to anonymously watch the GitLab “tags” page for a given project to be notified of new releases:
+This is an example how to anonymously watch the GitLab "tags" page for a given project to be notified of new releases:
 
 .. code-block:: yaml
 
@@ -195,7 +195,7 @@ per the example below. If a ``headers`` key is also found in a job, for that job
 
 Supplying cookies
 ^^^^^^^^^^^^^^^^^
-It is possible to add cookies to HTTP requests for pages that need them, for example:
+It is possible to add cookies to HTTP requests for pages that need them. For example:
 
 .. code-block:: yaml
 
@@ -221,29 +221,31 @@ man-in-the-middle (MitM) attacks, never use it outside of local development or t
    ssl_no_verify: true
 
 
-.. _ignore_errors:
+.. _ignore_connection_errors:
 
 Ignoring HTTP connection errors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In some cases, it might be useful to ignore (temporary) network errors to avoid notifications being sent. While
-you can set the ``errors`` directive of the ``display`` section to ``false`` in the ref:`configuration file
+you can set the ``errors`` directive of the ``display`` section to ``false`` in the :ref:`configuration file
 <configuration_display>` to suppress global reporting of all jobs that end up with any type of error, to ignore
 network errors for specific jobs only you can use the ``ignore_connection_errors`` directive in the job. For
-connection errors during local development or testing due to TLS/SSL use the ``ssl_no_verify`` directive above instead.
+connection errors during local development or testing with an invalid TLS certificate use the :ref:`ssl_no_verify`
+directive above instead.
 
 .. code-block:: yaml
 
    url: https://example.com/
    ignore_connection_errors: true
 
-Similarly, you might want to ignore some (temporary) HTTP errors on the server side:
+Similarly, you might want to ignore some (temporary) HTTP errors on the server side by using
+``ignore_http_error_codes``:
 
 .. code-block:: yaml
 
    url: https://example.com/
    ignore_http_error_codes: 408, 429, 500, 502, 503, 504
 
-or ignore all HTTP errors if you like:
+or ignore all HTTP errors if you like by using :ref:`ignore_http_error_codes`
 
 .. code-block:: yaml
 

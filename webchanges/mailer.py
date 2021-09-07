@@ -81,7 +81,7 @@ class SMTPMailer(Mailer):
     def send(self, msg: Optional[EmailMessage]) -> None:
         """Send a message via the SMTP server.
 
-        :param msg: The message to be sent.
+        :param msg: The message to be sent. Optional in order to allow server login testing.
         """
         passwd = ''  # nosec: B105 Possible hardcoded password
         if self.auth:

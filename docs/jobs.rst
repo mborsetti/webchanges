@@ -222,10 +222,10 @@ See example :ref:`here <timeout>`.
 
 method
 ^^^^^^
-`HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use (one of ``GET``,
-``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``).
+`HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use (a string).
 
-Defaults to ``GET``, unless the ``data`` directive, below, is set.
+Must be one of ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``. Defaults to ``GET``
+unless the ``data`` directive, below, is set when it defaults to ``POST``.
 
 .. error::
 
@@ -240,11 +240,14 @@ Defaults to ``GET``, unless the ``data`` directive, below, is set.
 data
 ^^^^
 Data to send with a ``POST`` `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ (a
-dict or a string).
+dict or string).
 
-This directive also sets the ``method`` directive  to ``POST`` and, if no `Content-type
-<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header is otherwise specified, such header
-to ``application/x-www-form-urlencoded``.
+When this directive is specified:
+
+* If no ``method`` directive is specified, it is set to ``POST``.
+* If no `Content-type
+  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` is specified, such header is
+  set to ``application/x-www-form-urlencoded``.
 
 See example :ref:`here <post>`.
 
@@ -286,8 +289,11 @@ See more :ref:`here <ignore_errors>`.
 
 ignore_http_error_codes
 ^^^^^^^^^^^^^^^^^^^^^^^
-List of HTTP errors to ignore (a list).  Also accepts 2xx, 3xx, 4xx, and 5xx for the entire class of response status
-codes.
+Ignore error if a specified `HTTP response status code <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status>`__ is
+received (an integer, string, or list).
+
+Also accepts 3xx, 4xx, and 5xx as values for the entire class of response
+status codes (i.e. 2xx will suppress any error from 300 to 399 inclusive).
 
 See more :ref:`here <ignore_errors>`.
 
@@ -327,7 +333,7 @@ These directives are available only for ``url`` jobs with ``use_browser: true`` 
 
 chromium_revision
 ^^^^^^^^^^^^^^^^^
-The revision number of the Chromium browser to use (a string, number or dict).
+The revision number of the Chromium browser to use (an integer, string, or dict).
 
 This can be different for different OSs, in which case is a dict with of one or more of the following keys: ``linux``,
 ``mac``, ``win32`` and ``win64``.
@@ -340,7 +346,7 @@ See note :ref:`here <pyppeteer_chromium_revision>`.
 
 ignore_https_errors
 ^^^^^^^^^^^^^^^^^^^
-Ignore HTTPs errors (true/false). Defaults to false.
+Ignore HTTPS errors (true/false). Defaults to false.
 
 .. versionadded:: 3.0
 
@@ -402,8 +408,7 @@ block_elements
    This is an experimental feature. Please see :ref:`here <pyppeteer_block_elements>`.
 
 Do not request (download) specified `resource types
-<https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (a list of
-strings).
+<https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (a list).
 
 Only resource types `supported by Chromium
 <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed.
@@ -421,7 +426,7 @@ System environment values - ``use_browser: true``
 PYPPETEER_NO_PROGRESS_BAR
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 When set to true, it will prevent showing a download progress bar if :program:`Pyppeteer` needs to download the Chromium
-executable.
+executable (true/false).
 
 .. warning::
    Setting ``PYPPETEER_NO_PROGRESS_BAR`` to true with Pyppetter ≤ 0.2.25 will cause it to `crash
@@ -549,7 +554,7 @@ Can be tested with ``--test-diff``.
 
 additions_only
 --------------
-Filter the unified diff output to keep only addition lines.
+Filter the unified diff output to keep only addition lines (no value required).
 
 See :ref:`here <additions_only>`.
 
@@ -557,7 +562,7 @@ See :ref:`here <additions_only>`.
 
 deletions_only
 --------------
-Filter the unified diff output to keep only deleted lines.
+Filter the unified diff output to keep only deleted lines (no value required).
 
 See :ref:`here <deletions_only>`.
 
@@ -565,10 +570,9 @@ See :ref:`here <deletions_only>`.
 
 is_markdown
 -----------
-Data is in Markdown format (true/false).
+Data is in Markdown format (true/false). Defaults to false unless set by a filter such as ``html2text``.
 
-Lets the code building an ``html`` report know that the data is markdown and should be reconstructed into HTML. Defaults
-to false unless set by a filter such as ``html2text``.
+Tells the ``html`` report that the data is in Markdown format and should be reconstructed into HTML.
 
 
 Setting default directives
