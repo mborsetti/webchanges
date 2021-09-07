@@ -66,12 +66,13 @@ class JobState(ContextManager):
 
         :returns: Class object.
         """
-        try:
-            self.job.main_thread_enter()
-        except Exception as ex:
-            logger.info(f'Job {self.job.index_number}: Exception while creating resources for job', exc_info=True)
-            self.exception = ex
-            self.traceback = traceback.format_exc()
+        # Below is legacy code that now does nothing so it's being skipped
+        # try:
+        #     self.job.main_thread_enter()
+        # except Exception as ex:
+        #     logger.info(f'Job {self.job.index_number}: Exception while creating resources for job', exc_info=True)
+        #     self.exception = ex
+        #     self.traceback = traceback.format_exc()
 
         return self
 
@@ -86,11 +87,12 @@ class JobState(ContextManager):
 
         :returns: None.
         """
-        try:
-            self.job.main_thread_exit()
-        except Exception:
-            # We don't want exceptions from releasing resources to override job run results
-            logger.warning(f'Job {self.job.index_number}: Exception while releasing resources for job', exc_info=True)
+        # Below is legacy code that now does nothing so it's being skipped
+        # try:
+        #     self.job.main_thread_exit()
+        # except Exception:
+        #     # We don't want exceptions from releasing resources to override job run results
+        #     logger.warning(f'Job {self.job.index_number}: Exception while releasing resources for job', exc_info=True)
 
         return None
 
