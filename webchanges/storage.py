@@ -289,11 +289,11 @@ DEFAULT_CONFIG: Config = {
             'method': 'smtp',  # either 'smtp' or 'sendmail'
             'smtp': {
                 'host': 'localhost',
-                'user': '',
-                'insecure_password': '',
-                'auth': True,
                 'port': 25,
                 'starttls': True,
+                'user': '',
+                'auth': True,
+                'insecure_password': '',
             },
             'sendmail': {
                 'path': 'sendmail',
