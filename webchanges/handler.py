@@ -26,7 +26,7 @@ except ImportError:
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    from typing import Literal  # not available in Python < 3.8
+    # from typing import Literal  # not available in Python < 3.8
 
     from .jobs import JobBase
     from .main import Urlwatch
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 class JobState(ContextManager):
     """The JobState class, which contains run information about a job."""
 
-    verb: Literal['new', 'changed', 'changed,no_report', 'unchanged', 'error', 'test']
+    verb: str  # 'new', 'changed', 'changed,no_report', 'unchanged', 'error' are recognized
     old_data: str = ''
     new_data: str
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
@@ -302,12 +302,11 @@ class Report(object):
         self.config: Config = urlwatch_config.config_storage.config
         self.job_states: List[JobState] = []
 
-    def _result(
-        self, verb: Literal['new', 'changed', 'changed,no_report', 'unchanged', 'error', 'test'], job_state: JobState
-    ) -> None:
+    def _result(self, verb: str, job_state: JobState) -> None:
         """Logs error and appends the verb to the job_state.
 
-        :param verb: Description of the result of the job run.
+        :param verb: Description of the result of the job run. Can be one of 'new', 'changed', 'changed,no_report',
+        'unchanged', 'error', which have a meaning, or a custom message such as 'test'.
         :param job_state: The JobState object with the information of the job run.
         """
         if job_state.exception is not None and job_state.exception is not NotModifiedError:
@@ -354,13 +353,13 @@ class Report(object):
         """
         self._result('error', job_state)
 
-    def test(self, job_state: JobState) -> None:
-        """Sets the verb of the job in job_state to 'test'. Called by :py:func:`UrlwatchCommand.check_test_reporter`
-        and tests.
+    def custom(self, job_state: JobState, label: str) -> None:
+        """Sets the verb of the job in job_state to a custom label. Called by
+        :py:func:`UrlwatchCommand.check_test_reporter`.
 
         :param job_state: The JobState object with the information of the job run.
         """
-        self._result('test', job_state)
+        self._result(label, job_state)
 
     def get_filtered_job_states(self, job_states: List[JobState]) -> Iterable[JobState]:
         """Returns JobStates that have reportable changes per config['display'].  Called from :py:Class:`ReporterBase`.

@@ -164,7 +164,11 @@ class CommandConfig(BaseConfig):
             metavar='JOB',
         )
         group = parser.add_argument_group('reporters')
-        group.add_argument('--test-reporter', help='send a test notification', metavar='REPORTER')
+        group.add_argument(
+            '--test-reporter',
+            help='send a test notification or redirect output of --test or --test-diff',
+            metavar='REPORTER',
+        )
         group.add_argument(
             '--smtp-login',
             action='store_true',

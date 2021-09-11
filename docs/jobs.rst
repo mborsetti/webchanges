@@ -260,11 +260,14 @@ Informational note added under the header in reports (a string).
 
 .. versionadded:: 3.2
 
+
+.. _ignore_connection_errors:
+
 ignore_connection_errors
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Ignore (temporary) connection errors (true/false). Defaults to false.
 
-See more :ref:`here <ignore_errors>`.
+See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
    Works for all url jobs, including those with use_browser: true.
@@ -273,19 +276,25 @@ ignore_timeout_errors
 ^^^^^^^^^^^^^^^^^^^^^
 Do not report errors when the timeout is hit (true/false). Defaults to false.
 
-See more :ref:`here <ignore_errors>`.
+See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
    Works for all url jobs, including those with use_browser: true.
+
+
+.. _ignore_too_many_redirects:
 
 ignore_too_many_redirects
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Ignore redirect loops (true/false). Defaults to false.
 
-See more :ref:`here <ignore_errors>`.
+See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
    Works for all url jobs, including those with use_browser: true.
+
+
+.. _ignore_http_error_codes:
 
 ignore_http_error_codes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -295,7 +304,7 @@ received (an integer, string, or list).
 Also accepts 3xx, 4xx, and 5xx as values for the entire class of response
 status codes (i.e. 2xx will suppress any error from 300 to 399 inclusive).
 
-See more :ref:`here <ignore_errors>`.
+See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
    Works for all url jobs, including those with use_browser: true.
@@ -305,31 +314,46 @@ Optional directives - without ``use_browser: true``
 ---------------------------------------------------
 These directives are available only for ``url`` without ``use_browser: true``:
 
+
+.. _no_redirects:
+
 no_redirects
 ^^^^^^^^^^^^
 Disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection (true/false). Defaults to false.
 
 .. versionadded:: 3.2.7
 
+
+.. _ssl_no_verify:
+
 ssl_no_verify
 ^^^^^^^^^^^^^
 Do not verify SSL certificates (true/false).
 
-See more :ref:`here <ssl_no_verify>`.
+See more :ref:`here <ignoring_tls_ssl_errors>`.
+
+
+.. _ignore_cached:
 
 ignore_cached
 ^^^^^^^^^^^^^
 Do not use cache control values (ETag/Last-Modified) (true/false). Defaults to false.
 
+
+.. _encoding:
+
 encoding
 ^^^^^^^^
 Character encoding to use, overriding the character encoding from the server (a string).
 
-See more :ref:`here <encoding>`.
+See more :ref:`here <overriding_content_encoding>`.
 
 Optional directives - with ``use_browser: true``
 ---------------------------------------------------
 These directives are available only for ``url`` jobs with ``use_browser: true`` (i.e. using :program:`Pyppeteer`):
+
+
+.. _chromium_revision:
 
 chromium_revision
 ^^^^^^^^^^^^^^^^^
@@ -344,11 +368,17 @@ See note :ref:`here <pyppeteer_chromium_revision>`.
 .. versionchanged:: 3.1
    Added keys for different OSs.
 
+
+.. _ignore_https_errors:
+
 ignore_https_errors
 ^^^^^^^^^^^^^^^^^^^
 Ignore HTTPS errors (true/false). Defaults to false.
 
 .. versionadded:: 3.0
+
+
+.. _user_data_dir:
 
 user_data_dir
 ^^^^^^^^^^^^^^^^^^^
@@ -356,12 +386,18 @@ A path to a pre-existing user directory that Chromium should be using (a string)
 
 .. versionadded:: 3.0
 
+
+.. _switches:
+
 switches
 ^^^^^^^^^^^^^^^^^^^
 Additional command line `switch(es) for Chromium
 <https://peter.sh/experiments/chromium-command-line-switches/>`__ (a list).
 
 .. versionadded:: 3.0
+
+
+.. _wait_until:
 
 wait_until
 ^^^^^^^^^^^^^^^^^^^
@@ -372,6 +408,9 @@ Must be one of ``load``, ``domcontentloaded``, ``networkidle0``, or ``networkidl
 See `Pyppeteer documentation <https://miyakogi.github.io/pyppeteer/reference.html#pyppeteer.page.Page.goto>`__.
 
 .. versionadded:: 3.0
+
+
+.. _wait_for_navigation:
 
 wait_for_navigation
 ^^^^^^^^^^^^^^^^^^^
@@ -388,6 +427,9 @@ navigation`` error.
 
 .. versionadded:: 3.2
 
+
+.. _wait_for:
+
 wait_for
 ^^^^^^^^^^^^^^^^^^^
 Wait until a timeout in seconds (if number), JavaScript function, or a selector string or xpath string is matched,
@@ -401,6 +443,9 @@ If ``wait_for_navigation`` is also used, ``wait_for`` is applied after.
 Cannot be used with ``block_elements``.
 
 .. versionadded:: 3.2
+
+
+.. _block_elements:
 
 block_elements
 ^^^^^^^^^^^^^^^^^^^
@@ -476,6 +521,9 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
 
 Required directives
 -------------------
+
+.. _command_directive:
+
 command
 ^^^^^^^
 The shell command to execute.
@@ -483,6 +531,9 @@ The shell command to execute.
 Optional directives (for all job types)
 =======================================
 These optional directives apply to all job types:
+
+
+.. _name:
 
 name
 ----
@@ -493,6 +544,9 @@ for ``url`` jobs retrieving HTML or XML data, up to 60 character of the contents
 
 .. versionchanged:: 3.0
    Added auto-detect <title> tag in HTML or XML.
+
+
+.. _user_visible_url:
 
 user_visible_url
 ----------------
@@ -506,6 +560,8 @@ webpage on your report.
 .. versionchanged:: 3.8
    Added support for ``command`` jobs; previously worked only with ``url`` jobs.
 
+
+.. _max_tries:
 
 max_tries
 ---------
@@ -523,6 +579,9 @@ For example, if you set a job with ``max_tries: 12`` and run :program:`webchange
 notified if the job has failed every single time during the span of one hour (5 minutes * 12 = 60 minutes) and then at
 every run until it succeeds again.
 
+
+.. _filter:
+
 filter
 ------
 Filter(s) to apply to the data retrieved (a list of dicts).
@@ -530,6 +589,9 @@ Filter(s) to apply to the data retrieved (a list of dicts).
 See :ref:`here <filters>`.
 
 Can be tested with ``--test``.
+
+
+.. _diff_tool:
 
 diff_tool
 ---------
@@ -544,6 +606,9 @@ See example usage :ref:`here <word_based_differ>`.
    * Reports now show date/time of diffs generated using ``diff_tool``.
    * Output from ``diff_tool: wdiff`` is colorized in html reports.
 
+
+.. _diff_filter:
+
 diff_filter
 -----------
 Filter(s) to be applied to the diff result (a list of dicts).
@@ -551,6 +616,9 @@ Filter(s) to be applied to the diff result (a list of dicts).
 See :ref:`here <diff_filters>`.
 
 Can be tested with ``--test-diff``.
+
+
+.. _additions_only_(jobs):
 
 additions_only
 --------------
@@ -560,6 +628,9 @@ See :ref:`here <additions_only>`.
 
 .. versionadded:: 3.0
 
+
+.. _deletions_only_(jobs):
+
 deletions_only
 --------------
 Filter the unified diff output to keep only deleted lines (no value required).
@@ -567,6 +638,20 @@ Filter the unified diff output to keep only deleted lines (no value required).
 See :ref:`here <deletions_only>`.
 
 .. versionadded:: 3.0
+
+.. _monospace:
+
+monospace
+---------
+Data is to be reported using a monospace font (true/false). Defaults to false.
+
+Tells the ``html`` report that the data should be reported using a monospace font. Useful e.g. for tabular text
+extracted by the  ``pdf2text`` filter.
+
+.. versionadded:: 3.9
+
+
+.. _is_markdown:
 
 is_markdown
 -----------

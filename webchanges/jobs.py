@@ -130,6 +130,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     ignore_https_errors: Optional[bool] = None
     ignore_timeout_errors: Optional[bool] = None
     ignore_too_many_redirects: Optional[bool] = None
+    monospace: Optional[bool] = None
     is_markdown: Optional[bool] = None
     loop: Optional[asyncio.AbstractEventLoop] = None
     markdown_padded_tables: Optional[bool] = None
@@ -428,11 +429,8 @@ class Job(JobBase):
         'filter',
         'markdown_padded_tables',
         'max_tries',
+        'monospace',
         'is_markdown',
-        'ignore_connection_errors',
-        'ignore_http_error_codes',
-        'ignore_timeout_errors',
-        'ignore_too_many_redirects',
         'user_visible_url',
     )
 
@@ -469,7 +467,19 @@ class Job(JobBase):
 CHARSET_RE = re.compile('text/(html|plain); charset=([^;]*)')
 
 
-class UrlJob(Job):
+class UrlJobBase(Job):
+    """The base class for jobs that use the 'url' key."""
+
+    __required__: Tuple[str, ...] = ('url',)
+    __optional__: Tuple[str, ...] = (
+        'ignore_connection_errors',
+        'ignore_http_error_codes',
+        'ignore_timeout_errors',
+        'ignore_too_many_redirects',
+    )
+
+
+class UrlJob(UrlJobBase):
     """Retrieve a URL from a web server."""
 
     __kind__ = 'url'
@@ -705,7 +715,7 @@ class UrlJob(Job):
         return False
 
 
-class BrowserJob(Job):
+class BrowserJob(UrlJobBase):
     """Retrieve a URL, emulating a real web browser (use_browser: true)."""
 
     __kind__ = 'browser'

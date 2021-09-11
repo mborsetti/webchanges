@@ -37,8 +37,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    # TypedDicts only work on Python >= 3.8
-    from typing import TypedDict
+    from typing import Literal, TypedDict  # not available in Python < 3.8
 
     ConfigDisplay = TypedDict(
         'ConfigDisplay',
@@ -60,7 +59,7 @@ if TYPE_CHECKING:
     ConfigReportHtml = TypedDict(
         'ConfigReportHtml',
         {
-            'diff': str,
+            'diff': Literal['unified', 'table'],
         },
     )
     ConfigReportMarkdown = TypedDict(

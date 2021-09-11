@@ -36,10 +36,20 @@ Unreleased
 
 Added
 -----
-* Test jobs generated using the command line argument ``--test`` can now be sent to a specific reporter by combining
-  this with ``--test-reporter``. For example, if running on a machine with a web browser, you can see how job 1 looks
-  like in HTML by running ``webchanges --test 1 --test-reporter browser``.
+* New job directive ``monospace`` to tell the ``html`` report that the data should be reported using a monospace font.
+  This can be useful e.g. for tabular text extracted by the ``pdf2text`` filter.
+* Test jobs generated using the command line arguments ``--test`` and ``--test-diff`` can now be sent to a specific
+  reporter by combining that argument with ``--test-reporter``. For example, if running on a machine with a web
+  browser, you can see how job 1 looks like in HTML by running ``webchanges --test 1 --test-reporter browser`` and
+  see the last diff(s) from job 1 with ``webchanges --test-diff 1 --test-reporter browser``.
 
+Documentation
+-------------
+* Improved documentation for filter ``pdf2text``.
+
+Internals
+---------
+* Initial testing with Python 3.10.
 
 Version 3.8.3
 ====================

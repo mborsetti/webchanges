@@ -14,7 +14,7 @@ Finally, if you're using unified diff (default), you can change the number of co
 
 * :ref:`contextlines`
 
-.. _generic_filters:
+.. _standard_filters:
 
 Standard filters
 ----------------

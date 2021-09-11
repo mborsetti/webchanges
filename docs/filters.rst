@@ -452,10 +452,10 @@ If the PDF file is password protected, you can specify its password:
      - pdf2text:
          password: webchangessecret
 
-
 To keep the layout of the original document by using spaces, use ``physical: true``. However, be aware that these
 spaces may change when a document is updated, so you may get reports containing a lot of changes consisting of
-nothing but changes in the spacing between the columns.
+nothing but changes in the spacing between the columns.  In addition, using the job directive ``monospace`` will
+maintain the formatting of the output (see :ref:`here <monospace>`).
 
 .. code-block:: yaml
 
@@ -463,6 +463,21 @@ nothing but changes in the spacing between the columns.
    filter:
      - pdf2text:
          physical: true
+   monospace: true
+
+To the opposite, if you don't care about the layout, you might want to strip all additional spaces that might be added
+by this filter:
+
+.. code-block:: yaml
+
+   url: https://example.net/pdf-no-multiple-spaces.pdf
+   filter:
+     - pdf2text:
+     - re.sub:
+         pattern: ' +'
+         repl: ' '
+     - strip:
+         splitlines: true
 
 
 Optional sub-directives

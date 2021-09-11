@@ -205,7 +205,7 @@ It is possible to add cookies to HTTP requests for pages that need them. For exa
        OtherKey: OtherValue
 
 
-.. _ssl_no_verify:
+.. _ignoring_tls_ssl_errors:
 
 Ignoring TLS/SSL errors
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -221,7 +221,7 @@ man-in-the-middle (MitM) attacks, never use it outside of local development or t
    ssl_no_verify: true
 
 
-.. _ignore_connection_errors:
+.. _ignoring_http_connection_errors:
 
 Ignoring HTTP connection errors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

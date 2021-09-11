@@ -40,7 +40,7 @@ Command line arguments
 
    reporters:
      --test-reporter REPORTER
-                           send a test notification
+                           send a test notification or redirect output of --test or --test-diff
      --smtp-login          verify SMTP login credentials with server and, if stored in keyring, enter or
                            check password
      --telegram-chats      list telegram chats program is joined to
@@ -123,11 +123,20 @@ saved; obviously a minimum of 2 saved snapshots are required. This allows you to
 retrieve historical diffs (changes). Use a negative index number to select a job from the bottom of your job list (i.e.
 -1 is the last job, -2 is the second to last job, etc.)
 
+You can test how the diff looks like with a reporter by combining this with ``--test-reporter``. For example, to see
+how diffs from job 1 look like in HTML if running on a machine with a web browser, run this::
+
+   webchanges --test-diff 1 --test-reporter browser
+
+
 .. versionchanged:: 3.3
    Will now display all snapshots instead of only the latest 10.
 
 .. versionchanged:: 3.8
    Accepts negative indices.
+
+.. versionchanged:: 3.9
+   Can be used in combination with ``--test-reporter``.
 
 
 .. _test-reporter:

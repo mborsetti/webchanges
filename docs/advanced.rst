@@ -81,8 +81,6 @@ With the script file ~/.config/webchanges/parse.py containing the following:
 
 
 
-.. _encoding:
-
 Selecting HTML elements with wildcards
 --------------------------------------
 Some pages appends/generates random characters to the end of the class name, which change every time it's loaded. For
@@ -128,6 +126,8 @@ With the script file ~/.config/webchanges/content_wrap.py containing the followi
        print(element)
 
 
+
+.. _overriding_content_encoding:
 
 Overriding the content encoding
 -------------------------------

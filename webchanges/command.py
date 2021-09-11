@@ -202,10 +202,9 @@ class UrlwatchCommand:
             if hasattr(job_state.job, 'note') and job_state.job.note:
                 print(job_state.job.note)
             print()
-            if self.urlwatch_config.test_reporter:
-                self.check_test_reporter(job_state)
-            else:
-                print(job_state.new_data)
+            if self.urlwatch_config.test_reporter is None:
+                self.urlwatch_config.test_reporter = 'stdout'  # default
+            self.check_test_reporter(job_state)
 
         return
 
@@ -226,9 +225,9 @@ class UrlwatchCommand:
             with JobState(self.urlwatcher.cache_storage, job) as job_state:
                 job_state.old_data, job_state.old_timestamp = history_data[i + 1]
                 job_state.new_data, job_state.new_timestamp = history_data[i]
-                tz = self.urlwatcher.config_storage.config['report']['tz']
-                print(f'=== Filtered diff between state {-i} and state {-(i + 1)} ===')
-                print(job_state.get_diff(tz))
+                if self.urlwatch_config.test_reporter is None:
+                    self.urlwatch_config.test_reporter = 'stdout'  # default
+                self.check_test_reporter(job_state, f'Filtered diff (states {-i} and {-(i + 1)})')
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
@@ -354,7 +353,7 @@ class UrlwatchCommand:
 
         self._exit(0)
 
-    def check_test_reporter(self, job_state: Optional[JobState] = None) -> None:
+    def check_test_reporter(self, job_state: Optional[JobState] = None, label: str = 'test') -> None:
         name = self.urlwatch_config.test_reporter
 
         if name not in ReporterBase.__subclasses__:
@@ -440,7 +439,7 @@ class UrlwatchCommand:
         else:
             job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
             job_state.new_timestamp = time.time()
-            report.test(job_state)
+            report.custom(job_state, label)
 
         if name:  # required for type checking
             report.finish_one(name, jobs_file=self.urlwatch_config.jobs)
