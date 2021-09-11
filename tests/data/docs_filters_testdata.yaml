@@ -288,6 +288,9 @@ https://example.net/pdf-test-password.pdf:
 https://example.net/pdf-test-keep-physical-layout.pdf:
   filename: pdf-test.pdf
   output: "A PDF Document that can be turned into plain text."
+https://example.net/pdf-no-multiple-spaces.pdf:
+  filename: pdf-test-multiple-spaces.pdf
+  output: "This PDF document has lots of multiple spaces."
 https://example.net/ocr-test.png:
   # Image taken from https://stackoverflow.com/q/39754903/1047040
   filename: ocr-test.png
@@ -572,8 +575,8 @@ https://example.net/execute.html:
     The data is 'TEST'
     The job location is 'https://example.net/execute.html'
     The job name is 'Test execute filter'
-    The job number is '46'
-    The job JSON is '{"url": "https://example.net/execute.html", "index_number": 46, "name": "Test execute filter", "filter": [{"execute": "python3 -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}]}'
+    The job number is '47'
+    The job JSON is '{"url": "https://example.net/execute.html", "index_number": 47, "name": "Test execute filter", "filter": [{"execute": "python3 -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}]}'
 https://example.net/shellpipe.html:
   input: |
   output: TEST

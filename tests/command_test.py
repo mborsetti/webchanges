@@ -271,12 +271,17 @@ def test_test_job(capsys):
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     message = message.replace('\n\n ', '\n').replace('\r', '')  # Python 3.6
-    assert message == (
-        'Sample webchanges job; used by command_test.py\n'
-        '----------------------------------------------\n'
-        '\n'
-        'test\n'
-        '\n'
+    assert message.startswith(
+        f'Sample webchanges job; used by command_test.py\n'
+        f'----------------------------------------------\n'
+        f'\n'
+        f'===========================================================================\n'
+        f'01. TEST: Sample webchanges job; used by command_test.py\n'
+        f'===========================================================================\n'
+        f'\n'
+        f'---------------------------------------------------------------------------\n'
+        f'TEST: Sample webchanges job; used by command_test.py ({urlwatch_command._get_job(1).get_location()})\n'
+        f'---------------------------------------------------------------------------\n'
     )
 
 
@@ -355,8 +360,8 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '=== Filtered diff between state 0 and state -1 ===\n' in message
-        assert message.splitlines()[1][-6:] == ' -1200'
+        assert '01. FILTERED DIFF (STATES 0 AND -1): ' in message
+        assert message.splitlines()[10][-6:] == ' -1200'
         # rerun to reuse cached _generated_diff but change timezone
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/UTC'
         setattr(command_config, 'test_diff', 1)
@@ -364,8 +369,8 @@ def test_test_diff_and_joblist(capsys):
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_diff', None)
         message = capsys.readouterr().out
-        assert '=== Filtered diff between state 0 and state -1 ===\n' in message
-        assert message.splitlines()[1][-6:] == ' +0000'
+        assert '01. FILTERED DIFF (STATES 0 AND -1): ' in message
+        assert message.splitlines()[10][-6:] == ' +0000'
 
         # test diff (using outside differ)
         setattr(command_config, 'test_diff', 1)
@@ -379,8 +384,8 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '=== Filtered diff between state 0 and state -1 ===\n' in message
-        assert message.splitlines()[2][-6:] == ' +0000'
+        assert '01. FILTERED DIFF (STATES 0 AND -1): ' in message
+        assert message.splitlines()[11][-6:] == ' +0000'
 
         # Try another timezone
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/GMT+1'
@@ -390,8 +395,8 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '=== Filtered diff between state 0 and state -1 ===\n' in message
-        assert message.splitlines()[2][-6:] == ' -0100'
+        assert '01. FILTERED DIFF (STATES 0 AND -1): ' in message
+        assert message.splitlines()[11][-6:] == ' -0100'
 
     finally:
         urlwatcher.cache_storage.delete(guid)

@@ -134,7 +134,7 @@ jobs:
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=77
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=78
           tests/
         env:
           PYTHONUTF8: 1
