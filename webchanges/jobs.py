@@ -626,7 +626,7 @@ class UrlJob(UrlJobBase):
 
         if 400 <= response.status_code <= 499:
             logger.info(
-                f'Received HTTP status code {response.status_code} ({response.reason}) with the following ' f'content:'
+                f'Received HTTP status code {response.status_code} ({response.reason}) with the following content:'
             )
             error_message = response.text
             try:
@@ -973,7 +973,7 @@ class BrowserJob(UrlJobBase):
             ) -> None:
                 """Handle pyee.EventEmitter callback."""
                 logger.info(
-                    f'Job {self.index_number}: resource_type={request_event.resourceType} ' f'elements={block_elements}'
+                    f'Job {self.index_number}: resource_type={request_event.resourceType} elements={block_elements}'
                 )
                 if any(request_event.resourceType == el for el in block_elements):
                     logger.info(f'Job {self.index_number}: Aborting request {request_event.resourceType}')
@@ -991,17 +991,20 @@ class BrowserJob(UrlJobBase):
             """Store the ETag for future use as well as the response code."""
             nonlocal etag  # type: ignore[misc]
             nonlocal response_code  # type: ignore[misc]
+            nonlocal response_headers  # type: ignore[misc]
             logger.debug(
                 f'Job {self.index_number}: response.status={response_event.status} '
                 f'response.url={response_event.url}'
             )
             if urldefrag(response_event.url)[0] == urldefrag(self.url)[0]:
                 response_code = response_event.status
+                response_headers = response_event.headers
                 if response_event.status == requests.codes.ok:
                     etag = response_event.headers.get('etag')
 
         etag: str = ''
         response_code: Optional[int] = None
+        response_headers: Optional[Dict[str, str]] = {}
 
         # page.on inherited from pyee's EventEmitter class
         # https://pyee.readthedocs.io/en/latest/#pyee.EventEmitter
@@ -1012,6 +1015,7 @@ class BrowserJob(UrlJobBase):
             await page.goto(self.url, options=options)
         except PageError as e:
             logger.debug(f'Job {self.index_number}: Page returned error {str(e.args)}')
+            logger.debug(f'Job {self.index_number}: Response headers {response_headers}')
             await browser.close()
             if response_code and 400 <= response_code < 600:
                 raise BrowserResponseError(e.args, response_code)
@@ -1029,6 +1033,7 @@ class BrowserJob(UrlJobBase):
         if self.wait_for_navigation:
             while not page.url.startswith(self.wait_for_navigation):
                 logger.info(f'Job {self.index_number}: Waiting for redirection from {page.url}')
+                logger.debug(f'Job {self.index_number}: Response headers {response_headers}')
                 await page.waitForNavigation(option=options)
         if self.wait_for:
             if isinstance(self.wait_for, (int, float, complex)) and not isinstance(self.wait_for, bool):
@@ -1042,8 +1047,9 @@ class BrowserJob(UrlJobBase):
             raise BrowserResponseError(('',), response_code)
         elif response_code is not None and response_code != requests.codes.ok:
             logger.info(
-                f'Job {self.index_number}: Received response HTTP {response_code} ' f'{response_names[response_code]}'
+                f'Job {self.index_number}: Received response HTTP {response_code} {response_names[response_code]}'
             )
+            logger.debug(f'Job {self.index_number}: Response headers {response_headers}')
 
         return content, etag
 
