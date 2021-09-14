@@ -547,7 +547,7 @@ class TextReporter(ReporterBase):
             yield (
                 f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
                 f' seconds with {__project_name__} {__version__}'
-                + (f' ({self.jobs_file.stem}).\n' if self.jobs_file and self.jobs_file.name != 'jobs' else '.\n')
+                + (f' ({self.jobs_file.stem}).\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '.\n')
             )
             if (
                 hasattr(self.report, 'new_release_future')
