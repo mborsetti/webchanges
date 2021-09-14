@@ -13,7 +13,7 @@ from typing import Optional, TYPE_CHECKING, Union
 
 import requests
 
-from . import __docs_url__, __project_name__
+from . import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
 from .handler import JobState, Report
 from .jobs import BrowserJob, JobBase, UrlJob
@@ -181,12 +181,12 @@ class UrlwatchCommand:
 
     def test_job(self, job_id: Union[str, int]) -> None:
         """
-
         :param job_id:
         :return:
         :raises Exception: The Exception of a job when job raises an Exception.
         """
         job = self._get_job(job_id)
+        start = time.perf_counter()
 
         if isinstance(job, UrlJob):
             # Force re-retrieval of job, as we're testing filters
@@ -194,6 +194,7 @@ class UrlwatchCommand:
 
         with JobState(self.urlwatcher.cache_storage, job) as job_state:
             job_state.process()
+            duration = time.perf_counter() - start
             if job_state.exception is not None:
                 self.print_new_version()
                 raise job_state.exception
@@ -202,9 +203,11 @@ class UrlwatchCommand:
             if hasattr(job_state.job, 'note') and job_state.job.note:
                 print(job_state.job.note)
             print()
-            if self.urlwatch_config.test_reporter is None:
-                self.urlwatch_config.test_reporter = 'stdout'  # default
-            self.check_test_reporter(job_state)
+            print(job_state.new_data)
+            print()
+            print('--')
+            dur_str = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
+            print(f'Job tested in {dur_str} seconds with {__project_name__} {__version__}.')
 
         return
 
@@ -212,6 +215,8 @@ class UrlwatchCommand:
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
     def test_diff(self, job_id: str) -> int:
+        report = Report(self.urlwatcher)
+        self.urlwatch_config.jobs = Path('--test-diff')
         job = self._get_job(job_id)
 
         history_data = list(self.urlwatcher.cache_storage.get_history_data(job.get_guid()).items())
@@ -227,7 +232,7 @@ class UrlwatchCommand:
                 job_state.new_data, job_state.new_timestamp = history_data[i]
                 if self.urlwatch_config.test_reporter is None:
                     self.urlwatch_config.test_reporter = 'stdout'  # default
-                self.check_test_reporter(job_state, f'Filtered diff (states {-i} and {-(i + 1)})')
+                self.check_test_reporter(job_state, label=f'Filtered diff (states {-i} and {-(i + 1)})', report=report)
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
@@ -254,7 +259,14 @@ class UrlwatchCommand:
                 (stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
             ):
                 if job_state.exception is not None:
-                    print(f'{job_state.job.index_number:3}: Error: {job_state.exception}')
+                    pretty_name = job_state.job.pretty_name()
+                    location = job_state.job.get_location()
+                    if pretty_name != location:
+                        print(
+                            f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name} ({location})'
+                        )
+                    else:
+                        print(f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})')
                 elif len(job_state.new_data.strip()) == 0:
                     if self.urlwatch_config.verbose:
                         print(f'{job_state.job.index_number:3}: No data: {job_state.job!r}')
@@ -269,7 +281,8 @@ class UrlwatchCommand:
         end = time.perf_counter()
         duration = end - start
         dur_str = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
-        print(f"--\nChecked {len(jobs)} job{'s' if len(jobs) else ''} in {dur_str} seconds")
+        print('--')
+        print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} in {dur_str} seconds")
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
@@ -353,7 +366,13 @@ class UrlwatchCommand:
 
         self._exit(0)
 
-    def check_test_reporter(self, job_state: Optional[JobState] = None, label: str = 'test') -> None:
+    def check_test_reporter(
+        self,
+        job_state: Optional[JobState] = None,
+        label: str = 'test',
+        report: Optional[Report] = None,
+    ) -> None:
+
         name = self.urlwatch_config.test_reporter
 
         if name not in ReporterBase.__subclasses__:
@@ -375,7 +394,8 @@ class UrlwatchCommand:
             print(f'Use {__project_name__} --edit-config to configure reporters')
             self._exit(1)
 
-        report = Report(self.urlwatcher)
+        if not report:
+            report = Report(self.urlwatcher)
 
         def build_job(job_name: str, url: str, old: str, new: str) -> JobState:
             job = JobBase.unserialize({'name': job_name, 'url': url})
@@ -437,8 +457,6 @@ class UrlwatchCommand:
                 )
             )
         else:
-            job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
-            job_state.new_timestamp = time.time()
             report.custom(job_state, label)
 
         if name:  # required for type checking

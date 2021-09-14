@@ -166,7 +166,7 @@ class CommandConfig(BaseConfig):
         group = parser.add_argument_group('reporters')
         group.add_argument(
             '--test-reporter',
-            help='send a test notification or redirect output of --test or --test-diff',
+            help='send a test notification or redirect output of --test-diff',
             metavar='REPORTER',
         )
         group.add_argument(

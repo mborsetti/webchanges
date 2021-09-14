@@ -40,7 +40,7 @@ Command line arguments
 
    reporters:
      --test-reporter REPORTER
-                           send a test notification or redirect output of --test or --test-diff
+                           send a test notification or redirect output of --test-diff
      --smtp-login          verify SMTP login credentials with server and, if stored in keyring, enter or
                            check password
      --telegram-chats      list telegram chats program is joined to
@@ -101,17 +101,8 @@ returned from a website with a 4xx (client error) status code::
 
    webchanges --verbose --test 1
 
-You can test how this job looks like with a reporter by combining this with ``--test-reporter``. For example, to see
-how job 1 looks like in HTML if running on a machine with a web browser, run this::
-
-   webchanges --test 1 --test-reporter browser
-
-
 .. versionchanged:: 3.8
    Accepts negative indices.
-
-.. versionchanged:: 3.9
-   Can be used in combination with ``--test-reporter``.
 
 .. _test-diff:
 
@@ -130,7 +121,7 @@ how diffs from job 1 look like in HTML if running on a machine with a web browse
 
 
 .. versionchanged:: 3.3
-   Will now display all snapshots instead of only the latest 10.
+   Will now display all saved snapshots instead of only the latest 10.
 
 .. versionchanged:: 3.8
    Accepts negative indices.
@@ -151,7 +142,7 @@ debugging issues, especially when used in conjunction with ``--verbose``::
 
 
 .. versionchanged:: 3.9
-   Can be used in combination with ``--test`` to send the output of the job being tested.
+   Can be used in combination with ``--test-diff`` to redirect the output of the diff to a reporter.
 
 
 .. _delete-snapshot:
