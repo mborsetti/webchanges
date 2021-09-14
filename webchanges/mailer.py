@@ -118,8 +118,12 @@ class SendmailMailer(Mailer):
 
         :param msg: The message to be sent.
         """
+        if msg['From']:
+            command = [self.sendmail_path, '-oi', msg['To']]
+        else:
+            command = [self.sendmail_path, '-oi', '-f', msg['From'], msg['To']]
         p = subprocess.run(
-            [self.sendmail_path, '-oi', msg['To']],
+            command,
             input=msg.as_string(),
             capture_output=True,
             text=True,

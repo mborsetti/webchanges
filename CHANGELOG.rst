@@ -42,6 +42,13 @@ Added
   combining that argument with ``--test-reporter``. For example, if running on a machine with a web
   browser, you can see the last diff(s) from job 1 with ``webchanges --test-diff 1 --test-reporter browser``.
 
+Fixed
+-----
+* When running the ``email`` reporter with the ``sendmail`` method sub-directive, if the ``from`` sub-directive is
+  specified it will now be passed on to the ``sendmail`` executable as a ``-f`` command line argument.  Contributed by
+  `Jonas Witschel <https://github.com/diabonas>`__ upstream `here <https://github.com/thp/urlwatch/pull/671>`__ (with
+  modifications).
+
 Documentation
 -------------
 * Improved documentation for filter ``pdf2text``.
