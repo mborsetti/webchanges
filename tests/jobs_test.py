@@ -206,7 +206,7 @@ def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
 def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) -> None:
     if job_data.get('use_browser'):
         logger.warning(
-            f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since it times out after 90 ' f'seconds or so'
+            f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since it times out after 90 seconds or so'
         )
         return
 

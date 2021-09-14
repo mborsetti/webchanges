@@ -1102,7 +1102,7 @@ class CacheSQLite3Storage(CacheStorage):
             if self.max_snapshots:
                 num_del = self.keep_latest(self.max_snapshots)
                 logger.debug(
-                    f'Keeping no more than {self.max_snapshots} snapshots per job: ' f'purged {num_del} older entries'
+                    f'Keeping no more than {self.max_snapshots} snapshots per job: purged {num_del} older entries'
                 )
             else:
                 self.db.commit()
