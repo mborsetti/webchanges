@@ -44,10 +44,14 @@ Added
 
 Fixed
 -----
-* When running the ``email`` reporter with the ``sendmail`` method sub-directive, if the ``from`` sub-directive is
-  specified it will now be passed on to the ``sendmail`` executable as a ``-f`` command line argument.  Contributed by
+* ``email`` reporter with the ``sendmail`` method sub-directive: ``sendmail`` executable now receives the ``from``
+  sub-directive (when specified) as a ``-f`` command line argument. Contributed by
   `Jonas Witschel <https://github.com/diabonas>`__ upstream `here <https://github.com/thp/urlwatch/pull/671>`__ (with
   modifications).
+* Conversion of Markdown to HTML:
+  * Code blocks are now correctly rendered in monospace font with no wrapping.
+  * Spaces immediately after ````` (code block opening) are no longer dropped.
+  * Improved speed of detection and handling of lines starting with spaces.
 
 Documentation
 -------------
