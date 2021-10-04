@@ -734,7 +734,6 @@ class BrowserJob(UrlJobBase):
         'navigate',
         'switches',
         'timeout',
-        'user_visible_url',
         'user_data_dir',
         'wait_for',
         'wait_for_navigation',

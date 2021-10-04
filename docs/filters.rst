@@ -1076,8 +1076,8 @@ the command) that the ``execute`` filter cannot handle.
 
 .. danger::
 
-   The execution of a shell command opens up all sort of security issues, in addition to generating additional
-   processing overhead, so the use of this filter should be avoided in favor of the :ref:`execute` filter.
+   The execution of a shell command opens up all sort of security issues and the use of this filter should be avoided
+   in favor of the :ref:`execute` filter.
 
 Example:
 
@@ -1089,9 +1089,9 @@ Example:
 
 .. warning::
 
-   On Linux and macOS systems, due to security reasons ``shellpipe`` will not run unless **both** the config directory
-   **and** the jobs file are both **owned** and **writeable** by **only** the user who is running the job (and not by
-   its group or by other users). To set this up:
+   On Linux and macOS systems, due to security reasons the ``shellpipe`` filter will not run unless **both** the config
+   directory **and** the jobs file are both **owned** and **writeable** by **only** the user who is running the job
+   (and not by its group or by other users). To set this up:
 
    .. code-block:: bash
 

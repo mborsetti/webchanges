@@ -145,13 +145,6 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
     return textwrap.wrap(string, length, replace_whitespace=False)
 
 
-_URL_RE = re.compile(
-    r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
-&amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|
-&quot;)*\)))+)"""
-)  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible
-
-
 def linkify(
     text: str,
     shorten: bool = False,
@@ -171,7 +164,9 @@ def linkify(
     We are using a regex from tornado library https://github.com/tornadoweb/tornado/blob/master/tornado/escape.py.
     This regex should avoid character entities other than &amp; so that we won't pick up &quot;, etc., but it is
     vulnerable to Regular expression Denial of Service (ReDoS), which would divert computational resources to an
-    expensive regex match. The risk in this application is limited and we can't find anything better.
+    expensive regex match. The risk in this application is limited.
+
+    In the future, consider using linkify from the bleach project instead (requires importing another package).
 
     :parameter text: The text to linkify.
     :parameter shorten: Long urls will be shortened for display.
@@ -182,6 +177,12 @@ def linkify(
     :parameter permitted_protocols: Protocols which should be linkified, e.g. linkify(text,
         permitted_protocols=('http', 'ftp', 'mailto')); it is very unsafe to include protocols such as javascript.
     """
+    _URL_RE = re.compile(
+        r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
+    &amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|
+    &quot;)*\)))+)"""
+    )  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible
+
     if extra_params and not callable(extra_params):
         extra_params = f' {extra_params.strip()}'
 

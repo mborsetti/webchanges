@@ -222,8 +222,11 @@ In order for this to work, ``wdiff`` needs to  be installed separately (e.g. ``a
 ``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
 Windows).
 
-.. tip::
-   When using ``diff_tool: wdiff`` with an ``html`` report, the output of ``wdiff`` will be colorized.
+You can more finely control the output of ``wdiff`` with command line arguments; see the manual for your installation
+(or a generic one `here <https://www.gnu.org/software/wdiff/manual/>`__) for more information.
+
+.. hint::
+   If you use an ``html`` report with ``diff_tool: wdiff``, the output of ``wdiff`` will be colorized.
 
 Note: the use of an external differ will override the ``diff`` setting of the ``html`` report.
 
@@ -238,11 +241,12 @@ Using a Chromium revision matching a Google Chrome release
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :program:`webchanges` currently specifies a Chromium release equivalent to Google Chrome version 89.0.4389.72. If you
 want a different one, you can do so, but unfortunately the Chromium revision number does not match the Google Chrome /
-Chromium release one, so you have to find out what the revision number is for a stable Chrome release.
+Chromium release one, so for a given stable Google Chrome release you have to find out the equivalent Chromium
+revision number.
 
 There are multiple ways of doing so; the one I found easiest is to go to https://chromium.cypress.io/, selecting the
-"stable" release channel *for the OS you need*, and clicking on "get downloads" for the one you want. At the top you
-will see something like "Base revision: 843830. Found build artifacts at 843831 [browse files]". You want the
+"stable" release channel *for the OS you need*, and clicking on "get downloads" for the release you want. At the top
+you will see something similar to "Base revision: 843830. Found build artifacts at 843831 [browse files]". You want the
 revision with build artifacts, in this example 843831.
 
 
@@ -256,9 +260,9 @@ revision with build artifacts, in this example 843831.
 
 
 .. note::
-   Every time you change the chromium_revision, a new download is initiated and the old version is kept
-   on your system, using up space. You must delete unused executables manually; you will find it in the directory
-   specified by running:
+   Every time you change the chromium_revision, a new download is initiated and the old version is kept on your
+   system, using up space. You must delete unneeded versions manually; you will find the name of the directories
+   containing the files by running:
 
    .. code-block:: bash
 

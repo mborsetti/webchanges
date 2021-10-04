@@ -3,29 +3,57 @@
 =========
 Reporters
 =========
-By default :program:`webchanges` prints out information about changes to the data collected to standard output
-(``stdout``), which is your terminal if you run it interactively.
+Reporters display or send the :ref:`report <reports>` containing the changes detected. By default, a :ref:`text
+<text>` report is sent to the standard output (``stdout``), which is your terminal if you are running
+:program:`webchanges` interactively.
 
 .. note::
    If running via cron or another scheduler service, the destination of this output depends on the scheduler and its
    configuration.
 
-You can change the settings to change or add to where the report is sent to. Settings are contained in the
-configuration file ``config.yaml`` (a text file located in the ``~/.config/webchanges`` directory for Linux or macOS,
-or in the :program:`webchanges` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``) for
-Windows) which is editable using any text editor or with the command ``webchanges --edit--config``. The
-configuration for the reporters will be listed under the ``reporters`` section.
+You can add or change the reporter (and/or customize it) by changing the settings in the configuration file
+``config.yaml``, which is editable using any text editor or with the command ``webchanges --edit--config``. The
+configuration for the reporters will be listed under the ``report`` section.
+
+.. note::
+   The ``config.yaml`` file is located in Linux or macOS in the ``~/.config/webchanges`` directory, in Windows in
+   the :program:`webchanges` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``).
 
 .. note::
    The ``config.yaml`` file is created at the first run of ``webchanges --edit`` or ``webchanges --edit--config``.
 
-.. tip:: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:tz
-   below to set the report's time zone.
+.. tip:: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:`tz`
+   below to set the time zone to be uses for reporting.
+
+At the moment, the following reporters are available:
+
+* :ref:`stdout` (enabled by default): Display on stdout (the console).
+* :ref:`browser`: Launch the default web browser.
+* :ref:`email`: Send via email (SMTP or sendmail).
+* :ref:`ifttt`: Send via IFTTT.
+* :ref:`mailgun`: Send via email using the Mailgun service.
+* :ref:`matrix`: Send to a room using the Matrix protocol.
+* :ref:`prowl`: Send via prowlapp.com.
+* :ref:`pushbullet`: Send via Pushbullet.
+* :ref:`pushover`: Send via Pushover.
+* :ref:`run_command`: Run a custom command on the local system.
+* :ref:`telegram`: Send via Telegram.
+* :ref:`webhook`: Send to an e.g. Slack or Discord channel using the service's webhook.
+* :ref:`xmpp`: Send using the Extensible Messaging and Presence Protocol (XMPP).
+
+.. To convert the "webchanges --features" output, use:
+   webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
+
+Each reporter has a directive called ``enabled`` that can be toggled (true/false).
+
+Please note that many reporters need the installation of additional Python packages to work, as noted below and in
+:ref:`dependencies <dependencies>`.
+
 
 To **test a reporter**, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.
 ``webchanges --test-reporter stdout``. :program:`webchanges` will generate test  ``new``, ``changed``, ``unchanged``
-and ``error`` notifications and send (the ones configured to be sent under ``display``) via the ``stdout`` reporter
-(if it is enabled). Any reporter that is configured and enabled can be tested.
+and ``error`` notifications and send the ones configured to be sent under ``display`` via the selected
+reporter, in this case ``stdout``. Any reporter that is configured and enabled can be tested.
 
 For example to test if your email reporter is configured correctly, use::
 
@@ -36,30 +64,6 @@ detailed debug logs::
 
    webchanges --verbose --test-reporter email
 
-
-At the moment, the following reporters are available:
-
-* :ref:`stdout` (enabled by default): Display on stdout (the console)
-* :ref:`browser`: Launch the default web browser
-* :ref:`email`: Send via email (SMTP or sendmail)
-* :ref:`ifttt`: Send via IFTTT
-* :ref:`mailgun`: Send via email using the Mailgun service
-* :ref:`matrix`: Send to a room using the Matrix protocol
-* :ref:`prowl`: Send via prowlapp.com
-* :ref:`pushbullet`: Send via Pushbullet
-* :ref:`pushover`: Send via Pushover
-* :ref:`run_command`: Run a custom command on the local system
-* :ref:`telegram`: Send via Telegram
-* :ref:`webhook`: Send to an e.g. Slack or Discord channel using the service's webhook
-* :ref:`xmpp`: Send using the Extensible Messaging and Presence Protocol (XMPP)
-
-.. To convert the "webchanges --features" output, use:
-   webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
-
-Each reporter has a directive called ``enabled`` that can be toggled (true/false).
-
-Please note that many reporters need the installation of additional Python packages to work, as noted below and in
-:ref:`dependencies <dependencies>`.
 
 .. _tz:
 
@@ -87,14 +91,15 @@ Browser
 -------
 .. versionadded:: 3.0
 
-Displays the summary in HTML format using the system's default web browser.
+Displays the ref:`HTML report <html>` using the system's default web browser.
+
 
 
 .. _email:
 
 Email
 -----
-Sends email (via SMTP or the sendmail external program).
+Sends the report via email (via SMTP or the sendmail external program).
 
 Sub-directives
 ~~~~~~~~~~~~~~
@@ -168,7 +173,7 @@ Gmail example
 .. warning::
    You **do not want to do this with your primary Google account**, but rather get a free separate one just for
    sending mails from :program:`webchanges` and similar programs. Allowing less secure apps and storing the password
-   (even if it's in the keychain) is not good security practice for your primary account. You have been warned!
+   (even if it's in the Keychain) is not good security practice for your primary account. You have been warned!
 
 First configure your Gmail account to allow for "less secure" (password-based) apps to login:
 
@@ -234,12 +239,12 @@ program, which must already be installed and configured.
 
 Optional packages
 ~~~~~~~~~~~~~~~~~
-If using a keychain to store the password, you also need to:
+If using a Keychain to store the password, you also need to:
 
 * Install the ``safe_password`` :ref:`optional package <optional_packages>` as per below
 * Install all the dependencies of the ``keyring`` package as per documentation `here
   <https://pypi.org/project/keyring/>`_
-* Configure the ``keyring`` package to use the keychain backend being used in your system following the instructions
+* Configure the ``keyring`` package to use the Keychain backend being used in your system following the instructions
   on the same page
 
 .. code-block:: bash
@@ -247,10 +252,13 @@ If using a keychain to store the password, you also need to:
    pip install --upgrade webchanges[safe_password]
 
 
+
 .. _ifttt:
 
 IFTTT
 -----
+Sends a ref:`text report <text>` as an IFTTT event.
+
 To configure IFTTT events, you need to retrieve your key from `<https://ifttt.com/maker_webhooks/settings>`__.
 
 The URL is shown in "Account Info" and has the following format:
@@ -276,35 +284,34 @@ The event will contain three values in the posted JSON:
 
 These values will be passed on to the Action in your Recipe.
 
-IFTTT uses the :ref:`text` report type.
 
 
 .. _mailgun:
 
 Mailgun
 -------
-Sends email using the commercial `Mailgun <https://www.mailgun.com/>`__ service.
+Sends a ref:`text report <text>` via email using the commercial `Mailgun <https://www.mailgun.com/>`__ service.
 
 
 Sub-directives
 ~~~~~~~~~~~~~~
-* ``domain``: The domain
+* ``domain``: The domain.
 * ``api_key``: API key (see `here
-  <https://help.mailgun.com/hc/en-us/articles/203380100-Where-Can-I-Find-My-API-Key-and-SMTP-Credentials->`__)
-* ``from_name``: Sender's name
-* ``from_mail``: Sender's email address
-* ``to``: Recipient's email address
-* ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported
-* ``region`` (optional)
+  <https://help.mailgun.com/hc/en-us/articles/203380100-Where-Can-I-Find-My-API-Key-and-SMTP-Credentials->`__).
+* ``from_name``: Sender's name.
+* ``from_mail``: Sender's email address.
+* ``to``: Recipient's email address.
+* ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported.
+* ``region`` (optional): The code of the region if different from the US (e.g. ``eu``).
 
-Mailgun uses the :ref:`text` report type.
 
 
 .. _matrix:
 
 Matrix
 ------
-Sends notifications through the `Matrix protocol <https://matrix.org>`__.
+Sends a :ref:`text <text>` or :ref:`Markdown <markdown>` report as a notification through the `Matrix protocol
+<https://matrix.org>`__.
 
 You first need to register a Matrix account for the bot on any home server.
 
@@ -331,7 +338,7 @@ Here is a sample configuration:
      access_token: 'YOUR_TOKEN_HERE'
      room_id: '!roomroomroom:matrix.org'
 
-You will probably want to use the following configuration for the ``markdown`` reporter, if you intend to post change
+You will probably want to use the following configuration for the ``markdown`` report, if you intend to post change
 notifications to a public Matrix room, as the messages quickly become noisy:
 
 .. code:: yaml
@@ -343,7 +350,6 @@ notifications to a public Matrix room, as the messages quickly become noisy:
      footer: false
      minimal: true
 
-Matrix uses the :ref:`text` report type.
 
 
 .. _prowl:
@@ -352,8 +358,7 @@ Prowl
 -----
 .. versionadded:: 3.0.1
 
-You can have notifications sent to you through the `Prowl <https://www.prowlapp.com>`__ push notification service to
-receive the notification on iOS (only).
+Sends a ref:`text report <text>` through the `Prowl <https://www.prowlapp.com>`__ push notification service (iOS only).
 
 To achieve this, you should register a new Prowl account, and have the Prowl application installed on your iOS device.
 
@@ -380,14 +385,15 @@ Here is a sample configuration:
 The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
 shown as the source of the event in the Prowl App.
 
-Prowl uses the :ref:`text` report type.
 
 
 .. _pushbullet:
 
 Pushbullet
 ----------
-Pushbullet notifications are configured similarly to Pushover (see above). You’ll need to add to the config your
+Sends a ref:`text report <text>` through  the `Pushbullet <https://www.pushbullet.com>`__ notification service.
+
+Pushbullet notifications are configured similarly to :ref:`Pushover`. You will need to add to the configuration your
 Pushbullet Access Token, which you can generate at https://www.pushbullet.com/#settings.
 
 Required packages
@@ -398,13 +404,14 @@ To use this report you need to install :ref:`optional_packages`. Install them us
 
    pip install --upgrade webchanges[pushbullet]
 
-Pushbullet uses the :ref:`text` report type.
 
 
 .. _pushover:
 
 Pushover
 --------
+Sends a ref:`text report <text>` through  the `Pushbullet <https://www.pushbullet.com>`__ notification service.
+
 You can configure webchanges to send real time notifications about changes via `Pushover <https://pushover.net/>`__.
 Firsly, make sure you have the required packages installed (see below). Then edit your configuration file
 (``webchanges --edit-config``) and enable pushover. You will also need to add to the config your Pushover user key
@@ -433,13 +440,12 @@ To use this report you need to install :ref:`optional_packages`. Install them us
 
 stdout
 ------
-Displays the summary in text format on stdout (the console)
-
-stdout uses the :ref:`text` report type.
+Displays a :ref:`text report <text>` on stdout (the console).
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``color``: Uses color (green for additions, red for deletions) (true/false)
+* ``color``: Uses color (green for additions, red for deletions) (true/false).
+
 
 
 .. _run_command:
@@ -448,8 +454,9 @@ run_command
 -----------
 .. versionadded:: 3.8
 
-This reporter will run a command on your local system.  Any text in the command that matches the keywords below will
-be substituted as follows:
+Runs a command on your local system supplying a :ref:`text report <text>`.
+
+Any text in the command that matches the keywords below will be substituted as follows:
 
 +------------------+------------------------------------------------------------------------------------+
 | Text in command  | Replacement                                                                        |
@@ -484,9 +491,7 @@ If the command generates an error, the output of the error will be in the first 
 
 Telegram
 --------
-Telegram notifications are made using Telegram's `Bot API <https://core.telegram.org/bots/api>`__.
-
-Telegram uses the :ref:`markdown` report type.
+Sends a ref:`Markdown report <markdown>` to Telegram using its `Bot API <https://core.telegram.org/bots/api>`__.
 
 Groups
 ~~~~~~
@@ -552,7 +557,7 @@ username of the channel (the text after \https://t.me/s/, prefixed by an @) as a
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``silent``: Receive a notification without any sound (true/false) (default: false)
+* ``silent``: Receive a notification without any sound (true/false). Default is false.
 
 
 .. versionchanged:: 3.7
@@ -566,8 +571,8 @@ Optional sub-directives
 
 Webhook (Slack, Discord, Mattermost etc.)
 -----------------------------------------
-Services such as Slack, Discord, Mattermost etc. that support incoming webhooks can be used for notifications using the
-``webhook`` reporter:
+Sends a :ref:`text <text>` or :ref:`Markdown <markdown>` report to services such as Slack, Discord, Mattermost etc.
+using a webhook.
 
 .. code:: yaml
 
@@ -613,10 +618,10 @@ setting ``markdown: true``):
 
 Sub-directives
 ~~~~~~~~~~~~~~
-* ``webhook_url`` (required): the webhook URL.
-* ``markdown`` (default: false): Whether to send Markdown instead of plain text (true/false).
-* ``max_message_length``: The maximum length of a message in characters (default: 40,000, unless ``webhook_url`` starts
-  with \https://discordapp.com, then 2,000).
+* ``webhook_url`` (required): The webhook URL.
+* ``markdown``: Whether to send Markdown instead of plain text (true/false). Default is false.
+* ``max_message_length``: The maximum length of a message in characters. Default is 40,000 unless ``webhook_url``
+  starts with \https://discordapp.com when the default is 2,000.
 
 
 .. versionchanged:: 3.0.1
@@ -627,9 +632,9 @@ Sub-directives
 
 XMPP
 ----
-You can have notifications sent to you through the XMPP protocol.
+Sends a :ref:`text <text>` report using the XMPP protocol.
 
-To achieve this, you should register a new XMPP account that is just used for :program:`webchanges`.
+This reporter should be only used with a new XMPP account that is exclusively used for :program:`webchanges`.
 
 Here is a sample configuration:
 
@@ -640,7 +645,7 @@ Here is a sample configuration:
      sender: 'BOT_ACCOUNT_NAME'
      recipient: 'YOUR_ACCOUNT_NAME'
 
-You can store your password securely on a keychain if you have one installed by running ``webchanges --xmpp-login``;
+You can store your password securely on a Keychain if you have one installed by running ``webchanges --xmpp-login``;
 this also requires having the optional ``safe_password`` dependencies installed (see below). However, be aware that
 the use of safe password and ``keyring`` won't allow you to run :program:`webchanges` unattended (e.g. from a
 scheduler), so you can save the password in the ``insecure_password`` directive in the XMPP config instead:
@@ -657,8 +662,6 @@ scheduler), so you can save the password in the ``insecure_password`` directive 
 As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet for an
 account that only sends these reports this might be a low-risk way.
 
-XMPP uses the :ref:`text` report type.
-
 Required packages
 ~~~~~~~~~~~~~~~~~
 To run jobs with this reporter, you need to install :ref:`optional_packages`. Install them using:
@@ -669,7 +672,7 @@ To run jobs with this reporter, you need to install :ref:`optional_packages`. In
 
 Optional packages
 ~~~~~~~~~~~~~~~~~
-If using a keychain to store the password, you also need to:
+If using a Keychain to store the password, you also need to:
 
 * install the ``safe_password`` :ref:`optional package <optional_packages>` as per below,
 * install all the dependencies of the ``keyring`` package as per documentation `here

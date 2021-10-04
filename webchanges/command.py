@@ -230,6 +230,8 @@ class UrlwatchCommand:
             with JobState(self.urlwatcher.cache_storage, job) as job_state:
                 job_state.old_data, job_state.old_timestamp = history_data[i + 1]
                 job_state.new_data, job_state.new_timestamp = history_data[i]
+                # TODO: setting of job_state.job.is_markdown = True when it had been set by a filter.
+                # Ideally it should be saved as an attribute when saving "data".
                 if self.urlwatch_config.test_reporter is None:
                     self.urlwatch_config.test_reporter = 'stdout'  # default
                 self.check_test_reporter(job_state, label=f'Filtered diff (states {-i} and {-(i + 1)})', report=report)

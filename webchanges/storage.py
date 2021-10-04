@@ -109,7 +109,7 @@ if TYPE_CHECKING:
             'to': str,
             'from': str,
             'subject': str,
-            'method': str,
+            'method': Literal['sendmail', 'smtp'],
             'smtp': ConfigReportEmailSmtp,
             'sendmail': ConfigReportEmailSendmail,
         },

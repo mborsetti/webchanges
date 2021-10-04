@@ -3,8 +3,8 @@
 =======
 Reports
 =======
-Reports are the text of the summary (diff), and can be one of the following formats (depending on what
-:ref:`reporter <reporters>` you use):
+Reports contain the changes detected (diff) and can be one of the following formats (depending on the :ref:`reporter
+<reporters>` and its settings):
 
 * :ref:`text`
 * :ref:`html`
@@ -20,10 +20,11 @@ Unicode text
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``minimal``: An abbreviated version (true/false); defaults to false (if set to true directives below are ignored)
-* ``line_length``: The maximum length of each line; defaults to 75
-* ``show_details``: Includes the diff of each job (true/false); defaults to true
-* ``show_footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true
+* ``minimal``: An abbreviated version (true/false); defaults to false.
+* ``line_length``: The maximum length of each line in characters; defaults to 75. Ignored if ``minimal`` is true.
+* ``show_details``: Includes the diff of each job (true/false); defaults to true. Ignored if ``minimal`` is true.
+* ``show_footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true. Ignored if
+  ``minimal`` is true.
 
 
 
@@ -45,19 +46,25 @@ HTML
 These reports are by default ``unified`` diffs that are prettified by :program:`webchanges` by:
 
 * Making links `clickable <https://pypi.org/project/webchanges/>`__!
-* Preserving formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and
-  indentation
-* Using color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines
+* Correctly representing Markdown formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list
+  bullets (•) and indentation.
+* Using color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines.
+
+If for some reason you want the diff as a Python `HtmlDiff
+<https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__ table, set the sub-directive ``diff`` to
+``table``:
 
 
-If for some reason you want the output to be a Python `HtmlDiff
-<https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__ HTML table, set the sub-directive ``diff`` to
-``table``.
+.. code-block:: yaml
+
+   report:
+     text:
+       diff: table
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``diff``: ``unified`` (default) or ``table``; see above. Note that the use of an external differ (i.e. using the
-  ``diff_tool`` directive in the job) will override this.
+* ``diff``: ``unified`` (default) or ``table``. Overridden if the job directive ``diff_tool`` (external
+  differ) is set.
 
 
 
@@ -70,6 +77,7 @@ Markdown text, used for the ``matrix`` and ``webhook`` reporters (if the latter 
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``minimal``: An abbreviated version (true/false); defaults to false (if set to true directives below are ignored)
-* ``show_details``: Includes the diff of each job (true/false); defaults to true
-* ``show_footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true
+* ``minimal``: An abbreviated version (true/false); defaults to false.
+* ``show_details``: Includes the diff of each job (true/false); defaults to true. Ignored if ``minimal`` is true.
+* ``show_footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true. Ignored if
+  ``minimal`` is true.

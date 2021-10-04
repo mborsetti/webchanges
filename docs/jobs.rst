@@ -301,8 +301,8 @@ ignore_http_error_codes
 Ignore error if a specified `HTTP response status code <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status>`__ is
 received (an integer, string, or list).
 
-Also accepts 3xx, 4xx, and 5xx as values for the entire class of response
-status codes (i.e. 2xx will suppress any error from 300 to 399 inclusive).
+Also accepts ``3xx``, ``4xx``, and ``5xx`` as values to denote an entire class of response status codes. For example,
+``4xx`` will suppress any error from 400 to 399 inclusive, i.e. all client error response status codes.
 
 See more :ref:`here <ignoring_http_connection_errors>`.
 
