@@ -10,13 +10,7 @@ from pathlib import Path, PurePath
 import pytest
 
 from webchanges import __copyright__, __min_python_version__, __project_name__, __version__
-from webchanges.cli import (
-    first_run,
-    locate_storage_file,
-    migrate_from_legacy,
-    python_version_warning,
-    setup_logger_verbose,
-)
+from webchanges.cli import first_run, locate_storage_file, migrate_from_legacy, python_version_warning, setup_logger
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
@@ -272,16 +266,14 @@ def test_test_job(capsys):
     message = capsys.readouterr().out
     message = message.replace('\n\n ', '\n').replace('\r', '')  # Python 3.6
     assert message.startswith(
-        f'Sample webchanges job; used by command_test.py\n'
-        f'----------------------------------------------\n'
-        f'\n'
-        f'===========================================================================\n'
-        f'01. TEST: Sample webchanges job; used by command_test.py\n'
-        f'===========================================================================\n'
-        f'\n'
-        f'---------------------------------------------------------------------------\n'
-        f'TEST: Sample webchanges job; used by command_test.py ({urlwatch_command._get_job(1).get_location()})\n'
-        f'---------------------------------------------------------------------------\n'
+        'Sample webchanges job; used by command_test.py\n'
+        '----------------------------------------------\n'
+        '\n'
+        'test\n'
+        '\n'
+        '\n'
+        '--\n'
+        'Job tested in '
     )
 
 
@@ -299,14 +291,11 @@ def test_test_job_with_test_reporter(capsys):
         'Sample webchanges job; used by command_test.py\n'
         '----------------------------------------------\n'
         '\n'
-        '===========================================================================\n'
-        '01. TEST: Sample webchanges job; used by command_test.py\n'
-        '===========================================================================\n'
+        'test\n'
         '\n'
-        '---------------------------------------------------------------------------\n'
-        'TEST: Sample webchanges job; used by command_test.py (echo test)\n'
-        '---------------------------------------------------------------------------\n'
         '\n'
+        '--\n'
+        'Job tested in '
     )
 
 
@@ -633,7 +622,7 @@ def test_check_xmpp_login():
 
 def test_setup_logger_verbose(caplog):
     caplog.set_level(logging.DEBUG)
-    setup_logger_verbose()
+    setup_logger()
     assert f' {__project_name__}: {__version__} {__copyright__}\n' in caplog.text
 
 

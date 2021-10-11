@@ -83,6 +83,7 @@ class CommandConfig(BaseConfig):
         self.max_snapshots: int = 4
         self.features: bool = False
         self.chromium_directory: bool = False
+        self.install_chrome: bool = False
         self.log_level: str = 'DEBUG'
 
         self.parse_args()
@@ -218,6 +219,11 @@ class CommandConfig(BaseConfig):
         group = parser.add_argument_group('miscellaneous')
         group.add_argument(
             '--chromium-directory', action='store_true', help='show directory where Chromium is installed'
+        )
+        group.add_argument(
+            '--install-chrome',
+            action='store_true',
+            help="install or update chrome executable for use with 'use_browser: true' jobs (Playwright)",
         )
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
         group.add_argument(

@@ -219,19 +219,19 @@ class FilterBase(object, metaclass=TrackSubClasses):
                     yield filter_kind, subfilter
 
     @classmethod
-    def process(cls, filter_kind: str, subfilter: Dict[str, Any], state: JobState, data: Union[str, bytes]) -> str:
+    def process(cls, filter_kind: str, subfilter: Dict[str, Any], job_state: JobState, data: Union[str, bytes]) -> str:
         """Process the filter.
 
         :param filter_kind: The name of the filter.
         :param subfilter: The subfilter information.
-        :param state: The JobState object (containing the Job).
+        :param job_state: The JobState object (containing the Job).
         :param data: The data upon which to apply the filter.
         :returns: The data after the filter has been applied.
         """
-        logger.info(f'Job {state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
+        logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
         filtercls: Optional[Type[FilterBase]] = cls.__subclasses__.get(filter_kind)
         if filtercls:
-            return filtercls(state.job, state).filter(data, subfilter)
+            return filtercls(job_state.job, job_state).filter(data, subfilter)
         else:
             return str(data)
 
@@ -395,7 +395,10 @@ class Html2TextFilter(FilterBase):
 
     __supported_subfilters__ = {
         'method': 'Method to use for conversion (html2text [default], bs4, or strip_tags)',
-        '<any>': 'Method-specific options passed to html2text',
+        'separator': 'bs4: Strings will be concatenated using this separator',
+        'strip': 'bs4: If True, strings will be stripped before being concatenated',
+        '<any>': 'html2text: Library-specific options (see '
+        'https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options)',
     }
 
     __default_subfilter__ = 'method'
@@ -408,7 +411,7 @@ class Html2TextFilter(FilterBase):
 
         * ``html2text`` (default): Use html2text Python library to extract text (in Markdown).
 
-          * options: see
+          * options: See
             https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options,
             however the following options are set to non-default values:
 
@@ -421,9 +424,14 @@ class Html2TextFilter(FilterBase):
 
           * options:
 
-            * parser: one of ``lxml``, ``html5lib``, and ``html.parser`` (default: ``lxml``); see
-              https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use.
-              Note: if using ``html5lib`` an additional dependency is required (see above documentation)
+            * parser: the type of markup you want to parse (currently supported are ``html``, ``xml``, and ``html5``)
+              or the name of the parser library you want to use (currently supported options are ``lxml``,
+              ``html5lib`` and ``html.parser``) as per
+              https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use.  Different parsers
+              are compared at https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser.
+              Note: ``html5lib``requires having the ``html5lib`` Python package already installed.
+            * separator: Strings will be concatenated using this separator. Defaults to `````` (empty string).
+            * strip: If True, strings will be stripped before being concatenated. Defaults to False.
 
         * ``strip_tags``: A simple and fast regex-based HTML tag stripper.
 
@@ -470,9 +478,11 @@ class Html2TextFilter(FilterBase):
                     f"{method}' filter ({self.job.get_indexed_location()})"
                 )
 
-            parser = options.pop('parser', 'lxml')
-            soup = BeautifulSoup(data, parser)
-            return soup.get_text(strip=True)
+            bs4_parser: str = options.pop('parser', 'lxml')
+            soup = BeautifulSoup(data, bs4_parser)
+            separator: str = options.pop('separator', '')
+            strip: bool = options.pop('strip', False)
+            return soup.get_text(separator=separator, strip=strip)
 
         elif method in ('strip_tags', 're'):  # re for backward compatibility
             if method == 're':
@@ -1327,7 +1337,7 @@ def pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str,
     env = os.environ.copy()
     env.update(
         {
-            f'{__project_name__.upper()}_JOB_JSON': f_cls.job.to_json(),
+            f'{__project_name__.upper()}_JOB_JSON': json.dumps(f_cls.job.to_dict()),
             f'{__project_name__.upper()}_JOB_NAME': f_cls.job.pretty_name(),
             f'{__project_name__.upper()}_JOB_LOCATION': f_cls.job.get_location(),
             f'{__project_name__.upper()}_JOB_INDEX_NUMBER': str(f_cls.job.index_number),

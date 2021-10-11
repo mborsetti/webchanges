@@ -87,14 +87,14 @@ def migrate_from_legacy(
             logger.warning(f"You can safely delete '{old_file}'.")
 
 
-def setup_logger_verbose(log_level: Union[str, int] = logging.DEBUG) -> None:
-    """Set up the logger verbosity.
+def setup_logger(log_level: Optional[Union[str, int]] = None) -> None:
+    """Set up the logger.
 
-    :param log_level: the logging level (same as used in the logging module); defaults to logging.DEBUG.
+    :param log_level: the logging level (same as used in the logging module).
     """
     import platform
 
-    logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s', level=log_level)
+    logging.basicConfig(format='%(asctime)s %(module)s[%(thread)s] %(levelname)s: %(message)s', level=log_level)
     logger.debug(f'{__project_name__}: {__version__} {__copyright__}')
     logger.debug(
         f'{platform.python_implementation()}: {platform.python_version()} '
@@ -187,7 +187,9 @@ def main() -> None:  # pragma: no cover
 
     # set up the logger to verbose if needed
     if command_config.verbose:
-        setup_logger_verbose(command_config.log_level)
+        setup_logger(command_config.log_level)
+    else:
+        setup_logger()
 
     # check for location of config files entered in cli
     command_config.config = locate_storage_file(command_config.config, command_config.config_path, '.yaml')

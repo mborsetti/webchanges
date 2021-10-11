@@ -92,7 +92,7 @@ class JobState(ContextManager):
         #     self.job.main_thread_exit()
         # except Exception:
         #     # We don't want exceptions from releasing resources to override job run results
-        #     logger.warning(f'Job {self.job.index_number}: Exception while releasing resources for job', exc_info=True)
+        #     logger.warning(f'Job {self.index_number}: Exception while releasing resources for job', exc_info=True)
 
         return None
 
@@ -201,9 +201,12 @@ class JobState(ContextManager):
             tz_info = ZoneInfo(tz)
         else:
             tz_info = None  # type: ignore[assignment]
-        timestamp_old = (
-            datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z')
-        )
+        if self.old_timestamp:
+            timestamp_old = (
+                datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z')
+            )
+        else:
+            timestamp_old = 'NEW:'
         timestamp_new = (
             datetime.fromtimestamp(self.new_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z')
         )

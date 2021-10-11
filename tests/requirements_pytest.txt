@@ -13,6 +13,7 @@ jsbeautifier
 keyring
 matrix_client
 minidb
+playwright
 pushbullet.py
 Pygments
 pyppeteer

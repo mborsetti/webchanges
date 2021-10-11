@@ -62,14 +62,12 @@ class TrackSubClasses(type):
             if hasattr(cls, '__kind__'):
                 subclasses = getattr(base, '__subclasses__', None)
                 if subclasses is not None:
-                    # TODO https://github.com/thp/urlwatch/issues/634
                     logger.info(f'Registering {cls} as {cls.__kind__}')
                     subclasses[cls.__kind__] = cls
                     break
             else:
                 anonymous_subclasses = getattr(base, '__anonymous_subclasses__', None)
                 if anonymous_subclasses is not None:
-                    # TODO https://github.com/thp/urlwatch/issues/634
                     logger.info(f'Registering {cls}')
                     anonymous_subclasses.append(cls)
                     break

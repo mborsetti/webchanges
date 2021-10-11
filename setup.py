@@ -70,6 +70,7 @@ SETUP = {
         'matrix': ['matrix_client'],
         'ocr': ['pytesseract', 'Pillow'],
         'pdf2text': ['pdftotext'],
+        'playwright': ['playwright'],
         'pushbullet': ['pushbullet.py'],
         'pushover': ['chump'],
         'redis': ['redis'],

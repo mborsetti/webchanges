@@ -4,6 +4,7 @@ import contextlib
 import logging
 import os
 import shutil
+import subprocess
 import sys
 import time
 import traceback
@@ -554,6 +555,31 @@ class UrlwatchCommand:
 
         self._exit(0)
 
+    def playwright_install_chrome(self) -> int:
+        """
+        Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
+        install the browser executable.
+
+        :return: Playwright's executable return code
+        """
+        try:
+            from playwright._impl._driver import compute_driver_executable
+        except ImportError:
+            raise ImportError('Python package playwright is not installed; cannot install the Chrome browser')
+
+        driver_executable = compute_driver_executable()
+        env = os.environ.copy()
+        env['PW_CLI_TARGET_LANG'] = 'python'
+        cmd = [str(driver_executable), 'install', 'chrome']
+        logger.info(f"Running playwright CLI: {' '.join(cmd)}")
+        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        if completed_process.returncode:
+            print(completed_process.stderr)
+            return completed_process.returncode
+        if completed_process.stdout:
+            logger.info(f'Output of Playwright CLI: {completed_process.stdout}')
+        return 0
+
     def handle_actions(self) -> None:
         if self.urlwatch_config.list:
             self.list_jobs()
@@ -617,6 +643,9 @@ class UrlwatchCommand:
 
         if self.urlwatch_config.chromium_directory:
             self._exit(self.show_chromium_directory())
+
+        if self.urlwatch_config.install_chrome:
+            self._exit(self.playwright_install_chrome())
 
     def run(self) -> None:  # pragma: no cover
         if self.urlwatch_config.edit_config:

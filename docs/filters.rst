@@ -373,12 +373,18 @@ This filter method extracts human-readable text from HTML using the `Beautiful S
       - xpath: '//section[@role="main"]'
       - html2text:
           method: bs4
+          strip: true
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``parser``: One of ``lxml``, ``html.parser``, ``xml`` or ``html5lib`` as per `documentation
-  <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__  (default: ``lxml``).
-  ``html5lib``requires having the ``html5lib`` Python package installed.
+* ``parser``: the type of markup you want to parse (currently supported are ``html``, ``xml``, and ``html5``) or the
+  name of the parser library you want to use (currently supported options are ``lxml``, ``html5lib`` and
+  ``html.parser``) as per `documentation
+  <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__ (default: ``lxml``).
+  ``html5lib``requires having the ``html5lib`` Python package already installed.
+* ``separator``: Strings extracted from the HTML or XML object will be concatenated using this separator (defaults to
+  the empty string ``````).
+* ``strip`` (true/false): If true, strings will be stripped before being concatenated (defaults to false).
 
 Required packages
 ~~~~~~~~~~~~~~~~~

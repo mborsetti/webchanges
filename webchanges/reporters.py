@@ -351,9 +351,11 @@ class HtmlReporter(ReporterBase):
                         pre += '&nbsp;' * indent
                         pre += '● ' if indent == 2 else '⯀ ' if indent == 4 else '○ '
                         text = text.split('* ', 1)[1]
-                    if text[:0] == ' ':  # replace leading spaces with NBSP or converter will strip them all
-                        text = '\xa0' + text[1:]
-                    text = text.replace('` ', '`\xa0')  # replace leading spaces within code blocks
+                    if text[:1] == ' ':
+                        # replace leading spaces with NBSP or converter will strip them all
+                        stripped = text.lstrip()
+                        text = '&nbsp;' * (len(text) - len(stripped)) + stripped
+                    text = text.replace('` ', '`&nbsp;')  # replace leading spaces within code blocks
                     if job.markdown_padded_tables and '|' in text:
                         # a padded row in a table; keep it monospaced for alignment
                         pre += '<span style="font-family:monospace;white-space:pre-wrap">'
@@ -493,7 +495,7 @@ class HtmlReporter(ReporterBase):
             table = table.replace('<span class="diff_chg"', '<span style="color:orange;background-color:lightyellow"')
             return table
         else:
-            raise ValueError(f'Diff style not supported: {difftype}')
+            raise ValueError(f'Job {job_state.job.index_number}: Diff style not supported: {difftype}')
 
 
 class TextReporter(ReporterBase):

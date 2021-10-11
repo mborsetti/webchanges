@@ -18,7 +18,7 @@ from ftplib import FTP  # nosec: B402
 from http.client import responses as response_names
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
-from urllib.parse import urldefrag, urlencode, urlparse, urlsplit
+from urllib.parse import quote, SplitResult, SplitResultBytes, urldefrag, urlencode, urlparse, urlsplit
 
 import html2text
 import requests
@@ -60,7 +60,7 @@ class BrowserResponseError(Exception):
     """Raised by 'url' jobs with 'use_browser: true' (i.e. using Pyppeteer) when a HTTP error response status code is
     received."""
 
-    def __init__(self, args: Tuple[Any, ...], status_code: int) -> None:
+    def __init__(self, args: Tuple[Any, ...], status_code: Optional[int]) -> None:
         """
 
         :param args: Tuple with the underlying error args, typically a string with the error text.
@@ -71,10 +71,13 @@ class BrowserResponseError(Exception):
         self.status_code = status_code
 
     def __str__(self) -> str:
-        return (
-            f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
-            f'{response_names[self.status_code]}'
-        )
+        if self.status_code:
+            return (
+                f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
+                f'{response_names[self.status_code]}'
+            )
+        else:
+            return self.args[0]
 
 
 class ShellError(Exception):
@@ -110,8 +113,9 @@ class JobBase(object, metaclass=TrackSubClasses):
     use_browser: Optional[bool] = False
 
     # __optional__ in derived classes
+    _beta_use_playwright: Optional[bool] = None
     additions_only: Optional[bool] = None
-    block_elements: List[str] = []
+    block_elements: List[str] = []  # Pyppeteer only
     chromium_revision: Optional[Union[Dict[str, int], Dict[str, str], str, int]] = None
     contextlines: Optional[int] = None
     cookies: Optional[Dict[str, str]] = None
@@ -121,7 +125,8 @@ class JobBase(object, metaclass=TrackSubClasses):
     diff_tool: Optional[str] = None
     encoding: Optional[str] = None
     filter: Union[str, List[Union[str, Dict[str, Any]]]] = None  # type: ignore[assignment]
-    headers: Optional[CaseInsensitiveDict] = None
+    headers: Optional[Union[dict, CaseInsensitiveDict]] = None
+    headless: Optional[bool] = None  # Playwright
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
     ignore_cached: Optional[bool] = None
@@ -140,25 +145,28 @@ class JobBase(object, metaclass=TrackSubClasses):
     navigate: Optional[str] = None  # backwards compatibility (deprecated)
     no_redirects: Optional[bool] = None
     note: Optional[str] = None
+    referer: Optional[str] = None  # Playwright
     ssl_no_verify: Optional[bool] = None
     switches: Optional[List[str]] = None
     timeout: Optional[float] = None
     user_data_dir: Optional[str] = None
     user_visible_url: Optional[str] = None
-    wait_for: Optional[Union[int, str]] = None
-    wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None
-    wait_until: Optional[Literal['load', 'domcontentloaded', 'networkidle0', 'networkidle2']] = None
+    wait_for: Optional[Union[int, str]] = None  # pyppeteer only?
+    wait_for_function: Optional[str] = None  # Playwright
+    wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None  # pyppeteer only?
+    wait_for_selector: Optional[str] = None  # Playwright
+    wait_for_url: Optional[str] = None  # Playwright
+    wait_until: Optional[Literal['load', 'domcontentloaded', 'networkidle', 'networkidle0', 'networkidle2']] = None
+    #  'networkidle0', 'networkidle2' is pyppeteer only , 'networkidle2' is Playwright only
 
     def __init__(self, **kwargs: Any) -> None:
-        # # Set optional keys to None -- legacy (explicit declarations added to support typing)
-        # for k in self.__optional__:
-        #     if k not in kwargs:
-        #         setattr(self, k, None)
-
         # Fail if any required keys are not provided
         for k in self.__required__:
             if k not in kwargs:
-                raise ValueError(f"Required directive '{k}' missing: '{kwargs}' ({self.get_indexed_location()})")
+                raise ValueError(
+                    f"Job {self.index_number}: Required directive '{k}' missing: '{kwargs}'"
+                    f' ({self.get_indexed_location()})'
+                )
 
         for k, v in list(kwargs.items()):
             setattr(self, k, v)
@@ -278,7 +286,7 @@ class JobBase(object, metaclass=TrackSubClasses):
         :returns: A dict with all job directives as keys, ignoring those that are extras.
         """
         return {
-            k: getattr(self, k)
+            k: dict(getattr(self, k)) if isinstance(getattr(self, k), CaseInsensitiveDict) else getattr(self, k)
             for keys in (self.__required__, self.__optional__)
             for k in keys
             if getattr(self, k) is not None
@@ -296,20 +304,6 @@ class JobBase(object, metaclass=TrackSubClasses):
             if k not in (cls.__required__ + cls.__optional__):
                 raise ValueError(f"Job directive '{k}' is unrecognized; check for errors/typos/escaping:\n{data}")
         return cls(**{k: v for k, v in list(data.items())})
-
-    def to_json(self) -> str:
-        """Represent all defined Job directives (required and optional) as a JSON string.
-
-        :returns: A JSON formatted string representing the Job.
-        """
-        return json.dumps(
-            {
-                k: dict(getattr(self, k)) if isinstance(getattr(self, k), CaseInsensitiveDict) else getattr(self, k)
-                for keys in (self.__required__, self.__optional__)
-                for k in keys
-                if getattr(self, k) is not None
-            }
-        )
 
     def __repr__(self) -> str:
         """Represent the Job object as a string.
@@ -342,8 +336,6 @@ class JobBase(object, metaclass=TrackSubClasses):
         :param defaults: The default Job parameters.
         """
 
-        # use case insensitive dict for headers
-        self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if isinstance(defaults, dict):
             # merge defaults from configuration (including dicts) into Job attributes without overwriting them
             for key, value in defaults.items():
@@ -364,8 +356,16 @@ class JobBase(object, metaclass=TrackSubClasses):
         :returns: A JobBase object.
         """
         job_with_defaults = copy.deepcopy(self)
+        if job_with_defaults.headers:
+            job_with_defaults.headers = CaseInsensitiveDict(job_with_defaults.headers)
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
+            if 'headers' in cfg.get('all', {}):
+                cfg['all']['headers'] = CaseInsensitiveDict(cfg['all']['headers'])
+            if 'headers' in cfg.get('url', {}):
+                cfg['url']['headers'] = CaseInsensitiveDict(cfg['url']['headers'])
+            if 'headers' in cfg.get('browser', {}):
+                cfg['browser']['headers'] = CaseInsensitiveDict(cfg['browser']['headers'])
             job_with_defaults._set_defaults(cfg.get(self.__kind__))  # type: ignore[arg-type]
             job_with_defaults._set_defaults(cfg.get('all'))
         return job_with_defaults
@@ -513,9 +513,9 @@ class UrlJob(UrlJobBase):
         :returns: The data retrieved and the ETag.
         :raises NotModifiedError: If an HTTP 304 response is received.
         """
-        self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
-        if 'User-Agent' not in self.headers:
-            self.headers['User-Agent'] = __user_agent__
+        headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
+        if 'User-Agent' not in headers:
+            headers['User-Agent'] = __user_agent__
 
         proxies = {
             'http': os.getenv('HTTP_PROXY'),
@@ -524,22 +524,24 @@ class UrlJob(UrlJobBase):
 
         if job_state.old_etag:
             # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
-            self.headers['If-None-Match'] = job_state.old_etag
+            headers['If-None-Match'] = job_state.old_etag
 
         if job_state.old_timestamp is not None:
-            self.headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
+            headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
 
         if self.ignore_cached or job_state.tries > 0:
-            self.headers.pop('If-None-Match', None)
-            self.headers['If-Modified-Since'] = email.utils.formatdate(0)
-            self.headers['Cache-Control'] = 'max-age=172800'
-            self.headers['Expires'] = email.utils.formatdate()
+            headers.pop('If-None-Match', None)
+            headers['If-Modified-Since'] = email.utils.formatdate(0)
+            headers['Cache-Control'] = 'max-age=172800'
+            headers['Expires'] = email.utils.formatdate()
 
         if self.data is not None:
             if self.method is None:
                 self.method = 'POST'
-            if 'Content-Type' not in self.headers:
-                self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            if 'Content-Type' not in headers:
+                headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            if isinstance(self.data, dict):
+                self.data = urlencode(self.data)
             logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
 
         if self.method is None:
@@ -616,7 +618,7 @@ class UrlJob(UrlJobBase):
             method=self.method,
             url=self.url,
             data=self.data,
-            headers=self.headers,
+            headers=headers,
             cookies=self.cookies,
             timeout=timeout,
             allow_redirects=(not self.no_redirects),
@@ -626,7 +628,8 @@ class UrlJob(UrlJobBase):
 
         if 400 <= response.status_code <= 499:
             logger.info(
-                f'Received HTTP status code {response.status_code} ({response.reason}) with the following content:'
+                f'Job {self.index_number}: Received HTTP status code {response.status_code} ({response.reason}) with'
+                f' the following content:'
             )
             error_message = response.text
             try:
@@ -722,11 +725,13 @@ class BrowserJob(UrlJobBase):
 
     __required__ = ('url', 'use_browser')
     __optional__ = (
+        '_beta_use_playwright',
         'block_elements',
         'chromium_revision',
         'cookies',
         'data',
         'headers',
+        'headless',  # Playwright
         'http_proxy',
         'https_proxy',
         'ignore_https_errors',
@@ -735,8 +740,11 @@ class BrowserJob(UrlJobBase):
         'switches',
         'timeout',
         'user_data_dir',
-        'wait_for',
-        'wait_for_navigation',
+        'wait_for',  # pyppeteer
+        'wait_for_function',  # Playwright
+        'wait_for_navigation',  # pyppeteer
+        'wait_for_selector',  # Playwright
+        'wait_for_url',
         'wait_until',
     )
 
@@ -756,7 +764,10 @@ class BrowserJob(UrlJobBase):
         :param job_state: The JobState object, to keep track of the sate of the retrieval.
         :returns: The data retrieved and the ETag.
         """
-        response, etag = asyncio.run(self._retrieve())
+        if self._beta_use_playwright:
+            response, etag = self._playwright_retrieve(job_state)
+        else:
+            response, etag = asyncio.run(self._retrieve(job_state))
 
         # if no name is found, set it to the title of the page if found
         if not self.name:
@@ -784,7 +795,7 @@ class BrowserJob(UrlJobBase):
             return 'win32'
         raise OSError(f'Platform unsupported by Pyppeteer (use_browser: true): {sys.platform}')
 
-    async def _retrieve(self) -> Tuple[str, str]:
+    async def _retrieve(self, job_state: JobState) -> Tuple[str, str]:
         """
 
         :raises KeyError: If chromium_revision is specified but not for the current operating system.
@@ -819,8 +830,8 @@ class BrowserJob(UrlJobBase):
             from pyppeteer import launch  # pyppeteer must be imported after setting os.environ variables
         except ImportError:
             raise ImportError(
-                f'Python package pyppeteer is not installed; cannot use the "use_browser: true" directive'
-                f' ( {self.get_indexed_location()} )'
+                f'Job {job_state.job.index_number}: Python package pyppeteer is not installed; cannot use the '
+                f"'use_browser: true' directive ( {self.get_indexed_location()} )"
             )
         import pyppeteer.network_manager
         from pyppeteer.errors import PageError
@@ -862,8 +873,8 @@ class BrowserJob(UrlJobBase):
                 self.switches = self.switches.split(',')
             if not isinstance(self.switches, list):
                 raise TypeError(
-                    f"'switches' needs to be a string or list, not {type(self.switches)} "
-                    f'( {self.get_indexed_location()} )'
+                    f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list, not"
+                    f' {type(self.switches)} ( {self.get_indexed_location()} )'
                 )
             self.switches = [f"--{switch.lstrip('--')}" for switch in self.switches]
             args.extend(self.switches)
@@ -882,20 +893,22 @@ class BrowserJob(UrlJobBase):
         # browse to page and get content
         page = await browser.newPage()
 
-        self.headers = CaseInsensitiveDict(getattr(self, 'headers', {}))
-        if 'User-Agent' not in self.headers:
-            self.headers['User-Agent'] = __user_agent__
+        headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
+        if 'User-Agent' not in headers:
+            headers['User-Agent'] = __user_agent__
 
         if self.data is not None:
             if self.method is None:
                 self.method = 'POST'
-            if 'Content-Type' not in self.headers:
-                self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            if 'Content-Type' not in headers:
+                headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            if isinstance(self.data, dict):
+                self.data = urlencode(self.data)
             logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
 
-        if self.headers:
-            logger.debug(f'Job {self.index_number}: setExtraHTTPHeaders={self.headers}')
-            await page.setExtraHTTPHeaders(dict(self.headers))
+        if headers:
+            logger.debug(f'Job {self.index_number}: setExtraHTTPHeaders={headers}')
+            await page.setExtraHTTPHeaders(dict(headers))
 
         if self.cookies:
             await page.setExtraHTTPHeaders({'Cookies': '; '.join([f'{k}={v}' for k, v in self.cookies.items()])})
@@ -925,9 +938,7 @@ class BrowserJob(UrlJobBase):
                     f'Job {self.index_number}: Intercepted request with resource_type'
                     f'={request_event.resourceType}; overriding request method to {self.method}'
                 )
-                if isinstance(self.data, dict):
-                    data = urlencode(self.data)
-                await request_event.continue_(overrides={'method': self.method, 'postData': data})
+                await request_event.continue_(overrides={'method': self.method, 'postData': self.data})
 
             await page.setRequestInterception(True)
             page.on(
@@ -941,8 +952,8 @@ class BrowserJob(UrlJobBase):
             if not isinstance(self.block_elements, list):
                 await browser.close()
                 raise TypeError(
-                    f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
-                    f'( {self.get_indexed_location()} )'
+                    f"Job {job_state.job.index_number}: Directive 'block_elements' needs to be a string or list, not"
+                    f' {type(self.block_elements)} ( {self.get_indexed_location()} )'
                 )
             chrome_web_request_resource_types = [
                 'main_frame',
@@ -963,8 +974,8 @@ class BrowserJob(UrlJobBase):
                 if element not in chrome_web_request_resource_types:
                     await browser.close()
                     raise ValueError(
-                        f"Unknown or unsupported '{element}' resource type in 'block_elements' "
-                        f'( {self.get_indexed_location()} )'
+                        f"Job {job_state.job.index_number}: Unknown or unsupported '{element}' resource type in"
+                        f" 'block_elements' ( {self.get_indexed_location()} )"
                     )
 
             async def handle_request(
@@ -1052,6 +1063,255 @@ class BrowserJob(UrlJobBase):
 
         return content, etag
 
+    def _playwright_retrieve(self, job_state: JobState) -> Tuple[str, str]:
+        try:
+            from playwright.sync_api import Error as PlaywrightError
+            from playwright.sync_api import Route, sync_playwright
+        except ImportError:
+            raise ImportError(
+                f'Job {job_state.job.index_number}: Python package playwright is not installed; cannot use the '
+                f'"use_browser: true" directive ( {self.get_indexed_location()} )'
+            )
+
+        # deprecations
+        if self.wait_until in ('networkidle0', 'networkidle2'):
+            self.wait_until = 'networkidle'
+        if self.wait_for_navigation:
+            warnings.warn(
+                f"Job {self.index_number}: Directive 'wait_for_navigation' is deprecated with Playwright; "
+                "for future compatibility replace it with 'wait_for_url'.",
+                DeprecationWarning,
+            )
+            self.wait_for_url = self.wait_for_navigation  # type: ignore[assignment]
+        if self.wait_for:
+            raise ValueError(
+                f"Job {job_state.job.index_number}: Directive 'wait_for' is deprecated with Playwright; replace with "
+                f"'wait_for_selector' or 'wait_for_function'."
+            )
+
+        headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
+        if self.ignore_cached or job_state.tries > 0:
+            headers.pop('If-None-Match', None)
+            headers['If-Modified-Since'] = email.utils.formatdate(0)
+            headers['Cache-Control'] = 'max-age=172800'
+            headers['Expires'] = email.utils.formatdate()
+        else:
+            if job_state.old_etag:
+                # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
+                headers['If-None-Match'] = job_state.old_etag
+            if job_state.old_timestamp is not None:
+                headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
+
+        if self.cookies:
+            headers['Cookies'] = '; '.join([f'{k}={quote(v)}' for k, v in self.cookies.items()])
+
+        if self.data:
+            if not self.method:
+                self.method = 'POST'
+            if 'Content-Type' not in headers:
+                headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
+            if isinstance(self.data, dict):
+                self.data = urlencode(self.data)
+
+        proxy = None
+        if self.http_proxy or self.https_proxy:
+            if urlsplit(self.url).scheme == 'http':
+                proxy_split: Optional[Union[SplitResult, SplitResultBytes]] = urlsplit(self.http_proxy)
+            elif urlsplit(self.url).scheme == 'https':
+                proxy_split = urlsplit(self.https_proxy)
+            else:
+                proxy_split = None
+            if proxy_split:
+                proxy = {
+                    'server': f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
+                    if proxy_split.port
+                    else '',
+                    'username': proxy_split.username,
+                    'password': proxy_split.password,
+                }
+
+        if self.switches:
+            if isinstance(self.switches, str):
+                self.switches = self.switches.split(',')
+            if not isinstance(self.switches, list):
+                raise TypeError(
+                    f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list, not"
+                    f' {type(self.switches)} ( {self.get_indexed_location()} )'
+                )
+            args: Optional[List[str]] = [f"--{switch.lstrip('--')}" for switch in self.switches]
+        else:
+            args = None
+
+        if self.timeout:
+            timeout: Optional[float] = self.timeout * 1000
+        else:
+            timeout = None
+
+        # launch browser
+        with sync_playwright() as p:
+            executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
+            channel = None if executable_path else 'chrome'
+            # logger.debug(f'Job {self.index_number}: About to launch browser {executable_path or channel}')
+            if self.user_data_dir:
+                browser = p.chromium.launch_persistent_context(
+                    user_data_dir=self.user_data_dir,
+                    channel=channel,
+                    executable_path=executable_path,
+                    args=args,
+                    handle_sigint=False,
+                    handle_sigterm=False,
+                    handle_sighup=False,
+                    timeout=timeout,
+                    headless=self.headless,
+                    proxy=proxy,
+                )  # as signals only work single-threaded, must set handle_sig* to False
+                logger.debug(f'Job {self.index_number}: Browser launched from {executable_path}')
+            else:
+                browser = p.chromium.launch(
+                    channel=channel,
+                    executable_path=executable_path,
+                    args=args,
+                    handle_sigint=False,
+                    handle_sigterm=False,
+                    handle_sighup=False,
+                    timeout=timeout,
+                    headless=self.headless,
+                    proxy=proxy,
+                )  # as signals only work single-threaded, must set handle_sig* to False
+                logger.debug(f'Job {self.index_number}: Browser {channel} {browser.version} launched')
+
+            if 'User-Agent' not in headers:
+                headers['User-Agent'] = (
+                    f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                    f'Chrome/{browser.version} Safari/537.36'
+                )
+
+            # open a page
+            page = browser.new_page(
+                ignore_https_errors=self.ignore_https_errors,
+                extra_http_headers=dict(headers),
+            )
+
+            if self.method and self.method != 'GET':
+
+                def handle_route(route: Route) -> None:
+                    """Handle handler function to change the route (probably a pyee.EventEmitter callback)."""
+                    logger.info(f'Job {self.index_number}: Intercepted route to change request method to {self.method}')
+                    route.continue_(method=self.method, post_data=self.data)
+
+                page.route(self.url, handle_route)
+
+            # if self.block_elements and not self.method or self.method == 'GET':
+            #     # FIXME: Pyppeteer freezes on certain sites if this is on; contribute if you know why
+            #     if isinstance(self.block_elements, str):
+            #         self.block_elements = self.block_elements.split(',')
+            #     if not isinstance(self.block_elements, list):
+            #         browser.close()
+            #         raise TypeError(
+            #             f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
+            #             f'( {self.get_indexed_location()} )'
+            #         )
+            #     chrome_web_request_resource_types = [
+            #         'main_frame',
+            #         'sub_frame',
+            #         'stylesheet',
+            #         'script',
+            #         'image',
+            #         'font',
+            #         'object',
+            #         'xmlhttprequest',
+            #         'ping',
+            #         'csp_report',
+            #         'media',
+            #         'websocket',
+            #         'other',
+            #     ]  # https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType
+            #     for element in self.block_elements:
+            #         if element not in chrome_web_request_resource_types:
+            #             browser.close()
+            #             raise ValueError(
+            #                 f"Unknown or unsupported '{element}' resource type in 'block_elements' "
+            #                 f'( {self.get_indexed_location()} )'
+            #             )
+            #
+            #     def handle_request(
+            #         request_event: pyppeteer.network_manager.Request, block_elements: List[str]
+            #     ) -> None:
+            #         """Handle pyee.EventEmitter callback."""
+            #         logger.info(
+            #             f'Job {self.index_number}: resource_type={request_event.resourceType}'
+            #             f' elements={block_elements}'
+            #         )
+            #         if any(request_event.resourceType == el for el in block_elements):
+            #             logger.info(f'Job {self.index_number}: Aborting request {request_event.resourceType}')
+            #             request_event.abort()
+            #         else:
+            #             logger.info(
+            #                 f'Job {self.index_number}: Continuing request {request_event.resourceType}'
+            #             )
+            #             request_event.continue_()  # broken -- many sites hang here!
+            #
+            #     page.setRequestInterception(True)
+            #     page.on(
+            #         'request',
+            #         lambda request_event: asyncio.create_task(
+            #              handle_request(request_event, self.block_elements)
+            #          ),
+            #     )  # inherited from pyee.EventEmitter
+
+            # navigate page
+            logger.debug(f'Job {self.index_number}: Navigating to {self.url} with headers {headers}')
+            try:
+                response = page.goto(
+                    self.url,
+                    timeout=timeout,
+                    wait_until=self.wait_until,
+                    referer=self.referer,
+                )
+            except PlaywrightError as e:
+                logger.error(f'Job {self.index_number}: Page returned error {e.args[0]}')
+                raise BrowserResponseError(e.args, None)
+
+            # wait_for-*
+            if self.wait_for_url:
+                response.frame.wait_for_url(self.wait_for_url, wait_until=self.wait_until, timeout=timeout)
+            if self.wait_for_selector:
+                if isinstance(self.wait_for_selector, str):
+                    response.frame.wait_for_selector(self.wait_for_selector, timeout=timeout)
+                elif isinstance(self.wait_for_selector, dict):
+                    response.frame.wait_for_selector(**self.wait_for_selector, timeout=timeout)
+                else:
+                    raise ValueError(
+                        f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a string or a"
+                        f' dictionary; found {type(self.wait_for_selector)}.'
+                    )
+            if self.wait_for_function:
+                if isinstance(self.wait_for_function, str):
+                    response.frame.wait_for_function(self.wait_for_function, timeout=timeout)
+                elif isinstance(self.wait_for_function, dict):
+                    response.frame.wait_for_function(**self.wait_for_function, timeout=timeout)
+                else:
+                    raise ValueError(
+                        f"Job {job_state.job.index_number}: Directive 'wait_for_function' can only be a string or a"
+                        f' dictionary; found {type(self.wait_for_function)}'
+                    )
+
+            # if response.status and 400 <= response.status < 600:
+            #     raise BrowserResponseError((response.status_text,), response.status)
+            if not response.ok:
+                # logger.info(
+                #     f'Job {self.index_number}: Received response HTTP {response.status} {response.status_text} from '
+                #     f'{response.url}'
+                # )
+                # logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
+                raise BrowserResponseError((response.status_text,), response.status)
+
+            # extract content
+            content = page.content()
+            etag = response.header_value('etag') or ''
+            return content, etag
+
     def ignore_error(self, exception: Exception) -> Union[bool, str]:
         """Determine whether the error of the job should be ignored.
 
@@ -1059,93 +1319,112 @@ class BrowserJob(UrlJobBase):
         :returns: True or the string with the number of the HTTPError code if the error should be ignored,
            False otherwise.
         """
-        from pyppeteer.errors import PageError  # pyppeteer must be imported after setting os.environ variables
+        # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
+        CHROMIUM_CONNECTION_ERRORS = [  # range 100-199 Connection related errors
+            'CONNECTION_CLOSED',
+            'CONNECTION_RESET',
+            'CONNECTION_REFUSED',
+            'CONNECTION_ABORTED',
+            'CONNECTION_FAILED',
+            'NAME_NOT_RESOLVED',
+            'INTERNET_DISCONNECTED',
+            'SSL_PROTOCOL_ERROR',
+            'ADDRESS_INVALID',
+            'ADDRESS_UNREACHABLE',
+            'SSL_CLIENT_AUTH_CERT_NEEDED',
+            'TUNNEL_CONNECTION_FAILED',
+            'NO_SSL_VERSIONS_ENABLED',
+            'SSL_VERSION_OR_CIPHER_MISMATCH',
+            'SSL_RENEGOTIATION_REQUESTED',
+            'PROXY_AUTH_UNSUPPORTED',
+            'CERT_ERROR_IN_SSL_RENEGOTIATION',
+            'BAD_SSL_CLIENT_AUTH_CERT',
+            'CONNECTION_TIMED_OUT',
+            'HOST_RESOLVER_QUEUE_TOO_LARGE',
+            'SOCKS_CONNECTION_FAILED',
+            'SOCKS_CONNECTION_HOST_UNREACHABLE',
+            'ALPN_NEGOTIATION_FAILED',
+            'SSL_NO_RENEGOTIATION',
+            'WINSOCK_UNEXPECTED_WRITTEN_BYTES',
+            'SSL_DECOMPRESSION_FAILURE_ALERT',
+            'SSL_BAD_RECORD_MAC_ALERT',
+            'PROXY_AUTH_REQUESTED',
+            'PROXY_CONNECTION_FAILED',
+            'MANDATORY_PROXY_CONFIGURATION_FAILED',
+            'PRECONNECT_MAX_SOCKET_LIMIT',
+            'SSL_CLIENT_AUTH_PRIVATE_KEY_ACCESS_DENIED',
+            'SSL_CLIENT_AUTH_CERT_NO_PRIVATE_KEY',
+            'PROXY_CERTIFICATE_INVALID',
+            'NAME_RESOLUTION_FAILED',
+            'NETWORK_ACCESS_DENIED',
+            'TEMPORARILY_THROTTLED',
+            'HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT',
+            'SSL_CLIENT_AUTH_SIGNATURE_FAILED',
+            'MSG_TOO_BIG',
+            'WS_PROTOCOL_ERROR',
+            'ADDRESS_IN_USE',
+            'SSL_HANDSHAKE_NOT_COMPLETED',
+            'SSL_BAD_PEER_PUBLIC_KEY',
+            'SSL_PINNED_KEY_NOT_IN_CERT_CHAIN',
+            'CLIENT_AUTH_CERT_TYPE_UNSUPPORTED',
+            'SSL_DECRYPT_ERROR_ALERT',
+            'WS_THROTTLE_QUEUE_TOO_LARGE',
+            'SSL_SERVER_CERT_CHANGED',
+            'SSL_UNRECOGNIZED_NAME_ALERT',
+            'SOCKET_SET_RECEIVE_BUFFER_SIZE_ERROR',
+            'SOCKET_SET_SEND_BUFFER_SIZE_ERROR',
+            'SOCKET_RECEIVE_BUFFER_SIZE_UNCHANGEABLE',
+            'SOCKET_SEND_BUFFER_SIZE_UNCHANGEABLE',
+            'SSL_CLIENT_AUTH_CERT_BAD_FORMAT',
+            'ICANN_NAME_COLLISION',
+            'SSL_SERVER_CERT_BAD_FORMAT',
+            'CT_STH_PARSING_FAILED',
+            'CT_STH_INCOMPLETE',
+            'UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH',
+            'CT_CONSISTENCY_PROOF_PARSING_FAILED',
+            'SSL_OBSOLETE_CIPHER',
+            'WS_UPGRADE',
+            'READ_IF_READY_NOT_IMPLEMENTED',
+            'NO_BUFFER_SPACE',
+            'SSL_CLIENT_AUTH_NO_COMMON_ALGORITHMS',
+            'EARLY_DATA_REJECTED',
+            'WRONG_VERSION_ON_EARLY_DATA',
+            'TLS13_DOWNGRADE_DETECTED',
+            'SSL_KEY_USAGE_INCOMPATIBLE',
+            'INVALID_ECH_CONFIG_LIST',
+        ]
 
-        if isinstance(exception, PageError):
-            # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
-            CHROMIUM_CONNECTION_ERRORS = [  # range 100-199 Connection related errors
-                'CONNECTION_CLOSED',
-                'CONNECTION_RESET',
-                'CONNECTION_REFUSED',
-                'CONNECTION_ABORTED',
-                'CONNECTION_FAILED',
-                'NAME_NOT_RESOLVED',
-                'INTERNET_DISCONNECTED',
-                'SSL_PROTOCOL_ERROR',
-                'ADDRESS_INVALID',
-                'ADDRESS_UNREACHABLE',
-                'SSL_CLIENT_AUTH_CERT_NEEDED',
-                'TUNNEL_CONNECTION_FAILED',
-                'NO_SSL_VERSIONS_ENABLED',
-                'SSL_VERSION_OR_CIPHER_MISMATCH',
-                'SSL_RENEGOTIATION_REQUESTED',
-                'PROXY_AUTH_UNSUPPORTED',
-                'CERT_ERROR_IN_SSL_RENEGOTIATION',
-                'BAD_SSL_CLIENT_AUTH_CERT',
-                'CONNECTION_TIMED_OUT',
-                'HOST_RESOLVER_QUEUE_TOO_LARGE',
-                'SOCKS_CONNECTION_FAILED',
-                'SOCKS_CONNECTION_HOST_UNREACHABLE',
-                'ALPN_NEGOTIATION_FAILED',
-                'SSL_NO_RENEGOTIATION',
-                'WINSOCK_UNEXPECTED_WRITTEN_BYTES',
-                'SSL_DECOMPRESSION_FAILURE_ALERT',
-                'SSL_BAD_RECORD_MAC_ALERT',
-                'PROXY_AUTH_REQUESTED',
-                'PROXY_CONNECTION_FAILED',
-                'MANDATORY_PROXY_CONFIGURATION_FAILED',
-                'PRECONNECT_MAX_SOCKET_LIMIT',
-                'SSL_CLIENT_AUTH_PRIVATE_KEY_ACCESS_DENIED',
-                'SSL_CLIENT_AUTH_CERT_NO_PRIVATE_KEY',
-                'PROXY_CERTIFICATE_INVALID',
-                'NAME_RESOLUTION_FAILED',
-                'NETWORK_ACCESS_DENIED',
-                'TEMPORARILY_THROTTLED',
-                'HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT',
-                'SSL_CLIENT_AUTH_SIGNATURE_FAILED',
-                'MSG_TOO_BIG',
-                'WS_PROTOCOL_ERROR',
-                'ADDRESS_IN_USE',
-                'SSL_HANDSHAKE_NOT_COMPLETED',
-                'SSL_BAD_PEER_PUBLIC_KEY',
-                'SSL_PINNED_KEY_NOT_IN_CERT_CHAIN',
-                'CLIENT_AUTH_CERT_TYPE_UNSUPPORTED',
-                'SSL_DECRYPT_ERROR_ALERT',
-                'WS_THROTTLE_QUEUE_TOO_LARGE',
-                'SSL_SERVER_CERT_CHANGED',
-                'SSL_UNRECOGNIZED_NAME_ALERT',
-                'SOCKET_SET_RECEIVE_BUFFER_SIZE_ERROR',
-                'SOCKET_SET_SEND_BUFFER_SIZE_ERROR',
-                'SOCKET_RECEIVE_BUFFER_SIZE_UNCHANGEABLE',
-                'SOCKET_SEND_BUFFER_SIZE_UNCHANGEABLE',
-                'SSL_CLIENT_AUTH_CERT_BAD_FORMAT',
-                'ICANN_NAME_COLLISION',
-                'SSL_SERVER_CERT_BAD_FORMAT',
-                'CT_STH_PARSING_FAILED',
-                'CT_STH_INCOMPLETE',
-                'UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH',
-                'CT_CONSISTENCY_PROOF_PARSING_FAILED',
-                'SSL_OBSOLETE_CIPHER',
-                'WS_UPGRADE',
-                'READ_IF_READY_NOT_IMPLEMENTED',
-                'NO_BUFFER_SPACE',
-                'SSL_CLIENT_AUTH_NO_COMMON_ALGORITHMS',
-                'EARLY_DATA_REJECTED',
-                'WRONG_VERSION_ON_EARLY_DATA',
-                'TLS13_DOWNGRADE_DETECTED',
-                'SSL_KEY_USAGE_INCOMPATIBLE',
-            ]
+        if self._beta_use_playwright:
+            from playwright.sync_api import Error as PlaywrightError
 
-            if self.ignore_connection_errors:
-                if any(str(exception.args[0]) == f'net::ERR_{error}' for error in CHROMIUM_CONNECTION_ERRORS):
-                    return True
-            if self.ignore_timeout_errors:
-                if str(exception.args[0]) == 'net::ERR_TIMED_OUT':
-                    return True
-            if self.ignore_too_many_redirects:
-                if str(exception.args[0]) == 'net::ERR_TOO_MANY_REDIRECTS':
-                    return True
-        elif isinstance(exception, BrowserResponseError) and self.ignore_http_error_codes:
+            if isinstance(exception, PlaywrightError):
+                if self.ignore_connection_errors:
+                    if any(
+                        str(exception.args[0]).split()[0] == f'net::ERR_{error}' for error in CHROMIUM_CONNECTION_ERRORS
+                    ):
+                        return True
+                if self.ignore_timeout_errors:
+                    if str(exception.args[0].split()[0]) == 'net::ERR_TIMED_OUT':
+                        return True
+                if self.ignore_too_many_redirects:
+                    if str(exception.args[0].split()[0]) == 'net::ERR_TOO_MANY_REDIRECTS':
+                        return True
+
+        else:
+            from pyppeteer.errors import PageError  # pyppeteer must be imported after setting os.environ variables
+
+            if isinstance(exception, PageError):
+                if self.ignore_connection_errors:
+                    if any(str(exception.args[0]) == f'net::ERR_{error}' for error in CHROMIUM_CONNECTION_ERRORS):
+                        return True
+                if self.ignore_timeout_errors:
+                    if str(exception.args[0]) == 'net::ERR_TIMED_OUT':
+                        return True
+                if self.ignore_too_many_redirects:
+                    if str(exception.args[0]) == 'net::ERR_TOO_MANY_REDIRECTS':
+                        return True
+
+        if isinstance(exception, BrowserResponseError) and self.ignore_http_error_codes:
             status_code = exception.status_code
             ignored_codes: List[str] = []
             if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
@@ -1154,7 +1433,10 @@ class BrowserJob(UrlJobBase):
                 ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
             elif isinstance(self.ignore_http_error_codes, list):
                 ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
-            return str(status_code) in ignored_codes or f'{(status_code // 100) in ignored_codes}xx'
+            if isinstance(status_code, int):
+                return str(status_code) in ignored_codes or f'{(status_code // 100) in ignored_codes}xx'
+            else:
+                return str(status_code)
         return False
 
 
