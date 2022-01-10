@@ -290,7 +290,9 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     with JobState(cache_storage, job) as job_state:
         job_state.process()
         if not isinstance(job_state.exception, BrowserResponseError):
-            assert 'Max retries exceeded' in str(job_state.exception.args)
+            assert sum(
+                list(x in str(job_state.exception.args) for x in ('Max retries exceeded', 'Timeout 1ms exceeded.'))
+            )
         assert job_state.error_ignored is False
 
         job_data['ignore_connection_errors'] = True
@@ -310,6 +312,9 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
         if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
             pytest.skip('Pyppeteer freezes in Python 3.10')
             return
+    if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+        pytest.skip('Playwright results not working on GitHub Actions')
+        return
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
