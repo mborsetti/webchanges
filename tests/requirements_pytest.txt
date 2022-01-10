@@ -19,6 +19,7 @@ pushbullet.py
 Pygments
 pyppeteer
 pytest
+pytest-asyncio
 pytest-cov
 redis
 vobject

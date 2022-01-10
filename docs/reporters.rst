@@ -4,16 +4,18 @@
 Reporters
 =========
 Reporters display or send the :ref:`report <reports>` containing the changes detected. By default, a :ref:`text
-<text>` report is sent to the standard output (``stdout``), which is your terminal if you are running
+<text>` report is sent to the standard output (a reporter called ``stdout``), which is your terminal if you are running
 :program:`webchanges` interactively.
 
 .. note::
    If running via cron or another scheduler service, the destination of this output depends on the scheduler and its
    configuration.
 
-You can add or change the reporter (and/or customize it) by changing the settings in the configuration file
-``config.yaml``, which is editable using any text editor or with the command ``webchanges --edit--config``. The
-configuration for the reporters will be listed under the ``report`` section.
+You can select the reporter(s) used, and its settings, by changing the configuration file ``config.yaml``. This file is
+editable using any text editor or with the command ``webchanges --edit--config``.
+
+The configuration for the reporters will be listed under the ``report`` section.  Each reporter has a directive called
+``enabled`` that can be toggled (true/false).
 
 .. note::
    The ``config.yaml`` file is located in Linux or macOS in the ``~/.config/webchanges`` directory, in Windows in
@@ -22,8 +24,8 @@ configuration for the reporters will be listed under the ``report`` section.
 .. note::
    The ``config.yaml`` file is created at the first run of ``webchanges --edit`` or ``webchanges --edit--config``.
 
-.. tip:: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:`tz`
-   below to set the time zone to be uses for reporting.
+Tip: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:`tz`
+below to set the time zone to be uses for reporting.
 
 At the moment, the following reporters are available:
 
@@ -43,8 +45,6 @@ At the moment, the following reporters are available:
 
 .. To convert the "webchanges --features" output, use:
    webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
-
-Each reporter has a directive called ``enabled`` that can be toggled (true/false).
 
 Please note that many reporters need the installation of additional Python packages to work, as noted below and in
 :ref:`dependencies <dependencies>`.
@@ -93,6 +93,13 @@ Browser
 
 Displays the ref:`HTML report <html>` using the system's default web browser.
 
+.. code-block:: yaml
+
+   report:
+     tz: null
+     browser:
+       enabled: true  # don't forget to set this to true! :)
+
 
 
 .. _email:
@@ -120,7 +127,6 @@ You can save a password in the ``insecure_password`` directive in the SMTP confi
 scheduled runs of :program:`webchanges`. As the name says, storing the password as plaintext in the configuration is
 insecure and bad practice, yet for a throwaway account that is only used for sending these reports this might be a
 low-risk way to run unattended.
-
 
 .. code-block:: yaml
 
@@ -271,10 +277,12 @@ In this URL, ``{key}`` is your API key. The configuration should look like this 
 
 .. code:: yaml
 
-   ifttt:
-     enabled: true  # don't forget to set this to true! :)
-     key: aA12abC3D456efgHIjkl7m
-     event: event_name_you_want
+   report:
+     tz: null
+     ifttt:
+       enabled: true  # don't forget to set this to true! :)
+       key: aA12abC3D456efgHIjkl7m
+       event: event_name_you_want
 
 The event will contain three values in the posted JSON:
 
@@ -332,23 +340,27 @@ Here is a sample configuration:
 
 .. code:: yaml
 
-   matrix:
-     enabled: true  # don't forget to set this to true! :)
-     homeserver: https://matrix.org
-     access_token: 'YOUR_TOKEN_HERE'
-     room_id: '!roomroomroom:matrix.org'
+   report:
+     tz: null
+     matrix:
+       enabled: true  # don't forget to set this to true! :)
+       homeserver: https://matrix.org
+       access_token: 'YOUR_TOKEN_HERE'
+       room_id: '!roomroomroom:matrix.org'
 
 You will probably want to use the following configuration for the ``markdown`` report, if you intend to post change
 notifications to a public Matrix room, as the messages quickly become noisy:
 
 .. code:: yaml
 
-   markdown:
-     enabled: true  # don't forget to set this to true! :)
-     markdown: false
-     details: false
-     footer: false
-     minimal: true
+   report:
+     tz: null
+     markdown:
+       enabled: true  # don't forget to set this to true! :)
+       markdown: false
+       details: false
+       footer: false
+       minimal: true
 
 
 
@@ -375,12 +387,14 @@ Here is a sample configuration:
 
 .. code:: yaml
 
-   prowl:
-     enabled: true  # don't forget to set this to true! :)
-     api_key: '<your api key here>'
-     priority: 2
-     application: 'webchanges example'
-     subject: '{count} changes: {jobs}'
+   report:
+     tz: null
+     prowl:
+       enabled: true  # don't forget to set this to true! :)
+       api_key: '<your api key here>'
+       priority: 2
+       application: 'webchanges example'
+       subject: '{count} changes: {jobs}'
 
 The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
 shown as the source of the event in the Prowl App.
@@ -472,9 +486,11 @@ For example, in Windows we can make a MessageBox pop up:
 
 .. code-block:: yaml
 
-   run_command:
-     enabled: true  # don't forget to set this to true! :)
-     command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
+   report:
+     tz: null
+     run_command:
+       enabled: true  # don't forget to set this to true! :)
+       command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
 
 All environment variables are preserved and the following one added:
 
@@ -504,10 +520,12 @@ then say ``/newbot`` and follow the instructions. Eventually it will tell you th
 
 .. code:: yaml
 
-   telegram:
-     enabled: true  # don't forget to set this to true! :)
-     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
-     chat_id: ''  # empty for now
+   report:
+     tz: null
+     telegram:
+       enabled: true  # don't forget to set this to true! :)
+       bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
+       chat_id: ''  # empty for now
 
 Next click on the link of your chat bot (starts with \https://t.me/) and, on the new screen, click on start (which will
 send the message ``/start``) and enter any text ("Hello" is fine). Then run ``webchanges --telegram-chats``, which
@@ -516,23 +534,27 @@ group(s) you want to be notified into the configuration file (run ``webchanges -
 
 .. code:: yaml
 
-   telegram:
-     enabled: true  # don't forget to set this to true! :)
-     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
-     chat_id: 88888888  # the chat id where the messages should be sent
-     silent: false  # set to true to receive a notification without any sound
+   report:
+     tz: null
+     telegram:
+       enabled: true  # don't forget to set this to true! :)
+       bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
+       chat_id: 88888888  # the chat id where the messages should be sent
+       silent: false  # set to true to receive a notification without any sound
 
 You may add multiple chat IDs as a YAML list:
 
 .. code:: yaml
 
-   telegram:
-     enabled: true  # don't forget to set this to true! :)
-     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
-     chat_id:
-       - 11111111  # positive chat IDs are private groups
-       - -22222222  # negative chat IDs are public groups
-     silent: true  # set to false to receive a notification with sound
+   report:
+     tz: null
+     telegram:
+       enabled: true  # don't forget to set this to true! :)
+       bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
+       chat_id:
+         - 11111111  # positive chat IDs are private groups
+         - -22222222  # negative chat IDs are public groups
+       silent: true  # set to false to receive a notification with sound
 
 .. note::
 
@@ -549,11 +571,13 @@ username of the channel (the text after \https://t.me/s/, prefixed by an @) as a
 
 .. code:: yaml
 
-   telegram:
-     enabled: true  # don't forget to set this to true! :)
-     bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
-     chat_id:
-       - '@channelusername'  # replace with your channel's username
+   report:
+     tz: null
+     telegram:
+       enabled: true  # don't forget to set this to true! :)
+       bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
+       chat_id:
+         - '@channelusername'  # replace with your channel's username
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -576,9 +600,11 @@ using a webhook.
 
 .. code:: yaml
 
-   webhook:
-     enabled: true  # don't forget to set this to true! :)
-     webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
+   report:
+     tz: null
+     webhook:
+       enabled: true  # don't forget to set this to true! :)
+       webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
 
 ``webhook`` uses the :ref:`text` report type unless the sub-directive ``markdown: true`` is present, in which case
 it uses the :ref:`markdown` one.
@@ -599,9 +625,11 @@ seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-I
 
 .. code:: yaml
 
-   webhook:
-     enabled: true  # don't forget to set this to true! :)
-     webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
+   report:
+     tz: null
+     webhook:
+       enabled: true  # don't forget to set this to true! :)
+       webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
 
 Mattermost
 ~~~~~~~~~~
@@ -611,10 +639,12 @@ setting ``markdown: true``):
 
 .. code:: yaml
 
-   webhook:
-     enabled: true  # don't forget to set this to true! :)
-     webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
-     markdown: true  # Mattermost prefers markdown
+   report:
+     tz: null
+     webhook:
+       enabled: true  # don't forget to set this to true! :)
+       webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
+       markdown: true  # Mattermost prefers markdown
 
 Sub-directives
 ~~~~~~~~~~~~~~
@@ -640,10 +670,12 @@ Here is a sample configuration:
 
 .. code:: yaml
 
-   xmpp:
-     enabled: true  # don't forget to set this to true! :)
-     sender: 'BOT_ACCOUNT_NAME'
-     recipient: 'YOUR_ACCOUNT_NAME'
+   report:
+     tz: null
+     xmpp:
+       enabled: true  # don't forget to set this to true! :)
+       sender: 'BOT_ACCOUNT_NAME'
+       recipient: 'YOUR_ACCOUNT_NAME'
 
 You can store your password securely on a Keychain if you have one installed by running ``webchanges --xmpp-login``;
 this also requires having the optional ``safe_password`` dependencies installed (see below). However, be aware that
@@ -653,6 +685,7 @@ scheduler), so you can save the password in the ``insecure_password`` directive 
 .. code-block:: yaml
 
    report:
+     tz: null
      xmpp:
        enabled: true  # don't forget to set this to true! :)
        sender: 'BOT_ACCOUNT_NAME'
