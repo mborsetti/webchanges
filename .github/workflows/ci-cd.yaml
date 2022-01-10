@@ -207,7 +207,7 @@ jobs:
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.9' && runner.os == 'macOS'
         run: |
-          brew install pkg-config poppler python tesseract
+          brew install poppler tesseract
           pip install -U pdftotext Pillow pytesseract
 
 #      - name: Install pdf2text and ocr dependencies (Windows Python 3.9)

@@ -94,7 +94,7 @@ testdata = load_filter_testdata()
 
 
 @pytest.mark.parametrize('job', FILTER_DOC_JOBS)
-def test_url(job):
+def test_filter_doc_jobs(job):
     """Test the yaml code in docs/filters.rst against the source and expected results contained
     in tests/data/docs_filters_testdata.yaml using 'url' as the key)."""
     # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
