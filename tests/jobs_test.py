@@ -182,6 +182,20 @@ def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> 
         if job.use_browser and not job._beta_use_playwright:
             pytest.skip('Pyppeteer freezes in Python 3.10')
             return
+    if (
+        input_job
+        == {
+            'url': 'https://postman-echo.com/post',
+            'name': 'testing POST url job with use_browser and Playwright',
+            '_beta_use_playwright': True,
+            'use_browser': True,
+            'data': {'fieldname': 'fieldvalue'},
+        }
+        and sys.platform == 'linux'
+    ):
+        pytest.skip('Triggers exit code 141 on Ubuntu in GitHub Actions')
+        return
+
     with JobState(cache_storage, job) as job_state:
         data, etag = job.retrieve(job_state)
         if job.filter == [{'pdf2text': {}}]:
@@ -239,10 +253,7 @@ def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
             pytest.skip('Pyppeteer freezes in Python 3.10')
             return
     if job_data.get('use_browser'):
-        pytest.skip(
-            f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since capturing of 304 cannot be '
-            f'implemented in Chromium'  # last tested with Chromium 89
-        )
+        pytest.skip('Capturing of 304 cannot be implemented in Chromium')  # last tested with Chromium 89
         return
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
@@ -269,10 +280,8 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
         if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
             pytest.skip('Pyppeteer freezes in Python 3.10')
             return
-    if job_data.get('use_browser'):
-        pytest.skip(
-            f'Skipping test {sys._getframe().f_code.co_name} on Pyppeteer since it times out after 90 seconds or so'
-        )
+    if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
+        pytest.skip('Pyppeteer times out after 90 seconds or so')
         return
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
