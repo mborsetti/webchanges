@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import difflib
+import json
 import logging
 import shlex
 import subprocess
@@ -13,7 +14,7 @@ from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import ContextManager, Iterable, List, Optional, Type, TYPE_CHECKING, Union
+from typing import Any, ContextManager, Iterable, List, Optional, Type, TYPE_CHECKING, Union
 
 from .filters import FilterBase
 from .jobs import NotModifiedError
@@ -23,6 +24,11 @@ try:
     from zoneinfo import ZoneInfo  # not available in Python < 3.9
 except ImportError:
     from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
+
+try:
+    from deepdiff import DeepDiff
+except ImportError:
+    DeepDiff = None  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -51,7 +57,7 @@ class JobState(ContextManager):
     error_ignored: Union[bool, str] = False
     _generated_diff: Optional[str] = None
 
-    def __init__(self, cache_storage: CacheStorage, job: JobBase) -> None:
+    def __init__(self, cache_storage: CacheStorage, job: JobBase, playwright: Any = None) -> None:
         """
 
         :param cache_storage: The CacheStorage object with the snapshot database methods.
@@ -59,6 +65,7 @@ class JobState(ContextManager):
         """
         self.cache_storage = cache_storage
         self.job = job
+        self.playwright = playwright
 
     def __enter__(self) -> 'JobState':
         """Context manager invoked on entry to the body of a with statement to make it possible to factor out standard
@@ -212,27 +219,48 @@ class JobState(ContextManager):
         )
 
         if self.job.diff_tool is not None:
-            # External diff tool
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                tmp_path = Path(tmp_dir)
-                old_file_path = tmp_path.joinpath('old_file')
-                new_file_path = tmp_path.joinpath('new_file')
-                old_file_path.write_text(str(self.old_data))
-                new_file_path.write_text(str(self.new_data))
-                cmdline = shlex.split(self.job.diff_tool) + [str(old_file_path), str(new_file_path)]
-                proc = subprocess.run(cmdline, capture_output=True, text=True)
-                # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
-                if proc.returncode == 0:
-                    return ''
-                elif proc.returncode == 1:
-                    head = (
-                        f'Using external diff tool "{self.job.diff_tool}"\n'
-                        f'Old: {timestamp_old}\n'
-                        f'New: {timestamp_new}\n' + '-' * 36 + '\n'
+            if self.job.diff_tool.startswith('deepdiff'):
+                if DeepDiff is None:
+                    raise ImportError(
+                        f"Python package 'deepdiff' is not installed; cannot use 'diff_tool: {self.job.diff_tool}'"
+                        f' ({self.job.get_indexed_location()})'
                     )
-                    return head + proc.stdout
+                data_type = self.job.diff_tool.split()[1] if len(self.job.diff_tool.split()) >= 1 else 'json'
+                if data_type == 'json':
+                    old_data = json.loads(self.old_data)
+                    new_data = json.loads(self.new_data)
                 else:
-                    raise RuntimeError(proc.stderr) from subprocess.CalledProcessError(proc.returncode, cmdline)
+                    raise NotImplementedError(
+                        f"data_type '{data_type}' is not supported by 'diff_tool: deepdiff'"
+                        f' ({self.job.get_indexed_location()})'
+                    )
+                diff = DeepDiff(old_data, new_data)
+                head = (
+                    f'Using {self.job.diff_tool}\n'
+                    f'Old: {timestamp_old}\n'
+                    f'New: {timestamp_new}\n' + '-' * 36 + '\n'
+                )
+                return head + diff.pretty()
+            else:
+                # External diff tool
+                with tempfile.TemporaryDirectory() as tmp_dir:
+                    tmp_path = Path(tmp_dir)
+                    old_file_path = tmp_path.joinpath('old_file')
+                    new_file_path = tmp_path.joinpath('new_file')
+                    old_file_path.write_text(str(self.old_data))
+                    new_file_path.write_text(str(self.new_data))
+                    cmdline = shlex.split(self.job.diff_tool) + [str(old_file_path), str(new_file_path)]
+                    proc = subprocess.run(cmdline, capture_output=True, text=True)
+                if proc.stderr:
+                    raise RuntimeError(
+                        f"diff_tool '{self.job.diff_tool}' returned '{proc.stderr}' ({self.job.get_indexed_location()})"
+                    ) from subprocess.CalledProcessError(proc.returncode, cmdline)
+                head = (
+                    f'Using external diff tool "{self.job.diff_tool}"\n'
+                    f'Old: {timestamp_old}\n'
+                    f'New: {timestamp_new}\n' + '-' * 36 + '\n'
+                )
+                return head + proc.stdout
 
         if self.job.contextlines is not None:
             contextlines = self.job.contextlines
@@ -293,17 +321,16 @@ class JobState(ContextManager):
 class Report(object):
     """The base class for reporting."""
 
-    new_release_future: Future[str]
+    job_states: List[JobState] = []
+    new_release_future: Optional[Future[str]] = None
+    start: float = time.perf_counter()
 
     def __init__(self, urlwatch_config: Urlwatch) -> None:
         """
 
         :param urlwatch_config: The Urlwatch object with the program configuration information.
         """
-        self.start = time.perf_counter()
-
         self.config: Config = urlwatch_config.config_storage.config
-        self.job_states: List[JobState] = []
 
     def _result(self, verb: str, job_state: JobState) -> None:
         """Logs error and appends the verb to the job_state.

@@ -76,9 +76,9 @@ If you want to be notified of new posts on a public Facebook page, you can use t
    name: USERNAME's Facebook posts
    url: https://m.facebook.com/USERNAME/pages/permalink/?view_type=tab_posts
    filter:
-     - xpath: //div[@class="story_body_container"]
-     - html2text:
-   additions_only:
+     - xpath: //div[@data-ft='{"tn":"*s"}']
+     - html2text: strip_tags
+   additions_only: true
 
 
 .. _facebook_events:
@@ -100,7 +100,7 @@ If you want to be notified of new events on a public Facebook page, you can use 
          pattern: '(/events/\d*)[^"]*'
          repl: '\1'
      - html2text:
-   additions_only:
+   additions_only: true
 
 
 .. _github:

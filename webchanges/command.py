@@ -223,7 +223,10 @@ class UrlwatchCommand:
         history_data = list(self.urlwatcher.cache_storage.get_history_data(job.get_guid()).items())
 
         num_snapshots = len(history_data)
-        if num_snapshots < 2:
+        if num_snapshots == 0:
+            print('This job has never been run before')
+            return 1
+        elif num_snapshots < 2:
             print('Not enough historic data available (need at least 2 different snapshots)')
             return 1
 
@@ -235,7 +238,11 @@ class UrlwatchCommand:
                 # Ideally it should be saved as an attribute when saving "data".
                 if self.urlwatch_config.test_reporter is None:
                     self.urlwatch_config.test_reporter = 'stdout'  # default
-                self.check_test_reporter(job_state, label=f'Filtered diff (states {-i} and {-(i + 1)})', report=report)
+                errorlevel = self.check_test_reporter(
+                    job_state, label=f'Filtered diff (states {-i} and {-(i + 1)})', report=report
+                )
+                if errorlevel:
+                    self._exit(errorlevel)
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
@@ -245,8 +252,8 @@ class UrlwatchCommand:
     def list_error_jobs(self) -> None:
         start = time.perf_counter()
         print(
-            f'Jobs, if any, with errors or returning no data after filtering.\n'
-            f'Jobs file: {self.urlwatch_config.jobs}\n'
+            f'Jobs, if any, with errors or returning no data after filtering in jobs file\n'
+            f'{self.urlwatch_config.jobs}:\n'
         )
         jobs = [job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs]
         for job in jobs:
@@ -374,14 +381,22 @@ class UrlwatchCommand:
         job_state: Optional[JobState] = None,
         label: str = 'test',
         report: Optional[Report] = None,
-    ) -> None:
+    ) -> int:
+        """
+        Tests a reporter.
+
+        :param job_state: The JobState (Optional).
+        :param label: The label to be used in the report; defaults to 'test'.
+        :param report: A Report class to use for testing (Optional).
+        :return: 0 if successful, 1 otherwise.
+        """
 
         name = self.urlwatch_config.test_reporter
 
         if name not in ReporterBase.__subclasses__:
             print(f'No such reporter: {name}')
             print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
-            self._exit(1)
+            return 1
 
         cfg: ConfigReportersList = self.urlwatcher.config_storage.config['report'][name]  # type: ignore[misc]
         if job_state:  # we want a full report
@@ -395,7 +410,7 @@ class UrlwatchCommand:
         if not cfg['enabled']:
             print(f'Reporter is not enabled/configured: {name}')
             print(f'Use {__project_name__} --edit-config to configure reporters')
-            self._exit(1)
+            return 1
 
         if not report:
             report = Report(self.urlwatcher)
@@ -465,7 +480,7 @@ class UrlwatchCommand:
         if name:  # required for type checking
             report.finish_one(name, jobs_file=self.urlwatch_config.jobs)
 
-        self._exit(0)
+        return 0
 
     def check_smtp_login(self) -> None:
         config: ConfigReportEmail = self.urlwatcher.config_storage.config['report']['email']
@@ -560,7 +575,7 @@ class UrlwatchCommand:
         Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
         install the browser executable.
 
-        :return: Playwright's executable return code
+        :return: Playwright's executable return code.
         """
         try:
             from playwright._impl._driver import compute_driver_executable
@@ -601,7 +616,7 @@ class UrlwatchCommand:
             self._exit(0)
 
         if self.urlwatch_config.test_reporter:
-            self.check_test_reporter()
+            self._exit(self.check_test_reporter())
 
         if self.urlwatch_config.smtp_login:
             self.check_smtp_login()

@@ -20,10 +20,10 @@
 
    jobs
    filters
-   configuration
    diff_filters
    reports
    reporters
+   configuration
    cli
    dependencies
    yaml_syntax

@@ -44,6 +44,8 @@ brackets, like this::
 |                         | * Note: you will also have to **separately install** OS-specific        |
 |                         |   dependencies [#f5]_                                                   |
 +-------------------------+-------------------------------------------------------------------------+
+| ``deepdiff`` differ     | * `deepdiff <https://github.com/seperman/deepdiff>`__                   |
++-------------------------+-------------------------------------------------------------------------+
 | ``matrix`` reporter     | * `matrix_client <https://github.com/matrix-org/matrix-python-sdk>`__   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``pushbullet`` reporter | * `pushbullet.py <https://github.com/randomchars/pushbullet.py>`__      |

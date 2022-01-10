@@ -102,7 +102,6 @@ TEST_JOBS = [
             '_beta_use_playwright': True,
             'use_browser': True,
             'block_elements': ['stylesheet', 'font', 'image', 'media'],
-            'chromium_revision': chromium_revision_num,
             'cookies': {'X-test': '', 'X-test-2': ''},
             'headers': {'Accept-Language': 'en-US,en'},
             'ignore_https_errors': False,
@@ -302,6 +301,25 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
 # pyppeteer.errors.BrowserError: Browser closed unexpectedly.
 def test_stress_use_browser() -> None:
     jobs_file = data_path.joinpath('jobs-use_browser.yaml')
+    config_file = data_path.joinpath('config.yaml')
+    hooks_file = Path('')
+
+    config_storage = YamlConfigStorage(config_file)
+    jobs_storage = YamlJobsStorage(jobs_file)
+
+    if not os.getenv('GITHUB_ACTIONS'):
+        from webchanges.cli import setup_logger
+
+        setup_logger()
+
+    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    urlwatcher.run_jobs()
+
+
+@connection_required
+def test_stress_use_browser_playwright() -> None:
+    jobs_file = data_path.joinpath('jobs-use_browser_pw.yaml')
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path('')
 

@@ -4,16 +4,22 @@ from __future__ import annotations
 
 import logging
 import os
+import random
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
-from typing import TYPE_CHECKING
+from typing import Iterable, Optional, TYPE_CHECKING
 
 from .handler import JobState
-from .jobs import BrowserJob, NotModifiedError
+from .jobs import BrowserJob, NotModifiedError, UrlJobBase
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    from .main import Urlwatch
+    from typing import List
+
+    from .jobs import JobBase
+    from .main import Report, Urlwatch
+    from .storage import CacheStorage
 
 logger = logging.getLogger(__name__)
 
@@ -23,32 +29,45 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
     :raises IndexError: If any index(es) is/are out of range.
     """
-    cache_storage = urlwatcher.cache_storage
-    if urlwatcher.urlwatch_config.joblist:
-        for idx in urlwatcher.urlwatch_config.joblist:
-            if not (-len(urlwatcher.jobs) <= idx <= -1 or 1 <= idx <= len(urlwatcher.jobs)):
-                raise IndexError(f'Job index {idx} out of range (found {len(urlwatcher.jobs)} jobs)')
-        urlwatcher.urlwatch_config.joblist = [
-            jn if jn > 0 else len(urlwatcher.jobs) + jn + 1 for jn in urlwatcher.urlwatch_config.joblist
-        ]
-        jobs = [
-            job.with_defaults(urlwatcher.config_storage.config)
-            for job in urlwatcher.jobs
-            if job.index_number in urlwatcher.urlwatch_config.joblist
-        ]
-        logger.debug(f'Processing {len(jobs)} job as specified (# {urlwatcher.urlwatch_config.joblist})')
-    else:
-        jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs]
-        logger.debug(f'Processing {len(jobs)} jobs')
-    report = urlwatcher.report
 
-    with ExitStack() as stack:
-        max_workers = min(32, os.cpu_count() or 1) if any(type(job) == BrowserJob for job in jobs) else None
-        logger.debug(f'Max_workers set to {max_workers}')
+    def insert_delay(jobs: List[JobBase]) -> List[JobBase]:
+        """
+        Sets a _delay value for URL jobs hitting the a network location already hit. Used to preventing multiple jobs
+        hitting the same network location at the exact same time and being blocked as a result.
+
+        :param jobs: The list of jobs.
+        :return: The list of jobs with the _delay value set.
+        """
+        previous_netlocs = set()
+        for job in jobs:
+            if isinstance(job, UrlJobBase):
+                netloc = urllib.parse.urlparse(job.url).netloc
+                if netloc in previous_netlocs:
+                    job._delay = random.uniform(0.1, 1)  # nosec [B311:blacklist] Standard pseudo-random generator
+                else:
+                    previous_netlocs.add(netloc)
+        return jobs
+
+    def job_runner(
+        stack: ExitStack,
+        jobs: Iterable[JobBase],
+        cache_storage: CacheStorage,
+        report: Report,
+        max_workers: Optional[int] = None,
+    ) -> None:
+        """
+        Runs the jobs in parallel.
+
+        :param stack: The ExitStack used.
+        :param jobs: The jobs to run.
+        :param max_workers: The number of maximum workers for ThreadPoolExecutor.
+        :return: None
+        """
         executor = ThreadPoolExecutor(max_workers=max_workers)
 
         # launch future to retrieve if new version is available
-        urlwatcher.report.new_release_future = executor.submit(urlwatcher.get_new_release_version)
+        if urlwatcher.report.new_release_future is None:
+            urlwatcher.report.new_release_future = executor.submit(urlwatcher.get_new_release_version)
 
         for job_state in executor.map(
             lambda jobstate: jobstate.process(),
@@ -103,3 +122,51 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 job_state.tries = 0
                 job_state.save()
                 report.new(job_state)
+
+    # extract subset of jobs to run if joblist CLI was set
+    if urlwatcher.urlwatch_config.joblist:
+        for idx in urlwatcher.urlwatch_config.joblist:
+            if not (-len(urlwatcher.jobs) <= idx <= -1 or 1 <= idx <= len(urlwatcher.jobs)):
+                raise IndexError(f'Job index {idx} out of range (found {len(urlwatcher.jobs)} jobs)')
+        urlwatcher.urlwatch_config.joblist = [
+            jn if jn > 0 else len(urlwatcher.jobs) + jn + 1 for jn in urlwatcher.urlwatch_config.joblist
+        ]
+        jobs = [
+            job.with_defaults(urlwatcher.config_storage.config)
+            for job in urlwatcher.jobs
+            if job.index_number in urlwatcher.urlwatch_config.joblist
+        ]
+        logger.debug(f'Processing {len(jobs)} job as specified (# {urlwatcher.urlwatch_config.joblist})')
+    else:
+        jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs]
+        logger.debug(f'Processing {len(jobs)} jobs')
+
+    #    jobs = insert_delay(jobs)
+
+    cache_storage = urlwatcher.cache_storage
+    report = urlwatcher.report
+    with ExitStack() as stack:
+        # run non-BrowserJob jobs
+        jobs_to_run = (job for job in jobs if type(job) != BrowserJob)
+        logger.debug("Running jobs without 'use_browser: true' in parallel with Python default max_workers")
+        job_runner(stack, jobs_to_run, cache_storage, report)
+
+        # run BrowserJob jobs
+        jobs_to_run = (job for job in jobs if type(job) == BrowserJob)
+        if any(jobs_to_run):
+            if any(job._beta_use_playwright for job in jobs_to_run):
+                try:
+                    import psutil
+                except ImportError:
+                    raise ImportError(
+                        "Python package psutil is not installed; cannot use 'use_browser: true' directives with "
+                        "'_beta_use_playwright: true'.  Please install dependencies with 'pip install webchanges["
+                        "playwright]'."
+                    )
+                avail_vm = psutil.virtual_memory().available + psutil.swap_memory().free
+                logger.debug(f'Found {avail_vm:,} in available virtual + swap memory')
+                max_workers = min(32, max(1, int(avail_vm / 120e6)), os.cpu_count() or 1)
+            else:
+                max_workers = min(32, os.cpu_count() or 1)
+            logger.debug(f"Running 'use_browser: true' jobs in parallel with {max_workers} max_workers")
+            job_runner(stack, jobs_to_run, cache_storage, report, max_workers)

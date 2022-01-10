@@ -557,8 +557,9 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         shelljob_errors = self.shelljob_security_checks()
         if shelljob_errors and any(is_shell_job(job) for job in jobs):
             print(
-                f"Removing 'command' job(s) and/or jobs with 'diff_tool' because  {' and '.join(shelljob_errors)} (see "
-                f'{__docs_url__}jobs.html#important-note-for-command-jobs)'
+                f"ERROR: Removing 'command' job(s) and/or jobs with 'diff_tool' because "
+                f" {' and '.join(shelljob_errors)}\n"
+                f'(see {__docs_url__}en/stable/jobs.html#important-note-for-command-jobs)'
             )
             jobs = [job for job in jobs if not is_shell_job(job)]
 

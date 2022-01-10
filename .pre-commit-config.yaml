@@ -158,13 +158,13 @@ repos:
         types: [python]
         require_serial: true
         args: [--max-line-length, '120']
-#      - id: mypy  # https://github.com/python/mypy
-#        name: Static Typing for Python (mypy)
-#        entry: mypy
-#        language: python
-#        types: [python]
-#        pass_filenames: false
-#        args: [-p, webchanges]
+      - id: mypy  # https://github.com/python/mypy
+        name: Static Typing for Python (mypy)
+        entry: mypy
+        language: python
+        types: [python]
+        pass_filenames: false
+        args: [-p, webchanges]
       - id: doc8  # https://github.com/pycqa/doc8
         name: Check for style in rst documentation (doc8)
         description: Documentation linter

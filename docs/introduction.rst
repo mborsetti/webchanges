@@ -170,7 +170,7 @@ If all you're doing is monitoring the text of a website to see if anything was a
     url: https://example.com/
     filters:
       - html2text:  # notice the 2 empty spaces before the hyphen and the colon at the end
-    additions_only:  # notice the colon at the end
+    additions_only: true
 
 
 :ref:`Reports`

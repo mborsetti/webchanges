@@ -288,7 +288,7 @@ class HtmlReporter(ReporterBase):
             )
         )
         if (
-            hasattr(self.report, 'new_release_future')
+            self.report.new_release_future is not None
             and self.report.new_release_future.done()
             and self.report.new_release_future.result()
         ):
@@ -554,7 +554,7 @@ class TextReporter(ReporterBase):
                 + (f' ({self.jobs_file.stem}).\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '.\n')
             )
             if (
-                hasattr(self.report, 'new_release_future')
+                self.report.new_release_future is not None
                 and self.report.new_release_future.done()
                 and self.report.new_release_future.result()
             ):
@@ -657,7 +657,7 @@ class MarkdownReporter(ReporterBase):
             footer += f' ({self.jobs_file.stem})_.\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '_.\n'
 
             if (
-                hasattr(self.report, 'new_release_future')
+                self.report.new_release_future is not None
                 and self.report.new_release_future.done()
                 and self.report.new_release_future.result()
             ):

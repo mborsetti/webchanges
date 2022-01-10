@@ -6,6 +6,7 @@ import asyncio
 import copy
 import email.utils
 import hashlib
+import html
 import json
 import logging
 import os
@@ -13,6 +14,7 @@ import re
 import subprocess
 import sys
 import textwrap
+import time
 import warnings
 from ftplib import FTP  # nosec: B402
 from http.client import responses as response_names
@@ -114,6 +116,7 @@ class JobBase(object, metaclass=TrackSubClasses):
 
     # __optional__ in derived classes
     _beta_use_playwright: Optional[bool] = None
+    _delay: Optional[float] = None
     additions_only: Optional[bool] = None
     block_elements: List[str] = []  # Pyppeteer only
     chromium_revision: Optional[Union[Dict[str, int], Dict[str, str], str, int]] = None
@@ -156,8 +159,9 @@ class JobBase(object, metaclass=TrackSubClasses):
     wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None  # pyppeteer only?
     wait_for_selector: Optional[str] = None  # Playwright
     wait_for_url: Optional[str] = None  # Playwright
-    wait_until: Optional[Literal['load', 'domcontentloaded', 'networkidle', 'networkidle0', 'networkidle2']] = None
-    #  'networkidle0', 'networkidle2' is pyppeteer only , 'networkidle2' is Playwright only
+    wait_until: Optional[
+        Literal['load', 'domcontentloaded', 'networkidle0', 'networkidle2']  # literal for pyppeteer
+    ] = None
 
     def __init__(self, **kwargs: Any) -> None:
         # Fail if any required keys are not provided
@@ -513,6 +517,10 @@ class UrlJob(UrlJobBase):
         :returns: The data retrieved and the ETag.
         :raises NotModifiedError: If an HTTP 304 response is received.
         """
+        if self._delay:
+            logger.debug(f'Delaying for {self._delay} seconds (duplicate network location)')
+            time.sleep(self._delay)
+
         headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if 'User-Agent' not in headers:
             headers['User-Agent'] = __user_agent__
@@ -663,11 +671,11 @@ class UrlJob(UrlJobBase):
             )
             response.encoding = response.apparent_encoding
 
-        # if no name is given, set it to the title element if found in HTML or XML truncated to 60 characters
+        # if no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
         if not self.name:
             title = re.search(r'<title.*?>(.+?)</title>', response.text)
             if title:
-                self.name = title.group(1)[:60]
+                self.name = html.unescape(title.group(1))[:60]
 
         return response.text, etag
 
@@ -748,6 +756,9 @@ class BrowserJob(UrlJobBase):
         'wait_until',
     )
 
+    _playwright: Optional[Any] = None
+    _playwright_browsers: dict = {}
+
     proxy_username: str = ''
     proxy_password: str = ''
 
@@ -764,16 +775,20 @@ class BrowserJob(UrlJobBase):
         :param job_state: The JobState object, to keep track of the sate of the retrieval.
         :returns: The data retrieved and the ETag.
         """
+        if self._delay:
+            logger.debug(f'Delaying for {self._delay} seconds (duplicate network location)')
+            time.sleep(self._delay)
+
         if self._beta_use_playwright:
             response, etag = self._playwright_retrieve(job_state)
         else:
             response, etag = asyncio.run(self._retrieve(job_state))
 
-        # if no name is found, set it to the title of the page if found
+        # if no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
         if not self.name:
             title = re.findall(r'<title.*?>(.+?)</title>', response)
             if title:
-                self.name = title[0]
+                self.name = html.unescape(title[0])[:60]
 
         return response, etag
 
@@ -1064,6 +1079,13 @@ class BrowserJob(UrlJobBase):
         return content, etag
 
     def _playwright_retrieve(self, job_state: JobState) -> Tuple[str, str]:
+        """
+
+        :raises ValueError: If there is a problem with the value supplied in one of the keys in the configuration file.
+        :raises TypeError: If the value provided in one of the directives is not of the correct type.
+        :raises ImportError: If the playwright package is not installed.
+        :raises BrowserResponseError: If a browser error or an HTTP response code between 400 and 599 is received.
+        """
         try:
             from playwright.sync_api import Error as PlaywrightError
             from playwright.sync_api import Route, sync_playwright
@@ -1075,7 +1097,7 @@ class BrowserJob(UrlJobBase):
 
         # deprecations
         if self.wait_until in ('networkidle0', 'networkidle2'):
-            self.wait_until = 'networkidle'
+            self.wait_until = 'networkidle'  # type: ignore[assignment]  # pyppeteer Literal
         if self.wait_for_navigation:
             warnings.warn(
                 f"Job {self.index_number}: Directive 'wait_for_navigation' is deprecated with Playwright; "
@@ -1101,10 +1123,10 @@ class BrowserJob(UrlJobBase):
                 headers['If-None-Match'] = job_state.old_etag
             if job_state.old_timestamp is not None:
                 headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
-
         if self.cookies:
             headers['Cookies'] = '; '.join([f'{k}={quote(v)}' for k, v in self.cookies.items()])
 
+        data = None
         if self.data:
             if not self.method:
                 self.method = 'POST'
@@ -1112,7 +1134,9 @@ class BrowserJob(UrlJobBase):
                 headers['Content-Type'] = 'application/x-www-form-urlencoded'
             logger.info(f'Job {self.index_number}: Sending POST request to {self.url}')
             if isinstance(self.data, dict):
-                self.data = urlencode(self.data)
+                data = urlencode(self.data)
+            else:
+                data = quote(self.data)
 
         proxy = None
         if self.http_proxy or self.https_proxy:
@@ -1143,43 +1167,78 @@ class BrowserJob(UrlJobBase):
         else:
             args = None
 
-        if self.timeout:
-            timeout: Optional[float] = self.timeout * 1000
-        else:
-            timeout = None
+        timeout = self.timeout * 1000 if self.timeout else 75000  # Browser could be slow to launch
 
         # launch browser
         with sync_playwright() as p:
             executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
             channel = None if executable_path else 'chrome'
-            # logger.debug(f'Job {self.index_number}: About to launch browser {executable_path or channel}')
-            if self.user_data_dir:
-                browser = p.chromium.launch_persistent_context(
-                    user_data_dir=self.user_data_dir,
-                    channel=channel,
-                    executable_path=executable_path,
-                    args=args,
-                    handle_sigint=False,
-                    handle_sigterm=False,
-                    handle_sighup=False,
-                    timeout=timeout,
-                    headless=self.headless,
-                    proxy=proxy,
-                )  # as signals only work single-threaded, must set handle_sig* to False
-                logger.debug(f'Job {self.index_number}: Browser launched from {executable_path}')
-            else:
+            if not self.user_data_dir:
                 browser = p.chromium.launch(
-                    channel=channel,
-                    executable_path=executable_path,
-                    args=args,
-                    handle_sigint=False,
-                    handle_sigterm=False,
-                    handle_sighup=False,
-                    timeout=timeout,
-                    headless=self.headless,
-                    proxy=proxy,
-                )  # as signals only work single-threaded, must set handle_sig* to False
+                    executable_path=executable_path,  # type: ignore[arg-type]
+                    channel=channel,  # type: ignore[arg-type]
+                    args=args,  # type: ignore[arg-type]
+                    timeout=timeout,  # type: ignore[arg-type]
+                    headless=self.headless,  # type: ignore[arg-type]
+                    proxy=proxy,  # type: ignore[arg-type]
+                )
+                context = browser.new_context(
+                    ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
+                    extra_http_headers=dict(headers),
+                )
                 logger.debug(f'Job {self.index_number}: Browser {channel} {browser.version} launched')
+            else:
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=self.user_data_dir,
+                    channel=channel,  # type: ignore[arg-type]
+                    executable_path=executable_path,  # type: ignore[arg-type]
+                    args=args,  # type: ignore[arg-type]
+                    # handle_sigint=False,
+                    # handle_sigterm=False,
+                    # handle_sighup=False,
+                    timeout=timeout,  # type: ignore[arg-type]
+                    headless=self.headless,  # type: ignore[arg-type]
+                    proxy=proxy,  # type: ignore[arg-type]
+                    ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
+                    extra_http_headers=dict(headers),
+                )
+                logger.debug(f'Job {self.index_number}: Browser launched from {executable_path}')
+
+            # # launch playwright (memoized)
+            # if self._playwright is None:
+            #     logger.info('Starting the instance of playwright')
+            #     self._playwright = sync_playwright().start()  # TODO this should be in a context manager with .stop()
+
+            # # launch browser (memoized)
+            # executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
+            # browser_key = msgpack.packb({1: executable_path, 2: args, 3: self.headless})
+            # browser = self._playwright_browsers.get(browser_key)
+            # print(f'playwright about to start browser for job {job_state.job.index_number}')
+            # if not browser:
+            #     logger.info(f'Starting a new browser with key {browser_key}')
+            #     print(f'Starting a new browser with key {browser_key}')
+            #     channel = None if executable_path else 'chrome'
+            #     playwright = job_state.playwright
+            #     if not playwright:
+            #         print(f'No playwright found for job {job_state.job.index_number}')
+            #         playwright = sync_playwright().start()
+            #     browser = playwright.chromium.launch(
+            #         executable_path=executable_path,
+            #         channel=channel,
+            #         args=args,
+            #         headless=self.headless,
+            #         proxy={'server': 'http://per-context'},
+            #     )
+            #     print(f'playwright browser launched for job {job_state.job.index_number}')
+            #     self._playwright_browsers[browser_key] = browser
+            #
+            # # launch new browser context for this job
+            #
+            # context = browser.new_context(
+            #     ignore_https_errors=self.ignore_https_errors,
+            #     extra_http_headers=dict(headers),
+            #     proxy=proxy,
+            # )
 
             if 'User-Agent' not in headers:
                 headers['User-Agent'] = (
@@ -1188,19 +1247,16 @@ class BrowserJob(UrlJobBase):
                 )
 
             # open a page
-            page = browser.new_page(
-                ignore_https_errors=self.ignore_https_errors,
-                extra_http_headers=dict(headers),
-            )
+            page = context.new_page()
 
             if self.method and self.method != 'GET':
 
                 def handle_route(route: Route) -> None:
-                    """Handle handler function to change the route (probably a pyee.EventEmitter callback)."""
+                    """Handler function to change the route (probably a pyee.EventEmitter callback)."""
                     logger.info(f'Job {self.index_number}: Intercepted route to change request method to {self.method}')
-                    route.continue_(method=self.method, post_data=self.data)
+                    route.continue_(method=str(self.method), post_data=data)  # type: ignore[arg-type]
 
-                page.route(self.url, handle_route)
+                page.route(self.url, handler=handle_route)
 
             # if self.block_elements and not self.method or self.method == 'GET':
             #     # FIXME: Pyppeteer freezes on certain sites if this is on; contribute if you know why
@@ -1265,23 +1321,31 @@ class BrowserJob(UrlJobBase):
             try:
                 response = page.goto(
                     self.url,
+                    wait_until=self.wait_until,  # type: ignore[arg-type]
+                    referer=self.referer,  # type: ignore[arg-type]
                     timeout=timeout,
-                    wait_until=self.wait_until,
-                    referer=self.referer,
                 )
             except PlaywrightError as e:
                 logger.error(f'Job {self.index_number}: Page returned error {e.args[0]}')
-                raise BrowserResponseError(e.args, None)
+                context.close()
+                raise e
+
+            if not response:
+                context.close()
+                raise BrowserResponseError(('No response received from browser',), None)
 
             # wait_for-*
             if self.wait_for_url:
-                response.frame.wait_for_url(self.wait_for_url, wait_until=self.wait_until, timeout=timeout)
+                response.frame.wait_for_url(
+                    self.wait_for_url, wait_until=self.wait_until, timeout=timeout  # type: ignore[arg-type]
+                )
             if self.wait_for_selector:
                 if isinstance(self.wait_for_selector, str):
                     response.frame.wait_for_selector(self.wait_for_selector, timeout=timeout)
                 elif isinstance(self.wait_for_selector, dict):
                     response.frame.wait_for_selector(**self.wait_for_selector, timeout=timeout)
                 else:
+                    context.close()
                     raise ValueError(
                         f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a string or a"
                         f' dictionary; found {type(self.wait_for_selector)}.'
@@ -1289,9 +1353,11 @@ class BrowserJob(UrlJobBase):
             if self.wait_for_function:
                 if isinstance(self.wait_for_function, str):
                     response.frame.wait_for_function(self.wait_for_function, timeout=timeout)
+
                 elif isinstance(self.wait_for_function, dict):
                     response.frame.wait_for_function(**self.wait_for_function, timeout=timeout)
                 else:
+                    context.close()
                     raise ValueError(
                         f"Job {job_state.job.index_number}: Directive 'wait_for_function' can only be a string or a"
                         f' dictionary; found {type(self.wait_for_function)}'
@@ -1305,11 +1371,13 @@ class BrowserJob(UrlJobBase):
                 #     f'{response.url}'
                 # )
                 # logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
+                context.close()
                 raise BrowserResponseError((response.status_text,), response.status)
 
             # extract content
             content = page.content()
             etag = response.header_value('etag') or ''
+            context.close()
             return content, etag
 
     def ignore_error(self, exception: Exception) -> Union[bool, str]:
@@ -1395,7 +1463,7 @@ class BrowserJob(UrlJobBase):
         ]
 
         if self._beta_use_playwright:
-            from playwright.sync_api import Error as PlaywrightError
+            from playwright.async_api import Error as PlaywrightError
 
             if isinstance(exception, PlaywrightError):
                 if self.ignore_connection_errors:

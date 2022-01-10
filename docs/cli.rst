@@ -40,7 +40,7 @@ Command line arguments
 
    reporters:
      --test-reporter REPORTER
-                           send a test notification or redirect output of --test-diff
+                           test a reporter or redirect output of --test-diff
      --smtp-login          verify SMTP login credentials with server and, if stored in keyring, enter or
                            check password
      --telegram-chats      list telegram chats program is joined to
@@ -76,7 +76,7 @@ Select subset of jobs
 ---------------------
 Add job number(s) in the command line to run a subset of them; for example, run ``webchanges 2 3`` to only run jobs #2
 and #3 from your job list, or ``webchanges -1`` to only run the last job on your jobs list. Find the numbering of your
-jobs by running``webchanges --list``. API is experimental and may change in the near future.
+jobs by running ``webchanges --list``. API is experimental and may change in the near future.
 
 .. versionadded:: 3.6
 
@@ -86,18 +86,18 @@ jobs by running``webchanges --list``. API is experimental and may change in the 
 Show errors and no-data jobs
 ----------------------------
 You can run all jobs and see those that result in an error or who, after filtering, return no data, by running
-:program:`webchanges` with the ``--error`` argument. This can help with detecting jobs that may no longer be monitoring
-resources as expected. No snapshots are saved from this run.
+:program:`webchanges` with the ``--error`` command line argument. This can help with detecting jobs that may no longer
+be monitoring resources as expected. No snapshots are saved from this run.
 
 .. _test:
 
 Test run a job
 --------------
-You can test a job and its filter by using the argument ``--test`` followed by the job index number (from ``--list``) or
-its URL/command; :program:`webchanges` will display the filtered output. This allows to easily test changes in
-filters. Use a negative index number to select a job from the bottom of your job list (i.e. -1 is the last job, -2 is
-the second to last job, etc.).  Combine ``--test`` with ``--verbose`` to get more information, for example the text
-returned from a website with a 4xx (client error) status code::
+You can test a job and its filter by using the command line argument ``--test`` followed by the job index number
+(from ``--list``) or its URL/command; :program:`webchanges` will display the filtered output. This allows to easily
+test changes in filters. Use a negative index number to select a job from the bottom of your job list (i.e. -1 is the
+last job, -2 is the second to last job, etc.).  Combine ``--test`` with ``--verbose`` to get more information, for
+example the text returned from a website with a 4xx (client error) status code::
 
    webchanges --verbose --test 1
 
@@ -108,11 +108,11 @@ returned from a website with a 4xx (client error) status code::
 
 Show diff from saved snapshots
 ------------------------------
-You can use the argument ``--test-diff`` followed by the job index number (from ``--list``) or its URL/command will
-display diffs and apply the :ref:`diff filters <diff_filters>` currently defined from all snapshots that have been
-saved; obviously a minimum of 2 saved snapshots are required. This allows you to test the effect of a diff filter and/or
-retrieve historical diffs (changes). Use a negative index number to select a job from the bottom of your job list (i.e.
--1 is the last job, -2 is the second to last job, etc.)
+You can use the command line argument ``--test-diff`` followed by the job index number (from ``--list``) or its
+URL/command will display diffs and apply the :ref:`diff filters <diff_filters>` currently defined from all snapshots
+that have been saved; obviously a minimum of 2 saved snapshots are required. This allows you to test the effect of a
+diff filter and/or retrieve historical diffs (changes). Use a negative index number to select a job from the bottom
+of your job list (i.e. -1 is the last job, -2 is the second to last job, etc.)
 
 You can test how the diff looks like with a reporter by combining this with ``--test-reporter``. For example, to see
 how diffs from job 1 look like in HTML if running on a machine with a web browser, run this::
@@ -134,7 +134,7 @@ how diffs from job 1 look like in HTML if running on a machine with a web browse
 
 Test a reporter
 ---------------
-You can test a reporter by using the argument ``--test-reporter`` followed by the reporter name;
+You can test a reporter by using the command line argument ``--test-reporter`` followed by the reporter name;
 :program:`webchanges` will create a dummy report and send it through the selected reporter. This will help in
 debugging issues, especially when used in conjunction with ``--verbose``::
 
@@ -150,8 +150,8 @@ debugging issues, especially when used in conjunction with ``--verbose``::
 Delete the latest saved snapshot
 --------------------------------
 You can delete the latest saved snapshot of a job by running :program:`webchanges` with the ``--delete-snapshot``
-argument followed by the job index number (from ``--list``) or its URL/command. This is extremely useful when a website
-is redesigned and your filters behave in unexpected ways (for example, by capturing nothing):
+command line argument followed by the job index number (from ``--list``) or its URL/command. This is extremely
+useful when a website is redesigned and your filters behave in unexpected ways (for example, by capturing nothing):
 
 * Update your filters to once again capture the content you're monitoring, testing the job by running
   :program:`webchanges` with the ``--test`` command line argument (see :ref:`here <test>`);
@@ -172,10 +172,10 @@ This feature does not work with database engines ``textfiles`` and ``minidb``.
 Rollback the database
 ---------------------
 You can rollback the snapshots database to an earlier time by running :program:`webchanges` with the
-``--rollback-cache`` argument followed by a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating
-the point in time you want to go back to. Useful when you missed notifications or they got lost: rollback the database
-to the time of the last good report, then run :program:`webchanges` again to get a new report with the differences
-since that time.
+``--rollback-cache``  command line argument followed by a `Unix timestamp <https://en.wikipedia
+.org/wiki/Unix_time>`__ indicating the point in time you want to go back to. Useful when you missed notifications or
+they got lost: rollback the database to the time of the last good report, then run :program:`webchanges` again to get
+a new report with the differences since that time.
 
 You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
 <https://www.unixtimestamp.com/>`__
@@ -203,7 +203,7 @@ for manual deletion.
 
 Redis
 ~~~~~
-To use Redis as a database (cache) backend, simply specify a redis URI in the ``--cache`` argument:
+To use Redis as a database (cache) backend, simply specify a redis URI in the ``--cache`` command line argument:
 
 .. code-block:: bash
 

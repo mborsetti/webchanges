@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import html
 import io
@@ -16,7 +17,7 @@ import warnings
 from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
 from xml.dom import minidom  # nosec: B408 Replace minidom with the equivalent defusedxml package TODO
 
 import html2text
@@ -502,6 +503,53 @@ class Html2TextFilter(FilterBase):
 
         else:
             raise ValueError(f"Unknown method {method} for filter 'html2text': ({self.job.get_indexed_location()})")
+
+
+class Csv2TextFilter(FilterBase):
+    """Convert CSV to plaintext."""
+
+    __kind__ = 'csv2text'
+
+    __supported_subfilters__ = {
+        'format_message': 'A format string with the headers that will be outputted for each csv'
+        'line (header will be lower-cased)',
+        'has_header': 'If specified and true - use the first line as a header. '
+        'If false - force ignore first line as header (treat it as data). '
+        'If not specified it will be guessed by the has_header method of csv.Sniffer.',
+        'ignore_header': 'If your format string is number based, but the CSV has headers, '
+        'this flag will force ignoring the header.',
+    }
+
+    __default_subfilter__ = 'format_message'
+
+    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+        has_header_config = subfilter.get('has_header')
+
+        if has_header_config is None:
+            has_header = csv.Sniffer().has_header(data)
+        else:
+            has_header = has_header_config
+
+        reader = csv.reader(data.split('\n'))
+        data_list = list(reader)
+        header = None
+
+        if has_header:
+            header = data_list.pop(0)
+            header = [i.lower() for i in header]
+
+        message = subfilter['format_message']
+        ignore_header = subfilter.get('ignore_header')
+
+        lines = []
+        for i in data_list:
+            if header and not ignore_header:
+                legend = dict(zip(header, i))
+                lines.append(message.format(**legend))
+            else:
+                lines.append(message.format(*i))
+
+        return '\n'.join(lines)
 
 
 class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
@@ -1046,19 +1094,19 @@ class LxmlParser:
     namespaces: Optional[Dict[str, str]]
     skip: int
     maxitems: int
-    job: JobBase
 
     def __init__(
         self: Union['LxmlParser', 'CSSFilter', 'XPathFilter'],
         filter_kind: str,
         subfilter: Dict[str, Any],
         expr_key: str,
+        job: JobBase,
     ) -> None:
         self.filter_kind = filter_kind
         if expr_key not in subfilter:
             raise ValueError(
                 f'The {filter_kind} filter needs {self.EXPR_NAMES[filter_kind]} for filtering'
-                f' ({self.job.get_indexed_location()})'
+                f' ({job.get_indexed_location()})'
             )
         self.expression = subfilter[expr_key]
         self.method = subfilter.get('method', 'html')
@@ -1069,10 +1117,10 @@ class LxmlParser:
         if self.method not in ('html', 'xml'):
             raise ValueError(
                 f"The {filter_kind} filter's method must be 'html' or 'xml', got {self.method}"
-                f' ({self.job.get_indexed_location()})'
+                f' ({job.get_indexed_location()})'
             )
         if self.method == 'html' and self.namespaces:
-            raise ValueError(f"Namespace prefixes only supported with 'xml' method ({self.job.get_indexed_location()})")
+            raise ValueError(f"Namespace prefixes only supported with 'xml' method ({job.get_indexed_location()})")
         self.parser = (etree.HTMLParser if self.method == 'html' else etree.XMLParser)()
         self.data = ''
 
@@ -1208,7 +1256,7 @@ class CSSFilter(FilterBase):
     maxitems: int
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
-        lxml_parser = LxmlParser('css', subfilter, 'selector')
+        lxml_parser = LxmlParser('css', subfilter, 'selector', self.job)
         lxml_parser.feed(data)
         return lxml_parser.get_filtered_data()
 
@@ -1233,7 +1281,7 @@ class XPathFilter(FilterBase):
     maxitems: int
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
-        lxml_parser = LxmlParser('xpath', subfilter, 'path')
+        lxml_parser = LxmlParser('xpath', subfilter, 'path', self.job)
         lxml_parser.feed(data)
         return lxml_parser.get_filtered_data()
 
@@ -1311,6 +1359,31 @@ class RemoveRepeatedFilter(FilterBase):
                     uniq_lines.append(line)
 
         return separator.join(uniq_lines)
+
+
+class RemoveDuplicateLinesFilter(FilterBase):
+    """Remove duplicate lines (case sensitive)."""
+
+    __kind__ = 'remove-duplicate-lines'
+
+    __supported_subfilters__ = {
+        'separator': 'Item separator (default: newline)',
+    }
+
+    __default_subfilter__ = 'separator'
+
+    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+        separator = subfilter.get('separator', '\n')
+        data_lines = data.split(separator)
+
+        def get_unique_lines(lines: List[str]) -> Iterable[str]:
+            seen = set()
+            for line in lines:
+                if line not in seen:
+                    yield line
+                    seen.add(line)
+
+        return separator.join(get_unique_lines(data_lines))
 
 
 class ReverseFilter(FilterBase):

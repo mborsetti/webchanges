@@ -56,6 +56,10 @@ At the moment, the following filters are available:
 
   - :ref:`beautify`: Beautify HTML.
 
+* To make CSV files more readable:
+
+  - :ref:`csv2text`: Convert CSV to plaintext.
+
 * To extract text from PDFs:
 
   - :ref:`pdf2text`: Convert PDF to plaintext.
@@ -240,6 +244,52 @@ Optional directives
 * ``skip``: Number of elements to skip from the beginning (default: 0).
 * ``maxitems``: Maximum number of items to return (default: all).
 
+
+
+.. _csv2text:
+
+csv2text
+--------
+The filter **csv2text** turns data formatted as comma separated values (CSV) to a prettier textual representation.
+This is done by supplying a Python `format string
+<https://docs.python.org/3/library/string.html#format-string-syntax>`__ where the csv data is replaced into. If the CSV
+has a header, the format string should use the header names (**lowercased**).
+
+For example, given the following csv data::
+
+   Name,Company
+   Smith,Apple
+   Doe,Google
+
+we can make it more readable by using:
+
+.. code-block:: yaml
+
+   url: https://example.org/data.csv
+   filter:
+     - csv2text:
+        format_message: Mr. or Ms. {name} works at {company}.  # note the lowercase in the replacement_fields
+        has_header: true
+
+to produce::
+
+  Mr. or Ms. Smith works at Apple.
+  Mr. or Ms. Doe works at Google.
+
+If there is no header row, or ``ignore_header`` is set to true, you will need to use the numeric array notation: ``Mr.
+or Mrs. {0} works at {1}.``.
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``format_message`` (default): The Python `format string
+  <https://docs.python.org/3/library/string.html#format-string-syntax>`__ containing "replacement fields" into which the
+  data from the csv is substituted. Field names are the column headers (in lowercase) if the data has column headers or
+  numeric starting from 0 if the data has no column headers or ``ignore_header`` is set to true.
+* ``has_header`` (true/false): Specifies whether the first row is a series of column headers (default: use the
+  rough heuristics provided by Python's `csv.Sniffer.has_header
+  <https://docs.python.org/3/library/csv.html#csv.Sniffer>`__ method.
+* ``ignore_header`` (true/false): If set to True, will parse the format_message as having numeric replacement fields
+  even if the data has column headers.
 
 
 .. _element-by-…:
@@ -458,10 +508,13 @@ If the PDF file is password protected, you can specify its password:
      - pdf2text:
          password: webchangessecret
 
-To keep the layout of the original document by using spaces, use ``physical: true``. However, be aware that these
+By default, pdf2text tries to reproduce the layout of the original document by using spaces. Be aware that these
 spaces may change when a document is updated, so you may get reports containing a lot of changes consisting of
-nothing but changes in the spacing between the columns.  In addition, using the job directive ``monospace`` will
-maintain the formatting of the output (see :ref:`here <monospace>`).
+nothing but changes in the spacing between the columns; in this case try turning it off with the sub-directive
+``physical: false``.
+
+.. tip:: If your reports are in HTML format and the pdf is columnar in nature, try using the job directive
+   ``monospace: true`` to improve readability (see :ref:`here <monospace>`).
 
 .. code-block:: yaml
 
@@ -489,13 +542,13 @@ by this filter:
 Optional sub-directives
 """""""""""""""""""""""
 * ``password``: Password for a password-protected PDF file.
+* ``physical`` (true/false): If true, page text is output in the order it appears on the page, regardless of columns or
+  other layout features (default: true). Only one of ``raw`` and ``physical`` can be set to true.
 * ``raw`` (true/false): If true, page text is output in the order it appears in the content stream (default: false).
   Only one of ``raw`` and ``physical`` can be set to true.
-* ``physical`` (true/false): If true, page text is output in the order it appears on the page, regardless of columns or
-  other layout features (default: false). Only one of ``raw`` and ``physical`` can be set to true.
 
 .. versionadded:: 3.8.2
-   ``raw`` and ``physical`` sub-directives.
+   ``physical`` and ``raw`` sub-directives.
 
 
 Required packages
@@ -885,7 +938,7 @@ Optional sub-directives
 * ``chars`` (default): A string specifying the set of characters to be removed instead of the default whitespace.
 * ``side``: For one-sided removal: either ``left`` (strip only leading whitespace or matching characters)
   or ``right`` (strip only trailing whitespace or matching characters).
-* ``splitlines``: Apply the filter on each line of text (true/false) (default: false, apply to the entire data as a
+* ``splitlines`` (true/false): Apply the filter on each line of text (default: false, apply to the entire data as a
   block).
 
 .. versionchanged:: 3.5
