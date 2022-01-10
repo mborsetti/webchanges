@@ -3,19 +3,20 @@
 =========
 Reporters
 =========
-Reporters display or send the :ref:`report <reports>` containing the changes detected. By default, a :ref:`text
-<text>` report is sent to the standard output (a reporter called ``stdout``), which is your terminal if you are running
-:program:`webchanges` interactively.
+Reporters display or send the :ref:`report <reports>` containing the changes detected.
+
+By default, the ``stdout`` reporter is enabled, and a :ref:`text <text>` report is sent to the standard output; this
+would be your terminal if you are running :program:`webchanges` interactively.
 
 .. note::
-   If running via cron or another scheduler service, the destination of this output depends on the scheduler and its
-   configuration.
+   If running via cron or another scheduler service, the destination of the standard output depends on the scheduler and
+   its configuration.
 
-You can select the reporter(s) used, and its settings, by changing the configuration file ``config.yaml``. This file is
-editable using any text editor or with the command ``webchanges --edit--config``.
+The configuration file ``config.yaml`` contains the directives toggling the reporters available (see below) on
+or off and their settings. This file is editable using any text editor or with the command
+``webchanges --edit--config``. Reporters are listed  under the ``report`` section.
 
-The configuration for the reporters will be listed under the ``report`` section.  Each reporter has a directive called
-``enabled`` that can be toggled (true/false).
+Each reporter has a directive called ``enabled`` that can be toggled (true/false).
 
 .. note::
    The ``config.yaml`` file is located in Linux or macOS in the ``~/.config/webchanges`` directory, in Windows in
@@ -69,8 +70,6 @@ detailed debug logs::
 
 Time zone (global setting)
 --------------------------
-.. versionadded:: 3.8
-
 You can set the timezone for reports by entering a `IANA time zone name
 <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`__ in the ``tz`` directive of the ``report`` section.
 This is useful if for example you are running :program:`webchanges` on a cloud server on a different timezone (e.g.
@@ -84,13 +83,14 @@ UTC). Note that this directive is ignored by the ``diff_tool`` job directive.
 If the directive is missing, or its value is null or blank, the timezone of the system that :program:`webchanges` runs
 on will be used in reports.
 
+.. versionadded:: 3.8
+
+
 
 .. _browser:
 
 Browser
 -------
-.. versionadded:: 3.0
-
 Displays the ref:`HTML report <html>` using the system's default web browser.
 
 .. code-block:: yaml
@@ -99,6 +99,8 @@ Displays the ref:`HTML report <html>` using the system's default web browser.
      tz: null
      browser:
        enabled: true  # don't forget to set this to true! :)
+
+.. versionadded:: 3.0
 
 
 
@@ -115,6 +117,8 @@ Sub-directives
 * ``to``: The destination email address.
 * ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported.
 * ``html``: Whether the email includes HTML (true/false).
+
+
 
 .. _smtp:
 
@@ -368,8 +372,6 @@ notifications to a public Matrix room, as the messages quickly become noisy:
 
 Prowl
 -----
-.. versionadded:: 3.0.1
-
 Sends a ref:`text report <text>` through the `Prowl <https://www.prowlapp.com>`__ push notification service (iOS only).
 
 To achieve this, you should register a new Prowl account, and have the Prowl application installed on your iOS device.
@@ -398,6 +400,8 @@ Here is a sample configuration:
 
 The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
 shown as the source of the event in the Prowl App.
+
+.. versionadded:: 3.0.1
 
 
 
@@ -466,8 +470,6 @@ Optional sub-directives
 
 run_command
 -----------
-.. versionadded:: 3.8
-
 Runs a command on your local system supplying a :ref:`text report <text>`.
 
 Any text in the command that matches the keywords below will be substituted as follows:
@@ -501,6 +503,9 @@ All environment variables are preserved and the following one added:
 +------------------------------------+------------------------------------------------------------------+
 
 If the command generates an error, the output of the error will be in the first line, before the traceback.
+
+.. versionadded:: 3.8
+
 
 
 .. _telegram:
@@ -591,6 +596,7 @@ Optional sub-directives
    ``silent`` sub-directive.
 
 
+
 .. _webhook:
 
 Webhook (Slack, Discord, Mattermost etc.)
@@ -653,9 +659,9 @@ Sub-directives
 * ``max_message_length``: The maximum length of a message in characters. Default is 40,000 unless ``webhook_url``
   starts with \https://discordapp.com when the default is 2,000.
 
-
 .. versionchanged:: 3.0.1
    Renamed from ``slack`` to ``webhook`` and added the ``markdown`` sub-directive.
+
 
 
 .. _xmpp:

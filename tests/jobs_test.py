@@ -172,7 +172,7 @@ TEST_ALL_URL_JOBS = [{}, {'use_browser': True}, {'use_browser': True, '_beta_use
 
 @connection_required
 @pytest.mark.parametrize('input_job, output', TEST_JOBS)
-def test_run_job(input_job: Dict[str, Any], output: str, caplog) -> None:
+def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> None:
     job = JobBase.unserialize(input_job)
     if current_platform is None and (job.use_browser and not job._beta_use_playwright):
         pytest.skip('Pyppeteer not installed')
