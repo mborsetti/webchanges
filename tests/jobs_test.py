@@ -199,8 +199,11 @@ def test_run_ftp_job() -> None:
 
 
 @connection_required
-@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
 def test_run_ftp_job_needs_bytes() -> None:
+    if os.getenv('GITHUB_ACTIONS'):
+        pytest.xfail('Test website cannot be reached from GitHub Actions')
+        return
     job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
     with JobState(cache_storage, job) as job_state:
         data, etag = job.retrieve(job_state)
@@ -306,7 +309,7 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
         if isinstance(job_state.exception, BrowserResponseError):
             assert job_state.exception.status_code == 418
         else:
-            assert any(x in str(job_state.exception.args) for x in ("I'm a Teapot", '418'))
+            assert sum(list(x in str(job_state.exception.args) for x in ("I'm a Teapot", '418')))
         assert job_state.error_ignored is False
 
         job_data['ignore_http_error_codes'] = [418]

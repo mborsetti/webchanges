@@ -355,14 +355,15 @@ class UrlwatchCommand:
 
         chats = {}
         info = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates').json()
-        for chat_info in info.get('result'):
-            chat = chat_info['message']['chat']
-            if chat['type'] == 'private':
-                chats[chat['id']] = (
-                    ' '.join((chat['first_name'], chat['last_name'])) if 'last_name' in chat else chat['first_name']
-                )
+        if 'result' in info:
+            for chat_info in info['result']:
+                chat = chat_info['message']['chat']
+                if chat['type'] == 'private':
+                    chats[chat['id']] = (
+                        ' '.join((chat['first_name'], chat['last_name'])) if 'last_name' in chat else chat['first_name']
+                    )
         if not chats:
-            print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}")
+            print(f"No chats found. Say hello to your bot at https://t.me/{info.get('result', {}).get('username')}")
             self._exit(1)
 
         headers = ('Chat ID', 'Name')

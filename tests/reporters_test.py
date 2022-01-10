@@ -6,7 +6,6 @@ import traceback
 from smtplib import SMTPAuthenticationError
 
 import pytest
-from keyring.errors import NoKeyringError
 from matrix_client.errors import MatrixError
 from requests.exceptions import MissingSchema
 
@@ -15,6 +14,11 @@ from webchanges.jobs import JobBase
 from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
 from webchanges.reporters import HtmlReporter
 from webchanges.storage import DEFAULT_CONFIG
+
+try:
+    from keyring.errors import NoKeyringError
+except ImportError:
+    NoKeyringError = None
 
 logger = logging.getLogger(__name__)
 
@@ -120,20 +124,19 @@ def test_diff_to_htm_wdiff():
 
 
 def test_smtp_password():
-    try:
+    if NoKeyringError:
+        try:
+            assert smtp_have_password('fdsfdsfdsafdsf', '') is False
+        except NoKeyringError:
+            pass
+        with pytest.raises((OSError, ImportError, NoKeyringError)):
+            smtp_set_password('', '')
+    else:
         assert smtp_have_password('fdsfdsfdsafdsf', '') is False
-    except NoKeyringError:
-        pass
-    with pytest.raises((OSError, ImportError, NoKeyringError)):
-        smtp_set_password('', '')
 
 
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)
 def test_reporters(reporter, capsys):
-    if os.getenv('GITHUB_ACTIONS'):
-        pytest.xfail('Getting exit code 141 in GitHub Actions')
-        return
-
     def build_job(name, url, old, new):
         job = JobBase.unserialize({'name': name, 'url': url})
 
@@ -184,14 +187,20 @@ def test_reporters(reporter, capsys):
     report.error(set_error(build_job('Error Reporting', 'https://example.com/error', '', ''), 'Sample error text'))
 
     if reporter == 'email':
-        with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
-            report.finish_one(reporter, check_enabled=False)
-        assert any(
-            x in str(pytest_wrapped_e.value)
-            for x in (
-                'No password available in keyring for localhost ',
-                'No password available for localhost ',
-                'No recommended backend was available.',
+        if NoKeyringError:
+            with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
+                report.finish_one(reporter, check_enabled=False)
+        else:
+            with pytest.raises(ValueError) as pytest_wrapped_e:
+                report.finish_one(reporter, check_enabled=False)
+        assert sum(
+            list(
+                x in str(pytest_wrapped_e.value)
+                for x in (
+                    'No password available in keyring for localhost ',
+                    'No password available for localhost ',
+                    'No recommended backend was available.',
+                )
             )
         )
     elif reporter == 'xmpp':
@@ -199,15 +208,18 @@ def test_reporters(reporter, capsys):
             logger.warning(f"Skipping {reporter} since 'aioxmpp' package is not installed")
             return
         else:
-            with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
-                report.finish_one(reporter, check_enabled=False)
-            assert any(
-                x in str(pytest_wrapped_e.value)
-                for x in (
-                    'No password available in keyring for ',
-                    'No recommended backend was available.',
+            if NoKeyringError:
+                with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
+                    report.finish_one(reporter, check_enabled=False)
+                assert sum(
+                    list(
+                        x in str(pytest_wrapped_e.value)
+                        for x in (
+                            'No password available in keyring for ',
+                            'No recommended backend was available.',
+                        )
+                    )
                 )
-            )
     elif reporter in ('pushover', 'pushbullet', 'telegram', 'mailgun', 'ifttt', 'prowl'):
         with pytest.raises(RuntimeError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
@@ -224,6 +236,9 @@ def test_reporters(reporter, capsys):
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == "Invalid URL '': No scheme supplied. Perhaps you meant http://?"
     elif reporter == 'run_command':
+        if os.getenv('GITHUB_ACTIONS'):
+            pytest.xfail('Getting exit code 141 in GitHub Actions')
+            return
         with pytest.raises(ValueError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
