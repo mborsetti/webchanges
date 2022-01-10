@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 from webchanges.filters import FilterBase
-from webchanges.jobs import UrlJob
+from webchanges.jobs import JobBase, UrlJob
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def test_normalize_filter_list(input, output):
 FILTER_TESTS = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), 'data/filters_test.yaml'), 'r'))
 
 
-class FakeJob:
+class FakeJob(JobBase):
     def get_indexed_location(self):
         return ''
 

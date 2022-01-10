@@ -106,6 +106,7 @@ def test_filter_doc_jobs(job):
             data = here.joinpath('data').joinpath(d['filename']).read_bytes()
         else:
             data = d['input']
+        # noinspection PyTypeChecker
         with JobState(None, job) as job_state:
             for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
                 # skip if package is not installed

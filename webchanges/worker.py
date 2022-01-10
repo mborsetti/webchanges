@@ -165,7 +165,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     )
                 avail_vm = psutil.virtual_memory().available + psutil.swap_memory().free
                 logger.debug(f'Found {avail_vm:,} in available virtual + swap memory')
-                max_workers = min(32, max(1, int(avail_vm / 120e6)), os.cpu_count() or 1)
+                max_workers = min(32, max(1, int(avail_vm / 140e6)), os.cpu_count() or 1)
             else:
                 max_workers = min(32, os.cpu_count() or 1)
             logger.debug(f"Running 'use_browser: true' jobs in parallel with {max_workers} max_workers")
