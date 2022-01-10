@@ -572,7 +572,7 @@ def test_check_telegram_chats(capsys):
         )
         setattr(command_config, 'telegram_chats', True)
         with pytest.raises(SystemExit):
-            urlwatch_command.check_telegram_chats()
+            urlwatch_command.handle_actions()
         setattr(command_config, 'telegram_chats', False)
         message = capsys.readouterr().out
         assert 'Say hello to your bot at https://t.me/' in message

@@ -362,9 +362,11 @@ class UrlwatchCommand:
                     chats[chat['id']] = (
                         ' '.join((chat['first_name'], chat['last_name'])) if 'last_name' in chat else chat['first_name']
                     )
-        if not chats:
-            print(f"No chats found. Say hello to your bot at https://t.me/{info.get('result', {}).get('username')}")
-            self._exit(1)
+            if not chats:
+                print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}")
+                self._exit(1)
+        else:
+            self._exit(info)
 
         headers = ('Chat ID', 'Name')
         maxchat = max(len(headers[0]), max((len(k) for k, v in chats.items()), default=0))
