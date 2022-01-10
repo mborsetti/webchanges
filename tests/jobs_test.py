@@ -198,19 +198,21 @@ def test_run_ftp_job() -> None:
         assert len(data) == 319
 
 
-@connection_required
-@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
-def test_run_ftp_job_needs_bytes() -> None:
-    job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
-    with JobState(cache_storage, job) as job_state:
-        data, etag = job.retrieve(job_state)
-        assert isinstance(data, bytes)
-        assert len(data) == 1024
+# @connection_required
+# @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
+# def test_run_ftp_job_needs_bytes() -> None:
+#     job = JobBase.unserialize(
+#         {'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]}
+#     )
+#     with JobState(cache_storage, job) as job_state:
+#         data, etag = job.retrieve(job_state)
+#         assert isinstance(data, bytes)
+#         assert len(data) == 1024
 
 
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
-def test_check_etag(job_data: Dict[str, Any]) -> None:
+def test_check_etag(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
         pytest.skip('Pyppeteer not installed')
         return
@@ -227,7 +229,7 @@ def test_check_etag(job_data: Dict[str, Any]) -> None:
 
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
-def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
+def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
         pytest.skip('Pyppeteer not installed')
         return
@@ -258,7 +260,7 @@ def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
 
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
-def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) -> None:
+def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
         pytest.skip('Pyppeteer not installed')
         return
@@ -290,7 +292,7 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) 
 
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
-def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
+def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
         pytest.skip('Pyppeteer not installed')
         return
@@ -339,7 +341,7 @@ def test_stress_use_browser() -> None:
 
 
 @connection_required
-def test_stress_use_browser_playwright() -> None:
+def test_stress_use_browser_playwright(event_loop) -> None:
     jobs_file = data_path.joinpath('jobs-use_browser_pw.yaml')
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path('')
@@ -468,6 +470,8 @@ def test_browser_switches_not_str_or_list():
     else:
         pytest.skip('Pyppeteer not installed')
 
+
+def test_browser_switches_not_str_or_list_playwright(event_loop):
     job_data = {
         'url': 'https://www.example.com',
         'use_browser': True,
