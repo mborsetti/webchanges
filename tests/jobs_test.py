@@ -198,16 +198,14 @@ def test_run_ftp_job() -> None:
         assert len(data) == 319
 
 
-# @connection_required
-# @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
-# def test_run_ftp_job_needs_bytes() -> None:
-#     job = JobBase.unserialize(
-#         {'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]}
-#     )
-#     with JobState(cache_storage, job) as job_state:
-#         data, etag = job.retrieve(job_state)
-#         assert isinstance(data, bytes)
-#         assert len(data) == 1024
+@connection_required
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))
+def test_run_ftp_job_needs_bytes() -> None:
+    job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
+    with JobState(cache_storage, job) as job_state:
+        data, etag = job.retrieve(job_state)
+        assert isinstance(data, bytes)
+        assert len(data) == 1024
 
 
 @connection_required
