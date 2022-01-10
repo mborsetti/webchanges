@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from .storage import Config
 
 # required to suppress warnings with 'ssl_no_verify: true'
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: ignore[no-untyped-call]
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: ignore[attr-defined,no-untyped-call]
 
 logger = logging.getLogger(__name__)
 
