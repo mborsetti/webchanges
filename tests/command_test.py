@@ -567,6 +567,9 @@ def test_check_telegram_chats(capsys):
     assert message == 'Error with token bogus: Not Found\n'
 
     if os.getenv('TELEGRAM_TOKEN'):
+        if os.getenv('GITHUB_ACTIONS'):
+            pytest.skip('Telegram testing no longer working from within GitHub Actions')
+            return
         urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = os.getenv(
             'TELEGRAM_TOKEN'
         )
