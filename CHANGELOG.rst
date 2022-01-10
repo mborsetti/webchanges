@@ -129,6 +129,9 @@ Changed
 * When multiple URL jobs have the same network location, a random delay between 0.1 and 1.0 seconds is added to
   all jobs to that network location after the first one. This prevents being blocked by the site as a result of being
   flooded by **webchanges**'s parallelism sending multiple requests from the same source at the same exact time.
+* Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
+  There will be no new development to debug and fix this as the use of Pyppeteer will soon be deprecated in favor of
+  Playwright due to the many issues with and the lack of development in the pyppeteer project.
 
 Added
 -----
@@ -168,6 +171,12 @@ Internals
 * Support for Python 3.10 (except for URL jobs with ``use_browser`` using pyppeteer since it does not yet support it).
 * Improved speed of detection and handling of lines starting with spaces during conversion of Markdown to HTML.
 * Logs now show thread IDs to help with debugging.
+
+Known issues
+------------
+* Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
+  There will be no new development to debug and fix this as the use of Pyppeteer will soon be deprecated in favor of
+  Playwright due to the many issues with and the lack of development in the pyppeteer project.
 
 Version 3.8.3
 ====================

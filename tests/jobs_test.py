@@ -177,6 +177,9 @@ def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> 
     if current_platform is None and (job.use_browser and not job._beta_use_playwright):
         pytest.skip('Pyppeteer not installed')
         return
+    if sys.version_info == (3, 7) and job.use_browser and not job._beta_use_playwright and sys.platform == 'linux':
+        pytest.skip('Pyppeteer throws "Page crashed!" errors in Python 3.7 in Ubuntu')
+        return
     if sys.version_info >= (3, 10):
         caplog.set_level(logging.DEBUG)
         if job.use_browser and not job._beta_use_playwright:
@@ -276,10 +279,9 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
         pytest.skip('Pyppeteer not installed')
         return
-    if sys.version_info >= (3, 10):
-        if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-            pytest.skip('Pyppeteer freezes in Python 3.10')
-            return
+    if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
+        pytest.skip('Pyppeteer freezes in Python 3.10')
+        return
     if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer times out after 90 seconds or so')
         return
@@ -311,10 +313,9 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
     if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
         pytest.skip('Pyppeteer not installed')
         return
-    if sys.version_info >= (3, 10):
-        if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-            pytest.skip('Pyppeteer freezes in Python 3.10')
-            return
+    if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
+        pytest.skip('Pyppeteer freezes in Python 3.10')
+        return
     if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
         pytest.skip('Playwright results not working on GitHub Actions')
         return

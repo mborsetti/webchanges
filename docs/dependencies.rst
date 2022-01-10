@@ -22,6 +22,7 @@ brackets, like this::
 | true (in a url job)     | * Note: you may also have to **separately install** OS-specific         |
 |                         |   dependencies [#f1]_                                                   |
 |                         | * Python 3.10 is *not* supported by pyppeteer                           |
+|                         | * Pyppeteer may be unreliable with Python 3.7 (fails some tests)        |
 +-------------------------+-------------------------------------------------------------------------+
 | ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
 | html2text filter        |                                                                         |
