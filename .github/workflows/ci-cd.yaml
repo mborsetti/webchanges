@@ -232,8 +232,7 @@ jobs:
         if: runner.os == 'macOS'
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=77
-          tests/
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
         env:
           PYTHONUTF8: 1
 
@@ -242,8 +241,8 @@ jobs:
         # workaround for Windows fatal exception: access violation
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc --cov-fail-under=77
-          tests/ -p no:faulthandler
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/ -p 
+          no:faulthandler
         env:
           PYTHONUTF8: 1
 
