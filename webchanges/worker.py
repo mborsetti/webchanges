@@ -32,7 +32,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
     def insert_delay(jobs: List[JobBase]) -> List[JobBase]:
         """
-        Sets a _delay value for URL jobs hitting the a network location already hit. Used to preventing multiple jobs
+        Sets a _delay value for URL jobs hitting the network location already hit. Used to prevent multiple jobs
         hitting the same network location at the exact same time and being blocked as a result.
 
         :param jobs: The list of jobs.
@@ -160,7 +160,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 except ImportError:
                     raise ImportError(
                         "Python package psutil is not installed; cannot use 'use_browser: true' directives with "
-                        "'_beta_use_playwright: true'.  Please install dependencies with 'pip install webchanges["
+                        "'_beta_use_playwright: true'. Please install dependencies with 'pip install webchanges["
                         "playwright]'."
                     )
                 avail_vm = psutil.virtual_memory().available + psutil.swap_memory().free

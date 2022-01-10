@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, Dict
 
 import pytest
-from pyppeteer.chromium_downloader import current_platform
 
 from webchanges import __project_name__ as project_name
 from webchanges.config import CommandConfig
@@ -25,6 +24,14 @@ from webchanges.jobs import (
 )
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+
+try:
+    from pyppeteer.chromium_downloader import current_platform
+
+    chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
+except ImportError:
+    current_platform = None
+    chromium_revision_num = None
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +58,6 @@ connection_required = pytest.mark.skipif(not is_connected(), reason='no Internet
 # py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
 py310_skip = pytest.mark.skipif(sys.version_info >= (3, 10), reason='Python 3.10 not supported by pyppeteer')
 
-chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
 TEST_JOBS = [
     (
         {
@@ -168,6 +174,9 @@ TEST_ALL_URL_JOBS = [{}, {'use_browser': True}, {'use_browser': True, '_beta_use
 @pytest.mark.parametrize('input_job, output', TEST_JOBS)
 def test_run_job(input_job: Dict[str, Any], output: str, caplog) -> None:
     job = JobBase.unserialize(input_job)
+    if current_platform is None and (job.use_browser and not job._beta_use_playwright):
+        pytest.skip('Pyppeteer not installed')
+        return
     if sys.version_info >= (3, 10):
         caplog.set_level(logging.DEBUG)
         if job.use_browser and not job._beta_use_playwright:
@@ -202,6 +211,9 @@ def test_run_ftp_job_needs_bytes() -> None:
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_etag(job_data: Dict[str, Any]) -> None:
+    if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
+        pytest.skip('Pyppeteer not installed')
+        return
     if sys.version_info >= (3, 10):
         if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
             pytest.skip('Pyppeteer freezes in Python 3.10')
@@ -216,6 +228,9 @@ def test_check_etag(job_data: Dict[str, Any]) -> None:
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
+    if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
+        pytest.skip('Pyppeteer not installed')
+        return
     if sys.version_info >= (3, 10):
         if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
             pytest.skip('Pyppeteer freezes in Python 3.10')
@@ -244,6 +259,9 @@ def test_check_etag_304_request(job_data: Dict[str, Any]) -> None:
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) -> None:
+    if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
+        pytest.skip('Pyppeteer not installed')
+        return
     if sys.version_info >= (3, 10):
         if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
             pytest.skip('Pyppeteer freezes in Python 3.10')
@@ -273,6 +291,9 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any]) 
 @connection_required
 @pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
 def test_check_ignore_http_error_codes(job_data: Dict[str, Any]) -> None:
+    if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
+        pytest.skip('Pyppeteer not installed')
+        return
     if sys.version_info >= (3, 10):
         if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
             pytest.skip('Pyppeteer freezes in Python 3.10')
@@ -438,7 +459,21 @@ def test_ignore_error():
 
 @py310_skip
 def test_browser_switches_not_str_or_list():
-    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'switches': {'dict key': ''}}
+    if current_platform:
+        job_data = {'url': 'https://www.example.com', 'use_browser': True, 'switches': {'dict key': ''}}
+        job = JobBase.unserialize(job_data)
+        with JobState(cache_storage, job) as job_state:
+            job_state.process()
+            assert isinstance(job_state.exception, TypeError)
+    else:
+        pytest.skip('Pyppeteer not installed')
+
+    job_data = {
+        'url': 'https://www.example.com',
+        'use_browser': True,
+        '_beta_use_playwright': True,
+        'switches': {'dict key': ''},
+    }
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
         job_state.process()
@@ -447,20 +482,26 @@ def test_browser_switches_not_str_or_list():
 
 @py310_skip
 def test_browser_block_elements_not_str_or_list():
-    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': {'dict key': ''}}
-    job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
-        job_state.process()
-        assert isinstance(job_state.exception, TypeError)
+    if current_platform:
+        job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': {'dict key': ''}}
+        job = JobBase.unserialize(job_data)
+        with JobState(cache_storage, job) as job_state:
+            job_state.process()
+            assert isinstance(job_state.exception, TypeError)
+    else:
+        pytest.skip('Pyppeteer not installed')
 
 
 @py310_skip
 def test_browser_block_elements_invalid():
-    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': ['fake element']}
-    job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
-        job_state.process()
-        assert isinstance(job_state.exception, ValueError)
+    if current_platform:
+        job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': ['fake element']}
+        job = JobBase.unserialize(job_data)
+        with JobState(cache_storage, job) as job_state:
+            job_state.process()
+            assert isinstance(job_state.exception, ValueError)
+    else:
+        pytest.skip('Pyppeteer not installed')
 
 
 def test_shell_error():

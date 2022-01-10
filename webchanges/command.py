@@ -217,7 +217,8 @@ class UrlwatchCommand:
 
     def test_diff(self, job_id: str) -> int:
         report = Report(self.urlwatcher)
-        self.urlwatch_config.jobs = Path('--test-diff')
+        report.job_states = []  # required for testing
+        self.urlwatch_config.jobs = Path('--test-diff')  # for report footer
         job = self._get_job(job_id)
 
         history_data = list(self.urlwatcher.cache_storage.get_history_data(job.get_guid()).items())
@@ -239,7 +240,7 @@ class UrlwatchCommand:
                 if self.urlwatch_config.test_reporter is None:
                     self.urlwatch_config.test_reporter = 'stdout'  # default
                 errorlevel = self.check_test_reporter(
-                    job_state, label=f'Filtered diff (states {-i} and {-(i + 1)})', report=report
+                    job_state, label=f'Filtered diff (states {-i:2} and {-(i + 1):2})', report=report
                 )
                 if errorlevel:
                     self._exit(errorlevel)
@@ -391,31 +392,8 @@ class UrlwatchCommand:
         :return: 0 if successful, 1 otherwise.
         """
 
-        name = self.urlwatch_config.test_reporter
-
-        if name not in ReporterBase.__subclasses__:
-            print(f'No such reporter: {name}')
-            print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
-            return 1
-
-        cfg: ConfigReportersList = self.urlwatcher.config_storage.config['report'][name]  # type: ignore[misc]
-        if job_state:  # we want a full report
-            cfg['enabled'] = True  # type: ignore[index]
-            self.urlwatcher.config_storage.config['report']['text']['details'] = True
-            self.urlwatcher.config_storage.config['report']['text']['footer'] = True
-            self.urlwatcher.config_storage.config['report']['text']['minimal'] = False
-            self.urlwatcher.config_storage.config['report']['markdown']['details'] = True
-            self.urlwatcher.config_storage.config['report']['markdown']['footer'] = True
-            self.urlwatcher.config_storage.config['report']['markdown']['minimal'] = False
-        if not cfg['enabled']:
-            print(f'Reporter is not enabled/configured: {name}')
-            print(f'Use {__project_name__} --edit-config to configure reporters')
-            return 1
-
-        if not report:
-            report = Report(self.urlwatcher)
-
         def build_job(job_name: str, url: str, old: str, new: str) -> JobState:
+            """Builds a pseudo-job for the reporter to run on."""
             job = JobBase.unserialize({'name': job_name, 'url': url})
 
             # Can pass in None for cache_storage, as we are not going to load or save the job state for
@@ -430,6 +408,7 @@ class UrlwatchCommand:
             return job_state
 
         def set_error(job_state: 'JobState', message: str) -> JobState:
+            """Sets a job error message on a JobState."""
             try:
                 raise ValueError(message)
             except ValueError as e:
@@ -438,7 +417,32 @@ class UrlwatchCommand:
 
             return job_state
 
-        if not job_state:
+        reporter_name = self.urlwatch_config.test_reporter
+        if reporter_name not in ReporterBase.__subclasses__:
+            print(f'No such reporter: {reporter_name}')
+            print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
+            return 1
+
+        cfg: ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]  # type: ignore[misc]
+        if job_state:  # we want a full report
+            cfg['enabled'] = True  # type: ignore[index]
+            self.urlwatcher.config_storage.config['report']['text']['details'] = True
+            self.urlwatcher.config_storage.config['report']['text']['footer'] = True
+            self.urlwatcher.config_storage.config['report']['text']['minimal'] = False
+            self.urlwatcher.config_storage.config['report']['markdown']['details'] = True
+            self.urlwatcher.config_storage.config['report']['markdown']['footer'] = True
+            self.urlwatcher.config_storage.config['report']['markdown']['minimal'] = False
+        if not cfg['enabled']:
+            print(f'Reporter is not enabled/configured: {reporter_name}')
+            print(f'Use {__project_name__} --edit-config to configure reporters')
+            return 1
+
+        if report is None:
+            report = Report(self.urlwatcher)
+
+        if job_state:
+            report.custom(job_state, label)
+        else:
             report.new(
                 build_job(
                     'Sample job that was newly added',
@@ -474,11 +478,8 @@ class UrlwatchCommand:
                     'The error message would appear here.',
                 )
             )
-        else:
-            report.custom(job_state, label)
 
-        if name:  # required for type checking
-            report.finish_one(name, jobs_file=self.urlwatch_config.jobs)
+        report.finish_one(reporter_name, jobs_file=self.urlwatch_config.jobs)
 
         return 0
 

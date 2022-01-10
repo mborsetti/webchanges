@@ -14,6 +14,7 @@ keyring
 matrix_client
 minidb
 playwright
+psutil
 pushbullet.py
 Pygments
 pyppeteer

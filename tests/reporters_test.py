@@ -218,7 +218,7 @@ def test_reporters(reporter, capsys):
     elif reporter == 'webhook':
         with pytest.raises(MissingSchema) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
-        assert str(pytest_wrapped_e.value) == "Invalid URL '': No schema supplied. Perhaps you meant http://?"
+        assert str(pytest_wrapped_e.value) == "Invalid URL '': No scheme supplied. Perhaps you meant http://?"
     elif reporter == 'run_command':
         with pytest.raises(ValueError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)

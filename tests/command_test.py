@@ -309,6 +309,7 @@ def test_test_diff_and_joblist(capsys):
     guid = urlwatcher.jobs[0].get_guid()
 
     try:
+        # never run
         setattr(command_config, 'test_diff', 1)
         urlwatch_command = UrlwatchCommand(urlwatcher)
         with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -316,7 +317,7 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 1
         message = capsys.readouterr().out
-        assert message == 'Not enough historic data available (need at least 2 different snapshots)\n'
+        assert message == 'This job has never been run before\n'
 
         # run once
         # also testing joblist
@@ -349,16 +350,18 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (STATES 0 AND -1): ' in message
+        assert '01. FILTERED DIFF (STATES  0 AND -1): ' in message
         assert message.splitlines()[10][-6:] == ' -1200'
+
         # rerun to reuse cached _generated_diff but change timezone
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/UTC'
         setattr(command_config, 'test_diff', 1)
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_diff', None)
+        assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (STATES 0 AND -1): ' in message
+        assert '01. FILTERED DIFF (STATES  0 AND -1): ' in message
         assert message.splitlines()[10][-6:] == ' +0000'
 
         # test diff (using outside differ)
@@ -373,7 +376,7 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (STATES 0 AND -1): ' in message
+        assert '01. FILTERED DIFF (STATES  0 AND -1): ' in message
         assert message.splitlines()[11][-6:] == ' +0000'
 
         # Try another timezone
@@ -384,7 +387,7 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (STATES 0 AND -1): ' in message
+        assert '01. FILTERED DIFF (STATES  0 AND -1): ' in message
         assert message.splitlines()[11][-6:] == ' -0100'
 
     finally:
@@ -398,7 +401,7 @@ def test_list_error_jobs(capsys):
     setattr(command_config, 'errors', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert 'Jobs, if any, with errors or returning no data after filtering.\n' in message
+    assert message.startswith('Jobs, if any, with errors or returning no data after filtering in jobs file\n')
 
 
 def test_modify_urls(capsys):
@@ -584,7 +587,7 @@ def test_check_test_reporter(capsys):
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert '01. NEW: Sample job that was newly added\n' in message
+    assert '01. NEW: ' in message
 
     setattr(command_config, 'test_reporter', 'stdout')
     urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
@@ -638,15 +641,16 @@ def test_job_states_verb():
     command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'
+    urlwatcher.jobs[0].name = 'echo TEST'
 
     # run once
     urlwatcher.run_jobs()
     cache_storage._copy_temp_to_permanent(delete=True)
-    assert urlwatcher.report.job_states[0].verb == 'new'
+    assert urlwatcher.report.job_states[-1].verb == 'new'
 
     # run twice
     urlwatcher.run_jobs()
-    assert urlwatcher.report.job_states[1].verb == 'unchanged'
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
 
 def test_job_states_verb_notimestamp_unchanged():
@@ -656,11 +660,12 @@ def test_job_states_verb_notimestamp_unchanged():
     command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'
+    urlwatcher.jobs[0].name = 'echo TEST'
 
     # run once
     urlwatcher.run_jobs()
     cache_storage._copy_temp_to_permanent(delete=True)
-    assert urlwatcher.report.job_states[0].verb == 'new'
+    assert urlwatcher.report.job_states[-1].verb == 'new'
 
     # modify database
     guid = urlwatcher.cache_storage.get_guids()[0]
@@ -671,7 +676,7 @@ def test_job_states_verb_notimestamp_unchanged():
 
     # run twice
     urlwatcher.run_jobs()
-    assert urlwatcher.report.job_states[1].verb == 'unchanged'
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
 
 def test_job_states_verb_notimestamp_changed():
@@ -681,6 +686,7 @@ def test_job_states_verb_notimestamp_changed():
     command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'
+    urlwatcher.jobs[0].name = 'echo TEST'
 
     # run once
     urlwatcher.run_jobs()
