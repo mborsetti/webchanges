@@ -135,7 +135,6 @@ Relative to :program:`urlwatch` 2.23:
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python packages; use the
   default method instead or construct a custom command using the :ref:`execute` filter.
 
-
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
 Relative to :program:`urlwatch` 2.23:
@@ -253,7 +252,6 @@ Relative to :program:`urlwatch` 2.23:
   * If a newer version of :program:`webchanges` has been released to PyPI, an advisory notice is printed to stdout and
     added to the report footer (if footer is enabled).
 
-
 * Internals
 
   * Reduction in concurrency with ``use_browser: true`` (i.e. using  *Pyppeteer*) jobs for higher stability.
@@ -284,7 +282,7 @@ Relative to :program:`urlwatch` 2.23:
   * Properly arranging imports with `isort <https://pycqa.github.io/isort/>`__.
   * Added type hinting to the entire code and using `mypy <https://pypi.org/project/mypy/>`__ to check it.
   * A vast improvement in documentation and error text.
-  * The support for Python 3.9.
+  * The support for Python 3.10 (except for URL jobs ``use_browser`` using pyppeteer since it does not yet support it).
 
 Fixed
 ~~~~~

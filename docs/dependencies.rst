@@ -21,6 +21,7 @@ brackets, like this::
 | ``use_browser`` set to  | * `pyppeteer <https://github.com/pyppeteer/pyppeteer>`__                |
 | true (in a url job)     | * Note: you may also have to **separately install** OS-specific         |
 |                         |   dependencies [#f1]_                                                   |
+|                         | * Python 3.10 is *not* supported by pyppeteer                           |
 +-------------------------+-------------------------------------------------------------------------+
 | ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
 | html2text filter        |                                                                         |

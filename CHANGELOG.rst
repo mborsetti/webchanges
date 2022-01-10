@@ -30,10 +30,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
-Version 3.9a0
+Version 3.9rc1
 ===================
 Unreleased
-
 
 ⚠ Breaking changes in the near future (opt-in now):
 ---------------------------------------------------
@@ -56,7 +55,8 @@ The `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 1
 As a result, I have been investigating a substitute, and found one in `Playwright
 <https://playwright.dev/python/>`__, in combination with the latest stable version of Google Chrome. This package has
 none of the issues above, the core dev team apparently is the same who did Puppetter, and is supported by the might
-of Microsoft, who has been keeping the Python version just as up-to-date as the JavaScript one.
+of Microsoft who has been keeping the Python version up-to-date (pyppeteer is several versions behind Puppetter, which
+it is based upon).
 
 You can upgrade to Playwright now (and your help is needed)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -123,8 +123,9 @@ determined by based on the amount of free memory available, which seems to be th
 Changed
 -------
 * The method ``bs4`` of filter ``html2text`` has a new ``strip`` sub-directive which is passed to BeautifulSoup, and
-  its default value now conforms to BeautifulSoup's default of false since it gives better output in most cases. To
-  restore the previous behavior, add the ``strip: true`` sub-directive of the ``html2text`` filter to impacted jobs.
+  its default value has changed to false to conform to BeautifulSoup's default since it gives better output in most
+  cases. To restore the previous behavior, add the ``strip: true`` sub-directive of the ``html2text`` filter to impacted
+  jobs.
 * When multiple URL jobs have the same network location, a random delay between 0.1 and 1.0 seconds is added to
   all jobs to that network location after the first one. This prevents being blocked by the site as a result of being
   flooded by **webchanges**'s parallelism sending multiple requests from the same source at the same exact time.
@@ -142,7 +143,7 @@ Added
   <https://github.com/thp/urlwatch/pull/653>`__ (with modifications).
 * New filter ``csv2text``. Contributed by `Michael Sverdlin <https://github.com/sveder>`__ upstream `here
   <https://github.com/thp/urlwatch/pull/658>`__ (with modifications).
-* Beta version of Playwright.
+* Beta version of Playwright as a replacement for pyppeteer for jobs with ``use_browser: true`` (see above).
 
 Fixed
 -----
@@ -164,9 +165,9 @@ Documentation
 
 Internals
 ---------
-* Initial testing with Python 3.10.
+* Support for Python 3.10 (except for URL jobs with ``use_browser`` using pyppeteer since it does not yet support it).
 * Improved speed of detection and handling of lines starting with spaces during conversion of Markdown to HTML.
-* Logs now show thread IDs
+* Logs now show thread IDs to help with debugging.
 
 Version 3.8.3
 ====================
