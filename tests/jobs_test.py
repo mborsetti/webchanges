@@ -202,7 +202,7 @@ def test_run_ftp_job() -> None:
 @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
 def test_run_ftp_job_needs_bytes() -> None:
     if os.getenv('GITHUB_ACTIONS'):
-        pytest.xfail('Test website cannot be reached from GitHub Actions')
+        pytest.skip('Test website cannot be reached from GitHub Actions')
         return
     job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
     with JobState(cache_storage, job) as job_state:

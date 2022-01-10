@@ -237,7 +237,7 @@ def test_reporters(reporter, capsys):
         assert str(pytest_wrapped_e.value) == "Invalid URL '': No scheme supplied. Perhaps you meant http://?"
     elif reporter == 'run_command':
         if os.getenv('GITHUB_ACTIONS'):
-            pytest.xfail('Getting exit code 141 in GitHub Actions')
+            pytest.skip('Getting exit code 141 in GitHub Actions')
             return
         with pytest.raises(ValueError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
