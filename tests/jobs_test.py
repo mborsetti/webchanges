@@ -1,4 +1,8 @@
-"""Test running of jobs"""
+"""Test running of jobs.
+
+Note: for '-use_browser: true' jobs, using the --disable-dev-shm-usage switch as per
+https://playwright.dev/python/docs/ci#docker since GitHub Actions runs the tests in a Docker container.
+"""
 import ftplib  # nosec: B402 A FTP-related module is being imported.
 import logging
 import os
@@ -292,9 +296,9 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer times out after 90 seconds or so')
         return
-    # if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-    #     pytest.skip('Playwright results not working on GitHub Actions')
-    #     return
+    if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+        pytest.skip('Playwright results not working on GitHub Actions')
+        return
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
     job_data['timeout'] = 0.001
@@ -323,9 +327,9 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
     if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer freezes in Python 3.10')
         return
-    # if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-    #     pytest.skip('Playwright results not working on GitHub Actions')
-    #     return
+    if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+        pytest.skip('Playwright results not working on GitHub Actions')
+        return
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
