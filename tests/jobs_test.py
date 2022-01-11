@@ -92,7 +92,7 @@ TEST_JOBS = [
             'cookies': {'X-test': 'test'},
             'headers': {'Accept-Language': 'en-US,en'},
             'ignore_https_errors': False,
-            'switches': ['--window-size=1298,1406'],
+            'switches': ['--window-size=1298,1406', '--disable-dev-shm-usage'],
             'timeout': 15,
             'user_visible_url': 'https://www.google.com/',
             'wait_for': 1,
@@ -111,7 +111,7 @@ TEST_JOBS = [
             'cookies': {'X-test': '', 'X-test-2': ''},
             'headers': {'Accept-Language': 'en-US,en'},
             'ignore_https_errors': False,
-            'switches': ['--window-size=1298,1406'],
+            'switches': ['--window-size=1298,1406', '--disable-dev-shm-usage'],
             'timeout': 15,
             'user_visible_url': 'https://www.google.com/',
             'wait_for_navigation': 'https://www.google.com/',
@@ -132,6 +132,7 @@ TEST_JOBS = [
             'url': 'https://postman-echo.com/post',
             'name': 'testing POST url job with use_browser',
             'use_browser': True,
+            'switches': ['--disable-dev-shm-usage'],
             'data': {'fieldname': 'fieldvalue'},
         },
         '"json":{"fieldname":"fieldvalue"}',
@@ -142,6 +143,7 @@ TEST_JOBS = [
             'name': 'testing POST url job with use_browser and Playwright',
             '_beta_use_playwright': True,
             'use_browser': True,
+            'switches': ['--disable-dev-shm-usage'],
             'data': {'fieldname': 'fieldvalue'},
         },
         '"json":{"fieldname":"fieldvalue"}',
@@ -167,7 +169,11 @@ TEST_JOBS = [
     ),
 ]
 
-TEST_ALL_URL_JOBS = [{}, {'use_browser': True}, {'use_browser': True, '_beta_use_playwright': True}]
+TEST_ALL_URL_JOBS = [
+    {},
+    {'use_browser': True, 'switches': ['--disable-dev-shm-usage']},
+    {'use_browser': True, 'switches': ['--disable-dev-shm-usage'], '_beta_use_playwright': True},
+]
 
 
 @connection_required
@@ -177,27 +183,28 @@ def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> 
     if current_platform is None and (job.use_browser and not job._beta_use_playwright):
         pytest.skip('Pyppeteer not installed')
         return
-    if sys.version_info == (3, 7) and job.use_browser and not job._beta_use_playwright and sys.platform == 'linux':
-        pytest.skip('Pyppeteer throws "Page crashed!" errors in Python 3.7 in Ubuntu')
-        return
+    # if sys.version_info == (3, 7) and job.use_browser and not job._beta_use_playwright and sys.platform == 'linux':
+    #     pytest.skip('Pyppeteer throws "Page crashed!" errors in Python 3.7 in Ubuntu')
+    #     return
     if sys.version_info >= (3, 10):
         caplog.set_level(logging.DEBUG)
         if job.use_browser and not job._beta_use_playwright:
             pytest.skip('Pyppeteer freezes in Python 3.10')
             return
-    if (
-        input_job
-        == {
-            'url': 'https://postman-echo.com/post',
-            'name': 'testing POST url job with use_browser and Playwright',
-            '_beta_use_playwright': True,
-            'use_browser': True,
-            'data': {'fieldname': 'fieldvalue'},
-        }
-        and sys.platform == 'linux'
-    ):
-        pytest.skip('Triggers exit code 141 on Ubuntu in GitHub Actions')
-        return
+    # if (
+    #     input_job
+    #     == {
+    #         'url': 'https://postman-echo.com/post',
+    #         'name': 'testing POST url job with use_browser and Playwright',
+    #         '_beta_use_playwright': True,
+    #         'use_browser': True,
+    #         'switches': ['--disable-dev-shm-usage'],
+    #         'data': {'fieldname': 'fieldvalue'},
+    #     }
+    #     and sys.platform == 'linux'
+    # ):
+    #     pytest.skip('Triggers exit code 141 on Ubuntu in GitHub Actions')
+    #     return
 
     with JobState(cache_storage, job) as job_state:
         data, etag = job.retrieve(job_state)
@@ -285,9 +292,9 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer times out after 90 seconds or so')
         return
-    if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-        pytest.skip('Playwright results not working on GitHub Actions')
-        return
+    # if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+    #     pytest.skip('Playwright results not working on GitHub Actions')
+    #     return
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
     job_data['timeout'] = 0.001
@@ -316,9 +323,9 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
     if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer freezes in Python 3.10')
         return
-    if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-        pytest.skip('Playwright results not working on GitHub Actions')
-        return
+    # if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+    #     pytest.skip('Playwright results not working on GitHub Actions')
+    #     return
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
@@ -446,13 +453,18 @@ def test_url_job_use_browser_false_without_kind():
 
 @py310_skip
 def test_browser_job_without_kind():
-    job_data = {'url': 'https://www.example.com', 'use_browser': True}
+    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'switches': ['--disable-dev-shm-usage']}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, BrowserJob)
 
 
 def test_browser_job_playwright_without_kind():
-    job_data = {'url': 'https://www.example.com', 'use_browser': True, '_beta_use_playwright': True}
+    job_data = {
+        'url': 'https://www.example.com',
+        'use_browser': True,
+        'switches': ['--disable-dev-shm-usage'],
+        '_beta_use_playwright': True,
+    }
     job = JobBase.unserialize(job_data)
     assert isinstance(job, BrowserJob)
 
@@ -481,7 +493,11 @@ def test_ignore_error():
 @py310_skip
 def test_browser_switches_not_str_or_list():
     if current_platform:
-        job_data = {'url': 'https://www.example.com', 'use_browser': True, 'switches': {'dict key': ''}}
+        job_data = {
+            'url': 'https://www.example.com',
+            'use_browser': True,
+            'switches': {'dict key': ''},
+        }
         job = JobBase.unserialize(job_data)
         with JobState(cache_storage, job) as job_state:
             job_state.process()
@@ -506,7 +522,11 @@ def test_browser_switches_not_str_or_list_playwright(event_loop):
 @py310_skip
 def test_browser_block_elements_not_str_or_list():
     if current_platform:
-        job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': {'dict key': ''}}
+        job_data = {
+            'url': 'https://www.example.com',
+            'use_browser': True,
+            'block_elements': {'dict key': ''},
+        }
         job = JobBase.unserialize(job_data)
         with JobState(cache_storage, job) as job_state:
             job_state.process()
@@ -518,7 +538,11 @@ def test_browser_block_elements_not_str_or_list():
 @py310_skip
 def test_browser_block_elements_invalid():
     if current_platform:
-        job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': ['fake element']}
+        job_data = {
+            'url': 'https://www.example.com',
+            'use_browser': True,
+            'block_elements': ['fake element'],
+        }
         job = JobBase.unserialize(job_data)
         with JobState(cache_storage, job) as job_state:
             job_state.process()

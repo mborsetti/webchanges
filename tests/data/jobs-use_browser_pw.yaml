@@ -2,48 +2,72 @@ name: Runs multiple use_browser jobs to stress test; used in jobs_test.py
 url: https://www.google.com/#01
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.ca/#02
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.com.mx/#03
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.com/#04
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.ca/#05
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.com.mx/#06
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.com/#07
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.ca/#08
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.com.mx/#09
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.com/#10
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.ca/#11
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ---
 url: https://www.google.com.mx/#12
 use_browser: true
 _beta_use_playwright: true
+switches:
+  - --disable-dev-shm-usage
 ...

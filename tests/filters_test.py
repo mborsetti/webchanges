@@ -73,6 +73,7 @@ def test_filters(test_name, test_data):
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         if filtercls is None:
             raise ValueError('Unknown filter kind: {filter_kind}:{subfilter}')
+        # noinspection PyTypeChecker
         result = filtercls(FakeJob(), None).filter(result, subfilter)
 
     logger.debug(f'Expected result:\n{expected_result}')
@@ -116,6 +117,7 @@ def test_execute_inherits_environment_but_does_not_modify_it():
     else:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('execute')
+    # noinspection PyTypeChecker
     result = filtercls(job, None).filter('input-string', {'command': command})
 
     # Check that the inherited value and the job name are set properly
@@ -127,9 +129,9 @@ def test_execute_inherits_environment_but_does_not_modify_it():
 
 def test_shellpipe_inherits_environment_but_does_not_modify_it():
     # https://github.com/thp/urlwatch/issues/541
-    if os.getenv('GITHUB_ACTIONS') and sys.version_info[0:2] == (3, 6) and sys.platform == 'linux':
-        pytest.skip('Triggers exit code 141 in Python 3.8 on Ubuntu in GitHub Actions')
-        return
+    # if os.getenv('GITHUB_ACTIONS') and sys.version_info[0:2] == (3, 6) and sys.platform == 'linux':
+    #     pytest.skip('Triggers exit code 141 in Python 3.8 on Ubuntu in GitHub Actions')
+    #     return
 
     # Set a specific value to check it doesn't overwrite the current env
     os.environ['URLWATCH_JOB_NAME'] = 'should-not-be-overwritten'
@@ -142,6 +144,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it():
     else:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('shellpipe')
+    # noinspection PyTypeChecker
     result = filtercls(job, None).filter('input-string', {'command': command})
 
     # Check that the inherited value and the job name are set properly
@@ -153,12 +156,15 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it():
 
 def test_deprecated_filters():
     filtercls = FilterBase.__subclasses__.get('grep')
+    # noinspection PyTypeChecker
     assert filtercls(FakeJob(), None).filter('a\nb', {'text': 'b'}) == 'b'
 
     filtercls = FilterBase.__subclasses__.get('grepi')
+    # noinspection PyTypeChecker
     assert filtercls(FakeJob(), None).filter('a\nb', {'text': 'b'}) == 'a'
 
 
 def test_filter_requires_bytes():
     filtercls = FilterBase.__subclasses__.get('pdf2text')
+    # noinspection PyTypeChecker
     assert filtercls(FakeJob(), None).is_bytes_filter_kind('pdf2text') is True
