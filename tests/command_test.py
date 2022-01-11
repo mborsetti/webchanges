@@ -16,6 +16,11 @@ from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
+try:
+    from pyppeteer import current_platform
+except ImportError:
+    current_platform = None
+
 # Paths
 here = Path(__file__).parent
 config_path = here.joinpath('data')
@@ -49,7 +54,7 @@ urlwatch_command = UrlwatchCommand(urlwatcher)
 
 # Set up dummy editor
 editor = os.getenv('EDITOR')
-if os.name == 'nt':
+if sys.platform == 'win32':
     os.environ['EDITOR'] = 'rundll32'
 else:
     os.environ['EDITOR'] = 'true'
@@ -304,7 +309,7 @@ def test_test_diff_and_joblist(capsys):
     jobs_storage = YamlJobsStorage(jobs_file)
     command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
     guid = urlwatcher.jobs[0].get_guid()
 
@@ -367,7 +372,7 @@ def test_test_diff_and_joblist(capsys):
         # test diff (using outside differ)
         setattr(command_config, 'test_diff', 1)
         # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
-        if os.name == 'nt':
+        if sys.platform == 'win32':
             urlwatcher.jobs[0].diff_tool = 'cmd /C exit 1 & rem '
         else:
             urlwatcher.jobs[0].diff_tool = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
@@ -437,7 +442,7 @@ def test_delete_snapshot(capsys):
     jobs_storage = YamlJobsStorage(jobs_file)
     command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     setattr(command_config, 'delete_snapshot', True)
@@ -496,7 +501,7 @@ def test_gc_cache(capsys):
     jobs_storage = YamlJobsStorage(jobs_file)
     command_config = CommandConfig(__project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
     guid = urlwatcher.jobs[0].get_guid()
 
@@ -519,7 +524,7 @@ def test_gc_cache(capsys):
     setattr(command_config, 'gc_cache', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         assert message == f'Deleting: {guid} (no longer being tracked)\n'
     else:
         # TODO: for some reason, Linux message is ''.  Need to figure out why.
@@ -738,6 +743,9 @@ def test_job_states_verb_notimestamp_changed():
 
 
 def test_show_chromium_directory(capsys):
-    urlwatch_command.show_chromium_directory()
-    message = capsys.readouterr().out
-    assert message[:74] == 'Downloaded Chromium executables are installed in the following directory:\n'
+    if current_platform:
+        urlwatch_command.show_chromium_directory()
+        message = capsys.readouterr().out
+        assert message[:74] == 'Downloaded Chromium executables are installed in the following directory:\n'
+    else:
+        pytest.skip('Pyppeteer not installed')

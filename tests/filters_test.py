@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
 
 # https://stackoverflow.com/questions/31469707/
-if sys.version_info[0:2] == (3, 6) and os.name == 'nt':
+if sys.version_info[0:2] == (3, 6) and sys.platform == 'win32':
     import _locale
 
     _locale._getdefaultlocale = lambda *args: ['en_US', 'utf8']
@@ -112,7 +112,7 @@ def test_execute_inherits_environment_but_does_not_modify_it():
     # See if the execute process can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         command = 'bash -c "echo $INHERITED_FROM/$URLWATCH_JOB_NAME"'
     else:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
@@ -139,7 +139,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it():
     # See if the shellpipe process can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         command = 'echo $INHERITED_FROM/$URLWATCH_JOB_NAME'
     else:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'

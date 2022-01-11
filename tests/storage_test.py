@@ -7,6 +7,7 @@ $ export REDIS_URI=redis://localhost:6379
 import importlib.util
 import os
 import shutil
+import sys
 import tempfile
 import time
 from dataclasses import dataclass
@@ -81,7 +82,7 @@ def prepare_storage_test(cache_storage: CacheStorage, config_args: Optional[dict
             setattr(urlwatch_config, k, v)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     return urlwatcher, cache_storage
@@ -119,12 +120,12 @@ def test_check_for_shell_job():
     """Test if a job is a shell job."""
     jobs_file = data_path.joinpath('jobs-is_shell_job.yaml')
     # TODO the below generates PermissionError: [Errno 1] Operation not permitted when run by GitHub Actions in macOS
-    # if os.name != 'nt':
+    # if sys.platform != 'win32':
     #     os.chown(jobs_file, 65534, 65534)
     jobs_storage = YamlJobsStorage(jobs_file)
     jobs_storage.load_secure()
     # jobs = jobs_storage.load_secure()
-    # if os.name != 'nt':
+    # if sys.platform != 'win32':
     #     assert len(jobs) == 1
 
 

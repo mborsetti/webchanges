@@ -1464,15 +1464,19 @@ class BrowserJob(UrlJobBase):
 
         if self._beta_use_playwright:
             from playwright.async_api import Error as PlaywrightError
+            from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
             if isinstance(exception, PlaywrightError):
                 if self.ignore_connection_errors:
-                    if any(
+                    if isinstance(exception, PlaywrightTimeoutError) or any(
                         str(exception.args[0]).split()[0] == f'net::ERR_{error}' for error in CHROMIUM_CONNECTION_ERRORS
                     ):
                         return True
                 if self.ignore_timeout_errors:
-                    if str(exception.args[0].split()[0]) == 'net::ERR_TIMED_OUT':
+                    if (
+                        isinstance(exception, PlaywrightTimeoutError)
+                        or str(exception.args[0].split()[0]) == 'net::ERR_TIMED_OUT'
+                    ):
                         return True
                 if self.ignore_too_many_redirects:
                     if str(exception.args[0].split()[0]) == 'net::ERR_TOO_MANY_REDIRECTS':

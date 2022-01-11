@@ -356,7 +356,7 @@ class UrlwatchCommand:
         chats = {}
         updates = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates').json()
         if 'result' in updates:
-            for chat_info in info['result']:
+            for chat_info in updates['result']:
                 chat = chat_info['message']['chat']
                 if chat['type'] == 'private':
                     chats[chat['id']] = (

@@ -91,7 +91,7 @@ on will be used in reports.
 
 Browser
 -------
-Displays the ref:`HTML report <html>` using the system's default web browser.
+Displays the :ref:`HTML report <html>` using the system's default web browser.
 
 .. code-block:: yaml
 

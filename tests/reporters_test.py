@@ -2,6 +2,7 @@
 import importlib.util
 import logging
 import os
+import sys
 import traceback
 from smtplib import SMTPAuthenticationError
 
@@ -242,7 +243,7 @@ def test_reporters(reporter, capsys):
         with pytest.raises(ValueError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
-        if os.name == 'nt':
+        if sys.platform == 'win32':
             report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
         else:
             report.config['report']['run_command']['command'] = 'echo TEST'

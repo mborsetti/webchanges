@@ -3,6 +3,7 @@
 Note: for '-use_browser: true' jobs, using the --disable-dev-shm-usage switch as per
 https://playwright.dev/python/docs/ci#docker since GitHub Actions runs the tests in a Docker container.
 """
+import asyncio
 import ftplib  # nosec: B402 A FTP-related module is being imported.
 import logging
 import os
@@ -43,6 +44,14 @@ here = Path(__file__).parent
 data_path = here.joinpath('data')
 cache_file = ':memory:'
 cache_storage = CacheSQLite3Storage(cache_file)
+
+if sys.version_info[0:2] < (3, 8) and sys.platform == 'win32':
+    # https://docs.python.org/3/library/asyncio-platforms.html#asyncio-windows-subprocess
+    loop = asyncio.ProactorEventLoop()
+
+    @pytest.fixture
+    def event_loop():
+        return loop
 
 
 def is_connected() -> bool:
@@ -296,9 +305,6 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer times out after 90 seconds or so')
         return
-    if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-        pytest.skip('Playwright results not working on GitHub Actions')
-        return
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
     job_data['timeout'] = 0.001
@@ -311,11 +317,11 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
             )
         assert job_state.error_ignored is False
 
-        job_data['ignore_connection_errors'] = True
-        job = JobBase.unserialize(job_data)
-        with JobState(cache_storage, job) as job_state:
-            job_state.process()
-            assert job_state.error_ignored is True
+    job_data['ignore_connection_errors'] = True
+    job = JobBase.unserialize(job_data)
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        assert job_state.error_ignored is True
 
 
 @connection_required
@@ -327,10 +333,8 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
     if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer freezes in Python 3.10')
         return
-    if os.getenv('GITHUB_ACTIONS') and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-        pytest.skip('Playwright results not working on GitHub Actions')
-        return
     job_data['url'] = 'https://www.google.com/teapot'
+    job_data['http_proxy'] = None
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
@@ -338,14 +342,14 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
         if isinstance(job_state.exception, BrowserResponseError):
             assert job_state.exception.status_code == 418
         else:
-            assert sum(list(x in str(job_state.exception.args) for x in ("I'm a Teapot", '418')))
+            assert '418' in job_state.exception.args[0]
         assert job_state.error_ignored is False
 
-        job_data['ignore_http_error_codes'] = [418]
-        job = JobBase.unserialize(job_data)
-        with JobState(cache_storage, job) as job_state:
-            job_state.process()
-            assert job_state.error_ignored is True
+    job_data['ignore_http_error_codes'] = [418]
+    job = JobBase.unserialize(job_data)
+    with JobState(cache_storage, job) as job_state:
+        job_state.process()
+        assert job_state.error_ignored is True
 
 
 @py310_skip

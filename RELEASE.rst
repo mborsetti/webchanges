@@ -87,11 +87,15 @@ determined by based on the amount of free memory available, which seems to be th
 Changed
 -------
 * The method ``bs4`` of filter ``html2text`` has a new ``strip`` sub-directive which is passed to BeautifulSoup, and
-  its default value now conforms to BeautifulSoup's default of false since it gives better output in most cases. To
-  restore the previous behavior, add the ``strip: true`` sub-directive of the ``html2text`` filter to impacted jobs.
+  its default value has changed to false to conform to BeautifulSoup's default since it gives better output in most
+  cases. To restore the previous behavior, add the ``strip: true`` sub-directive of the ``html2text`` filter to impacted
+  jobs.
 * When multiple URL jobs have the same network location, a random delay between 0.1 and 1.0 seconds is added to
   all jobs to that network location after the first one. This prevents being blocked by the site as a result of being
   flooded by **webchanges**'s parallelism sending multiple requests from the same source at the same exact time.
+* Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
+  There will be no new development to debug and fix this as the use of Pyppeteer will soon be deprecated in favor of
+  Playwright due to the many issues with and the lack of development in the pyppeteer project.
 
 Added
 -----
@@ -128,6 +132,12 @@ Documentation
 
 Internals
 ---------
-* Support for Python 3.10 (except for ``use_browser`` using pyppeteer since it does not yet support it).
+* Support for Python 3.10 (except for URL jobs with ``use_browser`` using pyppeteer since it does not yet support it).
 * Improved speed of detection and handling of lines starting with spaces during conversion of Markdown to HTML.
 * Logs now show thread IDs to help with debugging.
+
+Known issues
+------------
+* Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
+  There will be no new development to debug and fix this as the use of Pyppeteer will soon be deprecated in favor of
+  Playwright due to the many issues with and the lack of development in the pyppeteer project.
