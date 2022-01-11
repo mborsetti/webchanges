@@ -342,7 +342,7 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
         if isinstance(job_state.exception, BrowserResponseError):
             assert job_state.exception.status_code == 418
         else:
-            assert '418' in job_state.exception.args[0]
+            assert '418' in str(job_state.exception.args)
         assert job_state.error_ignored is False
 
     job_data['ignore_http_error_codes'] = [418]
