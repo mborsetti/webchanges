@@ -25,6 +25,7 @@ here = Path(__file__).parent
 docs_path = here.joinpath('..').resolve().joinpath('docs')
 
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
+cssbeautifier_is_installed = importlib.util.find_spec('cssbeautifier') is not None
 jq_is_installed = importlib.util.find_spec('jq') is not None
 pdftotext_is_installed = importlib.util.find_spec('pdftotext') is not None
 pytesseract_is_installed = importlib.util.find_spec('pytesseract') is not None
@@ -46,13 +47,14 @@ def parse_rst(text: str) -> docutils.nodes.document:
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file."""
 
-    def __init__(self, doc):
-        super().__init__(doc)
-        self.jobs = []
+    jobs: List[dict] = []
 
     def visit_literal_block(self, node: docutils.nodes.reference) -> None:
         if 'yaml' in node.attributes['classes']:
             self.jobs.append(yaml.safe_load(node.astext()))
+        elif node.rawsource.startswith('.. code-block:: yaml'):
+            yaml_block = node.rawsource[20:].strip()
+            self.jobs.append(yaml.safe_load(yaml_block))
 
     def unknown_visit(self, node: docutils.nodes.Node) -> None:
         ...
@@ -96,7 +98,7 @@ testdata = load_filter_testdata()
 @pytest.mark.parametrize('job', FILTER_DOC_JOBS)
 def test_filter_doc_jobs(job):
     """Test the yaml code in docs/filters.rst against the source and expected results contained
-    in tests/data/docs_filters_testdata.yaml using 'url' as the key)."""
+    in tests/data/docs_filters_testdata.yaml using 'url' as the key."""
     # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
     # installations beyond pip)
     if job.url != 'https://example.com/html2text.html' or html2text.__version__ <= (2020, 1, 16):
@@ -126,6 +128,9 @@ def test_filter_doc_jobs(job):
                     return
                 elif filter_kind == 'pdf2text' and not pdftotext_is_installed:
                     logger.warning(f"Skipping {job.url} since 'pdftotext' package is not installed")
+                    return
+                elif filter_kind == 'beautify' and not cssbeautifier_is_installed:
+                    logger.warning(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
                     return
                 data = FilterBase.process(filter_kind, subfilter, job_state, data)
                 if filter_kind in ('pdf2text', 'shellpipe'):  # fix for macOS or OS-specific end of line

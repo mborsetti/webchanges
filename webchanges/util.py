@@ -84,9 +84,8 @@ def edit_file(filename: Union[str, bytes, PathLike]) -> None:
         if os.name == 'nt':
             editor = 'notepad.exe'
         else:
-            raise SystemExit(
-                'Please set the path to the editor in the environment variable $EDITOR' ' e.g. "export EDITOR=nano"'
-            )
+            print('Please set the path to the editor in the environment variable $EDITOR, e.g. "export EDITOR=nano"')
+            raise SystemExit(1)
 
     subprocess.run(shlex.split(editor) + [str(filename)], check=True)
 

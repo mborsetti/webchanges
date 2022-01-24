@@ -43,13 +43,13 @@ def parse_rst(text: str) -> docutils.nodes.document:
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file."""
 
-    def __init__(self, doc):
-        super().__init__(doc)
-        self.code = []
+    code: List[str] = []
 
     def visit_literal_block(self, node: docutils.nodes.reference) -> None:
         if 'python' in node.attributes['classes']:
             self.code.append(node.astext())
+        elif node.rawsource.startswith('.. code-block:: python'):
+            self.code.append(node.rawsource[22:].strip())
 
     def unknown_visit(self, node: docutils.nodes.Node) -> None:
         ...
@@ -57,7 +57,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
 def load_hooks_from_doc() -> str:
     """Load YAML code blocks from rst file."""
-    doc = parse_rst(open(docs_path.joinpath('hooks.rst')).read())
+    doc = parse_rst(docs_path.joinpath('hooks.rst').read_text())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
     return visitor.code[0]

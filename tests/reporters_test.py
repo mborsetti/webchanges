@@ -7,7 +7,6 @@ import traceback
 from smtplib import SMTPAuthenticationError
 
 import pytest
-from matrix_client.errors import MatrixError
 from requests.exceptions import MissingSchema
 
 from webchanges.handler import JobState, Report
@@ -20,6 +19,12 @@ try:
     from keyring.errors import NoKeyringError
 except ImportError:
     NoKeyringError = None
+
+try:
+    from matrix_client.errors import MatrixError
+except ImportError:
+    MatrixError = None
+
 
 logger = logging.getLogger(__name__)
 

@@ -57,6 +57,8 @@ if importlib.util.find_spec('minidb') is not None:
     from webchanges.storage_minidb import CacheMiniDBStorage
 
     DATABASE_ENGINES += (CacheMiniDBStorage(':memory:'),)
+else:
+    CacheMiniDBStorage = type(None)
 
 
 def test_all_database_engines():

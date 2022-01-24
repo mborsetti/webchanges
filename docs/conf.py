@@ -17,8 +17,6 @@ import sys
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused
 from docutils import nodes
 from docutils.nodes import Element, Node
-
-# below required for local build
 from sphinx.writers.html import HTMLTranslator
 
 # below required to import project_data module
@@ -89,7 +87,7 @@ pygments_style = 'sphinx'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = '3.4'
+needs_sphinx = '4.3.2'
 
 # -- Options for internationalization ----------------------------------------
 
@@ -236,6 +234,10 @@ todo_include_todos = True
 
 
 class PatchedHTMLTranslator(HTMLTranslator):
+    """Adds open-in-new-tab support.
+    See https://stackoverflow.com/questions/25583581.
+    """
+
     def unknown_visit(self, node: Node) -> None:
         pass
 

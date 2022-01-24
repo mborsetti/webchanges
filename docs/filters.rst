@@ -1110,7 +1110,7 @@ For example, we can execute a Python script:
    filter:
      # For multiline YAML, quote the string and unindent its continuation. A space is added at the end
      # of each line. Pay attention to escaping!
-     - execute: "python3 -c \"import os, sys;
+     - execute: "python -c \"import os, sys;
      print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is
      '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is
      '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is

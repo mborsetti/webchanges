@@ -538,7 +538,8 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         jobs: List[JobBase] = self.load()
 
         def is_shell_job(job: JobBase) -> bool:
-            """Check if the job uses subprocess.run(Shell=True) (insecure).
+            """Check if the job uses filter 'shellpipe' or an external differ, as they call subprocess.run(
+            Shell=True) (insecure).
 
             :returns: True if subprocess.run(Shell=True) is invoked by job, False otherwise.
             """
@@ -549,19 +550,20 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
                 if filter_kind == 'shellpipe':
                     return True
 
-                if job.diff_tool is not None:
+                if job.diff_tool is not None and not job.diff_tool.startswith('deepdiff'):
                     return True
 
             return False
 
         shelljob_errors = self.shelljob_security_checks()
-        if shelljob_errors and any(is_shell_job(job) for job in jobs):
+        removed_jobs = (job for job in jobs if is_shell_job(job))
+        if shelljob_errors and any(removed_jobs):
             print(
-                f"ERROR: Removing 'command' job(s) and/or jobs with 'diff_tool' because "
-                f" {' and '.join(shelljob_errors)}\n"
+                f'ERROR: Removing the following jobs because '
+                f" {' and '.join(shelljob_errors)}: {' ,'.join(str(job.index_number) for job in removed_jobs)}\n"
                 f'(see {__docs_url__}en/stable/jobs.html#important-note-for-command-jobs)'
             )
-            jobs = [job for job in jobs if not is_shell_job(job)]
+            jobs = [job for job in jobs if job not in removed_jobs]
 
         return jobs
 
@@ -712,10 +714,12 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
 
     @classmethod
     def _parse(cls, fp: TextIO) -> List[JobBase]:
-        """Parse the contents of a YAML file.
+        """Parse the contents of a jobs YAML file.
 
         :param fp: The text stream to parse.
         :return: A list of JobBase objects.
+        :raise yaml.YAMLError: If a YAML error is found in the file.
+        :raise ValueError: If a duplicate URL/command is found in the list.
         """
         jobs = []
         jobs_by_guid = defaultdict(list)

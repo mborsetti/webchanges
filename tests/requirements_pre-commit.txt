@@ -3,6 +3,7 @@ bandit
 black
 doc8
 docutils
+docutils-stubs
 flake8
 flake8-quotes
 flynt

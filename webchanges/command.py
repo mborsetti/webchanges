@@ -36,14 +36,18 @@ class UrlwatchCommand:
         self.urlwatch_config = urlwatcher.urlwatch_config
 
     def print_new_version(self) -> None:
-        """Will print alert message if a newer version is found on PyPi."""
+        """Will print alert message if a newer version is found on PyPi.
+
+        TODO: this slows things down too much; must rework as a future.
+        """
         new_release = self.urlwatcher.get_new_release_version(timeout=1)
         if new_release:
             print(f'\nNew release version {new_release} is available; we recommend updating.')
         return
 
     def _exit(self, arg: object) -> None:
-        self.print_new_version()
+        # self.print_new_version()
+        logger.info(f'Exiting with exit code {arg}')
         sys.exit(arg)
 
     def edit_hooks(self) -> int:
@@ -176,7 +180,6 @@ class UrlwatchCommand:
         job = self._find_job(job_id)
         if job is None:
             print(f'Job not found: {job_id}')
-            self.print_new_version()
             raise SystemExit(1)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
@@ -678,4 +681,5 @@ class UrlwatchCommand:
 
         self.urlwatcher.close()
 
+        self.print_new_version()
         self._exit(0)

@@ -583,7 +583,7 @@ https://example.net/execute.html:
     The job location is 'https://example.net/execute.html'
     The job name is 'Test execute filter'
     The job number is '48'
-    The job JSON is '{"url": "https://example.net/execute.html", "index_number": 48, "name": "Test execute filter", "filter": [{"execute": "python3 -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}]}'
+    The job JSON is '{"url": "https://example.net/execute.html", "index_number": 48, "name": "Test execute filter", "filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}]}'
 https://example.net/shellpipe.html:
   input: |
   output: TEST

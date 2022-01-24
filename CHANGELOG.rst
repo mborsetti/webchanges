@@ -30,7 +30,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
-Version 3.9rc2
+Version 3.9rc3
 ===================
 Unreleased
 
@@ -44,27 +44,27 @@ has been very problematic, as the library:
 * is in alpha,
 * is very slow,
 * defaults to years-old obsolete versions of Chromium,
-* is not vetted for security (TLS certificates were disabled for downloading browsers!)
-* at times holds back versions of other packages (e.g. requires obsolete version of websockets)
+* can be insecure (found that TLS certificates were disabled for downloading browsers!)
+* creates conflicts with imports (e.g. requires obsolete version of websockets)
 * is poorly documented,
 * is poorly maintained,
-* and it freezes when running it in the current version of Python (3.10)!
+* and freezes when running it in the current version of Python (3.10)!
 
 The `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 100.
 
 As a result, I have been investigating a substitute, and found one in `Playwright
-<https://playwright.dev/python/>`__, in combination with the latest stable version of Google Chrome. This package has
-none of the issues above, the core dev team apparently is the same who did Puppetter, and is supported by the might
-of Microsoft who has been keeping the Python version up-to-date (pyppeteer is several versions behind Puppetter, which
-it is based upon).
+<https://playwright.dev/python/>`__. This package has none of the issues above, the core dev team apparently is the same
+who wrote Puppetter, and is supported by the deep pockets of Microsoft. The Python version is officially supported and
+up-to-date (while pyppeteer is several versions behind Puppetter, which it is based upon), and we can easily use the
+latest stable version of Google Chrome with it without mocking around with setting chromium_revisions.
 
 You can upgrade to Playwright now (and your help is needed)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The Playwright implementation in this release of **webchanges** is extremely stable, fully tested (even on Python
-3.10!), and much faster than Pyppeteer (some of my jobs are running 3x faster!), but before switching over I am
-releasing it as an opt-in beta just in case there are some bugs outside of the test cases.
+3.10!), and much faster than Pyppeteer (some of my jobs are running 3x faster!). While it's probably production
+quality, for the moment it is being released as an opt-in beta only.
 
-I urge you to try Playwright. To do so:
+I urge you to switch to Playwright. To do so:
 
 Install dependencies::
 
@@ -78,7 +78,7 @@ Edit your configuration file...::
 
    webchanges --edit-config
 
-...to add ``_beta_use_playwright`` under the ``browser`` section of ``job_defaults`` like this (note the leading
+...to add ``_beta_use_playwright`` under the ``browser`` section of ``job_defaults``, like this (note the leading
 underline):
 
 .. code-block:: yaml
@@ -117,26 +117,24 @@ and uninstalling the Pyppeteer package by running::
 
    pip uninstall pyppeteer
 
-Another improvement I made is that now the parallilzation of jobs when ``use_browser: true`` jobs are present is
-determined by based on the amount of free memory available, which seems to be the relevant constraint.
+Another improvement I made with the Playwright implementation is determining the maximum number of jobs to run in
+parallel on the amount of free memory available, which seems to be the relevant constraint.
 
 Changed
 -------
 * The method ``bs4`` of filter ``html2text`` has a new ``strip`` sub-directive which is passed to BeautifulSoup, and
-  its default value has changed to false to conform to BeautifulSoup's default since it gives better output in most
-  cases. To restore the previous behavior, add the ``strip: true`` sub-directive of the ``html2text`` filter to impacted
-  jobs.
-* When multiple URL jobs have the same network location, a random delay between 0.1 and 1.0 seconds is added to
-  all jobs to that network location after the first one. This prevents being blocked by the site as a result of being
-  flooded by **webchanges**'s parallelism sending multiple requests from the same source at the same exact time.
+  its default value has changed to false to conform to BeautifulSoup's default. This gives better output in most
+  cases. To restore the previous non-standard behavior, add the ``strip: true`` sub-directive to the ``html2text``
+  filter of impacted jobs.
+* When multiple URL jobs have the same network location (www.example.com), a random delay between 0.1 and 1.0 seconds is
+  added to all jobs to that network location after the first one. This prevents being blocked by the site as a result of
+  being flooded by **webchanges**'s parallelism sending multiple requests from the same source at the same exact time.
 * Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
-  There will be no new development to debug and fix this as the use of Pyppeteer will soon be deprecated in favor of
-  Playwright due to the many issues with and the lack of development in the pyppeteer project.
+  There will be no new development to fix this as the use of Pyppeteer will soon be deprecated in favor of Playwright.
+  See above to start using Playwright now (highly suggested).
 
 Added
 -----
-* The ``html`` report type has a new job directive ``monospace``, which sets the output to use a monospace font.
-  This can be useful e.g. for tabular text extracted by the ``pdf2text`` filter.
 * The method ``bs4`` of filter ``html2text`` now accepts the sub-directives ``separator`` and ``strip``.
 * When using the command line argument ``--test-diff``, the output can now be sent to a specific reporter by also
   specifying the ``--test-reporter`` argument. For example, if running on a machine with a web browser, you can see
@@ -146,20 +144,25 @@ Added
   <https://github.com/thp/urlwatch/pull/653>`__ (with modifications).
 * New filter ``csv2text``. Contributed by `Michael Sverdlin <https://github.com/sveder>`__ upstream `here
   <https://github.com/thp/urlwatch/pull/658>`__ (with modifications).
-* Beta version of Playwright as a replacement for pyppeteer for jobs with ``use_browser: true`` (see above).
+* The ``html`` report type has a new job directive ``monospace`` which sets the output to use a monospace font.
+  This can be useful e.g. for tabular text extracted by the ``pdf2text`` filter.
+* The ``command_run`` report type has a new environment variable ``WEBCHANGES_CHANGED_JOBS_JSON``.
+* Opt-in to use Playwright for jobs with ``use_browser: true`` instead of pyppeteer (see above).
 
 Fixed
 -----
 * During conversion of Markdown to HTML,
-  * Code blocks were not rendered in monospace font with no wrapping;
+  * Code blocks were not rendered without wrapping and in monospace font;
   * Spaces immediately after ````` (code block opening) were being dropped.
 * The ``email`` reporter's ``sendmail`` sub-directive was not passing the ``from`` sub-directive (when specified) to
-  the ``sendmail`` executable as ``-f`` command line argument. Contributed by
+  the ``sendmail`` executable as an ``-f`` command line argument. Contributed by
   `Jonas Witschel <https://github.com/diabonas>`__ upstream `here <https://github.com/thp/urlwatch/pull/671>`__ (with
   modifications).
-* When the job name is determined from the <title> tag of the data monitored (if present), HTML characters were not
-  being unescaped.
+* HTML characters were not being unescaped when the job name is determined from the <title> tag of the data monitored
+  (if present).
 * Command line argument ``--test-diff`` was only showing the last diff instead of all saved ones.
+* The ``command_run`` report type was not setting variables ``count`` and ``jobs`` (always 0). Contributed by
+  `Brian Rak <https://github.com/devicenull>`__ in `#23 <https://github.com/mborsetti/webchanges/issues/23>`__.
 
 Documentation
 -------------
@@ -168,15 +171,16 @@ Documentation
 
 Internals
 ---------
-* Support for Python 3.10 (except for URL jobs with ``use_browser`` using pyppeteer since it does not yet support it).
+* Support for Python 3.10 (except for URL jobs with ``use_browser`` using pyppeteer since it does not yet support it;
+  use Playwright instead).
 * Improved speed of detection and handling of lines starting with spaces during conversion of Markdown to HTML.
-* Logs now show thread IDs to help with debugging.
+* Logging (``--verbose``) now shows thread IDs to help with debugging.
 
 Known issues
 ------------
 * Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
-  There will be no new development to debug and fix this as the use of Pyppeteer will soon be deprecated in favor of
-  Playwright due to the many issues with and the lack of development in the pyppeteer project.
+  There will be no new development to fix this as the use of Pyppeteer will soon be deprecated in favor of Playwright.
+  See above to start using Playwright now (highly suggested).
 
 Version 3.8.3
 ====================

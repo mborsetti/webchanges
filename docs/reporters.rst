@@ -501,10 +501,14 @@ All environment variables are preserved and the following one added:
 +====================================+==================================================================+
 | ``WEBCHANGES_REPORT_CONFIG_JSON``  | All report parameters in JSON format                             |
 +------------------------------------+------------------------------------------------------------------+
+| ``WEBCHANGES_CHANGED_JOBS_JSON``   | All information about changed jobs in JSON format                |
++------------------------------------+------------------------------------------------------------------+
 
 If the command generates an error, the output of the error will be in the first line, before the traceback.
 
 .. versionadded:: 3.8
+.. versionchanged:: 3.9
+   Added environment variable ``WEBCHANGES_CHANGED_JOBS_JSON``
 
 
 

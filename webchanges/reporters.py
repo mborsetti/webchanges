@@ -307,27 +307,63 @@ class HtmlReporter(ReporterBase):
         :returns: HTML-formatted unified diff.
         """
         mark_to_html = None  # PyCharm
-        if job.diff_tool and job.diff_tool.startswith('wdiff'):
-            # wdiff colorization
-            yield '<span style="font-family:monospace;white-space:pre-wrap">'
-            diff = html.escape(diff)
-            diff = re.sub(
-                r'[{][+].*?[+][}]',
-                lambda x: f'<span style="background-color:#d1ffd1;color:#082b08">{x.group(0)}</span>',
-                diff,
-                flags=re.DOTALL,
-            )
-            diff = re.sub(
-                r'[\[][-].*?[-][]]',
-                lambda x: (
-                    f'<span style="background-color:#fff0f0;color:#9c1c1c;'
-                    f'text-decoration:line-through">{x.group(0)}</span>'
-                ),
-                diff,
-                flags=re.DOTALL,
-            )
-            yield diff
-            yield '</span>'
+        if job.diff_tool:
+            if job.diff_tool.startswith('wdiff'):
+                # wdiff colorization
+                yield '<span style="font-family:monospace;white-space:pre-wrap">'
+                diff = html.escape(diff)
+                diff = re.sub(
+                    r'[{][+].*?[+][}]',
+                    lambda x: f'<span style="background-color:#d1ffd1;color:#082b08">{x.group(0)}</span>',
+                    diff,
+                    flags=re.DOTALL,
+                )
+                diff = re.sub(
+                    r'[\[][-].*?[-][]]',
+                    lambda x: (
+                        f'<span style="background-color:#fff0f0;color:#9c1c1c;'
+                        f'text-decoration:line-through">{x.group(0)}</span>'
+                    ),
+                    diff,
+                    flags=re.DOTALL,
+                )
+                yield diff
+                yield '</span>'
+            elif job.diff_tool.startswith('deepdiff'):
+                yield '<span style="font-family:monospace;white-space:pre-wrap">'
+                diff += '\n'
+                diff = re.sub(
+                    r'^(Item .+?] added to [a-z]* as ["{]*)(.+?)(["}.]\.\n)',
+                    lambda x: (
+                        f'{x.group(1)}'
+                        f'<span style="background-color:#d1ffd1;color:#082b08">{x.group(2)}</span>{x.group(3)}'
+                    ),
+                    diff,
+                    flags=re.DOTALL | re.MULTILINE,
+                )
+                diff = re.sub(
+                    r'^(Item .+?] removed from [a-z]* \(was ["{]*)(.+?)(["}.]\)\.\n)',
+                    lambda x: (
+                        f'{x.group(1)}'
+                        f'<span style="background-color:#fff0f0;color:#9c1c1c;'
+                        f'text-decoration:line-through">{x.group(2)}</span>{x.group(3)}'
+                    ),
+                    diff,
+                    flags=re.DOTALL | re.MULTILINE,
+                    # flags=re.DOTALL | re.MULTILINE,
+                )
+                diff = re.sub(
+                    r'( changed from ["{]*)(.+?)(["}]* to ["{]*)(.+?)(["} .])',
+                    lambda x: (
+                        f'{x.group(1)}'
+                        f'<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">'
+                        f'{x.group(2)}</span>{x.group(3)}<span style="background-color:#d1ffd1;color:#082b08">'
+                        f'{x.group(4)}</span>{x.group(5)}'
+                    ),
+                    diff,
+                )
+                yield diff[:-1]
+                yield '</span>'
         else:
             if job.is_markdown:
                 # rebuild html from markdown using markdown2 library's Markdown
@@ -1454,7 +1490,7 @@ class BrowserReporter(HtmlReporter):
         f.write(body_html)
         f.close()
         webbrowser.open(f.name)
-        time.sleep(1.5)
+        time.sleep(2)
         os.remove(f.name)
 
 
@@ -1591,16 +1627,23 @@ class RunCommandReporter(TextReporter):
             logger.debug(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+
         # Work on a copy to not modify the outside environment
         env = dict(os.environ)
         env.update({f'{__project_name__.upper()}_REPORT_CONFIG_JSON': json.dumps(self.report.config)})
+        env.update({f'{__project_name__.upper()}_REPORT_REPORTED_JOBS_JSON': json.dumps(self.report.config)})
 
-        command = shlex.split(self.config['command'].format(text=text, count=0, jobs=0))
+        subject_args = {
+            'text': text,
+            'count': len(filtered_job_states),
+            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
+        }
+        command = shlex.split(self.config['command'].format(**subject_args))
 
         try:
             result = subprocess.run(
                 command,
-                input=text,
                 capture_output=True,
                 check=True,
                 text=True,

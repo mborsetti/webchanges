@@ -225,7 +225,67 @@ class JobState(ContextManager):
                         f"Python package 'deepdiff' is not installed; cannot use 'diff_tool: {self.job.diff_tool}'"
                         f' ({self.job.get_indexed_location()})'
                     )
-                data_type = self.job.diff_tool.split()[1] if len(self.job.diff_tool.split()) >= 1 else 'json'
+
+                def _pretty(diff: DeepDiff) -> str:
+                    """
+                    Customized version of deepdiff.base.pretty() edited to add the values deleted or added.
+                    The pretty human readable string output for the diff object
+                    regardless of what view was used to generate the diff.
+                    """
+
+                    PRETTY_FORM_TEXTS = {
+                        'type_changes': (
+                            'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
+                            'from {val_t1} to {val_t2}.'
+                        ),
+                        'values_changed': 'Value of {diff_path} changed from {val_t1} to {val_t2}.',
+                        'dictionary_item_added': 'Item {diff_path} added to dictionary as {val_t2}.',
+                        'dictionary_item_removed': 'Item {diff_path} removed from dictionary (was {val_t1}).',
+                        'iterable_item_added': 'Item {diff_path} added to iterable as {val_t2}.',
+                        'iterable_item_removed': 'Item {diff_path} removed from iterable (was {val_t1}).',
+                        'attribute_added': 'Attribute {diff_path} added as {val_t2}.',
+                        'attribute_removed': 'Attribute {diff_path} removed (was {val_t1}).',
+                        'set_item_added': 'Item root[{val_t2}] added to set as {val_t1}.',
+                        'set_item_removed': 'Item root[{val_t1}] removed from set (was {val_t2}).',
+                        'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
+                    }
+
+                    def _pretty_print_diff(diff: DeepDiff) -> str:
+                        type_t1 = type(diff.t1).__name__
+                        type_t2 = type(diff.t2).__name__
+
+                        val_t1 = (
+                            f'"{diff.t1}"'
+                            if type_t1 in ('str', 'int', 'float')
+                            else json.dumps(diff.t1, ensure_ascii=False, indent=2)
+                            if type_t1 == 'dict'
+                            else str(diff.t1)
+                        )
+                        val_t2 = (
+                            f'"{diff.t2}"'
+                            if type_t2 in ('str', 'int', 'float')
+                            else json.dumps(diff.t2, ensure_ascii=False, indent=2)
+                            if type_t2 == 'dict'
+                            else str(diff.t2)
+                        )
+
+                        diff_path = diff.path(root='root')
+                        return PRETTY_FORM_TEXTS.get(diff.report_type, '').format(
+                            diff_path=diff_path,
+                            type_t1=type_t1,
+                            type_t2=type_t2,
+                            val_t1=val_t1,
+                            val_t2=val_t2,
+                        )
+
+                    result = []
+                    for key in diff.tree.keys():
+                        for item_key in diff.tree[key]:
+                            result.append(_pretty_print_diff(item_key))
+
+                    return '\n'.join(result)
+
+                data_type = self.job.diff_tool.split()[1] if len(self.job.diff_tool.split()) > 1 else 'json'
                 if data_type == 'json':
                     old_data = json.loads(self.old_data)
                     new_data = json.loads(self.new_data)
@@ -234,13 +294,14 @@ class JobState(ContextManager):
                         f"data_type '{data_type}' is not supported by 'diff_tool: deepdiff'"
                         f' ({self.job.get_indexed_location()})'
                     )
-                diff = DeepDiff(old_data, new_data)
+                diff = DeepDiff(old_data, new_data, verbose_level=2)
                 head = (
                     f'Using {self.job.diff_tool}\n'
                     f'Old: {timestamp_old}\n'
                     f'New: {timestamp_new}\n' + '-' * 36 + '\n'
                 )
-                return head + diff.pretty()
+                return head + _pretty(diff)
+
             else:
                 # External diff tool
                 with tempfile.TemporaryDirectory() as tmp_dir:
