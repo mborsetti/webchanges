@@ -36,8 +36,8 @@ Unreleased
 
 ⚠ Breaking changes in the near future (opt-in now):
 ---------------------------------------------------
-Jobs with``use_browser: true`` will use Playwright instead of Pyppeteer (can opt in now)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pyppetter will be replaced with Playwright (can opt in now!)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The implementation of ``use_browser: true`` jobs (i.e. those running on a browser to run JavaScript) using Pyppeteer
 has been very problematic, as the library:
 
@@ -50,21 +50,23 @@ has been very problematic, as the library:
 * is poorly maintained,
 * and freezes when running it in the current version of Python (3.10)!
 
-The `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 100.
+Pyppeteer's `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 110.
 
 As a result, I have been investigating a substitute, and found one in `Playwright
 <https://playwright.dev/python/>`__. This package has none of the issues above, the core dev team apparently is the same
-who wrote Puppetter, and is supported by the deep pockets of Microsoft. The Python version is officially supported and
-up-to-date (while pyppeteer is several versions behind Puppetter, which it is based upon), and we can easily use the
-latest stable version of Google Chrome with it without mocking around with setting chromium_revisions.
+who wrote Puppetter (of which Pyppeteer is a port to Python), and is supported by the deep pockets of Microsoft. The
+Python version is officially supported and up-to-date and we can easily use the latest stable version of Google Chrome
+with it without mocking around with setting chromium_revisions.
 
-You can upgrade to Playwright now (and your help is needed)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+You can upgrade to Playwright now!
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The Playwright implementation in this release of **webchanges** is extremely stable, fully tested (even on Python
 3.10!), and much faster than Pyppeteer (some of my jobs are running 3x faster!). While it's probably production
 quality, for the moment it is being released as an opt-in beta only.
 
 I urge you to switch to Playwright. To do so:
+
+Ensure that you have at least Python 3.8 (not tested in 3.7 due to testing limitations).
 
 Install dependencies::
 
@@ -78,8 +80,8 @@ Edit your configuration file...::
 
    webchanges --edit-config
 
-...to add ``_beta_use_playwright`` under the ``browser`` section of ``job_defaults``, like this (note the leading
-underline):
+...to add ``_beta_use_playwright: true`` (note the leading underline) under the ``browser`` section of ``job_defaults``,
+ like this:
 
 .. code-block:: yaml
 
@@ -109,7 +111,7 @@ Please make sure to open a GitHub `issue <https://github.com/mborsetti/webchange
 anything wrong!
 
 If you decide to stick with Playwright, you can free up disk space (if no other package uses Pyppeteer) by removing
-the downloaded Chromium by *deleting the directory shown* by running::
+the downloaded Chromium by deleting the *directory* shown by running::
 
    webchanges --chromium-directory
 
@@ -117,18 +119,16 @@ and uninstalling the Pyppeteer package by running::
 
    pip uninstall pyppeteer
 
-Another improvement I made with the Playwright implementation is determining the maximum number of jobs to run in
-parallel on the amount of free memory available, which seems to be the relevant constraint.
+The Playwright implementation also determines the maximum number of jobs to run in parallel based on the amount of free
+memory available, which seems to be the relevant constraint, and this will make **webchanges** faster on machines with
+lots of memory and more stable on small ones.
 
 Changed
 -------
 * The method ``bs4`` of filter ``html2text`` has a new ``strip`` sub-directive which is passed to BeautifulSoup, and
   its default value has changed to false to conform to BeautifulSoup's default. This gives better output in most
   cases. To restore the previous non-standard behavior, add the ``strip: true`` sub-directive to the ``html2text``
-  filter of impacted jobs.
-* When multiple URL jobs have the same network location (www.example.com), a random delay between 0.1 and 1.0 seconds is
-  added to all jobs to that network location after the first one. This prevents being blocked by the site as a result of
-  being flooded by **webchanges**'s parallelism sending multiple requests from the same source at the same exact time.
+  filter of jobs.
 * Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
   There will be no new development to fix this as the use of Pyppeteer will soon be deprecated in favor of Playwright.
   See above to start using Playwright now (highly suggested).

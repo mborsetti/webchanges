@@ -32,8 +32,16 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
     def insert_delay(jobs: List[JobBase]) -> List[JobBase]:
         """
+        TODO: Evaluate whether this is necessary.  Currently not being called.
+
         Sets a _delay value for URL jobs hitting the network location already hit. Used to prevent multiple jobs
         hitting the same network location at the exact same time and being blocked as a result.
+
+        CHANGELOG:
+        * When multiple URL jobs have the same network location (www.example.com), a random delay between 0.1 and 1.0
+          seconds is added to all jobs to that network location after the first one. This prevents being blocked by
+          the site as a result of being flooded by **webchanges**'s parallelism sending multiple requests from the same
+          source at the same exact time.
 
         :param jobs: The list of jobs.
         :return: The list of jobs with the _delay value set.

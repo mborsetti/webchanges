@@ -69,7 +69,7 @@ def is_connected() -> bool:
 
 
 connection_required = pytest.mark.skipif(not is_connected(), reason='no Internet connection')
-# py37_required = pytest.mark.skipif(sys.version_info < (3, 7), reason='requires Python 3.7')
+py38_required = pytest.mark.skipif(sys.version_info < (3, 8), reason='requires Python 3.8')
 py310_skip = pytest.mark.skipif(sys.version_info >= (3, 10), reason='Python 3.10 not supported by pyppeteer')
 playwright_is_installed = (
     importlib.util.find_spec('playwright') is not None and importlib.util.find_spec('psutil') is not None
@@ -204,6 +204,9 @@ def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> 
     elif not playwright_is_installed and job.use_browser and job._beta_use_playwright:
         pytest.skip('Playwright and psutil not installed')
         return
+    elif sys.version_info < (3, 8) and job.use_browser and job._beta_use_playwright:
+        pytest.skip('Playwright testing requires Python 3.8')
+        return
     # if sys.version_info == (3, 7) and job.use_browser and not job._beta_use_playwright and sys.platform == 'linux':
     #     pytest.skip('Pyppeteer throws "Page crashed!" errors in Python 3.7 in Ubuntu')
     #     return
@@ -282,10 +285,12 @@ def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
         pytest.skip('Pyppeteer not installed')
         return
-    if sys.version_info >= (3, 10):
-        if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-            pytest.skip('Pyppeteer freezes in Python 3.10')
-            return
+    elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+        pytest.skip('Playwright testing requires Python 3.8')
+        return
+    elif sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
+        pytest.skip('Pyppeteer freezes in Python 3.10')
+        return
     if job_data.get('use_browser'):
         pytest.skip('Capturing of 304 cannot be implemented in Chromium')  # last tested with Chromium 89
         return
@@ -310,8 +315,8 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     if current_platform is None and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer not installed')
         return
-    elif not playwright_is_installed and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-        pytest.skip('Playwright and psutil not installed')
+    elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+        pytest.skip('Playwright testing requires Python 3.8')
         return
     if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer freezes in Python 3.10')
@@ -346,6 +351,9 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
         return
     elif not playwright_is_installed and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
         pytest.skip('Playwright and psutil not installed')
+        return
+    elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+        pytest.skip('Playwright testing requires Python 3.8')
         return
     if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer freezes in Python 3.10')
@@ -391,6 +399,7 @@ def test_stress_use_browser() -> None:
     urlwatcher.run_jobs()
 
 
+@py38_required
 @playwright_skip
 @connection_required
 def test_stress_use_browser_playwright(event_loop) -> None:
@@ -532,6 +541,7 @@ def test_browser_switches_not_str_or_list():
         pytest.skip('Pyppeteer not installed')
 
 
+@py38_required
 @playwright_skip
 def test_browser_switches_not_str_or_list_playwright(event_loop):
     job_data = {
