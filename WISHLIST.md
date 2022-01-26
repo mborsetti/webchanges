@@ -6,3 +6,4 @@
 - [ ] Document code (docstrings)
 - [ ] Figure out what to do with `--add JOB` and `--delete JOB`
 - [ ] Simplify main legacy Urlwatcher class
+- [ ] Create a class for differs and implement more differs
