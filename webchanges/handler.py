@@ -219,6 +219,8 @@ class JobState(ContextManager):
         )
 
         if self.job.diff_tool is not None:
+            # TODO: 'deepdiff' is work in progress, not documented, and will most likely change as diffing will
+            # become a class to keep the code organized.
             if self.job.diff_tool.startswith('deepdiff'):
                 if DeepDiff is None:
                     raise ImportError(

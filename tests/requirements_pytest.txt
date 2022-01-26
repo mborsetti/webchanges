@@ -7,6 +7,8 @@ coverage
 coverage_conditional_plugin
 cssbeautifier
 docutils
+flake8
+flake8-quotes
 jq; os_name != 'nt' and python_version < '3.10'
 jsbeautifier
 keyring

@@ -72,7 +72,7 @@ class UrlwatchCommand:
                 import_module_from_source('hooks', hooks_edit)
                 break  # stop if no exception on parser
             except SystemExit:
-                self.print_new_version()
+                # self.print_new_version()
                 raise
             except Exception as e:
                 print('Parsing failed:')
@@ -200,7 +200,7 @@ class UrlwatchCommand:
             job_state.process()
             duration = time.perf_counter() - start
             if job_state.exception is not None:
-                self.print_new_version()
+                # self.print_new_version()
                 raise job_state.exception
             print(job_state.job.pretty_name())
             print('-' * len(job_state.job.pretty_name()))
@@ -681,5 +681,5 @@ class UrlwatchCommand:
 
         self.urlwatcher.close()
 
-        self.print_new_version()
+        # self.print_new_version()
         self._exit(0)
