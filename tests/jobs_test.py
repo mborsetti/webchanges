@@ -268,10 +268,12 @@ def test_check_etag(job_data: Dict[str, Any], event_loop) -> None:
     elif not playwright_is_installed and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
         pytest.skip('Playwright and psutil not installed')
         return
-    if sys.version_info >= (3, 10):
-        if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-            pytest.skip('Pyppeteer freezes in Python 3.10')
-            return
+    elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+        pytest.skip('Playwright testing requires Python 3.8')
+        return
+    if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
+        pytest.skip('Pyppeteer freezes in Python 3.10')
+        return
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
