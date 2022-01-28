@@ -4,11 +4,13 @@ from __future__ import annotations
 import copy
 import email.utils
 import getpass
+import inspect
 import logging
 import os
 import shutil
 import sqlite3
 import stat
+import sys
 import threading
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -22,6 +24,7 @@ import yaml
 from . import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
 from .jobs import JobBase, ShellJob
+from .reporters import ReporterBase
 from .util import edit_file
 
 try:
@@ -662,6 +665,13 @@ class YamlConfigStorage(BaseYamlFileStorage):
         if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
             config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
         extras: Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG)
+        if extras.get('report') and 'hooks' in sys.modules:
+            # skip reports added by hooks
+            for name, obj in inspect.getmembers(sys.modules['hooks'], inspect.isclass):
+                if obj.__module__ == 'hooks' and issubclass(obj, ReporterBase):
+                    extras['report'].pop(obj.__kind__)  # type: ignore[misc]
+            if not len(extras['report']):
+                extras.pop('report')  # type: ignore[misc]
         if extras:
             raise ValueError(
                 f'Unrecognized directive(s) in the configuration file {self.filename}:\n'
@@ -737,7 +747,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         if conflicting_jobs:
             raise ValueError(
                 '\n   '.join(
-                    ['Each job must have a unique URL/command (for URLs, append #1, #2, etc. to ' 'make them unique):']
+                    ['Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):']
                     + conflicting_jobs
                 )
             )
@@ -1147,7 +1157,7 @@ class CacheSQLite3Storage(CacheStorage):
         """
         with self.lock:
             row = self._execute(
-                'SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? ' 'ORDER BY timestamp DESC LIMIT 1',
+                'SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? ORDER BY timestamp DESC LIMIT 1',
                 (guid,),
             ).fetchone()
         if row:
@@ -1175,7 +1185,7 @@ class CacheSQLite3Storage(CacheStorage):
 
         with self.lock:
             rows = self._execute(
-                'SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? ' 'ORDER BY timestamp DESC', (guid,)
+                'SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? ORDER BY timestamp DESC', (guid,)
             ).fetchall()
         if rows:
             for msgpack_data, timestamp in rows:

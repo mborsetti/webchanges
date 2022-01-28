@@ -196,7 +196,7 @@ class LegacyVersion(_BaseVersion):
         self._key = _legacy_cmpkey(self._version)
 
         warnings.warn(
-            'Creating a LegacyVersion has been deprecated and will be ' 'removed in the next major release',
+            'Creating a LegacyVersion has been deprecated and will be removed in the next major release',
             DeprecationWarning,
         )
 

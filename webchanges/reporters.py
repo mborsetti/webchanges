@@ -1055,7 +1055,7 @@ class WebServiceReporter(TextReporter):
             service = self.web_service_get()
         except Exception as e:
             raise RuntimeError(
-                f'Failed to load or connect to {self.__kind__} - are the dependencies installed and ' 'configured?'
+                f'Failed to load or connect to {self.__kind__} - are the dependencies installed and configured?'
             ) from e
 
         self.web_service_submit(service, 'Website Change Detected', text)

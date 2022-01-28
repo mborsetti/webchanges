@@ -149,7 +149,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
 
         :param filter_spec: A list of either filter_kind, subfilter (where subfilter is a dict) or a legacy
            string-based filter list specification.
-        :returns: Iterator of filter_kind, subfilter (where subfilter is a dict)
+        :returns: Iterator of filter_kind, subfilter (where subfilter is a dict).
         """
         for filter_kind, subfilter in cls._internal_normalize_filter_list(filter_spec):
             filtercls = cls.__subclasses__.get(filter_kind, None)
