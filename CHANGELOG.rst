@@ -190,6 +190,9 @@ Documentation
 * Added suggestion to run ``--clean-cache`` or ``--gc-cache`` periodically to compact the database file.
 * Continued improvements.
 
+Internals
+---------
+* Pyppeteer has been removed from the test suite.
 
 Version 3.9.1
 ===================

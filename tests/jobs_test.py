@@ -9,6 +9,7 @@ import importlib.util
 import logging
 import os
 import socket
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -23,7 +24,6 @@ from webchanges.jobs import (  # DEFAULT_CHROMIUM_REVISION,
     BrowserResponseError,
     JobBase,
     NotModifiedError,
-    ShellError,
     ShellJob,
     UrlJob,
 )
@@ -38,7 +38,7 @@ from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsS
 #     current_platform = None
 #     chromium_revision_num = None
 
-# NOT TESTING Pypeteer
+# NOT TESTING Pyppeteer
 current_platform = None
 chromium_revision_num = None
 
@@ -599,4 +599,4 @@ def test_shell_error():
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
         job_state.process()
-        assert isinstance(job_state.exception, ShellError)
+        assert isinstance(job_state.exception, subprocess.CalledProcessError)

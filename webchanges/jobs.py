@@ -140,6 +140,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     note: Optional[str] = None
     referer: Optional[str] = None  # Playwright
     ssl_no_verify: Optional[bool] = None
+    stderr: Optional[str] = None  # ShellJob backwards compatibility (not used)
     switches: Optional[List[str]] = None
     timeout: Optional[float] = None
     user_data_dir: Optional[str] = None
