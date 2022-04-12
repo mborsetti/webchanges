@@ -1,3 +1,7 @@
+========
+Licenses
+========
+
 The MIT License (MIT)
 
 Copyright (c) 2020- Mike Borsetti <mike@borsetti.com>
@@ -19,11 +23,13 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-The above license applies to all contributions after 2020-09-10
-
 --------------------------------------------------------------------------------
 
-This project includes code from https://github.com/thp/urlwatch
+This software redistributes source code of release 2.21 of urlwatch
+https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f
+which is subject to the following license, hereby retained with the source code,
+of which this file is part of:
+
 Copyright (c) 2008-2020 Thomas Perl <m@thp.io>
 All rights reserved.
 
@@ -39,7 +45,7 @@ are met:
 3. The name of the author may not be used to endorse or promote products
    derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ''AS IS'' AND ANY EXPRESS OR
 IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
 IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,

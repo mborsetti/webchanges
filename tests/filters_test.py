@@ -4,6 +4,7 @@ import importlib.util
 import logging
 import os
 import sys
+from pathlib import Path
 
 import pytest
 import yaml
@@ -45,12 +46,12 @@ TESTDATA = [
 ]
 
 
-@pytest.mark.parametrize('input, output', TESTDATA)
+@pytest.mark.parametrize('input, output', TESTDATA, ids=(str(d[0]) for d in TESTDATA))
 def test_normalize_filter_list(input, output):
     assert list(FilterBase.normalize_filter_list(input)) == output
 
 
-FILTER_TESTS = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), 'data/filters_test.yaml'), 'r'))
+FILTER_TESTS = list(yaml.safe_load(Path(__file__).parent.joinpath('data/filters_test.yaml').read_text()).items())
 
 
 class FakeJob(JobBase):
@@ -58,7 +59,7 @@ class FakeJob(JobBase):
         return ''
 
 
-@pytest.mark.parametrize('test_name, test_data', FILTER_TESTS.items())
+@pytest.mark.parametrize('test_name, test_data', FILTER_TESTS, ids=(d[0] for d in FILTER_TESTS))
 def test_filters(test_name, test_data):
     filter = test_data['filter']
     data = test_data['data']
@@ -84,13 +85,15 @@ def test_filters(test_name, test_data):
 def test_invalid_filter_name_raises_valueerror():
     with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list(['afilternamethatdoesnotexist']))
-    assert str(pytest_wrapped_e.value) == 'Unknown filter kind: afilternamethatdoesnotexist (subfilter {})'
+    assert str(pytest_wrapped_e.value) == 'Unknown filter kind: afilternamethatdoesnotexist (subfilter: {})'
 
 
 def test_providing_subfilter_to_filter_without_subfilter_raises_valueerror():
     with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list([{'beautify': {'asubfilterthatdoesnotexist': True}}]))
-    assert str(pytest_wrapped_e.value) == 'No subfilters supported for beautify'
+    assert str(pytest_wrapped_e.value) == (
+        "Filter beautify does not support subfilter(s): {'asubfilterthatdoesnotexist'} (supported: {'indent'})"
+    )
 
 
 def test_providing_unknown_subfilter_raises_valueerror():

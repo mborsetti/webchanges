@@ -95,7 +95,7 @@ def test_flake8(tmp_path):
     assert not r.returncode
 
 
-@pytest.mark.parametrize('job', HOOKS_DOC_JOBS)
+@pytest.mark.parametrize('job', HOOKS_DOC_JOBS, ids=(v.url for v in HOOKS_DOC_JOBS))
 def test_url(job: JobBase):
     d = testdata[job.url]
     data = d['input']

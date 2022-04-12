@@ -272,6 +272,24 @@ See more :ref:`here <ignoring_http_connection_errors>`.
 .. versionchanged:: 3.5
    Works for all url jobs, including those with use_browser: true.
 
+
+
+.. _ignore_dh_key_too_small:
+
+ignore_dh_key_too_small
+^^^^^^^^^^^^^^^^^^^^^^^
+Insecure workaround for servers using a weak (smaller than 2048-bit) Diffie-Hellman key which can allow a
+man-in-the-middle attack with through the `Logjam Attack <https://weakdh.org/>`__ against the TLS protocol. It attempts
+to force the use of a potentially weaker cipher, one that doesn't rely on a DH key.
+
+Set it as a last resort if you're getting a ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh key too small (_ssl.c:1129)``
+error and can't get the anyone to fix the security vulnerability on the server.
+
+.. versionadded:: 3.9.2
+
+
+.. _ignore_timeout_errors:
+
 ignore_timeout_errors
 ^^^^^^^^^^^^^^^^^^^^^
 Do not report errors when the timeout is hit (true/false). Defaults to false.
@@ -663,3 +681,11 @@ Tells the ``html`` report that the data is in Markdown format and should be reco
 Setting default directives
 ==========================
 See :ref:`here <job_defaults>` for how to set default directives for all jobs.
+
+
+.. kind
+
+kind
+----
+For Python programmers only, this is used to associate the job to a custom job Class defined in ``hooks.py``, by
+matching the contents of this directive to the ```__kind__`` variable of the class.

@@ -1,4 +1,7 @@
 """Handles all storage: job files, config files, hooks file, and cache database engines."""
+
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 from __future__ import annotations
 
 import copy
@@ -12,6 +15,7 @@ import sqlite3
 import stat
 import sys
 import threading
+import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from datetime import datetime
@@ -87,6 +91,17 @@ if TYPE_CHECKING:
             'title': str,
         },
     )
+    ConfigReportDiscord = TypedDict(
+        'ConfigReportDiscord',
+        {
+            'enabled': bool,
+            'webhook_url': str,
+            'max_message_length': Optional[int],
+            'embed': bool,
+            'subject': str,
+            'colored': bool,
+        },
+    )
     ConfigReportEmailSmtp = TypedDict(
         'ConfigReportEmailSmtp',
         {
@@ -117,6 +132,53 @@ if TYPE_CHECKING:
             'sendmail': ConfigReportEmailSendmail,
         },
     )
+    ConfigReportIfttt = TypedDict(
+        'ConfigReportIfttt',
+        {
+            'enabled': bool,
+            'key': str,
+            'event': str,
+        },
+    )
+    ConfigReportMailgun = TypedDict(
+        'ConfigReportMailgun',
+        {
+            'enabled': bool,
+            'region': str,
+            'api_key': str,
+            'domain': str,
+            'from_mail': str,
+            'from_name': str,
+            'to': str,
+            'subject': str,
+        },
+    )
+    ConfigReportMatrix = TypedDict(
+        'ConfigReportMatrix',
+        {
+            'enabled': bool,
+            'homeserver': str,
+            'access_token': str,
+            'room_id': str,
+        },
+    )
+    ConfigReportProwl = TypedDict(
+        'ConfigReportProwl',
+        {
+            'enabled': bool,
+            'api_key': str,
+            'priority': int,
+            'application': str,
+            'subject': str,
+        },
+    )
+    ConfigReportPushbullet = TypedDict(
+        'ConfigReportPushbullet',
+        {
+            'enabled': bool,
+            'api_key': str,
+        },
+    )
     ConfigReportPushover = TypedDict(
         'ConfigReportPushover',
         {
@@ -128,11 +190,11 @@ if TYPE_CHECKING:
             'priority': str,
         },
     )
-    ConfigReportPushbullet = TypedDict(
-        'ConfigReportPushbullet',
+    ConfigReportRunCommand = TypedDict(
+        'ConfigReportRunCommand',
         {
             'enabled': bool,
-            'api_key': str,
+            'command': str,
         },
     )
     ConfigReportTelegram = TypedDict(
@@ -153,36 +215,6 @@ if TYPE_CHECKING:
             'max_message_length': Optional[int],
         },
     )
-    ConfigReportMatrix = TypedDict(
-        'ConfigReportMatrix',
-        {
-            'enabled': bool,
-            'homeserver': str,
-            'access_token': str,
-            'room_id': str,
-        },
-    )
-    ConfigReportMailgun = TypedDict(
-        'ConfigReportMailgun',
-        {
-            'enabled': bool,
-            'region': str,
-            'api_key': str,
-            'domain': str,
-            'from_mail': str,
-            'from_name': str,
-            'to': str,
-            'subject': str,
-        },
-    )
-    ConfigReportIfttt = TypedDict(
-        'ConfigReportIfttt',
-        {
-            'enabled': bool,
-            'key': str,
-            'event': str,
-        },
-    )
     ConfigReportXmpp = TypedDict(
         'ConfigReportXmpp',
         {
@@ -190,23 +222,6 @@ if TYPE_CHECKING:
             'sender': str,
             'recipient': str,
             'insecure_password': Optional[str],
-        },
-    )
-    ConfigReportProwl = TypedDict(
-        'ConfigReportProwl',
-        {
-            'enabled': bool,
-            'api_key': str,
-            'priority': int,
-            'application': str,
-            'subject': str,
-        },
-    )
-    ConfigReportRunCommand = TypedDict(
-        'ConfigReportRunCommand',
-        {
-            'enabled': bool,
-            'command': str,
         },
     )
 
@@ -219,17 +234,18 @@ if TYPE_CHECKING:
             'markdown': ConfigReportMarkdown,
             'stdout': ConfigReportStdout,
             'browser': ConfigReportBrowser,
+            'discord': ConfigReportDiscord,
             'email': ConfigReportEmail,
-            'pushover': ConfigReportPushover,
+            'ifttt': ConfigReportIfttt,
+            'mailgun': ConfigReportMailgun,
+            'matrix': ConfigReportMatrix,
+            'prowl': ConfigReportProwl,
             'pushbullet': ConfigReportPushbullet,
+            'pushover': ConfigReportPushover,
+            'run_command': ConfigReportRunCommand,
             'telegram': ConfigReportTelegram,
             'webhook': ConfigReportWebhook,
-            'matrix': ConfigReportMatrix,
-            'mailgun': ConfigReportMailgun,
-            'ifttt': ConfigReportIfttt,
             'xmpp': ConfigReportXmpp,
-            'prowl': ConfigReportProwl,
-            'run_command': ConfigReportRunCommand,
         },
     )
     ConfigJobDefaults = TypedDict(
@@ -281,6 +297,14 @@ DEFAULT_CONFIG: Config = {
         'browser': {  # the system's default browser; uses html
             'enabled': False,
             'title': f'[{__project_name__}] {{count}} changes: {{jobs}}',
+        },
+        'discord': {
+            'enabled': False,
+            'webhook_url': '',
+            'max_message_length': None,
+            'embed': True,
+            'subject': '',
+            'colored': True,
         },
         'email': {  # email (except mailgun); uses text or both html and text if 'html' is set to true
             'enabled': False,
@@ -610,7 +634,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             """
             for key, value in d1_.copy().items():
                 if isinstance(value, dict) and isinstance(d2_.get(key), dict):  # type: ignore[misc]
-                    _sub_dict_deep_difference(value, d2_[key])  # type: ignore[arg-type,misc]
+                    _sub_dict_deep_difference(value, d2_[key])  # type: ignore[arg-type,literal-required]
                     if not len(value):
                         d1_.pop(key)  # type: ignore[misc]
                 else:
@@ -644,7 +668,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     node = destination_.setdefault(key, {})  # type: ignore[misc]
                     _sub_dict_deep_merge(value, node)  # type: ignore[arg-type]
                 else:
-                    destination_[key] = value  # type: ignore[misc]
+                    destination_[key] = value  # type: ignore[literal-required]
 
             return destination_
 
@@ -656,12 +680,11 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param config: The configuration.
         :raises ValueError: If the configuration has keys not in DEFAULT_CONFIG (bad keys, e.g. typos)
         """
-
         config_for_extras = copy.deepcopy(config)
         if 'job_defaults' in config_for_extras:
             # 'job_defaults' is not set in DEFAULT_CONFIG
             for key in DEFAULT_CONFIG['job_defaults']:
-                config_for_extras['job_defaults'][key] = {}  # type: ignore[misc]
+                config_for_extras['job_defaults'][key] = {}  # type: ignore[literal-required]
         if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
             config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
         extras: Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG)
@@ -669,14 +692,32 @@ class YamlConfigStorage(BaseYamlFileStorage):
             # skip reports added by hooks
             for name, obj in inspect.getmembers(sys.modules['hooks'], inspect.isclass):
                 if obj.__module__ == 'hooks' and issubclass(obj, ReporterBase):
-                    extras['report'].pop(obj.__kind__)  # type: ignore[misc]
+                    extras['report'].pop(obj.__kind__, None)  # type: ignore[misc]
             if not len(extras['report']):
                 extras.pop('report')  # type: ignore[misc]
         if extras:
-            raise ValueError(
+            warnings.warn(
                 f'Unrecognized directive(s) in the configuration file {self.filename}:\n'
-                f'{yaml.safe_dump(extras)}Check for typos (documentation at {__docs_url__})'
+                f'{yaml.safe_dump(extras)}Check for typos (documentation at {__docs_url__})\n',
+                SyntaxWarning,
             )
+
+    @staticmethod
+    def replace_none_keys(config: Config) -> None:
+        """Fixes None keys in loaded config that should be empty dicts instead."""
+        if 'job_defaults' not in config:
+            config['job_defaults'] = {
+                'all': {},
+                'url': {},
+                'browser': {},
+                'shell': {},
+            }
+        else:
+            for key in ('all', 'url', 'browser', 'shell'):
+                if key not in config['job_defaults']:
+                    config['job_defaults'][key] = {}  # type: ignore[literal-required]
+                elif config['job_defaults'][key] is None:  # type: ignore[literal-required]
+                    config['job_defaults'][key] = {}  # type: ignore[literal-required]
 
     def load(self, *args: Any) -> None:
         """Load configuration file from self.filename into self.config adding missing keys from DEFAULT_CONFIG.
@@ -686,6 +727,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         config: Config = self.parse(self.filename)
 
         if config:
+            self.replace_none_keys(config)
             self.check_for_unrecognized_keys(config)
 
             # If config is missing keys in DEFAULT_CONFIG, log the missing keys and deep merge DEFAULT_CONFIG
@@ -818,6 +860,10 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
+    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
     def save(self, *args: Any, guid: str, data: str, timestamp: float, tries: int, etag: str, **kwargs: Any) -> None:
         pass
 
@@ -937,11 +983,18 @@ class CacheDirStorage(CacheStorage):
         return Snapshot(data, timestamp, 0, '')
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
-        if isinstance(count, int) and count < 1:
+        if count is not None and count < 1:
             return {}
         else:
             data, timestamp, tries, etag = self.load(guid)
             return {data: timestamp} if data and timestamp else {}
+
+    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
+        if count is not None and count < 1:
+            return []
+        else:
+            data, timestamp, tries, etag = self.load(guid)
+            return [{'timestamp': timestamp, 'data': data}] if data and timestamp else []
 
     def save(
         self,
@@ -1121,7 +1174,6 @@ class CacheSQLite3Storage(CacheStorage):
                 )
             else:
                 self.db.commit()
-            self._execute('VACUUM')
             self.db.close()
             logger.info(f'Closed main sqlite3 database file {self.filename}')
         del self.temp_cur
@@ -1180,7 +1232,7 @@ class CacheSQLite3Storage(CacheStorage):
             - value is the timestamp.
         """
         history: Dict[str, float] = {}
-        if isinstance(count, int) and count < 1:
+        if count is not None and count < 1:
             return history
 
         with self.lock:
@@ -1195,6 +1247,43 @@ class CacheSQLite3Storage(CacheStorage):
                         history[r['d']] = timestamp
                         if count is not None and len(history) >= count:
                             break
+        return history
+
+    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Return all data from the last 'count' (None = all) entries matching a 'guid'.
+
+        :param guid: The guid.
+        :param count: The maximum number of entries to return; if None return all.
+
+        :returns: A list of dicts
+            WHERE the keys are:
+
+            - timestamp: The timestamp (float);
+            - data: The data (str);
+            - tries (optional): The number of tries (int);
+            - etag (optional): The ETag (str, could be empty).
+        """
+        history: List[Dict[str, Any]] = []
+        if count is not None and count < 1:
+            return history
+
+        with self.lock:
+            rows = self._execute(
+                'SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? ORDER BY timestamp DESC', (guid,)
+            ).fetchall()
+        if rows:
+            for msgpack_data, timestamp in rows:
+                r = msgpack.unpackb(msgpack_data)
+                history.append(
+                    {
+                        'timestamp': timestamp,
+                        'data': r['d'],
+                        'tries': r['t'],
+                        'etag': r['e'],
+                    }
+                )
+                if count is not None and len(history) >= count:
+                    break
         return history
 
     def save(
@@ -1264,7 +1353,6 @@ class CacheSQLite3Storage(CacheStorage):
                 (guid, delete_entries),
             )
             num_del: int = self._execute('SELECT changes()').fetchone()[0]
-            self.db.commit()
         return num_del
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
@@ -1289,6 +1377,7 @@ class CacheSQLite3Storage(CacheStorage):
             )
             num_del: int = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
+            self._execute('VACUUM')
         return num_del
 
     def clean_all(self) -> int:
@@ -1306,6 +1395,7 @@ class CacheSQLite3Storage(CacheStorage):
             )
             num_del: int = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
+            self._execute('VACUUM')
         return num_del
 
     def keep_latest(self, keep_entries: int = 1) -> int:
@@ -1332,6 +1422,7 @@ class CacheSQLite3Storage(CacheStorage):
             )
             num_del: int = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
+            self._execute('VACUUM')
         return num_del
 
     def rollback(self, timestamp: float) -> int:
@@ -1419,7 +1510,7 @@ class CacheRedisStorage(CacheStorage):
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
         history: Dict[str, float] = {}
-        if isinstance(count, int) and count < 1:
+        if count is not None and count < 1:
             return history
 
         key = self._make_key(guid)
@@ -1432,6 +1523,13 @@ class CacheRedisStorage(CacheStorage):
                     if count is not None and len(history) >= count:
                         break
         return history
+
+    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
+        if count is not None and count < 1:
+            return []
+        else:
+            data, timestamp, tries, etag = self.load(guid)
+            return [{'timestamp': timestamp, 'data': data}] if data and timestamp else []
 
     def save(
         self,

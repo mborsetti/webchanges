@@ -1,5 +1,7 @@
 """Jobs."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 from __future__ import annotations
 
 import asyncio
@@ -20,7 +22,7 @@ from ftplib import FTP  # nosec: B402
 from http.client import responses as response_names
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
-from urllib.parse import quote, SplitResult, SplitResultBytes, urldefrag, urlencode, urlparse, urlsplit
+from urllib.parse import parse_qsl, quote, SplitResult, SplitResultBytes, urldefrag, urlencode, urlparse, urlsplit
 
 import html2text
 import requests
@@ -82,21 +84,6 @@ class BrowserResponseError(Exception):
             return self.args[0]
 
 
-class ShellError(Exception):
-    """Raised by 'command' jobs when a non-zero execution exit code is received."""
-
-    def __init__(self, result: str) -> None:
-        """
-
-        :param result: The contents of stderr.
-        """
-        Exception.__init__(self)
-        self.result = result
-
-    def __str__(self) -> str:
-        return f'{self.__class__.__name__}: Exit status {self.result}'
-
-
 class JobBase(object, metaclass=TrackSubClasses):
     """The base class for Jobs."""
 
@@ -129,21 +116,24 @@ class JobBase(object, metaclass=TrackSubClasses):
     encoding: Optional[str] = None
     filter: Union[str, List[Union[str, Dict[str, Any]]]] = None  # type: ignore[assignment]
     headers: Optional[Union[dict, CaseInsensitiveDict]] = None
-    headless: Optional[bool] = None  # Playwright
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
     ignore_cached: Optional[bool] = None
     ignore_connection_errors: Optional[bool] = None
+    ignore_dh_key_too_small: Optional[bool] = None
     ignore_http_error_codes: Optional[bool] = None
     ignore_https_errors: Optional[bool] = None
     ignore_timeout_errors: Optional[bool] = None
     ignore_too_many_redirects: Optional[bool] = None
-    monospace: Optional[bool] = None
+    initialization_js: Optional[str] = None  # Playwright
+    initialization_url: Optional[str] = None  # Playwright
     is_markdown: Optional[bool] = None
+    kind: Optional[str] = None  # hooks.py
     loop: Optional[asyncio.AbstractEventLoop] = None
     markdown_padded_tables: Optional[bool] = None
     max_tries: Optional[int] = None
     method: Optional[Literal['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']] = None
+    monospace: Optional[bool] = None
     name: Optional[str] = None
     navigate: Optional[str] = None  # backwards compatibility (deprecated)
     no_redirects: Optional[bool] = None
@@ -241,38 +231,39 @@ class JobBase(object, metaclass=TrackSubClasses):
             data['url'] = data.get('url', data['navigate'])
             data['use_browser'] = True
 
-        # Backwards compatibility with 'kind' directive (deprecated)
         if 'kind' in data:
-            warnings.warn(
-                f"Job directive 'kind' is deprecated and ignored: delete from job ({data})",  # nosec: B608
-                DeprecationWarning,
-            )
-            data.pop('kind')
-
-        # Auto-detect the job subclass based on required directives
-        matched_subclasses = [
-            subclass
-            for subclass in list(cls.__subclasses__.values())[1:]
-            if all(data.get(required) for required in subclass.__required__)
-        ]
-
-        if len(matched_subclasses) == 1:
-            job_subclass = matched_subclasses[0]
-        elif len(matched_subclasses) > 1:
-            number_matched: Dict[JobBase, int] = {}
-            for match in matched_subclasses:
-                number_matched[match] = [data.get(required) is not None for required in match.__required__].count(True)
-            # noinspection PyUnresolvedReferences
-            job_subclass = sorted(number_matched.items(), key=lambda x: x[1], reverse=True)[0][0]
+            # Used for hooks.py.
+            try:
+                job_subclass = cls.__subclasses__[data['kind']]
+            except KeyError:
+                raise ValueError(f"Job directive 'kind' ({data['kind']}) does not match any known job kinds:\n{data}")
         else:
-            if len(data) == 1:
-                raise ValueError(
-                    f"Job directive has no value or doesn't match a job type; check for errors/typos/escaping:\n{data}"
-                )
+            # Auto-detect the job subclass based on required directives.
+            matched_subclasses = [
+                subclass
+                for subclass in list(cls.__subclasses__.values())[1:]
+                if all(data.get(required) for required in subclass.__required__)
+            ]
+            if len(matched_subclasses) == 1:
+                job_subclass = matched_subclasses[0]
+            elif len(matched_subclasses) > 1:
+                number_matched: Dict[JobBase, int] = {}
+                for match in matched_subclasses:
+                    number_matched[match] = [data.get(required) is not None for required in match.__required__].count(
+                        True
+                    )
+                # noinspection PyUnresolvedReferences
+                job_subclass = sorted(number_matched.items(), key=lambda x: x[1], reverse=True)[0][0]
             else:
-                raise ValueError(
-                    f"Job directives (with values) don't match a job type; check for errors/typos/escaping:\n{data}"
-                )
+                if len(data) == 1:
+                    raise ValueError(
+                        f"Job directive has no value or doesn't match a job type; check for errors/typos/escaping:\n"
+                        f'{data}'
+                    )
+                else:
+                    raise ValueError(
+                        f"Job directives (with values) don't match a job type; check for errors/typos/escaping:\n{data}"
+                    )
 
         # Remove extra required directives ("Falsy")
         other_subclasses = list(cls.__subclasses__.values())[1:]
@@ -346,7 +337,7 @@ class JobBase(object, metaclass=TrackSubClasses):
                 if key in self.__optional__:
                     if getattr(self, key) is None:
                         setattr(self, key, value)
-                    elif isinstance(defaults[key], dict) and isinstance(
+                    elif isinstance(defaults[key], (dict, CaseInsensitiveDict)) and isinstance(
                         getattr(self, key), (dict, CaseInsensitiveDict)
                     ):
                         for subkey, subvalue in defaults[key].items():
@@ -361,6 +352,11 @@ class JobBase(object, metaclass=TrackSubClasses):
         """
         job_with_defaults = copy.deepcopy(self)
         if job_with_defaults.headers:
+            if not isinstance(job_with_defaults.headers, dict):
+                raise ValueError(
+                    f"Error reading jobs file: 'headers' directive must be a dictionary in job "
+                    f'{job_with_defaults.url or job_with_defaults.command}'
+                )
             job_with_defaults.headers = CaseInsensitiveDict(job_with_defaults.headers)
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
@@ -382,10 +378,11 @@ class JobBase(object, metaclass=TrackSubClasses):
         location = self.get_location()
         return hashlib.sha1(location.encode()).hexdigest()  # nosec: B303
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
-        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :param job_state: The JobState object, to keep track of the state of the retrieval.
+        :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved and the ETag.
         """
         raise NotImplementedError()
@@ -422,6 +419,7 @@ class Job(JobBase):
 
     __required__: Tuple[str, ...] = ()
     __optional__: Tuple[str, ...] = (
+        'kind',  # hooks.py
         'index_number',
         'name',
         'note',
@@ -459,10 +457,11 @@ class Job(JobBase):
         """
         return self.name or self.get_location()
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
-        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :param job_state: The JobState object, to keep track of the state of the retrieval.
+        :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved and the ETag.
         """
         pass
@@ -497,6 +496,7 @@ class UrlJob(UrlJobBase):
         'http_proxy',
         'https_proxy',
         'ignore_cached',
+        'ignore_dh_key_too_small',
         'method',
         'no_redirects',
         'ssl_no_verify',
@@ -510,10 +510,11 @@ class UrlJob(UrlJobBase):
         """
         return self.user_visible_url or self.url
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
-        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :param job_state: The JobState object, to keep track of the state of the retrieval.
+        :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved and the ETag.
         :raises NotModifiedError: If an HTTP 304 response is received.
         """
@@ -621,6 +622,14 @@ class UrlJob(UrlJobBase):
         # cookiejar (called by requests) expects strings or bytes-like objects; PyYAML will try to guess int etc.
         if self.cookies:
             self.cookies = {k: str(v) for k, v in self.cookies.items()}
+
+        if self.ignore_dh_key_too_small:
+            # https://stackoverflow.com/questions/38015537
+            logger.debug(
+                'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange and '
+                "thus not affected by the server's weak DH key"
+            )
+            requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
 
         response = requests.request(
             method=self.method,
@@ -739,10 +748,11 @@ class BrowserJob(UrlJobBase):
         'cookies',
         'data',
         'headers',
-        'headless',  # Playwright
         'http_proxy',
         'https_proxy',
         'ignore_https_errors',
+        'initialization_js',  # Playwright
+        'initialization_url',  # Playwright  # TODO documentation
         'method',
         'navigate',
         'switches',
@@ -769,10 +779,11 @@ class BrowserJob(UrlJobBase):
         """
         return self.user_visible_url or self.url
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
-        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :param job_state: The JobState object, to keep track of the state of the retrieval.
+        :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved and the ETag.
         """
         if self._delay:
@@ -780,7 +791,7 @@ class BrowserJob(UrlJobBase):
             time.sleep(self._delay)
 
         if self._beta_use_playwright:
-            response, etag = self._playwright_retrieve(job_state)
+            response, etag = self._playwright_retrieve(job_state, headless)
         else:
             response, etag = asyncio.run(self._retrieve(job_state))
 
@@ -1078,7 +1089,7 @@ class BrowserJob(UrlJobBase):
 
         return content, etag
 
-    def _playwright_retrieve(self, job_state: JobState) -> Tuple[str, str]:
+    def _playwright_retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[str, str]:
         """
 
         :raises ValueError: If there is a problem with the value supplied in one of the keys in the configuration file.
@@ -1173,20 +1184,29 @@ class BrowserJob(UrlJobBase):
         with sync_playwright() as p:
             executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
             channel = None if executable_path else 'chrome'
+            no_viewport = False if not self.switches else any('--window-size' in switch for switch in self.switches)
             if not self.user_data_dir:
                 browser = p.chromium.launch(
                     executable_path=executable_path,  # type: ignore[arg-type]
                     channel=channel,  # type: ignore[arg-type]
                     args=args,  # type: ignore[arg-type]
                     timeout=timeout,  # type: ignore[arg-type]
-                    headless=self.headless,  # type: ignore[arg-type]
+                    headless=headless,  # type: ignore[arg-type]
                     proxy=proxy,  # type: ignore[arg-type]
                 )
+                if 'User-Agent' not in headers:
+                    headers['User-Agent'] = (
+                        f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                        f'Chrome/{browser.version} Safari/537.36'
+                    )
                 context = browser.new_context(
+                    no_viewport=no_viewport,
                     ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
                     extra_http_headers=dict(headers),
                 )
-                logger.debug(f'Job {self.index_number}: Browser {channel} {browser.version} launched')
+                logger.debug(
+                    f'Job {self.index_number}: Launched browser {channel or executable_path} version {browser.version}'
+                )
             else:
                 context = p.chromium.launch_persistent_context(
                     user_data_dir=self.user_data_dir,
@@ -1197,12 +1217,17 @@ class BrowserJob(UrlJobBase):
                     # handle_sigterm=False,
                     # handle_sighup=False,
                     timeout=timeout,  # type: ignore[arg-type]
-                    headless=self.headless,  # type: ignore[arg-type]
+                    headless=headless,
                     proxy=proxy,  # type: ignore[arg-type]
+                    no_viewport=no_viewport,
                     ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
                     extra_http_headers=dict(headers),
                 )
-                logger.debug(f'Job {self.index_number}: Browser launched from {executable_path}')
+                logger.debug(
+                    f'Job {self.index_number}: Launched browser {channel or executable_path} version'
+                    f' {context.browser.version} with user data directory '  # type: ignore[union-attr]
+                    f'{self.user_data_dir}'
+                )
 
             # # launch playwright (memoized)
             # if self._playwright is None:
@@ -1240,19 +1265,51 @@ class BrowserJob(UrlJobBase):
             #     proxy=proxy,
             # )
 
-            if 'User-Agent' not in headers:
-                headers['User-Agent'] = (
-                    f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                    f'Chrome/{browser.version} Safari/537.36'
-                )
-
             # open a page
             page = context.new_page()
+
+            if self.initialization_url:
+                logger.info(f'Job {self.index_number}: Initializing website by navigating to {self.initialization_url}')
+                try:
+                    response = page.goto(
+                        self.initialization_url,
+                        timeout=timeout,
+                    )
+                except PlaywrightError as e:
+                    context.close()
+                    logger.error(f'Job {self.index_number}: Website initialization page returned error' f' {e.args[0]}')
+                    raise e
+
+                if not response:
+                    context.close()
+                    raise BrowserResponseError(('No response received from browser',), None)
+
+                if self.initialization_js:
+                    logger.info(f'Job {self.index_number}: Running init script {self.initialization_js}')
+                    page.evaluate(self.initialization_js)
+                    if self.wait_for_url:
+                        logger.info(f'Job {self.index_number}: Waiting for url {self.wait_for_url}')
+                        response.frame.wait_for_url(
+                            self.wait_for_url, wait_until=self.wait_until, timeout=timeout  # type: ignore[arg-type]
+                        )
+                updated_url = page.url
+                params = dict(parse_qsl(urlparse(updated_url).params))
+                try:
+                    new_url = self.url.format(**params)
+                except KeyError as e:
+                    browser.close()
+                    raise ValueError(
+                        f"Job {job_state.job.index_number}: Directive 'initialization_url' did not find key"
+                        f" {e.args[0]} to substitute in 'url'"
+                    )
+                if new_url != self.url:
+                    self.url = new_url
+                    logger.info(f'Job {self.index_number}: URL updated to {self.url}')
 
             if self.method and self.method != 'GET':
 
                 def handle_route(route: Route) -> None:
-                    """Handler function to change the route (probably a pyee.EventEmitter callback)."""
+                    """Handler function to change the route (a pyee.EventEmitter callback)."""
                     logger.info(f'Job {self.index_number}: Intercepted route to change request method to {self.method}')
                     route.continue_(method=str(self.method), post_data=data)  # type: ignore[arg-type]
 
@@ -1328,7 +1385,7 @@ class BrowserJob(UrlJobBase):
             except PlaywrightError as e:
                 logger.error(f'Job {self.index_number}: Page returned error {e.args[0]}')
                 context.close()
-                raise e
+                raise BrowserResponseError(e.args, None)
 
             if not response:
                 context.close()
@@ -1518,7 +1575,7 @@ class ShellJob(Job):
     __kind__ = 'shell'
 
     __required__ = ('command',)
-    __optional__ = ()
+    __optional__ = ('stderr',)  # ignored; here for backwards compatibility
 
     def get_location(self) -> str:
         """Get the 'location' of a job, i.e. the URL or command.
@@ -1527,20 +1584,19 @@ class ShellJob(Job):
         """
         return self.user_visible_url or self.command
 
-    def retrieve(self, job_state: JobState) -> Tuple[Union[str, bytes], str]:
-        """Runs job to retrieve the data, and returns data and ETag.
+    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
+        """Runs job to retrieve the data, and returns data and ETag (which is blank).
 
-        :param job_state: The JobState object, to keep track of the sate of the retrieval.
+        :param job_state: The JobState object, to keep track of the state of the retrieval.
+        :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved and the ETag.
-        :raises ShellError: If the subprocess fails.
+        :raises subprocess.CalledProcessError: Subclass of SubprocessError, raised when a process returns a non-zero
+           exit status.
+        :raises subprocess.TimeoutExpired: Subclass of SubprocessError, raised when a timeout expires while waiting for
+           a child process.
         """
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
-        try:
-            return (
-                subprocess.run(
-                    self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)
-                ).stdout,
-                '',
-            )  # noqa: DUO116 use of "shell=True" is insecure
-        except subprocess.CalledProcessError as e:
-            raise ShellError(e.stderr).with_traceback(e.__traceback__)
+        return (
+            subprocess.run(self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)).stdout,
+            '',
+        )  # noqa: DUO116 use of "shell=True" is insecure

@@ -30,9 +30,11 @@ Command line arguments
      --errors              list jobs with errors or no data captured
      --test JOB, --test-filter JOB
                            test a job (by index or URL/command) and show filtered output
+     --no-headless         turn off browser headless mode (for jobs using a browser)
      --test-diff JOB, --test-diff-filter JOB
                            test and show diff using existing saved snapshots of a job (by index or
                            URL/command)
+     --dump-history JOB    print all saved snapshot history for a job (by index or URL/command)
      --add JOB             add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from
                            jobs file; use --edit instead!
      --delete JOB          delete job by URL/command or index number. WARNING: all remarks are deleted
@@ -172,7 +174,7 @@ This feature does not work with database engines ``textfiles`` and ``minidb``.
 Rollback the database
 ---------------------
 You can rollback the snapshots database to an earlier time by running :program:`webchanges` with the
-``--rollback-cache``  command line argument followed by a `Unix timestamp <https://en.wikipedia
+``--rollback-cache`` command line argument followed by a `Unix timestamp <https://en.wikipedia
 .org/wiki/Unix_time>`__ indicating the point in time you want to go back to. Useful when you missed notifications or
 they got lost: rollback the database to the time of the last good report, then run :program:`webchanges` again to get
 a new report with the differences since that time.
@@ -186,6 +188,22 @@ up the database before doing a rollback in case of a mistake (or fat-finger).
 This feature does not work with database engines ``redis``, ``textfiles`` or ``minidb``.
 
 .. versionadded:: 3.2
+
+
+.. _compact-cache:
+
+Compact the database
+--------------------
+You can compact the snapshots database by running :program:`webchanges` with either the ``--gc-cache`` or
+``--clean-cache`` command line argument.
+
+Running with ``--gc-cache`` will purge snapshots of jobs that are no longer in the jobs
+file **and**, for those in the jobs file, older snapshots, as well as rebuilding (and therefore defragmenting) the
+database using VACUUM (see `here <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ for more details).
+
+Running with ``--clean-cache`` will remove all older snapshots (without checking the jobs file) and rebuild (and
+therefore defragment) the database using `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__.
+
 
 
 .. _database-engine:
@@ -237,7 +255,7 @@ specified), applies filters, and saves the resulting snapshot to a database for 
 the last 4 snapshots are kept, but this number can be changed with the ``--max-snapshots`` command line argument. If
 set to 0, all snapshots are retained (the database will grow unbounded).
 
-.. tip:: Changes (diffs) between old snapshots can be redisplayed with the ``--test-diff`` command line argument (see
+.. tip:: Changes (diffs) between saved snapshots can be redisplayed with the ``--test-diff`` command line argument (see
    :ref:`here <test-diff>`).
 
 ¹ Note that when using ``redis`` or ``minidb`` database engines all snapshots will be kept, while when using the
@@ -245,7 +263,7 @@ set to 0, all snapshots are retained (the database will grow unbounded).
 
 
 .. versionadded:: 3.3
-   for Python 3.7 or higher and default ``sqlite3`` database engine only.`
+   for default ``sqlite3`` database engine only.
 
 
 Chromium downloads

@@ -1,5 +1,7 @@
 """Email handler."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 import getpass
 import logging
 import smtplib
@@ -33,16 +35,16 @@ class Mailer(object):
     ) -> EmailMessage:
         """Create an Email object for a message.
 
-        :param from_email: The 'from' email address
-        :param to_email: The 'to' email address
-        :param subject: The 'subject' of the email
+        :param from_email: The 'From' email address
+        :param to_email: The 'To' email address
+        :param subject: The 'Subject' of the email
         :param text_body: The body in text format
         :param html_body: The body in html format (optional)
         """
         msg = EmailMessage(policy=policy.SMTPUTF8)
-        msg['from'] = from_email
-        msg['to'] = to_email
-        msg['subject'] = subject
+        msg['From'] = from_email
+        msg['To'] = to_email
+        msg['Subject'] = subject
         msg.set_content(text_body, subtype='plain')
         if html_body is not None:
             msg.add_alternative(html_body, subtype='html')

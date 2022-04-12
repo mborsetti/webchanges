@@ -146,8 +146,8 @@ See Microsoft’s `XPath Examples
 <https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ms256086(v=vs.100)>`__ page for additional
 examples.
 
-Using CSS and XPath filters with XML and exclusions
-"""""""""""""""""""""""""""""""""""""""""""""""""""
+Using CSS and XPath filters with XMl
+""""""""""""""""""""""""""""""""""""
 By default, CSS and XPath filters are set up for HTML documents, but it is possible to use them for XML documents as
 well.
 
@@ -197,7 +197,9 @@ expression.
 
 Alternatively, use the XPath expression ``//*[name()='<tag_name>']`` to bypass the namespace entirely.
 
-Another useful option with XPath and CSS filters is ``exclude``. Elements selected by this ``exclude`` expression are
+Using CSS and XPath filters with XML to exclude content
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Another useful option with XPath and CSS filters is ``exclude``. Elements selected by the ``exclude`` sub-directive are
 removed from the final result. For example, the following job will not have any ``<a>`` tag in its results:
 
 .. code-block:: yaml
@@ -211,7 +213,7 @@ removed from the final result. For example, the following job will not have any 
 Limiting the returned items from a CSS Selector or XPath
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""
 If you only want to return a subset of the items returned by a CSS selector or XPath filter, you can use two additional
-subfilters:
+sub-directives:
 
 * ``skip``: How many elements to skip from the beginning (default: 0).
 * ``maxitems``: How many elements to return at most (default: no limit).
@@ -384,7 +386,7 @@ Example configuration:
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* See the optional subdirectives in the html2text Python package's `documentation
+* See the optional sub-directives in the html2text Python package's `documentation
   <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__. The following options are set
   by :program:`webchanges` but can be overridden:
 
@@ -469,8 +471,18 @@ packages to reformat the HTML in a document to make it more readable (keeping it
 
    url: https://example.net/beautify.html
    filter:
-     - beautify
+     - beautify: 1
 
+Optional sub-directives
+"""""""""""""""""""""""
+* ``indent``: If indent is a non-negative integer or string, then the contents of HTML elements will be indented
+  appropriately when pretty-printing them. An indent level of 0, negative, or "" will only insert newlines. Using a
+  positive integer indent indents that many spaces per level. If indent is a string (such as "\t"), that string is used
+  to indent each level. The default behavior to indent one space per level.  Requires BeautifulSoup version 4.11.0 or
+  later.
+
+.. versionadded:: 3.9.2
+   ``indent`` sub-directive (requires BeautifulSoup version 4.11.0 or later).
 
 Required packages
 """""""""""""""""
@@ -480,7 +492,6 @@ follows:
 .. code-block:: bash
 
    pip install --upgrade webchanges[beautify]
-
 
 
 .. _pdf2text:
@@ -1121,6 +1132,10 @@ Or instead we can call a script we have saved, e.g. ``- execute: python3 myscrip
 
 If the command generates an error, the output of the error will be in the first line, before the traceback.
 
+.. tip::
+   If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8 mode as
+   per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
+
 .. versionchanged:: 3.8
    Added additional WEBCHANGES_JOB_* environment variables.
 
@@ -1134,7 +1149,6 @@ is to allow for certain corner situations (e.g. relying on variables, glob patte
 the command) that the ``execute`` filter cannot handle.
 
 .. danger::
-
    The execution of a shell command opens up all sort of security issues and the use of this filter should be avoided
    in favor of the :ref:`execute` filter.
 
@@ -1147,7 +1161,6 @@ Example:
      - shellpipe: echo TEST
 
 .. warning::
-
    On Linux and macOS systems, due to security reasons the ``shellpipe`` filter will not run unless **both** the config
    directory **and** the jobs file are both **owned** and **writeable** by **only** the user who is running the job
    (and not by its group or by other users). To set this up:
@@ -1161,3 +1174,7 @@ Example:
    * ``sudo`` may or may not be required;
    * If making the change from a different account than the one you run :program:`webchanges` from, replace
      ``$USER:$(id -g -n)`` with the username:group of the account running :program:`webchanges`.
+
+.. tip::
+   If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8 mode as
+   per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.

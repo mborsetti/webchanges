@@ -3,6 +3,8 @@
 For the entrypoint, see cli.py.
 """
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 import logging
 from typing import List, Optional, Tuple, Union
 

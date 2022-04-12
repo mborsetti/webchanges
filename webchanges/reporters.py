@@ -1,5 +1,7 @@
 """Runs reports."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 from __future__ import annotations
 
 import asyncio
@@ -39,6 +41,7 @@ if TYPE_CHECKING:
     # TypedDicts only work on Python >= 3.8
     from .storage import (
         ConfigReportBrowser,
+        ConfigReportDiscord,
         ConfigReportEmail,
         ConfigReportIfttt,
         ConfigReportMailgun,
@@ -54,19 +57,20 @@ if TYPE_CHECKING:
     )
 
     ConfigReportersList = Union[
-        ConfigReportStdout,
         ConfigReportBrowser,
+        ConfigReportDiscord,
         ConfigReportEmail,
-        ConfigReportPushover,
+        ConfigReportIfttt,
+        ConfigReportMailgun,
+        ConfigReportMatrix,
+        ConfigReportProwl,
         ConfigReportPushbullet,
+        ConfigReportPushover,
+        ConfigReportRunCommand,
+        ConfigReportStdout,
         ConfigReportTelegram,
         ConfigReportWebhook,
-        ConfigReportMatrix,
-        ConfigReportMailgun,
-        ConfigReportIfttt,
         ConfigReportXmpp,
-        ConfigReportProwl,
-        ConfigReportRunCommand,
     ]
 
 try:
@@ -143,7 +147,9 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         :returns: The typecasted object.
         """
         if hasattr(othercls, '__kind__'):
-            config: ConfigReportersList = self.report.config['report'][othercls.__kind__]  # type: ignore[misc]
+            config: ConfigReportersList = self.report.config['report'][
+                othercls.__kind__  # type: ignore[literal-required]
+            ]
         else:
             config = {}  # type: ignore[assignment]
 
@@ -181,7 +187,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
            testing)
         """
         subclass = cls.__subclasses__[name]
-        cfg = report.config['report'][name]  # type: ignore[misc]
+        cfg = report.config['report'][name]  # type: ignore[literal-required]
         if cfg['enabled'] or not check_enabled:
             subclass(report, cfg, job_states, duration, jobs_file).submit()
         else:
@@ -331,37 +337,37 @@ class HtmlReporter(ReporterBase):
                 yield '</span>'
             elif job.diff_tool.startswith('deepdiff'):
                 yield '<span style="font-family:monospace;white-space:pre-wrap">'
-                diff += '\n'
-                diff = re.sub(
-                    r'^(Item .+?] added to [a-z]* as ["{]*)(.+?)(["}.]\.\n)',
-                    lambda x: (
-                        f'{x.group(1)}'
-                        f'<span style="background-color:#d1ffd1;color:#082b08">{x.group(2)}</span>{x.group(3)}'
-                    ),
-                    diff,
-                    flags=re.DOTALL | re.MULTILINE,
-                )
-                diff = re.sub(
-                    r'^(Item .+?] removed from [a-z]* \(was ["{]*)(.+?)(["}.]\)\.\n)',
-                    lambda x: (
-                        f'{x.group(1)}'
-                        f'<span style="background-color:#fff0f0;color:#9c1c1c;'
-                        f'text-decoration:line-through">{x.group(2)}</span>{x.group(3)}'
-                    ),
-                    diff,
-                    flags=re.DOTALL | re.MULTILINE,
-                    # flags=re.DOTALL | re.MULTILINE,
-                )
-                diff = re.sub(
-                    r'( changed from ["{]*)(.+?)(["}]* to ["{]*)(.+?)(["} .])',
-                    lambda x: (
-                        f'{x.group(1)}'
-                        f'<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">'
-                        f'{x.group(2)}</span>{x.group(3)}<span style="background-color:#d1ffd1;color:#082b08">'
-                        f'{x.group(4)}</span>{x.group(5)}'
-                    ),
-                    diff,
-                )
+                # diff += '\n'
+                # diff = re.sub(
+                #     r'^(Item .+?] added to [a-z]* as ["{]*)(.+?)(["}.]\.\n)',
+                #     lambda x: (
+                #         f'{x.group(1)}'
+                #         f'<span style="background-color:#d1ffd1;color:#082b08">{x.group(2)}</span>{x.group(3)}'
+                #     ),
+                #     diff,
+                #     flags=re.DOTALL | re.MULTILINE,
+                # )
+                # diff = re.sub(
+                #     r'^(Item .+?] removed from [a-z]* \(was ["{]*)(.+?)(["}.]\)\.\n)',
+                #     lambda x: (
+                #         f'{x.group(1)}'
+                #         f'<span style="background-color:#fff0f0;color:#9c1c1c;'
+                #         f'text-decoration:line-through">{x.group(2)}</span>{x.group(3)}'
+                #     ),
+                #     diff,
+                #     flags=re.DOTALL | re.MULTILINE,
+                #     # flags=re.DOTALL | re.MULTILINE,
+                # )
+                # diff = re.sub(
+                #     r'( changed from ["{]*)(.+?)(["}]* to ["{]*)(.+?)(["} .])',
+                #     lambda x: (
+                #         f'{x.group(1)}'
+                #         f'<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">'
+                #         f'{x.group(2)}</span>{x.group(3)}<span style="background-color:#d1ffd1;color:#082b08">'
+                #         f'{x.group(4)}</span>{x.group(5)}'
+                #     ),
+                #     diff,
+                # )
                 yield diff[:-1]
                 yield '</span>'
         else:
@@ -492,7 +498,7 @@ class HtmlReporter(ReporterBase):
             return '...'
 
         if difftype == 'unified':
-            diff = job_state.get_diff(tz)
+            diff = job_state.get_diff_html(tz)
             if diff:
                 return '\n'.join(self._diff_to_html(diff, job_state.job))
             else:
@@ -1328,9 +1334,82 @@ class TelegramReporter(MarkdownReporter):
         return chunks
 
 
+class DiscordReporter(TextReporter):
+    """Send a message to a Discord channel using a discord webhook."""
+
+    __kind__ = 'discord'
+
+    config: ConfigReportDiscord
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        default_max_length = 2000
+        if isinstance(self.config['max_message_length'], int):
+            self.max_length = int(self.config['max_message_length'])  # type: ignore[arg-type]
+        else:
+            self.max_length = default_max_length
+        if self.config.get('colored', True):
+            self.max_length -= 11
+
+    def submit(self) -> Optional[requests.Response]:  # type: ignore[override]
+        webhook_url = self.config['webhook_url']
+        text = '\n'.join(super().submit())
+
+        if not text:
+            logger.debug('Not calling Discord API (no changes)')
+            return None
+
+        result = None
+        for chunk in chunk_string(text, self.max_length, numbering=True):
+            res = self.submit_to_discord(webhook_url, chunk)
+            if res.status_code != requests.codes.ok or res is None:
+                result = res
+
+        return result
+
+    def submit_to_discord(self, webhook_url: str, text: str) -> requests.Response:
+        if self.config.get('colored', True):
+            text = '```diff\n' + text + '```'
+
+        if self.config.get('embed', False):
+            filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+
+            subject_args = {
+                'count': len(filtered_job_states),
+                'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
+            }
+
+            subject = self.config['subject'].format(**subject_args)
+
+            post_data = {
+                'content': subject,
+                'embeds': [
+                    {
+                        'type': 'rich',
+                        'description': text,
+                    }
+                ],
+            }
+        else:
+            post_data = {'content': text}
+
+        logger.debug(f'Sending Discord request with post_data: {post_data}')
+
+        result = requests.post(webhook_url, json=post_data)
+        try:
+            if result.status_code in (requests.codes.ok, requests.codes.no_content):
+                logger.info('Discord response: ok')
+            else:
+                logger.error(f'Discord error: {result.text}')
+        except ValueError:
+            logger.error(
+                f'Failed to parse Discord response. HTTP status code: {result.status_code}, content: {result.content!r}'
+            )
+        return result
+
+
 class WebhookReporter(TextReporter):
-    """Send a text message to a webhook such as Slack, Discord channel, or Mattermost.  For Mattermost,
-    set 'markdown' to true."""
+    """Send a text message to a webhook such as Slack or Mattermost.  For Mattermost,  set 'markdown' to true."""
 
     __kind__ = 'webhook'
 
@@ -1338,7 +1417,7 @@ class WebhookReporter(TextReporter):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        default_max_length = 2000 if self.config['webhook_url'][:23] == 'https://discordapp.com/' else 40000
+        default_max_length = 40000
         if isinstance(self.config['max_message_length'], int):
             self.max_length = int(self.config['max_message_length'])  # type: ignore[arg-type]
         else:
@@ -1369,11 +1448,11 @@ class WebhookReporter(TextReporter):
 
     @staticmethod
     def submit_to_webhook(webhook_url: str, text: str) -> requests.Response:
-        logger.debug(f'Sending request to webhook with text:{text}')
+        logger.debug(f'Sending request to webhook with text: {text}')
         post_data = {'text': text}
         result = requests.post(webhook_url, json=post_data)
         try:
-            if result.status_code == requests.codes.ok:
+            if result.status_code in (requests.codes.ok, requests.codes.no_content):
                 logger.info('Webhook server response: ok')
             else:
                 raise RuntimeError(f'Webhook server error: {result.text}')

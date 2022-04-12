@@ -1,5 +1,8 @@
 """Filters."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
+
 from __future__ import annotations
 
 import csv
@@ -34,9 +37,9 @@ if TYPE_CHECKING:
     from .jobs import JobBase
 
 try:
-    from bs4 import BeautifulSoup
+    import bs4
 except ImportError:  # pragma: has-bs4
-    BeautifulSoup = None
+    bs4 = None
 
 try:
     import cssbeautifier
@@ -73,6 +76,7 @@ try:
 except ImportError:
     vobject = None
 
+from ._vendored.packaging_version import parse as parse_version
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +159,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
             filtercls = cls.__subclasses__.get(filter_kind, None)
 
             if filtercls is None:
-                raise ValueError(f'Unknown filter kind: {filter_kind} (subfilter {subfilter})')
+                raise ValueError(f'Unknown filter kind: {filter_kind} (subfilter: {subfilter})')
 
             if getattr(filtercls, '__no_subfilter__', False) and subfilter:
                 raise ValueError(f'No subfilters supported for {filter_kind}')
@@ -345,7 +349,9 @@ class BeautifyFilter(FilterBase):
 
     __kind__ = 'beautify'
 
-    __no_subfilter__ = True
+    __supported_subfilters__ = {'indent': 'Number of spaces by which to indent HTML output.'}
+
+    __default_subfilter__ = 'indent'
 
     def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
         """Filter (process) the data.
@@ -354,13 +360,13 @@ class BeautifyFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The filtered (processed) data.
         """
-        if BeautifulSoup is None:
+        if bs4 is None:
             raise ImportError(
                 f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}' "
                 f'filter ({self.job.get_indexed_location()})'
             )
 
-        soup = BeautifulSoup(data, features='lxml')
+        soup = bs4.BeautifulSoup(data, features='lxml')
 
         if jsbeautifier is None:
             logger.warning(
@@ -386,7 +392,11 @@ class BeautifyFilter(FilterBase):
                     beautified_css = cssbeautifier.beautify(style.string)
                     style.string = beautified_css
 
-        return soup.prettify()
+        if parse_version(bs4.__version__) >= parse_version('4.11'):
+            indent = subfilter['indent']
+            return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent))
+        else:
+            return soup.prettify()
 
 
 class Html2TextFilter(FilterBase):
@@ -473,14 +483,14 @@ class Html2TextFilter(FilterBase):
             return parser.handle(data)
 
         elif method == 'bs4':
-            if BeautifulSoup is None:
+            if bs4 is None:
                 raise ImportError(
                     f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}: "
                     f"{method}' filter ({self.job.get_indexed_location()})"
                 )
 
             bs4_parser: str = options.pop('parser', 'lxml')
-            soup = BeautifulSoup(data, bs4_parser)
+            soup = bs4.BeautifulSoup(data, bs4_parser)
             separator: str = options.pop('separator', '')
             strip: bool = options.pop('strip', False)
             return soup.get_text(separator=separator, strip=strip)
@@ -889,10 +899,10 @@ class StripFilter(FilterBase):
             return data.strip(subfilter.get('chars'))
 
 
-class StripEachLineFilter(FilterBase):
+class StripLinesFilter(FilterBase):
     """Deprecated; use ``strip`` with subfilter ``splitlines`` instead."""
 
-    __kind__ = 'strip_each_line'
+    __kind__ = 'striplines'
 
     __no_subfilter__ = True
 

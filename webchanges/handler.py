@@ -1,5 +1,7 @@
 """Handles the running of jobs and, afterwards, of the reports."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 from __future__ import annotations
 
 import difflib
@@ -21,14 +23,20 @@ from .jobs import NotModifiedError
 from .reporters import ReporterBase
 
 try:
+    from deepdiff import DeepDiff
+except ImportError:
+    DeepDiff = None  # type: ignore[no-redef]
+
+try:
+    import xmltodict
+except ImportError:
+    xmltodict = None  # type: ignore[no-redef]
+
+try:
     from zoneinfo import ZoneInfo  # not available in Python < 3.9
 except ImportError:
     from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
 
-try:
-    from deepdiff import DeepDiff
-except ImportError:
-    DeepDiff = None  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -56,6 +64,7 @@ class JobState(ContextManager):
     new_etag: str
     error_ignored: Union[bool, str] = False
     _generated_diff: Optional[str] = None
+    _generated_diff_html: Optional[str] = None
 
     def __init__(self, cache_storage: CacheStorage, job: JobBase, playwright: Any = None) -> None:
         """
@@ -69,7 +78,7 @@ class JobState(ContextManager):
 
     def __enter__(self) -> 'JobState':
         """Context manager invoked on entry to the body of a with statement to make it possible to factor out standard
-        uses of try/finally statements. Calls the main_thread_enter() method of the Job.
+        uses of try/finally statements. Calls the main_threa_enter() method of the Job.
 
         :returns: Class object.
         """
@@ -126,7 +135,7 @@ class JobState(ContextManager):
             etag=self.new_etag,
         )
 
-    def process(self) -> 'JobState':
+    def process(self, headless: bool = True) -> 'JobState':
         """Processes the job: loads it (i.e. runs it) and handles Exceptions (errors).
 
         :returns: a JobState object containing information of the job run.
@@ -141,7 +150,7 @@ class JobState(ContextManager):
                 self.load()
 
                 self.new_timestamp = time.time()
-                data, self.new_etag = self.job.retrieve(self)
+                data, self.new_etag = self.job.retrieve(self, headless)
 
                 # Apply automatic filters first
                 filtered_data = FilterBase.auto_process(self, data)
@@ -196,7 +205,26 @@ class JobState(ContextManager):
 
         return self._generated_diff
 
-    def _generate_diff(self, tz: Optional[str] = None) -> str:
+    def get_diff_html(self, tz: Optional[str] = None) -> str:
+        """Generates the job's HTML diff and applies diff_filters to it (if any). Memoized.
+
+        :parameter tz: The IANA tz_info name of the timezone to use for diff in the job's report (e.g. 'Etc/UTC').
+        :returns: The job's diff.
+        """
+        # Must be initialized as None
+        if self._generated_diff_html is not None:
+            return self._generated_diff_html
+
+        _generated_diff_html = self._generate_diff(tz, html_out=True)
+        if _generated_diff_html:
+            # Apply any specified diff_filters
+            for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.diff_filter):
+                _generated_diff_html = FilterBase.process(filter_kind, subfilter, self, _generated_diff_html)
+        self._generated_diff_html = _generated_diff_html
+
+        return self._generated_diff_html
+
+    def _generate_diff(self, tz: Optional[str] = None, html_out: bool = False) -> str:
         """Generates the job's diff.
 
         :parameter tz: The IANA tz_info name of the timezone to use for diff in the job's report (e.g. 'Etc/UTC') (
@@ -228,29 +256,60 @@ class JobState(ContextManager):
                         f' ({self.job.get_indexed_location()})'
                     )
 
-                def _pretty(diff: DeepDiff) -> str:
+                def _pretty_deepdiff(diff: DeepDiff, html_out: bool = False) -> str:
                     """
                     Customized version of deepdiff.base.pretty() edited to add the values deleted or added.
                     The pretty human readable string output for the diff object
                     regardless of what view was used to generate the diff.
                     """
 
-                    PRETTY_FORM_TEXTS = {
-                        'type_changes': (
-                            'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
-                            'from {val_t1} to {val_t2}.'
-                        ),
-                        'values_changed': 'Value of {diff_path} changed from {val_t1} to {val_t2}.',
-                        'dictionary_item_added': 'Item {diff_path} added to dictionary as {val_t2}.',
-                        'dictionary_item_removed': 'Item {diff_path} removed from dictionary (was {val_t1}).',
-                        'iterable_item_added': 'Item {diff_path} added to iterable as {val_t2}.',
-                        'iterable_item_removed': 'Item {diff_path} removed from iterable (was {val_t1}).',
-                        'attribute_added': 'Attribute {diff_path} added as {val_t2}.',
-                        'attribute_removed': 'Attribute {diff_path} removed (was {val_t1}).',
-                        'set_item_added': 'Item root[{val_t2}] added to set as {val_t1}.',
-                        'set_item_removed': 'Item root[{val_t1}] removed from set (was {val_t2}).',
-                        'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
-                    }
+                    if html_out:
+                        added = '<span style="background-color:#d1ffd1;color:#082b08">'
+                        delte = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">'
+                        PRETTY_FORM_TEXTS = {
+                            'type_changes': (
+                                'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
+                                f'from {delte}{{val_t1}}</span> to {added}{{val_t2}}</span>.'
+                            ),
+                            'values_changed': (
+                                f'Value of {{diff_path}} changed from {delte}{{val_t1}}</span> to {added}{{val_t2}}'
+                                f'</span>.'
+                            ),
+                            'dictionary_item_added': (
+                                f'Item {{diff_path}} added to dictionary as {added}{{val_t2}}</span>.'
+                            ),
+                            'dictionary_item_removed': (
+                                f'Item {{diff_path}} removed from dictionary (was {delte}{{val_t1}}</span>).'
+                            ),
+                            'iterable_item_added': f'Item {{diff_path}} added to iterable as {added}{{val_t2}}</span>.',
+                            'iterable_item_removed': (
+                                f'Item {{diff_path}} removed from iterable (was {delte}{{val_t1}}</span>).'
+                            ),
+                            'attribute_added': f'Attribute {{diff_path}} added as {added}{{val_t2}}</span>.',
+                            'attribute_removed': f'Attribute {{diff_path}} removed (was {delte}{{val_t1}}</span>).',
+                            'set_item_added': f'Item root[{{val_t2}}] added to set as {added}{{val_t1}}</span>.',
+                            'set_item_removed': (
+                                f'Item root[{{val_t1}}] removed from set (was {delte}{{val_t2}}</span>).'
+                            ),
+                            'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
+                        }
+                    else:
+                        PRETTY_FORM_TEXTS = {
+                            'type_changes': (
+                                'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
+                                'from {val_t1} to {val_t2}.'
+                            ),
+                            'values_changed': 'Value of {diff_path} changed from {val_t1} to {val_t2}.',
+                            'dictionary_item_added': 'Item {diff_path} added to dictionary as {val_t2}.',
+                            'dictionary_item_removed': 'Item {diff_path} removed from dictionary (was {val_t1}).',
+                            'iterable_item_added': 'Item {diff_path} added to iterable as {val_t2}.',
+                            'iterable_item_removed': 'Item {diff_path} removed from iterable (was {val_t1}).',
+                            'attribute_added': 'Attribute {diff_path} added as {val_t2}.',
+                            'attribute_removed': 'Attribute {diff_path} removed (was {val_t1}).',
+                            'set_item_added': 'Item root[{val_t2}] added to set as {val_t1}.',
+                            'set_item_removed': 'Item root[{val_t1}] removed from set (was {val_t2}).',
+                            'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
+                        }
 
                     def _pretty_print_diff(diff: DeepDiff) -> str:
                         type_t1 = type(diff.t1).__name__
@@ -287,22 +346,37 @@ class JobState(ContextManager):
 
                     return '\n'.join(result)
 
-                data_type = self.job.diff_tool.split()[1] if len(self.job.diff_tool.split()) > 1 else 'json'
+                data_type = self.job.diff_tool.split('-')[1] if len(self.job.diff_tool.split('-')) > 1 else 'json'
                 if data_type == 'json':
-                    old_data = json.loads(self.old_data)
+                    try:
+                        old_data = json.loads(self.old_data)
+                    except json.JSONDecodeError:
+                        old_data = ''
                     new_data = json.loads(self.new_data)
+                elif data_type == 'xml':
+                    if xmltodict is None:
+                        raise ImportError(
+                            f"Python package 'xmltodict' is not installed; cannot use 'diff_tool: {self.job.diff_tool}'"
+                            f' ({self.job.get_indexed_location()})'
+                        )
+                    old_data = xmltodict.parse(self.old_data)
+                    new_data = xmltodict.parse(self.new_data)
                 else:
                     raise NotImplementedError(
                         f"data_type '{data_type}' is not supported by 'diff_tool: deepdiff'"
                         f' ({self.job.get_indexed_location()})'
                     )
                 diff = DeepDiff(old_data, new_data, verbose_level=2)
+                diff_text = _pretty_deepdiff(diff, html_out)
+                if not diff_text:
+                    self.verb = 'changed,no_report'
+                    return ''
                 head = (
                     f'Using {self.job.diff_tool}\n'
                     f'Old: {timestamp_old}\n'
                     f'New: {timestamp_new}\n' + '-' * 36 + '\n'
                 )
-                return head + _pretty(diff)
+                return head + diff_text
 
             else:
                 # External diff tool
@@ -341,6 +415,9 @@ class JobState(ContextManager):
                 lineterm='',
             )
         )
+        if not diff:
+            self.verb = 'changed,no_report'
+            return ''
         diff[0] = diff[0].replace('\t', ' ')
         diff[1] = diff[1].replace('\t', ' ')
         if self.job.additions_only:
@@ -451,6 +528,7 @@ class Report(object):
         :py:func:`UrlwatchCommand.check_test_reporter`.
 
         :param job_state: The JobState object with the information of the job run.
+        :param label: The label to set the information of the job run to.
         """
         self._result(label, job_state)
 
@@ -463,7 +541,7 @@ class Report(object):
         for job_state in job_states:
             if (
                 not any(
-                    job_state.verb == verb and not self.config['display'][verb]  # type: ignore[misc]
+                    job_state.verb == verb and not self.config['display'][verb]  # type: ignore[literal-required]
                     for verb in ('unchanged', 'new', 'error')
                 )
                 and job_state.verb != 'changed,no_report'

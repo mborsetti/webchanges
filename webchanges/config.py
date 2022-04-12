@@ -1,5 +1,7 @@
 """Command-line configuration."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 import argparse
 import os
 from pathlib import Path
@@ -28,7 +30,8 @@ class BaseConfig(object):
         :param config: The path of the configuration file.
         :param jobs: The path of the jobs file.
         :param hooks: The path of the Python hooks file.
-        :param cache: The path of the snapshots database file.
+        :param cache: The path of the database file (or directory if using the textfiles database-engine) where
+           snapshots are stored.
         """
         self.project_name = project_name
         self.config_path = config_path
@@ -43,6 +46,7 @@ class CommandConfig(BaseConfig):
 
     def __init__(
         self,
+        args: List[str],
         project_name: str,
         config_path: Path,
         config: Path,
@@ -50,14 +54,15 @@ class CommandConfig(BaseConfig):
         hooks: Path,
         cache: Union[str, Path],
     ) -> None:
-        """
+        """Command line arguments configuration; the arguments are stored as class attributes.
 
         :param project_name: The name of the project.
         :param config_path: The path of the configuration directory.
         :param config: The path of the configuration file.
         :param jobs: The path of the jobs file.
         :param hooks: The path of the Python hooks file.
-        :param cache: The path of the snapshots database file.
+        :param cache: The path of the database file (or directory if using the textfiles database-engine) where
+           snapshots are stored.
         """
         super().__init__(project_name, config_path, config, jobs, hooks, cache)
         self.joblist: Optional[List[int]] = None
@@ -65,7 +70,9 @@ class CommandConfig(BaseConfig):
         self.list: bool = False
         self.errors: bool = False
         self.test_job: Optional[str] = None
+        self.no_headless: bool = False
         self.test_diff: Optional[str] = None
+        self.dump_history: Optional[str] = None
         self.add: Optional[str] = None
         self.delete: Optional[str] = None
         self.test_reporter: Optional[str] = None
@@ -86,10 +93,10 @@ class CommandConfig(BaseConfig):
         self.install_chrome: bool = False
         self.log_level: str = 'DEBUG'
 
-        self.parse_args()
+        self.parse_args(args)
 
-    def parse_args(self) -> argparse.ArgumentParser:
-        """Set up the Python arguments parser.
+    def parse_args(self, cmdline_args: List[str]) -> argparse.ArgumentParser:
+        """Set up the Python arguments parser and stores the arguments in the class's variables.
 
         :returns: The Python arguments parser.
         """
@@ -146,11 +153,21 @@ class CommandConfig(BaseConfig):
             dest='test_job',
         )
         group.add_argument(
+            '--no-headless',
+            action='store_true',
+            help='turn off browser headless mode (for jobs using a browser)',
+        )
+        group.add_argument(
             '--test-diff',
             '--test-diff-filter',
             help='test and show diff using existing saved snapshots of a job (by index or URL/command)',
             metavar='JOB',
             dest='test_diff',
+        )
+        group.add_argument(
+            '--dump-history',
+            help='print all saved snapshot history for a job (by index or URL/command)',
+            metavar='JOB',
         )
         group.add_argument(
             '--add',
@@ -235,7 +252,7 @@ class CommandConfig(BaseConfig):
 
         # workaround for avoiding triggering error when invoked by pytest
         if parser.prog != '_jb_pytest_runner.py' and not os.getenv('CI'):
-            args = parser.parse_args()
+            args = parser.parse_args(cmdline_args)
 
             for arg in vars(args):
                 argval = getattr(args, arg)

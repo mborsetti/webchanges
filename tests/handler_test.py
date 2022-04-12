@@ -108,7 +108,7 @@ def test_run_watcher_sqlite3():
     jobs_storage = YamlJobsStorage(jobs_file)
     cache_storage = CacheSQLite3Storage(cache_file)
     try:
-        urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file)
+        urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
         urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:
@@ -123,7 +123,7 @@ def test_run_watcher_minidb():
     jobs_storage = YamlJobsStorage(jobs_file)
     cache_storage = CacheMiniDBStorage(cache_file)
     try:
-        urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file)
+        urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
         urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:
@@ -137,7 +137,7 @@ def prepare_retry_test_sqlite3():
     cache_storage = CacheSQLite3Storage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
 
-    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     return urlwatcher, cache_storage
@@ -216,7 +216,7 @@ def prepare_retry_test_minidb():
     cache_storage = CacheMiniDBStorage(cache_file)
     jobs_storage = YamlJobsStorage(jobs_file)
 
-    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     return urlwatcher, cache_storage

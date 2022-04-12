@@ -177,6 +177,8 @@ within the *torsocks* wrapper:
 
    torsocks webchanges
 
+
+
 .. _custom_diff:
 
 Customized diffing
@@ -229,6 +231,30 @@ You can more finely control the output of ``wdiff`` with command line arguments;
    If you use an ``html`` report with ``diff_tool: wdiff``, the output of ``wdiff`` will be colorized.
 
 Note: the use of an external differ will override the ``diff`` setting of the ``html`` report.
+
+
+
+Creating a separate notification for each change
+------------------------------------------------
+Currently this cannot be done natively.
+
+However, iterating over the list of jobs one by one with something like ``for i in {1..30}; do urlwatch $i; done``
+(Linux) would achieve this but at the loss of parallelism; the function is documented :ref:`here <job_subset>`. The
+current list of jobs including indexes can be printed with ``--list``.
+
+
+Using environment variables in URLs
+-----------------------------------
+Currently this cannot be done natively.
+
+However, as a workaround you can use a job with a :ref:command to invoke e.g. ``curl`` or ``wget`` which in turn reads
+the environment variable. Example:
+
+.. code-block:: yaml
+
+   command: wget https://www.example.com/test?resource=$RESOURCE
+
+
 
 .. _pyppeteer:
 
@@ -393,3 +419,43 @@ or like this in the config file for all ``use_browser: true`` jobs:
          - font
          - image
          - media
+
+
+Under the hood
+--------------
+
+Parallelism
+^^^^^^^^^^^
+All jobs are run in parallel threads for optimum speed.
+
+If there are no jobs to run that have ``use_browser: true``, then the default number of threads is the default one from
+Python's `concurrent.futures.ThreadPoolExecutor
+<https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`__, which is currently
+set to the number of processors on the machine multiplied by 5.
+
+If at least one of the jobs has ``use_browser: true``, and therefore Pyppetter must be run, the upper limit is set by
+the lower of the number of processors on the machine or, if known, the sum of available virtual memory and swap memory
+divided by 140 MB.
+
+
+Use of headers when determining if a webpage has changed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Once a website (``url``) has been checked once, any subsequent checks will be made as a conditional request by setting
+the HTTP headers ``If-Modified-Since`` and, if an ETag was returned, the ``If-None-Match``.
+
+The conditional request is an optimization to speed up execution since if there are no changes the server doesn't need
+to send the document but just a 304 HTTP response code, which :program:webchanges: interprets as indicating that there
+were no changes to the resource.
+
+With the ``If-Modified-Since`` request HTTP header the server sends back the requested resource, with a 200 status, only
+if it has been last modified after the given date. If the resource has not been modified since, the response is a 304
+without any body; the Last-Modified response header of a previous request contains the date of last modification.
+
+With the ``If-None-Match HTTP`` request HTTP header, for GET and HEAD methods, the server will return the requested
+resource, with a 200 status, only if it doesn't have an ETag matching the given ones. For other methods, the request
+will be processed only if the eventually existing resource's ETag doesn't match any of the values listed. When the
+condition fails for GET and HEAD methods, then the server must return HTTP status code 304 (Not Modified). The
+comparison with the stored ETag uses the weak comparison algorithm, meaning two files are considered identical if the
+content is equivalent — they don't have to be identical byte by byte. For example, two pages that differ by their
+creation date in the footer would still be considered identical. When used in combination with ``If-Modified-Since``,
+``If-None-Match`` has precedence (if the server supports it).

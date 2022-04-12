@@ -1,5 +1,7 @@
 """The worker that runs jobs in parallel.  Called from main.py."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 from __future__ import annotations
 
 import logging
@@ -78,7 +80,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             urlwatcher.report.new_release_future = executor.submit(urlwatcher.get_new_release_version)
 
         for job_state in executor.map(
-            lambda jobstate: jobstate.process(),
+            lambda jobstate: jobstate.process(headless=not urlwatcher.urlwatch_config.no_headless),
             (stack.enter_context(JobState(cache_storage, job)) for job in jobs),
         ):
 
@@ -171,9 +173,9 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         "'_beta_use_playwright: true'. Please install dependencies with 'pip install webchanges["
                         "playwright]'."
                     )
-                avail_vm = psutil.virtual_memory().available + psutil.swap_memory().free
-                logger.debug(f'Found {avail_vm:,} in available virtual + swap memory')
-                max_workers = min(32, max(1, int(avail_vm / 140e6)), os.cpu_count() or 1)
+                avail_mem = psutil.virtual_memory().available + psutil.swap_memory().free
+                logger.debug(f'Found {avail_mem:,} in available virtual + swap memory')
+                max_workers = min(32, max(1, int(avail_mem / 140e6)), os.cpu_count() or 1)
             else:
                 max_workers = min(32, os.cpu_count() or 1)
             logger.debug(f"Running 'use_browser: true' jobs in parallel with {max_workers} max_workers")

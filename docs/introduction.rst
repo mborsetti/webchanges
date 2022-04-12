@@ -36,7 +36,9 @@ It can be edited with any text editor or using the following command:
    If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment
    variable in your shell to the path to your editor with a command such as ``export EDITOR=nano``.
 
-For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.
+For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.  Some gotchas include that indentation is mandatory,
+spaces (and not tabs!) must be used for such indentation, and there must be a space after a colon separating a key from
+its value.
 
 For examples of jobs, see :ref:`here <watching_sites>`.
 

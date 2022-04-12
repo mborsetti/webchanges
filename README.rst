@@ -11,8 +11,7 @@ webchanges
 
 **webchanges** checks web content and notifies you via e-mail (or one of many other supported services) if a change is
 detected. **webchanges** can also check the output of local commands. The notification includes the changed URL or
-command and a summary of what has changed. This project is a fork of `urlwatch <https://github.com/thp/urlwatch>`__ as
-suggested by its author to optimize it for HTML.
+command and a summary of what has changed.
 
 **webchanges** *anonymously* alerts you of webpage changes.
 
@@ -22,9 +21,9 @@ Requirements
 ============
 **webchanges** requires |support|.
 
-You should use the latest version of `Python <https://www.python.org/downloads/>`__ if possible. If you’re using an
-older version, be aware that for each minor version (3.x), only the latest bugfix release (3.x.y) is supported. Older
-Python versions are supported for 3 years beyond being obsoleted by a new major release.
+You should use the latest version of `Python <https://www.python.org/downloads/>`__ if possible, but older
+Python versions are supported for 3 years after being obsoleted by a new major release (3.x). For each major release,
+only the latest bugfix version (3.x.y) is supported.
 
 
 Installation
@@ -104,15 +103,15 @@ License
 
 Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but including code licensed under the
 `BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`__. See the full license `here
-<https://github.com/mborsetti/webchanges/blob/main/COPYING>`__.
+<https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
 
 
-Improvements from **urlwatch**
-==============================
+Compatibility with **urlwatch**
+================================
 
-You can seamlessly upgrade from **urlwatch** 2.23 (see `here
-<https://webchanges.readthedocs.io/en/stable/migration.html>`__) and benefit from many HTML-focused improvements,
-including:
+This project is based on code of`urlwatch <https://github.com/thp/urlwatch>`__ 2.21 and you can easily upgrade from
+**urlwatch** 2.25 (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__) using the same job and
+configuration files and benefit from many HTML-focused improvements, including:
 
 * Report links that are `clickable <https://pypi.org/project/webchanges/>`__!
 * Original formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and

@@ -237,13 +237,13 @@ def test_reporters(reporter, capsys):
         with pytest.raises(MatrixError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
-    elif reporter == 'webhook':
+    elif reporter in ('webhook', 'discord'):
         with pytest.raises(MissingSchema) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == "Invalid URL '': No scheme supplied. Perhaps you meant http://?"
     elif reporter == 'run_command':
         if os.getenv('GITHUB_ACTIONS'):
-            pytest.skip('Triggers exit code 141 in GitHub Actions')
+            pytest.skip('Test triggers exit code 141 in GitHub Actions')
             return
         with pytest.raises(ValueError) as pytest_wrapped_e:
             report.finish_one(reporter, check_enabled=False)

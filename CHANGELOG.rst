@@ -30,58 +30,72 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
-Version 3.9.1
-===================
-2022-01-27
+⚠ 3.9.2 is last release using Pyppeteer
+=======================================
+Release 3.10, forthcoming hopefully in a few weeks, will replace Pyppeteer with Playwright.
 
-⚠ Breaking changes in the near future
--------------------------------------
+⚠ Breaking changes in next release (3.10)
+=========================================
 Pyppeteer will be replaced with Playwright (can opt in now!)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------------------------------
 The implementation of ``use_browser: true`` jobs (i.e. those running on a browser to run JavaScript) using Pyppeteer
 has been very problematic, as the library:
 
 * is in alpha,
 * is very slow,
 * defaults to years-old obsolete versions of Chromium,
-* can be insecure (found that TLS certificates were disabled for downloading browsers!)
-* creates conflicts with imports (e.g. requires obsolete version of websockets)
+* can be insecure (e.g. found that TLS certificates were disabled for downloading browsers!),
+* creates conflicts with imports (e.g. requires obsolete version of websockets),
 * is poorly documented,
 * is poorly maintained,
 * and freezes when running it in the current version of Python (3.10)!
 
-Pyppeteer's `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 110.
+Pyppeteer's `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 125.
 
 As a result, I have been investigating a substitute, and found one in `Playwright
-<https://playwright.dev/python/>`__. This package has none of the issues above, the core dev team apparently is the same
-who wrote Puppetter (of which Pyppeteer is a port to Python), and is supported by the deep pockets of Microsoft. The
-Python version is officially supported and up-to-date and we can easily use the latest stable version of Google Chrome
-with it without mocking around with setting chromium_revisions.
+<https://playwright.dev/python/>`__.
+
+This package has none of the issues above, the core dev team apparently is the same who wrote Puppetter (of which
+Pyppeteer is a port to Python), and is supported by the deep pockets of Microsoft. The Python version is officially
+supported and up-to-date, and it easily uses the latest stable version of Google Chrome without mocking around with
+manually setting chromium_revisions.
 
 You can upgrade to Playwright now!
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The Playwright implementation in this release of **webchanges** is extremely stable, fully tested (even on Python
-3.10!), and much faster than Pyppeteer (some of my jobs are running 3x faster!). While it's probably production
-quality, for the moment it is being released as an opt-in beta only.
+----------------------------------
+A Playwright implementation was released with version 3.9.0 of **webchanges** and it is extremely stable, fully
+tested (even on Python 3.10), and much faster than Pyppeteer (some of my jobs are running 3x faster!).
+
+As of this release it's production quality, but for the moment it is being released as an opt-in beta only as the
+documentation isn't fully ready yet (all job sub-directives works as they are with the exception of ``wait_for``,
+documented below).
+
+The Playwright implementation also runs faster than Pyppeteer on machines with lots of memory and is more stable on
+small ones not only due to Playwright's advantages, but also because the maximum number of jobs that **webchanges** runs
+in parallel is now determined based on the amount of free memory available in addition to the number of processors.
 
 I urge you to switch to Playwright. To do so:
 
-Ensure that you have at least Python 3.8 (not tested in 3.7 due to testing limitations).
+1) Ensure that you have at least Python 3.8 (it may work in 3.7, but is not tested due to limitations in the test
+   framework);
 
-Install dependencies::
+2) Install dependencies:
+
+.. code-block:: bash
 
    pip install --upgrade webchanges[playwright]
 
-Ensure you have an up-to-date Chrome installation::
+3) Ensure you have an up-to-date Chrome installation:
+
+.. code-block:: bash
 
    webchanges --install-chrome
 
-Edit your configuration file...::
+4) Edit your configuration file to add ``_beta_use_playwright: true`` (note the leading underline) under the ``browser``
+   section of ``job_defaults``:
+
+.. code-block:: bash
 
    webchanges --edit-config
-
-to add ``_beta_use_playwright: true`` (note the leading underline) under the ``browser`` section of ``job_defaults``,
- like this:
 
 .. code-block:: yaml
 
@@ -89,20 +103,21 @@ to add ``_beta_use_playwright: true`` (note the leading underline) under the ``b
      browser:
          _beta_use_playwright: true
 
-That's it!
+5) That's it!
 
 All job sub-directives works as they are, with only two minor exceptions:
 
 * ``wait_for`` needs to be replaced with either ``wait_for_selector`` (see more `here
   <https://playwright.dev/python/docs/api/class-frame/#frame-wait-for-function>`__) or ``wait_for_function`` (see
   more `here <https://playwright.dev/python/docs/api/class-frame/#frame-wait-for-function>`__).
-  These can still be strings (in which case they will be either the selector or the expression) but also dicts with
-  arguments accepted by those functions (except for timeout, which is set by the ``timeout`` sub-directory).
-* The experimental ``block_elements`` sub-directive is not implemented (yet?) and is simply ignored.
+  These can still be strings (either a selector or an expression) but now can also be dicts with
+  arguments accepted by those functions as per the Playwright documentation linked above.  Note however that timeout
+  can only be set by the ``timeout`` sub-directive.
+* The experimental ``block_elements`` sub-directive is not implemented (yet?) in Playwright and is ignored.
 
 The following sub-directives are new:
 
-* ``referer``: Referer header value. If provided it will take preference over the referer header value set by the
+* ``referer``: Referer header value. If provided, it will take preference over the referer header value set by the
   ``headers`` sub-directive.
 * ``headless`` (true/false): Launch browser in headless mode (i.e. invisible) (defaults to true). Set it to false to see
   what's going on in the browser for debugging purposes.
@@ -110,117 +125,85 @@ The following sub-directives are new:
 Please make sure to open a GitHub `issue <https://github.com/mborsetti/webchanges/issues>`__ if you encounter
 anything wrong!
 
-If you decide to stick with Playwright, you can free up disk space (if no other package uses Pyppeteer) by removing
-the downloaded Chromium by deleting the *directory* shown by running::
+If you decide to stick with Playwright, you can free up disk space (if no other package uses Pyppeteer) by, in order:
+
+1) removing the downloaded Chromium images by deleting the *directory* shown by running:
+
+.. code-block:: bash
 
    webchanges --chromium-directory
 
-and uninstalling the Pyppeteer package by running::
+2) uninstalling the Pyppeteer package by running:
+
+.. code-block:: bash
 
    pip uninstall pyppeteer
 
-The Playwright implementation also determines the maximum number of jobs to run in parallel based on the amount of free
-memory available, which seems to be the relevant constraint, and this will make **webchanges** faster on machines with
-lots of memory and more stable on small ones.
+
+Version 3.9.2rc0
+===================
+Unreleased
+
+⚠ Last release using Pyppeteer
+------------------------------
+* This is the last release using Pyppeteer for jobs with ``use_browser: true``, which will be replaced by Playwright
+  in release 9.10, forthcoming hopefully in a few weeks. See above for more information on how to prepare now -- and
+  start using Playwright now.
+
+Added
+-----
+* New ``ignore_dh_key_too_small`` directive for URL jobs to overcome the ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh key
+  too small (_ssl.c:1129)`` error.
+* New ``indent`` sub-directive for the ``beautify`` filter (requires BeautifulSoup version 4.11.0 or later).
+* New ``--dump-history JOB`` command line argument to print all saved snapshot history for a job.
+* Playwright only: new``--no-headless`` command line argument to help with debugging and testing (e.g. run
+  ``webchanges --test 1 --no-headless``).  Not available for Pyppeteer.
+* Extracted Discord reporting from ``webhooks`` into its own ``discord`` reporter to fix it not working and to
+  add embedding functionality as well as color (contributed by `Michał Ciołek  <https://github.com/michalciolek>`__
+  `upstream <https://github.com/thp/urlwatch/issues/683>`__. Reported by `jprokos <https://github.com/jprokos>`__` in
+  `#33 <https://github.com/mborsetti/webchanges/issues/33>`__.
+
+Fixed
+-----
+* We are no longer rewriting to disk the entire database at every run. Now it's only rewritten if there are changes
+  (and minimally) and, obviously, when running with the ``--gc-cache`` or ``--clean-cache`` command line argument.
+  Reported by `JsBergbau <https://github.com/JsBergbau>`__ `upstream <https://github.com/thp/urlwatch/issues/690>`__.
+  Also updated documentation suggesting to run ``--clean-cache`` or ``--gc-cache`` periodically.
+* A ValueError is no longer raised if an unknown directive is found in the configuration file, but a Warning is
+  issued instead. Reported by `c0deing <https://github.com/c0deing>`__ in `#26
+  <https://github.com/mborsetti/webchanges/issues/26>`__.
+* The ``kind`` job directive (used for custom job classes in ``hooks.py``) was undocumented and not fully functioning.
+* For jobs with ``use_browser: true`` and a ``switch`` directive containing ``--window-size``, turn off Playwright's
+  default fixed viewport (of 1280x720) as it overrides ``--window-size``.
+* Email headers ("From:", "To:", etc.) now have title case per RFC 2076. Reported by `fdelapena
+  <https://github.com/fdelapena>`__ in `#29 <https://github.com/mborsetti/webchanges/issues/29>`__.
+* Updated licensing file to `GitHub naming standards
+  <https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository>`__
+  and updated its contents to more clearly state that this software redistributes source code of release 2.21
+  of urlwatch (https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f), retaining its license,
+  which is distributed as part of the source code.
+
+Documentation
+-------------
+* Added warnings for Windows users to run Python in UTF-8 mode. Reported by `Knut Wannheden
+  <https://github.com/knutwannheden>`__ in `#25 <https://github.com/mborsetti/webchanges/issues/25>`__.
+* Added suggestion to run ``--clean-cache`` or ``--gc-cache`` periodically to compact the database file.
+* Continued improvements.
+
+
+Version 3.9.1
+===================
+2022-01-27
 
 Fixed
 -----
 * Config file directives checker would incorrect reject reports added through ``hooks.py``. Reported by `Knut Wannheden
-  <https://github.com/knutwannheden>`__ at `#24 <https://github.com/mborsetti/webchanges/issues/24>`__.
+  <https://github.com/knutwannheden>`__ in `#24 <https://github.com/mborsetti/webchanges/issues/24>`__.
 
 
 Version 3.9
 ===================
 2022-01-26
-
-⚠ Breaking changes in the near future
--------------------------------------
-Pyppeteer will be replaced with Playwright (can opt in now!)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The implementation of ``use_browser: true`` jobs (i.e. those running on a browser to run JavaScript) using Pyppeteer
-has been very problematic, as the library:
-
-* is in alpha,
-* is very slow,
-* defaults to years-old obsolete versions of Chromium,
-* can be insecure (found that TLS certificates were disabled for downloading browsers!)
-* creates conflicts with imports (e.g. requires obsolete version of websockets)
-* is poorly documented,
-* is poorly maintained,
-* and freezes when running it in the current version of Python (3.10)!
-
-Pyppeteer's `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 110.
-
-As a result, I have been investigating a substitute, and found one in `Playwright
-<https://playwright.dev/python/>`__. This package has none of the issues above, the core dev team apparently is the same
-who wrote Puppetter (of which Pyppeteer is a port to Python), and is supported by the deep pockets of Microsoft. The
-Python version is officially supported and up-to-date and we can easily use the latest stable version of Google Chrome
-with it without mocking around with setting chromium_revisions.
-
-You can upgrade to Playwright now!
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The Playwright implementation in this release of **webchanges** is extremely stable, fully tested (even on Python
-3.10!), and much faster than Pyppeteer (some of my jobs are running 3x faster!). While it's probably production
-quality, for the moment it is being released as an opt-in beta only.
-
-I urge you to switch to Playwright. To do so:
-
-Ensure that you have at least Python 3.8 (not tested in 3.7 due to testing limitations).
-
-Install dependencies::
-
-   pip install --upgrade webchanges[playwright]
-
-Ensure you have an up-to-date Chrome installation::
-
-   webchanges --install-chrome
-
-Edit your configuration file...::
-
-   webchanges --edit-config
-
-to add ``_beta_use_playwright: true`` (note the leading underline) under the ``browser`` section of ``job_defaults``,
- like this:
-
-.. code-block:: yaml
-
-   job_defaults:
-     browser:
-         _beta_use_playwright: true
-
-That's it!
-
-All job sub-directives works as they are, with only two minor exceptions:
-
-* ``wait_for`` needs to be replaced with either ``wait_for_selector`` (see more `here
-  <https://playwright.dev/python/docs/api/class-frame/#frame-wait-for-function>`__) or ``wait_for_function`` (see
-  more `here <https://playwright.dev/python/docs/api/class-frame/#frame-wait-for-function>`__).
-  These can still be strings (in which case they will be either the selector or the expression) but also dicts with
-  arguments accepted by those functions (except for timeout, which is set by the ``timeout`` sub-directory).
-* The experimental ``block_elements`` sub-directive is not implemented (yet?) and is simply ignored.
-
-The following sub-directives are new:
-
-* ``referer``: Referer header value. If provided it will take preference over the referer header value set by the
-  ``headers`` sub-directive.
-* ``headless`` (true/false): Launch browser in headless mode (i.e. invisible) (defaults to true). Set it to false to see
-  what's going on in the browser for debugging purposes.
-
-Please make sure to open a GitHub `issue <https://github.com/mborsetti/webchanges/issues>`__ if you encounter
-anything wrong!
-
-If you decide to stick with Playwright, you can free up disk space (if no other package uses Pyppeteer) by removing
-the downloaded Chromium by deleting the *directory* shown by running::
-
-   webchanges --chromium-directory
-
-and uninstalling the Pyppeteer package by running::
-
-   pip uninstall pyppeteer
-
-The Playwright implementation also determines the maximum number of jobs to run in parallel based on the amount of free
-memory available, which seems to be the relevant constraint, and this will make **webchanges** faster on machines with
-lots of memory and more stable on small ones.
 
 Changed
 -------
@@ -281,6 +264,7 @@ Known issues
   There will be no new development to fix this as the use of Pyppeteer will soon be deprecated in favor of Playwright.
   See above to start using Playwright now (highly suggested).
 
+
 Version 3.8.3
 ====================
 2021-08-29
@@ -292,6 +276,7 @@ Fixed
 Internals
 ---------
 * DictType hints for configuration.
+
 
 Version 3.8.2
 ====================
@@ -610,7 +595,7 @@ Added
   by `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
 * Filter ``jq`` to parse, transform, and extract ASCII JSON data. Contributed by `robgmills
   <https://github.com/robgmills>`__ upstream in PR `626 <https://github.com/thp/urlwatch/pull/626>`__.
-* Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with *urlwatch* 2.23)
+* Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with *urlwatch* 2.25)
 * Alert user when the jobs file contains unrecognized directives (e.g. typo)
 
 Changed
@@ -879,7 +864,7 @@ Version 3.0
 
 Milestone
 ---------
-Initial release of **webchanges** as a reworked fork of *urlwatch* 2.21
+Initial release of **webchanges**, based on reworking of code from *urlwatch* 2.21.
 
 Added
 -----

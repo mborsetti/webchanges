@@ -53,6 +53,7 @@
 
    contributing
    changelog
+   license
 
 .. see above for command to rebuild the API autodoc files
 

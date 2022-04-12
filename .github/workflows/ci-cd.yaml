@@ -5,9 +5,16 @@
 
 # Requires encrypted secret (see https://docs.github.com/en/actions/reference/encrypted-secrets) secrets.pypi_password
 
+# This file is automatically "updated" with PRs by the "pre-commit ci" app in GitHub https://pre-commit.ci; it is
+# currently scheduled weekly at approximately 16:00 UTC Monday.
+
 
 name: Test and deploy release
 on: [push, pull_request, workflow_dispatch]
+
+env:
+  FORCE_COLOR: 1
+  PYTHONUTF8: 1
 
 jobs:
   # Set the job key. The key is displayed as the job name
@@ -27,31 +34,25 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@main
         with:
-          python-version: '3.8'  # as per https://docs.readthedocs.io/en/stable/config-file/v2.html?#build-image
-
-      # Cache and reuse dependencies between runs
-      # https://docs.github.com/en/actions/guides/building-and-testing-python#caching-dependencies
-      - name: Cache
-        uses: actions/cache@main
-        with:
-          path: ~/.cache/pip
-          # Look to see if there is a cache hit for the corresponding requirements file
-          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-            ${{ runner.os }}-
+          python-version: '3.9'  # as per https://docs.readthedocs.io/en/stable/config-file/v2.html?#build-image
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            tests/requirements_pre-commit.txt
+            docs/requirements.txt
 
       # Install dependencies needed by the repo: local in .pre-commit-config.yaml
       - name: Install dependencies
         run: |
-          python -m pip install -U pip setuptools wheel
+          pip install -U pip setuptools wheel
           pip install -U -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
 
-      # Run pre-commit cache per https://github.com/pre-commit/action
-      - name: Run pre-commit
-        uses: pre-commit/action@v2.0.3
-        env:
-          PYTHONUTF8: 1
+      # The below has been replaced with the integration in GitHub of the "pre-commit ci" app https://pre-commit.ci
+      # # Run pre-commit cache per https://github.com/pre-commit/action
+      # - name: Run pre-commit
+      #   uses: pre-commit/action@v2.0.3
+      #   env:
+      #     PYTHONUTF8: 1
 
   test_linux:
     name: "Test ${{ matrix.python-version }} on ubuntu-latest"
@@ -95,21 +96,14 @@ jobs:
         uses: actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
-
-      # Cache and reuse dependencies between runs
-      # https://docs.github.com/en/actions/guides/building-and-testing-python#caching-dependencies
-      - name: Cache
-        uses: actions/cache@main
-        with:
-          path: ~/.cache/pip
-          # Look to see if there is a cache hit for the corresponding requirements file
-          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            tests/requirements_pytest.txt
 
       - name: Upgrade pip etc.
         run: |
-          python -m pip install -U pip setuptools wheel
+          pip install -U pip setuptools wheel
 
       - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
         # https://lxml.de/installation.html#installation
@@ -129,14 +123,12 @@ jobs:
 
       - name: Install all other dependencies
         run: |
-          pip install -U -r requirements.txt -r tests/requirements_pytest.txt coveralls
+          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
           python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
-        env:
-          PYTHONUTF8: 1
 
       - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
@@ -162,10 +154,6 @@ jobs:
         python-version: ['3.10', '3.9', '3.8', '3.7']
         include:
         - os: macos-latest
-          pipcachepath: ~/Library/Caches/pip
-#        - os: windows-latest  # TODO windows-latest: pytest hanging / freezing on 27-Jun-21
-#                              # https://github.com/pytest-dev/pytest/discussions/6349
-#          pipcachepath: ~\AppData\Local\pip\cache
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
@@ -181,21 +169,14 @@ jobs:
         uses: actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
-
-      # Cache and reuse dependencies between runs
-      # https://docs.github.com/en/actions/guides/building-and-testing-python#caching-dependencies
-      - name: Cache
-        uses: actions/cache@main
-        with:
-          path: ${{ matrix.pipcachepath }}
-          # Look to see if there is a cache hit for the corresponding requirements file
-          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            tests/requirements_pytest.txt
 
       - name: Upgrade pip etc.
         run: |
-          python -m pip install -U pip setuptools wheel
+          pip install -U pip setuptools wheel
 
       - name: Install wheel-less lxml for Python 3.10 (MacOS)
         # https://lxml.de/installation.html#installation
@@ -234,8 +215,6 @@ jobs:
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
           python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
-        env:
-          PYTHONUTF8: 1
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
@@ -244,8 +223,6 @@ jobs:
         run: >
           python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/ -p 
           no:faulthandler
-        env:
-          PYTHONUTF8: 1
 
       - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
@@ -278,11 +255,13 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@main
+        with:
+          cache: 'pip'
 
       # Install pip dependencies executing setup.py
       - name: Install dependencies
         run: |
-          python -m pip install -U pip setuptools wheel
+          pip install -U pip setuptools wheel
           pip install -U .
 
       # Only building wheel; otherwise run 'python setup.py sdist bdist_wheel'

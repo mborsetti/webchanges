@@ -18,10 +18,9 @@ import pytest
 from webchanges import __project_name__ as project_name
 from webchanges.config import CommandConfig
 from webchanges.handler import JobState
-from webchanges.jobs import (
+from webchanges.jobs import (  # DEFAULT_CHROMIUM_REVISION,
     BrowserJob,
     BrowserResponseError,
-    DEFAULT_CHROMIUM_REVISION,
     JobBase,
     NotModifiedError,
     ShellError,
@@ -31,13 +30,17 @@ from webchanges.jobs import (
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
-try:
-    from pyppeteer.chromium_downloader import current_platform
+# try:
+#     from pyppeteer.chromium_downloader import current_platform
+#
+#     chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
+# except ImportError:
+#     current_platform = None
+#     chromium_revision_num = None
 
-    chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
-except ImportError:
-    current_platform = None
-    chromium_revision_num = None
+# NOT TESTING Pypeteer
+current_platform = None
+chromium_revision_num = None
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +92,7 @@ TEST_JOBS = [
             },
             'ignore_cached': True,
             'ignore_connection_errors': False,
+            'ignore_dh_key_too_small': False,
             'ignore_http_error_codes': 200,
             'ignore_timeout_errors': False,
             'ignore_too_many_redirects': False,
@@ -100,25 +104,25 @@ TEST_JOBS = [
         },
         'Google',
     ),
-    (
-        {
-            'url': 'http://www.google.com/',
-            'name': 'testing url job with use_browser',
-            'use_browser': True,
-            'block_elements': ['stylesheet', 'font', 'image', 'media'],
-            'chromium_revision': chromium_revision_num,
-            'cookies': {'X-test': 'test'},
-            'headers': {'Accept-Language': 'en-US,en'},
-            'ignore_https_errors': False,
-            'switches': ['--window-size=1298,1406', '--disable-dev-shm-usage'],
-            'timeout': 15,
-            'user_visible_url': 'https://www.google.com/',
-            'wait_for': 1,
-            'wait_for_navigation': 'https://www.google.com/',
-            'wait_until': 'load',
-        },
-        'Google',
-    ),
+    # (
+    #     {
+    #         'url': 'http://www.google.com/',
+    #         'name': 'testing url job with use_browser',
+    #         'use_browser': True,
+    #         'block_elements': ['stylesheet', 'font', 'image', 'media'],
+    #         'chromium_revision': chromium_revision_num,
+    #         'cookies': {'X-test': 'test'},
+    #         'headers': {'Accept-Language': 'en-US,en'},
+    #         'ignore_https_errors': False,
+    #         'switches': ['--window-size=1298,1406', '--disable-dev-shm-usage'],
+    #         'timeout': 15,
+    #         'user_visible_url': 'https://www.google.com/',
+    #         'wait_for': 1,
+    #         'wait_for_navigation': 'https://www.google.com/',
+    #         'wait_until': 'load',
+    #     },
+    #     'Google',
+    # ),
     (
         {
             'url': 'https://www.google.com/',
@@ -145,16 +149,16 @@ TEST_JOBS = [
         },
         '"json":{"fieldname":"fieldvalue"}',
     ),
-    (
-        {
-            'url': 'https://postman-echo.com/post',
-            'name': 'testing POST url job with use_browser',
-            'use_browser': True,
-            'switches': ['--disable-dev-shm-usage'],
-            'data': {'fieldname': 'fieldvalue'},
-        },
-        '"json":{"fieldname":"fieldvalue"}',
-    ),
+    # (
+    #     {
+    #         'url': 'https://postman-echo.com/post',
+    #         'name': 'testing POST url job with use_browser',
+    #         'use_browser': True,
+    #         'switches': ['--disable-dev-shm-usage'],
+    #         'data': {'fieldname': 'fieldvalue'},
+    #     },
+    #     '"json":{"fieldname":"fieldvalue"}',
+    # ),
     (
         {
             'url': 'https://postman-echo.com/post',
@@ -396,7 +400,7 @@ def test_stress_use_browser() -> None:
 
         setup_logger()
 
-    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
     urlwatcher.run_jobs()
 
@@ -417,7 +421,7 @@ def test_stress_use_browser_playwright(event_loop) -> None:
 
         setup_logger()
 
-    urlwatch_config = CommandConfig(project_name, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
     urlwatcher.run_jobs()
 
@@ -467,13 +471,13 @@ def test_navigate_directive() -> None:
     )
 
 
-def test_kind_directive_deprecation() -> None:
-    job_data = {'kind': 'url', 'url': 'http://www.example.com'}
-    with pytest.deprecated_call() as pytest_wrapped_warning:
-        JobBase.unserialize(job_data.copy())
-    assert str(pytest_wrapped_warning.list[0].message) == (
-        f"Job directive 'kind' is deprecated and ignored: delete from job ({job_data})"  # nosec: B608
-    )
+# def test_kind_directive_deprecation() -> None:
+#     job_data = {'kind': 'url', 'url': 'http://www.example.com'}
+#     with pytest.deprecated_call() as pytest_wrapped_warning:
+#         JobBase.unserialize(job_data.copy())
+#     assert str(pytest_wrapped_warning.list[0].message) == (
+#         f"Job directive 'kind' is deprecated and ignored: delete from job ({job_data})"  # nosec: B608
+#     )
 
 
 def test_url_job_without_kind():
@@ -524,7 +528,7 @@ def test_with_defaults():
 def test_ignore_error():
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    assert job.ignore_error(Exception) is False
+    assert job.ignore_error(Exception()) is False
 
 
 @py310_skip

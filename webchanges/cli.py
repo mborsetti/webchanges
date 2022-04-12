@@ -4,6 +4,9 @@
 
 # See config module for the command line arguments
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
+
 import logging
 import os
 import shutil
@@ -13,7 +16,7 @@ import warnings
 from pathlib import Path, PurePath
 from typing import Optional, Union
 
-from platformdirs import user_cache_path, user_config_path
+import platformdirs
 
 from . import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
 from .command import UrlwatchCommand
@@ -27,16 +30,6 @@ from .storage import (
     YamlConfigStorage,
     YamlJobsStorage,
 )
-
-# Directory where the config, jobs and hooks files are located
-if os.name != 'nt':
-    config_path = user_config_path(__project_name__)  # typically ~/.config/{__project_name__}
-else:
-    config_path = Path.home().joinpath('Documents').joinpath(__project_name__)
-
-# directory where the database is located
-# typically ~/.cache/{__project_name__} or %LOCALAPPDATA%\{__project_name__}\{__project_name__}\Cache
-cache_path = user_cache_path(__project_name__)
 
 # Ignore signal SIGPIPE ("broken pipe") for stdout (see https://github.com/thp/urlwatch/issues/77)
 if os.name != 'nt':  # Windows does not have signal.SIGPIPE
@@ -75,7 +68,7 @@ def migrate_from_legacy(
     lg_config_file = lg_project_path.joinpath(f'{legacy_package}.yaml')
     lg_urls_file = lg_project_path.joinpath('urls.yaml')
     lg_hooks_file = lg_project_path.joinpath('hooks.py')
-    lg_cache_path = user_cache_path(legacy_package)
+    lg_cache_path = platformdirs.user_cache_path(legacy_package)
     lg_cache_file = lg_cache_path.joinpath('cache.db')
     for old_file, new_file in zip(
         (lg_config_file, lg_urls_file, lg_hooks_file, lg_cache_file), (config_file, jobs_file, hooks_file, cache_file)
@@ -110,7 +103,7 @@ def locate_storage_file(filename: Path, default_path: Path, ext: Optional[str] =
     :param default_path: The default directory.
     :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
 
-    :returns: The filename, either original or with path where found.
+    :returns: The filename, either original or one with path where found and/or extension.
     """
     search_filenames = [filename]
 
@@ -123,12 +116,13 @@ def locate_storage_file(filename: Path, default_path: Path, ext: Optional[str] =
         if file.is_file():
             return file
 
-        # no directory specified: add default one
+        # no directory specified (and not in current one): add default one
         if file.parent == PurePath('.'):
             new_file = default_path.joinpath(file)
             if new_file.is_file():
                 return new_file
 
+    # no matches found
     return filename
 
 
@@ -166,17 +160,28 @@ def main() -> None:  # pragma: no cover
     # Issue deprecation warning if running on minimum version supported
     python_version_warning()
 
+    # Directory where the config, jobs and hooks files are located
+    if os.name != 'nt':
+        config_path = platformdirs.user_config_path(__project_name__)  # typically ~/.config/{__project_name__}
+    else:
+        config_path = Path.home().joinpath('Documents').joinpath(__project_name__)
+
+    # Directory where the database is located; typically ~/.cache/{__project_name__}
+    # or %LOCALAPPDATA%\{__project_name__}\{__project_name__}\Cache
+    cache_path = platformdirs.user_cache_path(__project_name__)
+
     # The config, jobs, hooks and cache files
     default_config_file = config_path.joinpath('config.yaml')
     default_jobs_file = config_path.joinpath('jobs.yaml')
     default_hooks_file = config_path.joinpath('hooks.py')
     default_cache_file = cache_path.joinpath('cache.db')
 
-    # Migrate legacy (urlwatch 2.23) files
+    # Migrate legacy (urlwatch 2.25) files
     migrate_from_legacy('urlwatch', default_config_file, default_jobs_file, default_hooks_file, default_cache_file)
 
     # Load config files
     command_config = CommandConfig(
+        sys.argv[1:],
         __project_name__,
         config_path,
         default_config_file,
@@ -185,25 +190,25 @@ def main() -> None:  # pragma: no cover
         default_cache_file,
     )
 
-    # set up the logger to verbose if needed
+    # Set up the logger to verbose if needed
     if command_config.verbose:
         setup_logger(command_config.log_level)
     else:
         setup_logger()
 
-    # check for location of config files entered in cli
+    # Locate config, job and hooks files
     command_config.config = locate_storage_file(command_config.config, command_config.config_path, '.yaml')
     command_config.jobs = locate_storage_file(command_config.jobs, command_config.config_path, '.yaml')
     command_config.hooks = locate_storage_file(command_config.hooks, command_config.config_path, '.py')
 
-    # check for first run
+    # Check for first run
     if command_config.config == default_config_file and not Path(command_config.config).is_file():
         first_run(command_config)
 
-    # setup config file API
+    # Setup config file API
     config_storage = YamlConfigStorage(command_config.config)  # storage.py
 
-    # setup database API
+    # Setup database API
     if command_config.database_engine == 'sqlite3':
         cache_storage: CacheStorage = CacheSQLite3Storage(
             command_config.cache, command_config.max_snapshots
@@ -221,14 +226,14 @@ def main() -> None:  # pragma: no cover
     else:
         raise NotImplementedError(f'Database engine {command_config.database_engine} not implemented')
 
-    # setup jobs file API
+    # Setup jobs file API
     jobs_storage = YamlJobsStorage(command_config.jobs)  # storage.py
 
-    # setup urlwatch
+    # Setup 'urlwatch'
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)  # command.py
 
-    # run urlwatch
+    # Run 'urlwatch'
     urlwatch_command.run()
 
 

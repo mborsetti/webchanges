@@ -29,6 +29,7 @@ from webchanges.storage import (
     YamlConfigStorage,
     YamlJobsStorage,
 )
+from webchanges.util import import_module_from_source
 
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
 
@@ -78,7 +79,7 @@ def prepare_storage_test(cache_storage: CacheStorage, config_args: Optional[dict
     if hasattr(cache_storage, 'flushdb'):
         cache_storage.flushdb()
 
-    urlwatch_config = CommandConfig(__project_name__, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatch_config = CommandConfig([], __project_name__, here, config_file, jobs_file, hooks_file, cache_file)
     if config_args:
         for k, v in config_args.items():
             setattr(urlwatch_config, k, v)
@@ -95,12 +96,27 @@ def test_check_for_unrecognized_keys():
     config_storage = YamlConfigStorage(config_file)
     config = config_storage.parse(config_file)
     config['this_is_a_typo'] = True
-    with pytest.raises(ValueError) as pytest_wrapped_e:
+    with pytest.warns(SyntaxWarning) as pytest_wrapped_e:
         config_storage.check_for_unrecognized_keys(config)
-    assert str(pytest_wrapped_e.value) == (
+    assert pytest_wrapped_e.list[0].message.args[0] == (
         f'Unrecognized directive(s) in the configuration file {config_file}:\n'
-        f'this_is_a_typo: true\nCheck for typos (documentation at {__docs_url__})'
+        f'this_is_a_typo: true\nCheck for typos (documentation at {__docs_url__})\n'
     )
+
+
+def test_check_for_unrecognized_keys_hooks():
+    """Test config with keys that are in hooks."""
+    config_storage = YamlConfigStorage(config_file)
+    config = config_storage.parse(config_file)
+    config['report']['made_up_key'] = True
+    with pytest.warns(SyntaxWarning) as pytest_wrapped_e:
+        config_storage.check_for_unrecognized_keys(config)
+    assert pytest_wrapped_e.list[0].message.args[0] == (
+        f'Unrecognized directive(s) in the configuration file {config_file}:\n'
+        f'report:\n  made_up_key: true\nCheck for typos (documentation at {__docs_url__})\n'
+    )
+    import_module_from_source('hooks', data_path.joinpath('hooks_test.py'))
+    config_storage.check_for_unrecognized_keys(config)
 
 
 def test_empty_config_file():

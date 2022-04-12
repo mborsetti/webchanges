@@ -8,6 +8,9 @@ Code is loaded only:
 
 Having it into a standalone module allows running the program without requiring minidb package to be installed.
 """
+
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -75,6 +78,22 @@ class CacheMiniDBStorage(CacheStorage):
                 history[data] = timestamp
                 if count is not None and len(history) >= count:
                     break
+        return history
+
+    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
+        history: List[Dict[str, Any]] = []
+        if count is not None and count < 1:
+            return history
+        for data, timestamp in self.CacheEntry.query(
+            self.db,
+            self.CacheEntry.c.data // self.CacheEntry.c.timestamp,
+            order_by=minidb.columns(self.CacheEntry.c.timestamp.desc, self.CacheEntry.c.tries.desc),
+            where=(self.CacheEntry.c.guid == guid)
+            & ((self.CacheEntry.c.tries == 0) | (self.CacheEntry.c.tries is None)),
+        ):
+            history.append({'timestamp': timestamp, 'data': data})
+            if count is not None and len(history) >= count:
+                break
         return history
 
     def save(

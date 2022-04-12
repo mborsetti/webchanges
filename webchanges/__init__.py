@@ -2,6 +2,9 @@
 and/or sends it via e-mail and/or other supported services. Can check the output of local commands as well.
 """
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
+
 # The docstring above (__doc__) and the variables below are used in the program and for builds, including in building
 # documentation with Sphinx.
 
@@ -16,7 +19,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.9.1'
+__version__ = '3.9.2rc0'
 __description__ = (
     'Check web (or commands) for changes since last run and notify.\n\nAnonymously alerts you of webpage changes.'
 )

@@ -1,5 +1,7 @@
 """A few utilities used elsewhere."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 from __future__ import annotations
 
 import html
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
 
-    # __subclasses__ gets redefined in a non-Pythonic way from default "Callable[[_TT], List[_TT]]
+    # __subclasses__ gets redefined from default "Callable[[_TT], List[_TT]]
     __subclasses__: Dict[str, TrackSubClasses]  # type: ignore[assignment]
     __anonymous_subclasses__: List[TrackSubClasses]
     __required__: Tuple[str, ...] = ()
@@ -101,36 +103,36 @@ def import_module_from_source(module_name: str, source_path: Union[str, bytes, P
     return module
 
 
-def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[str]:
+def chunk_string(text: str, length: int, numbering: bool = False) -> Iterable[str]:
     """Chunks a string.
 
-    :param string: The string
-    :param length: The length of the chunked string
-    :param numbering: Whether to number each chunk on the right
+    :param text: The text to be chunked.
+    :param length: The length of the chunked text.
+    :param numbering: Whether to number each chunk on the left if more than one chunk is generated.
 
     :returns: a list of chunked strings
     """
-    if numbering and len(string) > length:
+    if numbering and len(text) > length:
         try:
             text_length = length - 4 - 2
-            digits_try = 1 if text_length <= 0 else floor(log10(len(string) / text_length))  # initialization floor
+            digits_try = 1 if text_length <= 0 else floor(log10(len(text) / text_length))  # initialization floor
             digits_guess = digits_try + 1
             while digits_guess > digits_try:
                 digits_try += 1
                 text_length = length - 4 - 2 * digits_try
                 if text_length <= 0:
                     raise ValueError('Not enough space to chunkify string with line numbering (1)')
-                lines_guess = len(string) / text_length
+                lines_guess = len(text) / text_length
                 digits_guess = floor(log10(lines_guess)) + 1
 
-            chunks = textwrap.wrap(string, text_length, replace_whitespace=False)
+            chunks = textwrap.wrap(text, text_length, replace_whitespace=False)
             actual_digits = floor(log10(len(chunks))) + 1
             while actual_digits > digits_try:
                 digits_try += 1
                 text_length = length - 4 - 2 * digits_try
                 if text_length <= 0:
                     raise ValueError('Not enough space to chunkify string with line numbering (2)')
-                chunks = textwrap.wrap(string, text_length, replace_whitespace=False)
+                chunks = textwrap.wrap(text, text_length, replace_whitespace=False)
                 actual_digits = floor(log10(len(chunks))) + 1
 
             length = len(chunks)
@@ -139,7 +141,7 @@ def chunk_string(string: str, length: int, numbering: bool = False) -> Iterable[
         except ValueError as e:
             logger.error(f'{e}')
 
-    return textwrap.wrap(string, length, replace_whitespace=False)
+    return textwrap.wrap(text, length, replace_whitespace=False)
 
 
 def linkify(

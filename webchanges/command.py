@@ -1,5 +1,7 @@
 """Take actions from command line arguments."""
 
+# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 import contextlib
 import logging
 import os
@@ -9,10 +11,16 @@ import sys
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING, Union
 
 import requests
+
+try:
+    from zoneinfo import ZoneInfo  # not available in Python < 3.9
+except ImportError:
+    from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
 
 from . import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
@@ -197,7 +205,7 @@ class UrlwatchCommand:
             job.ignore_cached = True
 
         with JobState(self.urlwatcher.cache_storage, job) as job_state:
-            job_state.process()
+            job_state.process(headless=not self.urlwatch_config.no_headless)
             duration = time.perf_counter() - start
             if job_state.exception is not None:
                 # self.print_new_version()
@@ -253,6 +261,28 @@ class UrlwatchCommand:
 
         return 0
 
+    def dump_history(self, job_id: str) -> int:
+        job = self._get_job(job_id)
+        history_data = self.urlwatcher.cache_storage.get_rich_history_data(job.get_guid())
+
+        print(f'History for job {job.get_indexed_location()}:')
+        for i, entry in enumerate(history_data):
+            etag = f"; ETag: {entry['etag']}" if entry.get('etag') else ''
+            tries = f"; failed tries: {entry['tries']}" if entry.get('tries') else ''
+            tz = self.urlwatcher.report.config['report']['tz'] or 'Etc/UTC'
+            dt = datetime.fromtimestamp(entry['timestamp'], ZoneInfo(tz))
+            header = f"{i + 1}) {dt.strftime('%Y-%m-%d %H:%M %Z')}{etag}{tries}"
+            sep_len = max(50, min(50, len(header)))
+            print('=' * sep_len)
+            print(header)
+            print('-' * sep_len)
+            print(entry['data'])
+            print('=' * sep_len, '\n')
+
+        print(f'Found {len(history_data)} snapshot' + ('s' if len(history_data) != 1 else '') + '.')
+
+        return 0
+
     def list_error_jobs(self) -> None:
         start = time.perf_counter()
         print(
@@ -269,7 +299,7 @@ class UrlwatchCommand:
             executor = ThreadPoolExecutor(max_workers=max_workers)
 
             for job_state in executor.map(
-                lambda jobstate: jobstate.process(),
+                lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
                 (stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
             ):
                 if job_state.exception is not None:
@@ -428,7 +458,9 @@ class UrlwatchCommand:
             print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
             return 1
 
-        cfg: ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]  # type: ignore[misc]
+        cfg: ConfigReportersList = self.urlwatcher.config_storage.config['report'][
+            reporter_name  # type: ignore[literal-required]
+        ]
         if job_state:  # we want a full report
             cfg['enabled'] = True  # type: ignore[index]
             self.urlwatcher.config_storage.config['report']['text']['details'] = True
@@ -616,6 +648,9 @@ class UrlwatchCommand:
 
         if self.urlwatch_config.test_diff:
             self._exit(self.test_diff(self.urlwatch_config.test_diff))
+
+        if self.urlwatch_config.dump_history:
+            sys.exit(self.dump_history(self.urlwatch_config.dump_history))
 
         if self.urlwatch_config.add or self.urlwatch_config.delete:
             self.modify_urls()

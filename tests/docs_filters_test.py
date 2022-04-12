@@ -95,7 +95,7 @@ FILTER_DOC_JOBS = load_filter_doc_jobs()
 testdata = load_filter_testdata()
 
 
-@pytest.mark.parametrize('job', FILTER_DOC_JOBS)
+@pytest.mark.parametrize('job', FILTER_DOC_JOBS, ids=(v.url for v in FILTER_DOC_JOBS))
 def test_filter_doc_jobs(job):
     """Test the yaml code in docs/filters.rst against the source and expected results contained
     in tests/data/docs_filters_testdata.yaml using 'url' as the key."""
