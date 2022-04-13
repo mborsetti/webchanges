@@ -123,7 +123,7 @@ class UrlwatchCommand:
         return 0
 
     @staticmethod
-    def show_chromium_directory() -> int:
+    def show_chromium_directory() -> int:  # pragma: no cover
         try:
             from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER
         except ImportError:
@@ -331,16 +331,16 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
 
-    def delete_snapshot(self, job_id: Union[str, int]) -> None:
+    def delete_snapshot(self, job_id: Union[str, int]) -> int:
         job = self._get_job(job_id)
 
         deleted = self.urlwatcher.cache_storage.delete_latest(job.get_guid())
         if deleted:
             print(f'Deleted last snapshot of {job.get_indexed_location()}')
-            self._exit(0)
+            return 0
         else:
             print(f'No snapshots found to be deleted for {job.get_indexed_location()}')
-            self._exit(1)
+            return 1
 
     def modify_urls(self) -> None:
         save = True
@@ -630,7 +630,7 @@ class UrlwatchCommand:
             print(completed_process.stderr)
             return completed_process.returncode
         if completed_process.stdout:
-            logger.info(f'Output of Playwright CLI: {completed_process.stdout}')
+            logger.info(f'Success! Output of Playwright CLI: {completed_process.stdout}')
         return 0
 
     def handle_actions(self) -> None:

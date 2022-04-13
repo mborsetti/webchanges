@@ -236,6 +236,21 @@ def test_clean(database_engine):
 
 
 @pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
+def test_gc(database_engine):
+    urlwatcher, cache_storage = prepare_storage_test(database_engine)
+
+    # run once
+    urlwatcher.run_jobs()
+    if hasattr(cache_storage, '_copy_temp_to_permanent'):
+        cache_storage._copy_temp_to_permanent(delete=True)
+
+    cache_storage.gc([])
+    guid = urlwatcher.jobs[0].get_guid()
+    history = cache_storage.get_history_data(guid)
+    assert history == {}
+
+
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_clean_cache(database_engine):
     if isinstance(database_engine, CacheDirStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
@@ -467,10 +482,18 @@ def test_get_empty_history_and_no_max_snapshots(database_engine):
     if hasattr(cache_storage, '_copy_temp_to_permanent'):
         cache_storage._copy_temp_to_permanent(delete=True)
 
-    # get history with zero count
+    # get rich_history
     guid = urlwatcher.jobs[0].get_guid()
+    rich_history = cache_storage.get_rich_history_data(guid)
+    assert len(rich_history) == 1
+
+    # get history with zero count
     history = cache_storage.get_history_data(guid, count=0)
     assert history == {}
+
+    # get rich_history with zero count
+    rich_history = cache_storage.get_rich_history_data(guid, count=0)
+    assert rich_history == []
 
 
 @pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))

@@ -794,7 +794,7 @@ class BrowserJob(UrlJobBase):
         if self._beta_use_playwright:
             response, etag = self._playwright_retrieve(job_state, headless)
         else:
-            response, etag = asyncio.run(self._retrieve(job_state))
+            response, etag = asyncio.run(self._retrieve(job_state))  # pragma: no cover
 
         # if no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
         if not self.name:
@@ -805,7 +805,7 @@ class BrowserJob(UrlJobBase):
         return response, etag
 
     @staticmethod
-    def current_platform() -> str:
+    def current_platform() -> str:  # pragma: no cover
         """Get current platform name by short string as used by Pyppeteer for downloading Chromium.
         Code originally from pyppeteer.chromium_downloader, but we cannot simply import it as it will trigger
         pyppeteer reading os.environ['PYPPETEER_CHROMIUM_REVISION'] before we can modify it ourselves.
@@ -822,7 +822,7 @@ class BrowserJob(UrlJobBase):
             return 'win32'
         raise OSError(f'Platform unsupported by Pyppeteer (use_browser: true): {sys.platform}')
 
-    async def _retrieve(self, job_state: JobState) -> Tuple[str, str]:
+    async def _retrieve(self, job_state: JobState) -> Tuple[str, str]:  # pragma: no cover
         """
 
         :raises KeyError: If chromium_revision is specified but not for the current operating system.

@@ -16,10 +16,10 @@ from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
-try:
-    from pyppeteer import current_platform
-except ImportError:
-    current_platform = None
+# try:
+#     import pyppeteer
+# except ImportError:
+#     pyppeteer = None
 
 # Paths
 here = Path(__file__).parent
@@ -380,6 +380,14 @@ def test_test_diff_and_joblist(capsys):
         urlwatcher.run_jobs()
         cache_storage._copy_temp_to_permanent(delete=True)
         urlwatcher.urlwatch_config.joblist = None
+
+        setattr(command_config, 'test_diff', 1)
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            urlwatch_command.handle_actions()
+        setattr(command_config, 'test_diff', None)
+        assert pytest_wrapped_e.value.code == 1
+        message = capsys.readouterr().out
+        assert message == 'Not enough historic data available (need at least 2 different snapshots)\n'
 
         # test invalid joblist
         urlwatcher.urlwatch_config.joblist = [999]
@@ -792,10 +800,10 @@ def test_job_states_verb_notimestamp_changed():
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
 
-def test_show_chromium_directory(capsys):
-    if current_platform:
-        urlwatch_command.show_chromium_directory()
-        message = capsys.readouterr().out
-        assert message[:74] == 'Downloaded Chromium executables are installed in the following directory:\n'
-    else:
-        pytest.skip('Pyppeteer not installed')
+# def test_show_chromium_directory(capsys):
+#     if pyppeteer:
+#         urlwatch_command.show_chromium_directory()
+#         message = capsys.readouterr().out
+#         assert message[:74] == 'Downloaded Chromium executables are installed in the following directory:\n'
+#     else:
+#         pytest.skip('Pyppeteer not installed')

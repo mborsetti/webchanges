@@ -140,9 +140,9 @@ If you decide to stick with Playwright, you can free up disk space (if no other 
    pip uninstall pyppeteer
 
 
-Version 3.9.2rc1
+Version 3.9.2
 ===================
-Unreleased
+2022-04-13
 
 ⚠ Last release using Pyppeteer
 ------------------------------
