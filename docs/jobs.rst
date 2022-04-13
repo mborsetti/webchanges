@@ -657,6 +657,7 @@ See :ref:`here <deletions_only>`.
 
 .. versionadded:: 3.0
 
+
 .. _monospace:
 
 monospace
@@ -678,14 +679,14 @@ Data is in Markdown format (true/false). Defaults to false unless set by a filte
 Tells the ``html`` report that the data is in Markdown format and should be reconstructed into HTML.
 
 
-Setting default directives
-==========================
-See :ref:`here <job_defaults>` for how to set default directives for all jobs.
-
-
 .. kind
 
 kind
 ----
 For Python programmers only, this is used to associate the job to a custom job Class defined in ``hooks.py``, by
 matching the contents of this directive to the ```__kind__`` variable of the class.
+
+
+Setting default directives
+==========================
+See :ref:`here <job_defaults>` for how to set default directives for all jobs.

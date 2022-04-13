@@ -1343,7 +1343,7 @@ class DiscordReporter(TextReporter):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        default_max_length = 2000
+        default_max_length = 2000 if not self.config.get('embed', False) else 4096
         if isinstance(self.config['max_message_length'], int):
             self.max_length = int(self.config['max_message_length'])  # type: ignore[arg-type]
         else:
@@ -1380,6 +1380,11 @@ class DiscordReporter(TextReporter):
             }
 
             subject = self.config['subject'].format(**subject_args)
+            # Content has a maximum length of 2000 characters, but the combined sum of characters in all title,
+            # description, field.name, field.value, footer.text, and author.name fields across all embeds attached to
+            # a message must not exceed 6000 characters.
+            max_subject_length = min(2000, 6000 - len(text))
+            subject = subject[:max_subject_length]
 
             post_data = {
                 'content': subject,

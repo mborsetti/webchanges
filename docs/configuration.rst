@@ -133,3 +133,9 @@ The possible sub-directives to ``job_defaults`` are:
 * ``browser``: Applies only to jobs with the directives ``url`` and ``use_browser: true``
 
 See :ref:`jobs <jobs>` about the different job kinds and directives that can be set.
+
+Omitting configuration directives
+---------------------------------
+When the ``config.yaml`` file is created, it contains all configuration directives and their default settings. If
+you omit/remove any directive from this file, :program:webchanges: will use the default value for the missing one. You
+can see a list of such omitted/missing directives when running with the ``--verbose`` command line argument.

@@ -96,10 +96,10 @@ if TYPE_CHECKING:
         {
             'enabled': bool,
             'webhook_url': str,
-            'max_message_length': Optional[int],
             'embed': bool,
             'subject': str,
             'colored': bool,
+            'max_message_length': Optional[int],
         },
     )
     ConfigReportEmailSmtp = TypedDict(
@@ -301,10 +301,10 @@ DEFAULT_CONFIG: Config = {
         'discord': {
             'enabled': False,
             'webhook_url': '',
-            'max_message_length': None,
             'embed': True,
-            'subject': '',
+            'subject': '{count} changes: {jobs}',
             'colored': True,
+            'max_message_length': None,
         },
         'email': {  # email (except mailgun); uses text or both html and text if 'html' is set to true
             'enabled': False,

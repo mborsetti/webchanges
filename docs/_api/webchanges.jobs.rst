@@ -6,4 +6,4 @@ webchanges.jobs module
     Please consider :ref:`contributing <contributing>` to this project.
 
 .. automodule:: webchanges.jobs
-   :noindex: NotModifiedError, BrowserResponseError, ShellError
+   :noindex: NotModifiedError, BrowserResponseError

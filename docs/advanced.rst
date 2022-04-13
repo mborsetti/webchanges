@@ -202,7 +202,7 @@ can even have a "normal" filter attached to only watch links (the ``css: a`` par
    filter:
      - css: a
    diff_filter:
-     - shellpipe: /usr/local/bin/process_new_links.sh
+     - execute: /usr/local/bin/process_new_links.sh
 
 If running on Linux/macOS, please read about file permission restrictions in the filter's explanation
 :ref:`here <shellpipe>`.

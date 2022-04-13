@@ -5,7 +5,6 @@ https://playwright.dev/python/docs/ci#docker since GitHub Actions runs the tests
 """
 import asyncio
 import ftplib  # nosec: B402 A FTP-related module is being imported.
-import importlib.util
 import logging
 import os
 import socket
@@ -74,10 +73,6 @@ def is_connected() -> bool:
 connection_required = pytest.mark.skipif(not is_connected(), reason='no Internet connection')
 py38_required = pytest.mark.skipif(sys.version_info < (3, 8), reason='requires Python 3.8')
 py310_skip = pytest.mark.skipif(sys.version_info >= (3, 10), reason='Python 3.10 not supported by pyppeteer')
-playwright_is_installed = (
-    importlib.util.find_spec('playwright') is not None and importlib.util.find_spec('psutil') is not None
-)
-playwright_skip = pytest.mark.skipif(not playwright_is_installed, reason='Playwright and psutil are not installed')
 
 TEST_JOBS = [
     (
@@ -165,7 +160,6 @@ TEST_JOBS = [
             'name': 'testing POST url job with use_browser and Playwright',
             '_beta_use_playwright': True,
             'use_browser': True,
-            'switches': ['--disable-dev-shm-usage'],
             'data': {'fieldname': 'fieldvalue'},
         },
         '"json":{"fieldname":"fieldvalue"}',
@@ -185,28 +179,27 @@ TEST_JOBS = [
     ),
     (
         {
-            'command': 'echo test',
+            'command': 'echo test echo command',
         },
-        'test',
+        'test echo command',
     ),
 ]
 
 TEST_ALL_URL_JOBS = [
     {},
-    {'use_browser': True, 'switches': ['--disable-dev-shm-usage']},
-    {'use_browser': True, 'switches': ['--disable-dev-shm-usage'], '_beta_use_playwright': True},
+    # {'use_browser': True, 'switches': ['--disable-dev-shm-usage']},
+    {'use_browser': True, '_beta_use_playwright': True},
 ]
 
 
 @connection_required
-@pytest.mark.parametrize('input_job, output', TEST_JOBS)
+@pytest.mark.parametrize(
+    'input_job, output', TEST_JOBS, ids=(f'{type(JobBase.unserialize(v[0])).__name__}: {v[1]}' for v in TEST_JOBS)
+)
 def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> None:
     job = JobBase.unserialize(input_job)
     if current_platform is None and job.use_browser and not job._beta_use_playwright:
         pytest.skip('Pyppeteer not installed')
-        return
-    elif not playwright_is_installed and job.use_browser and job._beta_use_playwright:
-        pytest.skip('Playwright and psutil not installed')
         return
     elif sys.version_info < (3, 8) and job.use_browser and job._beta_use_playwright:
         pytest.skip('Playwright testing requires Python 3.8')
@@ -264,13 +257,12 @@ def test_run_ftp_job_needs_bytes() -> None:
 
 
 @connection_required
-@pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
+@pytest.mark.parametrize(
+    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+)
 def test_check_etag(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer not installed')
-        return
-    elif not playwright_is_installed and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-        pytest.skip('Playwright and psutil not installed')
         return
     elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
         pytest.skip('Playwright testing requires Python 3.8')
@@ -286,7 +278,9 @@ def test_check_etag(job_data: Dict[str, Any], event_loop) -> None:
 
 
 @connection_required
-@pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
+@pytest.mark.parametrize(
+    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+)
 def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
         pytest.skip('Pyppeteer not installed')
@@ -316,7 +310,9 @@ def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
 
 
 @connection_required
-@pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
+@pytest.mark.parametrize(
+    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+)
 def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer not installed')
@@ -350,13 +346,12 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
 
 
 @connection_required
-@pytest.mark.parametrize('job_data', TEST_ALL_URL_JOBS)
+@pytest.mark.parametrize(
+    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+)
 def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> None:
     if current_platform is None and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
         pytest.skip('Pyppeteer not installed')
-        return
-    elif not playwright_is_installed and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
-        pytest.skip('Playwright and psutil not installed')
         return
     elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
         pytest.skip('Playwright testing requires Python 3.8')
@@ -406,7 +401,6 @@ def test_stress_use_browser() -> None:
 
 
 @py38_required
-@playwright_skip
 @connection_required
 def test_stress_use_browser_playwright(event_loop) -> None:
     jobs_file = data_path.joinpath('jobs-use_browser_pw.yaml')
@@ -548,7 +542,6 @@ def test_browser_switches_not_str_or_list():
 
 
 @py38_required
-@playwright_skip
 def test_browser_switches_not_str_or_list_playwright(event_loop):
     job_data = {
         'url': 'https://www.example.com',

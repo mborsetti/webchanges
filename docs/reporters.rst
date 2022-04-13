@@ -32,6 +32,7 @@ At the moment, the following reporters are available:
 
 * :ref:`stdout` (enabled by default): Display on stdout (the console).
 * :ref:`browser`: Launch the default web browser.
+* :ref:`discord`: Send to Discord channel.
 * :ref:`email`: Send via email (SMTP or sendmail).
 * :ref:`ifttt`: Send via IFTTT.
 * :ref:`mailgun`: Send via email using the Mailgun service.
@@ -41,7 +42,7 @@ At the moment, the following reporters are available:
 * :ref:`pushover`: Send via Pushover.
 * :ref:`run_command`: Run a custom command on the local system.
 * :ref:`telegram`: Send via Telegram.
-* :ref:`webhook`: Send to an e.g. Slack or Discord channel using the service's webhook.
+* :ref:`webhook`: Send to an e.g. Slack or Mattermost channel using the service's webhook.
 * :ref:`xmpp`: Send using the Extensible Messaging and Presence Protocol (XMPP).
 
 .. To convert the "webchanges --features" output, use:
@@ -104,6 +105,49 @@ Displays the :ref:`HTML report <html>` using the system's default web browser.
 
 
 
+.. _discord:
+
+Discord
+-------
+Sends a :ref:`text <text>` report as a message in a Discord channel.
+
+To use this reporter you must first create a webhook in Discord. From your Discord server settings select Integration
+and create a "New Webhook", give the webhook a name to post under, select a channel, press on "Copy Webhook URL" and
+paste the URL into the configuration as seen below (see
+`here <https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks>`__ for Discord's help).
+
+.. code:: yaml
+
+   report:
+     tz: null
+     webhook:
+       enabled: true  # don't forget to set this to true! :)
+       webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
+       embed: true
+       subject: '{count} changes: {jobs}'
+       colored: true
+
+Embedded content might make it easier to read and identify individual reports. If ``embed`` is set to true then the
+``subject`` will be the content of the message and the report will be shown as embedded text; if ``colored`` is also
+set to true then the report will be embedded as code of diff type, enabling Discord's `syntax highlighting
+<https://highlightjs.org/static/demo/>`__ and colorization.
+
+Sub-directives
+~~~~~~~~~~~~~~
+* ``webhook_url`` (required): The Discord webhook URL.
+* ``embed``: If true, the content will be sent as an Embed object (true/false). Default is true.
+* ``subject``: Only relevant if ``embed`` is true, it's a string that precedes the embedded report; ``{count}`` will be
+  replaced with the number of changes, while ``{jobs}`` will be replaced by the names of the jobs that changed
+  (string). Default: ``{count} changes: {jobs}``.
+* ``colored``: If true, the report will an Embed object formatted as diff code to enable colored syntax highlighting
+  (true/false). Default is true.
+* ``max_message_length``: The maximum length of a message in characters. Default is the maximum allowed by
+  Discord: either 2,000 or, if ``embed`` is true, 4,096.
+
+.. versionchanged:: 3.9.2
+   Added sub-directives ``embed``, ``subject`` and ``colored``.
+
+
 .. _email:
 
 Email
@@ -117,8 +161,6 @@ Sub-directives
 * ``to``: The destination email address.
 * ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported.
 * ``html``: Whether the email includes HTML (true/false).
-
-
 
 .. _smtp:
 
@@ -451,17 +493,6 @@ To use this report you need to install :ref:`optional packages <optional_package
    pip install --upgrade webchanges[pushover]
 
 
-.. _stdout:
-
-stdout
-------
-Displays a :ref:`text report <text>` on stdout (the console).
-
-Optional sub-directives
-~~~~~~~~~~~~~~~~~~~~~~~
-* ``color``: Uses color (green for additions, red for deletions) (true/false).
-
-
 
 .. _run_command:
 
@@ -506,6 +537,18 @@ If the command generates an error, the output of the error will be in the first 
 .. versionadded:: 3.8
 .. versionchanged:: 3.9
    Added environment variable ``WEBCHANGES_CHANGED_JOBS_JSON``
+
+
+
+.. _stdout:
+
+stdout
+------
+Displays a :ref:`text report <text>` on stdout (the console).
+
+Optional sub-directives
+~~~~~~~~~~~~~~~~~~~~~~~
+* ``color``: Uses color (green for additions, red for deletions) (true/false).
 
 
 
@@ -600,45 +643,10 @@ Optional sub-directives
 
 .. _webhook:
 
-Discord
--------
-To set up Discord, from your Discord server settings select Integration and create a "New Webhook", give the
-webhook a name to post under, select a channel, press on "Copy Webhook URL" and paste the URL into the configuration as
-seen below (see `here <https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks>`__).
-
-.. code:: yaml
-
-   report:
-     tz: null
-     webhook:
-       enabled: true  # don't forget to set this to true! :)
-       webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
-       embed: true
-       subject: '{count} changes: {jobs}'
-       colored: true
-
-Embedded content might be easier to read and identify individual reports. Subject precedes the embedded report and is
-only used when embed is true.
-
-When ``colored`` is set to true, reports will be embedded in code section (with diff syntax) to enable colors.
-
-Sub-directives
-~~~~~~~~~~~~~~
-* ``webhook_url`` (required): The Discord webhook URL.
-* ``max_message_length``: The maximum length of a message in characters. Default is 2,000, the maximum allowed by
-  Discord.
-* ``embed``: If true, the content will be embedded (true/false). Default is true.
-* ``subject``: Only relevant if ``embed`` is true, it's a string that precedes the embedded report; ``{count}`` will be
-  replaced with the number of changes, while ``{jobs}`` will be replaced by the names of the jobs that changed
-  (string). Default: ``{count} changes: {jobs}``.
-* ``colored``: If true, reports will be embedded in code section (with diff syntax) to enable colors in Discord
-  (true/false). Default is true.
-
-
 Webhook (Slack, Mattermost etc.)
 --------------------------------
-Sends a :ref:`text <text>` or :ref:`Markdown <markdown>` report to services such as Slack, Discord, Mattermost etc.
-using a webhook.
+Sends a :ref:`text <text>` or :ref:`Markdown <markdown>` report to services such as Slack, Mattermost etc. using a
+webhook.
 
 .. code:: yaml
 
@@ -678,16 +686,10 @@ Sub-directives
 ~~~~~~~~~~~~~~
 * ``webhook_url`` (required): The webhook URL.
 * ``markdown``: Whether to send Markdown instead of plain text (true/false). Default is false.
-* ``max_message_length``: The maximum length of a message in characters. Default is 40,000 unless ``webhook_url``
-  starts with \https://discordapp.com, then the default is 2,000.
-* ``colored``: If true, reports will be embedded in code section (with diff syntax) to enable colors in Discord.
+* ``max_message_length``: The maximum length of a message in characters. Default is 40,000.
 
 .. versionchanged:: 3.0.1
    Renamed from ``slack`` to ``webhook`` and added the ``markdown`` sub-directive.
-
-.. versionchanged:: 3.9.2
-   Added sub-directive ``colored``.
-
 
 
 .. _xmpp:

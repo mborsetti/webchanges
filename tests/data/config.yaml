@@ -20,6 +20,13 @@ report:
   browser:
     enabled: false
     title: '[webchanges] {count} changes: {jobs}'
+  discord:
+    enabled: false
+    webhook_url: ''
+    embed: true
+    subject: '{count} changes: {jobs}'
+    colored: true
+    max_message_length:
   email:
     enabled: false
     html: true
@@ -36,29 +43,10 @@ report:
       insecure_password: ''
     sendmail:
       path: sendmail
-  pushover:
+  ifttt:
     enabled: false
-    app: ''
-    device: null
-    sound: spacealarm
-    user: ''
-    priority: normal
-  pushbullet:
-    enabled: false
-    api_key: ''
-  telegram:
-    enabled: false
-    bot_token: ''
-    chat_id: ''
-  webhook:
-    enabled: false
-    webhook_url: ''
-    max_message_length:
-  matrix:
-    enabled: false
-    homeserver: ''
-    access_token: ''
-    room_id: ''
+    key: ''
+    event: ''
   mailgun:
     enabled: false
     region: us
@@ -68,20 +56,42 @@ report:
     from_name: ''
     to: ''
     subject: '[webchanges] {count} changes: {jobs}'
-  ifttt:
+  matrix:
     enabled: false
-    key: ''
-    event: ''
-  xmpp:
-    enabled: false
-    sender: ''
-    recipient: ''
+    homeserver: ''
+    access_token: ''
+    room_id: ''
   prowl:
     enabled: false
     api_key: ''
     priority: 0
     application: ''
     subject: '[webchanges] {count} changes: {jobs}'
+  pushbullet:
+    enabled: false
+    api_key: ''
+  pushover:
+    enabled: false
+    app: ''
+    device: null
+    sound: spacealarm
+    user: ''
+    priority: normal
+  run_command:
+    enabled: false
+    command: ''
+  telegram:
+    enabled: false
+    bot_token: ''
+    chat_id: ''
+  webhook:
+    enabled: false
+    webhook_url: ''
+    max_message_length:
+  xmpp:
+    enabled: false
+    sender: ''
+    recipient: ''
 
 job_defaults:
   all: {}

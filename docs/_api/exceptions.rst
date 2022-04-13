@@ -7,4 +7,3 @@ Exceptions
 
 .. autoexception:: webchanges.jobs.NotModifiedError
 .. autoexception:: webchanges.jobs.BrowserResponseError
-.. autoexception:: webchanges.jobs.ShellError

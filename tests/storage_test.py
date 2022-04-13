@@ -157,7 +157,7 @@ def test_legacy_slack_keys():
 
 # @py37_required
 # CacheSQLite3Storage.keep_latest() requires Python 3.7 to work (returns 0 otherwise).
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_keep_latest(database_engine):
     if not hasattr(database_engine, 'keep_latest'):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} has no keep_latest method')
@@ -196,7 +196,7 @@ def test_keep_latest(database_engine):
         assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_clean(database_engine):
     if isinstance(database_engine, CacheDirStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
@@ -235,7 +235,7 @@ def test_clean(database_engine):
         assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_clean_cache(database_engine):
     if isinstance(database_engine, CacheDirStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
@@ -270,7 +270,7 @@ def test_clean_cache(database_engine):
         assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_clean_and_delete(database_engine):
     urlwatcher, cache_storage = prepare_storage_test(database_engine)
 
@@ -298,7 +298,7 @@ def test_clean_and_delete(database_engine):
         pass
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_clean_all(database_engine):
     if not hasattr(database_engine, 'clean_all'):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} has no clean_all method')
@@ -333,7 +333,7 @@ def test_clean_all(database_engine):
         assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_clean_cache_no_clean_all(database_engine):
     if isinstance(database_engine, CacheDirStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
@@ -369,7 +369,7 @@ def test_clean_cache_no_clean_all(database_engine):
         assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_delete_latest(database_engine):
     if isinstance(database_engine, CacheDirStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
@@ -405,7 +405,7 @@ def test_delete_latest(database_engine):
         assert len(history) == 1
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_rollback_cache(database_engine):
     if isinstance(database_engine, CacheDirStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
@@ -442,7 +442,7 @@ def test_rollback_cache(database_engine):
         assert len(history) == 1
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_restore_and_backup(database_engine):
     urlwatcher, cache_storage = prepare_storage_test(database_engine)
 
@@ -458,7 +458,7 @@ def test_restore_and_backup(database_engine):
     assert entry == ('myguid', 'mydata', 1618105974, 0, '')
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_get_empty_history_and_no_max_snapshots(database_engine):
     urlwatcher, cache_storage = prepare_storage_test(database_engine, {'max_snapshots': 0})
 
@@ -473,7 +473,7 @@ def test_get_empty_history_and_no_max_snapshots(database_engine):
     assert history == {}
 
 
-@pytest.mark.parametrize('database_engine', DATABASE_ENGINES)
+@pytest.mark.parametrize('database_engine', DATABASE_ENGINES, ids=(type(v).__name__ for v in DATABASE_ENGINES))
 def test_clean_and_history_data(database_engine):
     if isinstance(database_engine, CacheDirStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')

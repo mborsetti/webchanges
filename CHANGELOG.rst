@@ -71,9 +71,9 @@ documented below).
 
 The Playwright implementation also runs faster than Pyppeteer on machines with lots of memory and is more stable on
 small ones not only due to Playwright's advantages, but also because the maximum number of jobs that **webchanges** runs
-in parallel is now determined based on the amount of free memory available in addition to the number of processors.
+in parallel is now determined on the amount of free memory available in addition to the number of processors.
 
-I urge you to switch to Playwright. To do so:
+I urge you to start switching to Playwright. To do so:
 
 1) Ensure that you have at least Python 3.8 (it may work in 3.7, but is not tested due to limitations in the test
    framework);
@@ -125,7 +125,7 @@ The following sub-directives are new:
 Please make sure to open a GitHub `issue <https://github.com/mborsetti/webchanges/issues>`__ if you encounter
 anything wrong!
 
-If you decide to stick with Playwright, you can free up disk space (if no other package uses Pyppeteer) by, in order:
+If you decide to stick with Playwright, you can free up disk space (if no other packages use Pyppeteer) by, in order:
 
 1) removing the downloaded Chromium images by deleting the *directory* shown by running:
 
@@ -140,15 +140,15 @@ If you decide to stick with Playwright, you can free up disk space (if no other 
    pip uninstall pyppeteer
 
 
-Version 3.9.2rc0
+Version 3.9.2rc1
 ===================
 Unreleased
 
 ⚠ Last release using Pyppeteer
 ------------------------------
 * This is the last release using Pyppeteer for jobs with ``use_browser: true``, which will be replaced by Playwright
-  in release 9.10, forthcoming hopefully in a few weeks. See above for more information on how to prepare now -- and
-  start using Playwright now.
+  in release 9.10, forthcoming hopefully in a few weeks. See above for more information on how to prepare -- and start
+  using Playwright now!
 
 Added
 -----
@@ -177,11 +177,6 @@ Fixed
   default fixed viewport (of 1280x720) as it overrides ``--window-size``.
 * Email headers ("From:", "To:", etc.) now have title case per RFC 2076. Reported by `fdelapena
   <https://github.com/fdelapena>`__ in `#29 <https://github.com/mborsetti/webchanges/issues/29>`__.
-* Updated licensing file to `GitHub naming standards
-  <https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository>`__
-  and updated its contents to more clearly state that this software redistributes source code of release 2.21
-  of urlwatch (https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f), retaining its license,
-  which is distributed as part of the source code.
 
 Documentation
 -------------
@@ -192,7 +187,14 @@ Documentation
 
 Internals
 ---------
+* Updated licensing file to `GitHub naming standards
+  <https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository>`__
+  and updated its contents to more clearly state that this software redistributes source code of release 2.21
+  of urlwatch (https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f), retaining its license,
+  which is distributed as part of the source code.
 * Pyppeteer has been removed from the test suite.
+* Deprecated ``webchanges.jobs.ShellError`` exception in favor of Python's native ``subprocess.SubprocessError`` one and
+  its subclasses.
 
 Version 3.9.1
 ===================
