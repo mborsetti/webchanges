@@ -691,8 +691,7 @@ class UrlwatchCommand:
             self._exit(0)
 
         if self.urlwatch_config.delete_snapshot:
-            self.delete_snapshot(self.urlwatch_config.delete_snapshot)
-            self._exit(0)
+            self._exit(self.delete_snapshot(self.urlwatch_config.delete_snapshot))
 
         if self.urlwatch_config.features:
             self._exit(self.show_features())
