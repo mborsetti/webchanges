@@ -33,7 +33,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
 
 Version 3.10
 ===================
-Unreleased
+20220502
 
 ⚠ Breaking changes
 ==================
