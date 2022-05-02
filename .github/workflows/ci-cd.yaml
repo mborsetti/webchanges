@@ -54,15 +54,16 @@ jobs:
       #   env:
       #     PYTHONUTF8: 1
 
-  test_linux:
-    name: "Test ${{ matrix.python-version }} on ubuntu-latest"
-    runs-on: ubuntu-latest
+  test:
+    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
     needs: [pre-commit]
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
         python-version: ['3.10', '3.9', '3.8', '3.7']
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
     # Service containers to run with `container-job`
@@ -113,105 +114,48 @@ jobs:
           sudo apt-get -y install libxml2-dev libxslt-dev python-dev
           CFLAGS="-O0" pip install lxml
 
-      - name: Install pdf2text and ocr dependencies (Python 3.9)
-        # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.9'
-        run: |
-          sudo apt-get -y update
-          sudo apt-get -y install python-dbus build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
-          pip install -U pdftotext Pillow pytesseract
-
-      - name: Install all other dependencies
-        run: |
-          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
-
-      - name: Run tests
-        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
-        run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
-
-      - name: Upload coverage data to coveralls.io (parallel)
-        run: coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
-          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
-          COVERALLS_PARALLEL: true
-
-
-  test_other:
-    name: "Test ${{ matrix.python-version }}, on ${{ matrix.os }}"
-    # matrix.os is defined in strategy
-    runs-on: ${{ matrix.os }}
-    # Identifies any jobs that must complete successfully before this job will run
-    needs: [pre-commit]
-    # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
-    strategy:
-      matrix:
-        os: [macos-latest]
-#        os: [windows-latest]
-#        python-version: ['3.9']
-        # for valid python-version see https://github.com/actions/python-versions/blob/main/versions-manifest.json
-        python-version: ['3.10', '3.9', '3.8', '3.7']
-        include:
-        - os: macos-latest
-
-    env:
-      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
-      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-
-    steps:
-      # Checks out a copy of the repository per https://github.com/actions/checkout
-      - name: Check out repo
-        uses: actions/checkout@main
-
-      # Build Python and packages per https://github.com/actions/setup-python
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@main
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            tests/requirements_pytest.txt
-
-      - name: Upgrade pip etc.
-        run: |
-          pip install -U pip setuptools wheel
-
       - name: Install wheel-less lxml for Python 3.10 (MacOS)
         # https://lxml.de/installation.html#installation
         if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'macOS'
         run: |
           STATIC_DEPS=true sudo -H pip install lxml
 
-      - name: Install pdf2text and ocr dependencies (macOS Python 3.9)
+      - name: Install pdf2text and ocr dependencies (Linux Python 3.10)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.9' && runner.os == 'macOS'
+        if: matrix.python-version == '3.10' && runner.os == 'Linux'
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install python-dbus build-essential libpoppler-cpp-dev pkg-config python-dev tesseract-ocr
+          pip install -U pdftotext Pillow pytesseract
+
+      - name: Install pdf2text and ocr dependencies (macOS Python 3.10)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.10' && runner.os == 'macOS'
         run: |
           brew install poppler tesseract
           pip install -U pdftotext Pillow pytesseract
 
-#      - name: Install pdf2text and ocr dependencies (Windows Python 3.9)
-#        # do full install and testing of pdf2text and ocr only on latest Python version
-#        if: matrix.python-version == '3.9' && runner.os == 'Windows'
-#        run: |
-#          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe^
-#          --output Miniconda3-latest-Windows-x86_64.exe
-#          start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
-#          del Miniconda3-latest-Windows-x86_64.exe /y
-#          conda install -y -c conda-forge poppler
-#          curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe^
-#          --output tesseract-setup.exe
-#          start /wait "" tesseract-setup.exe /S
-#          del tesseract-setup /y
-#          pip install -U keyring pdftotext Pillow pytesseract
+      - name: Install pdf2text and ocr dependencies (Windows Python 3.10)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.10' && runner.os == 'Windows'
+        run: |
+          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe^
+          --output Miniconda3-latest-Windows-x86_64.exe
+          start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
+          del Miniconda3-latest-Windows-x86_64.exe /y
+          conda install -y -c conda-forge poppler
+          curl https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20201127.exe^
+          --output tesseract-setup.exe
+          start /wait "" tesseract-setup.exe /S
+          del tesseract-setup /y
+          pip install -U keyring pdftotext Pillow pytesseract
 
       - name: Install all other dependencies
         run: |
-          pip install -U -r requirements.txt -r tests/requirements_pytest.txt coveralls
+          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
-      - name: Run tests (macOS)
-        if: runner.os == 'macOS'
+      - name: Run tests
+        if: runner.os != 'Windows'
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
           python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
@@ -231,10 +175,9 @@ jobs:
           COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
           COVERALLS_PARALLEL: true
 
-
   coveralls:
     name: Indicate completion to coveralls.io
-    needs: [test_linux, test_other]
+    needs: test
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls parallel finished
@@ -248,7 +191,7 @@ jobs:
     runs-on: ubuntu-latest
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
-    needs: [test_linux, test_other]
+    needs: test
     steps:
       - name: Check out repo
         uses: actions/checkout@main

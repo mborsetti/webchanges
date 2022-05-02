@@ -102,6 +102,8 @@ The following directives are new to the Playwright implementation:
 * ``initialization_url``: A url to navigate to before the ``url`` (e.g. a home page where some state gets set).
 * ``initialization_js``: Only used in conjunction with ``initialization_url``, a JavaScript to execute after
   loading ``initialization_url`` and before navigating to the ``url`` (e.g. to emulate a log in).  Advanced usage
+* ``ignore_default_args`` directive for ``url`` jobs with ``use_browser: true`` (using Chrome) to control how Playwright
+  launches Chrome.
 
 In addition, the new ``--no-headless`` command line argument will run the Chrome browser in "headed" mode, i.e.
 displaying the website as it loads it, to facilitate with debugging and testing (e.g. ``webchanges --test 1
@@ -144,20 +146,16 @@ and the Chromium browser it uses has been very problematic, as the library:
 * is prone to crashing,
 * and outright freezes withe the current version of Python (3.10)!
 
-Pyppeteer's `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 125.
+Pyppeteer's `open issues <https://github.com/pyppeteer/pyppeteer/issues>`__ now exceed 130 and are growing almost daily.
 
 `Playwright <https://playwright.dev/python/>`__ has none of the issues above, the core dev team apparently is the same
 who wrote Puppeteer (of which Pyppeteer is a port to Python), and is supported by the deep pockets of Microsoft. The
-Python version is officially supported and up-to-date, and it uses the latest stable version of Google Chrome out of the
-box without the contortions of manually having to pick and set revisions.
+Python version is officially supported and up-to-date, and (in our configuration) uses the latest stable version of
+Google Chrome out of the box without the contortions of manually having to pick and set revisions.
 
-Playwright has been in beta testing within **webchanges** and has been performing very well (significantly more so than
-Pyppeteer).
+Playwright has been in beta testing within **webchanges** for months and has been performing very well (significantly
+more so than Pyppeteer).
 
-Added:
-------
-* ``ignore_default_args`` directive for ``url`` jobs with ``use_browser: true`` (using Chrome) to control how Playwright
-  launches Chrome.
 
 Documentation
 -------------

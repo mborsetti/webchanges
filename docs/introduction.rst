@@ -3,15 +3,18 @@
 ============
 Introduction
 ============
-:program:`webchanges` monitors the output of web sources (or of commands on your computer) and issues a 'report' when
+:program:`webchanges` monitors the output of web sources (or of commands on your computer) and issues a "report" when
 it finds changes. Specifically, every time you run :program:`webchanges`, it:
 
-#. Retrieves the output from the source;
-#. (optional) Filters and transforms it;
-#. Compares it with the version saved from the previous run, producing a "diff" report if it finds any changes;
-#. (optional) Filters and transforms the diff report;
-#. Displays such report (default) and/or sends it via one or more methods such as email;
-#. Saves the output to be used the next time it is run.
+# For each "job":
+
+  #. Retrieves the output from the source (data);
+  #. (optional) Filters and transforms it;
+  #. Compares it with the version saved from the previous run, producing a "diff" report if it finds any changes;
+  #. (optional) Filters and transforms the diff report;
+
+#. Displays (default) such reports, if any, and/or sends it via one or more methods such as email;
+#. Saves the output(s) to be used the next time it is run.
 
 
 :ref:`Jobs`
@@ -35,6 +38,12 @@ It can be edited with any text editor or using the following command:
 
    If you use this command and get an error, set your ``$EDITOR`` (or ``$VISUAL``) environment
    variable in your shell to the path to your editor with a command such as ``export EDITOR=nano``.
+
+A different file can be specified with the ``--jobs`` command line argument as follows:
+
+.. code:: bash
+
+   webchanges --jobs mycustomjobs.yaml --edit
 
 For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.  Some gotchas include that indentation is mandatory,
 spaces (and not tabs!) must be used for such indentation, and there must be a space after a colon separating a key from
@@ -62,9 +71,9 @@ If you have multiple sources to monitor, i.e. multiple "jobs", separate each wit
 
 By default, the content is downloaded as-is. However, certain webpages need for their JavaScript to be run in order
 for their content to be rendered; in this case either find the API used by the JavaScript to get the data you care
-about and monitor that API (preferred), or add the directive ``use_browser: true`` to use a virtual (`headless`)
-Google Chrome browser to render the JavaScript. This requires additional installations and uses many resources; see
-:ref:`here <use_browser>` for more information.
+about directly from the source and monitor that API (preferred), or add the directive ``use_browser: true`` to use a
+virtual (`headless`) Google Chrome browser to render the JavaScript. This requires additional installations and uses
+many resources; see :ref:`here <use_browser>` for more information.
 
 .. code-block:: yaml
 
@@ -112,7 +121,7 @@ activate one or more :ref:`filters <filters>` to:
   ``remove_repeated`` and ``reverse``;
 * Run any custom script or program: ``execute``.
 
-If all you're doing is monitoring the displayed text and links of a website, this filter will do it:
+If all you want to do is monitoring the displayed text and links of a website, this job will do it:
 
 .. code-block:: yaml
 
@@ -121,8 +130,8 @@ If all you're doing is monitoring the displayed text and links of a website, thi
       - html2text:  # notice the 2 empty spaces before the hyphen and the colon at the end
 
 Filters can be chained. As an example, after retrieving an HTML document by using the ``url`` directive, you
-can extract a selection with the ``xpath`` filter, convert it to text with ``html2text``, extract only lines matching
-a specific regular expression with ``keep_lines_containing``, and sort the result with ``sort``:
+can extract a selection with the ``xpath`` filter, convert it to text with ``html2text`` with specific settings, extract
+only lines matching a specific regular expression with ``keep_lines_containing``, and sort the result with ``sort``:
 
 .. code-block:: yaml
 
@@ -134,13 +143,10 @@ a specific regular expression with ``keep_lines_containing``, and sort the resul
       - xpath: //section[@role="main"]
       - html2text:
           method: html2text
-          unicode_snob: true
-          body_width: 0
           inline_links: false
           ignore_links: true
-          ignore_images: true
-          pad_tables: false
-          single_line_break: true
+          ignore_images: false
+          pad_tables: true
       - keep_lines_containing: lines I care about
       - sort:
     ---
@@ -150,15 +156,15 @@ Filters are explained :ref:`here <filters>`.
 
 Comparison
 ----------
-Once all filters (if any) are applied, :program:`webchanges` then automatically performs a comparison between the
-filtered data collected in this run with the one saved from a prior run, by default computing a diff in the `unified
-format <https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ('unified diff').
+Once all filters (if any) are applied, :program:`webchanges` automatically performs a comparison between the filtered
+data collected in this run with the one saved from a prior run, by default computing a *diff* in the `unified format
+<https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ('unified *diff*').
 
 
 :ref:`Diff filters <diff_filters>`
 ----------------------------------
-After the comparison is generated, you can apply *any* of the filters above to the diff itself, or one of the additional
-diff-specific ones that:
+After the comparison is generated, you can apply **any** of the filters above to the *diff* itself using
+``diff_filter``, and/or one of the additional diff-specific ones to:
 
 * Only show lines representing additions: ``additions_only``;
 * Only show lines representing deletions: ``deletions_only``.
@@ -185,22 +191,23 @@ Reports are explained :ref:`here <reports>`.
 
 :ref:`Reporters`
 ----------------
-Finally, the report is *reported* using a *reporter*, by default displaying it on the ``stdout`` console, but you can
-add (or change to) one or more to:
+Finally, the report is *reported* using a reporter, by default displaying it on the ``stdout`` console, but you can
+add (or change to) one or more reporters to:
 
-* Display on stdout (the console): ``stdout``;
 * Display on the default web browser: ``browser``;
+* Send a message to a **Discord** channel: ``discord``;
 * Send via email (SMTP or sendmail): ``email``;
-* Send a message using the Extensible Messaging and Presence Protocol (XMPP): ``xmpp``;
-* Send to a **Slack** or **Discord** channel using the service's webhook: ``webhook``;
-* Send via Telegram: ``telegram``;
+* Send via IFTTT: ``ifttt``;
+* Send via email using the Mailgun service: ``mailgun``;
+* Send to a room using the Matrix protocol: ``matrix``;
+* Send via prowlapp.com: ``prowl``;
 * Send via pushbullet.com: ``pushbullet``;
 * Send via pushover.net: ``pushover``;
-* Send via IFTTT: ``ifttt``;
-* Send to a room using the Matrix protocol: ``matrix``;
-* Send via email using the Mailgun service: ``mailgun``;
-* Send via prowlapp.com: ``prowl``;
 * Run a command on the local system to take care of the notification: ``run_command``.
+* Display on stdout (the console): ``stdout``;
+* Send via Telegram: ``telegram``;
+* Send to a **Slack** or **Mattermost** channel using the service's webhook: ``webhook``;
+* Send a message using the Extensible Messaging and Presence Protocol (XMPP): ``xmpp``;
 
 Reporters are explained :ref:`here <reporters>`.
 

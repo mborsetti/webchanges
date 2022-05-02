@@ -30,10 +30,10 @@ Upgrading from a :program:`urlwatch` 2.25 setup is automatic (see more below), a
   * Correct rendering by email clients who override stylesheets (e.g. Gmail)
   * Better HTML-to-text translation with updated defaults for the ``html2text`` filter
   * Other legibility improvements
-* Improved ``telegram`` reporter now uses MarkdownV2 and preserves most formatting of HTML sites including clickable
+* Improved ``telegram`` reporter that uses MarkdownV2 and preserves most formatting of HTML sites including clickable
   links, bolding, underlining, italics and strikethrough.
-* The use of Playwright and Google Chrome instead of Pyppeteer and (old version of) Chromium for browsing (called
-  ``navigate`` in :program:`urlwatch`) jobs to render JavaScript, including:
+* The use of Playwright instead of Pyppeteer and (old version of) Chromium for browsing jobs to render JavaScript
+  (called ``navigate`` in :program:`urlwatch`), including:
 
   * Upgraded browser engine to the latest released version of Google Chrome
   * Higher stability by optimizing of concurrency
@@ -49,10 +49,10 @@ Upgrading from a :program:`urlwatch` 2.25 setup is automatic (see more below), a
 
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
   does not infinitely grow
-* Diffs (changes) that are no longer lost if :program:`webchanges` is interrupted mid-execution or encounters an error
-  with a reporter
+* *Diffs* (changes) that are no longer lost if :program:`webchanges` is interrupted mid-execution or encounters an
+  error with a reporter
 * The use of the webpage's title as a job ``name`` if one isn't provided
-* The ability to add a job ``note`` in the report
+* The ability to add a job ``note`` for the report
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
   which makes it easier to track content that was added without the distractions of the content that was deleted
 * A new ``--errors`` command line argument to help catching any problems by listing all jobs that error out or have
@@ -127,7 +127,7 @@ If you encounter any problems or have any suggestions please open an issue `here
 .. note::
 
    If you are upgrading from a version of :program:`urlwatch` prior to 2.25, before running :program:`webchanges` make
-   sure that you can run :program:`urlwatch` 2.25 successfully having implemented all :program:`urlwatch` breaking
+   sure that you can run :program:`urlwatch` 2.25 successfully, having implemented all :program:`urlwatch` breaking
    changes in your job and configuration files.
 
    For example, per :program:`urlwatch` issue `#600
@@ -139,7 +139,7 @@ If you encounter any problems or have any suggestions please open an issue `here
       filter: html2text
 
    no longer works in :program:`urlwatch` 2.25, and therefore in :program:`webchanges`, as all filters must be
-   specified as sub-filters like this:
+   specified as sub-directives like this:
 
    .. code-block:: yaml
 
@@ -167,13 +167,13 @@ Relative to :program:`urlwatch` 2.25:
   with ``--max-snapshots 0`` command line argument to keep the existing behavior (but beware of its infinite database
   growth!).
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python packages; use the
-  default method instead or construct a custom command using the :ref:`execute` filter.
+  default method instead or, if you must, construct a custom command using the :ref:`execute` filter.
 * If you are using the ``shellpipe`` filter and are running in Windows, ensure that Python is set to `UTF-8 mode
   <https://docs.python.org/3/using/windows.html#utf-8-mode>`__ to avoid getting ``UnicodeEncodeError``.
-* If you're using a hooks (e.g. ``hooks.py``) file, all imports from ``urlwatch`` need to be replaced with identical
+* If you're using a hooks file (e.g. ``hooks.py``), all imports from ``urlwatch`` need to be replaced with identical
   imports from ``webchanges``.
-* If you are using the ``discord`` or ``slack`` reporter you need to rename it ``webhook`` (unified reporter).
-* If you are using browser jobs, see above for upgrading to Playwrightt
+* If you are using the ``slack`` reporter you need to rename it ``webhook`` (unified reporter).
+* If you are using browser (``navigate``) jobs, see above for upgrading to Playwrightt
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~

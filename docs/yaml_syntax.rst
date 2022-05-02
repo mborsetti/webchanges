@@ -160,7 +160,7 @@ but the following will not work:
 
     windows_drive: c:
 
-and when you run :program:webchanges: it will result in the following error:
+and when you run :program:`webchanges` it will result in the following error:
 
 .. code-block:: text
 

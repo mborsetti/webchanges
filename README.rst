@@ -53,7 +53,8 @@ Initialize
 
 
 #. Run the following command to change the default `configuration
-   <https://webchanges.readthedocs.io/en/stable/configuration.html>`__, e.g. to receive change notifications ("reports")
+   <https://webchanges.readthedocs.io/en/stable/configuration.html>`__, e.g. to receive change notifications
+   ("`reports <https://webchanges.readthedocs.io/en/stable/reporters.html>`__")
    by `e-mail <https://webchanges.readthedocs.io/en/stable/reporters.html#smtp>`__ and/or one of many other methods:
 
    .. code-block:: bash
@@ -101,7 +102,8 @@ License
 =======
 |license|
 
-Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but including code licensed under the
+Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but including
+`code <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ licensed under the
 `BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`__. See the full license `here
 <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
 
@@ -109,7 +111,7 @@ Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but in
 Compatibility with **urlwatch**
 ================================
 
-This project is based on code of`urlwatch <https://github.com/thp/urlwatch>`__ 2.21 and you can easily upgrade from
+This project is based on code of`urlwatch <https://github.com/thp/urlwatch>`__ 2.21. You can easily upgrade from
 **urlwatch** 2.25 (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__) using the same job and
 configuration files and benefit from many HTML-focused improvements, including:
 
@@ -120,7 +122,7 @@ configuration files and benefit from many HTML-focused improvements, including:
   wrap around;
 * Correct rendering by email clients who override stylesheets (e.g. Gmail);
 * Other legibility improvements;
-* Use of stable Playwright instead of buggy Pyppeteer (for websites that need JavaScript rendering before capture),
+* Use of stable Playwright instead of buggy Pyppeteer for websites that need JavaScript rendering before capture,
   increasing stability, reliability, flexibility and control;
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
   which makes it easier to track content that was added without the distractions of the content that was deleted;

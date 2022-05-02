@@ -110,7 +110,7 @@ At the moment, the following filters are available:
 
   - :ref:`execute`: Run a program that filters the data (see also :ref:`shellpipe`, to be avoided).
 
-Python programmers can write their own plug-in that could include filters; see :ref:`hooks`.
+Advanced Python programmers can write their own plug-in with additional custom filters; see :ref:`hooks`.
 
 
 
@@ -146,7 +146,7 @@ See Microsoft’s `XPath Examples
 <https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ms256086(v=vs.100)>`__ page for additional
 examples.
 
-Using CSS and XPath filters with XMl
+Using CSS and XPath filters with XML
 """"""""""""""""""""""""""""""""""""
 By default, CSS and XPath filters are set up for HTML documents, but it is possible to use them for XML documents as
 well.
@@ -199,8 +199,8 @@ Alternatively, use the XPath expression ``//*[name()='<tag_name>']`` to bypass t
 
 Using CSS and XPath filters with XML to exclude content
 """""""""""""""""""""""""""""""""""""""""""""""""""""""
-Another useful option with XPath and CSS filters is ``exclude``. Elements selected by the ``exclude`` sub-directive are
-removed from the final result. For example, the following job will not have any ``<a>`` tag in its results:
+Elements selected by the ``exclude`` sub-directive are removed from the final result. For example, the following job
+will not have any ``<a>`` tag in its results:
 
 .. code-block:: yaml
 
@@ -234,7 +234,7 @@ Duplicated results
 """"""""""""""""""
 If you get multiple results from one page, but you only expected one (e.g. because the page contains both a mobile and
 desktop version in the same HTML document, and shows/hides one via CSS depending on the viewport size), you can use
-'``maxitems: 1``' to only return the first item.
+``maxitems: 1`` to only return the first item.
 
 
 Optional directives
@@ -410,12 +410,12 @@ but may not yield the prettiest of results.
 
 ``bs4``
 ^^^^^^^
-This filter method extracts human-readable text from HTML using the `Beautiful Soup
+This filter method extracts visible text from HTML using the `Beautiful Soup
 <https://pypi.org/project/beautifulsoup4/>`__ Python package, specifically its `get_text(strip=True)
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
 
 .. note:: As of Beautiful Soup version 4.9.0, when using the ``lxml`` or ``html.parser`` parser (see optional
-   sub-directive below), only human-visible content of the page is returned and the contents of <script>, <style>, and
+   sub-directive below), only human-visible content of the page is extracted and the contents of <script>, <style>, and
    <template> tags is not included.
 
 .. code-block:: yaml
