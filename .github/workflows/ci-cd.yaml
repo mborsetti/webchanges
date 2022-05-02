@@ -178,6 +178,7 @@ jobs:
           COVERALLS_PARALLEL: true
 
   test_others:
+    # No redis (only works on ubuntu)
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
     # Identifies any jobs that must complete successfully before this job will run
     needs: pre-commit
@@ -191,12 +192,10 @@ jobs:
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-      REDIS_URI: redis://localhost:6379
 
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-        if: runner.os == 'Linux'
         uses: actions/checkout@main
 
       # Build Python and packages per https://github.com/actions/setup-python
