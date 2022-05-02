@@ -203,12 +203,12 @@ jobs:
         if: matrix.python-version == '3.10' && runner.os == 'Windows'
         run: |
           curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
-          start /wait "" Miniconda3-latest-Windows-x86_64.exe /S
+          call Miniconda3-latest-Windows-x86_64.exe /S
           del Miniconda3-latest-Windows-x86_64.exe /y
           conda install -y -c conda-forge poppler
           set TESSERACT = tesseract-ocr-w64-setup-v5.0.1.20220118.exe
           curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
-          start /wait "" %TESSERACT% /S
+          call %TESSERACT% /S
           del %TESSERACT% /y
           pip install -U keyring pdftotext Pillow pytesseract
 
@@ -251,10 +251,10 @@ jobs:
 
   deploy:
     name: Deploy release
-    runs-on: ubuntu-latest
+    needs: [test_ubuntu, test_others]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
-    needs: [test_ubuntu, test_others]
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repo
         uses: actions/checkout@main
