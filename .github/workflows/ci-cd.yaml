@@ -148,10 +148,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
-        python-version: ['3.10']
-        include:
-          - os: macos-latest
-          - python-version: ['3.9', '3.8', '3.7']
+        python-version: ['3.10', '3.9', '3.8', '3.7']
     runs-on: ${{ matrix.os }}
 
     env:
@@ -178,11 +175,11 @@ jobs:
         run: |
           pip install -U pip setuptools wheel
 
-      - name: Install wheel-less lxml for Python 3.10 (MacOS)
-        # https://lxml.de/installation.html#installation
-        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'macOS'
-        run: |
-          STATIC_DEPS=true sudo -H pip install lxml
+#      - name: Install wheel-less lxml for Python 3.10 (MacOS)
+#        # https://lxml.de/installation.html#installation
+#        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'macOS'
+#        run: |
+#          STATIC_DEPS=true sudo -H pip install lxml
 
       - name: Install pdf2text and ocr dependencies (macOS Python 3.10)
         # do full install and testing of pdf2text and ocr only on latest Python version
