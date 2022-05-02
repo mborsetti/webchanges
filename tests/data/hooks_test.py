@@ -16,7 +16,10 @@ class CustomLoginJob(UrlJob):
     __kind__ = 'custom-login'
     __required__ = ('username', 'password')
 
-    def retrieve(self, job_state: JobState) -> str:
+    username: str
+    password: str
+
+    def retrieve(self, job_state: JobState, headless: bool = True) -> str:
         ...  # custom code here
         return f'Would log in to {self.url} with {self.username} and {self.password}\n'
 
