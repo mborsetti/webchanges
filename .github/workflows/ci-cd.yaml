@@ -101,6 +101,7 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
             requirements.txt
+            tests/requirements_pre-commit.txt
             tests/requirements_pytest.txt
 
       - name: Upgrade pip etc.
@@ -178,14 +179,14 @@ jobs:
 
   test_others:
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
-    runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
-    needs: [pre-commit]
+    needs: pre-commit
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-        python-version: ['3.10', '3.9', '3.8', '3.7']
         os: [macos-latest, windows-latest]
+        python-version: ['3.10', '3.9', '3.8', '3.7']
+    runs-on: ${{ matrix.os }}
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
@@ -206,6 +207,7 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
             requirements.txt
+            tests/requirements_pre-commit.txt
             tests/requirements_pytest.txt
 
       - name: Upgrade pip etc.
