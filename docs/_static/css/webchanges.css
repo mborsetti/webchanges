@@ -7,6 +7,9 @@ See https://docs.readthedocs.io/en/stable/guides/adding-custom-css.html#overridi
 /*@import '../alabaster.css';  /* for Alabaster */
 @import 'theme.css';       /* for the Read the Docs theme */
 
+.strike {
+  text-decoration: line-through;
+}
 .underline {
   text-decoration: underline;
 }

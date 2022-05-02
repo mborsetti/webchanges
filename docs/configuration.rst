@@ -103,7 +103,7 @@ If you want to change some settings for all your jobs, edit the ``job_defaults``
 .. code-block:: yaml
 
    job_defaults:
-     all:
+     url:
        headers:
          Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
          Accept-Language: en-US,en
@@ -114,16 +114,10 @@ If you want to change some settings for all your jobs, edit the ``job_defaults``
          Sec-Fetch-Site: same-origin
          Sec-Fetch-User: ?1
          Upgrade-Insecure-Requests: '1'
-         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36
-     browser:
-       chromium_revision: 782797
-       switches:
-         - --enable-experimental-web-platform-features
-         - '--window-size=1920,1080'
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36
 
-The above config file sets all jobs to use the specified headers, and all ``url`` jobs with ``browser: true`` to
-use a specific Chromium :ref:`revision <pyppeteer_chromium_revision>` and certain Chromium feature `switches
-<https://peter.sh/experiments/chromium-command-line-switches/>`__.
+
+The above config file sets all url jobs to use the specified headers.
 
 The possible sub-directives to ``job_defaults`` are:
 
@@ -137,5 +131,6 @@ See :ref:`jobs <jobs>` about the different job kinds and directives that can be 
 Omitting configuration directives
 ---------------------------------
 When the ``config.yaml`` file is created, it contains all configuration directives and their default settings. If
-you omit/remove any directive from this file, :program:webchanges: will use the default value for the missing one. You
-can see a list of such omitted/missing directives when running with the ``--verbose`` command line argument.
+you omit/remove any directive from this file, :program:`webchanges` will use the default value for the missing one. You
+can see a list of such omitted/missing directives and their default values when running with the ``--verbose`` command
+line argument.

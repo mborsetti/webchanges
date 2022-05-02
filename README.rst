@@ -23,7 +23,7 @@ Requirements
 
 You should use the latest version of `Python <https://www.python.org/downloads/>`__ if possible, but older
 Python versions are supported for 3 years after being obsoleted by a new major release (3.x). For each major release,
-only the latest bugfix version (3.x.y) is supported.
+only the latest bug and security fix version (3.x.y) is supported.
 
 
 Installation
@@ -120,12 +120,12 @@ configuration files and benefit from many HTML-focused improvements, including:
   wrap around;
 * Correct rendering by email clients who override stylesheets (e.g. Gmail);
 * Other legibility improvements;
-* Multiple changes to how Pyppeteer is run (for websites that need JavaScript rendering before capture), increasing
-  stability, reliability, flexibility and control;
+* Use of stable Playwright instead of buggy Pyppeteer (for websites that need JavaScript rendering before capture),
+  increasing stability, reliability, flexibility and control;
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
   which makes it easier to track content that was added without the distractions of the content that was deleted;
 * Much better `documentation <https://webchanges.readthedocs.io/>`__;
-* More reliability and stability, including a 33 percentage point increase in testing coverage;
+* More reliability and stability, including a 39 percentage point increase in testing coverage to 81%;
 * Many other additions, refinements and fixes (see `detailed information
   <https://webchanges.readthedocs.io/en/stable/migration.html#upgrade-details>`__).
 

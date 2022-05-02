@@ -40,6 +40,7 @@
 
    advanced
    hooks
+   under_the_hood
 
 .. toctree::
    :hidden:

@@ -5,12 +5,12 @@
 
 .. _hooks:
 
-=================
-Python code hook
-=================
+=========================
+Hook your own Python code
+=========================
 Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing it into
-a ``hooks.py`` file and placing it into the same directory as the job and configuration files. The code will be
-automatically loaded at startup.
+a ``hooks.py`` file located in the same directory as the job and configuration files. The code will be automatically
+loaded at startup.
 
 Smaller code snippets can also be run using the :ref:`execute` filter, for example as used :ref:`here <json_dict>`
 for filtering JSON dictionaries.
@@ -21,9 +21,9 @@ An example ``hooks.py`` file is below:
 
    """Example hooks file for webchanges."""
 
-   from pathlib import Path
    import re
-   from typing import Any, Dict, Optional
+   from pathlib import Path
+   from typing import Any, Dict, Optional, Union
 
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
    from webchanges.handler import JobState
@@ -32,18 +32,26 @@ An example ``hooks.py`` file is below:
 
 
    class CustomLoginJob(UrlJob):
-       """Custom login for my webpage."""
+       """Custom login for my webpage.
 
-       __kind__ = 'custom-login'
+       Add `kind: custom_login` to the job to retrieve data using this class instead of the built-in ones.
+       """
+
+       __kind__ = 'custom_login'
        __required__ = ('username', 'password')
 
-       def retrieve(self, job_state: JobState) -> str:
+       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
+           """:returns: The data retrieved and the ETag."""
            ...  # custom code here to actually do the login
-           return f'Would log in to {self.url} with {self.username} and {self.password}\n'
+           return f'Would log in to {self.url} with {self.username} and {self.password}\n', ''
 
 
    class CaseFilter(FilterBase):
-       """Custom filter for changing case, needs to be selected manually."""
+       """Custom filter for changing case.
+
+       Needs to be selected manually, i.e. add `- case:` (or e.g. `- case: lower`)to the list of filters in the job's
+       `filter:` directive.
+       """
 
        __kind__ = 'case'
 
@@ -66,7 +74,11 @@ An example ``hooks.py`` file is below:
 
 
    class IndentFilter(FilterBase):
-       """Custom filter for indenting, needs to be selected manually."""
+       """Custom filter for indenting.
+
+       Needs to be selected manually, i.e. add `- indent:` (or e.g. `- indent: 4`) to the list of filters in the job's
+       `filter:` directive.
+       """
 
        __kind__ = 'indent'
 
@@ -85,8 +97,7 @@ An example ``hooks.py`` file is below:
 
 
    class CustomMatchUrlFilter(AutoMatchFilter):
-       """The AutoMatchFilter will apply automatically to all jobs that match the given properties
-       set."""
+       """An AutoMatchFilter applies automatically to all jobs that match the MATCH properties set."""
 
        MATCH = {'url': 'https://example.org/'}
 
@@ -96,8 +107,7 @@ An example ``hooks.py`` file is below:
 
 
    class CustomRegexMatchUrlFilter(RegexMatchFilter):
-       """The RegexMatchFilter will apply automatically to  all jobs that match the given properties
-       set."""
+       """A RegexMatchFilter applies automatically to all jobs that match the MATCH regex properties set."""
 
        MATCH = {'url': re.compile(r'https://example.org/.*')}
 
@@ -107,7 +117,13 @@ An example ``hooks.py`` file is below:
 
 
    class CustomTextFileReporter(TextReporter):
-       """Custom reporter that writes the text-only report to a file."""
+       """Custom reporter that writes the text-only report to a file.
+
+       Needs to enabled in the config.yaml file:
+       report:
+         custom_file:
+           enabled: true
+       """
 
        __kind__ = 'custom_file'
 
@@ -116,7 +132,13 @@ An example ``hooks.py`` file is below:
 
 
    class CustomHtmlFileReporter(HtmlReporter):
-       """Custom reporter that writes the HTML report to a file."""
+       """Custom reporter that writes the HTML report to a file.
+
+       Needs to enabled in the config.yaml file:
+       report:
+         custom_html:
+           enabled: true
+       """
 
        __kind__ = 'custom_html'
 

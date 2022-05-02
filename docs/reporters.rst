@@ -185,6 +185,7 @@ low-risk way to run unattended.
        subject: '[webchanges] {count} changes: {jobs}'
        html: true
        method: 'smtp'
+       smtp:
          host: 'smtp.example.com'
          port: 587
          starttls: true
@@ -247,6 +248,7 @@ Then configure these directives as follows:
        subject: '[webchanges] {count} changes: {jobs}'
        html: true
        method: 'smtp'
+       smtp:
          host: 'smtp.gmail.com'
          user: 'your.username@gmail.com'  # (edit accordingly; don't use your primary account for this!!)
          port: 587

@@ -41,6 +41,12 @@ class TrackSubClasses(type):
 
     @staticmethod
     def sorted_by_kind(cls: TrackSubClasses) -> List[TrackSubClasses]:
+        """Generates a list of all members of a class sorted by the value of their __kind__ attribute. Useful for
+        documentation.
+
+        :param cls: The class.
+        :return: The sorted list of class members.
+        """
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
     def __init__(cls, name: str, bases: Tuple[type, ...], namespace: dict) -> None:
@@ -78,7 +84,10 @@ class TrackSubClasses(type):
 
 
 def edit_file(filename: Union[str, bytes, PathLike]) -> None:
-    """Opens the editor to edit the file."""
+    """Opens the editor to edit a file.
+
+    :param filename: The filename.
+    """
     editor = os.environ.get('EDITOR', None)
     if not editor:
         editor = os.environ.get('VISUAL', None)
@@ -89,11 +98,19 @@ def edit_file(filename: Union[str, bytes, PathLike]) -> None:
             print('Please set the path to the editor in the environment variable $EDITOR, e.g. "export EDITOR=nano"')
             raise SystemExit(1)
 
-    subprocess.run(shlex.split(editor) + [str(filename)], check=True)
+    subprocess.run(
+        shlex.split(editor) + [str(filename)],
+        check=True,
+    )
 
 
 def import_module_from_source(module_name: str, source_path: Union[str, bytes, PathLike]) -> ModuleType:
-    """Loads a module and executes it in its own namespace."""
+    """Loads a module and executes it in its own namespace.
+
+    :param module_name: The name of the module to import.
+    :param source_path: The path where the module is located.
+    :return: A ModuleType object.
+    """
     source_path = str(source_path)
     loader = importlib.machinery.SourceFileLoader(module_name, source_path)
     spec = importlib.util.spec_from_file_location(module_name, source_path, loader=loader)
@@ -263,3 +280,16 @@ def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] 
         logger.error(f'PyPi error when querying for latest release: {r}')
 
     return ''
+
+
+def dur_text(duration: float) -> str:
+    """Returns a formatted string optimized to the number of seconds for use in footers.
+
+    :parameter duration: The duration in seconds.
+    :returns: The formatted string.
+    """
+    if duration < 60:
+        return f'{float(f"{duration:.2g}"):g} seconds'
+    else:
+        m, s = divmod(duration, 60)
+        return f'{m:.0f}:{s:02.0f}'

@@ -28,8 +28,8 @@ from markdown2 import Markdown
 
 from . import __project_name__, __url__, __version__
 from .jobs import UrlJob
-from .mailer import SendmailMailer, SMTPMailer
-from .util import chunk_string, linkify, TrackSubClasses
+from .mailer import Mailer, SendmailMailer, SMTPMailer
+from .util import chunk_string, dur_text, linkify, TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -281,12 +281,11 @@ class HtmlReporter(ReporterBase):
                 yield '<hr>'
 
         # HTML footer
-        duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
         yield (
             f'<div style="font-style:italic">\n'
-            f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-            f' seconds with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a>'
-            f' {html.escape(__version__)}'
+            f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
+            f'{dur_text(self.duration)} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
+            f'{html.escape(__version__)}'
             + (
                 f' ({self.jobs_file.stem}).<br>\n'
                 if self.jobs_file is not None and self.jobs_file.stem != 'jobs'
@@ -589,10 +588,9 @@ class TextReporter(ReporterBase):
 
         if summary and show_footer:
             # Text footer
-            duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
             yield (
-                f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in {duration}"
-                f' seconds with {__project_name__} {__version__}'
+                f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
+                f'{dur_text(self.duration)} with {__project_name__} {__version__}'
                 + (f' ({self.jobs_file.stem}).\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '.\n')
             )
             if (
@@ -691,10 +689,9 @@ class MarkdownReporter(ReporterBase):
 
         if summary and show_footer:
             # Markdown footer
-            duration = f'{float(f"{self.duration:.2g}"):g}' if self.duration < 10 else f'{self.duration:.0f}'
             footer = (
-                f"--\n_Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in"
-                f' {duration} seconds with {__project_name__} {__version__}'
+                f"--\n_Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
+                f'{dur_text(self.duration)} with {__project_name__} {__version__}'
             )
             footer += f' ({self.jobs_file.stem})_.\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '_.\n'
 
@@ -986,7 +983,7 @@ class EMailReporter(TextReporter):
             smtp_config = self.config['smtp']
             smtp_user = smtp_config['user'] or self.config['from']
             use_auth = smtp_config['auth']
-            mailer: Union[SMTPMailer, SendmailMailer] = SMTPMailer(
+            mailer: Mailer = SMTPMailer(
                 smtp_user,
                 smtp_config['host'],
                 smtp_config['port'],

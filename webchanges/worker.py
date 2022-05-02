@@ -32,9 +32,9 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     :raises IndexError: If any index(es) is/are out of range.
     """
 
-    def insert_delay(jobs: List[JobBase]) -> List[JobBase]:
+    def insert_delay(jobs: List[JobBase]) -> List[JobBase]:  # pragma: no cover
         """
-        TODO: Evaluate whether this is necessary.  Currently not being called.
+        TODO: Evaluate whether this is necessary; currently not being called.  Remove pragma no cover.
 
         Sets a _delay value for URL jobs hitting the network location already hit. Used to prevent multiple jobs
         hitting the same network location at the exact same time and being blocked as a result.
@@ -156,27 +156,42 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     cache_storage = urlwatcher.cache_storage
     report = urlwatcher.report
     with ExitStack() as stack:
-        # run non-BrowserJob jobs
-        jobs_to_run = (job for job in jobs if type(job) != BrowserJob)
-        logger.debug("Running jobs without 'use_browser: true' in parallel with Python default max_workers")
-        job_runner(stack, jobs_to_run, cache_storage, report)
+        # run non-BrowserJob jobs first
+        jobs_to_run = [job for job in jobs if type(job) != BrowserJob]
+        if jobs_to_run:
+            logger.debug(
+                "Running jobs that do not require Chrome (without 'use_browser: true') in parallel with Python's "
+                'default max_workers.'
+            )
+            job_runner(stack, jobs_to_run, cache_storage, report)
+        else:
+            logger.debug("Found no jobs that do not require Chrome (i.e. without 'use_browser: true').")
 
-        # run BrowserJob jobs
-        jobs_to_run = (job for job in jobs if type(job) == BrowserJob)
-        if any(jobs_to_run):
-            if any(job._beta_use_playwright for job in jobs_to_run):
-                try:
-                    import psutil
-                except ImportError:
-                    raise ImportError(
-                        "Python package psutil is not installed; cannot use 'use_browser: true' directives with "
-                        "'_beta_use_playwright: true'. Please install dependencies with 'pip install webchanges["
-                        "playwright]'."
-                    )
-                avail_mem = psutil.virtual_memory().available + psutil.swap_memory().free
-                logger.debug(f'Found {avail_mem:,} in available virtual + swap memory')
-                max_workers = min(32, max(1, int(avail_mem / 140e6)), os.cpu_count() or 1)
-            else:
-                max_workers = min(32, os.cpu_count() or 1)
-            logger.debug(f"Running 'use_browser: true' jobs in parallel with {max_workers} max_workers")
+        # run BrowserJob jobs after
+        jobs_to_run = [job for job in jobs if type(job) == BrowserJob]
+        if jobs_to_run:
+            try:
+                import psutil
+            except ImportError:
+                raise ImportError(
+                    "Python package psutil is not installed; cannot use 'use_browser: true'. Please install "
+                    "dependencies with 'pip install webchanges[use_browser]'."
+                )
+            try:
+                virt_mem = psutil.virtual_memory().available
+                logger.debug(
+                    f'Found {virt_mem / 1e6:,.0f} MB of available physical memory (plus '
+                    f'{psutil.swap_memory().free / 1e6:,.0f} MB of swap).'
+                )
+            except psutil.Error as e:  # pragma: no cover
+                virt_mem = 0
+                logger.debug(f'Could not read memory: {e}')
+            max_workers = max(int(virt_mem / 120e6), 1)
+            max_workers = min(max_workers, os.cpu_count() or 1)
+            logger.debug(
+                f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with {max_workers} "
+                f'max_workers.'
+            )
             job_runner(stack, jobs_to_run, cache_storage, report, max_workers)
+        else:
+            logger.debug("Found no jobs that require Chrome (i.e. with 'use_browser: true').")

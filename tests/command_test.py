@@ -16,11 +16,6 @@ from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
-# try:
-#     import pyppeteer
-# except ImportError:
-#     pyppeteer = None
-
 # Paths
 here = Path(__file__).parent
 config_path = here.joinpath('data')
@@ -106,6 +101,7 @@ def test_first_run(capsys, tmp_path):
     config_file2 = tmp_path.joinpath('config.yaml')
     jobs_file2 = tmp_path.joinpath('jobs.yaml')
     command_config2 = CommandConfig([], __project_name__, tmp_path, config_file2, jobs_file2, hooks_file, cache_file)
+    command_config2.edit = False
     assert first_run(command_config2) is None
     message = capsys.readouterr().out
     assert 'Created default config file at ' in message
@@ -219,14 +215,16 @@ def test_show_features_and_verbose(capsys):
 def test_list_jobs_verbose(capsys):
     setattr(command_config, 'list', True)
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
-    urlwatcher.urlwatch_config.verbose = False
+    urlwatcher.urlwatch_config.verbose = True
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'list', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == '  1: Sample webchanges job; used by command_test.py (echo test)\n'
+    assert message == (
+        "  1: <shell command='echo test' index_number=1 name='Sample webchanges job; used by command_test.py'\n"
+    )
 
 
 def test_list_jobs_not_verbose(capsys):
@@ -246,6 +244,10 @@ def test__find_job():
     assert urlwatch_command._find_job('https://example.com/') is None
 
 
+def test__find_job_zero():
+    assert urlwatch_command._find_job(0) is None
+
+
 def test__find_job_index_error():
     assert urlwatch_command._find_job(100) is None
 
@@ -254,7 +256,11 @@ def test__get_job():
     assert urlwatch_command._get_job(1).get_location() == 'echo test'
 
 
-def test__get_job_index_error(capsys):
+def test__get_job_negative(capsys):
+    assert urlwatch_command._get_job(-1).get_location() == 'echo test'
+
+
+def test_get_job_index_error(capsys):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command._get_job(100).get_location()
     assert pytest_wrapped_e.value.code == 1
@@ -269,7 +275,6 @@ def test_test_job(capsys):
     setattr(command_config, 'test_job', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    message = message.replace('\n\n ', '\n').replace('\r', '')  # Python 3.6
     assert message.startswith(
         'Sample webchanges job; used by command_test.py\n'
         '----------------------------------------------\n'
@@ -291,7 +296,6 @@ def test_test_job_with_test_reporter(capsys):
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    message = message.replace('\n\n ', '\n').replace('\r', '')  # Python 3.6
     assert message.startswith(
         'Sample webchanges job; used by command_test.py\n'
         '----------------------------------------------\n'
@@ -320,8 +324,10 @@ def test_dump_history(capsys):
             urlwatch_command.handle_actions()
         setattr(command_config, 'dump_history', None)
         assert pytest_wrapped_e.value.code == 0
-        # message = capsys.readouterr().out
-        # assert message == 'This job has never been run before\n'
+        message = capsys.readouterr().out
+        assert (
+            'History for job Job 1: echo 1:\n' '(ID: 452b9ef6128065e9e0329ba8d32daf9715595fa4)\n' 'Found 0 snapshots.\n'
+        ) in message
 
         # run once
         urlwatcher.run_jobs()
@@ -337,8 +343,7 @@ def test_dump_history(capsys):
         message = capsys.readouterr().out
         assert (
             'History for job Job 1: echo 1:\n'
-            'Found 0 snapshots.\n'
-            'History for job Job 1: echo 1:\n'
+            '(ID: 452b9ef6128065e9e0329ba8d32daf9715595fa4)\n'
             '==================================================\n'
         ) in message
         assert (
@@ -798,12 +803,3 @@ def test_job_states_verb_notimestamp_changed():
     urlwatcher.run_jobs()
     cache_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
-
-
-# def test_show_chromium_directory(capsys):
-#     if pyppeteer:
-#         urlwatch_command.show_chromium_directory()
-#         message = capsys.readouterr().out
-#         assert message[:74] == 'Downloaded Chromium executables are installed in the following directory:\n'
-#     else:
-#         pytest.skip('Pyppeteer not installed')

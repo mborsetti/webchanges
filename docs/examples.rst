@@ -44,17 +44,18 @@ crontab)::
 
 .. _always_report:
 
-Receiving a report every time webchanges runs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If you are watching pages that change seldomly, but you still want to be notified evert time :program:`webchanges`
-runs to know it's still working, you can monitor the output of the ``date`` command, for example:
+Receiving a report for every run
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you are watching pages that change seldomly, but you still want to be notified every time :program:`webchanges`
+runs to know it's still working, you can add a job that monitors the output of the ``date`` command, for example:
 
 .. code-block:: yaml
 
-   name: webchanges run
+   name: Run date
    command: date
 
-Since the output of ``date`` changes every second, this job should produce a report every time webchanges is run.
+Since the output of ``date`` changes every second, this job should produce a report every time :program:`webchanges` is
+run.
 
 
 .. _resolving_issues:

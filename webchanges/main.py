@@ -5,6 +5,8 @@ For the entrypoint, see cli.py.
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
+from __future__ import annotations
+
 import logging
 from typing import List, Optional, Tuple, Union
 
@@ -87,10 +89,9 @@ class Urlwatch(object):
 
         :raises SystemExit: If job is not found, setting argument to 1.
         """
-        logger.info('Loading jobs from file')
         if self.urlwatch_config.jobs.is_file():
             jobs = self.jobs_storage.load_secure()
-            logger.info(f'Found {len(jobs)} jobs')
+            logger.info(f'Loaded {len(jobs)} jobs')
         else:
             print(f'Jobs file not found: {self.urlwatch_config.jobs}')
             raise SystemExit(1)

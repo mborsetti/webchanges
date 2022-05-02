@@ -63,7 +63,7 @@ SETUP = {
     'install_requires': list(requirements),
     'entry_points': {'console_scripts': [f'{project.__project_name__}={project.__package__}.cli:main']},
     'extras_require': {
-        'use_browser': ['pyppeteer'],
+        'use_browser': ['playwright', 'psutil'],
         'beautify': ['beautifulsoup4', 'jsbeautifier', 'cssbeautifier'],
         'bs4': ['beautifulsoup4'],
         'deepdiff': ['deepdiff'],
@@ -72,7 +72,6 @@ SETUP = {
         'matrix': ['matrix_client'],
         'ocr': ['pytesseract', 'Pillow'],
         'pdf2text': ['pdftotext'],
-        'playwright': ['playwright', 'psutil'],
         'pushbullet': ['pushbullet.py'],
         'pushover': ['chump'],
         'redis': ['redis'],

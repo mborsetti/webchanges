@@ -2,8 +2,11 @@
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
+from __future__ import annotations
+
 import argparse
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -11,38 +14,56 @@ from . import __doc__, __docs_url__, __project_name__, __version__
 from .util import get_new_version_number
 
 
+@dataclass
 class BaseConfig(object):
-    """Base configuration class."""
+    """Base configuration class.
 
-    def __init__(
-        self,
-        project_name: str,
-        config_path: Path,
-        config: Path,
-        jobs: Path,
-        hooks: Path,
-        cache: Union[str, Path],
-    ) -> None:
-        """
+    :param project_name: The name of the project.
+    :param config_path: The path of the configuration directory.
+    :param config: The path of the configuration file.
+    :param jobs: The path of the jobs file.
+    :param hooks: The path of the Python hooks file.
+    :param cache: The path of the database file (or directory if using the textfiles database-engine) where
+       snapshots are stored.
+    """
 
-        :param project_name: The name of the project.
-        :param config_path: The path of the configuration directory.
-        :param config: The path of the configuration file.
-        :param jobs: The path of the jobs file.
-        :param hooks: The path of the Python hooks file.
-        :param cache: The path of the database file (or directory if using the textfiles database-engine) where
-           snapshots are stored.
-        """
-        self.project_name = project_name
-        self.config_path = config_path
-        self.config = config
-        self.jobs = jobs
-        self.hooks = hooks
-        self.cache = cache
+    project_name: str
+    config_path: Path
+    config: Path
+    jobs: Path
+    hooks: Path
+    cache: Union[str, Path]
 
 
 class CommandConfig(BaseConfig):
     """Command line arguments configuration; the arguments are stored as class attributes."""
+
+    joblist: Optional[List[int]] = None
+    verbose: bool = False
+    list: bool = False
+    errors: bool = False
+    test_job: Optional[str] = None
+    no_headless: bool = False
+    test_diff: Optional[str] = None
+    dump_history: Optional[str] = None
+    add: Optional[str] = None
+    delete: Optional[str] = None
+    test_reporter: Optional[str] = None
+    smtp_login: bool = False
+    telegram_chats: bool = False
+    xmpp_login: bool = False
+    edit: bool = False
+    edit_config: bool = False
+    edit_hooks: bool = False
+    gc_cache: bool = False
+    clean_cache: bool = False
+    rollback_cache: Optional[int] = None
+    delete_snapshot: Optional[str] = None
+    database_engine: str = 'sqlite3'
+    max_snapshots: int = 4
+    features: bool = False
+    install_chrome: bool = False
+    log_level: str = 'DEBUG'
 
     def __init__(
         self,
@@ -65,34 +86,32 @@ class CommandConfig(BaseConfig):
            snapshots are stored.
         """
         super().__init__(project_name, config_path, config, jobs, hooks, cache)
-        self.joblist: Optional[List[int]] = None
-        self.verbose: bool = False
-        self.list: bool = False
-        self.errors: bool = False
-        self.test_job: Optional[str] = None
-        self.no_headless: bool = False
-        self.test_diff: Optional[str] = None
-        self.dump_history: Optional[str] = None
-        self.add: Optional[str] = None
-        self.delete: Optional[str] = None
-        self.test_reporter: Optional[str] = None
-        self.smtp_login: bool = False
-        self.telegram_chats: bool = False
-        self.xmpp_login: bool = False
-        self.edit: bool = False
-        self.edit_config: bool = False
-        self.edit_hooks: bool = False
-        self.gc_cache: bool = False
-        self.clean_cache: bool = False
-        self.rollback_cache: Optional[int] = None
-        self.delete_snapshot: Optional[str] = None
-        self.database_engine: str = 'sqlite3'
-        self.max_snapshots: int = 4
-        self.features: bool = False
-        self.chromium_directory: bool = False
-        self.install_chrome: bool = False
-        self.log_level: str = 'DEBUG'
-
+        # self.joblist: Optional[List[int]] = None
+        # self.verbose: bool = False
+        # self.list: bool = False
+        # self.errors: bool = False
+        # self.test_job: Optional[str] = None
+        # self.no_headless: bool = False
+        # self.test_diff: Optional[str] = None
+        # self.dump_history: Optional[str] = None
+        # self.add: Optional[str] = None
+        # self.delete: Optional[str] = None
+        # self.test_reporter: Optional[str] = None
+        # self.smtp_login: bool = False
+        # self.telegram_chats: bool = False
+        # self.xmpp_login: bool = False
+        # self.edit: bool = False
+        # self.edit_config: bool = False
+        # self.edit_hooks: bool = False
+        # self.gc_cache: bool = False
+        # self.clean_cache: bool = False
+        # self.rollback_cache: Optional[int] = None
+        # self.delete_snapshot: Optional[str] = None
+        # self.database_engine: str = 'sqlite3'
+        # self.max_snapshots: int = 4
+        # self.features: bool = False
+        # self.install_chrome: bool = False
+        # self.log_level: str = 'DEBUG'
         self.parse_args(args)
 
     def parse_args(self, cmdline_args: List[str]) -> argparse.ArgumentParser:
@@ -133,12 +152,14 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--config', default=self.config, type=Path, help='read configuration from FILE', metavar='FILE'
         )
-        group.add_argument('--hooks', default=self.hooks, type=Path, help='use FILE as hooks.py module', metavar='FILE')
+        group.add_argument(
+            '--hooks', default=self.hooks, type=Path, help='use FILE as imported hooks.py module', metavar='FILE'
+        )
         group.add_argument(
             '--cache',
             default=self.cache,
             type=Path,
-            help='use FILE as cache (snapshots database) or directory, alternatively a redis URI',
+            help='use FILE as cache (snapshots database), alternatively a redis URI',
             metavar='FILE',
         )
 
@@ -235,12 +256,9 @@ class CommandConfig(BaseConfig):
 
         group = parser.add_argument_group('miscellaneous')
         group.add_argument(
-            '--chromium-directory', action='store_true', help='show directory where Chromium is installed'
-        )
-        group.add_argument(
             '--install-chrome',
             action='store_true',
-            help="install or update chrome executable for use with 'use_browser: true' jobs (Playwright)",
+            help="install or update Google Chrome browser for use with 'use_browser: true' jobs",
         )
         group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
         group.add_argument(

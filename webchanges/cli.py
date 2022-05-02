@@ -6,9 +6,9 @@
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
+from __future__ import annotations
 
 import logging
-import os
 import shutil
 import signal
 import sys
@@ -32,7 +32,7 @@ from .storage import (
 )
 
 # Ignore signal SIGPIPE ("broken pipe") for stdout (see https://github.com/thp/urlwatch/issues/77)
-if os.name != 'nt':  # Windows does not have signal.SIGPIPE
+if sys.platform != 'win32':  # Windows does not have signal.SIGPIPE
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # type: ignore[attr-defined]  # not defined in Windows
 
 logger = logging.getLogger(__name__)
@@ -161,7 +161,7 @@ def main() -> None:  # pragma: no cover
     python_version_warning()
 
     # Directory where the config, jobs and hooks files are located
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         config_path = platformdirs.user_config_path(__project_name__)  # typically ~/.config/{__project_name__}
     else:
         config_path = Path.home().joinpath('Documents').joinpath(__project_name__)

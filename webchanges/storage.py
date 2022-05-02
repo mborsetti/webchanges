@@ -18,6 +18,7 @@ import threading
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, TYPE_CHECKING, Union
@@ -398,6 +399,7 @@ DEFAULT_CONFIG: Config = {
 }
 
 
+@dataclass
 class BaseStorage(ABC):
     """Base class for storage."""
 
@@ -680,6 +682,14 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param config: The configuration.
         :raises ValueError: If the configuration has keys not in DEFAULT_CONFIG (bad keys, e.g. typos)
         """
+        for key in ('_beta_use_playwright', 'chromium_revision'):
+            if key in config['job_defaults']['all'] or key in config['job_defaults']['browser']:
+                warnings.warn(
+                    f'Directive {key} found in the configuration file {self.filename} has been deprecated'
+                    f'with the use of Playright. Please delete it (webchanges --edit-config)',
+                    DeprecationWarning,
+                )
+
         config_for_extras = copy.deepcopy(config)
         if 'job_defaults' in config_for_extras:
             # 'job_defaults' is not set in DEFAULT_CONFIG
@@ -697,9 +707,9 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 extras.pop('report')  # type: ignore[misc]
         if extras:
             warnings.warn(
-                f'Unrecognized directive(s) in the configuration file {self.filename}:\n'
+                f'Found unrecognized directive(s) in the configuration file {self.filename}:\n'
                 f'{yaml.safe_dump(extras)}Check for typos (documentation at {__docs_url__})\n',
-                SyntaxWarning,
+                RuntimeWarning,
             )
 
     @staticmethod
@@ -911,7 +921,7 @@ class CacheStorage(BaseFileStorage, ABC):
         """Garbage collect the database: delete all guids not included in known_guids and keep only last snapshot for
         the others.
 
-        :param known_guids: Thfe guids to keep
+        :param known_guids: The guids to keep.
         """
         for guid in set(self.get_guids()) - set(known_guids):
             print(f'Deleting: {guid} (no longer being tracked)')
@@ -1422,7 +1432,6 @@ class CacheSQLite3Storage(CacheStorage):
             )
             num_del: int = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
-            self._execute('VACUUM')
         return num_del
 
     def rollback(self, timestamp: float) -> int:

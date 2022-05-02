@@ -1,6 +1,7 @@
 """Take actions from command line arguments."""
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+from __future__ import annotations
 
 import contextlib
 import logging
@@ -29,7 +30,7 @@ from .jobs import BrowserJob, JobBase, UrlJob
 from .mailer import smtp_have_password, smtp_set_password, SMTPMailer
 from .main import Urlwatch
 from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
-from .util import edit_file, import_module_from_source
+from .util import dur_text, edit_file, import_module_from_source
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +44,10 @@ class UrlwatchCommand:
         self.urlwatcher = urlwatcher
         self.urlwatch_config = urlwatcher.urlwatch_config
 
-    def print_new_version(self) -> None:
+    def print_new_version(self) -> None:  # pragma: no cover
         """Will print alert message if a newer version is found on PyPi.
 
-        TODO: this slows things down too much; must rework as a future.
+        TODO: this slows things down too much; must rework as a future. Remove pragma.
         """
         new_release = self.urlwatcher.get_new_release_version(timeout=1)
         if new_release:
@@ -108,6 +109,11 @@ class UrlwatchCommand:
 
     @staticmethod
     def show_features() -> int:
+        """
+        Prints the "features", i.e. a list of job types, filters and reporters.
+
+        :return: 0.
+        """
         print(f'Please see full documentation at {__docs_url__}')
         print()
         print('Supported jobs:\n')
@@ -122,30 +128,12 @@ class UrlwatchCommand:
 
         return 0
 
-    @staticmethod
-    def show_chromium_directory() -> int:  # pragma: no cover
-        try:
-            from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER
-        except ImportError:
-            print("'pyppeteer' module is not installed.")
-            return 1
-
-        chromium_folder = Path(DOWNLOADS_FOLDER)
-        print('Downloaded Chromium executables are installed in the following directory:')
-        print(chromium_folder)
-        revisions = list(chromium_folder.iterdir()) if chromium_folder.is_dir() else None
-        if revisions:
-            print(f"Current revisions installed: {', '.join(d.name for d in revisions)}")
-            if len(revisions) > 1:
-                print(
-                    'You can delete revisions not in use by removing the entire subdirectory bearing the revision '
-                    'number'
-                )
-                if os.name == 'posix':
-                    print(f'For example: $ rm -r {revisions[0]}')
-        return 0
-
     def list_jobs(self) -> None:
+        """
+        Lists the job and their respective _index_number.
+
+        :return: None.
+        """
         for job in self.urlwatcher.jobs:
             if self.urlwatch_config.verbose:
                 print(f'{job.index_number:3}: {job!r}')
@@ -174,9 +162,10 @@ class UrlwatchCommand:
 
     def _get_job(self, job_id: Union[str, int]) -> JobBase:
         """
+        Finds the job based on job_id, which could match an index, be a range, or match a url or command field.
 
         :param job_id:
-        :return:
+        :return: JobBase.
         :raises SystemExit: If job is not found, setting argument to 1.
         """
         try:
@@ -193,8 +182,13 @@ class UrlwatchCommand:
 
     def test_job(self, job_id: Union[str, int]) -> None:
         """
-        :param job_id:
-        :return:
+        Tests the running of a single job outputting the filtered text to stdout or whatever reporter is selected with
+        --test-reporter.
+
+        :param job_id: The job_id.
+
+        :return: None.
+
         :raises Exception: The Exception of a job when job raises an Exception.
         """
         job = self._get_job(job_id)
@@ -212,14 +206,13 @@ class UrlwatchCommand:
                 raise job_state.exception
             print(job_state.job.pretty_name())
             print('-' * len(job_state.job.pretty_name()))
-            if hasattr(job_state.job, 'note') and job_state.job.note:
+            if job_state.job.note:
                 print(job_state.job.note)
             print()
             print(job_state.new_data)
             print()
             print('--')
-            dur_str = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
-            print(f'Job tested in {dur_str} seconds with {__project_name__} {__version__}.')
+            print(f'Job tested in {dur_text(duration)} with {__project_name__} {__version__}.')
 
         return
 
@@ -227,6 +220,13 @@ class UrlwatchCommand:
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
     def test_diff(self, job_id: str) -> int:
+        """
+        Runs diffs for a job on all the saved snapshots and outputs the result to stdout or whatever reporter is
+        selected with --test-reporter.
+
+        :param job_id: The job_id.
+        :return: 1 if error, 0 if successful.
+        """
         report = Report(self.urlwatcher)
         report.job_states = []  # required for testing
         self.urlwatch_config.jobs = Path('--test-diff')  # for report footer
@@ -266,6 +266,7 @@ class UrlwatchCommand:
         history_data = self.urlwatcher.cache_storage.get_rich_history_data(job.get_guid())
 
         print(f'History for job {job.get_indexed_location()}:')
+        print(f'(ID: {job.get_guid()})')
         for i, entry in enumerate(history_data):
             etag = f"; ETag: {entry['etag']}" if entry.get('etag') else ''
             tries = f"; failed tries: {entry['tries']}" if entry.get('tries') else ''
@@ -324,9 +325,8 @@ class UrlwatchCommand:
 
         end = time.perf_counter()
         duration = end - start
-        dur_str = f'{float(f"{duration:.2g}"):g}' if duration < 10 else f'{duration:.0f}'
         print('--')
-        print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} in {dur_str} seconds")
+        print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} in {dur_text(duration)}.")
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
@@ -608,7 +608,8 @@ class UrlwatchCommand:
 
         self._exit(0)
 
-    def playwright_install_chrome(self) -> int:
+    @staticmethod
+    def playwright_install_chrome() -> int:  # pragma: no cover
         """
         Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
         install the browser executable.
@@ -634,6 +635,7 @@ class UrlwatchCommand:
         return 0
 
     def handle_actions(self) -> None:
+        """Handles the actions for command line arguments and exits."""
         if self.urlwatch_config.list:
             self.list_jobs()
             self._exit(0)
@@ -696,17 +698,16 @@ class UrlwatchCommand:
         if self.urlwatch_config.features:
             self._exit(self.show_features())
 
-        if self.urlwatch_config.chromium_directory:
-            self._exit(self.show_chromium_directory())
-
-        if self.urlwatch_config.install_chrome:
+        if self.urlwatch_config.install_chrome:  # pragma: no cover
             self._exit(self.playwright_install_chrome())
 
     def run(self) -> None:  # pragma: no cover
+        """The main run logic."""
         if self.urlwatch_config.edit_config:
             self._exit(self.edit_config())
 
         self.urlwatcher.config_storage.load()
+
         self.urlwatcher.report.config = self.urlwatcher.config_storage.config
 
         self.handle_actions()

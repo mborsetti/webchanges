@@ -14,32 +14,14 @@ from pathlib import Path
 from typing import Any, Dict
 
 import pytest
+import yaml
 
 from webchanges import __project_name__ as project_name
 from webchanges.config import CommandConfig
 from webchanges.handler import JobState
-from webchanges.jobs import (  # DEFAULT_CHROMIUM_REVISION,
-    BrowserJob,
-    BrowserResponseError,
-    JobBase,
-    NotModifiedError,
-    ShellJob,
-    UrlJob,
-)
+from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifiedError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
-
-# try:
-#     from pyppeteer.chromium_downloader import current_platform
-#
-#     chromium_revision_num = DEFAULT_CHROMIUM_REVISION[current_platform()]
-# except ImportError:
-#     current_platform = None
-#     chromium_revision_num = None
-
-# NOT TESTING Pyppeteer
-current_platform = None
-chromium_revision_num = None
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +69,7 @@ TEST_JOBS = [
             },
             'ignore_cached': True,
             'ignore_connection_errors': False,
-            'ignore_dh_key_too_small': False,
+            'ignore_dh_key_too_small': True,
             'ignore_http_error_codes': 200,
             'ignore_timeout_errors': False,
             'ignore_too_many_redirects': False,
@@ -99,30 +81,10 @@ TEST_JOBS = [
         },
         'Google',
     ),
-    # (
-    #     {
-    #         'url': 'http://www.google.com/',
-    #         'name': 'testing url job with use_browser',
-    #         'use_browser': True,
-    #         'block_elements': ['stylesheet', 'font', 'image', 'media'],
-    #         'chromium_revision': chromium_revision_num,
-    #         'cookies': {'X-test': 'test'},
-    #         'headers': {'Accept-Language': 'en-US,en'},
-    #         'ignore_https_errors': False,
-    #         'switches': ['--window-size=1298,1406', '--disable-dev-shm-usage'],
-    #         'timeout': 15,
-    #         'user_visible_url': 'https://www.google.com/',
-    #         'wait_for': 1,
-    #         'wait_for_navigation': 'https://www.google.com/',
-    #         'wait_until': 'load',
-    #     },
-    #     'Google',
-    # ),
     (
         {
             'url': 'https://www.google.com/',
             'name': 'testing url job with use_browser and Playwright',
-            '_beta_use_playwright': True,
             'use_browser': True,
             'block_elements': ['stylesheet', 'font', 'image', 'media'],
             'cookies': {'X-test': '', 'X-test-2': ''},
@@ -144,25 +106,14 @@ TEST_JOBS = [
         },
         '"json":{"fieldname":"fieldvalue"}',
     ),
-    # (
-    #     {
-    #         'url': 'https://postman-echo.com/post',
-    #         'name': 'testing POST url job with use_browser',
-    #         'use_browser': True,
-    #         'switches': ['--disable-dev-shm-usage'],
-    #         'data': {'fieldname': 'fieldvalue'},
-    #     },
-    #     '"json":{"fieldname":"fieldvalue"}',
-    # ),
     (
         {
             'url': 'https://postman-echo.com/post',
             'name': 'testing POST url job with use_browser and Playwright',
-            '_beta_use_playwright': True,
             'use_browser': True,
             'data': {'fieldname': 'fieldvalue'},
         },
-        '"json":{"fieldname":"fieldvalue"}',
+        '"data":"fieldname=fieldvalue"',
     ),
     (
         {
@@ -187,9 +138,28 @@ TEST_JOBS = [
 
 TEST_ALL_URL_JOBS = [
     {},
-    # {'use_browser': True, 'switches': ['--disable-dev-shm-usage']},
-    {'use_browser': True, '_beta_use_playwright': True},
+    {'use_browser': True},
 ]
+
+
+def test_kind() -> None:
+    with pytest.raises(ValueError) as e:
+        JobBase.unserialize({'kind': 'url'})
+    assert e.value.args[0] == "Job 0: Required directive 'url' missing: '{'kind': 'url'}' (Job 0: )"
+
+    with pytest.raises(ValueError) as e:
+        JobBase.unserialize({'kind': 'anykind'})
+    assert e.value.args[0] == (
+        "Error in job file: Job directive 'kind: anykind' does not match any known job kinds:\nkind: anykind\n"
+    )
+
+
+def test__dict_deep__merge():
+    job = JobBase.unserialize({'url': 'test'})
+    assert JobBase._dict_deep_merge(job, {'a': {'b': 'c'}}, {'a': {'d': 'e'}}) == {'a': {'b': 'c', 'd': 'e'}}
+    assert JobBase._dict_deep_merge(job, {'a': {'b': 'c'}}, {'a': {'b': 'e'}}) == {'a': {'b': 'c'}}
+    assert JobBase._dict_deep_merge(job, {'a': {}}, {'a': {'b': 'c'}}) == {'a': {'b': 'c'}}
+    assert JobBase._dict_deep_merge(job, {'a': 1}, {'b': 2}) == {'a': 1, 'b': 2}
 
 
 @connection_required
@@ -198,26 +168,14 @@ TEST_ALL_URL_JOBS = [
 )
 def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> None:
     job = JobBase.unserialize(input_job)
-    if current_platform is None and job.use_browser and not job._beta_use_playwright:
-        pytest.skip('Pyppeteer not installed')
-        return
-    elif sys.version_info < (3, 8) and job.use_browser and job._beta_use_playwright:
+    if sys.version_info < (3, 8) and job.use_browser:
         pytest.skip('Playwright testing requires Python 3.8')
         return
-    # if sys.version_info == (3, 7) and job.use_browser and not job._beta_use_playwright and sys.platform == 'linux':
-    #     pytest.skip('Pyppeteer throws "Page crashed!" errors in Python 3.7 in Ubuntu')
-    #     return
-    if sys.version_info >= (3, 10):
-        caplog.set_level(logging.DEBUG)
-        if job.use_browser and not job._beta_use_playwright:
-            pytest.skip('Pyppeteer freezes in Python 3.10')
-            return
     # if (
     #     input_job
     #     == {
     #         'url': 'https://postman-echo.com/post',
     #         'name': 'testing POST url job with use_browser and Playwright',
-    #         '_beta_use_playwright': True,
     #         'use_browser': True,
     #         'switches': ['--disable-dev-shm-usage'],
     #         'data': {'fieldname': 'fieldvalue'},
@@ -244,7 +202,7 @@ def test_run_ftp_job() -> None:
 
 
 @connection_required
-@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout))
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, EOFError, OSError))
 def test_run_ftp_job_needs_bytes() -> None:
     if os.getenv('GITHUB_ACTIONS'):
         pytest.skip('Test website cannot be reached from GitHub Actions')
@@ -261,14 +219,8 @@ def test_run_ftp_job_needs_bytes() -> None:
     'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
 )
 def test_check_etag(job_data: Dict[str, Any], event_loop) -> None:
-    if current_platform is None and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-        pytest.skip('Pyppeteer not installed')
-        return
-    elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+    if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
-        return
-    if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-        pytest.skip('Pyppeteer freezes in Python 3.10')
         return
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
@@ -282,17 +234,11 @@ def test_check_etag(job_data: Dict[str, Any], event_loop) -> None:
     'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
 )
 def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
-    if current_platform is None and (job_data.get('use_browser') and not job_data.get('_beta_use_playwright')):
-        pytest.skip('Pyppeteer not installed')
-        return
-    elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+    if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
         return
-    elif sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-        pytest.skip('Pyppeteer freezes in Python 3.10')
-        return
     if job_data.get('use_browser'):
-        pytest.skip('Capturing of 304 cannot be implemented in Chromium')  # last tested with Chromium 89
+        pytest.skip('Capturing of 304 cannot be implemented in Chrome')  # last tested with Chromium 89
         return
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
@@ -314,17 +260,8 @@ def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
     'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
 )
 def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], event_loop) -> None:
-    if current_platform is None and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-        pytest.skip('Pyppeteer not installed')
-        return
-    elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+    if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
-        return
-    if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-        pytest.skip('Pyppeteer freezes in Python 3.10')
-        return
-    if job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-        pytest.skip('Pyppeteer times out after 90 seconds or so')
         return
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
@@ -343,6 +280,7 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     with JobState(cache_storage, job) as job_state:
         job_state.process()
         assert job_state.error_ignored is True
+    job_data['ignore_connection_errors'] = None
 
 
 @connection_required
@@ -350,14 +288,8 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
 )
 def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> None:
-    if current_platform is None and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-        pytest.skip('Pyppeteer not installed')
-        return
-    elif sys.version_info < (3, 8) and job_data.get('use_browser') and job_data.get('_beta_use_playwright'):
+    if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
-        return
-    if sys.version_info >= (3, 10) and job_data.get('use_browser') and not job_data.get('_beta_use_playwright'):
-        pytest.skip('Pyppeteer freezes in Python 3.10')
         return
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['http_proxy'] = None
@@ -376,34 +308,13 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
     with JobState(cache_storage, job) as job_state:
         job_state.process()
         assert job_state.error_ignored is True
-
-
-@py310_skip
-@connection_required
-# Legacy code for Pyppeteer is not optimized for concurrency and fails in Github Actions with error
-# pyppeteer.errors.BrowserError: Browser closed unexpectedly.
-def test_stress_use_browser() -> None:
-    jobs_file = data_path.joinpath('jobs-use_browser.yaml')
-    config_file = data_path.joinpath('config.yaml')
-    hooks_file = Path('')
-
-    config_storage = YamlConfigStorage(config_file)
-    jobs_storage = YamlJobsStorage(jobs_file)
-
-    if not os.getenv('GITHUB_ACTIONS'):
-        from webchanges.cli import setup_logger
-
-        setup_logger()
-
-    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
-    urlwatcher.run_jobs()
+    job_data['ignore_http_error_codes'] = None
 
 
 @py38_required
 @connection_required
-def test_stress_use_browser_playwright(event_loop) -> None:
-    jobs_file = data_path.joinpath('jobs-use_browser_pw.yaml')
+def test_stress_use_browser(event_loop) -> None:
+    jobs_file = data_path.joinpath('jobs-use_browser.yaml')
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path('')
 
@@ -434,7 +345,8 @@ def test_no_required_directive() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        f"Job directive has no value or doesn't match a job type; check for errors/typos/escaping:\n{job_data}"
+        f"Error in job file: Job directive has no value or doesn't match a job type (check for errors/typos/escaping):"
+        f'\n{yaml.safe_dump(job_data)}'
     )
 
 
@@ -443,7 +355,8 @@ def test_no_required_directive_plural() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        f"Job directives (with values) don't match a job type; check for errors/typos/escaping:\n{job_data}"
+        f"Error in job file: Job directives (with values) don't match a job type (check for errors/typos/escaping):\n"
+        f'{yaml.safe_dump(job_data)}'
     )
 
 
@@ -452,7 +365,8 @@ def test_invalid_directive() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        f"Job directive 'directive_with_typo' is unrecognized; check for errors/typos/escaping:\n{job_data}"
+        f"Error in job file: Job directive 'directive_with_typo' is unrecognized (check for errors/typos/escaping):\n"
+        f'{yaml.safe_dump(job_data)}'
     )
 
 
@@ -461,7 +375,8 @@ def test_navigate_directive() -> None:
     with pytest.deprecated_call() as pytest_wrapped_warning:
         JobBase.unserialize(job_data.copy())
     assert str(pytest_wrapped_warning.list[0].message) == (
-        f"Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true' ({job_data})"
+        f"Error in job file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true':\n"
+        f'{yaml.safe_dump(job_data)}'
     )
 
 
@@ -486,20 +401,9 @@ def test_url_job_use_browser_false_without_kind():
     assert isinstance(job, UrlJob)
 
 
-@py310_skip
-def test_browser_job_without_kind():
-    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'switches': ['--disable-dev-shm-usage']}
-    job = JobBase.unserialize(job_data)
-    assert isinstance(job, BrowserJob)
-
-
-def test_browser_job_playwright_without_kind():
-    job_data = {
-        'url': 'https://www.example.com',
-        'use_browser': True,
-        'switches': ['--disable-dev-shm-usage'],
-        '_beta_use_playwright': True,
-    }
+@py38_required
+def test_browser_job_without_kind(event_loop):
+    job_data = {'url': 'https://www.example.com', 'use_browser': True}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, BrowserJob)
 
@@ -525,28 +429,11 @@ def test_ignore_error():
     assert job.ignore_error(Exception()) is False
 
 
-@py310_skip
-def test_browser_switches_not_str_or_list():
-    if current_platform:
-        job_data = {
-            'url': 'https://www.example.com',
-            'use_browser': True,
-            'switches': {'dict key': ''},
-        }
-        job = JobBase.unserialize(job_data)
-        with JobState(cache_storage, job) as job_state:
-            job_state.process()
-            assert isinstance(job_state.exception, TypeError)
-    else:
-        pytest.skip('Pyppeteer not installed')
-
-
 @py38_required
-def test_browser_switches_not_str_or_list_playwright(event_loop):
+def test_browser_switches_not_str_or_list(event_loop):
     job_data = {
         'url': 'https://www.example.com',
         'use_browser': True,
-        '_beta_use_playwright': True,
         'switches': {'dict key': ''},
     }
     job = JobBase.unserialize(job_data)
@@ -555,36 +442,30 @@ def test_browser_switches_not_str_or_list_playwright(event_loop):
         assert isinstance(job_state.exception, TypeError)
 
 
-@py310_skip
-def test_browser_block_elements_not_str_or_list():
-    if current_platform:
-        job_data = {
-            'url': 'https://www.example.com',
-            'use_browser': True,
-            'block_elements': {'dict key': ''},
-        }
-        job = JobBase.unserialize(job_data)
-        with JobState(cache_storage, job) as job_state:
-            job_state.process()
-            assert isinstance(job_state.exception, TypeError)
-    else:
-        pytest.skip('Pyppeteer not installed')
-
-
-@py310_skip
-def test_browser_block_elements_invalid():
-    if current_platform:
-        job_data = {
-            'url': 'https://www.example.com',
-            'use_browser': True,
-            'block_elements': ['fake element'],
-        }
-        job = JobBase.unserialize(job_data)
-        with JobState(cache_storage, job) as job_state:
-            job_state.process()
-            assert isinstance(job_state.exception, ValueError)
-    else:
-        pytest.skip('Pyppeteer not installed')
+# @py38_required
+# def test_browser_block_elements_not_str_or_list(event_loop):
+#     job_data = {
+#         'url': 'https://www.example.com',
+#         'use_browser': True,
+#         'block_elements': {'dict key': ''},
+#     }
+#     job = JobBase.unserialize(job_data)
+#     with JobState(cache_storage, job) as job_state:
+#         job_state.process()
+#         assert isinstance(job_state.exception, TypeError)
+#
+#
+# @py38_required
+# def test_browser_block_elements_invalid(event_loop):
+#     job_data = {
+#         'url': 'https://www.example.com',
+#         'use_browser': True,
+#         'block_elements': ['fake element'],
+#     }
+#     job = JobBase.unserialize(job_data)
+#     with JobState(cache_storage, job) as job_state:
+#         job_state.process()
+#         assert isinstance(job_state.exception, ValueError)
 
 
 def test_shell_error():

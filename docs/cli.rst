@@ -21,9 +21,8 @@ Command line arguments
      --jobs FILE, --urls FILE
                            read job list (URLs) from FILE
      --config FILE         read configuration from FILE
-     --hooks FILE          use FILE as hooks.py module
-     --cache FILE          use FILE as cache (snapshots database) or directory, alternatively a redis
-                           URI
+     --hooks FILE          use FILE as imported hooks.py module
+     --cache FILE          use FILE as cache (snapshots database), alternatively a redis URI
 
    job management:
      --list                list jobs and their index number
@@ -43,8 +42,8 @@ Command line arguments
    reporters:
      --test-reporter REPORTER
                            test a reporter or redirect output of --test-diff
-     --smtp-login          verify SMTP login credentials with server and, if stored in keyring, enter or
-                           check password
+     --smtp-login          verify SMTP login credentials with server (and enter or check password if
+                           using keyring)
      --telegram-chats      list telegram chats program is joined to
      --xmpp-login          enter or check password for XMPP (stored in keyring)
 
@@ -58,19 +57,19 @@ Command line arguments
                            jobs not in the jobs file
      --clean-cache         remove old snapshots from the cache database
      --rollback-cache TIMESTAMP
-                           delete recent snapshots > timestamp; backup the database before using!
+                           delete recent snapshots since TIMESTAMP (backup the database before using!)
      --delete-snapshot JOB
                            delete the last saved snapshot of job (URL/command)
      --database-engine {sqlite3,redis,minidb,textfiles}
-                           database engine to use (default: sqlite3 unless redis URI in --cache)
+                           database engine to use (default: sqlite3, unless redis URI in --cache)
      --max-snapshots NUM_SNAPSHOTS
                            maximum number of snapshots to retain in sqlite3 database (default: 4)
 
    miscellaneous:
+     --install-chrome      install or update Google Chrome browser for use with 'use_browser: true' jobs
      --features            list supported job types, filters and reporters
-     --chromium-directory  show directory where Chromium is installed
      --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                           level of logging output if -v is selected (default: DEBUG)
+                           level of logging output when -v is selected (default: DEBUG)
 
 .. _job_subset:
 
@@ -103,8 +102,11 @@ example the text returned from a website with a 4xx (client error) status code::
 
    webchanges --verbose --test 1
 
+Please note that ``max_tries`` will be ignored by ``--test``.
+
 .. versionchanged:: 3.8
    Accepts negative indices.
+
 
 .. _test-diff:
 
@@ -264,18 +266,6 @@ set to 0, all snapshots are retained (the database will grow unbounded).
 
 .. versionadded:: 3.3
    for default ``sqlite3`` database engine only.
-
-
-Chromium downloads
-------------------
-Every time you change the chromium_revision, a new download is initiated and the old version is kept on your system,
-using up space. You must delete it manually; you will find it in the directory specified by running:
-
-.. code-block:: bash
-
-    webchanges --chromium-directory
-
-.. versionadded:: 3.8.2
 
 
 .. todo::

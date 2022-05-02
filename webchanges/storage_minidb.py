@@ -11,6 +11,8 @@ Having it into a standalone module allows running the program without requiring 
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 

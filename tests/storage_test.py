@@ -96,10 +96,10 @@ def test_check_for_unrecognized_keys():
     config_storage = YamlConfigStorage(config_file)
     config = config_storage.parse(config_file)
     config['this_is_a_typo'] = True
-    with pytest.warns(SyntaxWarning) as pytest_wrapped_e:
+    with pytest.warns(RuntimeWarning) as pytest_wrapped_e:
         config_storage.check_for_unrecognized_keys(config)
     assert pytest_wrapped_e.list[0].message.args[0] == (
-        f'Unrecognized directive(s) in the configuration file {config_file}:\n'
+        f'Found unrecognized directive(s) in the configuration file {config_file}:\n'
         f'this_is_a_typo: true\nCheck for typos (documentation at {__docs_url__})\n'
     )
 
@@ -109,10 +109,10 @@ def test_check_for_unrecognized_keys_hooks():
     config_storage = YamlConfigStorage(config_file)
     config = config_storage.parse(config_file)
     config['report']['made_up_key'] = True
-    with pytest.warns(SyntaxWarning) as pytest_wrapped_e:
+    with pytest.warns(RuntimeWarning) as pytest_wrapped_e:
         config_storage.check_for_unrecognized_keys(config)
     assert pytest_wrapped_e.list[0].message.args[0] == (
-        f'Unrecognized directive(s) in the configuration file {config_file}:\n'
+        f'Found unrecognized directive(s) in the configuration file {config_file}:\n'
         f'report:\n  made_up_key: true\nCheck for typos (documentation at {__docs_url__})\n'
     )
     import_module_from_source('hooks', data_path.joinpath('hooks_test.py'))

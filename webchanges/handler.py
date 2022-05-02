@@ -23,9 +23,9 @@ from .jobs import NotModifiedError
 from .reporters import ReporterBase
 
 try:
-    from deepdiff import DeepDiff
+    import deepdiff
 except ImportError:
-    DeepDiff = None  # type: ignore[no-redef]
+    deepdiff = None  # type: ignore[no-redef]
 
 try:
     import xmltodict
@@ -78,11 +78,11 @@ class JobState(ContextManager):
 
     def __enter__(self) -> 'JobState':
         """Context manager invoked on entry to the body of a with statement to make it possible to factor out standard
-        uses of try/finally statements. Calls the main_threa_enter() method of the Job.
+        uses of try/finally statements. Calls the main_thread_enter method of the Job.
 
         :returns: Class object.
         """
-        # Below is legacy code that now does nothing so it's being skipped
+        # Below is legacy code that now does nothing, so it's being skipped
         # try:
         #     self.job.main_thread_enter()
         # except Exception as ex:
@@ -103,7 +103,7 @@ class JobState(ContextManager):
 
         :returns: None.
         """
-        # Below is legacy code that now does nothing so it's being skipped
+        # Below is legacy code that now does nothing, so it's being skipped
         # try:
         #     self.job.main_thread_exit()
         # except Exception:
@@ -250,15 +250,19 @@ class JobState(ContextManager):
             # TODO: 'deepdiff' is work in progress, not documented, and will most likely change as diffing will
             # become a class to keep the code organized.
             if self.job.diff_tool.startswith('deepdiff'):
-                if DeepDiff is None:
+                # pragma: no cover
+                if deepdiff is None:
                     raise ImportError(
                         f"Python package 'deepdiff' is not installed; cannot use 'diff_tool: {self.job.diff_tool}'"
                         f' ({self.job.get_indexed_location()})'
                     )
+                else:
+                    from deepdiff.model import DiffLevel
 
-                def _pretty_deepdiff(diff: DeepDiff, html_out: bool = False) -> str:
+                def _pretty_deepdiff(diff: deepdiff.DeepDiff, html_out: bool = False) -> str:
                     """
-                    Customized version of deepdiff.base.pretty() edited to add the values deleted or added.
+                    Customized version of deepdiff.serialization.SerializationMixin.pretty method,
+                    edited to include the values deleted or added and an option for colorized HTML output.
                     The pretty human readable string output for the diff object
                     regardless of what view was used to generate the diff.
                     """
@@ -311,7 +315,11 @@ class JobState(ContextManager):
                             'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
                         }
 
-                    def _pretty_print_diff(diff: DeepDiff) -> str:
+                    def _pretty_print_diff(diff: DiffLevel) -> str:
+                        """
+                        Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include
+                        the values deleted or added.
+                        """
                         type_t1 = type(diff.t1).__name__
                         type_t2 = type(diff.t2).__name__
 
@@ -366,7 +374,7 @@ class JobState(ContextManager):
                         f"data_type '{data_type}' is not supported by 'diff_tool: deepdiff'"
                         f' ({self.job.get_indexed_location()})'
                     )
-                diff = DeepDiff(old_data, new_data, verbose_level=2)
+                diff = deepdiff.DeepDiff(old_data, new_data, verbose_level=2)
                 diff_text = _pretty_deepdiff(diff, html_out)
                 if not diff_text:
                     self.verb = 'changed,no_report'

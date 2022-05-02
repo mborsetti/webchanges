@@ -2,10 +2,13 @@
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
+from __future__ import annotations
+
 import getpass
 import logging
 import smtplib
 import subprocess
+from dataclasses import dataclass
 from email import policy
 from email.message import EmailMessage
 from pathlib import Path
@@ -26,6 +29,7 @@ class Mailer(object):
         """Send a message.
 
         :param msg: The message to be sent.
+        :raises NotImplementedError: Use a subclass of EmailMessage to send a message.
         """
         raise NotImplementedError
 
@@ -52,33 +56,24 @@ class Mailer(object):
         return msg
 
 
+@dataclass
 class SMTPMailer(Mailer):
-    """The Mailer class for SMTP."""
+    """The Mailer class for SMTP.
 
-    def __init__(
-        self,
-        smtp_user: str,
-        smtp_server: str,
-        smtp_port: int,
-        tls: bool,
-        auth: bool,
-        insecure_password: Optional[str] = None,
-    ) -> None:
-        """The Mailer class for SMTP.
+    :param smtp_user: The username for the SMTP server.
+    :param smtp_server: The address of the SMTP server.
+    :param smtp_port: The port of the SMTP server.
+    :param tls: Whether tls is to be used to connect to the SMTP server.
+    :param auth: Whether authentication is to be used with the SMTP server.
+    :param insecure_password: The password for the SMTP server (optional, to be used only if no keyring is present).
+    """
 
-        :param smtp_user: The username for the SMTP server.
-        :param smtp_server: The address of the SMTP server.
-        :param smtp_port: The port of the SMTP server.
-        :param tls: Whether tls is to be used to connect to the SMTP server.
-        :param auth: Whether authentication is to be used with the SMTP server.
-        :param insecure_password: The password for the SMTP server (optional, to be used only if no keyring is present).
-        """
-        self.smtp_server = smtp_server
-        self.smtp_user = smtp_user
-        self.smtp_port = smtp_port
-        self.tls = tls
-        self.auth = auth
-        self.insecure_password = insecure_password
+    smtp_user: str
+    smtp_server: str
+    smtp_port: int
+    tls: bool
+    auth: bool
+    insecure_password: Optional[str] = None
 
     def send(self, msg: Optional[EmailMessage]) -> None:
         """Send a message via the SMTP server.
@@ -109,11 +104,11 @@ class SMTPMailer(Mailer):
                 logger.info(f"SMTP email sent to {msg.get('to')} via {self.smtp_server}")
 
 
+@dataclass
 class SendmailMailer(Mailer):
     """The Mailer class to use sendmail executable."""
 
-    def __init__(self, sendmail_path: Union[str, Path]) -> None:
-        self.sendmail_path = sendmail_path
+    sendmail_path: Union[str, Path]
 
     def send(self, msg: Union[EmailMessage]) -> None:
         """Send a message via the sendmail executable.

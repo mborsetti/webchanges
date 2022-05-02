@@ -62,9 +62,9 @@ If you have multiple sources to monitor, i.e. multiple "jobs", separate each wit
 
 By default, the content is downloaded as-is. However, certain webpages need for their JavaScript to be run in order
 for their content to be rendered; in this case either find the API used by the JavaScript to get the data you care
-about and monitor that API (preferred), or add the directive ``use_browser: true`` to use a virtual browser to render
-the JavaScript. This requires additional installations and uses many resources; see :ref:`here <use_browser>` for more
-information.
+about and monitor that API (preferred), or add the directive ``use_browser: true`` to use a virtual (`headless`)
+Google Chrome browser to render the JavaScript. This requires additional installations and uses many resources; see
+:ref:`here <use_browser>` for more information.
 
 .. code-block:: yaml
 

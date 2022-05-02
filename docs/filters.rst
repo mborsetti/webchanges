@@ -252,8 +252,8 @@ Optional directives
 
 csv2text
 --------
-The filter **csv2text** turns data formatted as comma separated values (CSV) to a prettier textual representation.
-This is done by supplying a Python `format string
+The filter **csv2text** turns *tabular data* formatted as comma separated values (CSV) into a prettier textual
+representation. This is done by supplying a Python `format string
 <https://docs.python.org/3/library/string.html#format-string-syntax>`__ where the csv data is replaced into. If the CSV
 has a header, the format string should use the header names (**lowercased**).
 
@@ -290,8 +290,8 @@ Optional sub-directives
 * ``has_header`` (true/false): Specifies whether the first row is a series of column headers (default: use the
   rough heuristics provided by Python's `csv.Sniffer.has_header
   <https://docs.python.org/3/library/csv.html#csv.Sniffer>`__ method.
-* ``ignore_header`` (true/false): If set to True, will parse the format_message as having numeric replacement fields
-  even if the data has column headers.
+* ``ignore_header`` (true/false): If set to true, it will parse the format_message as having numeric replacement fields
+  even if the data has column headers (or ``has_header``, immediately above, is set to true).
 
 
 .. _element-by-…:

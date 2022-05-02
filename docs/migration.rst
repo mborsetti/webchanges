@@ -32,20 +32,20 @@ Upgrading from a :program:`urlwatch` 2.25 setup is automatic (see more below), a
   * Other legibility improvements
 * Improved ``telegram`` reporter now uses MarkdownV2 and preserves most formatting of HTML sites including clickable
   links, bolding, underlining, italics and strikethrough.
-* Multiple upgrades in **Pyppeteer**-based browsing (called ``navigate`` in :program:`urlwatch`) to render JavaScript,
-  including:
+* The use of Playwright and Google Chrome instead of Pyppeteer and (old version of) Chromium for browsing (called
+  ``navigate`` in :program:`urlwatch`) jobs to render JavaScript, including:
 
-  * Upgraded browser engine (same as Chrome 92)
-  * Increased reliability with the use of Python's built-in ``asyncio.run()`` to manage the asyncio event loop,
-    finalizing asynchronous generators, and closing the threadpool instead of custom code
+  * Upgraded browser engine to the latest released version of Google Chrome
   * Higher stability by optimizing of concurrency
-  * More flexibility and control with new directives ``chromium_revision``, ``switches``, ``wait_until``,
-    ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``, ``user_data_dir``, ``block_elements``, ``cookies``,
-    ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout`` plus the implementation for this type of jobs of the
+  * More flexibility and control with new directives  ``switches``, ``wait_until``, ``ignore_https_errors``,
+    ``wait_for_url``, ``wait_for_function``, ``wait_for_selector``, ``wait_for_timeout``, ``user_data_dir``,
+    ``initialization_url``, ``initialization_js``, ``block_elements``, ``cookies``,  ``headers``, ``referrer``,
+    ``http_proxy``, ``https_proxy``, and ``timeout`` plus the implementation for this type of jobs of the
     ``ignore_connection_errors``, ``ignore_timeout_errors``, ``ignore_too_many_redirects`` and
     ``ignore_http_error_codes`` directives
   * Faster runs due to handling of ETags allowing servers to send a simple "HTTP 304 Not Modified" message when
     relevant
+  * A new ``--no-deadless`` command line argument to help with debugging
 
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
   does not infinitely grow
@@ -85,12 +85,41 @@ How-to
 ------
 If you are using :program:`urlwatch` 2.25, simply install :program:`webchanges` and run it. It will find the existing
 :program:`urlwatch` job and configuration files, and, unless you were still running ``lynx`` or have custom code (see
-below), it will run just fine as is. It may complain about some directive name being changed for clarity and other
+below), it *should* run just fine as is. It may complain about some directive name being changed for clarity and other
 :ref:`deprecations <migration_deprecations>`, but you will have time to make the edits if you decide to stick around!
 
 .. tip::
    If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8 mode as
    per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
+
+However, if *any* of your jobs use a browser (i.e. have ``navigate`` or ``use_browser: true``), you **MUST** install
+Playwright:
+
+1) Install the new dependencies:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[use_browser]
+
+2) (Optional) ensure you have an up-to-date Google Chrome browser:
+
+.. code-block:: bash
+
+   webchanges --install-chrome
+
+You can free up disk space if no other packages use Pyppeteer by, in order:
+
+1) Removing the downloaded Chromium images by deleting the entire *directory* (and its subdirectories) shown by running:
+
+.. code-block:: bash
+
+   python -c "import pathlib; from pyppeteer.chromium_downloader import DOWNLOADS_FOLDER; print(pathlib.Path(DOWNLOADS_FOLDER).parent)"
+
+2) Uninstalling the Pyppeteer package by running:
+
+.. code-block:: bash
+
+   pip uninstall pyppeteer
 
 If you encounter any problems or have any suggestions please open an issue `here
 <https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.
@@ -123,8 +152,9 @@ If you encounter any problems or have any suggestions please open an issue `here
 
 Upgrade details
 ---------------
-Most everything, except the breaking changes below, work out of the box when upgrading from a :program:`urlwatch` 2.25
-setup, as long as you run it in Python 3.7 or higher, and you can switch back whenever you want.
+Most everything, except the breaking changes below, *should* work out of the box when upgrading from a
+:program:`urlwatch` 2.25 setup, as long as you run it in Python 3.7 or higher, and you can switch back whenever you
+want.
 
 ⚠ Breaking Changes
 ~~~~~~~~~~~~~~~~~~
@@ -143,6 +173,7 @@ Relative to :program:`urlwatch` 2.25:
 * If you're using a hooks (e.g. ``hooks.py``) file, all imports from ``urlwatch`` need to be replaced with identical
   imports from ``webchanges``.
 * If you are using the ``discord`` or ``slack`` reporter you need to rename it ``webhook`` (unified reporter).
+* If you are using browser jobs, see above for upgrading to Playwrightt
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -219,7 +250,7 @@ Relative to :program:`urlwatch` 2.25:
   * New ``deletions_only`` directive to report only deleted lines.
   * New ``contextlines`` directive to specify the number of context lines in a unified diff.
   * New ``no_redirects`` job directive (for ``url`` jobs) to disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection.
-  * New directives for ``use_browser: true`` (**Pyppeteer**) jobs to allow more flexibility and control:
+  * New directives for ``use_browser: true`` (i.e. using **Chrome**) jobs to allow more flexibility and control:
     ``chromium_revision``, ``switches``, ``wait_until``, ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``,
     ``user_data_dir``, ``block_elements``, ``cookies``, ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``.
   * New ``note`` job directive to ad a freetext note appearing in the report after the job header.
@@ -248,7 +279,7 @@ Relative to :program:`urlwatch` 2.25:
   * New sub-directive ``silent`` for ``telegram`` reporter to receive a notification with no sound.
   * The ``slack`` webhook reporter allows the setting of maximum report length (for, e.g., usage with Discord) using the
     ``max_message_length`` sub-directive.
-  * ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) now recognize ``data`` and ``method`` directives,
+  * ``url`` jobs with ``use_browser: true`` (i.e. using **Chrome**) now recognize ``data`` and ``method`` directives,
     enabling e.g. to make a ``POST`` HTTP request using a browser with JavaScript support.
   * New ``tz`` key for  ``report`` in configuration file sets the timezone for the diff in reports (useful if running
     e.g. on a cloud server in a different timezone).
@@ -263,16 +294,13 @@ Relative to :program:`urlwatch` 2.25:
 
 * Internals
 
-  * Reduction in concurrency with ``use_browser: true`` (i.e. using  *Pyppeteer*) jobs for higher stability.
-  * Increased reliability by using Python's built-in ``asyncio.run()`` to manage the asyncio event loop, finalizing
-    asynchronous generators, and closing the threadpool instead of legacy custom code.
+  * Concurrency with ``use_browser: true`` (i.e. using **Chrome**) jobs takes into account amount of free memory for
+    higher stability.
   * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
     <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__.
   * A new, more efficient indexed database no longer requiring external Python package.
   * Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`__ to `timeit.default_timer
     <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__.
-  * Using Chromium revisions equivalent to Chrome 92.0.4515.131 for jobs with ``use_browser: true`` (i.e. using
-    **Pyppeteer**).
   * Replaced custom atomic_rename function with built-in `os.replace().
     <https://docs.python.org/3/library/os.html#os.replace>`__ (new in Python 3.3) that does the same thing.
   * Upgraded email construction from using ``email.mime`` (obsolete) to `email.message.EmailMessage
@@ -291,7 +319,7 @@ Relative to :program:`urlwatch` 2.25:
   * Properly arranging imports with `isort <https://pycqa.github.io/isort/>`__.
   * Added type hinting to the entire code and using `mypy <https://pypi.org/project/mypy/>`__ to check it.
   * A vast improvement in documentation and error text.
-  * The support for Python 3.10 (except for URL jobs ``use_browser`` using pyppeteer since it does not yet support it).
+  * The support for Python 3.10.
 
 Fixed
 ~~~~~
@@ -365,13 +393,3 @@ Relative to :program:`urlwatch` 2.25:
     will be automatically copied into it.
   * The location of configuration and jobs files in Windows has changed to ``%USERPROFILE%/Documents/webchanges``
     where they can be more easily edited and backed up.
-
-Known issues
-~~~~~~~~~~~~
-* ``url`` jobs with ``use_browser: true`` (i.e. using **Pyppeteer**) will at times display the below error message in
-  stdout (terminal console). This does not affect :program:`webchanges` as all data is downloaded, and hopefully it will
-  be fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
-
-  ``future: <Future finished exception=NetworkError('Protocol error Target.sendMessageToTarget: Target closed.')>``
-  ``pyppeteer.errors.NetworkError: Protocol error Target.sendMessageToTarget: Target closed.``
-  ``Future exception was never retrieved``
