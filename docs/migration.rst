@@ -311,7 +311,7 @@ Relative to :program:`urlwatch` 2.25:
     code readability and functionality.
   * A 39 percentage point increase in code testing coverage (to 81%), a completely new continuous integration
     (CI) and continuous delivery (CD) pipeline (`GitHub Actions <https://github.com/features/actions>`__), and testing
-    on Ubuntu, macOS and Windows 10 x64 increases reliability of new releases.
+    on Ubuntu and macOS (with Windows 10 x64 to come) increases reliability of new releases.
   * Using `flake8 <https://pypi.org/project/flake8/>`__ to check PEP-8 compliance and more.
   * Using `coverage <https://pypi.org/project/coverage/>`__ to check unit testing coverage.
   * Strengthened security with `bandit <https://pypi.org/project/bandit/>`__ to catch common security issues.

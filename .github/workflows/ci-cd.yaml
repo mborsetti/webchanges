@@ -147,7 +147,8 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-        os: [windows-latest, macos-latest]
+#        os: [windows-latest, macos-latest]
+        os: [macos-latest]
         python-version: ['3.10', '3.9', '3.8', '3.7']
     runs-on: ${{ matrix.os }}
 
