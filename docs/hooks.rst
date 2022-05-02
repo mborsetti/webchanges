@@ -23,7 +23,7 @@ An example ``hooks.py`` file is below:
 
    import re
    from pathlib import Path
-   from typing import Any, Dict, Optional, Union
+   from typing import Any, Dict, Tuple, Optional, Union
 
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
    from webchanges.handler import JobState
@@ -40,7 +40,7 @@ An example ``hooks.py`` file is below:
        __kind__ = 'custom_login'
        __required__ = ('username', 'password')
 
-       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
+       def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
            """:returns: The data retrieved and the ETag."""
            ...  # custom code here to actually do the login
            return f'Would log in to {self.url} with {self.username} and {self.password}\n', ''
