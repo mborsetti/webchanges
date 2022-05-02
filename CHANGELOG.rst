@@ -179,6 +179,10 @@ Advanced
         :returns: The data retrieved and the ETag.
         """
 
+Internals
+---------
+* Thanks to the removal of Pyppeteer, we can now test on Windows 10 x64 in addition to Ubunto and MacOS before
+  releasing.
 
 Version 3.9.2
 ===================
