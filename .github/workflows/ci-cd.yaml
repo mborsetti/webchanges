@@ -204,12 +204,12 @@ jobs:
         run: |  # in PowerShell
           curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
           cmd Miniconda3-latest-Windows-x86_64.exe /S
-          del Miniconda3-latest-Windows-x86_64.exe /y
+          Remove-Item Miniconda3-latest-Windows-x86_64.exe -Force
           conda install -y -c conda-forge poppler
           set TESSERACT = tesseract-ocr-w64-setup-v5.0.1.20220118.exe
           curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
           cmd %TESSERACT% /S
-          del %TESSERACT% /y
+          Remove-Item %TESSERACT% -Force
           pip install -U keyring pdftotext Pillow pytesseract
 
       - name: Install all other dependencies
