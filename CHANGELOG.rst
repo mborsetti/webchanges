@@ -181,8 +181,8 @@ Advanced
 
 Internals
 ---------
-* Thanks to the removal of Pyppeteer, we can now test on Windows 10 x64 in addition to Ubunto and MacOS before
-  releasing.
+* We now test on Windows 10 x64 in addition to Ubuntu and MacOS before releasing (thanks to the removal of Pyppeteer)
+  for increased reliability.
 
 Version 3.9.2
 ===================

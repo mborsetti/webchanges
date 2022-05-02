@@ -200,10 +200,11 @@ jobs:
 
       - name: Install pdf2text and ocr dependencies (Windows Python 3.10)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.10' && runner.os == 'Windows'
+        if: matrix.python-version == '3.11' && runner.os == 'Windows'
         run: |
           curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
-          Miniconda3-latest-Windows-x86_64.exe /S
+          powershell Get-FileHash Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
+          Miniconda3-latest-Windows-x86_64.exe /S /RegisterPython=0
           del Miniconda3-latest-Windows-x86_64.exe /f
           conda install -y -c conda-forge poppler
           set TESSERACT=tesseract-ocr-w64-setup-v5.0.1.20220118.exe
