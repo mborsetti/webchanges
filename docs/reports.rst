@@ -50,6 +50,10 @@ These reports are by default ``unified`` diffs that are prettified by :program:`
   bullets (•) and indentation.
 * Using color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines.
 
+
+.. note: You may receive a report that shows a deletion of some text and the addition of the same exact text: this is
+   most likely due to a change in the underlying link, since this is being tracked as well.
+
 If for some reason you want the diff as a Python `HtmlDiff
 <https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__ table, set the sub-directive ``diff`` to
 ``table``:

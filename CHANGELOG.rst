@@ -31,6 +31,17 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.10.1
+===================
+20220503
+
+Fixed
+-----
+* ``KeyError: 'indent' error`` when using ``beautify`` filter.  Reported by `César de Tassis Filho
+  <https://github.com/CTassisF>`__ in `#37 <https://github.com/mborsetti/webchanges/issues/37>`__.
+
+
+
 Version 3.10
 ===================
 20220502

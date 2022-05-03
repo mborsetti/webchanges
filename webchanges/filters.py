@@ -393,7 +393,7 @@ class BeautifyFilter(FilterBase):
                     style.string = beautified_css
 
         if parse_version(bs4.__version__) >= parse_version('4.11'):
-            indent = subfilter['indent']
+            indent = subfilter.get('indent', 1)
             return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent))
         else:
             return soup.prettify()
