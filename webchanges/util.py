@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import getpass
 import html
 import importlib.machinery
 import importlib.util
@@ -11,18 +12,24 @@ import logging
 import os
 import re
 import shlex
+import stat
 import subprocess
 import sys
 import textwrap
 from math import floor, log10
 from os import PathLike
+from pathlib import Path
 from types import ModuleType
 from typing import Callable, Dict, Iterable, List, Match, Optional, Tuple, Union
 
 import requests
 
 from . import __project_name__, __version__
-from ._vendored.packaging_version import parse as parse_version
+
+try:
+    from packaging.version import parse as parse_version
+except ImportError:
+    from ._vendored.packaging_version import parse as parse_version  # type: ignore[misc]
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +77,13 @@ class TrackSubClasses(type):
             if hasattr(cls, '__kind__'):
                 subclasses = getattr(base, '__subclasses__', None)
                 if subclasses is not None:
-                    logger.info(f'Registering {cls} as {cls.__kind__}')
+                    logger.debug(f'Registering {cls} as {cls.__kind__}')
                     subclasses[cls.__kind__] = cls
                     break
             else:
                 anonymous_subclasses = getattr(base, '__anonymous_subclasses__', None)
                 if anonymous_subclasses is not None:
-                    logger.info(f'Registering {cls}')
+                    logger.debug(f'Registering {cls}')
                     anonymous_subclasses.append(cls)
                     break
 
@@ -261,23 +268,25 @@ def linkify(
     return _URL_RE.sub(make_link, text)
 
 
-def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] = None) -> str:
+def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] = None) -> Union[str, bool]:
     """Check PyPi for newer version of project.
 
     :parameter timeout: Timeout in seconds after which empty string is returned.
-    :returns: The new version number if a newer version of project is found on PyPi, empty string otherwise.
+    :returns: The new version number if a newer version of project is found on PyPi, empty string otherwise, False if
+    error retrieving the new version number is encountered.
     """
     try:
         r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
-    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-        return ''
+    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
+        logger.error(f'Exception when querying PyPi for latest release: {e}')
+        return False
 
     if r.ok:
-        latest_release: str = list(r.json()['releases'].keys())[-1]
+        latest_release: str = r.json()['info']['version']
         if parse_version(latest_release) > parse_version(__version__):
             return latest_release
     else:
-        logger.error(f'PyPi error when querying for latest release: {r}')
+        logger.error(f'Error when querying PyPi for latest release: {r}')
 
     return ''
 
@@ -293,3 +302,32 @@ def dur_text(duration: float) -> str:
     else:
         m, s = divmod(duration, 60)
         return f'{m:.0f}:{s:02.0f}'
+
+
+def file_ownership_checks(filename: Path) -> List[str]:
+    """Check security of file and its directory, i.e. that they belong to the current UID and only the owner
+    can write to them. Return list of errors if any. Linux only.
+
+    :returns: List of errors encountered (if any).
+    """
+
+    if os.name == 'nt':
+        return []
+
+    file_ownership_errors = []
+    current_uid = os.getuid()  # type: ignore[attr-defined]  # not defined in Windows
+
+    dirname = filename.parent
+    dir_st = dirname.stat()
+    if (dir_st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) != 0:
+        file_ownership_errors.append(f'{dirname} is group/world-writable')
+    if dir_st.st_uid != current_uid:
+        file_ownership_errors.append(f'{dirname} not owned by {getpass.getuser()}')
+
+    file_st = filename.stat()
+    if (file_st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) != 0:
+        file_ownership_errors.append(f'{filename} is group/world-writable')
+    if file_st.st_uid != current_uid:
+        file_ownership_errors.append(f'{filename} not owned by {getpass.getuser()}')
+
+    return file_ownership_errors

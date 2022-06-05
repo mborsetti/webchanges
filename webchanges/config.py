@@ -5,27 +5,18 @@
 from __future__ import annotations
 
 import argparse
-import os
+
+# import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Union
 
 from . import __doc__, __docs_url__, __project_name__, __version__
-from .util import get_new_version_number
 
 
 @dataclass
 class BaseConfig(object):
-    """Base configuration class.
-
-    :param project_name: The name of the project.
-    :param config_path: The path of the configuration directory.
-    :param config: The path of the configuration file.
-    :param jobs: The path of the jobs file.
-    :param hooks: The path of the Python hooks file.
-    :param cache: The path of the database file (or directory if using the textfiles database-engine) where
-       snapshots are stored.
-    """
+    """Base configuration class."""
 
     project_name: str
     config_path: Path
@@ -38,32 +29,32 @@ class BaseConfig(object):
 class CommandConfig(BaseConfig):
     """Command line arguments configuration; the arguments are stored as class attributes."""
 
-    joblist: Optional[List[int]] = None
-    verbose: bool = False
-    list: bool = False
-    errors: bool = False
-    test_job: Optional[str] = None
-    no_headless: bool = False
-    test_diff: Optional[str] = None
-    dump_history: Optional[str] = None
-    add: Optional[str] = None
-    delete: Optional[str] = None
-    test_reporter: Optional[str] = None
-    smtp_login: bool = False
-    telegram_chats: bool = False
-    xmpp_login: bool = False
-    edit: bool = False
-    edit_config: bool = False
-    edit_hooks: bool = False
-    gc_cache: bool = False
-    clean_cache: bool = False
-    rollback_cache: Optional[int] = None
-    delete_snapshot: Optional[str] = None
-    database_engine: str = 'sqlite3'
-    max_snapshots: int = 4
-    features: bool = False
-    install_chrome: bool = False
-    log_level: str = 'DEBUG'
+    add: Optional[str]
+    check_new: bool
+    clean_cache: bool
+    database_engine: str
+    delete: Optional[str]
+    delete_snapshot: Optional[str]
+    dump_history: Optional[str]
+    edit: bool
+    edit_config: bool
+    edit_hooks: bool
+    errors: bool
+    features: bool
+    gc_cache: bool
+    install_chrome: bool
+    joblist: List[int]
+    list: bool
+    max_snapshots: int
+    no_headless: bool
+    rollback_cache: Optional[int]
+    smtp_login: bool
+    telegram_chats: bool
+    test_diff: Optional[str]
+    test_job: Union[bool, Optional[str]]
+    test_reporter: Optional[str]
+    verbose: Optional[int]
+    xmpp_login: bool
 
     def __init__(
         self,
@@ -86,32 +77,6 @@ class CommandConfig(BaseConfig):
            snapshots are stored.
         """
         super().__init__(project_name, config_path, config, jobs, hooks, cache)
-        # self.joblist: Optional[List[int]] = None
-        # self.verbose: bool = False
-        # self.list: bool = False
-        # self.errors: bool = False
-        # self.test_job: Optional[str] = None
-        # self.no_headless: bool = False
-        # self.test_diff: Optional[str] = None
-        # self.dump_history: Optional[str] = None
-        # self.add: Optional[str] = None
-        # self.delete: Optional[str] = None
-        # self.test_reporter: Optional[str] = None
-        # self.smtp_login: bool = False
-        # self.telegram_chats: bool = False
-        # self.xmpp_login: bool = False
-        # self.edit: bool = False
-        # self.edit_config: bool = False
-        # self.edit_hooks: bool = False
-        # self.gc_cache: bool = False
-        # self.clean_cache: bool = False
-        # self.rollback_cache: Optional[int] = None
-        # self.delete_snapshot: Optional[str] = None
-        # self.database_engine: str = 'sqlite3'
-        # self.max_snapshots: int = 4
-        # self.features: bool = False
-        # self.install_chrome: bool = False
-        # self.log_level: str = 'DEBUG'
         self.parse_args(args)
 
     def parse_args(self, cmdline_args: List[str]) -> argparse.ArgumentParser:
@@ -120,13 +85,9 @@ class CommandConfig(BaseConfig):
         :returns: The Python arguments parser.
         """
 
-        new_version = get_new_version_number(timeout=0.5)
-        new_version_text = (
-            f'\nNew release version {new_version} is available; we recommend updating.' if new_version else ''
-        )
         parser = argparse.ArgumentParser(
             description=__doc__.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--', '\n\n'),
-            epilog=f'Full documentation is at {__docs_url__}{new_version_text}\n',
+            epilog=f'Full documentation is at {__docs_url__}\n',
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         parser.add_argument(
@@ -136,8 +97,16 @@ class CommandConfig(BaseConfig):
             help='job(s) to run (by index as per --list) (default: run all jobs)',
             metavar='JOB',
         )
-        parser.add_argument('-V', '--version', action='version', version=f'{__project_name__} {__version__}')
-        parser.add_argument('-v', '--verbose', action='store_true', help='show logging output')
+        parser.add_argument(
+            '-V',
+            '--version',
+            action='version',
+            version=f'{__project_name__} {__version__}\n\n'
+            f"Run '{__project_name__} --check-new' to check if a new release is available.",
+        )
+        parser.add_argument(
+            '-v', '--verbose', action='count', help='show logging output; use -vv for maximum verbosity'
+        )
 
         group = parser.add_argument_group('override file defaults')
         group.add_argument(
@@ -169,7 +138,9 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--test',
             '--test-filter',
-            help='test a job (by index or URL/command) and show filtered output',
+            nargs='?',
+            const=True,
+            help='test a job (by index or URL/command) and show filtered output; if no JOB, check config and job files',
             metavar='JOB',
             dest='test_job',
         )
@@ -190,18 +161,15 @@ class CommandConfig(BaseConfig):
             help='print all saved snapshot history for a job (by index or URL/command)',
             metavar='JOB',
         )
-        group.add_argument(
-            '--add',
-            help='add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from '
-            'jobs file; use --edit instead!',
-            metavar='JOB',
+
+        group = parser.add_argument_group(
+            'backward compatibility (WARNING: all remarks are deleted from jobs file; use --edit instead)'
         )
+        group.add_argument('--add', help='add a job (key1=value1,key2=value2,...) [use --edit instead]', metavar='JOB')
         group.add_argument(
-            '--delete',
-            help='delete job by URL/command or index number. WARNING: all remarks are '
-            'deleted from jobs file; use --edit instead!',
-            metavar='JOB',
+            '--delete', help='delete a job (by index or URL/command) [use --edit instead]', metavar='JOB'
         )
+
         group = parser.add_argument_group('reporters')
         group.add_argument(
             '--test-reporter',
@@ -238,7 +206,7 @@ class CommandConfig(BaseConfig):
             metavar='TIMESTAMP',
         )
         group.add_argument(
-            '--delete-snapshot', help='delete the last saved snapshot of job (URL/command)', metavar='JOB'
+            '--delete-snapshot', help='delete the last saved snapshot of job (index or URL/command)', metavar='JOB'
         )
         group.add_argument(
             '--database-engine',
@@ -250,30 +218,29 @@ class CommandConfig(BaseConfig):
             '--max-snapshots',
             default=4,
             type=int,
-            help='maximum number of snapshots to retain in sqlite3 database (default: %(default)s)',
+            help='sqlite3 only: maximum number of snapshots to retain in database (default: %(default)s)',
             metavar='NUM_SNAPSHOTS',
         )
 
         group = parser.add_argument_group('miscellaneous')
+        group.add_argument('--check-new', action='store_true', help='check if new release is available')
         group.add_argument(
             '--install-chrome',
             action='store_true',
-            help="install or update Google Chrome browser for use with 'use_browser: true' jobs",
+            help='install or update Google Chrome browser (for jobs using a browser)',
         )
-        group.add_argument('--features', action='store_true', help='list supported job types, filters and reporters')
         group.add_argument(
-            '--log-level',
-            default='DEBUG',
-            choices=('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'),
-            help='level of logging output when -v is selected (default: %(default)s)',
+            '--features',
+            action='store_true',
+            help='list supported job types, filters and reporters (including those loaded by hooks)',
         )
 
-        # workaround for avoiding triggering error when invoked by pytest
-        if parser.prog != '_jb_pytest_runner.py' and not os.getenv('CI'):
-            args = parser.parse_args(cmdline_args)
+        # # workaround for avoiding triggering error when invoked by pytest
+        # if parser.prog != '_jb_pytest_runner.py' and not os.getenv('CI'):
+        args = parser.parse_args(cmdline_args)
 
-            for arg in vars(args):
-                argval = getattr(args, arg)
-                setattr(self, arg, argval)
+        for arg in vars(args):
+            argval = getattr(args, arg)
+            setattr(self, arg, argval)
 
         return parser

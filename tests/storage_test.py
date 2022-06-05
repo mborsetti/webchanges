@@ -576,7 +576,7 @@ def test_abstractmethods():
     d = Dummy(filename)
     assert d.load() is None
     assert d.save() is None
-    assert d.parse() is None
+    assert d.parse(Path()) is None
 
     CacheStorage.__abstractmethods__ = set()
 

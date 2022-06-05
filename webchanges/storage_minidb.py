@@ -2,9 +2,9 @@
 
 Code is loaded only:
 
-* when reading databases created in version < 3.2.0
-* when running with the '--database-engine minidb' switch
-* testing migration of legacy database
+* when reading databases created in version < 3.2.0 or in urlwatch;
+* when running with the '--database-engine minidb' switch;
+* testing migration of legacy database.
 
 Having it into a standalone module allows running the program without requiring minidb package to be installed.
 """

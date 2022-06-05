@@ -80,11 +80,11 @@ SETUP = {
     },
     'python_requires': f'>={".".join(str(v) for v in project.__min_python_version__)}',
     'project_urls': {
-        'Issues': f'{project.__code_url__}issues',
-        'CI': f'{project.__code_url__}actions',
-        'Documentation': project.__docs_url__,
         'Source Code': project.__code_url__,
+        'CI': f'{project.__code_url__}actions',
+        'Issues': f'{project.__code_url__}issues',
         'Changelog': f'{project.__docs_url__}en/stable/changelog.html',
+        'Documentation': project.__docs_url__,
     },
 }
 SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))

@@ -1,4 +1,4 @@
-"""Vendored version of packaging.version.parse() from Packaging 20.9, released on 2021-02-20.
+"""Vendored version of packaging.version.parse() from packaging 21.3, released on 2021-11-27.
 See https://github.com/pypa/packaging."""
 
 # This file is licensed under the terms of the BSD License.
@@ -56,16 +56,13 @@ class InfinityType:
     def __eq__(self, other: object) -> bool:
         return isinstance(other, self.__class__)
 
-    def __ne__(self, other: object) -> bool:
-        return not isinstance(other, self.__class__)
-
     def __gt__(self, other: object) -> bool:
         return True
 
     def __ge__(self, other: object) -> bool:
         return True
 
-    def __neg__(self: object) -> NegativeInfinityType:
+    def __neg__(self: object) -> 'NegativeInfinityType':
         return NegativeInfinity
 
 
@@ -87,9 +84,6 @@ class NegativeInfinityType:
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, self.__class__)
-
-    def __ne__(self, other: object) -> bool:
-        return not isinstance(other, self.__class__)
 
     def __gt__(self, other: object) -> bool:
         return False
@@ -126,7 +120,7 @@ VersionComparisonMethod = Callable[[Union[CmpKey, LegacyCmpKey], Union[CmpKey, L
 _Version = collections.namedtuple('_Version', ['epoch', 'release', 'dev', 'pre', 'post', 'local'])
 
 
-def parse(version: str) -> Union[LegacyVersion, Version]:
+def parse(version: str) -> Union['LegacyVersion', 'Version']:
     """
     Parse the given version string and return either a :class:`Version` object
     or a :class:`LegacyVersion` object depending on if the given version is
@@ -153,13 +147,13 @@ class _BaseVersion:
     # Please keep the duplicated `isinstance` check
     # in the six comparisons hereunder
     # unless you find a way to avoid adding overhead function calls.
-    def __lt__(self, other: _BaseVersion) -> bool:
+    def __lt__(self, other: '_BaseVersion') -> bool:
         if not isinstance(other, _BaseVersion):
             return NotImplemented
 
         return self._key < other._key
 
-    def __le__(self, other: _BaseVersion) -> bool:
+    def __le__(self, other: '_BaseVersion') -> bool:
         if not isinstance(other, _BaseVersion):
             return NotImplemented
 
@@ -171,13 +165,13 @@ class _BaseVersion:
 
         return self._key == other._key
 
-    def __ge__(self, other: _BaseVersion) -> bool:
+    def __ge__(self, other: '_BaseVersion') -> bool:
         if not isinstance(other, _BaseVersion):
             return NotImplemented
 
         return self._key >= other._key
 
-    def __gt__(self, other: _BaseVersion) -> bool:
+    def __gt__(self, other: '_BaseVersion') -> bool:
         if not isinstance(other, _BaseVersion):
             return NotImplemented
 
@@ -196,7 +190,7 @@ class LegacyVersion(_BaseVersion):
         self._key = _legacy_cmpkey(self._version)
 
         warnings.warn(
-            'Creating a LegacyVersion has been deprecated and will be removed in the next major release',
+            'Creating a LegacyVersion has been deprecated and will be ' 'removed in the next major release',
             DeprecationWarning,
         )
 

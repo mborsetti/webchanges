@@ -254,23 +254,27 @@ or ignore all HTTP errors if you like by using :ref:`ignore_http_error_codes`
    ignore_http_error_codes: 4xx, 5xx
 
 
-Only receive short notifications containing the URL
+Receive short notifications only containing the URL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-When using a reporter that uses text, the report -> text -> details setting can be set to false to avoid details and
-report just a summary. You can also set report -> text -> footer to false to make the report even shorter.  You can also
-use the directive ``user_visible_url`` to customize the URL that is reported visible (e.g. watching a REST API
-endpoint, but wanting to show the "web-visible" URL in the report).
+If you only want to be alerted that there is a change without any information about the change itself, you can use a
+a reporter that uses text and set report -> text -> details to false to avoid details being sent; you can also set
+report -> text -> footer to false to make the report even shorter.
+
+Don't forget that you can also use the directive :ref:`user_visible_url` to customize the URL that is reported visible
+(e.g. watching a REST API endpoint, but wanting to show the "web-visible" URL in the report).
+
+If you want the alert for one job only (of many), consider using the :ref:`sha1sum` filter instead.
 
 For example, for email set these in the configuration file (``webchanges --edit-config``):
 
 .. code-block:: yaml
 
    report:
-     ...
+     # ...
      text:
        details: false
        footer: false
-       ...
+       # ...
      email:
        html: false
-       ...
+       # ...

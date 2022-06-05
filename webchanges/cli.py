@@ -1,35 +1,28 @@
 #!/usr/bin/env python3
 
-"""Module containing the entry point main()."""
+"""Module containing the entry point: the function main()."""
 
-# See config module for the command line arguments
+# See config module for the command line arguments.
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import signal
+import subprocess
 import sys
 import warnings
 from pathlib import Path, PurePath
-from typing import Optional, Union
+from typing import Optional
 
 import platformdirs
 
 from . import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
-from .command import UrlwatchCommand
 from .config import CommandConfig
-from .main import Urlwatch
-from .storage import (
-    CacheDirStorage,
-    CacheRedisStorage,
-    CacheSQLite3Storage,
-    CacheStorage,
-    YamlConfigStorage,
-    YamlJobsStorage,
-)
+from .util import get_new_version_number
 
 # Ignore signal SIGPIPE ("broken pipe") for stdout (see https://github.com/thp/urlwatch/issues/77)
 if sys.platform != 'win32':  # Windows does not have signal.SIGPIPE
@@ -80,20 +73,27 @@ def migrate_from_legacy(
             logger.warning(f"You can safely delete '{old_file}'.")
 
 
-def setup_logger(log_level: Optional[Union[str, int]] = None) -> None:
+def setup_logger(verbose: Optional[int] = None) -> None:
     """Set up the logger.
 
-    :param log_level: the logging level (same as used in the logging module).
+    :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
     """
     import platform
 
+    log_level = None
+    if verbose is not None:
+        if verbose >= 2:
+            log_level = 'DEBUG'
+        elif verbose == 1:
+            log_level = 'INFO'
+
     logging.basicConfig(format='%(asctime)s %(module)s[%(thread)s] %(levelname)s: %(message)s', level=log_level)
-    logger.debug(f'{__project_name__}: {__version__} {__copyright__}')
-    logger.debug(
+    logger.info(f'{__project_name__}: {__version__} {__copyright__}')
+    logger.info(
         f'{platform.python_implementation()}: {platform.python_version()} '
         f'{platform.python_build()} {platform.python_compiler()}'
     )
-    logger.debug(f'System: {platform.platform()}')
+    logger.info(f'System: {platform.platform()}')
 
 
 def locate_storage_file(filename: Path, default_path: Path, ext: Optional[str] = None) -> Path:
@@ -133,6 +133,8 @@ def first_run(command_config: CommandConfig) -> None:
     """
     if not command_config.config.is_file():
         command_config.config.parent.mkdir(parents=True, exist_ok=True)
+        from .storage import YamlConfigStorage
+
         YamlConfigStorage.write_default_config(command_config.config)
         print(f'Created default config file at {command_config.config}')
         if not command_config.edit_config:
@@ -144,6 +146,62 @@ def first_run(command_config: CommandConfig) -> None:
         print(f'Created default jobs file at {command_config.jobs}')
         if not command_config.edit:
             print(f'> Edit it with {__project_name__} --edit')
+
+
+def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
+    """Handles CLI actions that do not require all classes etc. to be initialized.  For speed purposes."""
+
+    def _exit(arg: object) -> None:
+        logger.info(f'Exiting with exit code {arg}')
+        sys.exit(arg)
+
+    def print_new_version() -> int:
+        """Will print alert message if a newer version is found on PyPi."""
+        print(f'{__project_name__} {__version__}', end='')
+        new_release = get_new_version_number(timeout=2)
+        if new_release:
+            print(
+                f'. Release version {new_release} is available; we recommend updating using e.g. '
+                f"'pip install -U {__project_name__}'."
+            )
+            return 0
+        elif new_release == '':
+            print('. You are running the latest release.')
+            return 0
+        else:
+            print('. Error contacting PyPI to determine the latest release.')
+            return 1
+
+    def playwright_install_chrome() -> int:  # pragma: no cover
+        """
+        Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
+        install the browser executable.
+
+        :return: Playwright's executable return code.
+        """
+        try:
+            from playwright._impl._driver import compute_driver_executable
+        except ImportError:
+            raise ImportError('Python package playwright is not installed; cannot install the Chrome browser')
+
+        driver_executable = compute_driver_executable()
+        env = os.environ.copy()
+        env['PW_CLI_TARGET_LANG'] = 'python'
+        cmd = [str(driver_executable), 'install', 'chrome']
+        logger.info(f"Running playwright CLI: {' '.join(cmd)}")
+        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        if completed_process.returncode:
+            print(completed_process.stderr)
+            return completed_process.returncode
+        if completed_process.stdout:
+            logger.info(f'Success! Output of Playwright CLI: {completed_process.stdout}')
+        return 0
+
+    if urlwatch_config.check_new:
+        _exit(print_new_version())
+
+    if urlwatch_config.install_chrome:  # pragma: no cover
+        _exit(playwright_install_chrome())
 
 
 def main() -> None:  # pragma: no cover
@@ -160,26 +218,26 @@ def main() -> None:  # pragma: no cover
     # Issue deprecation warning if running on minimum version supported
     python_version_warning()
 
-    # Directory where the config, jobs and hooks files are located
+    # Path where the config, jobs and hooks files are located
     if sys.platform != 'win32':
         config_path = platformdirs.user_config_path(__project_name__)  # typically ~/.config/{__project_name__}
     else:
         config_path = Path.home().joinpath('Documents').joinpath(__project_name__)
 
-    # Directory where the database is located; typically ~/.cache/{__project_name__}
+    # Path where the database is located; typically ~/.cache/{__project_name__}
     # or %LOCALAPPDATA%\{__project_name__}\{__project_name__}\Cache
     cache_path = platformdirs.user_cache_path(__project_name__)
 
-    # The config, jobs, hooks and cache files
+    # Default config, jobs, hooks and cache (database) files
     default_config_file = config_path.joinpath('config.yaml')
     default_jobs_file = config_path.joinpath('jobs.yaml')
     default_hooks_file = config_path.joinpath('hooks.py')
     default_cache_file = cache_path.joinpath('cache.db')
 
-    # Migrate legacy (urlwatch 2.25) files
+    # Check for and if found migrate legacy (urlwatch 2.25) files
     migrate_from_legacy('urlwatch', default_config_file, default_jobs_file, default_hooks_file, default_cache_file)
 
-    # Load config files
+    # Parse command line arguments
     command_config = CommandConfig(
         sys.argv[1:],
         __project_name__,
@@ -191,10 +249,22 @@ def main() -> None:  # pragma: no cover
     )
 
     # Set up the logger to verbose if needed
-    if command_config.verbose:
-        setup_logger(command_config.log_level)
-    else:
-        setup_logger()
+    setup_logger(command_config.verbose)
+
+    # For speed, run these here
+    handle_unitialized_actions(command_config)
+
+    # Only now we can load other modules (so that logging is enabled)
+    from .command import UrlwatchCommand
+    from .main import Urlwatch
+    from .storage import (
+        CacheDirStorage,
+        CacheRedisStorage,
+        CacheSQLite3Storage,
+        CacheStorage,
+        YamlConfigStorage,
+        YamlJobsStorage,
+    )
 
     # Locate config, job and hooks files
     command_config.config = locate_storage_file(command_config.config, command_config.config_path, '.yaml')
@@ -233,7 +303,7 @@ def main() -> None:  # pragma: no cover
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)  # command.py
 
-    # Run 'urlwatch'
+    # Run 'urlwatch', starting with processing command line arguments
     urlwatch_command.run()
 
 

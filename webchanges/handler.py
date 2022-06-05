@@ -16,7 +16,7 @@ from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Iterable, List, Optional, Type, TYPE_CHECKING, Union
+from typing import Any, ContextManager, Dict, Iterable, List, Optional, Type, TYPE_CHECKING, Union
 
 from .filters import FilterBase
 from .jobs import NotModifiedError
@@ -52,19 +52,19 @@ logger = logging.getLogger(__name__)
 class JobState(ContextManager):
     """The JobState class, which contains run information about a job."""
 
-    verb: str  # 'new', 'changed', 'changed,no_report', 'unchanged', 'error' are recognized
-    old_data: str = ''
-    new_data: str
-    old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
-    new_timestamp: float
-    exception: Optional[Exception] = None
-    traceback: str
-    tries: int = 0
-    old_etag: str = ''
-    new_etag: str
-    error_ignored: Union[bool, str] = False
     _generated_diff: Optional[str] = None
     _generated_diff_html: Optional[str] = None
+    error_ignored: Union[bool, str]
+    exception: Optional[Exception] = None
+    new_data: str
+    new_etag: str
+    new_timestamp: float
+    old_data: str = ''
+    old_etag: str = ''
+    old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
+    traceback: str
+    tries: int = 0
+    verb: str  # typically 'new', 'changed', 'changed,no_report', 'unchanged', 'error'
 
     def __init__(self, cache_storage: CacheStorage, job: JobBase, playwright: Any = None) -> None:
         """
@@ -112,6 +112,11 @@ class JobState(ContextManager):
 
         return None
 
+    def added_data(self) -> Dict[str, Optional[Union[bool, str, Exception, float]]]:
+        """Returns a dict with the data added in the processing of the job"""
+        attrs = ('error_ignored', 'exception', 'new_data', 'new_etag', 'new_timestamp')
+        return {attr: getattr(self, attr) for attr in attrs if hasattr(self, attr)}
+
     def load(self) -> None:
         """Loads form the database the last snapshot for the job."""
         guid = self.job.get_guid()
@@ -140,9 +145,11 @@ class JobState(ContextManager):
 
         :returns: a JobState object containing information of the job run.
         """
-        logger.info(f'Job {self.job.index_number}: Processing job {self.job}')
+        logger.info(f'{self.job.get_indexed_location()} started processing')
+        logger.debug(f'Job {self.job.index_number}: {self.job}')
 
         if self.exception:
+            logger.info(f'{self.job.get_indexed_location()} ended processing due to exception: {self.exception}')
             return self
 
         try:
@@ -151,6 +158,7 @@ class JobState(ContextManager):
 
                 self.new_timestamp = time.time()
                 data, self.new_etag = self.job.retrieve(self, headless)
+                logger.debug(f'Job {self.job.index_number}: Retrieved data {dict(data=data, new_etag=self.new_etag)}')
 
                 # Apply automatic filters first
                 filtered_data = FilterBase.auto_process(self, data)
@@ -168,7 +176,7 @@ class JobState(ContextManager):
                 self.error_ignored = self.job.ignore_error(e)
                 if not (self.error_ignored or isinstance(e, NotModifiedError)):
                     self.tries += 1
-                    logger.debug(
+                    logger.info(
                         f'Job {self.job.index_number}: Job ended with error; incrementing cumulative tries to '
                         f'{self.tries} ({str(e).strip()})'
                     )
@@ -179,11 +187,13 @@ class JobState(ContextManager):
             self.error_ignored = False
             if not isinstance(e, NotModifiedError):
                 self.tries += 1
-                logger.debug(
+                logger.info(
                     f'Job {self.job.index_number}: Job ended with error (internal handling failed); '
                     f'incrementing cumulative tries to {self.tries} ({str(e).strip()})'
                 )
 
+        logger.debug(f'Job {self.job.index_number}: Processed as {self.added_data()}')
+        logger.info(f'{self.job.get_indexed_location()} ended processing')
         return self
 
     def get_diff(self, tz: Optional[str] = None) -> str:
@@ -233,9 +243,9 @@ class JobState(ContextManager):
         :raises RuntimeError: If the external diff tool returns an error.
         """
         if tz:
-            tz_info = ZoneInfo(tz)
+            tz_info: Optional[ZoneInfo] = ZoneInfo(tz)
         else:
-            tz_info = None  # type: ignore[assignment]
+            tz_info = None
         if self.old_timestamp:
             timestamp_old = (
                 datetime.fromtimestamp(self.old_timestamp).astimezone(tz=tz_info).strftime('%a, %d %b %Y %H:%M:%S %z')
@@ -470,7 +480,7 @@ class Report(object):
     """The base class for reporting."""
 
     job_states: List[JobState] = []
-    new_release_future: Optional[Future[str]] = None
+    new_release_future: Optional[Future[Union[str, bool]]] = None
     start: float = time.perf_counter()
 
     def __init__(self, urlwatch_config: Urlwatch) -> None:
@@ -488,7 +498,7 @@ class Report(object):
         :param job_state: The JobState object with the information of the job run.
         """
         if job_state.exception is not None and job_state.exception is not NotModifiedError:
-            logger.debug(
+            logger.info(
                 f'Job {job_state.job.index_number}: Got exception while processing job {job_state.job}',
                 exc_info=job_state.exception,
             )

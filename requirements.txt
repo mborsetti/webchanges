@@ -9,3 +9,4 @@ platformdirs
 pyyaml
 requests
 tzdata; os_name == "nt"
+urllib3

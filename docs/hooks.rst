@@ -8,12 +8,28 @@
 =========================
 Hook your own Python code
 =========================
-Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing it into
-a ``hooks.py`` file located in the same directory as the job and configuration files. The code will be automatically
-loaded at startup.
+Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing such
+code into a ``hooks.py`` file located in the same directory as the job and configuration files. The file will be
+automatically loaded as a module at startup.
 
 Smaller code snippets can also be run using the :ref:`execute` filter, for example as used :ref:`here <json_dict>`
 for filtering JSON dictionaries.
+
+.. _important_note_for_hooks_file:
+
+.. important:: On Linux and macOS systems, due to security reasons the hooks module will not be imported unless **both**
+   the hooks file **and** the directory it is located in are **owned** and **writeable** by **only** the user who is
+   running the job (and not by its group or by other users). To set this up:
+
+   .. code-block:: bash
+
+      cd ~/.config/webchanges  # could be different
+      sudo chown $USER:$(id -g -n) . hooks.py
+      sudo chmod go-w . hooks.py
+
+   * ``sudo`` may or may not be required.
+   * Replace ``$USER`` with the username that runs :program:`webchanges` if different than the use you're logged in when
+     making the above changes, similarly with ``$(id -g -n)`` for the group.
 
 An example ``hooks.py`` file is below:
 

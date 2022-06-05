@@ -94,8 +94,7 @@ https://example.org/feed/css-namespace.xml:
         </item>
       </channel>
     </rss>
-  output: |
-    stylesheets™
+  output: stylesheets™
 https://example.net/feed/xpath-namespace.xml:
   input: |-
     <?xml version="1.0"?>
@@ -199,8 +198,7 @@ https://example.net/id2text.html:
       <p>And no other element.</p>
     </body>
     </html>
-  output: |
-    Only this™ element, only the text.
+  output: Only this™ element, only the text.
 https://example.org/styletest.html:
   input: |-
     <html>
@@ -226,7 +224,12 @@ https://example.com/html2text.html:
     </section>
     </body>
     </html>
-  output: "Date                    | #Sales™ \n------------------------|---------\nMonday, 3 February 2020 | 10,000  \nTu, 3 Mar               | 20,000  \n\n\n"
+  output: |+
+    Date                    | #Sales™
+    ------------------------|---------
+    Monday, 3 February 2020 | 10,000
+    Tu, 3 Mar               | 20,000
+
 # The below is for when html2text > 2020.1.16 (fixes included)
 #  output: |-
 #    | Date                    | #Sales™ |
@@ -453,7 +456,7 @@ https://example.com/re_sub_group.html:
   input: |-
     <h1>This is a test™</h1>
     <div>Page generated in 1.2 milliseconds.</div>
-  output: |
+  output: |-
     # This is a test™
     Page generated in X milliseconds.
 https://example.com/strip.html:

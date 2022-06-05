@@ -1,20 +1,21 @@
 """The main class.
 
-For the entrypoint, see cli.py.
-"""
+For the entry point, see main() in the cli module."""
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import List, Optional, Tuple, Union
 
+from . import __docs_url__
 from .config import CommandConfig
 from .handler import Report
 from .jobs import JobBase
 from .storage import CacheStorage, YamlConfigStorage, YamlJobsStorage
-from .util import get_new_version_number, import_module_from_source
+from .util import file_ownership_checks, get_new_version_number, import_module_from_source
 from .worker import run_jobs
 
 logger = logging.getLogger(__name__)
@@ -40,11 +41,6 @@ class Urlwatch(object):
 
         self.urlwatch_config = urlwatch_config
 
-        logger.info(f'Config file is {self.urlwatch_config.config}')
-        logger.info(f'Jobs file is {self.urlwatch_config.jobs}')
-        logger.info(f'Hooks file is {self.urlwatch_config.hooks}')
-        logger.info(f'Database file is {self.urlwatch_config.cache}')
-
         self.config_storage = config_storage
         self.cache_storage = cache_storage
         self.jobs_storage = jobs_storage
@@ -52,7 +48,7 @@ class Urlwatch(object):
         self.report = Report(self)
         self.jobs: List[JobBase] = []
 
-        self._latest_release: str = None  # type: ignore[assignment]
+        self._latest_release: Optional[Union[str, bool]] = None
 
         self.check_directories()
 
@@ -80,9 +76,24 @@ class Urlwatch(object):
 
     def load_hooks(self) -> None:
         """Load hooks file."""
-        logger.info('Loading hooks file')
-        if self.urlwatch_config.hooks.is_file():
+        if not self.urlwatch_config.hooks.is_file():
+            warnings.warn(
+                f'Hooks file not imported because {self.urlwatch_config.hooks} is not a file',
+                ImportWarning,
+            )
+            return
+
+        hooks_file_errors = file_ownership_checks(self.urlwatch_config.hooks)
+        if hooks_file_errors:
+            warnings.warn(
+                f'Hooks file {self.urlwatch_config.hooks} not imported because '
+                f" {' and '.join(hooks_file_errors)}.\n"
+                f'(see {__docs_url__}en/stable/hooks.html#important-note-for-hooks-file)',
+                ImportWarning,
+            )
+        else:
             import_module_from_source('hooks', self.urlwatch_config.hooks)
+            logger.info(f'Loaded hooks from {self.urlwatch_config.hooks}')
 
     def load_jobs(self) -> None:
         """Load jobs from the file into self.jobs.
@@ -91,14 +102,14 @@ class Urlwatch(object):
         """
         if self.urlwatch_config.jobs.is_file():
             jobs = self.jobs_storage.load_secure()
-            logger.info(f'Loaded {len(jobs)} jobs')
+            logger.info(f'Loaded {len(jobs)} jobs from {self.urlwatch_config.jobs}')
         else:
             print(f'Jobs file not found: {self.urlwatch_config.jobs}')
             raise SystemExit(1)
 
         self.jobs = jobs
 
-    def get_new_release_version(self, timeout: Optional[Union[float, Tuple[float, float]]] = None) -> str:
+    def get_new_release_version(self, timeout: Optional[Union[float, Tuple[float, float]]] = None) -> Union[str, bool]:
         """Check PyPi to see if we're running the latest version. Memoized.
 
         :returns: Empty string if no higher version is available, otherwise the new version number.

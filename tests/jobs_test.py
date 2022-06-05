@@ -1,7 +1,4 @@
 """Test running of jobs.
-
-Note: for '-use_browser: true' jobs, using the --disable-dev-shm-usage switch as per
-https://playwright.dev/python/docs/ci#docker since GitHub Actions runs the tests in a Docker container.
 """
 import asyncio
 import ftplib  # nosec: B402 A FTP-related module is being imported.
@@ -90,7 +87,7 @@ TEST_JOBS = [
             'cookies': {'X-test': '', 'X-test-2': ''},
             'headers': {'Accept-Language': 'en-US,en'},
             'ignore_https_errors': False,
-            'switches': ['--window-size=1298,1406', '--disable-dev-shm-usage'],
+            'switches': ['--window-size=1298,1406'],
             'timeout': 15,
             'user_visible_url': 'https://www.google.com/',
             'wait_for_navigation': 'https://www.google.com/',
@@ -171,19 +168,6 @@ def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> 
     if sys.version_info < (3, 8) and job.use_browser:
         pytest.skip('Playwright testing requires Python 3.8')
         return
-    # if (
-    #     input_job
-    #     == {
-    #         'url': 'https://postman-echo.com/post',
-    #         'name': 'testing POST url job with use_browser and Playwright',
-    #         'use_browser': True,
-    #         'switches': ['--disable-dev-shm-usage'],
-    #         'data': {'fieldname': 'fieldvalue'},
-    #     }
-    #     and sys.platform == 'linux'
-    # ):
-    #     pytest.skip('Triggers exit code 141 on Ubuntu in GitHub Actions')
-    #     return
 
     with JobState(cache_storage, job) as job_state:
         data, etag = job.retrieve(job_state)

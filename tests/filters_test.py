@@ -167,7 +167,7 @@ def test_deprecated_filters():
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
         # noinspection PyTypeChecker
-        assert filtercls(FakeJob(), None).filter('<div>a</div>', {'method': 'pyhtml2text'}) == 'a\n'
+        assert filtercls(FakeJob(), None).filter('<div>a</div>', {'method': 'pyhtml2text'}) == 'a'
     assert len(w) == 1
     assert w[0].message.args[0] == (
         "Filter html2text's method 'pyhtml2text' is deprecated: remove method as it's now the filter's default ()"

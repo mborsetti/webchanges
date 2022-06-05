@@ -62,7 +62,7 @@ If for some reason you want the diff as a Python `HtmlDiff
 .. code-block:: yaml
 
    report:
-     text:
+     html:
        diff: table
 
 Optional sub-directives

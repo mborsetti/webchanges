@@ -581,16 +581,15 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
 
 .. _important_note_for_command_jobs:
 
-.. important:: When :program:`webchanges` is run in Linux, for security purposes a ``command`` job or a job with
-   ``diff_tool`` will only run if the job file is both owned by the same user running :program:`webchanges` and
-   can **only** be written by such user. To change the ownership and the access permissions of the file (i.e. remove
-   write permission for the group and all other users), run the following commands:
+.. important:: On Linux and macOS systems, due to security reasons a ``command`` job or a job with ``diff_tool`` will
+   not run unless **both** the jobs file **and** the directory it is located in are **owned** and **writeable** by
+   **only** the user who is running the job (and not by its group or by other users). To set this up:
 
    .. code-block:: bash
 
       cd ~/.config/webchanges  # could be different
-      sudo chown $USER:$(id -g -n) *.yaml
-      sudo chmod go-w *.yaml
+      sudo chown $USER:$(id -g -n) . *.yaml
+      sudo chmod go-w . *.yaml
 
    * ``sudo`` may or may not be required.
    * Replace ``$USER`` with the username that runs :program:`webchanges` if different than the use you're logged in when

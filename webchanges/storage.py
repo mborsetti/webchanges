@@ -6,13 +6,11 @@ from __future__ import annotations
 
 import copy
 import email.utils
-import getpass
 import inspect
 import logging
 import os
 import shutil
 import sqlite3
-import stat
 import sys
 import threading
 import warnings
@@ -30,7 +28,7 @@ from . import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
 from .jobs import JobBase, ShellJob
 from .reporters import ReporterBase
-from .util import edit_file
+from .util import edit_file, file_ownership_checks
 
 try:
     import pwd
@@ -453,10 +451,10 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
 
     @classmethod
     @abstractmethod
-    def parse(cls, *args: Any) -> Any:
+    def parse(cls, filename: Path) -> Any:
         """Parse storage contents.
 
-        :param args: Specified by the subclass.
+        :param filename: The filename.
         :return: Specified by the subclass.
         """
         pass
@@ -530,34 +528,6 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         super().__init__(filename)
         self.filename = filename
 
-    def shelljob_security_checks(self) -> List[str]:
-        """Check security of jobs file and its directory, i.e. that they belong to the current UID and only the owner
-        can write to them. Return list of errors if any. Linux only.
-
-        :returns: List of errors encountered (if any).
-        """
-
-        if os.name == 'nt':
-            return []
-
-        shelljob_errors = []
-        current_uid = os.getuid()  # type: ignore[attr-defined]  # not defined in Windows
-
-        dirname = self.filename.parent
-        dir_st = dirname.stat()
-        if (dir_st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) != 0:
-            shelljob_errors.append(f'{dirname} is group/world-writable')
-        if dir_st.st_uid != current_uid:
-            shelljob_errors.append(f'{dirname} not owned by {getpass.getuser()}')
-
-        file_st = self.filename.stat()
-        if (file_st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) != 0:
-            shelljob_errors.append(f'{self.filename} is group/world-writable')
-        if file_st.st_uid != current_uid:
-            shelljob_errors.append(f'{self.filename} not owned by {getpass.getuser()}')
-
-        return shelljob_errors
-
     def load_secure(self) -> List[JobBase]:
         """Load the jobs from a text file checking that the file is secure (i.e. belongs to the current UID and only
         the owner can write to it - Linux only).
@@ -584,7 +554,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
 
             return False
 
-        shelljob_errors = self.shelljob_security_checks()
+        shelljob_errors = file_ownership_checks(self.filename)
         removed_jobs = (job for job in jobs if is_shell_job(job))
         if shelljob_errors and any(removed_jobs):
             print(
@@ -601,13 +571,12 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
     """Base class for YAML textual files storage."""
 
     @classmethod
-    def parse(cls, *args: Any) -> Any:
+    def parse(cls, filename: Path) -> Any:
         """Return contents of YAML file if it exists
 
         :param args: Specified by the subclass.
         :return: Specified by the subclass.
         """
-        filename = args[0]
         if filename is not None and filename.is_file():
             with filename.open() as fp:
                 return yaml.safe_load(fp)
@@ -695,6 +664,11 @@ class YamlConfigStorage(BaseYamlFileStorage):
             # 'job_defaults' is not set in DEFAULT_CONFIG
             for key in DEFAULT_CONFIG['job_defaults']:
                 config_for_extras['job_defaults'][key] = {}  # type: ignore[literal-required]
+        if 'hooks' in sys.modules:
+            for _, obj in inspect.getmembers(sys.modules['hooks'], inspect.isclass):
+                if issubclass(obj, JobBase):
+                    if obj.__kind__ not in (DEFAULT_CONFIG['job_defaults'].keys()):
+                        config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
         if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
             config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
         extras: Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG)
@@ -750,6 +724,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     f'See documentation at {__docs_url__}/en/stable/configuration.html'
                 )
                 config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
+            logger.info(f'Loaded configuration from {self.filename}')
         else:
             logger.info(f'No directives found in the configuration file {self.filename}; using default directives.')
             config = DEFAULT_CONFIG
@@ -807,13 +782,12 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         return jobs
 
     @classmethod
-    def parse(cls, *args: Path) -> List[JobBase]:
+    def parse(cls, filename: Path) -> List[JobBase]:
         """Parse the contents of the job YAML file and return a list of jobs.
 
         :param args: The filename.
         :return: A list of JobBase objects.
         """
-        filename = args[0]
         if filename is not None and filename.is_file():
             with filename.open() as fp:
                 return cls._parse(fp)
@@ -827,12 +801,11 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         with self.filename.open() as fp:
             return self._parse(fp)
 
-    def save(self, *args: Iterable[JobBase], **kwargs: Any) -> None:
+    def save(self, jobs: Iterable[JobBase]) -> None:  # type: ignore[override]
         """Save jobs to the job YAML file.
 
-        :param args: An iterable of JobBase objects to be written.
+        :param jobs: An iterable of JobBase objects to be written.
         """
-        jobs = args[0]
         print(f'Saving updated list to {self.filename}')
 
         with self.filename.open('w') as fp:
@@ -965,10 +938,11 @@ class CacheDirStorage(CacheStorage):
 
     def __init__(self, dirname: Union[str, Path]) -> None:
         super().__init__(dirname)
-        self.filename.mkdir(parents=True, exist_ok=True)  # filename is a dir (confusing!)
+        self.filename.mkdir(parents=True, exist_ok=True)  # using the attr filename because it is a Path (confusing!)
+        logger.info(f'Using directory {self.filename} to store snapshot data as individual text files')
 
     def close(self) -> None:
-        # No need to close
+        # Nothing to close
         return
 
     def _get_filename(self, guid: str) -> Path:
@@ -1078,7 +1052,6 @@ class CacheSQLite3Storage(CacheStorage):
         self.max_snapshots = max_snapshots
 
         logger.debug(f'Run-time SQLite library: {sqlite3.sqlite_version}')
-        logger.info(f'Opening permanent sqlite3 database file {filename}')
         super().__init__(filename)
 
         self.filename.parent.mkdir(parents=True, exist_ok=True)
@@ -1087,6 +1060,7 @@ class CacheSQLite3Storage(CacheStorage):
         self.lock = threading.RLock()
 
         self.db = sqlite3.connect(filename, check_same_thread=False)
+        logger.info(f'Using sqlite3 database at {filename}')
         self.cur = self.db.cursor()
         self.cur.execute('PRAGMA temp_store = MEMORY;')
         tables = self._execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
@@ -1492,6 +1466,7 @@ class CacheRedisStorage(CacheStorage):
             raise ImportError("Python package 'redis' is missing")
 
         self.db = redis.from_url(str(filename))
+        logger.info(f'Using {self.filename} for database')
 
     @staticmethod
     def _make_key(guid: str) -> str:

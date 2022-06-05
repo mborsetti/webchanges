@@ -1,13 +1,13 @@
 """Take actions from command line arguments."""
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
 from __future__ import annotations
 
 import contextlib
 import logging
 import os
 import shutil
-import subprocess
 import sys
 import time
 import traceback
@@ -40,22 +40,14 @@ if TYPE_CHECKING:
 
 
 class UrlwatchCommand:
+    """The class that runs the program after initialization and CLI arguments parsing."""
+
     def __init__(self, urlwatcher: Urlwatch) -> None:
         self.urlwatcher = urlwatcher
         self.urlwatch_config = urlwatcher.urlwatch_config
 
-    def print_new_version(self) -> None:  # pragma: no cover
-        """Will print alert message if a newer version is found on PyPi.
-
-        TODO: this slows things down too much; must rework as a future. Remove pragma.
-        """
-        new_release = self.urlwatcher.get_new_release_version(timeout=1)
-        if new_release:
-            print(f'\nNew release version {new_release} is available; we recommend updating.')
-        return
-
-    def _exit(self, arg: object) -> None:
-        # self.print_new_version()
+    @staticmethod
+    def _exit(arg: object) -> None:
         logger.info(f'Exiting with exit code {arg}')
         sys.exit(arg)
 
@@ -81,7 +73,6 @@ class UrlwatchCommand:
                 import_module_from_source('hooks', hooks_edit)
                 break  # stop if no exception on parser
             except SystemExit:
-                # self.print_new_version()
                 raise
             except Exception as e:
                 print('Parsing failed:')
@@ -180,17 +171,22 @@ class UrlwatchCommand:
             raise SystemExit(1)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
-    def test_job(self, job_id: Union[str, int]) -> None:
+    def test_job(self, job_id: Union[bool, str, int]) -> None:
         """
         Tests the running of a single job outputting the filtered text to stdout or whatever reporter is selected with
-        --test-reporter.
+        --test-reporter.  If job_id is True, don't run any jobs as it's a test of loading config and job files for
+        syntax.
 
-        :param job_id: The job_id.
+        :param job_id: The job_id or True.
 
         :return: None.
 
         :raises Exception: The Exception of a job when job raises an Exception.
         """
+        if job_id is True:
+            print(f'Tested {self.urlwatch_config.config} and {self.urlwatch_config.jobs}.')
+            return
+
         job = self._get_job(job_id)
         start = time.perf_counter()
 
@@ -202,7 +198,6 @@ class UrlwatchCommand:
             job_state.process(headless=not self.urlwatch_config.no_headless)
             duration = time.perf_counter() - start
             if job_state.exception is not None:
-                # self.print_new_version()
                 raise job_state.exception
             print(job_state.job.pretty_name())
             print('-' * len(job_state.job.pretty_name()))
@@ -462,7 +457,7 @@ class UrlwatchCommand:
             reporter_name  # type: ignore[literal-required]
         ]
         if job_state:  # we want a full report
-            cfg['enabled'] = True  # type: ignore[index]
+            cfg['enabled'] = True
             self.urlwatcher.config_storage.config['report']['text']['details'] = True
             self.urlwatcher.config_storage.config['report']['text']['footer'] = True
             self.urlwatcher.config_storage.config['report']['text']['minimal'] = False
@@ -608,32 +603,6 @@ class UrlwatchCommand:
 
         self._exit(0)
 
-    @staticmethod
-    def playwright_install_chrome() -> int:  # pragma: no cover
-        """
-        Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
-        install the browser executable.
-
-        :return: Playwright's executable return code.
-        """
-        try:
-            from playwright._impl._driver import compute_driver_executable
-        except ImportError:
-            raise ImportError('Python package playwright is not installed; cannot install the Chrome browser')
-
-        driver_executable = compute_driver_executable()
-        env = os.environ.copy()
-        env['PW_CLI_TARGET_LANG'] = 'python'
-        cmd = [str(driver_executable), 'install', 'chrome']
-        logger.info(f"Running playwright CLI: {' '.join(cmd)}")
-        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)
-        if completed_process.returncode:
-            print(completed_process.stderr)
-            return completed_process.returncode
-        if completed_process.stdout:
-            logger.info(f'Success! Output of Playwright CLI: {completed_process.stdout}')
-        return 0
-
     def handle_actions(self) -> None:
         """Handles the actions for command line arguments and exits."""
         if self.urlwatch_config.list:
@@ -674,6 +643,9 @@ class UrlwatchCommand:
             result = self.urlwatcher.jobs_storage.edit()
             self._exit(result)
 
+        if self.urlwatch_config.edit_config:
+            self._exit(self.edit_config())
+
         if self.urlwatch_config.edit_hooks:
             self._exit(self.edit_hooks())
 
@@ -698,14 +670,8 @@ class UrlwatchCommand:
         if self.urlwatch_config.features:
             self._exit(self.show_features())
 
-        if self.urlwatch_config.install_chrome:  # pragma: no cover
-            self._exit(self.playwright_install_chrome())
-
     def run(self) -> None:  # pragma: no cover
         """The main run logic."""
-        if self.urlwatch_config.edit_config:
-            self._exit(self.edit_config())
-
         self.urlwatcher.config_storage.load()
 
         self.urlwatcher.report.config = self.urlwatcher.config_storage.config
@@ -716,5 +682,4 @@ class UrlwatchCommand:
 
         self.urlwatcher.close()
 
-        # self.print_new_version()
         self._exit(0)

@@ -27,8 +27,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 This software redistributes source code of release 2.21 of urlwatch
 https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f
-which is subject to the following license, hereby retained with the source code,
-of which this file is part of:
+which is subject to the following copyright notice and license from
+https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING
+hereby retained and redistributed with the source code (of which this license
+file is part of), in binary form, and in the documentation. The appearance of
+the name of the author below does not constitute an endorsement or promotion of
+this software by such author.
 
 Copyright (c) 2008-2020 Thomas Perl <m@thp.io>
 All rights reserved.

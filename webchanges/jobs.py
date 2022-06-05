@@ -27,8 +27,8 @@ import html2text
 import psutil
 import requests
 import yaml
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from requests.structures import CaseInsensitiveDict
+from urllib3.exceptions import InsecureRequestWarning
 
 from . import __user_agent__
 from .filters import FilterBase
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from .storage import Config
 
 # required to suppress warnings with 'ssl_no_verify: true'
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: ignore[attr-defined,no-untyped-call]
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 
@@ -137,16 +137,16 @@ class JobBase(object, metaclass=TrackSubClasses):
     ssl_no_verify: Optional[bool] = None
     stderr: Optional[str] = None  # urlwatch backwards compatibility for ShellJob (not used)
     switches: Optional[List[str]] = None
-    timeout: Optional[float] = None
+    timeout: Optional[Union[int, float]] = None
     user_data_dir: Optional[str] = None
     user_visible_url: Optional[str] = None
     wait_for: Optional[Union[int, str]] = None  # pyppeteer backwards compatibility (deprecated)
     wait_for_function: Optional[Union[str, Dict[str, Any]]] = None  # Playwright
     wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None
     wait_for_selector: Optional[Union[str, Dict[str, Any]]] = None  # Playwright
-    wait_for_timeout: Optional[float] = None  # Playwright
+    wait_for_timeout: Optional[Union[int, float]] = None  # Playwright
     wait_for_url: Optional[Union[str, Dict[str, Any]]] = None  # Playwright
-    wait_until: Optional[Literal['load', 'domcontentloaded', 'networkidle', 'commit']] = None
+    wait_until: Optional[Literal['commit', 'domcontentloaded', 'load', 'networkidle']] = None
 
     def __init__(self, **kwargs: Any) -> None:
         # Fail if any required keys are not provided
@@ -525,40 +525,6 @@ class UrlJob(UrlJobBase):
             logger.debug(f'Delaying for {self._delay} seconds (duplicate network location)')
             time.sleep(self._delay)
 
-        headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
-        if 'User-Agent' not in headers:
-            headers['User-Agent'] = __user_agent__
-
-        if job_state.old_etag:
-            # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
-            headers['If-None-Match'] = job_state.old_etag
-
-        if job_state.old_timestamp is not None:
-            headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
-
-        if self.ignore_cached or job_state.tries > 0:
-            headers.pop('If-None-Match', None)
-            headers['If-Modified-Since'] = email.utils.formatdate(0)
-            headers['Cache-Control'] = 'max-age=172800'
-            headers['Expires'] = email.utils.formatdate()
-
-        if self.data is not None:
-            if self.method is None:
-                self.method = 'POST'
-            if 'Content-Type' not in headers:
-                headers['Content-Type'] = 'application/x-www-form-urlencoded'
-            if isinstance(self.data, dict):
-                self.data = urlencode(self.data)
-            logger.info(f'Job {self.index_number}: Sending {self.method} request to {self.url}')
-
-        if self.method is None:
-            self.method = 'GET'
-
-        proxies = {
-            'http': self.http_proxy or os.getenv('HTTP_PROXY'),
-            'https': self.https_proxy or os.getenv('HTTPS_PROXY'),
-        }
-
         if urlparse(self.url).scheme == 'file':
             logger.info(f'Job {self.index_number}: Using local filesystem (file URI scheme)')
 
@@ -605,21 +571,56 @@ class UrlJob(UrlJobBase):
 
                     return '\n'.join(data), ''
 
+        headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
+        if 'User-Agent' not in headers:
+            headers['User-Agent'] = __user_agent__
+
+        if self.ignore_cached or job_state.tries > 0:
+            headers.pop('If-None-Match', None)
+            headers['If-Modified-Since'] = email.utils.formatdate(0)
+            headers['Cache-Control'] = 'max-age=172800'
+            headers['Expires'] = email.utils.formatdate()
+        else:
+            if job_state.old_etag:
+                # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
+                headers['If-None-Match'] = job_state.old_etag
+
+            if job_state.old_timestamp is not None:
+                headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
+
+        if self.data is not None:
+            if self.method is None:
+                self.method = 'POST'
+            if 'Content-Type' not in headers:
+                headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            if isinstance(self.data, dict):
+                self.data = urlencode(self.data)
+        else:
+            if self.method is None:
+                self.method = 'GET'
+
         # if self.headers:
         #     self.add_custom_headers(headers)
 
+        # cookiejar (called by requests) expects strings or bytes-like objects; PyYAML will try to guess int etc.
+        if self.cookies:
+            self.cookies = {k: str(v) for k, v in self.cookies.items()}
+
         if self.timeout is None:
             # default timeout
-            timeout: Optional[float] = 60.0
+            timeout: Optional[Union[int, float]] = 60.0
         elif self.timeout == 0:
             # never timeout
             timeout = None
         else:
             timeout = self.timeout
 
-        # cookiejar (called by requests) expects strings or bytes-like objects; PyYAML will try to guess int etc.
-        if self.cookies:
-            self.cookies = {k: str(v) for k, v in self.cookies.items()}
+        proxies = None
+        scheme = urlsplit(self.url).scheme
+        if getattr(self, scheme + '_proxy'):
+            proxies = {scheme: getattr(self, scheme + '_proxy')}
+        elif os.getenv((scheme + '_proxy').upper()):
+            proxies = {scheme: os.getenv((scheme + '_proxy').upper())}
 
         if self.ignore_dh_key_too_small:
             # https://stackoverflow.com/questions/38015537
@@ -629,6 +630,7 @@ class UrlJob(UrlJobBase):
             )
             requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
 
+        logger.info(f'Job {self.index_number}: Sending {self.method} request to {self.url}')
         response = requests.request(
             method=self.method,
             url=self.url,
@@ -637,15 +639,40 @@ class UrlJob(UrlJobBase):
             cookies=self.cookies,
             timeout=timeout,
             allow_redirects=(not self.no_redirects),
-            proxies=proxies,  # type: ignore[arg-type]
+            proxies=proxies,
             verify=(not self.ssl_no_verify),
         )
 
-        if 400 <= response.status_code <= 499:
-            logger.info(
-                f'Job {self.index_number}: Received HTTP status code {response.status_code} ({response.reason}) with'
-                f' the following content:'
-            )
+        # Custom version of request.raise_for_status() to include returned text.
+        # https://requests.readthedocs.io/en/master/_modules/requests/models/#Response.raise_for_status
+        http_error_msg = ''
+        if isinstance(response.reason, bytes):
+            # We attempt to decode utf-8 first because some servers
+            # choose to localize their reason strings. If the string
+            # isn't utf-8, we fall back to iso-8859-1 for all other
+            # encodings. (See PR #3538)
+            try:
+                reason = response.reason.decode('utf-8')
+            except UnicodeDecodeError:
+                reason = response.reason.decode('iso-8859-1')
+        else:
+            reason = response.reason
+        if 400 <= response.status_code < 500:
+            http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
+        elif 500 <= response.status_code < 600:
+            http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
+        if http_error_msg:
+            response_message = response.text
+            if response_message:
+                try:
+                    parsed_json = json.loads(response_message)
+                    response_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+                except json.decoder.JSONDecodeError:
+                    response_message = html2text.HTML2Text().handle(response_message).strip()
+                http_error_msg += f'\n{response_message}'
+            raise requests.HTTPError(http_error_msg, response=response)
+
+        if 400 <= response.status_code < 600:
             error_message = response.text
             try:
                 parsed_json = json.loads(error_message)
@@ -653,8 +680,14 @@ class UrlJob(UrlJobBase):
             except json.decoder.JSONDecodeError:
                 error_message = html2text.HTML2Text().handle(error_message).strip()
             logger.info(error_message)
+            if response.status_code < 500:
+                http_error_msg = f'{response.status_code} Client Error: {response.reason} for url: {response.url}'
+            else:
+                http_error_msg = (
+                    f'{response.status_code} Server Error: {response.reason} for url: {response.url} ({error_message})'
+                )
+            raise requests.HTTPError(http_error_msg, response=response)
 
-        response.raise_for_status()
         if response.status_code == requests.codes.not_modified:
             raise NotModifiedError(response.status_code)
 
@@ -809,7 +842,7 @@ class BrowserJob(UrlJobBase):
         """
         try:
             from playwright.sync_api import Error as PlaywrightError
-            from playwright.sync_api import Route, sync_playwright
+            from playwright.sync_api import ProxySettings, Route, sync_playwright
         except ImportError:
             raise ImportError(
                 f'Job {job_state.job.index_number}: Python package playwright is not installed; cannot use the '
@@ -835,7 +868,15 @@ class BrowserJob(UrlJobBase):
                 "for future compatibility replace it with 'wait_for_url'.",
                 DeprecationWarning,
             )
-            self.wait_for_url = self.wait_for_navigation  # type: ignore[assignment]
+            if isinstance(self.wait_for_navigation, str):
+                self.wait_for_url = self.wait_for_navigation
+            else:
+                warnings.warn(
+                    f"Job {self.index_number}: Directive 'wait_for_navigation' is "
+                    f'of type {type(self.wait_for_navigation)} and cannot be converted for use  with Playwright; '
+                    "please use 'wait_for_url' (see documentation).",
+                    DeprecationWarning,
+                )
 
         headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
         if self.ignore_cached or job_state.tries > 0:
@@ -850,9 +891,9 @@ class BrowserJob(UrlJobBase):
             if job_state.old_timestamp is not None:
                 headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
         if self.cookies:
-            headers['Cookies'] = '; '.join([f'{k}={quote(v)}' for k, v in self.cookies.items()])
+            headers['Cookie'] = '; '.join([f'{k}={quote(v)}' for k, v in self.cookies.items()])
 
-        proxy = None
+        proxy: Optional[ProxySettings] = None
         if self.http_proxy or os.getenv('HTTP_PROXY') or self.https_proxy or os.getenv('HTTPS_PROXY'):
             if urlsplit(self.url).scheme == 'http':
                 proxy_split: Optional[Union[SplitResult, SplitResultBytes]] = urlsplit(
@@ -863,12 +904,12 @@ class BrowserJob(UrlJobBase):
             else:
                 proxy_split = None
             if proxy_split:
-                proxy = {
+                proxy = {  # type: ignore[misc] # for PyCharm
                     'server': f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
                     if proxy_split.port
                     else '',
-                    'username': proxy_split.username,
-                    'password': proxy_split.password,
+                    'username': str(proxy_split.username),
+                    'password': str(proxy_split.password),
                 }
 
         if self.switches:
@@ -910,6 +951,7 @@ class BrowserJob(UrlJobBase):
         with sync_playwright() as p:
             executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
             channel = None if executable_path else 'chrome'
+            browser_name = executable_path or 'Chrome'
             no_viewport = False if not self.switches else any('--window-size' in switch for switch in self.switches)
             if not self.user_data_dir:
                 browser = p.chromium.launch(
@@ -932,7 +974,7 @@ class BrowserJob(UrlJobBase):
                     extra_http_headers=dict(headers),
                 )
                 logger.debug(
-                    f'Job {self.index_number}: Launched browser {channel or executable_path} version {browser.version}'
+                    f'Job {self.index_number}: Pyppeteer launched {browser_name} browser ' f'{browser.version}'
                 )
             else:
                 context = p.chromium.launch_persistent_context(
@@ -948,7 +990,7 @@ class BrowserJob(UrlJobBase):
                     extra_http_headers=dict(headers),
                 )
                 logger.debug(
-                    f'Job {self.index_number}: Launched browser {channel or executable_path} version'
+                    f'Job {self.index_number}: Pyppeteer launched {browser_name} browser version'
                     f' {context.browser.version} with user data directory '  # type: ignore[union-attr]
                     f'{self.user_data_dir}'
                 )
@@ -1022,7 +1064,7 @@ class BrowserJob(UrlJobBase):
                 try:
                     new_url = url.format(**params)
                 except KeyError as e:
-                    browser.close()
+                    context.close()
                     raise ValueError(
                         f"Job {job_state.job.index_number}: Directive 'initialization_url' did not find key"
                         f" {e.args[0]} to substitute in 'url'"
@@ -1111,7 +1153,8 @@ class BrowserJob(UrlJobBase):
             #     )  # inherited from pyee.EventEmitter
 
             # navigate page
-            logger.debug(f'Job {self.index_number}: Navigating to {url} with headers {headers}')
+            logger.info(f'Job {self.index_number}: {browser_name} {browser.version} navigating to {url}')
+            logger.debug(f'Job {self.index_number}: Headers {headers}')
             try:
                 response = page.goto(
                     url,
@@ -1163,7 +1206,7 @@ class BrowserJob(UrlJobBase):
                         f'dictionary; found {type(self.wait_for_function)}'
                     )
             if self.wait_for_timeout:
-                if isinstance(self.wait_for_timeout, float):
+                if isinstance(self.wait_for_timeout, (int, float)) and not isinstance(self.wait_for_timeout, bool):
                     page.wait_for_timeout(self.wait_for_timeout * 1000)
                 else:
                     context.close()

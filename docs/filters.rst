@@ -756,7 +756,7 @@ detail, or saving large snapshots of data.
 
 .. code-block:: yaml
 
-   name: "Calculate SHA-1 hash test"
+   name: "Calculate SHA-1 hash"
    url: https://example.com/sha.html
    filter:
      - sha1sum:
@@ -1160,16 +1160,15 @@ Example:
    filter:
      - shellpipe: echo TEST
 
-.. warning::
-   On Linux and macOS systems, due to security reasons the ``shellpipe`` filter will not run unless **both** the config
-   directory **and** the jobs file are both **owned** and **writeable** by **only** the user who is running the job
-   (and not by its group or by other users). To set this up:
+.. important:: On Linux and macOS systems, due to security reasons the ``shellpipe`` filter will not run unless **both**
+   the jobs file **and** the directory it is located in are **owned** and **writeable** by **only** the user who is
+   running the job (and not by its group or by other users). To set this up:
 
    .. code-block:: bash
 
       cd ~/.config/webchanges  # could be different
-      sudo chown $USER:$(id -g -n) *.yaml
-      sudo chmod go-w *.yaml
+      sudo chown $USER:$(id -g -n) . *.yaml
+      sudo chmod go-w . *.yaml
 
    * ``sudo`` may or may not be required;
    * If making the change from a different account than the one you run :program:`webchanges` from, replace

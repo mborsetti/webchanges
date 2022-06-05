@@ -1,4 +1,4 @@
-"""The worker that runs jobs in parallel.  Called from main.py."""
+"""The worker that runs jobs in parallel.  Called from main module."""
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
@@ -20,8 +20,7 @@ if TYPE_CHECKING:
     from typing import List
 
     from .jobs import JobBase
-    from .main import Report, Urlwatch
-    from .storage import CacheStorage
+    from .main import Urlwatch
 
 logger = logging.getLogger(__name__)
 
@@ -61,14 +60,12 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     def job_runner(
         stack: ExitStack,
         jobs: Iterable[JobBase],
-        cache_storage: CacheStorage,
-        report: Report,
         max_workers: Optional[int] = None,
     ) -> None:
         """
         Runs the jobs in parallel.
 
-        :param stack: The ExitStack used.
+        :param stack: The context manager.
         :param jobs: The jobs to run.
         :param max_workers: The number of maximum workers for ThreadPoolExecutor.
         :return: None
@@ -81,7 +78,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
         for job_state in executor.map(
             lambda jobstate: jobstate.process(headless=not urlwatcher.urlwatch_config.no_headless),
-            (stack.enter_context(JobState(cache_storage, job)) for job in jobs),
+            (stack.enter_context(JobState(urlwatcher.cache_storage, job)) for job in jobs),
         ):
 
             max_tries = 0 if not job_state.job.max_tries else job_state.job.max_tries
@@ -100,7 +97,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save(use_old_data=True)  # data is not returned by 304 therefore reuse old data
-                    report.unchanged(job_state)
+                    urlwatcher.report.unchanged(job_state)
                 elif job_state.tries < max_tries:
                     logger.debug(
                         f'Job {job_state.job.index_number}: Error suppressed as cumulative number of '
@@ -113,25 +110,45 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         f'met or exceeded ({job_state.tries}'
                     )
                     job_state.save(use_old_data=True)  # do not save error data but reuse old data
-                    report.error(job_state)
+                    urlwatcher.report.error(job_state)
                 else:
-                    logger.debug(f'Job {job_state.job.index_number}: Job finished with no exceptions')
+                    logger.info(f'Job {job_state.job.index_number}: Job finished with no exceptions')
             elif job_state.old_data != '' or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
                 if job_state.new_data == job_state.old_data:
                     if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save()
-                    report.unchanged(job_state)
+                    urlwatcher.report.unchanged(job_state)
                 else:
                     job_state.tries = 0
                     job_state.save()
-                    report.changed(job_state)
+                    urlwatcher.report.changed(job_state)
             else:
                 # We have never run this job before (there are no snapshots)
                 job_state.tries = 0
                 job_state.save()
-                report.new(job_state)
+                urlwatcher.report.new(job_state)
+
+    def get_virt_mem() -> int:
+        try:
+            import psutil
+        except ImportError:
+            raise ImportError(
+                "Python package psutil is not installed; cannot use 'use_browser: true'. Please install "
+                "dependencies with 'pip install webchanges[use_browser]'."
+            )
+        try:
+            virt_mem = psutil.virtual_memory().available
+            logger.debug(
+                f'Found {virt_mem / 1e6:,.0f} MB of available physical memory (plus '
+                f'{psutil.swap_memory().free / 1e6:,.0f} MB of swap).'
+            )
+        except psutil.Error as e:  # pragma: no cover
+            virt_mem = 0
+            logger.debug(f'Could not read memory: {e}')
+
+        return virt_mem
 
     # extract subset of jobs to run if joblist CLI was set
     if urlwatcher.urlwatch_config.joblist:
@@ -153,8 +170,6 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
     #    jobs = insert_delay(jobs)
 
-    cache_storage = urlwatcher.cache_storage
-    report = urlwatcher.report
     with ExitStack() as stack:
         # run non-BrowserJob jobs first
         jobs_to_run = [job for job in jobs if type(job) != BrowserJob]
@@ -163,35 +178,20 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 "Running jobs that do not require Chrome (without 'use_browser: true') in parallel with Python's "
                 'default max_workers.'
             )
-            job_runner(stack, jobs_to_run, cache_storage, report)
+            job_runner(stack, jobs_to_run)
         else:
             logger.debug("Found no jobs that do not require Chrome (i.e. without 'use_browser: true').")
 
         # run BrowserJob jobs after
         jobs_to_run = [job for job in jobs if type(job) == BrowserJob]
         if jobs_to_run:
-            try:
-                import psutil
-            except ImportError:
-                raise ImportError(
-                    "Python package psutil is not installed; cannot use 'use_browser: true'. Please install "
-                    "dependencies with 'pip install webchanges[use_browser]'."
-                )
-            try:
-                virt_mem = psutil.virtual_memory().available
-                logger.debug(
-                    f'Found {virt_mem / 1e6:,.0f} MB of available physical memory (plus '
-                    f'{psutil.swap_memory().free / 1e6:,.0f} MB of swap).'
-                )
-            except psutil.Error as e:  # pragma: no cover
-                virt_mem = 0
-                logger.debug(f'Could not read memory: {e}')
+            virt_mem = get_virt_mem()
             max_workers = max(int(virt_mem / 120e6), 1)
             max_workers = min(max_workers, os.cpu_count() or 1)
             logger.debug(
                 f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with {max_workers} "
                 f'max_workers.'
             )
-            job_runner(stack, jobs_to_run, cache_storage, report, max_workers)
+            job_runner(stack, jobs_to_run, max_workers)
         else:
             logger.debug("Found no jobs that require Chrome (i.e. with 'use_browser: true').")

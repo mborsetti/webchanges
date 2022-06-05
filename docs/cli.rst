@@ -12,10 +12,10 @@ Command line arguments
    positional arguments:
      JOB                   job(s) to run (by index as per --list) (default: run all jobs)
 
-   optional arguments:
+   options:
      -h, --help            show this help message and exit
      -V, --version         show program's version number and exit
-     -v, --verbose         show logging output
+     -v, --verbose         show logging output; use -vv for maximum verbosity
 
    override file defaults:
      --jobs FILE, --urls FILE
@@ -27,17 +27,18 @@ Command line arguments
    job management:
      --list                list jobs and their index number
      --errors              list jobs with errors or no data captured
-     --test JOB, --test-filter JOB
-                           test a job (by index or URL/command) and show filtered output
+     --test [JOB], --test-filter [JOB]
+                           test a job (by index or URL/command) and show filtered output; if no JOB,
+                           check config and job files
      --no-headless         turn off browser headless mode (for jobs using a browser)
      --test-diff JOB, --test-diff-filter JOB
                            test and show diff using existing saved snapshots of a job (by index or
                            URL/command)
      --dump-history JOB    print all saved snapshot history for a job (by index or URL/command)
-     --add JOB             add job (key1=value1,key2=value2,...). WARNING: all remarks are deleted from
-                           jobs file; use --edit instead!
-     --delete JOB          delete job by URL/command or index number. WARNING: all remarks are deleted
-                           from jobs file; use --edit instead!
+
+   backward compatibility (WARNING: all remarks are deleted from jobs file; use --edit instead):
+     --add JOB             add a job (key1=value1,key2=value2,...) [use --edit instead]
+     --delete JOB          delete a job (by index or URL/command) [use --edit instead]
 
    reporters:
      --test-reporter REPORTER
@@ -59,17 +60,16 @@ Command line arguments
      --rollback-cache TIMESTAMP
                            delete recent snapshots since TIMESTAMP (backup the database before using!)
      --delete-snapshot JOB
-                           delete the last saved snapshot of job (URL/command)
+                           delete the last saved snapshot of job (index or URL/command)
      --database-engine {sqlite3,redis,minidb,textfiles}
                            database engine to use (default: sqlite3, unless redis URI in --cache)
      --max-snapshots NUM_SNAPSHOTS
-                           maximum number of snapshots to retain in sqlite3 database (default: 4)
+                           sqlite3 only: maximum number of snapshots to retain in database (default: 4)
 
    miscellaneous:
-     --install-chrome      install or update Google Chrome browser for use with 'use_browser: true' jobs
-     --features            list supported job types, filters and reporters
-     --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                           level of logging output when -v is selected (default: DEBUG)
+     --check-new           check if new release is available
+     --install-chrome      install or update Google Chrome browser (for jobs using a browser)
+     --features            list supported job types, filters and reporters (including those loaded by hooks)
 
 .. _job_subset:
 
@@ -92,21 +92,32 @@ be monitoring resources as expected. No snapshots are saved from this run.
 
 .. _test:
 
-Test run a job
---------------
+Test run a job or check config and job files for errors
+-------------------------------------------------------
 You can test a job and its filter by using the command line argument ``--test`` followed by the job index number
 (from ``--list``) or its URL/command; :program:`webchanges` will display the filtered output. This allows to easily
 test changes in filters. Use a negative index number to select a job from the bottom of your job list (i.e. -1 is the
 last job, -2 is the second to last job, etc.).  Combine ``--test`` with ``--verbose`` to get more information, for
-example the text returned from a website with a 4xx (client error) status code::
+example the text returned from a website with a 4xx (client error) status code:
+
+.. code-block:: bash
 
    webchanges --verbose --test 1
 
 Please note that ``max_tries`` will be ignored by ``--test``.
 
+To only check the config and job files for errors, specify --test without a JOB:
+
+.. code-block:: bash
+
+   webchanges --test
+
+
 .. versionchanged:: 3.8
    Accepts negative indices.
 
+.. versionchanged:: 3.10.2
+   JOB no longer required (will only check the config and job files for errors).
 
 .. _test-diff:
 
@@ -140,9 +151,9 @@ Test a reporter
 ---------------
 You can test a reporter by using the command line argument ``--test-reporter`` followed by the reporter name;
 :program:`webchanges` will create a dummy report and send it through the selected reporter. This will help in
-debugging issues, especially when used in conjunction with ``--verbose``::
+debugging issues, especially when used in conjunction with ``-vv``::
 
-   webchanges --verbose --test-reporter telegram
+   webchanges -vv --test-reporter telegram
 
 
 .. versionchanged:: 3.9

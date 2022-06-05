@@ -9,6 +9,7 @@
 webchanges
 ==========
 
+|downloads|
 **webchanges** checks web content and notifies you via e-mail (or one of many other supported services) if a change is
 detected. **webchanges** can also check the output of local commands. The notification includes the changed URL or
 command and a summary of what has changed.
@@ -28,10 +29,11 @@ only the latest bug and security fix version (3.x.y) is supported.
 
 Installation
 ============
-Install **webchanges** |pypi_version| |format| |status| with::
+Install **webchanges** |pypi_version| |format| |status| with:
+
+.. code-block:: bash
 
    pip install webchanges
-
 
 
 Documentation
@@ -90,10 +92,10 @@ The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/
 
 Contributing
 ============
-We welcome any contribution, e.g. documentation, bug reports, new features, etc., as both pull requests and
-`issue reports <https://github.com/mborsetti/webchanges/issues>`__.
+We welcome any contribution no matter how small as both pull requests and `issue reports
+<https://github.com/mborsetti/webchanges/issues>`__.
 
-More information for developers and documentation editors is `here
+More information for developers and documentation contributors is `here
 <https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__, and our wishlist is `here
 <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__.
 
@@ -102,16 +104,17 @@ License
 =======
 |license|
 
-Released under the `MIT License <https://opensource.org/licenses/MIT>`__, but including
-`code <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ licensed under the
-`BSD 3-Clause License <https://opensource.org/licenses/BSD-3-Clause>`__. See the full license `here
-<https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
+Released under the `MIT License <https://opensource.org/licenses/MIT>`__ but redistributing modified source code from
+`urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ licensed under a
+`BSD 3-Clause License
+<https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__. See the complete
+license `here <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
 
 
 Compatibility with **urlwatch**
 ================================
 
-This project is based on code of`urlwatch <https://github.com/thp/urlwatch>`__ 2.21. You can easily upgrade from
+This project is based on `urlwatch <https://github.com/thp/urlwatch>`__ 2.21. You can easily upgrade from
 **urlwatch** 2.25 (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__) using the same job and
 configuration files and benefit from many HTML-focused improvements, including:
 
@@ -153,9 +156,9 @@ Examples:
 .. |format| image:: https://img.shields.io/pypi/format/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: Kit format
-.. |downloads| image:: https://img.shields.io/pypi/dw/webchanges.svg
-    :target: https://pypi.org/project/webchanges/
-    :alt: Weekly PyPI downloads
+.. |downloads| image:: https://pepy.tech/badge/requests
+    :target: https://pepy.tech/badge/webchanges
+    :alt: PyPI downloads
 .. |license| image:: https://img.shields.io/pypi/l/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: License at https://pypi.org/project/webchanges/

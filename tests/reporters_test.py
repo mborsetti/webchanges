@@ -93,7 +93,62 @@ class UrlwatchTest:
         config = DEFAULT_CONFIG
 
 
+def build_test_report():
+    def build_job(name, url, old, new):
+        job = JobBase.unserialize({'name': name, 'url': url})
+
+        # Can pass in None as cache_storage, as we are not
+        # going to load or save the job state for testing;
+        # also no need to use it as context manager, since
+        # no processing is called on the job
+        job_state = JobState(None, job)
+
+        job_state.old_data = old
+        job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
+        job_state.new_data = new
+        job_state.new_timestamp = 1605147837.511478
+
+        return job_state
+
+    def set_error(job_state, message):
+        try:
+            raise ValueError(message)
+        except ValueError as e:
+            job_state.exception = e
+            job_state.traceback = job_state.job.format_error(e, traceback.format_exc())
+
+        return job_state
+
+    test_report = Report(UrlwatchTest)
+    test_report.job_states = []
+    test_report.new(build_job('Newly Added', 'https://example.com/new', '', ''))
+    test_report.changed(
+        build_job(
+            'Something Changed',
+            'https://example.com/changed',
+            """
+    Unchanged Line
+    Previous Content
+    Another Unchanged Line
+    """,
+            """
+    Unchanged Line
+    Updated Content
+    Another Unchanged Line
+    """,
+        )
+    )
+    test_report.changed_no_report(build_job('Newly Added', 'https://example.com/changed_no_report', '', ''))
+    test_report.unchanged(
+        build_job('Same As Before', 'https://example.com/unchanged', 'Same Old, Same Old\n', 'Same Old, Same Old\n')
+    )
+    test_report.error(set_error(build_job('Error Reporting', 'https://example.com/error', '', ''), 'Sample error text'))
+
+    return test_report
+
+
 report = Report(UrlwatchTest)
+test_report = build_test_report()
 
 
 @pytest.mark.parametrize('inpt, out', DIFF_TO_HTML_TEST_DATA)
@@ -143,62 +198,13 @@ def test_smtp_password():
 
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)
 def test_reporters(reporter, capsys):
-    def build_job(name, url, old, new):
-        job = JobBase.unserialize({'name': name, 'url': url})
-
-        # Can pass in None as cache_storage, as we are not
-        # going to load or save the job state for testing;
-        # also no need to use it as context manager, since
-        # no processing is called on the job
-        job_state = JobState(None, job)
-
-        job_state.old_data = old
-        job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
-        job_state.new_data = new
-        job_state.new_timestamp = 1605147837.511478
-
-        return job_state
-
-    def set_error(job_state, message):
-        try:
-            raise ValueError(message)
-        except ValueError as e:
-            job_state.exception = e
-            job_state.traceback = job_state.job.format_error(e, traceback.format_exc())
-
-        return job_state
-
-    report = Report(UrlwatchTest)
-    report.new(build_job('Newly Added', 'https://example.com/new', '', ''))
-    report.changed(
-        build_job(
-            'Something Changed',
-            'https://example.com/changed',
-            """
-    Unchanged Line
-    Previous Content
-    Another Unchanged Line
-    """,
-            """
-    Unchanged Line
-    Updated Content
-    Another Unchanged Line
-    """,
-        )
-    )
-    report.changed_no_report(build_job('Newly Added', 'https://example.com/changed_no_report', '', ''))
-    report.unchanged(
-        build_job('Same As Before', 'https://example.com/unchanged', 'Same Old, Same Old\n', 'Same Old, Same Old\n')
-    )
-    report.error(set_error(build_job('Error Reporting', 'https://example.com/error', '', ''), 'Sample error text'))
-
     if reporter == 'email':
         if NoKeyringError:
             with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
-                report.finish_one(reporter, check_enabled=False)
+                test_report.finish_one(reporter, check_enabled=False)
         else:
             with pytest.raises(ValueError) as pytest_wrapped_e:
-                report.finish_one(reporter, check_enabled=False)
+                test_report.finish_one(reporter, check_enabled=False)
         assert sum(
             list(
                 x in str(pytest_wrapped_e.value)
@@ -216,7 +222,7 @@ def test_reporters(reporter, capsys):
         else:
             if NoKeyringError:
                 with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
-                    report.finish_one(reporter, check_enabled=False)
+                    test_report.finish_one(reporter, check_enabled=False)
                 assert sum(
                     list(
                         x in str(pytest_wrapped_e.value)
@@ -228,34 +234,34 @@ def test_reporters(reporter, capsys):
                 )
     elif reporter in ('pushover', 'pushbullet', 'telegram', 'mailgun', 'ifttt', 'prowl'):
         with pytest.raises(RuntimeError) as pytest_wrapped_e:
-            report.finish_one(reporter, check_enabled=False)
+            test_report.finish_one(reporter, check_enabled=False)
         assert reporter in str(pytest_wrapped_e.value).lower()
     elif reporter == 'matrix':
         if not matrix_client_is_installed:
             logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
             return
         with pytest.raises(MatrixError) as pytest_wrapped_e:
-            report.finish_one(reporter, check_enabled=False)
+            test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
     elif reporter in ('webhook', 'discord'):
         with pytest.raises(MissingSchema) as pytest_wrapped_e:
-            report.finish_one(reporter, check_enabled=False)
+            test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == "Invalid URL '': No scheme supplied. Perhaps you meant http://?"
     elif reporter == 'run_command':
         if os.getenv('GITHUB_ACTIONS'):
             pytest.skip('Test triggers exit code 141 in GitHub Actions')
             return
         with pytest.raises(ValueError) as pytest_wrapped_e:
-            report.finish_one(reporter, check_enabled=False)
+            test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
         if sys.platform == 'win32':
-            report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
+            test_report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
         else:
-            report.config['report']['run_command']['command'] = 'echo TEST'
-        report.finish_one(reporter, check_enabled=False)
+            test_report.config['report']['run_command']['command'] = 'echo TEST'
+        test_report.finish_one(reporter, check_enabled=False)
         assert capsys.readouterr().out == 'TEST\n'
     elif reporter != 'browser' or 'PYCHARM_HOSTED' in os.environ:
-        report.finish_one(reporter, check_enabled=False)
+        test_report.finish_one(reporter, check_enabled=False)
 
 
 def test_mailer_send():

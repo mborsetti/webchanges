@@ -2,7 +2,6 @@
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
-
 from __future__ import annotations
 
 import csv
@@ -75,8 +74,10 @@ try:
     import vobject
 except ImportError:
     vobject = None
-
-from ._vendored.packaging_version import parse as parse_version
+try:
+    from packaging.version import parse as parse_version
+except ImportError:
+    from ._vendored.packaging_version import parse as parse_version  # type: ignore[misc]
 
 logger = logging.getLogger(__name__)
 
@@ -480,7 +481,8 @@ class Html2TextFilter(FilterBase):
                 if k == 'pad_tables':
                     self.job.markdown_padded_tables = v
 
-            return parser.handle(data)
+            # html2text returns lines with spaces at the end even if they are ignored when rendered
+            return '\n'.join(line.rstrip() for line in parser.handle(data).splitlines())
 
         elif method == 'bs4':
             if bs4 is None:
@@ -1147,12 +1149,13 @@ class LxmlParser:
         self.data += data
 
     @staticmethod
-    def _to_string(element: Union[etree.Element, str]) -> str:
-        # Handle "/text()" selector, which returns lxml.etree._ElementUnicodeResult (Issue #282)
+    def _to_string(element: Union[etree.Element, str], method: str) -> str:
+        # Handle "/text()" selector, which returns lxml.etree._ElementUnicodeResult
+        # (https://github.com/thp/urlwatch/issues/282)
         if isinstance(element, str):
             return element
 
-        return etree.tostring(element, pretty_print=True, encoding='unicode', with_tail=False).strip()
+        return etree.tostring(element, encoding='unicode', method=method, pretty_print=True, with_tail=False).strip()
 
     @staticmethod
     def _remove_element(element: etree.Element) -> None:
@@ -1176,7 +1179,7 @@ class LxmlParser:
                     parent.text = parent.text + element.tail if parent.text else element.tail
             parent.remove(element)
 
-    def _reevaluate(self, element: etree.Element) -> etree.Element:
+    def _reevaluate(self, element: etree.Element) -> Optional[Union[etree.Element, str]]:
         if self._orphaned(element):
             return None
         if isinstance(element, etree._ElementUnicodeResult):
@@ -1189,10 +1192,12 @@ class LxmlParser:
                 return parent.text
             elif element.is_attribute:
                 return parent.attrib.get(element.attrname)
+            else:
+                return element
         else:
             return element
 
-    def _orphaned(self, element: etree.Element) -> Union[etree.Element, bool]:
+    def _orphaned(self, element: etree.Element) -> bool:
         if isinstance(element, etree._ElementUnicodeResult):
             parent = element.getparent()
             if (
@@ -1210,7 +1215,7 @@ class LxmlParser:
         except (ValueError, IndexError):
             return True
 
-    def _get_filtered_elements(self) -> List[etree.Element]:
+    def _get_filtered_elements(self) -> List[Union[etree.Element, str]]:
         try:
             root = etree.fromstring(self.data, self.parser)  # bandit B320: use defusedxml TODO
         except ValueError:
@@ -1222,8 +1227,8 @@ class LxmlParser:
             root = etree.fromstring(self.data, self.parser)  # bandit B320: use defusedxml TODO
         if root is None:
             return []
-        selected_elems = [None]
-        excluded_elems = None
+        selected_elems: Optional[List[etree.Element]] = None
+        excluded_elems: Optional[List[etree.Element]] = None
         if self.filter_kind == 'css':
             selected_elems = CSSSelector(self.expression, namespaces=self.namespaces).evaluate(root)
             excluded_elems = (
@@ -1235,15 +1240,18 @@ class LxmlParser:
         if excluded_elems is not None:
             for el in excluded_elems:
                 self._remove_element(el)
-        return [el for el in map(self._reevaluate, selected_elems) if el is not None]
+        if selected_elems is not None:
+            return [el for el in map(self._reevaluate, selected_elems) if el is not None]
+        else:
+            return []
 
     def get_filtered_data(self) -> str:
-        elements = list(self._get_filtered_elements())
+        elements = self._get_filtered_elements()
         if self.skip:
             elements = elements[self.skip :]
         if self.maxitems:
             elements = elements[: self.maxitems]
-        return '\n'.join(self._to_string(element) for element in elements)
+        return '\n'.join(self._to_string(element, self.method) for element in elements)
 
 
 LXML_PARSER_COMMON_SUBFILTERS = {
@@ -1458,6 +1466,9 @@ def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str
     except subprocess.CalledProcessError as e:
         logger.error(f"The '{f_cls.__kind__}' filter returned error ({f_cls.job.get_indexed_location()}):\n{e.stderr}")
         raise e
+    except FileNotFoundError as e:
+        logger.error(f"The '{f_cls.__kind__}' filter returned error ({f_cls.job.get_indexed_location()}):\n{e}")
+        raise FileNotFoundError(e, f'with command {command}')
 
 
 class ExecuteFilter(FilterBase):
