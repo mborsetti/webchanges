@@ -273,7 +273,7 @@ def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] 
 
     :parameter timeout: Timeout in seconds after which empty string is returned.
     :returns: The new version number if a newer version of project is found on PyPi, empty string otherwise, False if
-    error retrieving the new version number is encountered.
+      error retrieving the new version number is encountered.
     """
     try:
         r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)

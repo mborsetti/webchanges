@@ -6,20 +6,20 @@ Introduction
 :program:`webchanges` monitors the output of web sources (or of commands on your computer) and issues a "report" when
 it finds changes. Specifically, every time you run :program:`webchanges`, it:
 
-# For each "job":
+#. For each "job":
 
   #. Retrieves the output from the source (data);
   #. (optional) Filters and transforms it;
   #. Compares it with the version saved from the previous run, producing a "diff" report if it finds any changes;
   #. (optional) Filters and transforms the diff report;
 
-#. Displays (default) such reports, if any, and/or sends it via one or more methods such as email;
-#. Saves the output(s) to be used the next time it is run.
+#. Displays such reports (default), if any, and/or sends it via one or more methods such as email;
+#. Saves the output to be used the next time it is run.
 
 
 :ref:`Jobs`
 -----------
-Each web source or command to be monitored is a "job".
+Each source or command to be monitored is a "job".
 
 The instructions for each such job are contained in a file in the :ref:`YAML format <yaml_syntax>` called
 ``jobs.yaml`` and located in the following directory:
@@ -72,8 +72,8 @@ If you have multiple sources to monitor, i.e. multiple "jobs", separate each wit
 By default, the content is downloaded as-is. However, certain webpages need for their JavaScript to be run in order
 for their content to be rendered; in this case either find the API used by the JavaScript to get the data you care
 about directly from the source and monitor that API (preferred), or add the directive ``use_browser: true`` to use a
-virtual (`headless`) Google Chrome browser to render the JavaScript. This requires additional installations and uses
-many resources; see :ref:`here <use_browser>` for more information.
+virtual (`headless`) Google Chrome browser to render the JavaScript. This requires additional installations; see
+:ref:`here <use_browser>` for more information.
 
 .. code-block:: yaml
 
@@ -102,8 +102,8 @@ are listed and explained :ref:`here <jobs>`.
 
 :ref:`Filters`
 --------------
-Once you have collected the output, you may transform it to increase its utility. You use the ``filter`` directive to
-activate one or more :ref:`filters <filters>` to:
+Once :program:`webchanges` has collected the raw output, you may transform it to increase its utility. You use the
+``filter`` directive to activate one or more :ref:`filters <filters>` to:
 
 * Select HTML or (XML) elements: ``css``, ``xpath``, ``element-by-class``, ``element-by-id``, ``element-by-style``,
   ``element-by-tag``;
@@ -158,12 +158,12 @@ Comparison
 ----------
 Once all filters (if any) are applied, :program:`webchanges` automatically performs a comparison between the filtered
 data collected in this run with the one saved from a prior run, by default computing a *diff* in the `unified format
-<https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ('unified *diff*').
+<https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ("unified *diff*").
 
 
 :ref:`Diff filters <diff_filters>`
 ----------------------------------
-After the comparison is generated, you can apply **any** of the filters above to the *diff* itself using
+After the comparison is generated, you can apply **any** of the filters above to the *diff itself* using
 ``diff_filter``, and/or one of the additional diff-specific ones to:
 
 * Only show lines representing additions: ``additions_only``;
@@ -171,43 +171,34 @@ After the comparison is generated, you can apply **any** of the filters above to
 
 Diff filters are explained :ref:`here <diff_filters>`.
 
-If all you're doing is monitoring the text of a website to see if anything was added, this job definition will do it:
-
-.. code-block:: yaml
-
-    url: https://example.com/
-    filters:
-      - html2text:  # notice the 2 empty spaces before the hyphen and the colon at the end
-    additions_only: true
-
 
 :ref:`Reports`
 --------------
-The *diffs* from all jobs are collected and turned into a report of one or more of the formats ``text``, ``html``
-and ``markdown``. You can select settings to tailor what elements are included in the report.
+The *diffs* from all jobs are collected and turned into (a) report(s), which can be of one or more of the ``text``,
+``html`` and/or ``markdown`` formats. You can select settings to tailor what elements are included in the report.
 
 Reports are explained :ref:`here <reports>`.
 
 
 :ref:`Reporters`
 ----------------
-Finally, the report is *reported* using a reporter, by default displaying it on the ``stdout`` console, but you can
-add (or change to) one or more reporters to:
+Finally, the report(s) is (are) *reported* using a reporter, by default displaying it on the ``stdout`` console, but you
+can add (or change to) one or more reporters to:
 
-* Display on the default web browser: ``browser``;
-* Send a message to a **Discord** channel: ``discord``;
-* Send via email (SMTP or sendmail): ``email``;
-* Send via IFTTT: ``ifttt``;
-* Send via email using the Mailgun service: ``mailgun``;
-* Send to a room using the Matrix protocol: ``matrix``;
-* Send via prowlapp.com: ``prowl``;
-* Send via pushbullet.com: ``pushbullet``;
-* Send via pushover.net: ``pushover``;
+* Display it on the default web browser: ``browser``;
+* Send it to a **Discord** channel: ``discord``;
+* Send it via **email** (SMTP or sendmail): ``email``;
+* Send it via **IFTTT**: ``ifttt``;
+* Send it via email using the external **Mailgun** program: ``mailgun``;
+* Send it to a room using the **Matrix** protocol: ``matrix``;
+* Send it via **prowlapp.com**: ``prowl``;
+* Send it via **pushbullet**.com: ``pushbullet``;
+* Send it via **pushover**.net: ``pushover``;
 * Run a command on the local system to take care of the notification: ``run_command``.
-* Display on stdout (the console): ``stdout``;
-* Send via Telegram: ``telegram``;
-* Send to a **Slack** or **Mattermost** channel using the service's webhook: ``webhook``;
-* Send a message using the Extensible Messaging and Presence Protocol (XMPP): ``xmpp``;
+* Display it on stdout (the text console): ``stdout``;
+* Send it via **Telegram**: ``telegram``;
+* Send it to a **Slack** or **Mattermost** channel using the service's webhook: ``webhook``;
+* Send it as a message using the Extensible Messaging and Presence Protocol (**XMPP**): ``xmpp``;
 
 Reporters are explained :ref:`here <reporters>`.
 

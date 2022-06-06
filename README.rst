@@ -5,14 +5,13 @@
 .. role:: deletions
     :class: deletions
 
-==========
-webchanges
-==========
+======================
+webchanges |downloads|
+======================
 
-|downloads|
 **webchanges** checks web content and notifies you via e-mail (or one of many other supported services) if a change is
 detected. **webchanges** can also check the output of local commands. The notification includes the changed URL or
-command and a summary of what has changed.
+command and a summary (diff) of what has changed.
 
 **webchanges** *anonymously* alerts you of webpage changes.
 

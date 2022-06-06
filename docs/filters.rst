@@ -23,13 +23,12 @@ to the data, you can run :program:`webchanges` with the ``--test-filter`` comman
    webchanges --test https://example.net/  # Test the job that matches the given URL
    webchanges --test -1  # Test the last job in the jobs list
 
-This command will show the output that will be captured and stored, and used to compare to the old version stored from
-a previous run against the same url or shell command.
+This command will show the output that will be captured, stored, and used for the comparison to the old version stored
+from a previous run against the same url or command.
 
-Once :program:`webchanges` has collected at least 2 historic snapshots of a job (two different states of a webpage) you
-can start testing the effects of your ``diff_filter`` with the command-line option ``--test-diff``, passing in the
-index (from ``--list``) or the URL/command of the job to be tested, which using the historic data saved locally in
-the cache::
+Once :program:`webchanges` has collected at least 2 historic snapshots of a job (e.g. two different states of a webpage)
+you can start testing the effects of your ``diff_filter`` with the command-line option ``--test-diff``, passing in the
+index (from ``--list``) or the URL/command of the job to be tested::
 
    webchanges --test-diff 1    # Test the first job in the jobs list and show the report
    webchanges --test-diff -2   # Test the second-to-last job in the jobs list and show the report
@@ -43,10 +42,10 @@ At the moment, the following filters are available:
 
   - :ref:`css <css-and-xpath>`: Filter XML/HTML using CSS selectors.
   - :ref:`xpath <css-and-xpath>`: Filter XML/HTML using XPath expressions.
-  - :ref:`element-by-class <element-by-…>`: Get all HTML elements by class.
-  - :ref:`element-by-id <element-by-…>`: Get an HTML element by its ID.
-  - :ref:`element-by-style <element-by-…>`: Get all HTML elements by style.
-  - :ref:`element-by-tag <element-by-…>`: Get an HTML element by its tag.
+  - :ref:`element-by-class <element-by-…>`: Get all HTML elements matching a class.
+  - :ref:`element-by-id <element-by-…>`: Get all HTML element matching an id.
+  - :ref:`element-by-style <element-by-…>`: Get all HTML elements matching a style.
+  - :ref:`element-by-tag <element-by-…>`: Get an HTML element matching a tag.
 
 * To extract text from HTML:
 
@@ -101,7 +100,7 @@ At the moment, the following filters are available:
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`re.sub`: Replace or remove text matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
-  - :ref:`strip`: Strip leading and/or trailing whitespace or specified characters (entire document, not line-by-line)
+  - :ref:`strip`: Strip leading and/or trailing whitespace or specified characters.
   - :ref:`sort`: Sort lines.
   - :ref:`remove_repeated`: Remove repeated items (lines).
   - :ref:`reverse`: Reverse the order of items (lines).
@@ -110,7 +109,7 @@ At the moment, the following filters are available:
 
   - :ref:`execute`: Run a program that filters the data (see also :ref:`shellpipe`, to be avoided).
 
-Advanced Python programmers can write their own plug-in with additional custom filters; see :ref:`hooks`.
+Advanced Python programmers can write their own custom filters; see :ref:`hooks`.
 
 
 
@@ -143,13 +142,13 @@ Examples: to filter only the ``<body>`` element of the HTML document, stripping 
    -> Copy selector'. You can learn more about Chrome DevTools `here <https://developer.chrome.com/docs/devtools/>`__.
 
 See Microsoft’s `XPath Examples
-<https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ms256086(v=vs.100)>`__ page for additional
-examples.
+<https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ms256086(v=vs.100)>`__ page for
+additional information on XPath.
 
 Using CSS and XPath filters with XML
 """"""""""""""""""""""""""""""""""""
-By default, CSS and XPath filters are set up for HTML documents, but it is possible to use them for XML documents as
-well.
+By default, CSS and XPath filters are set up for HTML documents, but they also work on XML documents by declaring the
+sub-directive ``method: xml``.
 
 For example, to parse an RSS feed and filter only the titles and publication dates, use:
 
@@ -197,8 +196,8 @@ expression.
 
 Alternatively, use the XPath expression ``//*[name()='<tag_name>']`` to bypass the namespace entirely.
 
-Using CSS and XPath filters with XML to exclude content
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Using CSS and XPath filters to exclude content
+""""""""""""""""""""""""""""""""""""""""""""""
 Elements selected by the ``exclude`` sub-directive are removed from the final result. For example, the following job
 will not have any ``<a>`` tag in its results:
 
@@ -353,7 +352,7 @@ To extract ``<div style="something">.../<div>`` from a page:
 
 html2text
 -------------
-This filter converts HTML (or XML) to Unicode plaintext.
+This filter converts HTML (or XML) to Unicode text.
 
 Optional sub-directives
 """""""""""""""""""""""
@@ -370,7 +369,8 @@ Optional sub-directives
 This method is the default (does not need to be specified) and converts HTML into `Markdown
 <https://www.markdownguide.org/>`__ using the `html2text <https://pypi.org/project/html2text/>`__ Python package.
 
-It is the recommended option to convert all types of HTML into readable text.
+It is the recommended option to convert all types of HTML into readable text, as it can be displayed (after conversion)
+in HTML.
 
 Example configuration:
 
@@ -676,8 +676,6 @@ Python programmers on all OSs can use an advanced technique to select only certa
 
 format-xml
 ----------
-.. versionadded:: 3.0
-
 This filter deserializes an XML object and reformats it. It uses the `lxml <https://lxml.de>`__ Python package's
 etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ function.
 
@@ -688,14 +686,14 @@ etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.
    filter:
      - format-xml:
 
+.. versionadded:: 3.0
+
 
 
 .. _pretty-xml:
 
 pretty-xml
 ----------
-.. versionadded:: 3.3
-
 This filter deserializes an XML object and pretty-prints it. It uses Python's xml.dom.minidom `toprettyxml
 <https://docs.python.org/3/library/xml.dom.minidom.html#xml.dom.minidom.Node.toprettyxml>`__ function.
 
@@ -705,6 +703,8 @@ This filter deserializes an XML object and pretty-prints it. It uses Python's xm
    url: https://example.com/pretty_xml.xml
    filter:
      - pretty-xml:
+
+.. versionadded:: 3.3
 
 
 
@@ -751,8 +751,8 @@ This filter displays the contents both in binary and ASCII using the hex dump fo
 
 sha1sum
 -----------
-This filter calculates a SHA-1 hash for the contents. Useful to be notified when something has changed without any
-detail, or saving large snapshots of data.
+This filter calculates a SHA-1 hash for the contents. Useful to be notified when anything has changed without
+any detail and avoiding saving large snapshots of data.
 
 .. code-block:: yaml
 
@@ -799,7 +799,7 @@ Optional sub-directives
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
 
 .. versionchanged:: 3.0
-   Renamed from ``grep``.
+   Renamed from ``grep`` to avoid confusion.
 
 
 
@@ -840,7 +840,7 @@ Optional sub-directives
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
 
 .. versionchanged:: 3.0
-   Renamed from ``grepi``.
+   Renamed from ``grepi`` to avoid confusion.
 
 
 
@@ -1006,8 +1006,6 @@ Optional sub-directives
 
 remove_repeated
 ---------------
-.. versionadded:: 3.8
-
 This filter compares adjacent items (lines), and the second and succeeding copies of repeated items (lines) are
 removed. Repeated items (lines) must be adjacent in order to be found. Works similarly to Unix's ``uniq``.
 
@@ -1050,6 +1048,8 @@ Optional sub-directives
   line-based); it can also be specified inline as the value of ``remove_repeated``.
 * ``ignore_case``: Ignore differences in case and of leading and/or trailing whitespace when comparing (true/false)
   (default: false).
+
+.. versionadded:: 3.8
 
 
 
