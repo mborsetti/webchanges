@@ -93,7 +93,7 @@ class Urlwatch(object):
             )
         else:
             import_module_from_source('hooks', self.urlwatch_config.hooks)
-            logger.info(f'Loaded hooks from {self.urlwatch_config.hooks}')
+            logger.info(f'Imported hooks module from {self.urlwatch_config.hooks}')
 
     def load_jobs(self) -> None:
         """Load jobs from the file into self.jobs.
@@ -102,7 +102,6 @@ class Urlwatch(object):
         """
         if self.urlwatch_config.jobs.is_file():
             jobs = self.jobs_storage.load_secure()
-            logger.info(f'Loaded {len(jobs)} jobs from {self.urlwatch_config.jobs}')
         else:
             print(f'Jobs file not found: {self.urlwatch_config.jobs}')
             raise SystemExit(1)

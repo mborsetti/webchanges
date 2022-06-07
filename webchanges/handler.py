@@ -56,6 +56,7 @@ class JobState(ContextManager):
     _generated_diff_html: Optional[str] = None
     error_ignored: Union[bool, str]
     exception: Optional[Exception] = None
+    history_data: Dict[str, float] = {}
     new_data: str
     new_etag: str
     new_timestamp: float
@@ -121,6 +122,7 @@ class JobState(ContextManager):
         """Loads form the database the last snapshot for the job."""
         guid = self.job.get_guid()
         self.old_data, self.old_timestamp, self.tries, self.old_etag = self.cache_storage.load(guid)
+        self.history_data = self.cache_storage.get_history_data(guid, self.job.compared_versions)
 
     def save(self, use_old_data: bool = False) -> None:
         """Saves new data retrieved by the job into the snapshot database.

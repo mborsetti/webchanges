@@ -100,6 +100,7 @@ class JobBase(object, metaclass=TrackSubClasses):
     additions_only: Optional[bool] = None
     block_elements: List[str] = []
     chromium_revision: Optional[Union[Dict[str, int], Dict[str, str], str, int]] = None  # deprecated
+    compared_versions: int = 1
     contextlines: Optional[int] = None
     cookies: Optional[Dict[str, str]] = None
     data: Union[str, Dict[str, str]] = None  # type: ignore[assignment]
@@ -426,6 +427,7 @@ class Job(JobBase):
         'name',
         'note',
         'additions_only',
+        'compared_versions',
         'contextlines',
         'deletions_only',
         'diff_filter',
@@ -840,6 +842,7 @@ class BrowserJob(UrlJobBase):
         :raises BrowserResponseError: If a browser error or an HTTP response code between 400 and 599 is received.
         """
         try:
+            from playwright._repo_version import version as playwright_version
             from playwright.sync_api import Error as PlaywrightError
             from playwright.sync_api import ProxySettings, Route, sync_playwright
         except ImportError:
@@ -983,8 +986,9 @@ class BrowserJob(UrlJobBase):
                     ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
                     extra_http_headers=dict(headers),
                 )
-                logger.debug(
-                    f'Job {self.index_number}: Pyppeteer launched {browser_name} browser ' f'{browser.version}'
+                logger.info(
+                    f'Job {self.index_number}: Pyppeteer {playwright_version} launched {browser_name} browser'
+                    f' {browser.version}'
                 )
             else:
                 context = p.chromium.launch_persistent_context(
@@ -999,9 +1003,9 @@ class BrowserJob(UrlJobBase):
                     ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
                     extra_http_headers=dict(headers),
                 )
-                logger.debug(
-                    f'Job {self.index_number}: Pyppeteer launched {browser_name} browser version'
-                    f' {context.browser.version} with user data directory '  # type: ignore[union-attr]
+                logger.info(
+                    f'Job {self.index_number}: Pyppeteer {playwright_version} launched {browser_name} browser '
+                    f'{context.browser.version} from user data directory '  # type: ignore[union-attr]
                     f'{self.user_data_dir}'
                 )
 

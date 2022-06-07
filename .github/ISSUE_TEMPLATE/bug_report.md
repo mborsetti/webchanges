@@ -18,7 +18,8 @@ bug.
 A clear and concise description of what you expected to happen.
 
 **Screen scrape/screenshots**
-If applicable, add screen scrape or screenshots to help explain your problem.
+If applicable, add screen scrape or screenshots to help explain the bug.  Use ``-v`` or ``-vv`` to capture 
+logging.
 
 **Version info**
 Please run ``webchanges -v`` and paste the version information as follows (first 3 lines):

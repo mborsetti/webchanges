@@ -36,6 +36,9 @@ if %r% EQU n exit /b
 set /p r=Did you run local tests (tox) and ensure CI passed? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b
+set /p r=Did you check https://readthedocs.org/projects/webchanges/builds/ and ensure docs built there? [N/y] || set r=n
+if %r% EQU N r=n
+if %r% EQU n exit /b
 set /p r=Are you in the unreleased branch? [N/y] || set r=n
 if %r% EQU N r=n
 if %r% EQU n exit /b

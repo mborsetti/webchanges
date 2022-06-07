@@ -44,6 +44,20 @@ crontab)::
 
 .. _always_report:
 
+
+Comparing with several latest snapshots
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If a webpage frequently changes between several known stable states (e.g. A/B layout testing), it may be desirable to
+have changes reported only if the webpage changes into a new unknown state. You can use compared_versions to do this.
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   compared_versions: 3
+
+In this example, changes are only reported if the webpage becomes different from the latest three distinct states.
+The differences are shown relative to the closest match.
+
 Receiving a report for every run
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you are watching pages that change seldomly, but you still want to be notified every time :program:`webchanges`

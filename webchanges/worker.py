@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import difflib
 import logging
 import os
 import random
@@ -113,14 +114,22 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     urlwatcher.report.error(job_state)
                 else:
                     logger.info(f'Job {job_state.job.index_number}: Job finished with no exceptions')
-            elif job_state.old_data != '' or job_state.old_timestamp != 0:
+            elif len(job_state.old_data) or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
-                if job_state.new_data == job_state.old_data:
+                if job_state.history_data.get(job_state.new_data):
+                    # exactly matches one of the previous snapshots
                     if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save()
                     urlwatcher.report.unchanged(job_state)
                 else:
+                    # no match
+                    if len(job_state.history_data) > 1:
+                        # replace old with best "good enough" previous snapshot
+                        close_matches = difflib.get_close_matches(job_state.new_data, job_state.history_data, n=1)
+                        if close_matches:
+                            job_state.old_data = close_matches[0]
+                            job_state.old_timestamp = job_state.history_data[close_matches[0]]
                     job_state.tries = 0
                     job_state.save()
                     urlwatcher.report.changed(job_state)

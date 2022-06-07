@@ -564,6 +564,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
             )
             jobs = [job for job in jobs if job not in removed_jobs]
 
+        logger.info(f'Loaded {len(jobs)} jobs from {self.filename}')
         return jobs
 
 
@@ -1060,7 +1061,7 @@ class CacheSQLite3Storage(CacheStorage):
         self.lock = threading.RLock()
 
         self.db = sqlite3.connect(filename, check_same_thread=False)
-        logger.info(f'Using sqlite3 database at {filename}')
+        logger.info(f'Using sqlite3 {sqlite3.sqlite_version} database at {filename}')
         self.cur = self.db.cursor()
         self.cur.execute('PRAGMA temp_store = MEMORY;')
         tables = self._execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()

@@ -168,6 +168,20 @@ Whether to use a Chrome web browser (true/false). Defaults to false.
 If true, it renders the URL via a JavaScript-enabled web browser and extracts the HTML after rendering (see
 :ref:`above <use_browser>` for important information).
 
+compared_versions
+^^^^^^^^^^^^^^^^^
+Number of saved snapshots to compare against (int). Defaults to 1.
+
+If set to a number greater than 1, instead of comparing the current data to only the very last snapshot captured, it
+is matched against any of *n* snapshots. This is very useful when a webpage frequently changes between several known
+stable states (e.g. they're doing A/B testing), as changes will be reported only when the content changes to a new
+unknown state, in which case the differences are shown relative to the closest match.
+
+Refer to the command line argument ``--max-snapshots`` to ensure that you are saving the number of snapshots you need
+for this directive to run successfully (default is 4) (see :ref:`here<max-snapshots>`).
+
+.. versionadded:: 3.10.2
+
 cookies
 ^^^^^^^
 Cookies to send with the request (a dict).
@@ -194,7 +208,7 @@ http_proxy
 Proxy server to use for HTTP requests (a string). If unspecified or null/false, the system environment variable
 ``HTTP_PROXY``, if defined, will be used.
 
-E.g. ``\http://username:password@proxy.com:8080``.
+E.g. ``http://username:password@proxy.com:8080``.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
@@ -204,7 +218,7 @@ https_proxy
 Proxy server to use for HTTPS (i.e. secure) requests (a string). If unspecified or null/false, the system environment
 variable ``HTTPS_PROXY``, if defined, will be used.
 
-E.g. ``\https://username:password@proxy.com:8080``.
+E.g. ``https://username:password@proxy.com:8080``.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
@@ -332,7 +346,32 @@ The following directives are available only for ``url`` jobs without ``use_brows
 
 no_redirects
 ^^^^^^^^^^^^
-Disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection (true/false). Defaults to false.
+Disables GET, OPTIONS, POST, PUT, PATCH, DELETE, HEAD redirection (true/false). Defaults to false (i.e. redirection
+is enabled) for all methods except HEAD. See more `here
+<https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history>`__.  Redirection takes place
+whenever an HTTP status code of 301, 302, 303, 307 or 308 is returned.
+
+Example:
+
+.. code-block:: yaml
+
+   url: "https://donneespubliques.meteofrance.fr/donnees_libres/bulletins/BCM/203001.pdf"
+   no_redirects: true
+   filter:
+     - html2text:
+
+Returns:
+
+.. code-block::
+
+   302 Found
+   ---------
+
+   # Found
+   The document has moved [here](https://donneespubliques.meteofrance.fr/?fond=donnee_indisponible).
+   * * *
+   Apache/2.2.15 (CentOS) Server at donneespubliques.meteofrance.fr Port 80
+
 
 .. versionadded:: 3.2.7
 

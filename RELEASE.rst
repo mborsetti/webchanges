@@ -6,12 +6,14 @@
 
 Added
 -----
-* You can now run the command line argument ``--test`` without specifying a JOB; this will run a check of the config and
-  job files for syntax errors.
+* You can now run the command line argument ``--test`` without specifying a JOB; this will check the config
+  (default: ``config.yaml``) and job (default: ``job.yaml``) files for syntax errors.
+* New job directive ``compared_versions`` allows change detection to be made against multiple saved snapshots;
+  useful for monitoring websites that change between a set of states (e.g. they are running A/B testing).
+* New command line argument ``--check-new`` to check if a new version of **webchanges** is available.
 * Error messages for url jobs failing with HTTP reason codes of 400 and higher now include any text returned by the
   website (e.g. "Rate exceeded.", "upstream request timeout", etc.). Not implemented in jobs with ``use_browser: true``
   due to limitations in Playwright.
-* New command line argument ``--check-new`` to check if a new version of **webchanges** is available.
 
 Changed
 -------
