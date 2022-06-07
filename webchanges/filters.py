@@ -160,10 +160,10 @@ class FilterBase(object, metaclass=TrackSubClasses):
             filtercls = cls.__subclasses__.get(filter_kind, None)
 
             if filtercls is None:
-                raise ValueError(f'Unknown filter kind: {filter_kind} (subfilter: {subfilter})')
+                raise ValueError(f'Unknown filter kind: {filter_kind} (subfilter: {subfilter}).')
 
             if getattr(filtercls, '__no_subfilter__', False) and subfilter:
-                raise ValueError(f'No subfilters supported for {filter_kind}')
+                raise ValueError(f'No subfilters supported for {filter_kind}.')
 
             if hasattr(filtercls, '__supported_subfilters__'):
                 provided_keys = set(subfilter.keys())
@@ -172,7 +172,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
                 if unknown_keys and '<any>' not in allowed_keys:
                     raise ValueError(
                         f'Filter {filter_kind} does not support subfilter(s): {unknown_keys} '
-                        f'(supported: {allowed_keys})'
+                        f'(supported: {allowed_keys}).'
                     )
 
             yield filter_kind, subfilter
@@ -211,7 +211,7 @@ class FilterBase(object, metaclass=TrackSubClasses):
                 elif isinstance(item, dict):
                     filter_kind, subfilter = next(iter(item.items()))
                 else:
-                    raise ValueError('Subfilter(s) must be a string or a dictionary')
+                    raise ValueError('Subfilter(s) must be a string or a dictionary.')
 
                 filtercls = cls.__subclasses__.get(filter_kind, None)
 
@@ -363,8 +363,8 @@ class BeautifyFilter(FilterBase):
         """
         if bs4 is None:
             raise ImportError(
-                f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}' "
-                f'filter ({self.job.get_indexed_location()})'
+                f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}' filter. "
+                f'({self.job.get_indexed_location()})'
             )
 
         soup = bs4.BeautifulSoup(data, features='lxml')
@@ -488,7 +488,7 @@ class Html2TextFilter(FilterBase):
             if bs4 is None:
                 raise ImportError(
                     f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}: "
-                    f"{method}' filter ({self.job.get_indexed_location()})"
+                    f"{method}' filter. ({self.job.get_indexed_location()})"
                 )
 
             bs4_parser: str = options.pop('parser', 'lxml')
@@ -510,11 +510,11 @@ class Html2TextFilter(FilterBase):
         elif method == 'lynx':
             raise NotImplementedError(
                 f"Filter html2text's method 'lynx' is no longer supported; for similar results, use the filter without "
-                f'specifying a method ({self.job.get_indexed_location()})'
+                f'specifying a method. ({self.job.get_indexed_location()})'
             )
 
         else:
-            raise ValueError(f"Unknown method {method} for filter 'html2text' ({self.job.get_indexed_location()})")
+            raise ValueError(f"Unknown method {method} for filter 'html2text'. ({self.job.get_indexed_location()})")
 
 
 class Csv2TextFilter(FilterBase):
@@ -592,14 +592,14 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
         # data must be bytes
         if not isinstance(data, bytes):
             raise ValueError(
-                f"The 'html2text: pdf2text' filter needs bytes input (is it the first filter?)"
-                f' ({self.job.get_indexed_location()})'
+                f"The 'html2text: pdf2text' filter needs bytes input (is it the first filter?). "
+                f'({self.job.get_indexed_location()})'
             )
 
         if pdftotext is None:
             raise ImportError(
-                f"Python package 'pdftotext' (and OS-specific dependencies) is not installed; cannot use"
-                f" 'html2text: pdf2text' filter ({self.job.get_indexed_location()})"
+                f"Python package 'pdftotext' (and OS-specific dependencies) is not installed; cannot use "
+                f"'html2text: pdf2text' filter. ({self.job.get_indexed_location()})"
             )
 
         return '\n'.join(
@@ -628,8 +628,8 @@ class Ical2TextFilter(FilterBase):
         """
         if vobject is None:
             raise ImportError(
-                f"Python package 'vobject' is not installed; cannot use 'html2text: ical2text' filter"
-                f' ({self.job.get_indexed_location()})'
+                f"Python package 'vobject' is not installed; cannot use 'html2text: ical2text' filter. "
+                f'({self.job.get_indexed_location()})'
             )
 
         result = []
@@ -640,7 +640,7 @@ class Ical2TextFilter(FilterBase):
                 parsedCal = vobject.readOne(data)
             except vobject.ParseError:
                 parsedCal = vobject.readOne(data.decode(errors='ignore'))
-                logger.warning('Found and ignored Unicode-related errors when reading iCal entry')
+                logger.warning('Found and ignored Unicode-related errors when reading iCal entry.')
 
         for event in parsedCal.getChildren():
             if event.name == 'VEVENT':
@@ -759,20 +759,20 @@ class KeepLinesContainingFilter(FilterBase):
                 return '\n'.join(line for line in data.splitlines() if subfilter['text'] in line)
             else:
                 raise TypeError(
-                    f"The '{self.__kind__}' filter requires a string but you provided a"
-                    f" {type(subfilter['text']).__name__} ({self.job.get_indexed_location()})"
+                    f"The '{self.__kind__}' filter requires a string but you provided a "
+                    f"{type(subfilter['text']).__name__}. ({self.job.get_indexed_location()})"
                 )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
                 return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line))
             else:
                 raise TypeError(
-                    f"The '{self.__kind__}' filter requires a string but you provided a"
-                    f" {type(subfilter['re']).__name__} ({self.job.get_indexed_location()})"
+                    f"The '{self.__kind__}' filter requires a string but you provided a "
+                    f"{type(subfilter['re']).__name__}. ({self.job.get_indexed_location()})"
                 )
         else:
             raise ValueError(
-                f"The '{self.__kind__}' filter requires a 'text' or 're' sub-directive "
+                f"The '{self.__kind__}' filter requires a 'text' or 're' sub-directive. "
                 f'({self.job.get_indexed_location()})'
             )
 
@@ -819,20 +819,20 @@ class DeleteLinesContainingFilter(FilterBase):
                 return '\n'.join(line for line in data.splitlines() if subfilter['text'] not in line)
             else:
                 raise TypeError(
-                    f"The '{self.__kind__}' filter requires a string but you provided a"
-                    f" {type(subfilter['text']).__name__} ({self.job.get_indexed_location()})"
+                    f"The '{self.__kind__}' filter requires a string but you provided a "
+                    f"{type(subfilter['text']).__name__}. ({self.job.get_indexed_location()})"
                 )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
                 return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line) is None)
             else:
                 raise TypeError(
-                    f"The '{self.__kind__}' filter requires a string but you provided a"
-                    f" {type(subfilter['re']).__name__} ({self.job.get_indexed_location()})"
+                    f"The '{self.__kind__}' filter requires a string but you provided a "
+                    f"{type(subfilter['re']).__name__}. ({self.job.get_indexed_location()})"
                 )
         else:
             raise ValueError(
-                f"The '{self.__kind__}' filter requires a 'text' or 're' sub-directive "
+                f"The '{self.__kind__}' filter requires a 'text' or 're' sub-directive. "
                 f'({self.job.get_indexed_location()})'
             )
 
@@ -882,7 +882,7 @@ class StripFilter(FilterBase):
                     return '\n'.join([line.lstrip(subfilter.get('chars')) for line in lines])
 
                 raise ValueError(
-                    f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left' "
+                    f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
                     f'({self.job.get_indexed_location()})'
                 )
 
@@ -896,7 +896,7 @@ class StripFilter(FilterBase):
                     return data.lstrip(subfilter.get('chars'))
 
                 raise ValueError(
-                    f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left' "
+                    f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
                     f'({self.job.get_indexed_location()})'
                 )
 
@@ -983,7 +983,7 @@ class ElementByIdFilter(FilterBase):
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         if 'id' not in subfilter:
             raise ValueError(
-                f"The 'element-by-id' filter needs an id for filtering ({self.job.get_indexed_location()})"
+                f"The 'element-by-id' filter needs an id for filtering. ({self.job.get_indexed_location()})"
             )
 
         element_by_id = ElementsBy(FilterBy.ATTRIBUTE, 'id', subfilter['id'])
@@ -1005,7 +1005,7 @@ class ElementByClassFilter(FilterBase):
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         if 'class' not in subfilter:
             raise ValueError(
-                f"The 'element-by-class' filter needs a class for filtering ({self.job.get_indexed_location()})"
+                f"The 'element-by-class' filter needs a class for filtering. ({self.job.get_indexed_location()})"
             )
 
         element_by_class = ElementsBy(FilterBy.ATTRIBUTE, 'class', subfilter['class'])
@@ -1027,7 +1027,7 @@ class ElementByStyleFilter(FilterBase):
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         if 'style' not in subfilter:
             raise ValueError(
-                f"The 'element-by-style' filter needs a style for filtering ({self.job.get_indexed_location()})"
+                f"The 'element-by-style' filter needs a style for filtering. ({self.job.get_indexed_location()})"
             )
 
         element_by_style = ElementsBy(FilterBy.ATTRIBUTE, 'style', subfilter['style'])
@@ -1049,7 +1049,7 @@ class ElementByTagFilter(FilterBase):
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         if 'tag' not in subfilter:
             raise ValueError(
-                f"The 'element-by-tag' filter needs a tag for filtering ({self.job.get_indexed_location()})"
+                f"The 'element-by-tag' filter needs a tag for filtering. ({self.job.get_indexed_location()})"
             )
 
         element_by_tag = ElementsBy(FilterBy.TAG, subfilter['tag'])
@@ -1124,13 +1124,13 @@ class LxmlParser:
         self.method = subfilter.get('method', 'html')
         if self.method not in ('html', 'xml'):
             raise ValueError(
-                f"The '{filter_kind}' filter's method must be 'html' or 'xml', got '{self.method}'"
-                f' ({job.get_indexed_location()})'
+                f"The '{filter_kind}' filter's method must be 'html' or 'xml', got '{self.method}'. "
+                f'({job.get_indexed_location()})'
             )
         if expr_key not in subfilter:
             raise ValueError(
-                f"The '{filter_kind}' filter needs {self.EXPR_NAMES[filter_kind]} for filtering"
-                f' ({job.get_indexed_location()})'
+                f"The '{filter_kind}' filter needs {self.EXPR_NAMES[filter_kind]} for filtering. "
+                f'({job.get_indexed_location()})'
             )
         self.expression = subfilter[expr_key]
         self.exclude = subfilter.get('exclude')
@@ -1139,7 +1139,7 @@ class LxmlParser:
         self.maxitems = int(subfilter.get('maxitems', 0))
         if self.method == 'html' and self.namespaces:
             raise ValueError(
-                f"The '{filter_kind}' filter's namespace prefixes are only supported with 'method: xml' "
+                f"The '{filter_kind}' filter's namespace prefixes are only supported with 'method: xml'. "
                 f'({job.get_indexed_location()})'
             )
         self.parser = (etree.HTMLParser if self.method == 'html' else etree.XMLParser)()
@@ -1333,7 +1333,7 @@ class ReSubFilter(FilterBase):
         :returns: The filtered (processed) data.
         """
         if 'pattern' not in subfilter:
-            raise ValueError(f"The 're.sub' filter needs a pattern ({self.job.get_indexed_location()})")
+            raise ValueError(f"The 're.sub' filter needs a pattern. ({self.job.get_indexed_location()})")
 
         # Default: Replace with empty string if no "repl" value is set
         return re.sub(subfilter['pattern'], subfilter.get('repl', ''), data)
@@ -1431,7 +1431,7 @@ class ReverseFilter(FilterBase):
 
 def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
     if 'command' not in subfilter:
-        raise ValueError(f"The '{f_cls.__kind__}' filter needs a command ({f_cls.job.get_indexed_location()})")
+        raise ValueError(f"The '{f_cls.__kind__}' filter needs a command. ({f_cls.job.get_indexed_location()})")
 
     # Work on a copy of the environment as not to modify the outside environment
     env = os.environ.copy()
@@ -1521,7 +1521,7 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
         """
         if not isinstance(data, bytes):
             raise ValueError(
-                f"The 'ocr' filter needs bytes input (is it the first filter?) ({self.job.get_indexed_location()})"
+                f"The 'ocr' filter needs bytes input (is it the first filter?). ({self.job.get_indexed_location()})"
             )
 
         language = subfilter.get('language', None)
@@ -1529,14 +1529,14 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
 
         if pytesseract is None:
             raise ImportError(
-                f"Python package 'pytesseract' is not installed; cannot use the '{self.__kind__}' filter"
-                f' ({self.job.get_indexed_location()})'
+                f"Python package 'pytesseract' is not installed; cannot use the '{self.__kind__}' filter. "
+                f'({self.job.get_indexed_location()})'
             )
 
         if Image is None:
             raise ImportError(
-                f"Python package 'Pillow' is not installed; cannot use the '{self.__kind__}' filter"
-                f' ({self.job.get_indexed_location()})'
+                f"Python package 'Pillow' is not installed; cannot use the '{self.__kind__}' filter. "
+                f'({self.job.get_indexed_location()})'
             )
 
         return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip()
@@ -1563,16 +1563,16 @@ class JQFilter(FilterBase):  # pragma: has-jq
         :returns: The filtered (processed) data.
         """
         if 'query' not in subfilter:
-            raise ValueError(f"The 'jq' filter needs a query ({self.job.get_indexed_location()})")
+            raise ValueError(f"The 'jq' filter needs a query. ({self.job.get_indexed_location()})")
         try:
             jsondata = json.loads(data)
         except ValueError:
-            raise ValueError(f"The 'jq' filter needs valid JSON ({self.job.get_indexed_location()})")
+            raise ValueError(f"The 'jq' filter needs valid JSON. ({self.job.get_indexed_location()})")
 
         if jq is None:
             raise ImportError(
-                f"Python package 'jq' is not installed; cannot use the '{self.__kind__}' filter"
-                f' ({self.job.get_indexed_location()})'
+                f"Python package 'jq' is not installed; cannot use the '{self.__kind__}' filter. "
+                f'({self.job.get_indexed_location()})'
             )
 
         return jq.text(subfilter['query'], jsondata)

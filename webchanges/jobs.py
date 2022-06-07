@@ -24,7 +24,6 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
 from urllib.parse import parse_qsl, quote, SplitResult, SplitResultBytes, urlencode, urlparse, urlsplit
 
 import html2text
-import psutil
 import requests
 import yaml
 from requests.structures import CaseInsensitiveDict
@@ -845,8 +844,17 @@ class BrowserJob(UrlJobBase):
             from playwright.sync_api import ProxySettings, Route, sync_playwright
         except ImportError:
             raise ImportError(
-                f'Job {job_state.job.index_number}: Python package playwright is not installed; cannot use the '
-                f'"use_browser: true" directive ( {self.get_indexed_location()} )'
+                f"Python package 'playwright' is not installed; cannot run jobs with the 'use_browser: true' "
+                f"directive. Please install dependencies with 'pip install webchanges[use_browser]' and run again. "
+                f'({job_state.job.get_indexed_location()})'
+            )
+        try:
+            import psutil
+        except ImportError:
+            raise ImportError(
+                f"Python package 'psutil' is not installed; cannot run jobs with the 'use_browser: true' "
+                f"directive. Please install dependencies with 'pip install webchanges[use_browser]' and run again. "
+                f'({job_state.job.get_indexed_location()})'
             )
 
         # deprecations
@@ -940,7 +948,7 @@ class BrowserJob(UrlJobBase):
 
         timeout = self.timeout * 1000 if self.timeout else 90000  # Playwright's default of 30 seconds is too short
 
-        # launch browser
+        # memory
         virtual_memory = psutil.virtual_memory().available
         swap_memory = psutil.swap_memory().free
         start_free_mem = virtual_memory + swap_memory
@@ -948,6 +956,8 @@ class BrowserJob(UrlJobBase):
             f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical memory '
             f'(plus {swap_memory / 1e6:,.0f} MB of swap) before launching the browser.'
         )
+
+        # launch browser
         with sync_playwright() as p:
             executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
             channel = None if executable_path else 'chrome'
