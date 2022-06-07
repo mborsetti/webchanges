@@ -64,7 +64,7 @@ class JobState(ContextManager):
     old_etag: str = ''
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
     traceback: str
-    tries: int = 0
+    tries: int = 0  # the number of times a retrieval failed
     verb: str  # typically 'new', 'changed', 'changed,no_report', 'unchanged', 'error'
 
     def __init__(self, cache_storage: CacheStorage, job: JobBase, playwright: Any = None) -> None:
@@ -122,13 +122,13 @@ class JobState(ContextManager):
         """Loads form the database the last snapshot for the job."""
         guid = self.job.get_guid()
         self.old_data, self.old_timestamp, self.tries, self.old_etag = self.cache_storage.load(guid)
-        self.history_data = self.cache_storage.get_history_data(guid, self.job.compared_versions)
+        self.history_data = self.cache_storage.get_history_data(guid, self.job.compared_versions or 1)
 
     def save(self, use_old_data: bool = False) -> None:
         """Saves new data retrieved by the job into the snapshot database.
 
-        :param use_old_data: Whether old data should be used (e.g. due to error, leading to new data or data being an
-           error message instead of the relevant data). Also uses the old ETag.
+        :param use_old_data: Whether old data (nd ETag) should be used (e.g. due to error, leading to new data or
+        data being an error message instead of the relevant data).
         """
         if use_old_data:
             self.new_data = self.old_data

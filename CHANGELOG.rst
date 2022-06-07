@@ -25,13 +25,13 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Added, for new features. [triggers a minor revision]
    Changed, for changes in existing functionality. [triggers a minor revision or, if to API, major revision]
    Deprecated, for soon-to-be removed features.
-   Removed, for now removed features. [if to API, triggers a major revision].
+   Removed, for now removed features. [if to API, triggers a major revision]
    Fixed, for any bug fixes. [triggers a minor patch]
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.10.2rc3
+Version 3.10.2rc4
 ===================
 Unreleased
 

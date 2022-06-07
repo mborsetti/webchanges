@@ -85,14 +85,14 @@ def test_filters(test_name, test_data):
 def test_invalid_filter_name_raises_valueerror():
     with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list(['afilternamethatdoesnotexist']))
-    assert str(pytest_wrapped_e.value) == 'Unknown filter kind: afilternamethatdoesnotexist (subfilter: {})'
+    assert str(pytest_wrapped_e.value) == 'Unknown filter kind: afilternamethatdoesnotexist (subfilter: {}).'
 
 
 def test_providing_subfilter_to_filter_without_subfilter_raises_valueerror():
     with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list([{'beautify': {'asubfilterthatdoesnotexist': True}}]))
     assert str(pytest_wrapped_e.value) == (
-        "Filter beautify does not support subfilter(s): {'asubfilterthatdoesnotexist'} (supported: {'indent'})"
+        "Filter beautify does not support subfilter(s): {'asubfilterthatdoesnotexist'} (supported: {'indent'})."
     )
 
 
@@ -215,120 +215,120 @@ def test_filter_exceptions():
         filtercls(FakeJob(), None).filter('<div>a</div>', {'method': 'lynx'})
     assert e.value.args[0] == (
         "Filter html2text's method 'lynx' is no longer supported; for similar results, use the filter without "
-        'specifying a method ()'
+        'specifying a method. ()'
     )
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('<div>a</div>', {'method': 'blabla'})
-    assert e.value.args[0] == ("Unknown method blabla for filter 'html2text' ()")
+    assert e.value.args[0] == ("Unknown method blabla for filter 'html2text'. ()")
 
     filtercls = FilterBase.__subclasses__.get('pdf2text')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('<div>a</div>', {})
-    assert e.value.args[0] == ("The 'html2text: pdf2text' filter needs bytes input (is it the first filter?) ()")
+    assert e.value.args[0] == ("The 'html2text: pdf2text' filter needs bytes input (is it the first filter?). ()")
 
     for filter in ('keep_lines_containing', 'delete_lines_containing'):
         filtercls = FilterBase.__subclasses__.get(filter)
         with pytest.raises(TypeError) as e:
             # noinspection PyTypeChecker
             filtercls(FakeJob(), None).filter('a', {'text': 2})
-        assert e.value.args[0] == (f"The '{filter}' filter requires a string but you provided a int ()")
+        assert e.value.args[0] == (f"The '{filter}' filter requires a string but you provided a int. ()")
 
         filtercls = FilterBase.__subclasses__.get(filter)
         with pytest.raises(TypeError) as e:
             # noinspection PyTypeChecker
             filtercls(FakeJob(), None).filter('a', {'re': 2})
-        assert e.value.args[0] == (f"The '{filter}' filter requires a string but you provided a int ()")
+        assert e.value.args[0] == (f"The '{filter}' filter requires a string but you provided a int. ()")
 
         filtercls = FilterBase.__subclasses__.get(filter)
         with pytest.raises(ValueError) as e:
             # noinspection PyTypeChecker
             filtercls(FakeJob(), None).filter('a', {})
-        assert e.value.args[0] == (f"The '{filter}' filter requires a 'text' or 're' sub-directive ()")
+        assert e.value.args[0] == (f"The '{filter}' filter requires a 'text' or 're' sub-directive. ()")
 
     filtercls = FilterBase.__subclasses__.get('strip')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {'splitlines': True, 'side': 'whatever'})
-    assert e.value.args[0] == ("The 'strip' filter's 'side' sub-directive can only be 'right' or 'left' ()")
+    assert e.value.args[0] == ("The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. ()")
 
     filtercls = FilterBase.__subclasses__.get('strip')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {'side': 'whatever'})
-    assert e.value.args[0] == ("The 'strip' filter's 'side' sub-directive can only be 'right' or 'left' ()")
+    assert e.value.args[0] == ("The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. ()")
 
     filtercls = FilterBase.__subclasses__.get('element-by-id')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 'element-by-id' filter needs an id for filtering ()")
+    assert e.value.args[0] == ("The 'element-by-id' filter needs an id for filtering. ()")
 
     filtercls = FilterBase.__subclasses__.get('element-by-class')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 'element-by-class' filter needs a class for filtering ()")
+    assert e.value.args[0] == ("The 'element-by-class' filter needs a class for filtering. ()")
 
     filtercls = FilterBase.__subclasses__.get('element-by-style')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 'element-by-style' filter needs a style for filtering ()")
+    assert e.value.args[0] == ("The 'element-by-style' filter needs a style for filtering. ()")
 
     filtercls = FilterBase.__subclasses__.get('element-by-tag')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 'element-by-tag' filter needs a tag for filtering ()")
+    assert e.value.args[0] == ("The 'element-by-tag' filter needs a tag for filtering. ()")
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {'method': 'any'})
-    assert e.value.args[0] == ("The 'xpath' filter's method must be 'html' or 'xml', got 'any' ()")
+    assert e.value.args[0] == ("The 'xpath' filter's method must be 'html' or 'xml', got 'any'. ()")
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 'xpath' filter needs an XPath expression for filtering ()")
+    assert e.value.args[0] == ("The 'xpath' filter needs an XPath expression for filtering. ()")
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {'path': 'any', 'namespaces': 'whatever'})
-    assert e.value.args[0] == ("The 'xpath' filter's namespace prefixes are only supported with 'method: xml' ()")
+    assert e.value.args[0] == ("The 'xpath' filter's namespace prefixes are only supported with 'method: xml'. ()")
 
     filtercls = FilterBase.__subclasses__.get('re.sub')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 're.sub' filter needs a pattern ()")
+    assert e.value.args[0] == ("The 're.sub' filter needs a pattern. ()")
 
     filtercls = FilterBase.__subclasses__.get('execute')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 'execute' filter needs a command ()")
+    assert e.value.args[0] == ("The 'execute' filter needs a command. ()")
 
     filtercls = FilterBase.__subclasses__.get('ocr')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 'ocr' filter needs bytes input (is it the first filter?) ()")
+    assert e.value.args[0] == ("The 'ocr' filter needs bytes input (is it the first filter?). ()")
 
     filtercls = FilterBase.__subclasses__.get('jq')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('a', {})
-    assert e.value.args[0] == ("The 'jq' filter needs a query ()")
+    assert e.value.args[0] == ("The 'jq' filter needs a query. ()")
 
     filtercls = FilterBase.__subclasses__.get('jq')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), None).filter('{""""""}', {'query': 'any'})
-    assert e.value.args[0] == ("The 'jq' filter needs valid JSON ()")
+    assert e.value.args[0] == ("The 'jq' filter needs valid JSON. ()")

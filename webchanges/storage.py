@@ -1213,8 +1213,8 @@ class CacheSQLite3Storage(CacheStorage):
         :returns: A dict (key: value)
             WHERE
 
-            - key is the data;
-            - value is the timestamp.
+            - key is the snapshot data;
+            - value is the most recent timestamp for such snapshot.
         """
         history: Dict[str, float] = {}
         if count is not None and count < 1:
@@ -1227,11 +1227,11 @@ class CacheSQLite3Storage(CacheStorage):
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
-                if not r['t']:
-                    if r['d'] not in history:
-                        history[r['d']] = timestamp
-                        if count is not None and len(history) >= count:
-                            break
+                # if not r['t']:
+                if r['d'] not in history:
+                    history[r['d']] = timestamp
+                    if count is not None and len(history) >= count:
+                        break
         return history
 
     def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:

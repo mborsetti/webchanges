@@ -116,7 +116,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     logger.info(f'Job {job_state.job.index_number}: Job finished with no exceptions')
             elif len(job_state.old_data) or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
-                if job_state.history_data.get(job_state.new_data):
+                if job_state.new_data in (job_state.old_data, job_state.history_data):
                     # exactly matches one of the previous snapshots
                     if job_state.tries > 0:
                         job_state.tries = 0
