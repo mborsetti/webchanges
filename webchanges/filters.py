@@ -19,7 +19,7 @@ import warnings
 from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
 from xml.dom import minidom  # nosec: B408 Replace minidom with the equivalent defusedxml package TODO
 
 import html2text
@@ -82,7 +82,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class FilterBase(object, metaclass=TrackSubClasses):
+class FilterBase(metaclass=TrackSubClasses):
     """The base class for filters."""
 
     __subclasses__: Dict[str, Type[FilterBase]] = {}
@@ -1403,7 +1403,7 @@ class RemoveDuplicateLinesFilter(FilterBase):
         separator = subfilter.get('separator', '\n')
         data_lines = data.split(separator)
 
-        def get_unique_lines(lines: List[str]) -> Iterable[str]:
+        def get_unique_lines(lines: List[str]) -> Iterator[str]:
             seen = set()
             for line in lines:
                 if line not in seen:

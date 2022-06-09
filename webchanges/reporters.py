@@ -20,7 +20,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, TYPE_CHECKING, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
 from warnings import warn
 
 import requests
@@ -112,7 +112,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class ReporterBase(object, metaclass=TrackSubClasses):
+class ReporterBase(metaclass=TrackSubClasses):
     """Base class for reporting."""
 
     __subclasses__: Dict[str, Type[ReporterBase]] = {}
@@ -222,7 +222,7 @@ class ReporterBase(object, metaclass=TrackSubClasses):
         if not any_enabled:
             logger.warning('No reporters enabled.')
 
-    def submit(self, **kwargs: Any) -> Iterable[str]:
+    def submit(self, **kwargs: Any) -> Iterator[str]:
         """Submit a job to generate the report.
 
         :returns: The content of the report.
@@ -233,14 +233,14 @@ class ReporterBase(object, metaclass=TrackSubClasses):
 class HtmlReporter(ReporterBase):
     """The base class for all reports using HTML."""
 
-    def submit(self, **kwargs: Any) -> Iterable[str]:
+    def submit(self, **kwargs: Any) -> Iterator[str]:
         """Submit a job to generate the report.
 
         :returns: The content of the HTML report.
         """
         yield from self._parts()
 
-    def _parts(self) -> Iterable[str]:
+    def _parts(self) -> Iterator[str]:
         """Generator yielding the HTML; called by submit. Calls _format_content.
 
         :returns: The content of the report.
@@ -304,7 +304,7 @@ class HtmlReporter(ReporterBase):
         yield '</div>\n</body>\n</html>\n'
 
     @staticmethod
-    def _diff_to_html(diff: str, job: JobBase) -> Iterable[str]:
+    def _diff_to_html(diff: str, job: JobBase) -> Iterator[str]:
         """Generator yielding the HTML-formatted unified diff; called by _format_content.
 
         :param diff: The diff text.
@@ -542,7 +542,7 @@ class HtmlReporter(ReporterBase):
 class TextReporter(ReporterBase):
     """The base class for all reports using plain text."""
 
-    def submit(self, **kwargs: Any) -> Iterable[str]:
+    def submit(self, **kwargs: Any) -> Iterator[str]:
         """Submit a job to generate the report.
 
         :returns: The content of the plain text report.
@@ -653,7 +653,7 @@ class TextReporter(ReporterBase):
 class MarkdownReporter(ReporterBase):
     """The base class for all reports using Markdown."""
 
-    def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> Iterable[str]:
+    def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> Iterator[str]:
         """Submit a job to generate the report in Markdown format.
         We use the CommonMark spec: https://spec.commonmark.org/
 
@@ -1572,7 +1572,7 @@ class BrowserReporter(HtmlReporter):
         os.remove(f.name)
 
 
-class XMPP(object):
+class XMPP:
     def __init__(self, sender: str, recipient: str, insecure_password: Optional[str] = None) -> None:
         if aioxmpp is None:
             raise ImportError('Python package "aioxmpp" is not installed; cannot use the "xmpp" reporter')

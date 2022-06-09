@@ -77,7 +77,7 @@ class BrowserResponseError(Exception):
             return self.args[0]
 
 
-class JobBase(object, metaclass=TrackSubClasses):
+class JobBase(metaclass=TrackSubClasses):
     """The base class for Jobs."""
 
     __subclasses__: Dict[str, 'JobBase'] = {}

@@ -22,7 +22,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class Mailer(object):
+class Mailer:
     """Mailer class."""
 
     def send(self, msg: Union[EmailMessage]) -> None:

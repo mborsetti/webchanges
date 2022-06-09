@@ -21,7 +21,7 @@ from .worker import run_jobs
 logger = logging.getLogger(__name__)
 
 
-class Urlwatch(object):
+class Urlwatch:
     """The main class."""
 
     def __init__(

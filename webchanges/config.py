@@ -15,7 +15,7 @@ from . import __doc__, __docs_url__, __project_name__, __version__
 
 
 @dataclass
-class BaseConfig(object):
+class BaseConfig:
     """Base configuration class."""
 
     project_name: str

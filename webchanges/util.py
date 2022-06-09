@@ -20,7 +20,7 @@ from math import floor, log10
 from os import PathLike
 from pathlib import Path
 from types import ModuleType
-from typing import Callable, Dict, Iterable, List, Match, Optional, Tuple, Union
+from typing import Callable, Dict, List, Match, Optional, Tuple, Union
 
 import requests
 
@@ -127,7 +127,7 @@ def import_module_from_source(module_name: str, source_path: Union[str, bytes, P
     return module
 
 
-def chunk_string(text: str, length: int, numbering: bool = False) -> Iterable[str]:
+def chunk_string(text: str, length: int, numbering: bool = False) -> List[str]:
     """Chunks a string.
 
     :param text: The text to be chunked.

@@ -16,7 +16,7 @@ from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Dict, Iterable, List, Optional, Type, TYPE_CHECKING, Union
+from typing import Any, ContextManager, Dict, Iterator, List, Optional, Type, TYPE_CHECKING, Union
 
 from .filters import FilterBase
 from .jobs import NotModifiedError
@@ -478,7 +478,7 @@ class JobState(ContextManager):
         return '\n'.join(diff)
 
 
-class Report(object):
+class Report:
     """The base class for reporting."""
 
     job_states: List[JobState] = []
@@ -552,7 +552,7 @@ class Report(object):
         """
         self._result(label, job_state)
 
-    def get_filtered_job_states(self, job_states: List[JobState]) -> Iterable[JobState]:
+    def get_filtered_job_states(self, job_states: List[JobState]) -> Iterator[JobState]:
         """Returns JobStates that have reportable changes per config['display'].  Called from :py:Class:`ReporterBase`.
 
         :param job_states: The list of JobState objects with the information of the job runs.
