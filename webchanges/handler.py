@@ -64,7 +64,7 @@ class JobState(ContextManager):
     old_etag: str = ''
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
     traceback: str
-    tries: int = 0  # the number of times a retrieval failed
+    tries: int = 0  # if >1, an error; value is the consecutive number of runs leading to an error
     verb: str  # typically 'new', 'changed', 'changed,no_report', 'unchanged', 'error'
 
     def __init__(self, cache_storage: CacheStorage, job: JobBase, playwright: Any = None) -> None:
@@ -114,7 +114,7 @@ class JobState(ContextManager):
         return None
 
     def added_data(self) -> Dict[str, Optional[Union[bool, str, Exception, float]]]:
-        """Returns a dict with the data added in the processing of the job"""
+        """Returns a dict with the data added in the processing of the job."""
         attrs = ('error_ignored', 'exception', 'new_data', 'new_etag', 'new_timestamp')
         return {attr: getattr(self, attr) for attr in attrs if hasattr(self, attr)}
 
@@ -179,7 +179,7 @@ class JobState(ContextManager):
                 if not (self.error_ignored or isinstance(e, NotModifiedError)):
                     self.tries += 1
                     logger.info(
-                        f'Job {self.job.index_number}: Job ended with error; incrementing cumulative tries to '
+                        f'Job {self.job.index_number}: Job ended with error; incrementing cumulative error runs to '
                         f'{self.tries} ({str(e).strip()})'
                     )
         except Exception as e:
@@ -191,7 +191,7 @@ class JobState(ContextManager):
                 self.tries += 1
                 logger.info(
                     f'Job {self.job.index_number}: Job ended with error (internal handling failed); '
-                    f'incrementing cumulative tries to {self.tries} ({str(e).strip()})'
+                    f'incrementing cumulative error runs to {self.tries} ({str(e).strip()})'
                 )
 
         logger.debug(f'Job {self.job.index_number}: Processed as {self.added_data()}')

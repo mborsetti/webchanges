@@ -83,14 +83,17 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         ):
 
             max_tries = 0 if not job_state.job.max_tries else job_state.job.max_tries
+            # tries is incremented by JobState.process when an exception (including 304) is encountered.
 
             if job_state.exception is not None:
-                # Oops, we have captured an error to ignore!
+                # Oops, we have captured an error (which could also be 304)
                 if job_state.error_ignored:
+                    # We captured an error to ignore
                     logger.info(
                         f'Job {job_state.job.index_number}: Error while executing job was ignored due to job config'
                     )
                 elif isinstance(job_state.exception, NotModifiedError):
+                    # We captured a 304 Not Modified
                     logger.info(
                         f'Job {job_state.job.index_number}: Job has not changed (HTTP 304 response or same strong '
                         f'ETag)'
@@ -100,20 +103,21 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         job_state.save(use_old_data=True)  # data is not returned by 304 therefore reuse old data
                     urlwatcher.report.unchanged(job_state)
                 elif job_state.tries < max_tries:
+                    # We're not reporting the error yet because we haven't yet hit 'max_tries'
                     logger.debug(
                         f'Job {job_state.job.index_number}: Error suppressed as cumulative number of '
                         f'failures ({job_state.tries}) does not exceed max_tries={max_tries}'
                     )
                     job_state.save(use_old_data=True)  # do not save error data but reuse old data
-                elif job_state.tries >= max_tries:
+                else:
+                    # Reporting the error
                     logger.debug(
                         f'Job {job_state.job.index_number}: Flagged as error as max_tries={max_tries} has been '
                         f'met or exceeded ({job_state.tries}'
                     )
                     job_state.save(use_old_data=True)  # do not save error data but reuse old data
                     urlwatcher.report.error(job_state)
-                else:
-                    logger.info(f'Job {job_state.job.index_number}: Job finished with no exceptions')
+
             elif len(job_state.old_data) or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
                 if job_state.new_data in (job_state.old_data, job_state.history_data):

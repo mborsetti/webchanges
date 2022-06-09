@@ -223,7 +223,6 @@ class UrlwatchCommand:
         :return: 1 if error, 0 if successful.
         """
         report = Report(self.urlwatcher)
-        report.job_states = []  # required for testing
         self.urlwatch_config.jobs = Path('--test-diff')  # for report footer
         job = self._get_job(job_id)
 
@@ -245,6 +244,7 @@ class UrlwatchCommand:
                 # Ideally it should be saved as an attribute when saving "data".
                 if self.urlwatch_config.test_reporter is None:
                     self.urlwatch_config.test_reporter = 'stdout'  # default
+                report.job_states = []  # required
                 errorlevel = self.check_test_reporter(
                     job_state, label=f'Filtered diff (states {-i:2} and {-(i + 1):2})', report=report
                 )
@@ -262,9 +262,11 @@ class UrlwatchCommand:
 
         print(f'History for job {job.get_indexed_location()}:')
         print(f'(ID: {job.get_guid()})')
+        total_failed = 0
         for i, entry in enumerate(history_data):
             etag = f"; ETag: {entry['etag']}" if entry.get('etag') else ''
-            tries = f"; failed tries: {entry['tries']}" if entry.get('tries') else ''
+            tries = f"; error run (number {entry['tries']})" if entry.get('tries') else ''
+            total_failed += entry['tries'] > 0
             tz = self.urlwatcher.report.config['report']['tz'] or 'Etc/UTC'
             dt = datetime.fromtimestamp(entry['timestamp'], ZoneInfo(tz))
             header = f"{i + 1}) {dt.strftime('%Y-%m-%d %H:%M %Z')}{etag}{tries}"
@@ -275,7 +277,14 @@ class UrlwatchCommand:
             print(entry['data'])
             print('=' * sep_len, '\n')
 
-        print(f'Found {len(history_data)} snapshot' + ('s' if len(history_data) != 1 else '') + '.')
+        print(
+            f'Found {len(history_data) - total_failed}'
+            + (' good' if total_failed else '')
+            + ' snapshot'
+            + ('s' if len(history_data) - total_failed != 1 else '')
+            + (f' and {total_failed} error capture' + ('s' if total_failed != 1 else '') if total_failed else '')
+            + '.'
+        )
 
         return 0
 

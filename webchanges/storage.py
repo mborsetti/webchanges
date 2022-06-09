@@ -1205,7 +1205,7 @@ class CacheSQLite3Storage(CacheStorage):
         return Snapshot('', 0, 0, '')
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
-        """Return data and timestamp from the last 'count' (None = all) entries matching a 'guid'.
+        """Return max 'count' (None = all) records of data and timestamp of **successful** runs for a 'guid'.
 
         :param guid: The guid.
         :param count: The maximum number of entries to return; if None return all.
@@ -1227,15 +1227,17 @@ class CacheSQLite3Storage(CacheStorage):
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
-                # if not r['t']:
-                if r['d'] not in history:
-                    history[r['d']] = timestamp
-                    if count is not None and len(history) >= count:
-                        break
+                if not r['t']:  # No data is saved when errors are encountered; use get_rich_history_data()
+                    if r['d'] not in history:
+                        history[r['d']] = timestamp
+                        if count is not None and len(history) >= count:
+                            break
         return history
 
-    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Return all data from the last 'count' (None = all) entries matching a 'guid'.
+    def get_rich_history_data(
+        self, guid: str, count: Optional[int] = None
+    ) -> List[Dict[str, Union[Optional[str], float, int]]]:
+        """Return max 'count' (None = all) entries of all data (including from error runs) saved for a 'guid'.
 
         :param guid: The guid.
         :param count: The maximum number of entries to return; if None return all.
@@ -1244,11 +1246,11 @@ class CacheSQLite3Storage(CacheStorage):
             WHERE the keys are:
 
             - timestamp: The timestamp (float);
-            - data: The data (str);
-            - tries (optional): The number of tries (int);
+            - data: The data (str, could be empty);
+            - tries: The number of tries (int);
             - etag (optional): The ETag (str, could be empty).
         """
-        history: List[Dict[str, Any]] = []
+        history: List[Dict[str, Union[Optional[str], float, int]]] = []
         if count is not None and count < 1:
             return history
 
@@ -1284,8 +1286,11 @@ class CacheSQLite3Storage(CacheStorage):
     ) -> None:
         """Save the data from a job.
 
-        By default it is saved into the temporary database. Call close() to transfer the contents of the temporary
+        By default, it is saved into the temporary database. Call close() to transfer the contents of the temporary
         database to the permanent one.
+
+        Note: the logic is such that any attempts that end in an exception will have tries >= 1, and we replace the data
+        with the one from the most recent successful attempt.
 
         :param guid: The guid.
         :param data: The data.
