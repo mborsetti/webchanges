@@ -3,7 +3,7 @@
 
 # List of hooks at https://pre-commit.com/hooks.html
 
-# Prefer using local configurations so they don't have to be constantly auto-updated (slow).
+# Prefer using local configurations as they don't have to be constantly auto-updated (slow).
 # Local configuration follows the repo's .pre-commit-hooks.yaml
 
 # Requires the pre-commit package manager to be installed: pip install pre-commit

@@ -70,7 +70,7 @@ packages, as below) before creating a pull request, starting from the project's 
    pip install -U tox
    tox --parallel
 
-Alternatively, you can manually run the following commands
+Alternatively, you can manually run the following commands:
 
 .. code-block:: bash
 
@@ -86,3 +86,12 @@ Testing documentation
 ~~~~~~~~~~~~~~~~~~~~~
 For documentation, build it locally using ``$ make html`` (Linux) or ``make_html.bat`` (Windows) from within the docs
 directory and monitor for errors.
+
+
+Unreleased version
+------------------
+To install the unreleased version, please run:
+
+.. code-block:: bash
+
+   pip install https://github.com/mborsetti/webchanges/archive/unreleased.tar.gz

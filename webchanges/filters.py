@@ -1073,7 +1073,8 @@ class Sha1SumFilter(FilterBase):
         """
         if isinstance(data, str):
             data = data.encode(errors='ignore')
-        return hashlib.sha1(data, usedforsecurity=False).hexdigest()
+        # Python 3.9: insert usedforsecurity=False argument in sha1() and remove nosec
+        return hashlib.sha1(data).hexdigest()  # nosec B324: Use of weak MD4, MD5, or SHA1 hash for security.
 
 
 class HexDumpFilter(FilterBase):
