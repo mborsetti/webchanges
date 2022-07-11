@@ -17,7 +17,7 @@ Changed
 
 Fixed
 -----
-* Attempt to fix ``Unicode strings with encoding declaration are not supported.`` error in the ``xpath`` filter using
+* Fixed ``Unicode strings with encoding declaration are not supported.`` error in the ``xpath`` filter using
   ``method: xml`` under certain conditions (MacOS only). Reported by `jprokos <https://github.com/jprokos>`__ in `#42
   <https://github.com/mborsetti/webchanges/issues/42>`__.
 

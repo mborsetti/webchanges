@@ -31,7 +31,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.10.3rc0
+Version 3.10.3rc1
 ===================
 Unreleased
 
@@ -54,7 +54,7 @@ Changed
 
 Fixed
 -----
-* Attempt to fix ``Unicode strings with encoding declaration are not supported.`` error in the ``xpath`` filter using
+* Fixed ``Unicode strings with encoding declaration are not supported.`` error in the ``xpath`` filter using
   ``method: xml`` under certain conditions (MacOS only). Reported by `jprokos <https://github.com/jprokos>`__ in `#42
   <https://github.com/mborsetti/webchanges/issues/42>`__.
 

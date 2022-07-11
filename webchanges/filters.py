@@ -1109,10 +1109,8 @@ class LxmlParser:
 
     expression: str
     method: str
-    exclude: Optional[str]
     namespaces: Optional[Dict[str, str]]
     skip: int
-    maxitems: int
 
     def __init__(
         self: Union['LxmlParser', 'CSSFilter', 'XPathFilter'],
@@ -1143,8 +1141,7 @@ class LxmlParser:
                 f"The '{filter_kind}' filter's namespace prefixes are only supported with 'method: xml'. "
                 f'({job.get_indexed_location()})'
             )
-        # for the below, see https://lxml.de/FAQ.html#why-can-t-lxml-parse-my-xml-from-unicode-strings
-        self.parser = etree.HTMLParser() if self.method == 'html' else etree.XMLParser()
+        self.parser = etree.HTMLParser() if self.method == 'html' else etree.XMLParser()  # etree._FeedParser
         self.data = ''
 
     def feed(self, data: str) -> None:
@@ -1220,11 +1217,20 @@ class LxmlParser:
     def _get_filtered_elements(self) -> List[Union[etree.Element, str]]:
         if self.method == 'xml' and isinstance(self.data, str):
             # see https://lxml.de/FAQ.html#why-can-t-lxml-parse-my-xml-from-unicode-strings
-            root = etree.fromstring(  # nosec B320: use defusedxml TODO
-                self.data.encode(errors='xmlcharrefreplace'), self.parser
-            )
+            data: Union[str, bytes] = self.data.encode(errors='xmlcharrefreplace')
+        elif self.method == 'html' and self.data.startswith('<?xml'):
+            # handle legacy https://stackoverflow.com/questions/37592045/
+            data = self.data.split('>', maxsplit=1)[1]
         else:
-            root = etree.fromstring(self.data, self.parser)  # nosec B320: use defusedxml TODO
+            data = self.data
+        try:
+            root = etree.fromstring(data, self.parser)  # nosec B320: use defusedxml TODO
+        except ValueError as e:
+            args = (
+                f"Filter '{self.filter_kind}' encountered the following error when parsing the data. Check that "
+                f"'method: {self.method}' is the correct one.\n    {type(e).__name__}: {e.args[0]}"
+            )
+            raise RuntimeError(args) from None
         if root is None:
             return []
         selected_elems: Optional[List[etree.Element]] = None
