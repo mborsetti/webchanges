@@ -1073,7 +1073,7 @@ class Sha1SumFilter(FilterBase):
         """
         if isinstance(data, str):
             data = data.encode(errors='ignore')
-        return hashlib.sha1(data).hexdigest()  # noqa: DUO130 insecure use of "hashlib" module  # nosec: B303
+        return hashlib.sha1(data, usedforsecurity=False).hexdigest()
 
 
 class HexDumpFilter(FilterBase):
@@ -1142,7 +1142,8 @@ class LxmlParser:
                 f"The '{filter_kind}' filter's namespace prefixes are only supported with 'method: xml'. "
                 f'({job.get_indexed_location()})'
             )
-        self.parser = (etree.HTMLParser if self.method == 'html' else etree.XMLParser)()
+        # for the below, see https://lxml.de/FAQ.html#why-can-t-lxml-parse-my-xml-from-unicode-strings
+        self.parser = etree.HTMLParser() if self.method == 'html' else etree.XMLParser()
         self.data = ''
 
     def feed(self, data: str) -> None:
@@ -1216,15 +1217,13 @@ class LxmlParser:
             return True
 
     def _get_filtered_elements(self) -> List[Union[etree.Element, str]]:
-        try:
-            root = etree.fromstring(self.data, self.parser)  # bandit B320: use defusedxml TODO
-        except ValueError:
-            # Strip XML declaration, for example: '<?xml version="1.0" encoding="utf-8"?>'
-            # for https://heronebag.com/blog/index.xml, an error happens, as we get a
-            # a (Unicode) string, but the XML contains its own "encoding" declaration
-            self.data = re.sub(r'^<[?]xml[^>]*[?]>', '', self.data)
-            # Retry parsing with XML declaration removed (Fixes #281)
-            root = etree.fromstring(self.data, self.parser)  # bandit B320: use defusedxml TODO
+        if self.method == 'xml' and isinstance(self.data, str):
+            # see https://lxml.de/FAQ.html#why-can-t-lxml-parse-my-xml-from-unicode-strings
+            root = etree.fromstring(  # nosec B320: use defusedxml TODO
+                self.data.encode(errors='xmlcharrefreplace'), self.parser
+            )
+        else:
+            root = etree.fromstring(self.data, self.parser)  # nosec B320: use defusedxml TODO
         if root is None:
             return []
         selected_elems: Optional[List[etree.Element]] = None
@@ -1325,7 +1324,7 @@ class ReSubFilter(FilterBase):
 
     __default_subfilter__ = 'pattern'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> Union[str, bytes]:  # type: ignore[override]
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -1454,7 +1453,7 @@ def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str
         shell = True
 
     try:
-        return subprocess.run(
+        return subprocess.run(  # nosec: B602
             command,
             input=data,
             capture_output=True,
@@ -1468,7 +1467,7 @@ def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str
         raise e
     except FileNotFoundError as e:
         logger.error(f"The '{f_cls.__kind__}' filter returned error ({f_cls.job.get_indexed_location()}):\n{e}")
-        raise FileNotFoundError(e, f'with command {command}')
+        raise FileNotFoundError(e, f'with command {command}') from None
 
 
 class ExecuteFilter(FilterBase):

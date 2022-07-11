@@ -1,4 +1,4 @@
-"""Handles all storage: job files, config files, hooks file, and cache database engines."""
+"""Handles all storage: jobs files, config files, hooks file, and cache database engines."""
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import email.utils
 import inspect
+import io
 import logging
 import os
 import shutil
@@ -401,8 +402,6 @@ DEFAULT_CONFIG: Config = {
 class BaseStorage(ABC):
     """Base class for storage."""
 
-    filename: Path
-
 
 class BaseFileStorage(BaseStorage, ABC):
     """Base class for file storage."""
@@ -466,10 +465,16 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         """
         # Similar code to UrlwatchCommand.edit_hooks()
         # Python 3.9: file_edit = self.filename.with_stem(self.filename.stem + '_edit')
-        file_edit = self.filename.parent.joinpath(self.filename.stem + '_edit' + ''.join(self.filename.suffixes))
+        if isinstance(self.filename, list):
+            if len(self.filename) > 1:
+                raise ValueError(f'Only one jobs file can be specified for editing; found {len(self.filename)}.')
+            filename = self.filename[0]
+        else:
+            filename = self.filename
+        file_edit = filename.parent.joinpath(filename.stem + '_edit' + ''.join(filename.suffixes))
 
-        if self.filename.is_file():
-            shutil.copy(self.filename, file_edit)
+        if filename.is_file():
+            shutil.copy(filename, file_edit)
         # elif example_file is not None and Path(example_file).is_file():
         #     shutil.copy(example_file, file_edit, follow_symlinks=False)
 
@@ -489,7 +494,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
                 print(e)
                 print('======')
                 print('')
-                print(f'The file {self.filename} was NOT updated.')
+                print(f'The file {filename} was NOT updated.')
                 user_input = input('Do you want to retry the same edit? (Y/n)')
                 if not user_input or user_input.lower()[0] == 'y':
                     continue
@@ -497,14 +502,14 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
                 print('No changes have been saved.')
                 return 1
 
-        if self.filename.is_symlink():
-            self.filename.write_text(file_edit.read_text())
+        if filename.is_symlink():
+            filename.write_text(file_edit.read_text())
         else:
-            file_edit.replace(self.filename)
+            file_edit.replace(filename)
         # Python 3.8: replace with file_edit.unlink(missing_ok=True)
         if file_edit.is_file():
             file_edit.unlink()
-        print('Saved edits in', self.filename)
+        print('Saved edits in', filename)
         return 0
 
     @classmethod
@@ -520,12 +525,14 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
 class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
     """Class for jobs textual files storage."""
 
-    def __init__(self, filename: Path) -> None:
+    filename: List[Path]  # type: ignore[assignment]
+
+    def __init__(self, filename: List[Path]) -> None:  # type: ignore[arg-type]
         """
 
-        :param filename: The filename of the jobs file.
+        :param filename: The filenames of the jobs file.
         """
-        super().__init__(filename)
+        super().__init__(filename)  # type: ignore[arg-type]
         self.filename = filename
 
     def load_secure(self) -> List[JobBase]:
@@ -554,7 +561,9 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
 
             return False
 
-        shelljob_errors = file_ownership_checks(self.filename)
+        shelljob_errors = []
+        for file in self.filename:
+            shelljob_errors.extend(file_ownership_checks(file))
         removed_jobs = (job for job in jobs if is_shell_job(job))
         if shelljob_errors and any(removed_jobs):
             print(
@@ -575,7 +584,7 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
     def parse(cls, filename: Path) -> Any:
         """Return contents of YAML file if it exists
 
-        :param args: Specified by the subclass.
+        :param filename: The filename Path.
         :return: Specified by the subclass.
         """
         if filename is not None and filename.is_file():
@@ -751,7 +760,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
     """Class for jobs file (is a YAML textual file)."""
 
     @classmethod
-    def _parse(cls, fp: TextIO) -> List[JobBase]:
+    def _parse(cls, fp: TextIO, filenames: List[Path]) -> List[JobBase]:
         """Parse the contents of a jobs YAML file.
 
         :param fp: The text stream to parse.
@@ -761,11 +770,25 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         """
         jobs = []
         jobs_by_guid = defaultdict(list)
-        for i, job_data in enumerate((job for job in yaml.safe_load_all(fp) if job)):
-            job_data['index_number'] = i + 1
-            job = JobBase.unserialize(job_data)
-            jobs.append(job)
-            jobs_by_guid[job.get_guid()].append(job)
+        try:
+            for i, job_data in enumerate((job for job in yaml.safe_load_all(fp) if job)):
+                job_data['index_number'] = i + 1
+                job = JobBase.unserialize(job_data, filenames)
+                jobs.append(job)
+                jobs_by_guid[job.get_guid()].append(job)
+        except yaml.scanner.ScannerError as e:
+            if len(filenames) > 1:
+                jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
+            elif len(filenames) == 1:
+                jobs_files = [f'in jobs file {filenames[0]}:']
+            else:
+                jobs_files = []
+            raise ValueError(
+                '\n   '.join(
+                    [f"YAML {e.args[2].replace('here', '')}in line {e.args[3].line +1 }, column {e.args[3].column + 1}"]
+                    + jobs_files
+                )
+            ) from None
 
         conflicting_jobs = []
         for guid, guid_jobs in jobs_by_guid.items():
@@ -773,43 +796,54 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 conflicting_jobs.append(guid_jobs[0].get_location())
 
         if conflicting_jobs:
+            if len(filenames) > 1:
+                jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
+            elif len(filenames) == 1:
+                jobs_files = [f'in jobs file {filenames[0]}:']
+            else:
+                jobs_files = []
             raise ValueError(
                 '\n   '.join(
                     ['Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):']
-                    + conflicting_jobs
+                    + [f'• {job}' for job in conflicting_jobs]
+                    + jobs_files
                 )
-            )
+            ) from None
 
         return jobs
 
     @classmethod
     def parse(cls, filename: Path) -> List[JobBase]:
-        """Parse the contents of the job YAML file and return a list of jobs.
+        """Parse the contents of a jobs YAML file and return a list of jobs.
 
-        :param args: The filename.
+        :param filename: The filename Path.
         :return: A list of JobBase objects.
         """
         if filename is not None and filename.is_file():
             with filename.open() as fp:
-                return cls._parse(fp)
+                return cls._parse(fp, [filename])
         return []
 
     def load(self, *args: Any) -> List[JobBase]:
-        """Parse the contents of the job YAML file and return a list of jobs.
+        """Parse the contents of the jobs YAML file(s) and return a list of jobs.
 
         :return: A list of JobBase objects.
         """
-        with self.filename.open() as fp:
-            return self._parse(fp)
+        if len(self.filename) == 1:
+            with self.filename[0].open() as fp:
+                return self._parse(fp, self.filename)
+        else:
+            fp = io.StringIO('\n---\n'.join(f.read_text(encoding='utf-8-sig') for f in self.filename if f.is_file()))
+            return self._parse(fp, self.filename)
 
     def save(self, jobs: Iterable[JobBase]) -> None:  # type: ignore[override]
         """Save jobs to the job YAML file.
 
         :param jobs: An iterable of JobBase objects to be written.
         """
-        print(f'Saving updated list to {self.filename}')
+        print(f'Saving updated list to {self.filename[0]}')
 
-        with self.filename.open('w') as fp:
+        with self.filename[0].open('w') as fp:
             yaml.safe_dump_all(
                 [job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False, allow_unicode=True
             )
@@ -898,7 +932,7 @@ class CacheStorage(BaseFileStorage, ABC):
         :param known_guids: The guids to keep.
         """
         for guid in set(self.get_guids()) - set(known_guids):
-            print(f'Deleting: {guid} (no longer being tracked)')
+            print(f'Deleting job {guid} (no longer being tracked)')
             self.delete(guid)
         self.clean_cache(known_guids)
 

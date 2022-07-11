@@ -9,6 +9,18 @@ Command line arguments
 
 .. code-block::
 
+   usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE] [--cache FILE] [--list]
+                 [--errors] [--test [JOB]] [--no-headless] [--test-diff JOB] [--dump-history JOB]
+                 [--test-reporter REPORTER] [--smtp-login] [--telegram-chats] [--xmpp-login] [--edit]
+                 [--edit-config] [--edit-hooks] [--gc-cache] [--clean-cache]
+                 [--rollback-cache TIMESTAMP] [--delete-snapshot JOB]
+                 [--database-engine {sqlite3,redis,minidb,textfiles}] [--max-snapshots NUM_SNAPSHOTS]
+                 [--check-new] [--install-chrome] [--features] [--add JOB] [--delete JOB]
+                 [JOB ...]
+
+   Checks web content to detect any changes since the prior run. If any are found, it shows what changed ('diff') and/or
+   sends it via e-mail and/or other supported services. Can check the output of local commands as well.
+
    positional arguments:
      JOB                   job(s) to run (by index as per --list) (default: run all jobs)
 
@@ -19,7 +31,7 @@ Command line arguments
 
    override file defaults:
      --jobs FILE, --urls FILE
-                           read job list (URLs) from FILE
+                           read job list (URLs) from FILE or files matching a glob pattern
      --config FILE         read configuration from FILE
      --hooks FILE          use FILE as imported hooks.py module
      --cache FILE          use FILE as cache (snapshots database), alternatively a redis URI
@@ -29,16 +41,12 @@ Command line arguments
      --errors              list jobs with errors or no data captured
      --test [JOB], --test-filter [JOB]
                            test a job (by index or URL/command) and show filtered output; if no JOB,
-                           check config and job files
+                           check syntax of config and jobs file(s)
      --no-headless         turn off browser headless mode (for jobs using a browser)
      --test-diff JOB, --test-diff-filter JOB
                            test and show diff using existing saved snapshots of a job (by index or
                            URL/command)
      --dump-history JOB    print all saved snapshot history for a job (by index or URL/command)
-
-   backward compatibility (WARNING: all remarks are deleted from jobs file; use --edit instead):
-     --add JOB             add a job (key1=value1,key2=value2,...) [use --edit instead]
-     --delete JOB          delete a job (by index or URL/command) [use --edit instead]
 
    reporters:
      --test-reporter REPORTER
@@ -67,9 +75,13 @@ Command line arguments
                            sqlite3 only: maximum number of snapshots to retain in database (default: 4)
 
    miscellaneous:
-     --check-new           check if new release is available
+     --check-new           check if a new release is available
      --install-chrome      install or update Google Chrome browser (for jobs using a browser)
      --features            list supported job types, filters and reporters (including those loaded by hooks)
+
+   backward compatibility (WARNING: all remarks are deleted from jobs file; use --edit instead):
+     --add JOB             add a job (key1=value1,key2=value2,...) [use --edit instead]
+     --delete JOB          delete a job (by index or URL/command) [use --edit instead]
 
 .. _job_subset:
 
@@ -210,12 +222,19 @@ Compact the database
 You can compact the snapshots database by running :program:`webchanges` with either the ``--gc-cache`` or
 ``--clean-cache`` command line argument.
 
-Running with ``--gc-cache`` will purge snapshots of jobs that are no longer in the jobs
-file **and**, for those in the jobs file, older snapshots, as well as rebuilding (and therefore defragmenting) the
-database using VACUUM (see `here <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ for more details).
+Running with ``--gc-cache`` will purge all snapshots of jobs that are no longer in the jobs file **and**, for those in
+the jobs file, older snapshots other than the most recent one for each job. It will also rebuild (and therefore
+defragment) the database using VACUUM (see `here <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ for more
+details).
 
-Running with ``--clean-cache`` will remove all older snapshots (without checking the jobs file) and rebuild (and
-therefore defragment) the database using `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__.
+.. tip
+   If you use multiple jobs files, use ``--cg-cache`` in conjunction with a glob ``--jobs`` command, e.g. ``webchanges
+   --jobs "jobs*.yaml" --gc-cache``.  To ensure that the glob is correct, run e.g. ``webchanges --jobs "jobs*.yaml"
+   --list``.
+
+Running with ``--clean-cache`` will remove all older snapshots keeping the most recent one for each job (whether it is
+still present in the jobs file or not) and rebuild (and therefore defragment) the database using `VACUUM
+<https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__.
 
 
 

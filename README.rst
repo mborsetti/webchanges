@@ -156,7 +156,7 @@ Examples:
     :target: https://pypi.org/project/webchanges/
     :alt: Kit format
 .. |downloads| image:: https://pepy.tech/badge/requests
-    :target: https://pepy.tech/badge/webchanges
+    :target: https://pepy.tech/project/webchanges
     :alt: PyPI downloads
 .. |license| image:: https://img.shields.io/pypi/l/webchanges.svg
     :target: https://pypi.org/project/webchanges/

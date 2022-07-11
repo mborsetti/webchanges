@@ -63,47 +63,47 @@ class Urlwatch:
         files if one not found.
         """
         if (
-            not (self.urlwatch_config.config and self.urlwatch_config.jobs)
+            not (self.urlwatch_config.config_file and self.urlwatch_config.jobs_files)
             and not self.urlwatch_config.config_path.is_dir()
         ):
             self.urlwatch_config.config_path.mkdir(parents=True)
-            if not self.urlwatch_config.config.is_file():
-                self.config_storage.write_default_config(self.urlwatch_config.config)
+            if not self.urlwatch_config.config_file.is_file():
+                self.config_storage.write_default_config(self.urlwatch_config.config_file)
                 print(
-                    f'A default config has been written to {self.urlwatch_config.config}.'
+                    f'A default config has been written to {self.urlwatch_config.config_file}.'
                     f'Use "{self.urlwatch_config.project_name} --edit-config" to customize it.'
                 )
 
     def load_hooks(self) -> None:
         """Load hooks file."""
-        if not self.urlwatch_config.hooks.is_file():
+        if not self.urlwatch_config.hooks_file.is_file():
             warnings.warn(
-                f'Hooks file not imported because {self.urlwatch_config.hooks} is not a file',
+                f'Hooks file not imported because {self.urlwatch_config.hooks_file} is not a file',
                 ImportWarning,
             )
             return
 
-        hooks_file_errors = file_ownership_checks(self.urlwatch_config.hooks)
+        hooks_file_errors = file_ownership_checks(self.urlwatch_config.hooks_file)
         if hooks_file_errors:
             warnings.warn(
-                f'Hooks file {self.urlwatch_config.hooks} not imported because '
+                f'Hooks file {self.urlwatch_config.hooks_file} not imported because '
                 f" {' and '.join(hooks_file_errors)}.\n"
                 f'(see {__docs_url__}en/stable/hooks.html#important-note-for-hooks-file)',
                 ImportWarning,
             )
         else:
-            import_module_from_source('hooks', self.urlwatch_config.hooks)
-            logger.info(f'Imported hooks module from {self.urlwatch_config.hooks}')
+            import_module_from_source('hooks', self.urlwatch_config.hooks_file)
+            logger.info(f'Imported hooks module from {self.urlwatch_config.hooks_file}')
 
     def load_jobs(self) -> None:
-        """Load jobs from the file into self.jobs.
+        """Load jobs from the file(s) into self.jobs.
 
         :raises SystemExit: If job is not found, setting argument to 1.
         """
-        if self.urlwatch_config.jobs.is_file():
+        if any(f.is_file() for f in self.urlwatch_config.jobs_files):
             jobs = self.jobs_storage.load_secure()
         else:
-            print(f'Jobs file not found: {self.urlwatch_config.jobs}')
+            print(f'Jobs file not found: {self.urlwatch_config.jobs_files}')
             raise SystemExit(1)
 
         self.jobs = jobs

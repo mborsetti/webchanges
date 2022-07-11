@@ -147,7 +147,7 @@ def test_kind() -> None:
     with pytest.raises(ValueError) as e:
         JobBase.unserialize({'kind': 'anykind'})
     assert e.value.args[0] == (
-        "Error in job file: Job directive 'kind: anykind' does not match any known job kinds:\nkind: anykind\n"
+        "Error in jobs file: Job directive 'kind: anykind' does not match any known job kinds:\nkind: anykind\n"
     )
 
 
@@ -303,7 +303,7 @@ def test_stress_use_browser(event_loop) -> None:
     hooks_file = Path('')
 
     config_storage = YamlConfigStorage(config_file)
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
 
     if not os.getenv('GITHUB_ACTIONS'):
         from webchanges.cli import setup_logger
@@ -329,7 +329,7 @@ def test_no_required_directive() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        f"Error in job file: Job directive has no value or doesn't match a job type (check for errors/typos/escaping):"
+        f"Error in jobs file: Job directive has no value or doesn't match a job type (check for errors/typos/escaping):"
         f'\n{yaml.safe_dump(job_data)}'
     )
 
@@ -339,7 +339,7 @@ def test_no_required_directive_plural() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        f"Error in job file: Job directives (with values) don't match a job type (check for errors/typos/escaping):\n"
+        f"Error in jobs file: Job directives (with values) don't match a job type (check for errors/typos/escaping):\n"
         f'{yaml.safe_dump(job_data)}'
     )
 
@@ -349,8 +349,14 @@ def test_invalid_directive() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        f"Error in job file: Job directive 'directive_with_typo' is unrecognized (check for errors/typos/escaping):\n"
-        f'{yaml.safe_dump(job_data)}'
+        "Directive 'directive_with_typo' is unrecognized in the following job\n"
+        '   \n'
+        '   ---\n'
+        '   directive_with_typo: this directive does not exist\n'
+        '   url: https://www.example.com\n'
+        '   ---\n'
+        '\n'
+        '   Please check for typos.'
     )
 
 
@@ -359,7 +365,7 @@ def test_navigate_directive() -> None:
     with pytest.deprecated_call() as pytest_wrapped_warning:
         JobBase.unserialize(job_data.copy())
     assert str(pytest_wrapped_warning.list[0].message) == (
-        f"Error in job file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true':\n"
+        f"Error in jobs file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true':\n"
         f'{yaml.safe_dump(job_data)}'
     )
 

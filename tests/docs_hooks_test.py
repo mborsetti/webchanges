@@ -70,7 +70,7 @@ def load_hooks_testdata() -> Dict[str, Any]:
 
 def load_hooks_jobs() -> List[JobBase]:
     jobs_file = data_path.joinpath('docs_hooks_jobs.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     return jobs_storage.load()
 
 

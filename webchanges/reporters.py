@@ -124,7 +124,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         config: ConfigReportersList,
         job_states: List[JobState],
         duration: float,
-        jobs_file: Optional[Path] = None,
+        jobs_files: Optional[List[Path]] = None,
     ) -> None:
         """
 
@@ -132,13 +132,17 @@ class ReporterBase(metaclass=TrackSubClasses):
         :param config: The configuration of the run (typically from config.yaml).
         :param job_states: The list of JobState objects containing the information about the jobs that were retrieved.
         :param duration: The duration of the retrieval of jobs.
-        :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
+        :param jobs_files: The list of paths to the files containing the list of jobs (optional, used in footers).
         """
         self.report = report
         self.config = config
         self.job_states = job_states
         self.duration = duration
-        self.jobs_file = jobs_file
+        self.jobs_files = jobs_files
+        if jobs_files is None:
+            self.footer_job_file: Optional[str] = None
+        else:
+            self.footer_job_file = ', '.join(f.stem for f in jobs_files if f.stem != 'jobs')
 
     def convert(self, othercls: Type[ReporterBase]) -> ReporterBase:
         """Convert self to a different ReporterBase class (object typecasting).
@@ -153,7 +157,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         else:
             config = {}  # type: ignore[assignment]
 
-        return othercls(self.report, config, self.job_states, self.duration, self.jobs_file)
+        return othercls(self.report, config, self.job_states, self.duration, self.jobs_files)
 
     @classmethod
     def reporter_documentation(cls) -> str:
@@ -173,7 +177,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         report: Report,
         job_states: List[JobState],
         duration: float,
-        jobs_file: Optional[Path] = None,
+        jobs_files: Optional[List[Path]] = None,
         check_enabled: Optional[bool] = True,
     ) -> None:
         """Run a single named report.
@@ -182,14 +186,14 @@ class ReporterBase(metaclass=TrackSubClasses):
         :param report: The Report object with the information of all the reports.
         :param job_states: The list of JobState objects containing the information about each job retrieved.
         :param duration: The duration of the retrieval of jobs.
-        :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
+        :param jobs_files: The path(s) to the file(s) containing the list of jobs (optional, used in footers).
         :param check_enabled: Whether to check if the report is marked "enabled" in the configuration (used for
            testing)
         """
         subclass = cls.__subclasses__[name]
         cfg = report.config['report'][name]  # type: ignore[literal-required]
         if cfg['enabled'] or not check_enabled:
-            subclass(report, cfg, job_states, duration, jobs_file).submit()
+            subclass(report, cfg, job_states, duration, jobs_files).submit()
         else:
             raise ValueError(f'Reporter not enabled: {name}')
 
@@ -199,14 +203,14 @@ class ReporterBase(metaclass=TrackSubClasses):
         report: Report,
         job_states: List[JobState],
         duration: float,
-        jobs_file: Optional[Path] = None,
+        jobs_files: Optional[List[Path]] = None,
     ) -> None:
         """Run all (enabled) reports.
 
         :param report: The Report object with the information of all the reports.
         :param job_states: The list of JobState objects containing the information about about each job retrieved.
         :param duration: The duration of the retrieval of jobs.
-        :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
+        :param jobs_files: The path(s) to the file(s) containing the list of jobs (optional, used in footers).
         """
 
         any_enabled = False
@@ -217,7 +221,7 @@ class ReporterBase(metaclass=TrackSubClasses):
             if cfg['enabled']:
                 any_enabled = True
                 logger.info(f'Submitting with {name} ({subclass})')
-                subclass(report, cfg, job_states, duration, jobs_file).submit()
+                subclass(report, cfg, job_states, duration, jobs_files).submit()
 
         if not any_enabled:
             logger.warning('No reporters enabled.')
@@ -285,12 +289,7 @@ class HtmlReporter(ReporterBase):
             f'<div style="font-style:italic">\n'
             f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
             f'{dur_text(self.duration)} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
-            f'{html.escape(__version__)}'
-            + (
-                f' ({self.jobs_file.stem}).<br>\n'
-                if self.jobs_file is not None and self.jobs_file.stem != 'jobs'
-                else '.<br>\n'
-            )
+            f'{html.escape(__version__)}' + (f' ({self.footer_job_file}).<br>\n' if self.footer_job_file else '.<br>\n')
         )
         if (
             self.report.new_release_future is not None
@@ -591,7 +590,7 @@ class TextReporter(ReporterBase):
             yield (
                 f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
                 f'{dur_text(self.duration)} with {__project_name__} {__version__}'
-                + (f' ({self.jobs_file.stem}).\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '.\n')
+                + (f' ({self.footer_job_file}).<br>\n' if self.footer_job_file else '.<br>\n')
             )
             if (
                 self.report.new_release_future is not None
@@ -690,7 +689,7 @@ class MarkdownReporter(ReporterBase):
                 f"--\n_Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
                 f'{dur_text(self.duration)} with {__project_name__} {__version__}'
             )
-            footer += f' ({self.jobs_file.stem})_.\n' if self.jobs_file and self.jobs_file.stem != 'jobs' else '_.\n'
+            footer += f' ({self.footer_job_file})_.\n' if self.footer_job_file else '_.\n'
 
             if (
                 self.report.new_release_future is not None
@@ -994,7 +993,7 @@ class EMailReporter(TextReporter):
             raise ValueError(f"Unknown email reporter method: {self.config['method']}")
 
         if self.config['html']:
-            html_reporter = HtmlReporter(self.report, self.config, self.job_states, self.duration, self.jobs_file)
+            html_reporter = HtmlReporter(self.report, self.config, self.job_states, self.duration, self.jobs_files)
             body_html = '\n'.join(html_reporter.submit())
             msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html)
         else:
@@ -1167,7 +1166,7 @@ class MailgunReporter(TextReporter):
         except ValueError:
             raise RuntimeError(
                 f'Failed to parse Mailgun response. HTTP status code: {result.status_code}, content: {result.text}'
-            )
+            ) from None
         return None
 
 
@@ -1427,7 +1426,7 @@ class WebhookReporter(TextReporter):
 
         if self.config['markdown']:
             markdown_reporter = MarkdownReporter(
-                self.report, self.config, self.job_states, self.duration, self.jobs_file
+                self.report, self.config, self.job_states, self.duration, self.jobs_files
             )
             text = '\n'.join(markdown_reporter.submit())
         else:
@@ -1552,7 +1551,7 @@ class BrowserReporter(HtmlReporter):
             logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
-        html_reporter = HtmlReporter(self.report, self.config, self.job_states, self.duration, self.jobs_file)
+        html_reporter = HtmlReporter(self.report, self.config, self.job_states, self.duration, self.jobs_files)
         body_html = '\n'.join(html_reporter.submit())
 
         # recheck after running as diff_filters can modify job_states.verb

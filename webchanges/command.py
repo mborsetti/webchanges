@@ -58,11 +58,11 @@ class UrlwatchCommand:
         """
         # Similar code to BaseTextualFileStorage.edit()
         # Python 3.9: hooks_edit = self.urlwatch_config.hooks.with_stem(self.urlwatch_config.hooks.stem + '_edit')
-        hooks_edit = self.urlwatch_config.hooks.parent.joinpath(
-            self.urlwatch_config.hooks.stem + '_edit' + ''.join(self.urlwatch_config.hooks.suffixes)
+        hooks_edit = self.urlwatch_config.hooks_file.parent.joinpath(
+            self.urlwatch_config.hooks_file.stem + '_edit' + ''.join(self.urlwatch_config.hooks_file.suffixes)
         )
-        if self.urlwatch_config.hooks.exists():
-            shutil.copy(self.urlwatch_config.hooks, hooks_edit)
+        if self.urlwatch_config.hooks_file.exists():
+            shutil.copy(self.urlwatch_config.hooks_file, hooks_edit)
         # elif self.urlwatch_config.hooks_py_example is not None and os.path.exists(
         #         self.urlwatch_config.hooks_py_example):
         #     shutil.copy(self.urlwatch_config.hooks_py_example, hooks_edit, follow_symlinks=False)
@@ -80,7 +80,7 @@ class UrlwatchCommand:
                 print(e)
                 print('======')
                 print('')
-                print(f'The file {self.urlwatch_config.hooks} was NOT updated.')
+                print(f'The file {self.urlwatch_config.hooks_file} was NOT updated.')
                 user_input = input('Do you want to retry the same edit? (Y/n)')
                 if not user_input or user_input.lower()[0] == 'y':
                     continue
@@ -88,14 +88,14 @@ class UrlwatchCommand:
                 print('No changes have been saved.')
                 return 1
 
-        if self.urlwatch_config.hooks.is_symlink():
-            self.urlwatch_config.hooks.write_text(hooks_edit.read_text())
+        if self.urlwatch_config.hooks_file.is_symlink():
+            self.urlwatch_config.hooks_file.write_text(hooks_edit.read_text())
         else:
-            hooks_edit.replace(self.urlwatch_config.hooks)
+            hooks_edit.replace(self.urlwatch_config.hooks_file)
         # python 3.8: replace with hooks_edit.unlink(missing_ok=True)
         if hooks_edit.is_file():
             hooks_edit.unlink()
-        print(f'Saved edits in {self.urlwatch_config.hooks}')
+        print(f'Saved edits in {self.urlwatch_config.hooks_file}')
         return 0
 
     @staticmethod
@@ -135,6 +135,9 @@ class UrlwatchCommand:
                     print(f'{job.index_number:3}: {pretty_name} ({location})')
                 else:
                     print(f'{job.index_number:3}: {pretty_name}')
+        print('Jobs file(s):')
+        for file in self.urlwatch_config.jobs_files:
+            print(str(file))
 
     def _find_job(self, query: Union[str, int]) -> Optional[JobBase]:
         try:
@@ -174,7 +177,7 @@ class UrlwatchCommand:
     def test_job(self, job_id: Union[bool, str, int]) -> None:
         """
         Tests the running of a single job outputting the filtered text to stdout or whatever reporter is selected with
-        --test-reporter.  If job_id is True, don't run any jobs as it's a test of loading config and job files for
+        --test-reporter.  If job_id is True, don't run any jobs as it's a test of loading config and jobs files for
         syntax.
 
         :param job_id: The job_id or True.
@@ -184,7 +187,11 @@ class UrlwatchCommand:
         :raises Exception: The Exception of a job when job raises an Exception.
         """
         if job_id is True:
-            print(f'Tested {self.urlwatch_config.config} and {self.urlwatch_config.jobs}.')
+            if len(self.urlwatch_config.jobs_files) == 1:
+                jobs_files = [f'and in jobs file {self.urlwatch_config.jobs_files[0]}.']
+            else:
+                jobs_files = ['and in jobs files:'] + [f'• {file}' for file in self.urlwatch_config.jobs_files]
+            print('\n'.join([f'No syntax errors in config file {self.urlwatch_config.config_file}'] + jobs_files))
             return
 
         job = self._get_job(job_id)
@@ -223,7 +230,7 @@ class UrlwatchCommand:
         :return: 1 if error, 0 if successful.
         """
         report = Report(self.urlwatcher)
-        self.urlwatch_config.jobs = Path('--test-diff')  # for report footer
+        self.urlwatch_config.jobs_files = [Path('--test-diff')]  # for report footer
         job = self._get_job(job_id)
 
         history_data = list(self.urlwatcher.cache_storage.get_history_data(job.get_guid()).items())
@@ -290,11 +297,39 @@ class UrlwatchCommand:
 
     def list_error_jobs(self) -> None:
         start = time.perf_counter()
-        print(
-            f'Jobs, if any, with errors or returning no data after filtering in jobs file\n'
-            f'{self.urlwatch_config.jobs}:\n'
-        )
-        jobs = [job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs]
+        if len(self.urlwatch_config.jobs_files) == 1:
+            jobs_files = [f'in jobs file {self.urlwatch_config.jobs_files[0]}:']
+        else:
+            jobs_files = ['in the concatenation of the jobs files'] + [
+                f'• {file}' for file in self.urlwatch_config.jobs_files
+            ]
+        print('\n'.join(['Jobs with errors or returning no data after filtering (if any)'] + jobs_files))
+
+        # extract subset of jobs to run if joblist CLI was set
+        if self.urlwatcher.urlwatch_config.joblist:
+            for idx in self.urlwatcher.urlwatch_config.joblist:
+                if not (-len(self.urlwatcher.jobs) <= idx <= -1 or 1 <= idx <= len(self.urlwatcher.jobs)):
+                    raise IndexError(f'Job index {idx} out of range (found {len(self.urlwatcher.jobs)} jobs)')
+            self.urlwatcher.urlwatch_config.joblist = [
+                jn if jn > 0 else len(self.urlwatcher.jobs) + jn + 1 for jn in self.urlwatcher.urlwatch_config.joblist
+            ]
+            jobs = [
+                job.with_defaults(self.urlwatcher.config_storage.config)
+                for job in self.urlwatcher.jobs
+                if job.index_number in self.urlwatcher.urlwatch_config.joblist
+            ]
+            logger.debug(
+                f'Processing {len(jobs)} job{"s" if len(jobs) else ""} as specified in command line: # '
+                f'{", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
+            )
+            print(
+                f'Processing {len(jobs)} job{"s" if len(jobs) else ""} as specified in command line: # '
+                f'{", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
+            )
+        else:
+            jobs = [job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs]
+            logger.debug(f'Processing {len(jobs)} job{"s" if len(jobs) else ""}')
+
         for job in jobs:
             # Force re-retrieval of job, as we're testing for errors
             job.ignore_cached = True
@@ -520,7 +555,7 @@ class UrlwatchCommand:
                 )
             )
 
-        report.finish_one(reporter_name, jobs_file=self.urlwatch_config.jobs)
+        report.finish_one(reporter_name, jobs_file=self.urlwatch_config.jobs_files)
 
         return 0
 

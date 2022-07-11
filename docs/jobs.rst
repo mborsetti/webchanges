@@ -129,10 +129,14 @@ you are interested in, add the directive ``use_browser: true`` to the job:
    and time than a simple ``url`` job; use it only for resources where omitting ``use_browser: true`` does not
    give the right results and when you can't find alternate sources (e.g. an API).
 
+.. _rest_api:
+
 .. tip::
-   In many instances you can get the data you want to monitor from a REST API (URL) called by the site during its
-   page loading. Monitor the page load with a browser's Developer's Tools (e.g. `Chrome DevTools
-   <https://developers.google.com/web/tools/chrome-devtools>`__) to see if this is the case.
+   In many instances you can get the data you want to monitor directly from a REST API (URL) called by the site during
+   its page loading. Monitor what happens during the page load with a browser's Developer's Tools (e.g. `Chrome DevTools
+   <https://developers.google.com/web/tools/chrome-devtools>`__ using Ctrl+Shift+I, specifically its `network activity
+   inspection tab <https://developer.chrome.com/docs/devtools/network/>`__) to see if this is the case and get the URL,
+   method, and data for this API which you can then monitor directly without ``use_browser: true``.
 
 .. important::
    * The optional `Playwright <https://playwright.dev/python/>`__ Python package must be installed; run

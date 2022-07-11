@@ -86,11 +86,12 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             # tries is incremented by JobState.process when an exception (including 304) is encountered.
 
             if job_state.exception is not None:
-                # Oops, we have captured an error (which could also be 304)
+                # Oops, we have captured an error (which could also be 304 or a Playwright timeout)
                 if job_state.error_ignored:
                     # We captured an error to ignore
                     logger.info(
-                        f'Job {job_state.job.index_number}: Error while executing job was ignored due to job config'
+                        f'Job {job_state.job.index_number}: Error while executing job was ignored (e.g. due to job '
+                        f'config or browser timing out)'
                     )
                 elif isinstance(job_state.exception, NotModifiedError):
                     # We captured a 304 Not Modified
@@ -150,7 +151,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             raise ImportError(
                 "Python package psutil is not installed; cannot use 'use_browser: true'. Please install "
                 "dependencies with 'pip install webchanges[use_browser]'."
-            )
+            ) from None
         try:
             virt_mem = psutil.virtual_memory().available
             logger.debug(
@@ -176,10 +177,13 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             for job in urlwatcher.jobs
             if job.index_number in urlwatcher.urlwatch_config.joblist
         ]
-        logger.debug(f'Processing {len(jobs)} job as specified (# {urlwatcher.urlwatch_config.joblist})')
+        logger.debug(
+            f'Processing {len(jobs)} job{"s" if len(jobs) else ""} as specified in command line: # '
+            f'{", ".join(str(j) for j in urlwatcher.urlwatch_config.joblist)}'
+        )
     else:
         jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs]
-        logger.debug(f'Processing {len(jobs)} jobs')
+        logger.debug(f'Processing {len(jobs)} job{"s" if len(jobs) else ""}')
 
     #    jobs = insert_delay(jobs)
 

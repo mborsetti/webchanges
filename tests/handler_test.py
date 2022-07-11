@@ -48,10 +48,10 @@ def test_save_load_jobs():
     # because the returned file object cannot be opened again
     fd, name = tempfile.mkstemp()
     name = Path(name)
-    YamlJobsStorage(name).save(jobs)
-    jobs2 = YamlJobsStorage(name).load()
+    YamlJobsStorage([name]).save(jobs)
+    jobs2 = YamlJobsStorage([name]).load()
     os.chmod(name, 0o777)  # nosec: B103 Chmod setting a permissive mask 0o777 on file (name).
-    jobs3 = YamlJobsStorage(name).load_secure()
+    jobs3 = YamlJobsStorage([name]).load_secure()
     os.close(fd)
     os.remove(name)
 
@@ -75,7 +75,7 @@ def test_load_config_yaml():
 def test_load_jobs_yaml():
     jobs_file = data_path.joinpath('jobs.yaml')
     if jobs_file.is_file():
-        assert len(YamlJobsStorage(jobs_file).load_secure()) > 0
+        assert len(YamlJobsStorage([jobs_file]).load_secure()) > 0
     else:
         warnings.warn(f'{jobs_file} not found', UserWarning)
 
@@ -84,10 +84,10 @@ def test_duplicates_in_jobs_yaml():
     jobs_file = data_path.joinpath('jobs-duplicate_url.broken_yaml')
     if jobs_file.is_file():
         with pytest.raises(ValueError) as pytest_wrapped_e:
-            YamlJobsStorage(jobs_file).load_secure()
-        assert str(pytest_wrapped_e.value) == (
+            YamlJobsStorage([jobs_file]).load_secure()
+        assert str(pytest_wrapped_e.value).startswith(
             'Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):'
-            '\n   https://dupe_1\n   https://dupe_2'
+            '\n   • https://dupe_1\n   • https://dupe_2\n   in jobs file '
         )
     else:
         warnings.warn(f'{jobs_file} not found', UserWarning)
@@ -105,7 +105,7 @@ def test_run_watcher_sqlite3():
     jobs_file = data_path.joinpath('jobs.yaml')
 
     config_storage = YamlConfigStorage(config_file)
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     cache_storage = CacheSQLite3Storage(cache_file)
     try:
         urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
@@ -120,7 +120,7 @@ def test_run_watcher_minidb():
     jobs_file = data_path.joinpath('jobs.yaml')
 
     config_storage = YamlConfigStorage(config_file)
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     cache_storage = CacheMiniDBStorage(cache_file)
     try:
         urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
@@ -135,7 +135,7 @@ def prepare_retry_test_sqlite3():
 
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheSQLite3Storage(cache_file)
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
 
     urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
@@ -214,7 +214,7 @@ def prepare_retry_test_minidb():
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheMiniDBStorage(cache_file)
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
 
     urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)

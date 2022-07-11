@@ -16,7 +16,7 @@ import subprocess
 import sys
 import warnings
 from pathlib import Path, PurePath
-from typing import Optional
+from typing import List, Optional
 
 import platformdirs
 
@@ -87,6 +87,9 @@ def setup_logger(verbose: Optional[int] = None) -> None:
         elif verbose == 1:
             log_level = 'INFO'
 
+    if not verbose:
+        sys.tracebacklimit = 0
+
     logging.basicConfig(format='%(asctime)s %(module)s[%(thread)s] %(levelname)s: %(message)s', level=log_level)
     logger.info(f'{__project_name__}: {__version__} {__copyright__}')
     logger.info(
@@ -94,6 +97,38 @@ def setup_logger(verbose: Optional[int] = None) -> None:
         f'{platform.python_build()} {platform.python_compiler()}'
     )
     logger.info(f'System: {platform.platform()}')
+
+
+def locate_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = None) -> List[Path]:
+    """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
+
+    :param filename: The filename.
+    :param default_path: The default directory.
+    :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
+
+    :returns: The filename, either original or one with path where found and/or extension.
+    """
+    search_filenames = [filename]
+
+    # if ext is given, iterate both on raw filename and the filename with ext if different
+    if ext and filename.suffix != ext:
+        search_filenames.append(filename.with_suffix(ext))
+
+    # try as given
+    for file in search_filenames:
+        # https://stackoverflow.com/questions/56311703/globbing-absolute-paths-with-pathlib
+        file_list = list(Path(file.anchor).glob(str(file.relative_to(file.anchor))))
+        if any(f.is_file() for f in file_list):
+            return file_list
+
+        # no directory specified (and not in current one): add default one
+        if not file.is_absolute() and not Path(file).parent == Path.cwd():
+            file_list = list(default_path.glob(str(file)))
+            if any(f.is_file() for f in file_list):
+                return file_list
+
+    # no matches found
+    return [filename]
 
 
 def locate_storage_file(filename: Path, default_path: Path, ext: Optional[str] = None) -> Path:
@@ -131,19 +166,19 @@ def first_run(command_config: CommandConfig) -> None:
 
     :param command_config: the CommandConfig containing the command line arguments selected.
     """
-    if not command_config.config.is_file():
-        command_config.config.parent.mkdir(parents=True, exist_ok=True)
+    if not command_config.config_file.is_file():
+        command_config.config_file.parent.mkdir(parents=True, exist_ok=True)
         from .storage import YamlConfigStorage
 
-        YamlConfigStorage.write_default_config(command_config.config)
-        print(f'Created default config file at {command_config.config}')
+        YamlConfigStorage.write_default_config(command_config.config_file)
+        print(f'Created default config file at {command_config.config_file}')
         if not command_config.edit_config:
             print(f'> Edit it with {__project_name__} --edit-config')
-    if not command_config.jobs.is_file():
-        command_config.jobs.parent.mkdir(parents=True, exist_ok=True)
-        command_config.jobs.write_text(f'# {__project_name__} jobs file. See {__docs_url__}\n')
+    if not any(f.is_file() for f in command_config.jobs_files):
+        command_config.jobs_files[0].parent.mkdir(parents=True, exist_ok=True)
+        command_config.jobs_files[0].write_text(f'# {__project_name__} jobs file. See {__docs_url__}\n')
         command_config.edit = True
-        print(f'Created default jobs file at {command_config.jobs}')
+        print(f'Created default jobs file at {command_config.jobs_files}')
         if not command_config.edit:
             print(f'> Edit it with {__project_name__} --edit')
 
@@ -182,7 +217,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
         try:
             from playwright._impl._driver import compute_driver_executable
         except ImportError:
-            raise ImportError('Python package playwright is not installed; cannot install the Chrome browser')
+            raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
 
         driver_executable = compute_driver_executable()
         env = os.environ.copy()
@@ -267,16 +302,16 @@ def main() -> None:  # pragma: no cover
     )
 
     # Locate config, job and hooks files
-    command_config.config = locate_storage_file(command_config.config, command_config.config_path, '.yaml')
-    command_config.jobs = locate_storage_file(command_config.jobs, command_config.config_path, '.yaml')
-    command_config.hooks = locate_storage_file(command_config.hooks, command_config.config_path, '.py')
+    command_config.config_file = locate_storage_file(command_config.config_file, command_config.config_path, '.yaml')
+    command_config.jobs_files = locate_jobs_files(command_config.jobs_def_file, command_config.config_path, '.yaml')
+    command_config.hooks_file = locate_storage_file(command_config.hooks_file, command_config.config_path, '.py')
 
     # Check for first run
-    if command_config.config == default_config_file and not Path(command_config.config).is_file():
+    if command_config.config_file == default_config_file and not Path(command_config.config_file).is_file():
         first_run(command_config)
 
     # Setup config file API
-    config_storage = YamlConfigStorage(command_config.config)  # storage.py
+    config_storage = YamlConfigStorage(command_config.config_file)  # storage.py
 
     # Setup database API
     if command_config.database_engine == 'sqlite3':
@@ -297,7 +332,7 @@ def main() -> None:  # pragma: no cover
         raise NotImplementedError(f'Database engine {command_config.database_engine} not implemented')
 
     # Setup jobs file API
-    jobs_storage = YamlJobsStorage(command_config.jobs)  # storage.py
+    jobs_storage = YamlJobsStorage(command_config.jobs_files)  # storage.py
 
     # Setup 'urlwatch'
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py

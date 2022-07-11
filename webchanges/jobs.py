@@ -71,7 +71,7 @@ class BrowserResponseError(Exception):
         if self.status_code:
             return (
                 f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
-                f'{response_names[self.status_code]}'
+                f'{response_names[self.status_code]}' + (f' with content "{self.args[0]}"' if self.args[0] else '')
             )
         else:
             return self.args[0]
@@ -211,16 +211,18 @@ class JobBase(metaclass=TrackSubClasses):
         return d
 
     @classmethod
-    def unserialize(cls, data: dict) -> 'JobBase':
+    def unserialize(cls, data: dict, filenames: Optional[List[Path]] = None) -> 'JobBase':
         """Unserialize a dict with job data (e.g. from the YAML jobs file) into a JobBase type object.
 
         :param data: The dict with job data (e.g. from the YAML jobs file).
         :returns: A JobBase type object.
         """
         # Backwards compatibility with 'navigate' directive (deprecated)
+        if filenames is None:
+            filenames = []
         if data.get('navigate') and not data.get('use_browser'):
             warnings.warn(
-                f"Error in job file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: "
+                f"Error in jobs file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: "
                 f"true':\n{yaml.safe_dump(data)}",
                 DeprecationWarning,
             )
@@ -233,9 +235,9 @@ class JobBase(metaclass=TrackSubClasses):
                 job_subclass = cls.__subclasses__[data['kind']]
             except KeyError:
                 raise ValueError(
-                    f"Error in job file: Job directive 'kind: {data['kind']}' does not match any known job kinds:\n"
+                    f"Error in jobs file: Job directive 'kind: {data['kind']}' does not match any known job kinds:\n"
                     f'{yaml.safe_dump(data)}'
-                )
+                ) from None
         else:
             # Auto-detect the job subclass based on required directives.
             matched_subclasses = [
@@ -256,12 +258,12 @@ class JobBase(metaclass=TrackSubClasses):
             else:
                 if len(data) == 1:
                     raise ValueError(
-                        f"Error in job file: Job directive has no value or doesn't match a job type (check for "
+                        f"Error in jobs file: Job directive has no value or doesn't match a job type (check for "
                         f'errors/typos/escaping):\n{yaml.safe_dump(data)}'
                     )
                 else:
                     raise ValueError(
-                        f"Error in job file: Job directives (with values) don't match a job type (check for "
+                        f"Error in jobs file: Job directives (with values) don't match a job type (check for "
                         f'errors/typos/escaping):\n{yaml.safe_dump(data)}'
                     )
 
@@ -273,7 +275,7 @@ class JobBase(metaclass=TrackSubClasses):
                 if k not in job_subclass.__required__:
                     data.pop(k, None)
 
-        return job_subclass.from_dict(data)
+        return job_subclass.from_dict(data, filenames)
 
     def to_dict(self) -> dict:
         """Return all defined Job object directives (required and optional) as a serializable dict.
@@ -288,7 +290,7 @@ class JobBase(metaclass=TrackSubClasses):
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'JobBase':
+    def from_dict(cls, data: dict, filenames: List[Path]) -> 'JobBase':
         """Create a JobBase class from a dict, checking that all keys are recognized (i.e. listed in __required__ or
         __optional__).
 
@@ -297,9 +299,22 @@ class JobBase(metaclass=TrackSubClasses):
         """
         for k in data.keys():
             if k not in (cls.__required__ + cls.__optional__):
+                if len(filenames) > 1:
+                    jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
+                elif len(filenames) == 1:
+                    jobs_files = [f'in jobs file {filenames[0]}:']
+                else:
+                    jobs_files = []
                 raise ValueError(
-                    f"Error in job file: Job directive '{k}' is unrecognized (check for errors/typos/escaping):"
-                    f'\n{yaml.safe_dump(data)}'
+                    '\n   '.join(
+                        [f"Directive '{k}' is unrecognized in the following job"]
+                        + jobs_files
+                        + ['']
+                        + ['---']
+                        + yaml.safe_dump(data).splitlines()
+                        + ['---\n']
+                        + ['Please check for typos.']
+                    )
                 )
         return cls(**{k: v for k, v in list(data.items())})
 
@@ -379,7 +394,7 @@ class JobBase(metaclass=TrackSubClasses):
         :returns: the GUID.
         """
         location = self.get_location()
-        return hashlib.sha1(location.encode()).hexdigest()  # nosec: B303
+        return hashlib.sha1(location.encode(), usedforsecurity=False).hexdigest()
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
@@ -544,12 +559,12 @@ class UrlJob(UrlJobBase):
             username = url.username or 'anonymous'
             password = url.password or 'anonymous'
 
-            with FTP(
+            with FTP(  # nosec: B321
                 str(url.hostname),
                 str(username),
                 str(password),
                 timeout=self.timeout,  # type: ignore[arg-type]
-            ) as ftp:  # nosec: B321
+            ) as ftp:
                 if FilterBase.filter_chain_needs_bytes(self.filter):
                     data_bytes = b''
 
@@ -768,7 +783,7 @@ class UrlJob(UrlJobBase):
 
 
 class BrowserJob(UrlJobBase):
-    """Retrieve a URL, emulating a real web browser (use_browser: true)."""
+    """Retrieve a URL using a real web browser (use_browser: true)."""
 
     __kind__ = 'browser'
 
@@ -850,7 +865,7 @@ class BrowserJob(UrlJobBase):
                 f"Python package 'playwright' is not installed; cannot run jobs with the 'use_browser: true' "
                 f"directive. Please install dependencies with 'pip install webchanges[use_browser]' and run again. "
                 f'({job_state.job.get_indexed_location()})'
-            )
+            ) from None
         try:
             import psutil
         except ImportError:
@@ -858,7 +873,7 @@ class BrowserJob(UrlJobBase):
                 f"Python package 'psutil' is not installed; cannot run jobs with the 'use_browser: true' "
                 f"directive. Please install dependencies with 'pip install webchanges[use_browser]' and run again. "
                 f'({job_state.job.get_indexed_location()})'
-            )
+            ) from None
 
         # deprecations
         if self.wait_for:
@@ -987,7 +1002,7 @@ class BrowserJob(UrlJobBase):
                     extra_http_headers=dict(headers),
                 )
                 logger.info(
-                    f'Job {self.index_number}: Pyppeteer {playwright_version} launched {browser_name} browser'
+                    f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name} browser'
                     f' {browser.version}'
                 )
             else:
@@ -1175,59 +1190,66 @@ class BrowserJob(UrlJobBase):
                     wait_until=self.wait_until,  # type: ignore[arg-type]
                     referer=self.referer,  # type: ignore[arg-type]
                 )
+
+                if not response:
+                    context.close()
+                    raise BrowserResponseError(('No response received from browser',), None)
+
+                if response.ok:
+                    if self.wait_for_url:
+                        if isinstance(self.wait_for_url, str):
+                            page.wait_for_url(
+                                self.wait_for_url,
+                                wait_until=self.wait_until,  # type: ignore[arg-type]
+                                timeout=timeout,
+                            )
+                        elif isinstance(self.wait_for_url, dict):
+                            page.wait_for_url(**self.wait_for_url)
+                        else:
+                            context.close()
+                            raise ValueError(
+                                f"Job {job_state.job.index_number}: Directive 'wait_for_url' can only be a string or a "
+                                f'dictionary; found {type(self.wait_for_url)}.'
+                            )
+                    if self.wait_for_selector:
+                        if isinstance(self.wait_for_selector, str):
+                            page.wait_for_selector(self.wait_for_selector)
+                        elif isinstance(self.wait_for_selector, dict):
+                            page.wait_for_selector(**self.wait_for_selector)
+                        else:
+                            context.close()
+                            raise ValueError(
+                                f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a string "
+                                f'or a dictionary; found {type(self.wait_for_selector)}.'
+                            )
+                    if self.wait_for_function:
+                        if isinstance(self.wait_for_function, str):
+                            page.wait_for_function(self.wait_for_function)
+
+                        elif isinstance(self.wait_for_function, dict):
+                            page.wait_for_function(**self.wait_for_function)
+                        else:
+                            context.close()
+                            raise ValueError(
+                                f"Job {job_state.job.index_number}: Directive 'wait_for_function' can only be a string "
+                                f'or a dictionary; found {type(self.wait_for_function)}'
+                            )
+                    if self.wait_for_timeout:
+                        if isinstance(self.wait_for_timeout, (int, float)) and not isinstance(
+                            self.wait_for_timeout, bool
+                        ):
+                            page.wait_for_timeout(self.wait_for_timeout * 1000)
+                        else:
+                            context.close()
+                            raise ValueError(
+                                f"Job {job_state.job.index_number}: Directive 'wait_for_timeout' can only be a number; "
+                                f'found {type(self.wait_for_timeout)}.'
+                            )
+
             except PlaywrightError as e:
-                logger.error(f'Job {self.index_number}: Page returned error {e.args[0]}')
+                logger.error(f'Job {self.index_number}: Browser returned error {e.args[0]}')
                 context.close()
                 raise BrowserResponseError(e.args, None)
-
-            if not response:
-                context.close()
-                raise BrowserResponseError(('No response received from browser',), None)
-
-            # wait_for-*
-            if self.wait_for_url:
-                if isinstance(self.wait_for_url, str):
-                    page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)  # type: ignore[arg-type]
-                elif isinstance(self.wait_for_url, dict):
-                    page.wait_for_url(**self.wait_for_url)
-                else:
-                    context.close()
-                    raise ValueError(
-                        f"Job {job_state.job.index_number}: Directive 'wait_for_url' can only be a string or a "
-                        f'dictionary; found {type(self.wait_for_url)}.'
-                    )
-            if self.wait_for_selector:
-                if isinstance(self.wait_for_selector, str):
-                    page.wait_for_selector(self.wait_for_selector)
-                elif isinstance(self.wait_for_selector, dict):
-                    page.wait_for_selector(**self.wait_for_selector)
-                else:
-                    context.close()
-                    raise ValueError(
-                        f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a string or a "
-                        f'dictionary; found {type(self.wait_for_selector)}.'
-                    )
-            if self.wait_for_function:
-                if isinstance(self.wait_for_function, str):
-                    page.wait_for_function(self.wait_for_function)
-
-                elif isinstance(self.wait_for_function, dict):
-                    page.wait_for_function(**self.wait_for_function)
-                else:
-                    context.close()
-                    raise ValueError(
-                        f"Job {job_state.job.index_number}: Directive 'wait_for_function' can only be a string or a "
-                        f'dictionary; found {type(self.wait_for_function)}'
-                    )
-            if self.wait_for_timeout:
-                if isinstance(self.wait_for_timeout, (int, float)) and not isinstance(self.wait_for_timeout, bool):
-                    page.wait_for_timeout(self.wait_for_timeout * 1000)
-                else:
-                    context.close()
-                    raise ValueError(
-                        f"Job {job_state.job.index_number}: Directive 'wait_for_timeout' can only be a number; found "
-                        f'{type(self.wait_for_timeout)}.'
-                    )
 
             # if response.status and 400 <= response.status < 600:
             #     context.close()
@@ -1238,8 +1260,15 @@ class BrowserJob(UrlJobBase):
                 #     f'{response.url}'
                 # )
                 # logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
+                if response.status != 404:
+                    try:
+                        message = f"{response.status_text}\n{page.text_content('body')}"
+                    except PlaywrightError:
+                        message = response.status_text
+                else:
+                    message = response.status_text
                 context.close()
-                raise BrowserResponseError((response.status_text,), response.status)
+                raise BrowserResponseError((message,), response.status)
 
             # extract content
             content = page.content()
@@ -1349,7 +1378,7 @@ class BrowserJob(UrlJobBase):
                     return True
             if self.ignore_timeout_errors:
                 if (
-                    isinstance(exception, PlaywrightTimeoutError)
+                    isinstance(exception, (PlaywrightTimeoutError))
                     or str(exception.args[0].split()[0]) == 'net::ERR_TIMED_OUT'
                 ):
                     return True
@@ -1401,6 +1430,8 @@ class ShellJob(Job):
         """
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         return (
-            subprocess.run(self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)).stdout,
+            subprocess.run(  # nosec: B602
+                self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)
+            ).stdout,
             '',
         )  # noqa: DUO116 use of "shell=True" is insecure

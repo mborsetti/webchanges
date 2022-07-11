@@ -43,7 +43,7 @@ command_config = CommandConfig([], __project_name__, config_path, config_file, j
 config_storage = YamlConfigStorage(config_file)
 config_storage.load()
 cache_storage = CacheSQLite3Storage(cache_file)
-jobs_storage = YamlJobsStorage(jobs_file)
+jobs_storage = YamlJobsStorage([jobs_file])
 urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
 urlwatch_command = UrlwatchCommand(urlwatcher)
 
@@ -179,7 +179,7 @@ def test_edit_hooks(capsys):
     setattr(command_config, 'edit_hooks', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == f'Saved edits in {urlwatch_command.urlwatch_config.hooks}\n'
+    assert message == f'Saved edits in {urlwatch_command.urlwatch_config.hooks_file}\n'
 
 
 def test_edit_hooks_fail(capsys):
@@ -209,7 +209,7 @@ def test_show_features_and_verbose(capsys):
     setattr(command_config, 'verbose', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert '* browser - Retrieve a URL, emulating a real web browser (use_browser: true).' in message
+    assert '* browser - Retrieve a URL using a real web browser (use_browser: true).' in message
 
 
 def test_list_jobs_verbose(capsys):
@@ -224,6 +224,7 @@ def test_list_jobs_verbose(capsys):
     message = capsys.readouterr().out
     assert message == (
         "  1: <shell command='echo test' index_number=1 name='Sample webchanges job; used by command_test.py'\n"
+        f'Jobs file(s):\n{urlwatcher.urlwatch_config.jobs_files[0]}\n'
     )
 
 
@@ -237,7 +238,10 @@ def test_list_jobs_not_verbose(capsys):
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == '  1: Sample webchanges job; used by command_test.py (echo test)\n'
+    assert message == (
+        '  1: Sample webchanges job; used by command_test.py (echo test)\n'
+        f'Jobs file(s):\n{urlwatcher.urlwatch_config.jobs_files[0]}\n'
+    )
 
 
 def test__find_job():
@@ -310,7 +314,7 @@ def test_test_job_with_test_reporter(capsys):
 
 def test_dump_history(capsys):
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo 1'
@@ -361,7 +365,7 @@ def test_dump_history(capsys):
 
 def test_test_diff_and_joblist(capsys):
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     if sys.platform == 'win32':
@@ -469,7 +473,7 @@ def test_list_error_jobs(capsys):
     setattr(command_config, 'errors', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message.startswith('Jobs, if any, with errors or returning no data after filtering in jobs file\n')
+    assert message.startswith('Jobs with errors or returning no data after filtering (if any)\nin jobs file ')
 
 
 def test_modify_urls(capsys):
@@ -502,7 +506,7 @@ def test_modify_urls(capsys):
 
 def test_delete_snapshot(capsys):
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     if sys.platform == 'win32':
@@ -561,7 +565,7 @@ def test_delete_snapshot(capsys):
 
 def test_gc_cache(capsys):
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     if sys.platform == 'win32':
@@ -575,7 +579,7 @@ def test_gc_cache(capsys):
     assert len(history) == 1
 
     # set job file to a different one
-    jobs_file = config_path.joinpath('jobs-echo_test.yaml')
+    jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)
@@ -588,7 +592,7 @@ def test_gc_cache(capsys):
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     if sys.platform == 'win32':
-        assert message == f'Deleting: {guid} (no longer being tracked)\n'
+        assert message == f'Deleting job {guid} (no longer being tracked)\n'
     else:
         # TODO: for some reason, Linux message is ''.  Need to figure out why.
         ...
@@ -707,8 +711,8 @@ def test_locate_storage_file():
 
 def test_job_states_verb():
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
     cache_storage = CacheSQLite3Storage(cache_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'
@@ -726,8 +730,8 @@ def test_job_states_verb():
 
 def test_job_states_verb_notimestamp_unchanged():
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
     cache_storage = CacheSQLite3Storage(cache_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'
@@ -752,8 +756,8 @@ def test_job_states_verb_notimestamp_unchanged():
 
 def test_job_states_verb_notimestamp_changed():
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    jobs_storage = YamlJobsStorage(jobs_file)
     cache_storage = CacheSQLite3Storage(cache_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'

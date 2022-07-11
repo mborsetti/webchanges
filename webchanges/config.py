@@ -7,7 +7,7 @@ from __future__ import annotations
 import argparse
 
 # import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -20,10 +20,11 @@ class BaseConfig:
 
     project_name: str
     config_path: Path
-    config: Path
-    jobs: Path
-    hooks: Path
+    config_file: Path
+    jobs_def_file: Path
+    hooks_file: Path
     cache: Union[str, Path]
+    jobs_files: List[Path] = field(default_factory=list)
 
 
 class CommandConfig(BaseConfig):
@@ -61,9 +62,9 @@ class CommandConfig(BaseConfig):
         args: List[str],
         project_name: str,
         config_path: Path,
-        config: Path,
-        jobs: Path,
-        hooks: Path,
+        config_file: Path,
+        jobs_def_file: Path,
+        hooks_file: Path,
         cache: Union[str, Path],
     ) -> None:
         """Command line arguments configuration; the arguments are stored as class attributes.
@@ -71,12 +72,13 @@ class CommandConfig(BaseConfig):
         :param project_name: The name of the project.
         :param config_path: The path of the configuration directory.
         :param config: The path of the configuration file.
-        :param jobs: The path of the jobs file.
+        :param jobs: The glob of the jobs file(s).
         :param hooks: The path of the Python hooks file.
         :param cache: The path of the database file (or directory if using the textfiles database-engine) where
            snapshots are stored.
         """
-        super().__init__(project_name, config_path, config, jobs, hooks, cache)
+        super().__init__(project_name, config_path, config_file, jobs_def_file, hooks_file, cache)
+        self.jobs_files = [jobs_def_file]
         self.parse_args(args)
 
     def parse_args(self, cmdline_args: List[str]) -> argparse.ArgumentParser:
@@ -112,17 +114,17 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--jobs',
             '--urls',
-            default=self.jobs,
+            default=self.jobs_def_file,
             type=Path,
-            help='read job list (URLs) from FILE',
+            help='read job list (URLs) from FILE or files matching a glob pattern',
             metavar='FILE',
-            dest='jobs',
+            dest='jobs_def_file',
         )
         group.add_argument(
-            '--config', default=self.config, type=Path, help='read configuration from FILE', metavar='FILE'
+            '--config', default=self.config_file, type=Path, help='read configuration from FILE', metavar='FILE'
         )
         group.add_argument(
-            '--hooks', default=self.hooks, type=Path, help='use FILE as imported hooks.py module', metavar='FILE'
+            '--hooks', default=self.hooks_file, type=Path, help='use FILE as imported hooks.py module', metavar='FILE'
         )
         group.add_argument(
             '--cache',
@@ -140,7 +142,8 @@ class CommandConfig(BaseConfig):
             '--test-filter',
             nargs='?',
             const=True,
-            help='test a job (by index or URL/command) and show filtered output; if no JOB, check config and job files',
+            help='test a job (by index or URL/command) and show filtered output; if no JOB, check syntax of config and '
+            'jobs file(s)',
             metavar='JOB',
             dest='test_job',
         )
@@ -160,14 +163,6 @@ class CommandConfig(BaseConfig):
             '--dump-history',
             help='print all saved snapshot history for a job (by index or URL/command)',
             metavar='JOB',
-        )
-
-        group = parser.add_argument_group(
-            'backward compatibility (WARNING: all remarks are deleted from jobs file; use --edit instead)'
-        )
-        group.add_argument('--add', help='add a job (key1=value1,key2=value2,...) [use --edit instead]', metavar='JOB')
-        group.add_argument(
-            '--delete', help='delete a job (by index or URL/command) [use --edit instead]', metavar='JOB'
         )
 
         group = parser.add_argument_group('reporters')
@@ -223,7 +218,7 @@ class CommandConfig(BaseConfig):
         )
 
         group = parser.add_argument_group('miscellaneous')
-        group.add_argument('--check-new', action='store_true', help='check if new release is available')
+        group.add_argument('--check-new', action='store_true', help='check if a new release is available')
         group.add_argument(
             '--install-chrome',
             action='store_true',
@@ -233,6 +228,14 @@ class CommandConfig(BaseConfig):
             '--features',
             action='store_true',
             help='list supported job types, filters and reporters (including those loaded by hooks)',
+        )
+
+        group = parser.add_argument_group(
+            'backward compatibility (WARNING: all remarks are deleted from jobs file; use --edit instead)'
+        )
+        group.add_argument('--add', help='add a job (key1=value1,key2=value2,...) [use --edit instead]', metavar='JOB')
+        group.add_argument(
+            '--delete', help='delete a job (by index or URL/command) [use --edit instead]', metavar='JOB'
         )
 
         # # workaround for avoiding triggering error when invoked by pytest

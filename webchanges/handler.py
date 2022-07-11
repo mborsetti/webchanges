@@ -147,7 +147,7 @@ class JobState(ContextManager):
 
         :returns: a JobState object containing information of the job run.
         """
-        logger.info(f'{self.job.get_indexed_location()} started processing')
+        logger.info(f'{self.job.get_indexed_location()} started processing ({type(self.job).__name__})')
         logger.debug(f'Job {self.job.index_number}: {self.job}')
 
         if self.exception:
@@ -568,7 +568,7 @@ class Report:
             ):
                 yield job_state
 
-    def finish(self, jobs_file: Optional[Path] = None) -> None:
+    def finish(self, jobs_file: Optional[List[Path]] = None) -> None:
         """Finish job run: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_all`.
 
@@ -579,7 +579,9 @@ class Report:
 
         ReporterBase.submit_all(self, self.job_states, duration, jobs_file)
 
-    def finish_one(self, name: str, jobs_file: Optional[Path] = None, check_enabled: Optional[bool] = True) -> None:
+    def finish_one(
+        self, name: str, jobs_file: Optional[List[Path]] = None, check_enabled: Optional[bool] = True
+    ) -> None:
         """Finish job run of one: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_one`.  Used in testing.
 

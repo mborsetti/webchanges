@@ -44,7 +44,7 @@ config_file = data_path.joinpath('config.yaml')
 hooks_file = Path('')
 jobs_file = data_path.joinpath('jobs-time.yaml')
 config_storage = YamlConfigStorage(config_file)
-jobs_storage = YamlJobsStorage(jobs_file)
+jobs_storage = YamlJobsStorage([jobs_file])
 
 DATABASE_ENGINES = (
     CacheDirStorage(tmp_path),
@@ -128,7 +128,7 @@ def test_empty_config_file():
 
 def test_jobs_parse():
     """Test if a job is a shell job."""
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     jobs = jobs_storage.parse(jobs_file)
     assert len(jobs) == 1
     assert jobs[0].command == "perl -MTime::HiRes -e 'printf \"%f\n\",Time::HiRes::time()'"
@@ -140,7 +140,7 @@ def test_check_for_shell_job():
     # TODO the below generates PermissionError: [Errno 1] Operation not permitted when run by GitHub Actions in macOS
     # if sys.platform != 'win32':
     #     os.chown(jobs_file, 65534, 65534)
-    jobs_storage = YamlJobsStorage(jobs_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
     jobs_storage.load_secure()
     # jobs = jobs_storage.load_secure()
     # if sys.platform != 'win32':
@@ -188,6 +188,7 @@ def test_keep_latest(database_engine):
         assert timestamp == list(history.values())[0]
 
         # only keep last one
+        # noinspection PyUnresolvedReferences
         cache_storage.keep_latest(1)
         history = cache_storage.get_history_data(guid)
         assert len(history) == 1
@@ -340,6 +341,7 @@ def test_clean_all(database_engine):
             assert timestamps[1] <= timestamps[0]
 
         # clean all
+        # noinspection PyUnresolvedReferences
         cache_storage.clean_all()
         history = cache_storage.get_history_data(guid)
         assert len(history) == 1
