@@ -97,7 +97,6 @@ class CommandConfig(BaseConfig):
             nargs='*',
             type=int,
             help='job(s) to run (by index as per --list) (default: run all jobs)',
-            metavar='JOB',
         )
         parser.add_argument(
             '-V',

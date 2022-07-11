@@ -16,13 +16,13 @@ Command line arguments
                  [--rollback-cache TIMESTAMP] [--delete-snapshot JOB]
                  [--database-engine {sqlite3,redis,minidb,textfiles}] [--max-snapshots NUM_SNAPSHOTS]
                  [--check-new] [--install-chrome] [--features] [--add JOB] [--delete JOB]
-                 [JOB ...]
+                 [joblist ...]
 
    Checks web content to detect any changes since the prior run. If any are found, it shows what changed ('diff') and/or
    sends it via e-mail and/or other supported services. Can check the output of local commands as well.
 
    positional arguments:
-     JOB                   job(s) to run (by index as per --list) (default: run all jobs)
+     joblist               job(s) to run (by index as per --list) (default: run all jobs)
 
    options:
      -h, --help            show this help message and exit
@@ -87,9 +87,9 @@ Command line arguments
 
 Select subset of jobs
 ---------------------
-Add job number(s) in the command line to run a subset of them; for example, run ``webchanges 2 3`` to only run jobs #2
-and #3 from your job list, or ``webchanges -1`` to only run the last job on your jobs list. Find the numbering of your
-jobs by running ``webchanges --list``. API is experimental and may change in the near future.
+Add job number(s) (a ``joblist``) to the command line to run a subset of jobs; for example, ``webchanges 2 3 9`` will
+only run jobs #2, #3, and #9, and ``webchanges -1`` will only run the last job. Find the index numbering of your jobs by
+running ``webchanges --list``. API is experimental and may change in the near future.
 
 .. versionadded:: 3.6
 
