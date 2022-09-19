@@ -120,10 +120,20 @@ class CommandConfig(BaseConfig):
             dest='jobs_def_file',
         )
         group.add_argument(
-            '--config', default=self.config_file, type=Path, help='read configuration from FILE', metavar='FILE'
+            '--config',
+            default=self.config_file,
+            type=Path,
+            help='read configuration from FILE',
+            metavar='FILE',
+            dest='config_file',
         )
         group.add_argument(
-            '--hooks', default=self.hooks_file, type=Path, help='use FILE as imported hooks.py module', metavar='FILE'
+            '--hooks',
+            default=self.hooks_file,
+            type=Path,
+            help='use FILE as imported hooks.py module',
+            metavar='FILE',
+            dest='hooks_file',
         )
         group.add_argument(
             '--cache',
