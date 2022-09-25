@@ -419,7 +419,7 @@ class JobBase(metaclass=TrackSubClasses):
         """Format the error of the job if one is encountered.
 
         :param exception: The exception.
-        :param tb: The traceback.
+        :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
         return tb
@@ -774,7 +774,7 @@ class UrlJob(UrlJobBase):
         """Format the error of the job if one is encountered.
 
         :param exception: The exception.
-        :param tb: The traceback.
+        :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
         if isinstance(exception, requests.exceptions.RequestException):
