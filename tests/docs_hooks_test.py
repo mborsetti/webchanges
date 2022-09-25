@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
-docs_path = here.joinpath('..').resolve().joinpath('docs')
+docs_path = here.parent.joinpath('docs')
 
-latest_py_only = pytest.mark.skipif(sys.version_info < (3, 9), reason='Only needs to run once')
+if sys.version_info < (3, 10):
+    pytest.skip('hooks.py is written for Python 3.10', allow_module_level=True)
 
 
 # https://stackoverflow.com/a/48719723/1047040
@@ -85,7 +86,6 @@ exec(HOOKS, hooks.__dict__)  # nosec: B102 Use of exec detected.
 # TODO: ensure that this is the version loaded during testing.
 
 
-@latest_py_only
 def test_flake8(tmp_path):
     """Check that the hooks.py example code in hooks.rst passes flake8."""
     hooks_path = tmp_path.joinpath('hooks.py')

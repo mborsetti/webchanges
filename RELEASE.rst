@@ -11,7 +11,7 @@ Added
   file, and the command line arguments ``--database-engine`` and ``--max-snapshots`` are used to override such
   settings. See documentation for more information. Suggested by `jprokos <https://github.com/jprokos>`__ in `#43
   <https://github.com/mborsetti/webchanges/issues/43>`__.
-* New configuration file setting ``empty-diff`` within the ``display`` configuration for backwards compatibility only:
+* New configuration setting ``empty-diff`` within the ``display`` configuration for backwards compatibility only:
   use the ``additions_only`` job directive instead to achieve the same result. Reported by
   `bbeevvoo <https://github.com/bbeevvoo>`__ in `#47 <https://github.com/mborsetti/webchanges/issues/47>`__.
 * Aliased the command line arguments ``--gc-cache`` with ``--gc-database``, ``--clean-cache`` with ``--clean-database``

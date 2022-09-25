@@ -22,7 +22,7 @@ from webchanges.jobs import JobBase
 logger = logging.getLogger(__name__)
 
 here = Path(__file__).parent
-docs_path = here.joinpath('..').resolve().joinpath('docs')
+docs_path = here.parent.joinpath('docs')
 
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
 cssbeautifier_is_installed = importlib.util.find_spec('cssbeautifier') is not None
