@@ -1,9 +1,10 @@
 # GitHub Actions docs: https://docs.github.com/en/actions/learn-github-actions
-# Reference syntax: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
-# Env. variables: https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
-# Add'l variables: https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions
+# Reference syntax: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+# Env. vars: https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
+# Add'l variables (contexts): https://docs.github.com/en/actions/learn-github-actions/contexts
 
-# Requires encrypted secret (see https://docs.github.com/en/actions/reference/encrypted-secrets) secrets.pypi_password
+# Requires encrypted secret (see https://docs.github.com/en/actions/security-guides/encrypted-secrets)
+# secrets.pypi_password
 
 # This file is automatically "updated" with PRs by the "pre-commit ci" app in GitHub https://pre-commit.ci; it is
 # currently scheduled weekly at approximately 16:00 UTC Monday.
