@@ -11,7 +11,6 @@ import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
 import docutils.utils
-import html2text
 import pytest
 import yaml
 
@@ -101,43 +100,50 @@ def test_filter_doc_jobs(job):
     in tests/data/docs_filters_testdata.yaml using 'url' as the key."""
     # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
     # installations beyond pip)
-    if job.url != 'https://example.com/html2text.html' or html2text.__version__ <= (2020, 1, 16):
-        # TODO when html2text > 2020.1.16 update output and remove if (https://github.com/Alir3z4/html2text/pull/339)
-        d = testdata[job.url]
-        if 'filename' in d:
-            data = here.joinpath('data').joinpath(d['filename']).read_bytes()
-        else:
-            data = d['input']
-        # noinspection PyTypeChecker
-        with JobState(None, job) as job_state:
-            for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
-                # skip if package is not installed
-                if (
-                    filter_kind == 'beautify' or filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
-                ) and not bs4_is_installed:
-                    logger.warning(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
-                    return
-                if filter_kind == 'ical2text' and not vobject_is_installed:
-                    logger.warning(f"Skipping {job.url} since 'vobject' package is not installed")
-                    return
-                elif filter_kind == 'ocr' and not pytesseract_is_installed:
-                    logger.warning(f"Skipping {job.url} since 'pytesseract' package is not installed")
-                    return
-                elif filter_kind == 'jq' and not jq_is_installed:
-                    logger.warning(f"Skipping {job.url} since 'jq' package is not installed")
-                    return
-                elif filter_kind == 'pdf2text' and not pdftotext_is_installed:
-                    logger.warning(f"Skipping {job.url} since 'pdftotext' package is not installed")
-                    return
-                elif filter_kind == 'beautify' and not cssbeautifier_is_installed:
-                    logger.warning(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
-                    return
-                data = FilterBase.process(filter_kind, subfilter, job_state, data)
-                if filter_kind in ('pdf2text', 'shellpipe'):  # fix for macOS or OS-specific end of line
-                    data = data.rstrip()
-
-            expected_output_data = d['output']
-            assert data == expected_output_data
-
+    d = testdata[job.url]
+    if 'filename' in d:
+        data = here.joinpath('data').joinpath(d['filename']).read_bytes()
     else:
-        logger.warning("Skipping https://example.com/html2text.html since 'html2text' > (2020, 1, 16)")
+        data = d['input']
+    # noinspection PyTypeChecker
+    with JobState(None, job) as job_state:
+        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
+            # skip if package is not installed
+            if (
+                filter_kind == 'beautify' or filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
+            ) and not bs4_is_installed:
+                logger.warning(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
+                return
+            if filter_kind == 'ical2text' and not vobject_is_installed:
+                logger.warning(f"Skipping {job.url} since 'vobject' package is not installed")
+                return
+            elif filter_kind == 'ocr' and not pytesseract_is_installed:
+                logger.warning(f"Skipping {job.url} since 'pytesseract' package is not installed")
+                return
+            elif filter_kind == 'jq' and not jq_is_installed:
+                logger.warning(f"Skipping {job.url} since 'jq' package is not installed")
+                return
+            elif filter_kind == 'pdf2text' and not pdftotext_is_installed:
+                logger.warning(f"Skipping {job.url} since 'pdftotext' package is not installed")
+                return
+            elif filter_kind == 'beautify' and not cssbeautifier_is_installed:
+                logger.warning(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
+                return
+            data = FilterBase.process(filter_kind, subfilter, job_state, data)
+            if filter_kind in ('pdf2text', 'shellpipe'):  # fix for macOS or OS-specific end of line
+                data = data.rstrip()
+
+        expected_output_data = d['output']
+        if job.url != 'https://example.com/html2text.html':
+            assert data == expected_output_data
+        else:
+            # see https://github.com/Alir3z4/html2text/pull/339
+            assert data in (
+                expected_output_data,
+                # The below is for when html2text > 2020.1.16 (fixes included)
+                '| Date                    | #Sales™ |\n'
+                '|-------------------------|---------|\n'
+                '| Monday, 3 February 2020 | 10,000  |\n'
+                '| Tu, 3 Mar               | 20,000  |\n'
+                '\n',
+            )

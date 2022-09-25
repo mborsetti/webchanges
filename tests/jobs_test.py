@@ -509,7 +509,7 @@ def test_compared_versions():
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     # compared_versions = 2
-    urlwatcher.jobs[0].command = 'python -c "import random; print(random.randint(0, 1))'
+    urlwatcher.jobs[0].command = 'python3 -c "import random; print(random.randint(0, 1))'
     urlwatcher.jobs[0].compared_versions = 2
     results = set()
     for i in range(20):
@@ -523,7 +523,7 @@ def test_compared_versions():
 
     # compared_versions = 3  (may trigger fuzzy match search)
     cache_storage.flushdb()
-    urlwatcher.jobs[0].command = 'python -c "import random; print(random.randint(0, 2))'
+    urlwatcher.jobs[0].command = 'python3 -c "import random; print(random.randint(0, 2))'
     urlwatcher.jobs[0].compared_versions = 3
     results = set()
     for i in range(20):
