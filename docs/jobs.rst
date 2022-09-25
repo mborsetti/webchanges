@@ -72,6 +72,7 @@ a name.
    url: https://example.org/
 
 
+
 .. _url:
 
 URL
@@ -96,7 +97,7 @@ This is the main job type. It retrieves a document from a web server (``https://
 
 .. caution:: Due to a legacy architectural choice, URLs must be **unique** to each job. If for some reason you want to
    monitor the same resource multiple times, make each job's URL unique by e.g. adding # at the end of the link
-   followed by a unique remark (the # and everything after is discarded by a web server, but captured by
+   followed by a unique remark (the # and everything after is typically discarded by a web server, but captured by
    :program:`webchanges`):
 
    .. code-block:: yaml
@@ -107,8 +108,12 @@ This is the main job type. It retrieves a document from a web server (``https://
       name: Example homepage -- again!
       url: https://example.org/#2
 
+Internally, this type of job has the attribute ``kind: url``.
+
+
 .. versionchanged:: 3.6
    Added support for ``ftp://`` URIs.
+
 
 
 .. _use_browser:
@@ -125,18 +130,17 @@ you are interested in, add the directive ``use_browser: true`` to the job:
    use_browser: true
 
 .. warning::
-   As this job type renders the page in a headless Google Chrome instance, it requires **significantly more resources**
-   and time than a simple ``url`` job; use it only for resources where omitting ``use_browser: true`` does not
-   give the right results and when you can't find alternate sources (e.g. an API).
+   As this job type renders the page in a headless Google Chrome instance, it requires more resources and time than a
+   simple ``url`` job; use it only for resources where omitting ``use_browser: true`` does not give the right results
+   and when you can't find alternate sources (e.g. an API).
 
 .. _rest_api:
 
-.. tip::
-   In many instances you can get the data you want to monitor directly from a REST API (URL) called by the site during
-   its page loading. Monitor what happens during the page load with a browser's Developer's Tools (e.g. `Chrome DevTools
-   <https://developers.google.com/web/tools/chrome-devtools>`__ using Ctrl+Shift+I, specifically its `network activity
-   inspection tab <https://developer.chrome.com/docs/devtools/network/>`__) to see if this is the case and get the URL,
-   method, and data for this API which you can then monitor directly without ``use_browser: true``.
+.. tip:: In many instances you can get the data you want to monitor directly from a REST API (URL) called by the site
+   during its page loading. Monitor what happens during the page load with a browser's Developer's Tools (e.g. `Chrome
+   DevTools <https://developers.google.com/web/tools/chrome-devtools>`__ using Ctrl+Shift+I, specifically its `network
+   activity inspection tab <https://developer.chrome.com/docs/devtools/network/>`__) to see if this is the case. If so,
+   get the URL, method, and data for this API and use it in a job that you can run without ``use_browser: true``.
 
 .. important::
    * The optional `Playwright <https://playwright.dev/python/>`__ Python package must be installed; run
@@ -145,6 +149,21 @@ you are interested in, add the directive ``use_browser: true`` to the job:
      :program:`Playwright` will download it (~350 MiB). This it could take some time (and bandwidth). You can
      pre-install the latest version of Chrome at any time with ``webchanges --install-chrome``.
 
+When using ``use_browser: true``, you do not need to set any headers in the configuration file or job unless the site
+you're monitoring has special requirements.
+
+We implement measures to reduce the chance that a website can detect that the request is coming from a
+headless Google Chrome instance, and we pass all detection tests `here
+<https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html>`__, but we cannot guarantee
+that this will always work (other measures, such as rate limiting or session initialization, for which you can use
+:ref:`initialization_url`, may be in place to block or limit the effectiveness of automated tools).
+
+.. tip:: Please see the :ref:`no_conditional_request` directive if you need to turn off the use of :ref:`conditional
+   requests <conditional_requests>` for those extremely rare websites that don't handle it (e.g. Google Flights).
+
+Internally, this type of job has the attribute ``kind: browser``.
+
+
 .. versionchanged:: 3.0
    JavaScript rendering is done using the ``use_browser: true`` directive instead of replacing the ``url`` directive
    with ``navigate``, which is now deprecated.
@@ -152,9 +171,17 @@ you are interested in, add the directive ``use_browser: true`` to the job:
 .. versionchanged:: 3.10
    Using Playwright and Google Chrome instead of Pyppeteer and Chromium.
 
+.. versionchanged:: 3.11
+   Implemented measures to reduce the chance of detection.
+
 
 Required directives
 -------------------
+
+
+
+.. _ulr:
+
 url
 ^^^
 The URI of the resource to monitor. ``https://``, ``http://``, ``ftp://`` and ``file://`` are supported.
@@ -165,12 +192,19 @@ Optional directives (all ``url`` jobs)
 The following optional directives are available for all ``url`` jobs:
 
 
+
+.. _use_browser_directive:
+
 use_browser
 ^^^^^^^^^^^
 Whether to use a Chrome web browser (true/false). Defaults to false.
 
 If true, it renders the URL via a JavaScript-enabled web browser and extracts the HTML after rendering (see
 :ref:`above <use_browser>` for important information).
+
+
+
+.. _compared_versions:
 
 compared_versions
 ^^^^^^^^^^^^^^^^^
@@ -186,6 +220,10 @@ for this directive to run successfully (default is 4) (see :ref:`here<max-snapsh
 
 .. versionadded:: 3.10.2
 
+
+
+.. _cookies:
+
 cookies
 ^^^^^^^
 Cookies to send with the request (a dict).
@@ -196,16 +234,25 @@ See examples :ref:`here <cookies>`.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
+
+.. _headers:
+
 headers
 ^^^^^^^
 Headers to send along with the request (a dict).
 
-See examples :ref:`here <headers>`.
+See examples :ref:`here <default_headers>`.
 
-Note that with ``browser: true`` a ``Referer`` header specified here may be replaced by the ``referer`` directive.
+Note that with ``browser: true`` the `Referer
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header will be replaced by the
+contents of the :ref:`referer <referer>` directive if specified.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+
+
+.. _http_proxy:
 
 http_proxy
 ^^^^^^^^^^
@@ -217,6 +264,10 @@ E.g. ``http://username:password@proxy.com:8080``.
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
+
+
+.. _https_proxy:
+
 https_proxy
 ^^^^^^^^^^^
 Proxy server to use for HTTPS (i.e. secure) requests (a string). If unspecified or null/false, the system environment
@@ -227,15 +278,23 @@ E.g. ``https://username:password@proxy.com:8080``.
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
+
+
+.. _timeout:
+
 timeout
 ^^^^^^^
-Override the default timeout, in seconds (a number). The default is 60 seconds for URL jobs unless they have the
+Override the default timeout, in seconds (a number). The default is 60 seconds for ``url`` jobs unless they have the
 directive ```use_browser: true``, in which case it's 90 seconds.  If set to 0, timeout is disabled.
 
 See example :ref:`here <timeout>`.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+
+
+.. _method:
 
 method
 ^^^^^^
@@ -244,15 +303,17 @@ method
 Must be one of ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``. Defaults to ``GET``
 unless the ``data`` directive, below, is set when it defaults to ``POST``.
 
-.. error::
-
-   Setting a method other than ``GET`` with ``use_browser: true`` may result in any 3xx redirections received by the
-   website to be ignored and the job hanging until it times out. This is due to bug `#937719
+.. error:: Setting a method other than ``GET`` with ``use_browser: true`` may result in any 3xx redirections received by
+   the website to be ignored and the job hanging until it times out. This is due to bug `#937719
    <https://bugs.chromium.org/p/chromium/issues/detail?id=937719>`__ in Chromium. Please take the time to add a star to
    the bug report so it will be prioritized for a faster fix.
 
 .. versionchanged:: 3.8
-   Works for all url jobs, including those with ``use_browser: true``.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+
+
+.. _data:
 
 data
 ^^^^
@@ -269,13 +330,30 @@ When this directive is specified:
 See example :ref:`here <post>`.
 
 .. versionchanged:: 3.8
-   Works for all url jobs, including those with ``use_browser: true``.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+
+
+.. _no_conditional_request:
+
+no_conditional_request
+^^^^^^^^^^^^^^^^^^^^^^^^
+In order to speed things up, :program:`webchanges` sets the ``If-Modified-Since`` and/or ``If-None-Match`` headers
+on all requests, making them conditional requests (see more :ref:`here <conditional_requests>`). In extremely rare cases
+(e.g. Google Flights) the ``If-Modified-Since`` will cause the website to hang or return invalid data, so you can
+disable conditional requests with the directive ``no_conditional_request : true`` to ensure it is not added to the
+query.
+
+
+
+.. _note:
 
 note
 ^^^^
 Informational note added under the header in reports (a string).
 
 .. versionadded:: 3.2
+
 
 
 .. _ignore_connection_errors:
@@ -287,7 +365,8 @@ Ignore (temporary) connection errors (true/false). Defaults to false.
 See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
-   Works for all url jobs, including those with ``use_browser: true``.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
 
 
 .. _ignore_timeout_errors:
@@ -299,7 +378,8 @@ Ignore error if caused by a timeout (true/false). Defaults to false.
 See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
-   Works for all url jobs, including those with ``use_browser: true``.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
 
 
 .. _ignore_too_many_redirects:
@@ -311,7 +391,8 @@ Ignore error if caused by a redirect loop (true/false). Defaults to false.
 See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
-   Works for all url jobs, including those with ``use_browser: true``.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
 
 
 .. _ignore_http_error_codes:
@@ -327,7 +408,8 @@ Also accepts ``3xx``, ``4xx``, and ``5xx`` as values to denote an entire class o
 See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
-   Works for all url jobs, including those with ``use_browser: true``.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
 
 
 .. _ignore_cached:
@@ -336,14 +418,17 @@ ignore_cached
 ^^^^^^^^^^^^^
 Do not use cache control values (ETag/Last-Modified) (true/false). Defaults to false.
 
+Also see :ref:`no_conditional_request`.
+
 .. versionchanged:: 3.10
-   Works for all url jobs, including those with ``use_browser: true``.
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
 
 Optional directives (without ``use_browser: true``)
 --------------------------------------------------------
 The following directives are available only for ``url`` jobs without ``use_browser: true``:
+
 
 
 .. _no_redirects:
@@ -380,6 +465,7 @@ Returns:
 .. versionadded:: 3.2.7
 
 
+
 .. _ssl_no_verify:
 
 ssl_no_verify
@@ -387,6 +473,7 @@ ssl_no_verify
 Do not verify SSL certificates (true/false).
 
 See more :ref:`here <ignoring_tls_ssl_errors>`.
+
 
 
 .. _ignore_dh_key_too_small:
@@ -404,6 +491,7 @@ Set it as a last resort if you're getting a ``ssl.SSLError: [SSL: DH_KEY_TOO_SMA
 error and can't get the anyone to fix the security vulnerability on the server.
 
 .. versionadded:: 3.9.2
+
 
 
 .. _encoding:
@@ -577,25 +665,26 @@ The event of when to consider navigation succeeded (a string):
    ``networkidle0`` and ``networkidle2`` are replaced by ``networkidle``;  added ``commit``.
 
 
-.. initialization_url:
+.. _initialization_url:
 
 initialization_url
 ^^^^^^^^^^^^^^^^^^
 The browser will load the ``initialization_url`` before navigating to ``url`` (a string). This could be useful for
-monitoring pages on websites that rely on a state established when you first land on their "home" page.
+monitoring pages on websites that rely on a state established when you first land on their "home" page.  Also see
+``initialization_js`` below.
 
 Note that all the ``wait_for_*`` directives are apply only after navigating to ``url``.
 
 .. versionadded:: 3.10
 
 
-.. initialization_js:
+.. _initialization_js:
 
 initialization_js
 ^^^^^^^^^^^^^^^^^^
 Only used with ``initialization_url``, executes the JavaScript after loading ```initialization_url`` and before
-navigating to ``url`` (a string). This could be useful to programmatically emulate performing an action, such as logging
-in.
+navigating to ``url`` (a string). This could be useful to e.g. logging in when it's done by calling a JavaScript
+function.
 
 .. versionadded:: 3.10
 
@@ -604,8 +693,9 @@ in.
 
 referer
 ^^^^^^^
-The referer header value (a string). If provided, it will take preference over the ``Referer`` header value set within
-the ``headers`` directive.
+The referer header value (a string). If provided, it will take preference over the the `Referer
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header value set within the :ref:`headers`
+directive.
 
 .. versionadded:: 3.10
 
@@ -638,6 +728,11 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
    * Replace ``$USER`` with the username that runs :program:`webchanges` if different than the use you're logged in when
      making the above changes, similarly with ``$(id -g -n)`` for the group.
 
+Internally, this type of job has the attribute ``kind: command``.
+
+.. versionchanged:: 3.11
+   ``kind`` attribute was renamed from ``shell`` to ``command`` but the former is still recognized.
+
 Required directives
 -------------------
 
@@ -661,8 +756,14 @@ Human-readable name/label of the job used in reports (a string).
 If this directive is not specified, the label used in reports will either be the ``url`` or the ``command`` itself or,
 for ``url`` jobs retrieving HTML or XML data, the first 60 character of the contents of the <title> field if found.
 
+While jobs are executed in parallel for speed, they appear in the report in alphabetical order by name, so
+you can control the order in which they appear through their naming.
+
 .. versionchanged:: 3.0
    Added auto-detect <title> tag in HTML or XML.
+
+.. versionchanged:: 3.11
+   Reports are sorted by job name.
 
 
 .. _user_visible_url:
@@ -785,9 +886,15 @@ Tells the ``html`` report that the data is in Markdown format and should be reco
 kind
 ----
 For Python programmers only, this is used to associate the job to a custom job Class defined in ``hooks.py``, by
-matching the contents of this directive to the ```__kind__`` variable of the class.
+matching the contents of this directive to the ``__kind__`` variable of the custom Class.
+
+The three built-in job Classes are:
+
+- ``kind: url`` for ``url`` jobs without the ``browser`` directive;
+- ``kind: browser`` for ``url`` jobs with the ``browser: true`` directive;
+- ``kind: command`` for ``command`` jobs (formerly called ``shell``).
 
 
 Setting default directives
 ==========================
-See :ref:`here <job_defaults>` for how to set default directives for all jobs.
+See :ref:`here <job_defaults>` for how to set default directives for all jobs or for jobs of an individual ``kind``.

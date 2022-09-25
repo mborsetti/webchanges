@@ -77,6 +77,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         if urlwatcher.report.new_release_future is None:
             urlwatcher.report.new_release_future = executor.submit(urlwatcher.get_new_release_version)
 
+        job_state: JobState
         for job_state in executor.map(
             lambda jobstate: jobstate.process(headless=not urlwatcher.urlwatch_config.no_headless),
             (stack.enter_context(JobState(urlwatcher.cache_storage, job)) for job in jobs),
@@ -119,22 +120,29 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     job_state.save(use_old_data=True)  # do not save error data but reuse old data
                     urlwatcher.report.error(job_state)
 
-            elif len(job_state.old_data) or job_state.old_timestamp != 0:
+            elif job_state.old_data or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
-                if job_state.new_data in (job_state.old_data, job_state.history_data):
-                    # exactly matches one of the previous snapshots
+                if (
+                    job_state.new_data == job_state.old_data
+                    or job_state.new_data in job_state.history_dic_snapshots.keys()
+                ):
+                    # Exactly matches one of the previous snapshots
                     if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save()
                     urlwatcher.report.unchanged(job_state)
                 else:
-                    # no match
-                    if len(job_state.history_data) > 1:
-                        # replace old with best "good enough" previous snapshot
-                        close_matches = difflib.get_close_matches(job_state.new_data, job_state.history_data, n=1)
+                    # No exact match to previous snapshot
+                    if len(job_state.history_dic_snapshots) > 1:
+                        # Find the closest fuzzy matching old snapshot ("good enough") and replace to diff against it
+                        close_matches: list[str] = difflib.get_close_matches(
+                            job_state.new_data, job_state.history_dic_snapshots.keys(), n=1
+                        )
                         if close_matches:
                             job_state.old_data = close_matches[0]
-                            job_state.old_timestamp = job_state.history_data[close_matches[0]]
+                            job_state.old_timestamp = job_state.history_dic_snapshots[close_matches[0]].timestamp
+                            job_state.old_etag = job_state.history_dic_snapshots[close_matches[0]].etag
+                    # It has different data so we save it
                     job_state.tries = 0
                     job_state.save()
                     urlwatcher.report.changed(job_state)
@@ -168,7 +176,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     if urlwatcher.urlwatch_config.joblist:
         for idx in urlwatcher.urlwatch_config.joblist:
             if not (-len(urlwatcher.jobs) <= idx <= -1 or 1 <= idx <= len(urlwatcher.jobs)):
-                raise IndexError(f'Job index {idx} out of range (found {len(urlwatcher.jobs)} jobs)')
+                raise IndexError(f'Job index {idx} out of range (found {len(urlwatcher.jobs)} jobs).')
         urlwatcher.urlwatch_config.joblist = [
             jn if jn > 0 else len(urlwatcher.jobs) + jn + 1 for jn in urlwatcher.urlwatch_config.joblist
         ]
@@ -195,7 +203,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 "Running jobs that do not require Chrome (without 'use_browser: true') in parallel with Python's "
                 'default max_workers.'
             )
-            job_runner(stack, jobs_to_run)
+            job_runner(stack, jobs_to_run, urlwatcher.urlwatch_config.max_workers)
         else:
             logger.debug("Found no jobs that do not require Chrome (i.e. without 'use_browser: true').")
 
@@ -203,8 +211,11 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         jobs_to_run = [job for job in jobs if type(job) == BrowserJob]
         if jobs_to_run:
             virt_mem = get_virt_mem()
-            max_workers = max(int(virt_mem / 120e6), 1)
-            max_workers = min(max_workers, os.cpu_count() or 1)
+            if urlwatcher.urlwatch_config.max_workers:
+                max_workers = urlwatcher.urlwatch_config.max_workers
+            else:
+                max_workers = max(int(virt_mem / 200e6), 1)
+                max_workers = min(max_workers, os.cpu_count() or 1)
             logger.debug(
                 f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with {max_workers} "
                 f'max_workers.'

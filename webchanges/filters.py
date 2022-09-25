@@ -427,10 +427,11 @@ class Html2TextFilter(FilterBase):
             https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options,
             however the following options are set to non-default values:
 
-            * ``parser.unicode_snob = True``
-            * ``parser.body_width = 0``
-            * ``parser.single_line_break = True``
-            * ``parser.ignore_images = True``
+            * ``unicode_snob = True``
+            * ``body_width = 0``
+            * ``ignore_images = True``
+            * ``single_line_break = True``
+            * ``wrap_links = False``
 
         * ``bs4``: Use Beautiful Soup Python library to prettify the HTML.
 
@@ -472,8 +473,9 @@ class Html2TextFilter(FilterBase):
             parser = html2text.HTML2Text()
             parser.unicode_snob = True
             parser.body_width = 0
-            parser.single_line_break = True
             parser.ignore_images = True
+            parser.single_line_break = True
+            parser.wrap_links = False
             if hasattr(self.job, 'url'):
                 parser.baseurl = self.job.url
             for k, v in options.items():

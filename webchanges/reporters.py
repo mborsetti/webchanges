@@ -213,6 +213,9 @@ class ReporterBase(metaclass=TrackSubClasses):
         :param jobs_files: The path(s) to the file(s) containing the list of jobs (optional, used in footers).
         """
 
+        # sort job_states
+        job_states = sorted(job_states, key=lambda x: x.verb + x.job.pretty_name())
+
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
             cfg: ConfigReportersList = report.config['report'].get(  # type: ignore[misc] # for PyCharm
@@ -227,7 +230,7 @@ class ReporterBase(metaclass=TrackSubClasses):
             logger.warning('No reporters enabled.')
 
     def submit(self, **kwargs: Any) -> Iterator[str]:
-        """Submit a job to generate the report.
+        """For the subclass, submit a job to generate the report.
 
         :returns: The content of the report.
         """
@@ -371,7 +374,7 @@ class HtmlReporter(ReporterBase):
         else:
             if job.is_markdown:
                 # rebuild html from markdown using markdown2 library's Markdown
-                markdowner = Markdown(safe_mode='escape', extras=['strike', 'target-blank-links'])
+                markdowner = Markdown(extras=['strike', 'target-blank-links'])
                 ptags = re.compile(r'^<p>|</p>$')
                 htags = re.compile(r'<(/?)h\d>')
 
@@ -400,7 +403,7 @@ class HtmlReporter(ReporterBase):
                         # a padded row in a table; keep it monospaced for alignment
                         pre += '<span style="font-family:monospace;white-space:pre-wrap">'
                         post += '</span>'
-                    html_out = str(markdowner.convert(text)).strip('\n')  # convert markdown to html
+                    html_out = str(markdowner.convert(text)).rstrip('\n')  # convert markdown to html
                     html_out = html_out.replace('<a', '<a style="font-family:inherit"')  # fix <a> tag styling
                     html_out = html_out.replace('<img', '<img style="max-width:100%;height:auto;max-height:100%"')
                     html_out = html_out.replace('<code>', '<span style="font-family:monospace;white-space:pre-wrap">')
@@ -590,7 +593,7 @@ class TextReporter(ReporterBase):
             yield (
                 f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
                 f'{dur_text(self.duration)} with {__project_name__} {__version__}'
-                + (f' ({self.footer_job_file}).<br>\n' if self.footer_job_file else '.<br>\n')
+                + (f' ({self.footer_job_file}).\n' if self.footer_job_file else '.\n')
             )
             if (
                 self.report.new_release_future is not None
@@ -1336,12 +1339,12 @@ class DiscordReporter(TextReporter):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        default_max_length = 2000 if not self.config.get('embed', False) else 4096
+        default_max_length = 2000 if not self.config['embed'] else 4096
         if isinstance(self.config['max_message_length'], int):
             self.max_length = int(self.config['max_message_length'])
         else:
             self.max_length = default_max_length
-        if self.config.get('colored', True):
+        if self.config['colored']:
             self.max_length -= 11
 
     def submit(self) -> Optional[requests.Response]:  # type: ignore[override]
@@ -1361,10 +1364,10 @@ class DiscordReporter(TextReporter):
         return result
 
     def submit_to_discord(self, webhook_url: str, text: str) -> requests.Response:
-        if self.config.get('colored', True):
+        if self.config['colored']:
             text = '```diff\n' + text + '```'
 
-        if self.config.get('embed', False):
+        if self.config['embed']:
             filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
 
             subject_args = {

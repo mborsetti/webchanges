@@ -131,6 +131,7 @@ class JobBase(metaclass=TrackSubClasses):
     monospace: Optional[bool] = None
     name: Optional[str] = None
     navigate: Optional[str] = None  # backwards compatibility (deprecated)
+    no_conditional_request: Optional[bool] = None
     no_redirects: Optional[bool] = None
     note: Optional[str] = None
     referer: Optional[str] = None  # Playwright
@@ -432,16 +433,55 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return False
 
+    def get_headers(self, job_state: JobState) -> CaseInsensitiveDict:
+        """Get headers and modify them to add cookies and conditional request.
+
+        :param job_state: The job state.
+
+        :returns: The headers.
+        """
+
+        if self.headers:
+            headers = CaseInsensitiveDict({k: str(v) for k, v in self.headers.items()})
+        else:
+            headers = CaseInsensitiveDict()
+        if self.cookies:
+            if not isinstance(self.cookies, dict):
+                raise TypeError(
+                    f"Job {self.index_number}: Directive 'cookies' needs to be a dictionary; "
+                    f"found a '{type(self.cookies).__name__}' ( {self.get_indexed_location()} ).'"
+                )
+            self.cookies = {k: str(v) for k, v in self.cookies.items()}
+            if 'Cookie' in headers:
+                warnings.warn(
+                    f"Job {self.index_number}: Found both a header 'Cookie' and a directive 'cookies'; "
+                    f"please specify only one of them (using content of the cookies 'directive') "
+                    f'( {self.get_indexed_location()} ).'
+                )
+            headers['Cookie'] = '; '.join([f'{k}={quote(v)}' for k, v in self.cookies.items()])
+        if self.no_conditional_request:
+            headers.pop('If-Modified-Since', None)
+            headers.pop('If-None-Match', None)
+        else:
+            if self.ignore_cached or job_state.tries > 0:
+                headers['Cache-Control'] = 'max-age=172800'
+                headers['Expires'] = email.utils.formatdate()
+                headers['If-Modified-Since'] = email.utils.formatdate(0)
+                headers.pop('If-None-Match', None)
+            else:
+                if job_state.old_etag:
+                    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
+                    headers['If-None-Match'] = job_state.old_etag
+                if job_state.old_timestamp is not None:
+                    headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
+        return headers
+
 
 class Job(JobBase):
     """Job class for jobs."""
 
     __required__: Tuple[str, ...] = ()
     __optional__: Tuple[str, ...] = (
-        'kind',  # hooks.py
-        'index_number',
-        'name',
-        'note',
         'additions_only',
         'compared_versions',
         'contextlines',
@@ -449,10 +489,15 @@ class Job(JobBase):
         'diff_filter',
         'diff_tool',
         'filter',
+        'index_number',
+        'is_markdown',
+        'kind',  # hooks.py
         'markdown_padded_tables',
         'max_tries',
         'monospace',
-        'is_markdown',
+        'name',
+        'no_conditional_request',
+        'note',
         'user_visible_url',
     )
 
@@ -507,7 +552,6 @@ class UrlJob(UrlJobBase):
 
     __kind__ = 'url'
 
-    __required__ = ('url',)
     __optional__ = (
         'cookies',
         'data',
@@ -588,22 +632,9 @@ class UrlJob(UrlJobBase):
 
                     return '\n'.join(data), ''
 
-        headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
+        headers = self.get_headers(job_state)
         if 'User-Agent' not in headers:
             headers['User-Agent'] = __user_agent__
-
-        if self.ignore_cached or job_state.tries > 0:
-            headers.pop('If-None-Match', None)
-            headers['If-Modified-Since'] = email.utils.formatdate(0)
-            headers['Cache-Control'] = 'max-age=172800'
-            headers['Expires'] = email.utils.formatdate()
-        else:
-            if job_state.old_etag:
-                # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
-                headers['If-None-Match'] = job_state.old_etag
-
-            if job_state.old_timestamp is not None:
-                headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
 
         if self.data is not None:
             if self.method is None:
@@ -612,6 +643,12 @@ class UrlJob(UrlJobBase):
                 headers['Content-Type'] = 'application/x-www-form-urlencoded'
             if isinstance(self.data, dict):
                 self.data = urlencode(self.data)
+            elif not isinstance(self.data, str):
+                raise TypeError(
+                    f"Job {job_state.job.index_number}: Directive 'data' needs to be a string or a dictionary; found a "
+                    f'{type(self.data).__name__} ( {self.get_indexed_location()} ).'
+                )
+
         else:
             if self.method is None:
                 self.method = 'GET'
@@ -620,9 +657,6 @@ class UrlJob(UrlJobBase):
         #     self.add_custom_headers(headers)
 
         # cookiejar (called by requests) expects strings or bytes-like objects; PyYAML will try to guess int etc.
-        if self.cookies:
-            self.cookies = {k: str(v) for k, v in self.cookies.items()}
-
         if self.timeout is None:
             # default timeout
             timeout: Optional[Union[int, float]] = 60.0
@@ -653,7 +687,6 @@ class UrlJob(UrlJobBase):
             url=self.url,
             data=self.data,
             headers=headers,
-            cookies=self.cookies,
             timeout=timeout,
             allow_redirects=(not self.no_redirects),
             proxies=proxies,
@@ -662,47 +695,37 @@ class UrlJob(UrlJobBase):
 
         # Custom version of request.raise_for_status() to include returned text.
         # https://requests.readthedocs.io/en/master/_modules/requests/models/#Response.raise_for_status
-        http_error_msg = ''
-        if isinstance(response.reason, bytes):
-            # We attempt to decode utf-8 first because some servers
-            # choose to localize their reason strings. If the string
-            # isn't utf-8, we fall back to iso-8859-1 for all other
-            # encodings. (See PR #3538)
-            try:
-                reason = response.reason.decode('utf-8')
-            except UnicodeDecodeError:
-                reason = response.reason.decode('iso-8859-1')
-        else:
-            reason = response.reason
-        if 400 <= response.status_code < 500:
-            http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
-        elif 500 <= response.status_code < 600:
-            http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
-        if http_error_msg:
-            response_message = response.text
-            if response_message:
-                try:
-                    parsed_json = json.loads(response_message)
-                    response_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
-                except json.decoder.JSONDecodeError:
-                    response_message = html2text.HTML2Text().handle(response_message).strip()
-                http_error_msg += f'\n{response_message}'
-            raise requests.HTTPError(http_error_msg, response=response)
-
         if 400 <= response.status_code < 600:
-            error_message = response.text
-            try:
-                parsed_json = json.loads(error_message)
-                error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
-            except json.decoder.JSONDecodeError:
-                error_message = html2text.HTML2Text().handle(error_message).strip()
-            logger.info(error_message)
-            if response.status_code < 500:
-                http_error_msg = f'{response.status_code} Client Error: {response.reason} for url: {response.url}'
+            if isinstance(response.reason, bytes):
+                # If the reason isn't utf-8 (HTML5 standard), we fall back to iso-8859-1 (legacy standard HTML <= 4.01).
+                try:
+                    reason = response.reason.decode()
+                except UnicodeDecodeError:
+                    reason = response.reason.decode('iso-8859-1')
             else:
-                http_error_msg = (
-                    f'{response.status_code} Server Error: {response.reason} for url: {response.url} ({error_message})'
-                )
+                reason = response.reason
+
+            if response.status_code < 500:
+                http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
+            else:
+                http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
+
+            if response.status_code != 404:
+                try:
+                    parsed_json = json.loads(response.text)
+                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+                except json.decoder.JSONDecodeError:
+                    html_text = (
+                        response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
+                    )
+                    parser = html2text.HTML2Text()
+                    parser.unicode_snob = True
+                    parser.body_width = 0
+                    parser.single_line_break = True
+                    parser.ignore_images = True
+                    error_message = parser.handle(html_text).strip()
+                http_error_msg += f'\n{error_message}'
+
             raise requests.HTTPError(http_error_msg, response=response)
 
         if response.status_code == requests.codes.not_modified:
@@ -719,16 +742,17 @@ class UrlJob(UrlJobBase):
         if self.encoding:
             response.encoding = self.encoding
         elif response.encoding == 'ISO-8859-1' and not CHARSET_RE.match(response.headers.get('Content-type', '')):
-            # requests follows RFC 2616 and defaults to ISO-8859-1 if no explicit charset is present in the HTTP headers
-            # and the Content-Type header contains text, but this IRL is often wrong; the below updates it with
-            # whatever response detects it to be by its use of the chardet library
+            # If the Content-Type header contains text and no explicit charset is present in the HTTP headers requests
+            # follows RFC 2616 and defaults encoding to ISO-8859-1, but IRL this is often wrong; the below updates it
+            # with whatever is detected by the charset_normalizer or chardet libraries used in requests
+            # (see https://requests.readthedocs.io/en/latest/user/advanced/#encodings)
             logger.debug(
                 f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from '
                 f'{response.encoding}'
             )
             response.encoding = response.apparent_encoding
 
-        # if no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
+        # If no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
         if not self.name:
             title = re.search(r'<title.*?>(.+?)</title>', response.text)
             if title:
@@ -788,7 +812,7 @@ class BrowserJob(UrlJobBase):
 
     __kind__ = 'browser'
 
-    __required__ = ('url', 'use_browser')
+    __required__ = ('use_browser',)
     __optional__ = (
         'block_elements',
         'chromium_revision',  # deprecated
@@ -833,30 +857,17 @@ class BrowserJob(UrlJobBase):
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
         :param headless: For browser-based jobs, whether headless mode should be used.
+
+        :raises ValueError: If there is a problem with the value supplied in one of the keys in the configuration file.
+        :raises TypeError: If the value provided in one of the directives is not of the correct type.
+        :raises ImportError: If the playwright package is not installed.
+        :raises BrowserResponseError: If a browser error or an HTTP response code between 400 and 599 is received.
         :returns: The data retrieved and the ETag.
         """
         if self._delay:  # pragma: no cover  TODO not yet implemented.
             logger.debug(f'Delaying for {self._delay} seconds (duplicate network location)')
             time.sleep(self._delay)
 
-        response, etag = self._playwright_retrieve(job_state, headless)
-
-        # if no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
-        if not self.name:
-            title = re.findall(r'<title.*?>(.+?)</title>', response)
-            if title:
-                self.name = html.unescape(title[0])[:60]
-
-        return response, etag
-
-    def _playwright_retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[str, str]:
-        """
-
-        :raises ValueError: If there is a problem with the value supplied in one of the keys in the configuration file.
-        :raises TypeError: If the value provided in one of the directives is not of the correct type.
-        :raises ImportError: If the playwright package is not installed.
-        :raises BrowserResponseError: If a browser error or an HTTP response code between 400 and 599 is received.
-        """
         try:
             from playwright._repo_version import version as playwright_version
             from playwright.sync_api import Error as PlaywrightError
@@ -900,25 +911,12 @@ class BrowserJob(UrlJobBase):
             else:
                 warnings.warn(
                     f"Job {self.index_number}: Directive 'wait_for_navigation' is "
-                    f'of type {type(self.wait_for_navigation)} and cannot be converted for use  with Playwright; '
-                    "please use 'wait_for_url' (see documentation).",
+                    f'of type {type(self.wait_for_navigation).__name__} and cannot be converted for use with '
+                    f"Playwright; please use 'wait_for_url' (see documentation)  ( {self.get_indexed_location()} ).",
                     DeprecationWarning,
                 )
 
-        headers: CaseInsensitiveDict = CaseInsensitiveDict(getattr(self, 'headers', {}))
-        if self.ignore_cached or job_state.tries > 0:
-            headers.pop('If-None-Match', None)
-            headers['If-Modified-Since'] = email.utils.formatdate(0)
-            headers['Cache-Control'] = 'max-age=172800'
-            headers['Expires'] = email.utils.formatdate()
-        else:
-            if job_state.old_etag:
-                # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
-                headers['If-None-Match'] = job_state.old_etag
-            if job_state.old_timestamp is not None:
-                headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
-        if self.cookies:
-            headers['Cookie'] = '; '.join([f'{k}={quote(v)}' for k, v in self.cookies.items()])
+        headers = self.get_headers(job_state)
 
         proxy: Optional[ProxySettings] = None
         if self.http_proxy or os.getenv('HTTP_PROXY') or self.https_proxy or os.getenv('HTTPS_PROXY'):
@@ -944,8 +942,8 @@ class BrowserJob(UrlJobBase):
                 self.switches = self.switches.split(',')
             if not isinstance(self.switches, list):
                 raise TypeError(
-                    f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list, not"
-                    f' {type(self.switches)} ( {self.get_indexed_location()} )'
+                    f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list; found a "
+                    f'{type(self.switches).__name__} ( {self.get_indexed_location()} ).'
                 )
             args: Optional[List[str]] = [f"--{switch.lstrip('--')}" for switch in self.switches]
         else:
@@ -960,7 +958,7 @@ class BrowserJob(UrlJobBase):
             elif not isinstance(self.ignore_default_args, bool):
                 raise TypeError(
                     f"Job {job_state.job.index_number}: Directive 'ignore_default_args' needs to be a bool, string or "
-                    f'list, not {type(self.ignore_default_args)} ( {self.get_indexed_location()} )'
+                    f'list; found a {type(self.ignore_default_args).__name__} ( {self.get_indexed_location()} ).'
                 )
         else:
             ignore_default_args = None
@@ -992,21 +990,26 @@ class BrowserJob(UrlJobBase):
                     headless=headless,
                     proxy=proxy,  # type: ignore[arg-type]
                 )
-                if 'User-Agent' not in headers:
-                    headers['User-Agent'] = (
-                        f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                        f'Chrome/{browser.version} Safari/537.36'
-                    )
+                browser_version = browser.version
+                user_agent = headers.pop(
+                    'User-Agent',
+                    f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                    f"Chrome/{browser_version.split('.', maxsplit=1)[0]}.0.0.0 Safari/537.36",
+                )
                 context = browser.new_context(
                     no_viewport=no_viewport,
                     ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
+                    user_agent=user_agent,  # will be detected if in headers
                     extra_http_headers=dict(headers),
                 )
                 logger.info(
                     f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name} browser'
-                    f' {browser.version}'
+                    f' {browser_version}'
                 )
+
             else:
+                user_agent = headers.pop('User-Agent', None)
+
                 context = p.chromium.launch_persistent_context(
                     user_data_dir=self.user_data_dir,
                     channel=channel,  # type: ignore[arg-type]
@@ -1018,11 +1021,12 @@ class BrowserJob(UrlJobBase):
                     no_viewport=no_viewport,
                     ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
                     extra_http_headers=dict(headers),
+                    user_agent=user_agent,
                 )
+                browser_version = ''
                 logger.info(
                     f'Job {self.index_number}: Pyppeteer {playwright_version} launched {browser_name} browser '
-                    f'{context.browser.version} from user data directory '  # type: ignore[union-attr]
-                    f'{self.user_data_dir}'
+                    f'from user data directory {self.user_data_dir}'
                 )
 
             # set default timeout
@@ -1066,6 +1070,12 @@ class BrowserJob(UrlJobBase):
 
             # open a page
             page = context.new_page()
+            # the below to bypass detection; from https://intoli.com/blog/not-possible-to-block-chrome-headless/
+            page.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => false,});"
+                'window.chrome = {runtime: {},};'  # This is abbreviated: entire content is huge!!
+                "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5],});"
+            )
 
             url = self.url
             if self.initialization_url:
@@ -1075,7 +1085,7 @@ class BrowserJob(UrlJobBase):
                         self.initialization_url,
                     )
                 except PlaywrightError as e:
-                    logger.error(f'Job {self.index_number}: Website initialization page returned error' f' {e.args[0]}')
+                    logger.info(f'Job {self.index_number}: Website initialization page returned error' f' {e.args[0]}')
                     context.close()
                     raise e
 
@@ -1097,7 +1107,7 @@ class BrowserJob(UrlJobBase):
                     context.close()
                     raise ValueError(
                         f"Job {job_state.job.index_number}: Directive 'initialization_url' did not find key"
-                        f" {e.args[0]} to substitute in 'url'"
+                        f" {e.args[0]} to substitute in 'url'."
                     )
                 if new_url != url:
                     url = new_url
@@ -1107,13 +1117,16 @@ class BrowserJob(UrlJobBase):
             if self.data:
                 if not self.method:
                     self.method = 'POST'
-                if 'Content-Type' not in headers:
-                    headers['Content-Type'] = 'application/x-www-form-urlencoded'
                 logger.info(f'Job {self.index_number}: Sending POST request to {url}')
                 if isinstance(self.data, dict):
                     data = urlencode(self.data)
-                else:
+                elif isinstance(self.data, str):
                     data = quote(self.data)
+                else:
+                    raise ValueError(
+                        f"Job {job_state.job.index_number}: Directive 'data' requires a dictionary or a string; found "
+                        f'a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
+                    )
 
             if self.method and self.method != 'GET':
 
@@ -1183,7 +1196,7 @@ class BrowserJob(UrlJobBase):
             #     )  # inherited from pyee.EventEmitter
 
             # navigate page
-            logger.info(f'Job {self.index_number}: {browser_name} {browser.version} navigating to {url}')
+            logger.info(f'Job {self.index_number}: {browser_name} {browser_version} navigating to {url}')
             logger.debug(f'Job {self.index_number}: Headers {headers}')
             try:
                 response = page.goto(
@@ -1210,7 +1223,8 @@ class BrowserJob(UrlJobBase):
                             context.close()
                             raise ValueError(
                                 f"Job {job_state.job.index_number}: Directive 'wait_for_url' can only be a string or a "
-                                f'dictionary; found {type(self.wait_for_url)}.'
+                                f'dictionary; found a {type(self.wait_for_url.__name__)} '
+                                f'( {self.get_indexed_location()} ).'
                             )
                     if self.wait_for_selector:
                         if isinstance(self.wait_for_selector, str):
@@ -1221,7 +1235,8 @@ class BrowserJob(UrlJobBase):
                             context.close()
                             raise ValueError(
                                 f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a string "
-                                f'or a dictionary; found {type(self.wait_for_selector)}.'
+                                f'or a dictionary; found a {type(self.wait_for_selector).__name__}'
+                                f' ( {self.get_indexed_location()} ).'
                             )
                     if self.wait_for_function:
                         if isinstance(self.wait_for_function, str):
@@ -1233,7 +1248,8 @@ class BrowserJob(UrlJobBase):
                             context.close()
                             raise ValueError(
                                 f"Job {job_state.job.index_number}: Directive 'wait_for_function' can only be a string "
-                                f'or a dictionary; found {type(self.wait_for_function)}'
+                                f'or a dictionary; found a {type(self.wait_for_function).__name__}'
+                                f' ( {self.get_indexed_location()} ).'
                             )
                     if self.wait_for_timeout:
                         if isinstance(self.wait_for_timeout, (int, float)) and not isinstance(
@@ -1244,11 +1260,12 @@ class BrowserJob(UrlJobBase):
                             context.close()
                             raise ValueError(
                                 f"Job {job_state.job.index_number}: Directive 'wait_for_timeout' can only be a number; "
-                                f'found {type(self.wait_for_timeout)}.'
+                                f'found a {type(self.wait_for_timeout).__name__}'
+                                f' ( {self.get_indexed_location()} ).'
                             )
 
             except PlaywrightError as e:
-                logger.error(f'Job {self.index_number}: Browser returned error {e.args[0]}')
+                logger.info(f'Job {self.index_number}: Browser returned error {e.args[0]}\n({url})')
                 context.close()
                 raise BrowserResponseError(e.args, None)
 
@@ -1261,13 +1278,11 @@ class BrowserJob(UrlJobBase):
                 #     f'{response.url}'
                 # )
                 # logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
+                message = response.status_text
                 if response.status != 404:
-                    try:
-                        message = f"{response.status_text}\n{page.text_content('body')}"
-                    except PlaywrightError:
-                        message = response.status_text
-                else:
-                    message = response.status_text
+                    body = page.text_content('body')
+                    if body is not None:
+                        message = f'{message}\n{body.strip()}' if message else body.strip()
                 context.close()
                 raise BrowserResponseError((message,), response.status)
 
@@ -1282,6 +1297,12 @@ class BrowserJob(UrlJobBase):
                 f'(plus {swap_memory / 1e6:,.0f} MB of swap) before closing the browser (a decrease of '
                 f'{used_mem / 1e6:,.0f} MB).'
             )
+
+            # if no name directive is given, set it to the title element if found in HTML or XML truncated to 60 chars
+            if not self.name:
+                title = re.findall(r'<title.*?>(.+?)</title>', content)
+                if title:
+                    self.name = html.unescape(title[0])[:60]
 
             context.close()
             return content, etag
@@ -1406,7 +1427,7 @@ class BrowserJob(UrlJobBase):
 class ShellJob(Job):
     """Run a shell command and get its standard output."""
 
-    __kind__ = 'shell'
+    __kind__ = 'command'
 
     __required__ = ('command',)
     __optional__ = ('stderr',)  # ignored; here for backwards compatibility

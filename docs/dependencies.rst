@@ -19,7 +19,7 @@ square brackets, like this::
 | Feature                 | Python package(s) installed                                             |
 +=========================+=========================================================================+
 | ``use_browser``         | * `Playwright <https://playwright.dev/python/>`__                       |
-| (in a url job)          | * `psutil <https://github.com/giampaolo/psutil>`__                      |
+| (in a ``url`` job)      | * `psutil <https://github.com/giampaolo/psutil>`__                      |
 |                         | * Note: Google Chrome (if not present) will be auto-installed at first  |
 |                         |   run                                                                   |
 +-------------------------+-------------------------------------------------------------------------+

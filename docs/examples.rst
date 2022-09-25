@@ -158,12 +158,12 @@ Resolving typical issues
 Below are some job configurations that have helped to solve typical issues.
 
 
-.. _timeout:
+.. _example_timeout:
 
 Changing the default timeout
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-By default, url jobs timeout after 60 seconds. If you want a different timeout period, use the ``timeout`` directive to
-specify it in number of seconds, or set it to 0 to never timeout.
+By default, ``url`` jobs timeout after 60 seconds. If you want a different timeout period, use the ``timeout`` directive
+to specify it in number of seconds, or set it to 0 to never timeout.
 
 .. code-block:: yaml
 
@@ -171,7 +171,7 @@ specify it in number of seconds, or set it to 0 to never timeout.
    timeout: 300
 
 
-.. _headers:
+.. _default_headers:
 
 Setting default headers
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -182,7 +182,7 @@ per the example below. If a ``headers`` key is also found in a job, for that job
 .. code-block:: yaml
 
    job_defaults:
-     all:
+     url:
        headers:
          Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
          Accept-Language: en-US,en
@@ -206,7 +206,7 @@ per the example below. If a ``headers`` key is also found in a job, for that job
          Viewport-Width: '1707'
 
 
-.. _cookies:
+.. _example_cookies:
 
 Supplying cookies
 ^^^^^^^^^^^^^^^^^

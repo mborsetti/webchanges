@@ -10,8 +10,8 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 import sys
+from pathlib import Path
 
 # below required for local build
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused
@@ -20,15 +20,12 @@ from docutils.nodes import Element, Node
 from sphinx.writers.html import HTMLTranslator
 
 # below required to import project_data module
-current_path = os.path.dirname(__file__)
-target_path = os.path.abspath(os.path.join(current_path, '..'))
-sys.path.insert(1, target_path)
+sys.path.insert(1, str(Path(__file__).parent.parent))
 
 import webchanges as project_data  # noqa: E402 module level import not at top of file
 
-# below required for autosummary build on GitHub actions's pre-commit and on readthedocs.io
-target_path = os.path.abspath(os.path.join(current_path, 'webchanges'))
-sys.path.insert(1, target_path)
+# below required for autosummary build on GitHub Actions's pre-commit and on readthedocs.io
+sys.path.insert(1, str(Path(__file__).parent.joinpath('webchanges')))
 
 # -- Project information -----------------------------------------------------
 

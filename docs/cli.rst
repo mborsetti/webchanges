@@ -11,15 +11,16 @@ Command line arguments
 
    usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE] [--cache FILE] [--list]
                  [--errors] [--test [JOB]] [--no-headless] [--test-diff JOB] [--dump-history JOB]
-                 [--test-reporter REPORTER] [--smtp-login] [--telegram-chats] [--xmpp-login] [--edit]
-                 [--edit-config] [--edit-hooks] [--gc-cache] [--clean-cache]
-                 [--rollback-cache TIMESTAMP] [--delete-snapshot JOB]
-                 [--database-engine {sqlite3,redis,minidb,textfiles}] [--max-snapshots NUM_SNAPSHOTS]
-                 [--check-new] [--install-chrome] [--features] [--add JOB] [--delete JOB]
+                 [--max-workers WORKERS] [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
+                 [--xmpp-login] [--edit] [--edit-config] [--edit-hooks] [--gc-database]
+                 [--clean-database] [--rollback-database TIMESTAMP] [--delete-snapshot JOB]
+                 [--check-new] [--install-chrome] [--features] [--database-engine DATABASE_ENGINE]
+                 [--max-snapshots NUM_SNAPSHOTS] [--add JOB] [--delete JOB]
                  [joblist ...]
 
-   Checks web content to detect any changes since the prior run. If any are found, it shows what changed ('diff') and/or
-   sends it via e-mail and/or other supported services. Can check the output of local commands as well.
+   Checks web content to detect any changes since the prior run. If any are found, it shows what changed
+   ('diff') and/or sends it via e-mail and/or other supported services. Can check the output of local
+   commands as well.
 
    positional arguments:
      joblist               job(s) to run (by index as per --list) (default: run all jobs)
@@ -38,15 +39,17 @@ Command line arguments
 
    job management:
      --list                list jobs and their index number
-     --errors              list jobs with errors or no data captured
+     --errors              test run all jobs and list those with errors or no data captured
      --test [JOB], --test-filter [JOB]
                            test a job (by index or URL/command) and show filtered output; if no JOB,
                            check syntax of config and jobs file(s)
      --no-headless         turn off browser headless mode (for jobs using a browser)
      --test-diff JOB, --test-diff-filter JOB
-                           test and show diff using existing saved snapshots of a job (by index or
+                           show diff(s) using existing saved snapshots of a job (by index or
                            URL/command)
-     --dump-history JOB    print all saved snapshot history for a job (by index or URL/command)
+     --dump-history JOB    print all saved changed snapshots for a job (by index or URL/command)
+     --max-workers WORKERS
+                           maximum number of parallel threads
 
    reporters:
      --test-reporter REPORTER
@@ -62,22 +65,29 @@ Command line arguments
      --edit-hooks          edit hooks script
 
    database:
-     --gc-cache            garbage collect the cache database by removing old snapshots plus all data of
-                           jobs not in the jobs file
-     --clean-cache         remove old snapshots from the cache database
-     --rollback-cache TIMESTAMP
-                           delete recent snapshots since TIMESTAMP (backup the database before using!)
+     --gc-database, --gc-cache
+                           garbage collect the cache database by removing old changed snapshots plus all
+                           data of jobs not in the jobs file
+     --clean-database, --clean-cache
+                           remove old changed snapshots from the database
+     --rollback-database TIMESTAMP, --rollback-cache TIMESTAMP
+                           delete recent changed snapshots since TIMESTAMP (backup the database before
+                           using!)
      --delete-snapshot JOB
-                           delete the last saved snapshot of job (index or URL/command)
-     --database-engine {sqlite3,redis,minidb,textfiles}
-                           database engine to use (default: sqlite3, unless redis URI in --cache)
-     --max-snapshots NUM_SNAPSHOTS
-                           sqlite3 only: maximum number of snapshots to retain in database (default: 4)
+                           delete the last saved changed snapshot of job (index or URL/command)
 
    miscellaneous:
      --check-new           check if a new release is available
      --install-chrome      install or update Google Chrome browser (for jobs using a browser)
-     --features            list supported job types, filters and reporters (including those loaded by hooks)
+     --features            list supported job kinds, filters and reporters (including those loaded by
+                           hooks)
+
+   override configuration file:
+     --database-engine DATABASE_ENGINE
+                           override database engine to use
+     --max-snapshots NUM_SNAPSHOTS
+                           override maximum number of changed snapshots to retain in database (sqlite3
+                           only)
 
    backward compatibility (WARNING: all remarks are deleted from jobs file; use --edit instead):
      --add JOB             add a job (key1=value1,key2=value2,...) [use --edit instead]
@@ -118,7 +128,7 @@ example the text returned from a website with a 4xx (client error) status code:
 
 Please note that ``max_tries`` will be ignored by ``--test``.
 
-To only check the config and job files for errors, specify --test without a JOB:
+To only check the config, job and hooks files for errors, use ``--test`` without a JOB:
 
 .. code-block:: bash
 
@@ -130,6 +140,11 @@ To only check the config and job files for errors, specify --test without a JOB:
 
 .. versionchanged:: 3.10.2
    JOB no longer required (will only check the config and job files for errors).
+
+.. versionchanged:: 3.11
+   When JOB is not specified, the hooks file is also checked for syntax errors (in addition to the config and jobs
+   files).
+
 
 .. _test-diff:
 
@@ -194,15 +209,18 @@ This feature does not work with database engines ``textfiles`` and ``minidb``.
    Also works with ``redis`` database engine.
 
 
-.. _rollback-cache:
+.. _rollback-database:
 
 Rollback the database
 ---------------------
 You can rollback the snapshots database to an earlier time by running :program:`webchanges` with the
-``--rollback-cache`` command line argument followed by a `Unix timestamp <https://en.wikipedia
+``--rollback-database`` command line argument followed by a `Unix timestamp <https://en.wikipedia
 .org/wiki/Unix_time>`__ indicating the point in time you want to go back to. Useful when you missed notifications or
 they got lost: rollback the database to the time of the last good report, then run :program:`webchanges` again to get
 a new report with the differences since that time.
+
+.. versionchanged:: 3.11
+   Renamed from ``--rollback-cache``.
 
 You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
 <https://www.unixtimestamp.com/>`__
@@ -215,87 +233,47 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 .. versionadded:: 3.2
 
 
-.. _compact-cache:
+.. _compact-database:
 
 Compact the database
 --------------------
-You can compact the snapshots database by running :program:`webchanges` with either the ``--gc-cache`` or
-``--clean-cache`` command line argument.
+You can compact the snapshots database by running :program:`webchanges` with either the ``--gc-database`` or
+``--clean-database`` command line argument.
 
-Running with ``--gc-cache`` will purge all snapshots of jobs that are no longer in the jobs file **and**, for those in
-the jobs file, older snapshots other than the most recent one for each job. It will also rebuild (and therefore
+Running with ``--gc-database`` will purge all snapshots of jobs that are no longer in the jobs file **and**, for those
+in the jobs file, older snapshots other than the most recent one for each job. It will also rebuild (and therefore
 defragment) the database using VACUUM (see `here <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ for more
 details).
 
-.. tip
-   If you use multiple jobs files, use ``--cg-cache`` in conjunction with a glob ``--jobs`` command, e.g. ``webchanges
-   --jobs "jobs*.yaml" --gc-cache``.  To ensure that the glob is correct, run e.g. ``webchanges --jobs "jobs*.yaml"
-   --list``.
+.. tip:: If you use multiple jobs files, use ``--cg-database`` in conjunction with a glob ``--jobs`` command, e.g.
+   ``webchanges --jobs "jobs*.yaml" --gc-cache``. To ensure that the glob is correct, run e.g. ``webchanges --jobs
+   "jobs*.yaml" --list``.
 
-Running with ``--clean-cache`` will remove all older snapshots keeping the most recent one for each job (whether it is
-still present in the jobs file or not) and rebuild (and therefore defragment) the database using `VACUUM
+Running with ``--clean-database`` will remove all older snapshots keeping the most recent one for each job (whether it
+is still present in the jobs file or not) and rebuild (and therefore defragment) the database using SQL's `VACUUM
 <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__.
 
-
+.. versionchanged:: 3.11
+   Renamed from ``--gc-cache`` and ``--clean-cache``.
 
 .. _database-engine:
 
-Select a database engine
--------------------------
-Default (``sqlite3``)
-~~~~~~~~~~~~~~~~~~~~~
-The requirement for the ``minidb`` Python package has been removed in version 3.2 and the database system has migrated
-to one that relies on the built-in ``sqlite3``, is more efficient due to indexing, creates smaller files due to data
-compression with `msgpack <https://msgpack.org/index.html>`__, and provides additional functionality.
-
-Migration of the latest snapshots from the legacy (minidb) database is done automatically and the old file is preserved
-for manual deletion.
-
-Redis
-~~~~~
-To use Redis as a database (cache) backend, simply specify a redis URI in the ``--cache`` command line argument:
-
-.. code-block:: bash
-
-    webchanges --cache=redis://localhost:6379/
-
-For this to work, optional dependencies need to be installed; please see :ref:`here <dependencies>`
-
-There is no migration path from an existing database: the cache will be empty the first time Redis is used.
-
-Text files
-~~~~~~~~~~
-To have the latest snapshot of each job saved as a separate text file instead of as a record in a database, use
-``--cache-engine textfiles``.
-
-minidb (legacy)
-~~~~~~~~~~~~~~~
-To use the minidb-based database structure used in prior versions and in :program:`urlwatch` 2, launch
-:program:`webchanges` with the command line argument ``--cache-engine minidb``. The ``minidib`` Python package must
-be installed for this to work.
-
+Database engine
+---------------
+``--database-engine`` will override the value in the configuration file (see :ref:`database_engine`).
 
 .. versionadded:: 3.2
+
 
 
 .. _max-snapshots:
 
 Maximum number of snapshots to save
 -----------------------------------
-Each time you run :program:`webchanges` it captures the data downloaded from the URL (or the output of the command
-specified), applies filters, and saves the resulting snapshot to a database for future comparison. By default¹ only
-the last 4 snapshots are kept, but this number can be changed with the ``--max-snapshots`` command line argument. If
-set to 0, all snapshots are retained (the database will grow unbounded).
-
-.. tip:: Changes (diffs) between saved snapshots can be redisplayed with the ``--test-diff`` command line argument (see
-   :ref:`here <test-diff>`).
-
-¹ Note that when using ``redis`` or ``minidb`` database engines all snapshots will be kept, while when using the
-``textfiles`` database engine only the last snapshot is kept.
-
+``--max-snapshots`` will override the value in the configuration file (see :ref:`database_max_snapshots`).
 
 .. versionadded:: 3.3
-   for default ``sqlite3`` database engine only.
+   For default ``sqlite3`` database engine only.
 
 
 .. todo::

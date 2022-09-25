@@ -31,23 +31,79 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.11rc0
+===================
+2022-09-22
+
+Notice
+------
+Support for Python 3.7 will be removed on or about 22 October 2022 as older Python versions are supported for 3
+years after being obsoleted by a new major release.
+
+Added
+-----
+* The new ``no_conditional_request`` directive for ``url`` jobs turns off conditional requests for those extremely rare
+  websites that don't handle it (e.g. Google Flights).
+* Selecting the database engine and the maximum number of changed snapshots saved is now set through the configuration
+  file, and the command line arguments ``--database-engine`` and ``--max-snapshots`` are used to override such
+  settings. See documentation for more information. Suggested by `jprokos <https://github.com/jprokos>`__ in `#43
+  <https://github.com/mborsetti/webchanges/issues/43>`__.
+* New configuration file setting ``empty-diff`` within the ``display`` configuration for backwards compatibility only:
+  use the ``additions_only`` job directive instead to achieve the same result. Reported by
+  `bbeevvoo <https://github.com/bbeevvoo>`__ in `#47 <https://github.com/mborsetti/webchanges/issues/47>`__.
+* Aliased the command line arguments ``--gc-cache`` with ``--gc-database``, ``--clean-cache`` with ``--clean-database``
+  and ``--rollback-cache`` with ``--rollback-database`` for clarity.
+* The configuration file (e.g. ``conf.yaml``) can now contain keys starting with a ``_`` (underscore) for remarks (they
+  are ignored).
+
+Changed
+-------
+* Reports are now sorted alphabetically and therefore you can use the ``name`` directive to affect the order by which
+  your jobs are displayed in reports.
+* Implemented measures for ``url`` jobs using ``browser: true`` to avoid being detected: **webchanges** now passes all
+  the headless Chrome detection tests `here
+  <https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html>`__.
+  Brought to my attention by `amammad <https://github.com/amammad>`__ in `#45
+  <https://github.com/mborsetti/webchanges/issues/45>`__.
+* Running ``webchanges --test`` (without specifying a JOB) will now check the hooks file (if any) for syntax errors in
+  addition to the config and jobs file. Error reporting has also been improved.
+* No longer showing the the text returned by the server when a 404 - Not Found error HTTP status code is returned by for
+  all ``url`` jobs (previously only for jobs with ``use_browser: true``).
+
+Fixed
+-----
+* Bug in command line arguments ``--config`` and ``--hooks``. Contributed by
+  `Klaus Sperner <https://github.com/klaus-tux>`__ in PR `#46 <https://github.com/mborsetti/webchanges/pull/46>`__.
+* Job directive ``compared_versions`` now works as documented and testing has been added to the test suite. Reported by
+  `jprokos <https://github.com/jprokos>`__ in `#43 <https://github.com/mborsetti/webchanges/issues/43>`__.
+* The output of command line argument ``--test-diff`` now takes into consideration ``compared_versions``.
+* Markdown containing code in a link text now converts correctly in HTML reports.
+
+Internals
+---------
+* The job ``kind`` of ``shell`` has been renamed ``command`` to better reflect what it does and the way it's described
+  in the documentation, but ``shell`` is still recognized for backward compatibility.
+* Readthedocs build upgraded to Python 3.10
+
+
+
 Version 3.10.3
 ===================
 2022-07-22
 
 Added
 -----
-* URL jobs with ``use_browser: true`` that receive an error HTTP status code from the server will now include the text
-  returned by the website in the error message (e.g. "Rate exceeded.", "upstream request timeout", etc.), except for
-  HTTP status code 404 - Not Found.
+* ``url`` jobs with ``use_browser: true`` that receive an error HTTP status code from the server will now include the
+  text returned by the server in the error message (e.g. "Rate exceeded.", "upstream request timeout", etc.), except if
+  HTTP status code 404 - Not Found is received.
 
 Changed
 -------
-* The command line argument ``--jobs`` used to specify a jobs file will now accept a `glob pattern
+* The command line argument ``--jobs`` used to specify a jobs file now accepts a `glob pattern
   <https://en.wikipedia.org/wiki/Glob_(programming)>`__, e.g. wildcards, to specify multiple files. If more than one
-  file matches the pattern, their contents will be concatenated before a job list is built.  Useful e.g. if you have
+  file matches the pattern, their contents will be concatenated before a job list is built. Useful e.g. if you have
   multiple jobs files that run on different schedules and you want to clean the snapshot database of URLs/commands no
-  longer monitored ("garbage collect") using ``--gc-cache``.
+  longer monitored ("garbage collect") using ``--gc-cache`` (e.g. ``webchanges --jobs *.yaml --gc-cache``).
 * The command line argument ``--list`` will now list the full path of the jobs file(s).
 * Traceback information for Python Exceptions is suppressed by default. Use the command line argument ``--verbose``
   (or ``-v``) to display it.
@@ -61,7 +117,8 @@ Fixed
 Internals
 ---------
 * The source distribution is now available on PyPI to support certain packagers like ``fpm``.
-* Improved handling and reporting of Playwrigt browser errors (for URL jobs with ``use_browser: true``).
+* Improved handling and reporting of Playwright browser errors (for ``url`` jobs with ``use_browser: true``).
+
 
 
 Version 3.10.2
@@ -81,7 +138,7 @@ Added
 * New job directive ``compared_versions`` allows change detection to be made against multiple saved snapshots;
   useful for monitoring websites that change between a set of states (e.g. they are running A/B testing).
 * New command line argument ``--check-new`` to check if a new version of **webchanges** is available.
-* Error messages for url jobs failing with HTTP reason codes of 400 and higher now include any text returned by the
+* Error messages for ``url`` jobs failing with HTTP reason codes of 400 and higher now include any text returned by the
   website (e.g. "Rate exceeded.", "upstream request timeout", etc.). Not implemented in jobs with ``use_browser: true``
   due to limitations in Playwright.
 
@@ -122,7 +179,7 @@ Internals
 * ``urllib3`` is now an explicit dependency due to the refactoring of the ``requests`` package (we previously used
   ``requests.packages.urllib3``). Has no effect since ``urllib3`` is already being installed as a dependency of
   ``requests``.
-* Added ``typed.py`` file to implement `PEP 561 <https://peps.python.org/pep-0561/>`__.
+* Added ``py.typed`` marker file to implement `PEP 561 <https://peps.python.org/pep-0561/>`__.
 
 
 
@@ -298,8 +355,8 @@ Version 3.9.2
 
 Added
 -----
-* New ``ignore_dh_key_too_small`` directive for URL jobs to overcome the ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh key
-  too small (_ssl.c:1129)`` error.
+* New ``ignore_dh_key_too_small`` directive for ``url`` jobs to overcome the ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh
+  key too small (_ssl.c:1129)`` error.
 * New ``indent`` sub-directive for the ``beautify`` filter (requires BeautifulSoup version 4.11.0 or later).
 * New ``--dump-history JOB`` command line argument to print all saved snapshot history for a job.
 * Playwright only: new``--no-headless`` command line argument to help with debugging and testing (e.g. run
@@ -362,7 +419,7 @@ Changed
   its default value has changed to false to conform to BeautifulSoup's default. This gives better output in most
   cases. To restore the previous non-standard behavior, add the ``strip: true`` sub-directive to the ``html2text``
   filter of jobs.
-* Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
+* Pyppeteer (used for ``url`` jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
   There will be no new development to fix this as the use of Pyppeteer will soon be deprecated in favor of Playwright.
   See above to start using Playwright now (highly suggested).
 
@@ -404,14 +461,14 @@ Documentation
 
 Internals
 ---------
-* Support for Python 3.10 (except for URL jobs with ``use_browser`` using pyppeteer since it does not yet support it;
-  use Playwright instead).
+* Support for Python 3.10 (except for ``url`` jobs with ``use_browser`` using pyppeteer since it does not yet support
+  it; use Playwright instead).
 * Improved speed of detection and handling of lines starting with spaces during conversion of Markdown to HTML.
 * Logging (``--verbose``) now shows thread IDs to help with debugging.
 
 Known issues
 ------------
-* Pyppeteer (used for URL jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
+* Pyppeteer (used for ``url`` jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
   There will be no new development to fix this as the use of Pyppeteer will soon be deprecated in favor of Playwright.
   See above to start using Playwright now (highly suggested).
 
@@ -823,7 +880,7 @@ Version 3.2
 Added
 -----
 * Job directive ``note``: adds a freetext note appearing in the report after the job header
-* Job directive ``wait_for_navigation`` for URL jobs with ``use_browser: true`` (i.e. using *Pyppeteer*): wait for
+* Job directive ``wait_for_navigation`` for ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*): wait for
   navigation to reach a URL starting with the specified one before extracting content. Useful when the URL redirects
   elsewhere before displaying content you're interested in and *Pyppeteer* would capture the intermediate page.
 * command line argument ``--rollback-cache TIMESTAMP``: rollback the snapshot database to a previous time, useful when
@@ -833,8 +890,8 @@ Added
   in prior versions and *urlwatch* 2. New default ``sqlite3`` creates a smaller database due to data compression with
   `msgpack <https://msgpack.org/index.html>`__ and offers additional features; migration from old minidb database is
   done automatically and the old database preserved for manual deletion.
-* Job directive ``block_elements`` for URL jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) (⚠ ignored in Python
-  < 3.7) (experimental feature): specify `resource types
+* Job directive ``block_elements`` for ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) (⚠ ignored in
+  Python < 3.7) (experimental feature): specify `resource types
   <https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/ResourceType>`__ (elements) to
   skip requesting (downloading) in order to speed up retrieval of the content; only resource types `supported by
   Chromium <https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType>`__ are allowed
@@ -852,8 +909,8 @@ Changes
   <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`__ to avoid
   instability due to *Pyppeteer*'s high usage of CPU
 * Default configuration now specifies the use of Chromium revisions equivalent to Chrome 89.0.4389.72
-  for URL jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) to increase stability. Note: if you already have a
-  configuration file and want to upgrade to this version, see `here
+  for ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) to increase stability. Note: if you already have
+  a configuration file and want to upgrade to this version, see `here
   <https://webchanges.readthedocs.io/en/stable/advanced.html#using-a-chromium-revision-matching-a-google-chrome-chromium-release>`__.
   The Chromium revisions used now are 'linux': 843831, 'win64': 843846, 'win32': 843832, and 'mac': 843846.
 * Temporarily removed code autodoc from the documentation as it was not building correctly

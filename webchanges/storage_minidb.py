@@ -82,10 +82,10 @@ class CacheMiniDBStorage(CacheStorage):
                     break
         return history
 
-    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
-        history: List[Dict[str, Any]] = []
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
         if count is not None and count < 1:
-            return history
+            return []
+        history: List[Snapshot] = []
         for data, timestamp in self.CacheEntry.query(
             self.db,
             self.CacheEntry.c.data // self.CacheEntry.c.timestamp,
@@ -93,7 +93,7 @@ class CacheMiniDBStorage(CacheStorage):
             where=(self.CacheEntry.c.guid == guid)
             & ((self.CacheEntry.c.tries == 0) | (self.CacheEntry.c.tries is None)),
         ):
-            history.append({'timestamp': timestamp, 'data': data})
+            history.append(Snapshot(data, timestamp, 0, ''))
             if count is not None and len(history) >= count:
                 break
         return history

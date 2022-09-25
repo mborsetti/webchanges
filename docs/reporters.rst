@@ -52,12 +52,18 @@ Please note that many reporters need the installation of additional Python packa
 :ref:`dependencies <dependencies>`.
 
 
-To **test a reporter**, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.
+.. tip:: While jobs are executed in parallel for speed, they are sorted alphabetically in reports so you can use
+   :ref:`name` to control the order in which they appear in the report.
+
+.. versionchanged:: 3.11
+   Reports are sorted by job name.
+
+To test a reporter, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.
 ``webchanges --test-reporter stdout``. :program:`webchanges` will generate test  ``new``, ``changed``, ``unchanged``
 and ``error`` notifications and send the ones configured to be sent under ``display`` via the selected
-reporter, in this case ``stdout``. Any reporter that is configured and enabled can be tested.
+reporter, in this example ``stdout``. Any reporter that is configured and enabled can be tested.
 
-For example to test if your email reporter is configured correctly, use::
+For example, to test if your email reporter is configured correctly, use::
 
    webchanges --test-reporter email
 
@@ -97,7 +103,7 @@ Displays the :ref:`HTML report <html>` using the system's default web browser.
 .. code-block:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      browser:
        enabled: true  # don't forget to set this to true! :)
 
@@ -119,12 +125,12 @@ paste the URL into the configuration as seen below (see
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      webhook:
        enabled: true  # don't forget to set this to true! :)
        webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
        embed: true
-       subject: '{count} changes: {jobs}'
+       subject: "{count} changes: {jobs}"
        colored: true
 
 Embedded content might make it easier to read and identify individual reports. If ``embed`` is set to true then the
@@ -177,28 +183,27 @@ low-risk way to run unattended.
 .. code-block:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      email:
        enabled: true  # don't forget to set this to true! :)
-       from: 'webchanges <throwawayaccount@example.com>'  # (edit accordingly; don't use your primary account for this!!)
-       to: 'myself@example.com'  # The email address of where want to receive reports
-       subject: '[webchanges] {count} changes: {jobs}'
+       from: webchanges <throwawayaccount@example.com>  # (edit accordingly; don't use your primary account for this!!)
+       to: myself@example.com  # The email address of where want to receive reports
+       subject: "[webchanges] {count} changes: {jobs}"
        html: true
-       method: 'smtp'
+       method: smtp
        smtp:
-         host: 'smtp.example.com'
+         host: smtp.example.com
          port: 587
+         user: throwawayaccount@example.com  # (edit accordingly; don't use your primary account for this!!)
          starttls: true
-         user: 'throwawayaccount@example.com'  # (edit accordingly; don't use your primary account for this!!)
-         insecure_password: 'this_is_my_secret_password'
          auth: true
+         insecure_password: "this_is_my_secret_password"
 
 .. warning::
    **Never ever use this method with your your primary email account!**  Seriously! This method makes it really easy
    for your password to be picked up by software (e.g. a virus) running on your machine, by other users logged into
    the system, and/or for the password to appear in log files accidentally, so it's **insecure**. Create a throw-away
-   free email account just for sending out these emails; see below for an example on how to do so with
-   :ref:`Gmail <gmail>`.
+   free email account just for sending out these emails.
 
 .. _smtp-login-with-keychain:
 
@@ -219,68 +224,79 @@ SMTP sub-directives
 * ``auth``: Whether authentication via username/password is required (true/false). Default is true.
 * ``insecure_password``: The password used to authenticate (if keyring is not used).
 
+Amazon Simple Email Service (SES) example
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+First ensure that you have configured SES as per the `Quick start
+<https://docs.aws.amazon.com/ses/latest/DeveloperGuide/quick-start.html>`__
+
+Create an email address just for sending mails from :program:`webchanges` and similar programs for security reasons (so
+you can easily recover from a compromised user/password leak from, e.g. from a scan of your jobs file), then configure
+these directives as follows:
+
+.. code-block:: yaml
+
+   report:
+     tz: America/New_York  # or whatever you want it to be
+     email:
+       enabled: true  # don't forget to set this to true! :)
+       from: my_programs@verified_domain.com  # (edit accordingly)
+       to: your.destination@example.org  # The email address you want to send reports to
+       subject: "{count} changes: {jobs}"
+       html: true
+       method: smtp
+       smtp:
+         host: email-smtp.us-west-2.amazonaws.com  # (edit accordingly)
+         user: ABCDEFGHIJ1234567890  # (edit accordingly)
+         port: 587  # (25 or 465 also work)
+         starttls: true
+         auth: true
+         insecure_password: "this_is_my_secret_password"  # (edit accordingly)
+
+
 .. _gmail:
 
 Gmail example
 ^^^^^^^^^^^^^
+.. important::
+   The functionality described below is available only on Google Workspace and Google Cloud Identity accounts, but not
+   on regular @gmail.com accounts, because as of "May 30, 2022 Google no longer supports the use of third-party apps or
+   devices which ask you to sign in to your Google Account using only your username and password". You can still use a
+   @gmail account address to send emails using the Amazon Simple Email Service (see above).
+
 .. warning::
-   You **do not want to do this with your primary Google account**, but rather get a free separate one just for
+   You **do not want to do this with your primary Google account**, but rather set up a separate one just for
    sending mails from :program:`webchanges` and similar programs. Allowing less secure apps and storing the password
    (even if it's in the Keychain) is not good security practice for your primary account. You have been warned!
 
-First configure your Gmail account to allow for "less secure" (password-based) apps to login:
+First configure your Google Workspace or Google Cloud Identity account to allow for "less secure" (password-based)
+apps to login:
 
 #. Go to https://myaccount.google.com/lesssecureapps
-#. Turn Less secure apps access on
+#. Turn Allow less secure apps access ON
 
-For more information, see `Google's help <https://support.google.com/accounts/answer/6010255>`__.
+For more information, see `Google's help <https://support.google.com/accounts/answer/6010255>`__.  This setting may not
+be available if the account administrator turned the functionality off and you therefore cannot use this functionality.
 
 Then configure these directives as follows:
 
 .. code-block:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      email:
        enabled: true  # don't forget to set this to true! :)
-       from: 'your.username@gmail.com'  # (edit accordingly; don't use your primary account for this!!)
-       to: 'your.destination@example.org'  # The email address of where want to receive reports
-       subject: '[webchanges] {count} changes: {jobs}'
+       from: my_programs@googleworkspacedomain.com  # (edit accordingly; don't use your primary account for this!!)
+       to: your.destination@example.org  # The email address of where want to receive reports
+       subject: "[webchanges] {count} changes: {jobs}"
        html: true
-       method: 'smtp'
+       method: smtp
        smtp:
-         host: 'smtp.gmail.com'
-         user: 'your.username@gmail.com'  # (edit accordingly; don't use your primary account for this!!)
+         host: smtp.gmail.com
+         user: my_programs@googleworkspacedomain.com  # (edit accordingly; don't use your primary account for this!!)
          port: 587
          starttls: true
          auth: true
-         insecure_password: 'this_is_my_secret_password'
-
-Amazon Simple Email Service (SES) example
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-First ensure that you have configured SES as per the `Quick start
-<https://docs.aws.amazon.com/ses/latest/DeveloperGuide/quick-start.html>`__
-
-Create a user just for :program:`webchanges` for security reasons (so you can easily recover from a compromised
-user/password leak from, e.g. from a scan of your jobs file), then configure these directives as follows:
-
-.. code-block:: yaml
-
-   report:
-     tz: America/New_York
-     email:
-       enabled: true  # don't forget to set this to true! :)
-       from: you@verified_domain.com  # (edit accordingly)
-       to: your.destination@example.org  # The email address you want to send reports to
-       subject: '{count} changes: {jobs}'
-       html: true
-       method: smtp
-         host: email-smtp.us-west-2.amazonaws.com  # (edit accordingly)
-         user: ABCDEFGHIJ1234567890  # (edit accordingly)
-         insecure_password: 'this_is_my_secret_password'  # (edit accordingly)
-         auth: true
-         port: 587  # (25 or 465 also work)
-         starttls: true
+         insecure_password: "this_is_my_secret_password"  # (edit accordingly)
 
 .. _sendmail:
 
@@ -294,11 +310,11 @@ Optional packages
 ~~~~~~~~~~~~~~~~~
 If using a Keychain to store the password, you also need to:
 
-* Install the ``safe_password`` :ref:`optional package <optional_packages>` as per below
+* Install the ``safe_password`` :ref:`optional package <optional_packages>` as per below;
 * Install all the dependencies of the ``keyring`` package as per documentation `here
-  <https://pypi.org/project/keyring/>`_
+  <https://pypi.org/project/keyring/>`__;
 * Configure the ``keyring`` package to use the Keychain backend being used in your system following the instructions
-  on the same page
+  on the same page.
 
 .. code-block:: bash
 
@@ -325,7 +341,7 @@ In this URL, ``{key}`` is your API key. The configuration should look like this 
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      ifttt:
        enabled: true  # don't forget to set this to true! :)
        key: aA12abC3D456efgHIjkl7m
@@ -388,12 +404,12 @@ Here is a sample configuration:
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      matrix:
        enabled: true  # don't forget to set this to true! :)
        homeserver: https://matrix.org
-       access_token: 'YOUR_TOKEN_HERE'
-       room_id: '!roomroomroom:matrix.org'
+       access_token: "YOUR_TOKEN_HERE"
+       room_id: "!roomroomroom:matrix.org"
 
 You will probably want to use the following configuration for the ``markdown`` report, if you intend to post change
 notifications to a public Matrix room, as the messages quickly become noisy:
@@ -401,7 +417,7 @@ notifications to a public Matrix room, as the messages quickly become noisy:
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      markdown:
        enabled: true  # don't forget to set this to true! :)
        markdown: false
@@ -433,13 +449,13 @@ Here is a sample configuration:
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      prowl:
        enabled: true  # don't forget to set this to true! :)
-       api_key: '<your api key here>'
+       api_key: "<your api key here>"
        priority: 2
-       application: 'webchanges example'
-       subject: '{count} changes: {jobs}'
+       application: webchanges example
+       subject: "{count} changes: {jobs}"
 
 The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
 shown as the source of the event in the Prowl App.
@@ -480,7 +496,7 @@ and a unique app key (generated by registering webchanges as an application on y
 <https://pushover.net/apps/build>`__.
 
 You can send to a specific device by using the device name, as indicated when you add or view your list of devices in
-the Pushover console. For example ``device:  'MyPhone'``, or ``device: 'MyLaptop'``. To send to *all* of your devices,
+the Pushover console. For example ``device: MyPhone``, or ``device: MyLaptop``. To send to *all* of your devices,
 set ``device: null`` in your config (``webchanges --edit-config``) or leave out the device configuration completely.
 
 Setting the priority is possible via the ``priority`` config option, which can be ``lowest``, ``low``, ``normal``,
@@ -519,7 +535,7 @@ For example, in Windows we can make a MessageBox pop up:
 .. code-block:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      run_command:
        enabled: true  # don't forget to set this to true! :)
        command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
@@ -572,11 +588,11 @@ then say ``/newbot`` and follow the instructions. Eventually it will tell you th
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      telegram:
        enabled: true  # don't forget to set this to true! :)
-       bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
-       chat_id: ''  # empty for now
+       bot_token: "110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"  # replace with your bot's token
+       chat_id: ""  # empty for now
 
 Next click on the link of your chat bot (starts with \https://t.me/) and, on the new screen, click on start (which will
 send the message ``/start``) and enter any text ("Hello" is fine). Then run ``webchanges --telegram-chats``, which
@@ -586,10 +602,10 @@ group(s) you want to be notified into the configuration file (run ``webchanges -
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      telegram:
        enabled: true  # don't forget to set this to true! :)
-       bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
+       bot_token: "110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"  # replace with your bot's token
        chat_id: 88888888  # the chat id where the messages should be sent
        silent: false  # set to true to receive a notification without any sound
 
@@ -598,10 +614,10 @@ You may add multiple chat IDs as a YAML list:
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      telegram:
        enabled: true  # don't forget to set this to true! :)
-       bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
+       bot_token: "110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"  # replace with your bot's token
        chat_id:
          - 11111111  # positive chat IDs are private groups
          - -22222222  # negative chat IDs are public groups
@@ -623,12 +639,12 @@ username of the channel (the text after \https://t.me/s/, prefixed by an @) as a
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      telegram:
        enabled: true  # don't forget to set this to true! :)
-       bot_token: '110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  # replace with your bot's token
+       bot_token: "110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"  # replace with your bot's token
        chat_id:
-         - '@channelusername'  # replace with your channel's username
+         - "@channelusername"  # replace with your channel's username
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -653,7 +669,7 @@ webhook.
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      webhook:
        enabled: true  # don't forget to set this to true! :)
        webhook_url: https://hooks.slack.com/services/T50TXXXXXU/BDVYYYYYYY/PWTqwyFM7CcCfGnNzdyDYZ
@@ -678,7 +694,7 @@ setting ``markdown: true``):
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      webhook:
        enabled: true  # don't forget to set this to true! :)
        webhook_url: http://{your-mattermost-site}/hooks/xxx-generatedkey-xxx
@@ -707,11 +723,11 @@ Here is a sample configuration:
 .. code:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      xmpp:
        enabled: true  # don't forget to set this to true! :)
-       sender: 'BOT_ACCOUNT_NAME'
-       recipient: 'YOUR_ACCOUNT_NAME'
+       sender: "BOT_ACCOUNT_NAME"
+       recipient: "YOUR_ACCOUNT_NAME"
 
 You can store your password securely on a Keychain if you have one installed by running ``webchanges --xmpp-login``;
 this also requires having the optional ``safe_password`` dependencies installed (see below). However, be aware that
@@ -721,12 +737,12 @@ scheduler), so you can save the password in the ``insecure_password`` directive 
 .. code-block:: yaml
 
    report:
-     tz: null
+     tz: null  # or whatever you want it to be
      xmpp:
        enabled: true  # don't forget to set this to true! :)
-       sender: 'BOT_ACCOUNT_NAME'
-       recipient: 'YOUR_ACCOUNT_NAME'
-       insecure_password: 'this_is_my_secret_password'
+       sender: "BOT_ACCOUNT_NAME"
+       recipient: "YOUR_ACCOUNT_NAME"
+       insecure_password: "this_is_my_secret_password"
 
 As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet for an
 account that only sends these reports this might be a low-risk way.

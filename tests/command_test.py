@@ -223,8 +223,8 @@ def test_list_jobs_verbose(capsys):
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message == (
-        "  1: <shell command='echo test' index_number=1 name='Sample webchanges job; used by command_test.py'\n"
-        f'Jobs file(s):\n{urlwatcher.urlwatch_config.jobs_files[0]}\n'
+        "  1: <command command='echo test' index_number=1 name='Sample webchanges job; used by command_test.py'\n"
+        f'Jobs file: {urlwatcher.urlwatch_config.jobs_files[0]}\n'
     )
 
 
@@ -240,7 +240,7 @@ def test_list_jobs_not_verbose(capsys):
     message = capsys.readouterr().out
     assert message == (
         '  1: Sample webchanges job; used by command_test.py (echo test)\n'
-        f'Jobs file(s):\n{urlwatcher.urlwatch_config.jobs_files[0]}\n'
+        f'Jobs file: {urlwatcher.urlwatch_config.jobs_files[0]}\n'
     )
 
 
@@ -381,7 +381,7 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 1
         message = capsys.readouterr().out
-        assert message == 'This job has never been run before\n'
+        assert message == 'This job has never been run before.\n'
 
         # run once
         # also testing joblist
@@ -396,13 +396,13 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 1
         message = capsys.readouterr().out
-        assert message == 'Not enough historic data available (need at least 2 different snapshots)\n'
+        assert message == 'Not enough historic data available (need at least 2 different snapshots).\n'
 
         # test invalid joblist
         urlwatcher.urlwatch_config.joblist = [999]
         with pytest.raises(IndexError) as pytest_wrapped_e:
             urlwatcher.run_jobs()
-        assert pytest_wrapped_e.value.args[0] == 'Job index 999 out of range (found 1 jobs)'
+        assert pytest_wrapped_e.value.args[0] == 'Job index 999 out of range (found 1 jobs).'
         urlwatcher.urlwatch_config.joblist = None
 
         # run twice
@@ -422,7 +422,7 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (STATES  0 AND -1): ' in message
+        assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
         assert message.splitlines()[10][-6:] == ' -1200'
 
         # rerun to reuse cached _generated_diff but change timezone
@@ -433,7 +433,7 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (STATES  0 AND -1): ' in message
+        assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
         assert message.splitlines()[10][-6:] == ' +0000'
 
         # test diff (using outside differ)
@@ -448,7 +448,7 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (STATES  0 AND -1): ' in message
+        assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
         assert message.splitlines()[11][-6:] == ' +0000'
 
         # Try another timezone
@@ -459,7 +459,7 @@ def test_test_diff_and_joblist(capsys):
         setattr(command_config, 'test_diff', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (STATES  0 AND -1): ' in message
+        assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
         assert message.splitlines()[11][-6:] == ' -0100'
 
     finally:
@@ -473,7 +473,7 @@ def test_list_error_jobs(capsys):
     setattr(command_config, 'errors', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message.startswith('Jobs with errors or returning no data after filtering (if any)\nin jobs file ')
+    assert message.startswith('Jobs with errors or returning no data (after filters, if any)\n   in jobs file ')
 
 
 def test_modify_urls(capsys):
@@ -563,7 +563,7 @@ def test_delete_snapshot(capsys):
     assert pytest_wrapped_e.value.code == 1
 
 
-def test_gc_cache(capsys):
+def test_gc_database(capsys):
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
@@ -584,11 +584,11 @@ def test_gc_cache(capsys):
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)
 
-    # run gc_cache and check that it deletes the snapshot of the job no longer being tracked
-    setattr(command_config, 'gc_cache', True)
+    # run gc_database and check that it deletes the snapshot of the job no longer being tracked
+    setattr(command_config, 'gc_database', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config, 'gc_cache', False)
+    setattr(command_config, 'gc_database', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     if sys.platform == 'win32':
@@ -598,23 +598,23 @@ def test_gc_cache(capsys):
         ...
 
 
-def test_clean_cache(capsys):
-    setattr(command_config, 'clean_cache', True)
+def test_clean_database(capsys):
+    setattr(command_config, 'clean_database', True)
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config, 'clean_cache', False)
+    setattr(command_config, 'clean_database', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message == ''
 
 
-def test_rollback_cache(capsys):
-    setattr(command_config, 'rollback_cache', True)
+def test_rollback_database(capsys):
+    setattr(command_config, 'rollback_database', True)
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config, 'rollback_cache', False)
+    setattr(command_config, 'rollback_database', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert 'No snapshots found after' in message
@@ -744,9 +744,9 @@ def test_job_states_verb_notimestamp_unchanged():
 
     # modify database
     guid = urlwatcher.cache_storage.get_guids()[0]
-    data, timestamp, tries, etag = urlwatcher.cache_storage.load(guid)
+    snapshot = urlwatcher.cache_storage.load(guid)
     urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=0, tries=1, etag=etag)
+    urlwatcher.cache_storage.save(guid=guid, data=snapshot.data, timestamp=0, tries=1, etag=snapshot.etag)
     cache_storage._copy_temp_to_permanent(delete=True)
 
     # run twice
@@ -770,9 +770,9 @@ def test_job_states_verb_notimestamp_changed():
 
     # modify database (save no timestamp)
     guid = urlwatcher.jobs[0].get_guid()
-    data, timestamp, tries, etag = urlwatcher.cache_storage.load(guid)
+    snapshot = urlwatcher.cache_storage.load(guid)
     urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=0, tries=tries, etag=etag)
+    urlwatcher.cache_storage.save(guid=guid, data=snapshot.data, timestamp=0, tries=snapshot.tries, etag=snapshot.etag)
     cache_storage._copy_temp_to_permanent(delete=True)
 
     # run twice
@@ -781,9 +781,11 @@ def test_job_states_verb_notimestamp_changed():
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
     # modify database to 1 try
-    data, timestamp, tries, etag = urlwatcher.cache_storage.load(guid)
+    snapshot = urlwatcher.cache_storage.load(guid)
     urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=timestamp, tries=1, etag=etag)
+    urlwatcher.cache_storage.save(
+        guid=guid, data=snapshot.data, timestamp=snapshot.timestamp, tries=1, etag=snapshot.etag
+    )
     cache_storage._copy_temp_to_permanent(delete=True)
     # run again
     urlwatcher.run_jobs()
@@ -792,7 +794,7 @@ def test_job_states_verb_notimestamp_changed():
 
     # modify database to no timestamp
     urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=0, tries=tries, etag=etag)
+    urlwatcher.cache_storage.save(guid=guid, data=snapshot.data, timestamp=0, tries=snapshot.tries, etag=snapshot.etag)
     cache_storage._copy_temp_to_permanent(delete=True)
     # run again
     urlwatcher.run_jobs()
@@ -801,7 +803,7 @@ def test_job_states_verb_notimestamp_changed():
 
     # modify database to no timestamp and 1 try
     urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=data, timestamp=0, tries=1, etag=etag)
+    urlwatcher.cache_storage.save(guid=guid, data=snapshot.data, timestamp=0, tries=1, etag=snapshot.etag)
     cache_storage._copy_temp_to_permanent(delete=True)
     # run again
     urlwatcher.run_jobs()

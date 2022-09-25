@@ -88,9 +88,8 @@ If you are using :program:`urlwatch` 2.25, simply install :program:`webchanges` 
 below), it *should* run just fine as is. It may complain about some directive name being changed for clarity and other
 :ref:`deprecations <migration_deprecations>`, but you will have time to make the edits if you decide to stick around!
 
-.. tip::
-   If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8 mode as
-   per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
+.. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
+   mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
 
 However, if *any* of your jobs use a browser (i.e. have ``navigate`` or ``use_browser: true``), you **MUST** install
 Playwright:
@@ -195,13 +194,13 @@ Relative to :program:`urlwatch` 2.25:
   * New ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults
     to 4. If set to 0, and unlimited number of snapshots will be kept. Only works if the default ``sqlite3`` database
     is being used.
-  * New ``--cache-engine ENGINE`` command line argument to specify database engine. New default ``sqlite3`` creates a
+  * New ``--database-engine ENGINE`` command line argument to specify database engine. New default ``sqlite3`` creates a
     smaller database due to data compression with `msgpack <https://msgpack.org/index.html>`__, higher speed due to
     indexing, and offers additional features and flexibility; migration from old 'minidb' database is done automatically
     and the old database preserved for manual deletion. Specify ``minidb`` to continue using the legacy database used
     by :program:`urlwatch`.
-  * New ``--rollback-cache TIMESTAMP`` new command line argument to rollback the snapshot database to a previous time,
-    useful when you lose notifications. Does not work with database engine ``minidb`` or ``textfiles``.
+  * New ``--rollback-database TIMESTAMP`` new command line argument to rollback the snapshot database to a previous
+    time, useful when you lose notifications. Does not work with database engine ``minidb`` or ``textfiles``.
   * New ``--delete-snapshot`` command line argument to removes the latest saved snapshot of a job from the database;
     useful if a change in a website (e.g. layout) requires modifying filters as invalid snapshot can be deleted and
     :program:`webchanges` rerun to create a truthful diff.

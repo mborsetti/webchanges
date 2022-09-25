@@ -32,7 +32,7 @@ class CommandConfig(BaseConfig):
 
     add: Optional[str]
     check_new: bool
-    clean_cache: bool
+    clean_database: bool
     database_engine: str
     delete: Optional[str]
     delete_snapshot: Optional[str]
@@ -42,13 +42,14 @@ class CommandConfig(BaseConfig):
     edit_hooks: bool
     errors: bool
     features: bool
-    gc_cache: bool
+    gc_database: bool
     install_chrome: bool
     joblist: List[int]
     list: bool
     max_snapshots: int
+    max_workers: Optional[int]
     no_headless: bool
-    rollback_cache: Optional[int]
+    rollback_database: Optional[int]
     smtp_login: bool
     telegram_chats: bool
     test_diff: Optional[str]
@@ -71,9 +72,9 @@ class CommandConfig(BaseConfig):
 
         :param project_name: The name of the project.
         :param config_path: The path of the configuration directory.
-        :param config: The path of the configuration file.
-        :param jobs: The glob of the jobs file(s).
-        :param hooks: The path of the Python hooks file.
+        :param config_file: The path of the configuration file.
+        :param jobs_def_file: The glob of the jobs file(s).
+        :param hooks_file: The path of the Python hooks file.
         :param cache: The path of the database file (or directory if using the textfiles database-engine) where
            snapshots are stored.
         """
@@ -145,7 +146,11 @@ class CommandConfig(BaseConfig):
 
         group = parser.add_argument_group('job management')
         group.add_argument('--list', action='store_true', help='list jobs and their index number')
-        group.add_argument('--errors', action='store_true', help='list jobs with errors or no data captured')
+        group.add_argument(
+            '--errors',
+            action='store_true',
+            help='test run all jobs and list those with errors or no data captured',
+        )
         group.add_argument(
             '--test',
             '--test-filter',
@@ -164,14 +169,20 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--test-diff',
             '--test-diff-filter',
-            help='test and show diff using existing saved snapshots of a job (by index or URL/command)',
+            help='show diff(s) using existing saved snapshots of a job (by index or URL/command)',
             metavar='JOB',
             dest='test_diff',
         )
         group.add_argument(
             '--dump-history',
-            help='print all saved snapshot history for a job (by index or URL/command)',
+            help='print all saved changed snapshots for a job (by index or URL/command)',
             metavar='JOB',
+        )
+        group.add_argument(
+            '--max-workers',
+            type=int,
+            help='maximum number of parallel threads',
+            metavar='WORKERS',
         )
 
         group = parser.add_argument_group('reporters')
@@ -197,33 +208,29 @@ class CommandConfig(BaseConfig):
 
         group = parser.add_argument_group('database')
         group.add_argument(
+            '--gc-database',
             '--gc-cache',
             action='store_true',
-            help='garbage collect the cache database by removing old snapshots plus all data of jobs'
+            help='garbage collect the cache database by removing old changed snapshots plus all data of jobs'
             ' not in the jobs file',
         )
-        group.add_argument('--clean-cache', action='store_true', help='remove old snapshots from the cache database')
         group.add_argument(
+            '--clean-database',
+            '--clean-cache',
+            action='store_true',
+            help='remove old changed snapshots from the database',
+        )
+        group.add_argument(
+            '--rollback-database',
             '--rollback-cache',
             type=int,
-            help='delete recent snapshots since TIMESTAMP (backup the database before using!)',
+            help='delete recent changed snapshots since TIMESTAMP (backup the database before using!)',
             metavar='TIMESTAMP',
         )
         group.add_argument(
-            '--delete-snapshot', help='delete the last saved snapshot of job (index or URL/command)', metavar='JOB'
-        )
-        group.add_argument(
-            '--database-engine',
-            default='sqlite3',
-            choices=['sqlite3', 'redis', 'minidb', 'textfiles'],
-            help='database engine to use (default: %(default)s, unless redis URI in --cache)',
-        )
-        group.add_argument(
-            '--max-snapshots',
-            default=4,
-            type=int,
-            help='sqlite3 only: maximum number of snapshots to retain in database (default: %(default)s)',
-            metavar='NUM_SNAPSHOTS',
+            '--delete-snapshot',
+            help='delete the last saved changed snapshot of job (index or URL/command)',
+            metavar='JOB',
         )
 
         group = parser.add_argument_group('miscellaneous')
@@ -236,7 +243,21 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--features',
             action='store_true',
-            help='list supported job types, filters and reporters (including those loaded by hooks)',
+            help='list supported job kinds, filters and reporters (including those loaded by hooks)',
+        )
+
+        group = parser.add_argument_group('override configuration file')
+        group.add_argument(
+            '--database-engine',
+            # choices=['sqlite3', 'redis', 'minidb', 'textfiles'],
+            help='override database engine to use',
+        )
+        group.add_argument(
+            '--max-snapshots',
+            # default=4,
+            type=int,
+            help='override maximum number of changed snapshots to retain in database (sqlite3 only)',
+            metavar='NUM_SNAPSHOTS',
         )
 
         group = parser.add_argument_group(

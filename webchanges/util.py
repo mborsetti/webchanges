@@ -123,7 +123,11 @@ def import_module_from_source(module_name: str, source_path: Union[str, bytes, P
     spec = importlib.util.spec_from_file_location(module_name, source_path, loader=loader)
     module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
     sys.modules[module_name] = module
-    loader.exec_module(module)
+    try:
+        loader.exec_module(module)
+    except Exception:
+        sys.tracebacklimit = 1000
+        raise
     return module
 
 
@@ -278,7 +282,7 @@ def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] 
     try:
         r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
     except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
-        logger.error(f'Exception when querying PyPi for latest release: {e}')
+        logger.info(f'Exception when querying PyPi for latest release: {e}')
         return False
 
     if r.ok:
@@ -286,7 +290,7 @@ def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] 
         if parse_version(latest_release) > parse_version(__version__):
             return latest_release
     else:
-        logger.error(f'Error when querying PyPi for latest release: {r}')
+        logger.info(f'HTTP error when querying PyPi for latest release: {r}')
 
     return ''
 

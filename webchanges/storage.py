@@ -24,6 +24,7 @@ from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Optional, Te
 
 import msgpack
 import yaml
+import yaml.scanner
 
 from . import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
@@ -52,6 +53,7 @@ if TYPE_CHECKING:
             'new': bool,
             'error': bool,
             'unchanged': bool,
+            'empty-diff': bool,
         },
     )
     ConfigReportText = TypedDict(
@@ -251,10 +253,18 @@ if TYPE_CHECKING:
     ConfigJobDefaults = TypedDict(
         'ConfigJobDefaults',
         {
+            '_note': str,
             'all': Dict[str, Any],
             'url': Dict[str, Any],
             'browser': Dict[str, Any],
-            'shell': Dict[str, Any],
+            'command': Dict[str, Any],
+        },
+    )
+    ConfigDatabase = TypedDict(
+        'ConfigDatabase',
+        {
+            'engine': Union[Literal['sqlite3', 'redis', 'minidb', 'textfiles'], str],
+            'max_snapshots': int,
         },
     )
     Config = TypedDict(
@@ -263,6 +273,7 @@ if TYPE_CHECKING:
             'display': ConfigDisplay,
             'report': ConfigReport,
             'job_defaults': ConfigJobDefaults,
+            'database': ConfigDatabase,
         },
     )
 
@@ -271,6 +282,7 @@ DEFAULT_CONFIG: Config = {
         'new': True,
         'error': True,
         'unchanged': False,
+        'empty-diff': True,
     },
     'report': {
         'tz': None,  # the timezone as a IANA time zone name, e.g. 'America/Los_Angeles', or null for machine's'
@@ -309,16 +321,16 @@ DEFAULT_CONFIG: Config = {
         'email': {  # email (except mailgun); uses text or both html and text if 'html' is set to true
             'enabled': False,
             'html': True,
-            'to': '',
             'from': '',
+            'to': '',
             'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
             'method': 'smtp',  # either 'smtp' or 'sendmail'
             'smtp': {
                 'host': 'localhost',
                 'port': 25,
                 'starttls': True,
-                'user': '',
                 'auth': True,
+                'user': '',
                 'insecure_password': '',
             },
             'sendmail': {
@@ -388,12 +400,16 @@ DEFAULT_CONFIG: Config = {
             'insecure_password': '',
         },
     },
-    'job_defaults': {  # default settings for jobs
-        'all': {},
-        'url': {},  # these are used for url jobs without use_browser
-        'browser': {},  # these are used for url jobs with use_browser: true
-        # TODO rename 'shell' to 'command' for clarity
-        'shell': {},  # these are used for 'command' jobs
+    'job_defaults': {
+        '_note': 'Default directives that are applied to jobs.',
+        'all': {'_note': 'These are used for all type of jobs, including those in hooks.py.'},
+        'url': {'_note': "These are used for 'url' jobs without 'use_browser'."},
+        'browser': {'_note': "These are used for 'url' jobs with 'use_browser: true'."},
+        'command': {'_note': "These are used for 'command' jobs."},
+    },
+    'database': {
+        'engine': 'sqlite3',
+        'max_snapshots': 4,
     },
 }
 
@@ -598,11 +614,12 @@ class YamlConfigStorage(BaseYamlFileStorage):
     config: Config = {}  # type: ignore[typeddict-item]
 
     @staticmethod
-    def dict_deep_difference(d1: Config, d2: Config) -> Config:
+    def dict_deep_difference(d1: Config, d2: Config, ignore_underline_keys: bool = False) -> Config:
         """Recursively find elements in the first dict that are not in the second.
 
         :param d1: The first dict.
         :param d2: The second dict.
+        :ignore_underline_keys: If true, keys starting with _ are ignored (treated as remarks)
         :return: A dict with all the elements on the first dict that are not in the second.
         """
 
@@ -614,7 +631,9 @@ class YamlConfigStorage(BaseYamlFileStorage):
             :return: A dict with elements on the first dict that are not in the second.
             """
             for key, value in d1_.copy().items():
-                if isinstance(value, dict) and isinstance(d2_.get(key), dict):  # type: ignore[misc]
+                if ignore_underline_keys and key.startswith('_'):
+                    d1_.pop(key, None)  # type: ignore[misc]
+                elif isinstance(value, dict) and isinstance(d2_.get(key), dict):  # type: ignore[misc]
                     _sub_dict_deep_difference(value, d2_[key])  # type: ignore[arg-type,literal-required]
                     if not len(value):
                         d1_.pop(key)  # type: ignore[misc]
@@ -681,7 +700,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
         if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
             config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
-        extras: Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG)
+        extras: Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG, ignore_underline_keys=True)
         if extras.get('report') and 'hooks' in sys.modules:
             # skip reports added by hooks
             for name, obj in inspect.getmembers(sys.modules['hooks'], inspect.isclass):
@@ -700,14 +719,20 @@ class YamlConfigStorage(BaseYamlFileStorage):
     def replace_none_keys(config: Config) -> None:
         """Fixes None keys in loaded config that should be empty dicts instead."""
         if 'job_defaults' not in config:
-            config['job_defaults'] = {
-                'all': {},
-                'url': {},
-                'browser': {},
-                'shell': {},
-            }
+            config['job_defaults'] = DEFAULT_CONFIG['job_defaults']
         else:
-            for key in ('all', 'url', 'browser', 'shell'):
+            if 'shell' in config['job_defaults']:
+                if 'command' in config['job_defaults']:
+                    raise KeyError(
+                        "Found both 'shell' and 'command' job_defaults in config, a duplicate. Please remove 'shell' "
+                        'ones.'
+                    )
+                else:
+                    config['job_defaults']['command'] = config['job_defaults'].pop(
+                        'shell'
+                    )  # type: ignore[typeddict-item]
+
+            for key in ('all', 'url', 'browser', 'command'):
                 if key not in config['job_defaults']:
                     config['job_defaults'][key] = {}  # type: ignore[literal-required]
                 elif config['job_defaults'][key] is None:  # type: ignore[literal-required]
@@ -725,7 +750,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             self.check_for_unrecognized_keys(config)
 
             # If config is missing keys in DEFAULT_CONFIG, log the missing keys and deep merge DEFAULT_CONFIG
-            missing = self.dict_deep_difference(DEFAULT_CONFIG, config)
+            missing = self.dict_deep_difference(DEFAULT_CONFIG, config, ignore_underline_keys=True)
             if missing:
                 logger.info(
                     f'The configuration file {self.filename} is missing directive(s); the following default '
@@ -773,6 +798,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         try:
             for i, job_data in enumerate((job for job in yaml.safe_load_all(fp) if job)):
                 job_data['index_number'] = i + 1
+                if job_data.get('kind') == 'shell':
+                    job_data['kind'] = 'command'
                 job = JobBase.unserialize(job_data, filenames)
                 jobs.append(job)
                 jobs_by_guid[job.get_guid()].append(job)
@@ -780,12 +807,15 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             if len(filenames) > 1:
                 jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
             elif len(filenames) == 1:
-                jobs_files = [f'in jobs file {filenames[0]}:']
+                jobs_files = [f'in jobs file {filenames[0]}.']
             else:
                 jobs_files = []
             raise ValueError(
                 '\n   '.join(
-                    [f"YAML {e.args[2].replace('here', '')}in line {e.args[3].line +1 }, column {e.args[3].column + 1}"]
+                    [
+                        f"YAML parser {e.args[2].replace('here', '')} in line {e.args[3].line +1 }, column"
+                        f' {e.args[3].column + 1}'
+                    ]
                     + jobs_files
                 )
             ) from None
@@ -850,7 +880,13 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
 
 
 class Snapshot(NamedTuple):
-    """Type for Snapshot object."""
+    """Type for Snapshot tuple.
+
+    * 0: data: str
+    * 1: timestamp: float
+    * 2: tries: int
+    * 3: etag: str
+    """
 
     data: str
     timestamp: float
@@ -878,7 +914,7 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
-    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
         pass
 
     @abstractmethod
@@ -914,8 +950,8 @@ class CacheStorage(BaseFileStorage, ABC):
         :returns: An generator of tuples, each consisting of (guid, data, timestamp, tries, etag)
         """
         for guid in self.get_guids():
-            data, timestamp, tries, etag = self.load(guid)
-            yield guid, data, timestamp, tries, etag
+            snapshot = self.load(guid)
+            yield guid, *snapshot
 
     def restore(self, entries: Iterable[Tuple[str, str, float, int, str]]) -> None:
         """Save multiple entries into the database.
@@ -1008,12 +1044,12 @@ class CacheDirStorage(CacheStorage):
             data, timestamp, tries, etag = self.load(guid)
             return {data: timestamp} if data and timestamp else {}
 
-    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
         if count is not None and count < 1:
             return []
         else:
             data, timestamp, tries, etag = self.load(guid)
-            return [{'timestamp': timestamp, 'data': data}] if data and timestamp else []
+            return [Snapshot(data, timestamp, tries, etag)] if data and timestamp else []
 
     def save(
         self,
@@ -1250,59 +1286,50 @@ class CacheSQLite3Storage(CacheStorage):
             - key is the snapshot data;
             - value is the most recent timestamp for such snapshot.
         """
-        history: Dict[str, float] = {}
         if count is not None and count < 1:
-            return history
+            return {}
 
         with self.lock:
             rows = self._execute(
                 'SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? ORDER BY timestamp DESC', (guid,)
             ).fetchall()
+        history = {}
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
-                if not r['t']:  # No data is saved when errors are encountered; use get_rich_history_data()
+                if not r['t']:  # No data is saved when errors are encountered; use get_history_snapshots()
                     if r['d'] not in history:
                         history[r['d']] = timestamp
                         if count is not None and len(history) >= count:
                             break
         return history
 
-    def get_rich_history_data(
-        self, guid: str, count: Optional[int] = None
-    ) -> List[Dict[str, Union[Optional[str], float, int]]]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
         """Return max 'count' (None = all) entries of all data (including from error runs) saved for a 'guid'.
 
         :param guid: The guid.
         :param count: The maximum number of entries to return; if None return all.
 
-        :returns: A list of dicts
-            WHERE the keys are:
+        :returns: A list of Snapshot tuples (data, timestamp, tries, etag).
+            WHERE the values are:
 
-            - timestamp: The timestamp (float);
             - data: The data (str, could be empty);
+            - timestamp: The timestamp (float);
             - tries: The number of tries (int);
-            - etag (optional): The ETag (str, could be empty).
+            - etag: The ETag (str, could be empty).
         """
-        history: List[Dict[str, Union[Optional[str], float, int]]] = []
         if count is not None and count < 1:
-            return history
+            return []
 
         with self.lock:
             rows = self._execute(
                 'SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? ORDER BY timestamp DESC', (guid,)
             ).fetchall()
+        history: List[Snapshot] = []
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
-                history.append(
-                    {
-                        'timestamp': timestamp,
-                        'data': r['d'],
-                        'tries': r['t'],
-                        'etag': r['e'],
-                    }
-                )
+                history.append(Snapshot(r['d'], timestamp, r['t'], r['e']))
                 if count is not None and len(history) >= count:
                     break
         return history
@@ -1533,10 +1560,10 @@ class CacheRedisStorage(CacheStorage):
         return Snapshot('', 0, 0, '')
 
     def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
-        history: Dict[str, float] = {}
         if count is not None and count < 1:
-            return history
+            return {}
 
+        history = {}
         key = self._make_key(guid)
         for i in range(0, self.db.llen(key)):
             r = self.db.lindex(key, i)
@@ -1548,12 +1575,20 @@ class CacheRedisStorage(CacheStorage):
                         break
         return history
 
-    def get_rich_history_data(self, guid: str, count: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
         if count is not None and count < 1:
             return []
-        else:
-            data, timestamp, tries, etag = self.load(guid)
-            return [{'timestamp': timestamp, 'data': data}] if data and timestamp else []
+
+        history: List[Snapshot] = []
+        key = self._make_key(guid)
+        for i in range(0, self.db.llen(key)):
+            r = self.db.lindex(key, i)
+            c = msgpack.unpackb(r)
+            if c['tries'] == 0 or c['tries'] is None:
+                history.append(Snapshot(c['data'], c['timestamp'], c['tries'], c['etag']))
+                if count is not None and len(history) >= count:
+                    break
+        return history
 
     def save(
         self,

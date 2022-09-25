@@ -22,7 +22,7 @@ import platformdirs
 
 from . import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
 from .config import CommandConfig
-from .util import get_new_version_number
+from .util import file_ownership_checks, get_new_version_number, import_module_from_source
 
 # Ignore signal SIGPIPE ("broken pipe") for stdout (see https://github.com/thp/urlwatch/issues/77)
 if sys.platform != 'win32':  # Windows does not have signal.SIGPIPE
@@ -183,8 +183,31 @@ def first_run(command_config: CommandConfig) -> None:
             print(f'> Edit it with {__project_name__} --edit')
 
 
+def load_hooks(hooks_file: Path) -> None:
+    """Load hooks file."""
+    if not hooks_file.is_file():
+        warnings.warn(
+            f'Hooks file not imported because {hooks_file} is not a file',
+            ImportWarning,
+        )
+        return
+
+    hooks_file_errors = file_ownership_checks(hooks_file)
+    if hooks_file_errors:
+        warnings.warn(
+            f'Hooks file {hooks_file} not imported because '
+            f" {' and '.join(hooks_file_errors)}.\n"
+            f'(see {__docs_url__}en/stable/hooks.html#important-note-for-hooks-file)',
+            ImportWarning,
+        )
+    else:
+        import_module_from_source('hooks', hooks_file)
+        logger.info(f'Imported hooks module from {hooks_file}')
+
+
 def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
-    """Handles CLI actions that do not require all classes etc. to be initialized.  For speed purposes."""
+    """Handles CLI actions that do not require all classes etc. to be initialized (and command.py loaded). For speed
+    purposes."""
 
     def _exit(arg: object) -> None:
         logger.info(f'Exiting with exit code {arg}')
@@ -313,23 +336,30 @@ def main() -> None:  # pragma: no cover
     # Setup config file API
     config_storage = YamlConfigStorage(command_config.config_file)  # storage.py
 
+    # load config (which for syntax checking requires hooks to be loaded too)
+    if command_config.hooks_file:
+        load_hooks(command_config.hooks_file)
+    config_storage.load()
+
     # Setup database API
-    if command_config.database_engine == 'sqlite3':
-        cache_storage: CacheStorage = CacheSQLite3Storage(
-            command_config.cache, command_config.max_snapshots
-        )  # storage.py
+    database_engine = (
+        command_config.database_engine or config_storage.config.get('database', {}).get('engine') or 'sqlite3'
+    )  # "or 'sqlite3'" is not needed except for a mypy bug; same for the "or 4" below
+    max_snapshots = command_config.max_snapshots or config_storage.config.get('database', {}).get('max_snapshots') or 4
+    if database_engine == 'sqlite3':
+        cache_storage: CacheStorage = CacheSQLite3Storage(command_config.cache, max_snapshots)  # storage.py
     elif any(str(command_config.cache).startswith(prefix) for prefix in ('redis://', 'rediss://')):
         cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
-    elif command_config.database_engine == 'redis':
-        raise RuntimeError("A redis URI (starting with 'redis://' or 'rediss://' needs to be specified with --cache")
-    elif command_config.database_engine == 'textfiles':
+    elif database_engine.startswith('redis'):
+        cache_storage = CacheRedisStorage(database_engine)
+    elif database_engine == 'textfiles':
         cache_storage = CacheDirStorage(command_config.cache)  # storage.py
-    elif command_config.database_engine == 'minidb':
+    elif database_engine == 'minidb':
         from .storage_minidb import CacheMiniDBStorage  # legacy code imported only if needed (requires minidb)
 
         cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
     else:
-        raise NotImplementedError(f'Database engine {command_config.database_engine} not implemented')
+        raise NotImplementedError(f'Database engine {database_engine} not implemented')
 
     # Setup jobs file API
     jobs_storage = YamlJobsStorage(command_config.jobs_files)  # storage.py

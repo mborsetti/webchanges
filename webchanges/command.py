@@ -5,9 +5,11 @@
 from __future__ import annotations
 
 import contextlib
+import difflib
 import logging
 import os
 import shutil
+import subprocess
 import sys
 import time
 import traceback
@@ -25,7 +27,7 @@ except ImportError:
 
 from . import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
-from .handler import JobState, Report
+from .handler import JobState, Report, SnapshotShort
 from .jobs import BrowserJob, JobBase, UrlJob
 from .mailer import smtp_have_password, smtp_set_password, SMTPMailer
 from .main import Urlwatch
@@ -135,9 +137,13 @@ class UrlwatchCommand:
                     print(f'{job.index_number:3}: {pretty_name} ({location})')
                 else:
                     print(f'{job.index_number:3}: {pretty_name}')
-        print('Jobs file(s):')
-        for file in self.urlwatch_config.jobs_files:
-            print(str(file))
+        if len(self.urlwatch_config.jobs_files) > 1:
+            jobs_files = ['Jobs files concatenated:'] + [f'• {file}' for file in self.urlwatch_config.jobs_files]
+        elif len(self.urlwatch_config.jobs_files) == 1:
+            jobs_files = [f'Jobs file: {self.urlwatch_config.jobs_files[0]}']
+        else:
+            jobs_files = []
+        print('\n   '.join(jobs_files))
 
     def _find_job(self, query: Union[str, int]) -> Optional[JobBase]:
         try:
@@ -177,21 +183,27 @@ class UrlwatchCommand:
     def test_job(self, job_id: Union[bool, str, int]) -> None:
         """
         Tests the running of a single job outputting the filtered text to stdout or whatever reporter is selected with
-        --test-reporter.  If job_id is True, don't run any jobs as it's a test of loading config and jobs files for
-        syntax.
+        --test-reporter.  If job_id is True, don't run any jobs as it's a test of loading config, jobs and hook files
+        for syntax.
 
         :param job_id: The job_id or True.
 
         :return: None.
 
-        :raises Exception: The Exception of a job when job raises an Exception.
+        :raises Exception: The Exception when raised by a job. loading of hooks files, etc.
         """
         if job_id is True:
+            message = [f'No syntax errors in config file {self.urlwatch_config.config_file}']
+            conj = ',\n' if 'hooks' in sys.modules else '\nand '
             if len(self.urlwatch_config.jobs_files) == 1:
-                jobs_files = [f'and in jobs file {self.urlwatch_config.jobs_files[0]}.']
+                message.append(f'{conj}jobs file {self.urlwatch_config.jobs_files[0]}')
             else:
-                jobs_files = ['and in jobs files:'] + [f'• {file}' for file in self.urlwatch_config.jobs_files]
-            print('\n'.join([f'No syntax errors in config file {self.urlwatch_config.config_file}'] + jobs_files))
+                message.append(
+                    '\n   '.join([f'{conj}jobs files'] + [f'• {file}' for file in self.urlwatch_config.jobs_files])
+                )
+            if 'hooks' in sys.modules:
+                message.append(f",\nand hooks file {sys.modules['hooks'].__file__}")
+            print(f"{''.join(message)}.")
             return
 
         job = self._get_job(job_id)
@@ -233,28 +245,54 @@ class UrlwatchCommand:
         self.urlwatch_config.jobs_files = [Path('--test-diff')]  # for report footer
         job = self._get_job(job_id)
 
-        history_data = list(self.urlwatcher.cache_storage.get_history_data(job.get_guid()).items())
+        history_data = self.urlwatcher.cache_storage.get_history_snapshots(job.get_guid())
 
         num_snapshots = len(history_data)
         if num_snapshots == 0:
-            print('This job has never been run before')
+            print('This job has never been run before.')
             return 1
         elif num_snapshots < 2:
-            print('Not enough historic data available (need at least 2 different snapshots)')
+            print('Not enough historic data available (need at least 2 different snapshots).')
             return 1
+
+        if job.compared_versions and job.compared_versions != 1:
+            print(f"Note: The job's 'compared_versions' directive is set to {job.compared_versions}.")
 
         for i in range(num_snapshots - 1):
             with JobState(self.urlwatcher.cache_storage, job) as job_state:
-                job_state.old_data, job_state.old_timestamp = history_data[i + 1]
-                job_state.new_data, job_state.new_timestamp = history_data[i]
+                job_state.new_data = history_data[i].data
+                job_state.new_timestamp = history_data[i].timestamp
+                job_state.new_etag = history_data[i].etag
+                if not job.compared_versions or job.compared_versions == 1:
+                    job_state.old_data = history_data[i + 1].data
+                    job_state.old_timestamp = history_data[i + 1].timestamp
+                    job_state.old_etag = history_data[i + 1].etag
+                else:
+                    history_dic_snapshots = {
+                        s.data: SnapshotShort(s.timestamp, s.tries, s.etag)
+                        for s in history_data[i + 1 : i + 1 + job.compared_versions]
+                    }
+                    close_matches: list[str] = difflib.get_close_matches(
+                        job_state.new_data, history_dic_snapshots.keys(), n=1
+                    )
+                    if close_matches:
+                        job_state.old_data = close_matches[0]
+                        job_state.old_timestamp = history_dic_snapshots[close_matches[0]].timestamp
+                        job_state.old_etag = history_dic_snapshots[close_matches[0]].etag
+
                 # TODO: setting of job_state.job.is_markdown = True when it had been set by a filter.
                 # Ideally it should be saved as an attribute when saving "data".
                 if self.urlwatch_config.test_reporter is None:
                     self.urlwatch_config.test_reporter = 'stdout'  # default
                 report.job_states = []  # required
-                errorlevel = self.check_test_reporter(
-                    job_state, label=f'Filtered diff (states {-i:2} and {-(i + 1):2})', report=report
-                )
+                if job_state.new_data == job_state.old_data:
+                    label = (
+                        f'No change (snapshots {-i:2} AND {-(i + 1):2}) with '
+                        f"'compared_versions: {job.compared_versions}'"
+                    )
+                else:
+                    label = f'Filtered diff (snapshots {-i:2} and {-(i + 1):2})'
+                errorlevel = self.check_test_reporter(job_state, label=label, report=report)
                 if errorlevel:
                     self._exit(errorlevel)
 
@@ -265,23 +303,23 @@ class UrlwatchCommand:
 
     def dump_history(self, job_id: str) -> int:
         job = self._get_job(job_id)
-        history_data = self.urlwatcher.cache_storage.get_rich_history_data(job.get_guid())
+        history_data = self.urlwatcher.cache_storage.get_history_snapshots(job.get_guid())
 
         print(f'History for job {job.get_indexed_location()}:')
         print(f'(ID: {job.get_guid()})')
         total_failed = 0
-        for i, entry in enumerate(history_data):
-            etag = f"; ETag: {entry['etag']}" if entry.get('etag') else ''
-            tries = f"; error run (number {entry['tries']})" if entry.get('tries') else ''
-            total_failed += entry['tries'] > 0
+        for i, snapshot in enumerate(history_data):
+            etag = f'; ETag: {snapshot[3]}' if snapshot[3] else ''
+            tries = f'; error run (number {snapshot[2]})' if snapshot[2] else ''
+            total_failed += snapshot[2] > 0
             tz = self.urlwatcher.report.config['report']['tz'] or 'Etc/UTC'
-            dt = datetime.fromtimestamp(entry['timestamp'], ZoneInfo(tz))
+            dt = datetime.fromtimestamp(snapshot[1], ZoneInfo(tz))
             header = f"{i + 1}) {dt.strftime('%Y-%m-%d %H:%M %Z')}{etag}{tries}"
             sep_len = max(50, min(50, len(header)))
             print('=' * sep_len)
             print(header)
             print('-' * sep_len)
-            print(entry['data'])
+            print(snapshot[0])
             print('=' * sep_len, '\n')
 
         print(
@@ -303,13 +341,13 @@ class UrlwatchCommand:
             jobs_files = ['in the concatenation of the jobs files'] + [
                 f'• {file}' for file in self.urlwatch_config.jobs_files
             ]
-        print('\n'.join(['Jobs with errors or returning no data after filtering (if any)'] + jobs_files))
+        print('\n   '.join(['Jobs with errors or returning no data (after filters, if any)'] + jobs_files))
 
         # extract subset of jobs to run if joblist CLI was set
         if self.urlwatcher.urlwatch_config.joblist:
             for idx in self.urlwatcher.urlwatch_config.joblist:
                 if not (-len(self.urlwatcher.jobs) <= idx <= -1 or 1 <= idx <= len(self.urlwatcher.jobs)):
-                    raise IndexError(f'Job index {idx} out of range (found {len(self.urlwatcher.jobs)} jobs)')
+                    raise IndexError(f'Job index {idx} out of range (found {len(self.urlwatcher.jobs)} jobs).')
             self.urlwatcher.urlwatch_config.joblist = [
                 jn if jn > 0 else len(self.urlwatcher.jobs) + jn + 1 for jn in self.urlwatcher.urlwatch_config.joblist
             ]
@@ -647,6 +685,32 @@ class UrlwatchCommand:
 
         self._exit(0)
 
+    @staticmethod
+    def playwright_install_chrome() -> int:  # pragma: no cover
+        """
+        Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
+        install the browser executable.
+
+        :return: Playwright's executable return code.
+        """
+        try:
+            from playwright._impl._driver import compute_driver_executable
+        except ImportError:
+            raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
+
+        driver_executable = compute_driver_executable()
+        env = os.environ.copy()
+        env['PW_CLI_TARGET_LANG'] = 'python'
+        cmd = [str(driver_executable), 'install', 'chrome']
+        logger.info(f"Running playwright CLI: {' '.join(cmd)}")
+        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        if completed_process.returncode:
+            print(completed_process.stderr)
+            return completed_process.returncode
+        if completed_process.stdout:
+            logger.info(f'Success! Output of Playwright CLI: {completed_process.stdout}')
+        return 0
+
     def handle_actions(self) -> None:
         """Handles the actions for command line arguments and exits."""
         if self.urlwatch_config.list:
@@ -693,18 +757,18 @@ class UrlwatchCommand:
         if self.urlwatch_config.edit_hooks:
             self._exit(self.edit_hooks())
 
-        if self.urlwatch_config.gc_cache:
+        if self.urlwatch_config.gc_database:
             self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
             self.urlwatcher.cache_storage.close()
             self._exit(0)
 
-        if self.urlwatch_config.clean_cache:
+        if self.urlwatch_config.clean_database:
             self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
             self.urlwatcher.cache_storage.close()
             self._exit(0)
 
-        if self.urlwatch_config.rollback_cache:
-            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_cache)
+        if self.urlwatch_config.rollback_database:
+            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_database)
             self.urlwatcher.cache_storage.close()
             self._exit(0)
 
@@ -716,8 +780,6 @@ class UrlwatchCommand:
 
     def run(self) -> None:  # pragma: no cover
         """The main run logic."""
-        self.urlwatcher.config_storage.load()
-
         self.urlwatcher.report.config = self.urlwatcher.config_storage.config
 
         self.handle_actions()

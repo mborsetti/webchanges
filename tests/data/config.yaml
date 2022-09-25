@@ -2,14 +2,16 @@ display:
   new: true
   error: true
   unchanged: false
+  empty-diff: true
 report:
-  html:
-    diff: unified
+  tz:
   text:
     line_length: 75
     details: true
     footer: true
     minimal: false
+  html:
+    diff: unified
   markdown:
     details: true
     footer: true
@@ -73,9 +75,9 @@ report:
   pushover:
     enabled: false
     app: ''
+    user: ''
     device: null
     sound: spacealarm
-    user: ''
     priority: normal
   run_command:
     enabled: false
@@ -84,17 +86,26 @@ report:
     enabled: false
     bot_token: ''
     chat_id: ''
+    silent: false
   webhook:
     enabled: false
     webhook_url: ''
+    markdown: false
     max_message_length:
   xmpp:
     enabled: false
     sender: ''
     recipient: ''
-
 job_defaults:
-  all: {}
-  url: {}
-  browser: {}
-  shell: {}
+  _note: Default directives that are applied to jobs.
+  all:
+    _note: These are used for all type of jobs, including those in hooks.py.
+  url:
+    _note: "These are used for 'url' jobs without 'use_browser'."
+  browser:
+    _note: "These are used for 'url' jobs with 'use_browser: true'."
+  command:
+    _note: "These are used for 'command' jobs."
+database:
+  engine: sqlite3
+  max_snapshots: 4

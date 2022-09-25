@@ -10,7 +10,7 @@ Hook your own Python code
 =========================
 Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing such
 code into a ``hooks.py`` file located in the same directory as the job and configuration files. The file will be
-automatically loaded as a module at startup.
+automatically loaded as a module at startup, and an example to get you started is below.
 
 Smaller code snippets can also be run using the :ref:`execute` filter, for example as used :ref:`here <json_dict>`
 for filtering JSON dictionaries.
@@ -35,11 +35,11 @@ An example ``hooks.py`` file is below:
 
 .. code-block:: python
 
-   """Example hooks file for webchanges."""
+   """Example hooks file for webchanges (for Python 3.10)."""
 
    import re
    from pathlib import Path
-   from typing import Any, Dict, Tuple, Optional, Union
+   from typing import Any
 
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
    from webchanges.handler import JobState
@@ -50,13 +50,13 @@ An example ``hooks.py`` file is below:
    class CustomLoginJob(UrlJob):
        """Custom login for my webpage.
 
-       Add `kind: custom_login` to the job to retrieve data using this class instead of the built-in ones.
+       Add `kind: hooks_custom_login` to the job to retrieve data using this class instead of the built-in ones.
        """
 
-       __kind__ = 'custom_login'
-       __required__ = ('username', 'password')
+       __kind__ = 'hooks_custom_login'
+       __required__ = ('username', 'password')  # These are added to the ones from the super classes.
 
-       def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
+       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes, str | str]:
            """:returns: The data retrieved and the ETag."""
            ...  # custom code here to actually do the login
            return f'Would log in to {self.url} with {self.username} and {self.password}\n', ''
@@ -65,11 +65,16 @@ An example ``hooks.py`` file is below:
    class CaseFilter(FilterBase):
        """Custom filter for changing case.
 
-       Needs to be selected manually, i.e. add `- case:` (or e.g. `- case: lower`)to the list of filters in the job's
-       `filter:` directive.
+       Needs to be selected manually, i.e. add `- hooks_case:` (or e.g. `- hooks_case: lower`) to the list of filters in
+       the job's `filter:` directive. E.g.:
+       #
+       # url: example.com/hooks/case
+       # filter:
+       #   - hooks_case: lower
+
        """
 
-       __kind__ = 'case'
+       __kind__ = 'hooks_case'
 
        __supported_subfilters__ = {
            'upper': 'Upper case (default)',
@@ -79,7 +84,7 @@ An example ``hooks.py`` file is below:
        __default_subfilter__ = 'upper'
 
        @staticmethod
-       def filter(data: str, subfilter: Optional[Dict[str, Any]] = None) -> str:
+       def filter(data: str, subfilter: dict[str, Any] | None = None) -> str:
 
            if not subfilter or subfilter.get('upper'):
                return data.upper()
@@ -90,13 +95,16 @@ An example ``hooks.py`` file is below:
 
 
    class IndentFilter(FilterBase):
-       """Custom filter for indenting.
+       """Custom filter for indenting."""
 
-       Needs to be selected manually, i.e. add `- indent:` (or e.g. `- indent: 4`) to the list of filters in the job's
-       `filter:` directive.
-       """
+       # Needs to be selected manually, i.e. add ``- hooks_indent:`` (or e.g. ``- hooks_indent: 4``) to the list of
+       # filters in the job's ``filter:`` directive.  E.g.:
+       #
+       # url: example.com/hooks/indent
+       # filter:
+       #   - hooks_indent: 4
 
-       __kind__ = 'indent'
+       __kind__ = 'hooks_indent'
 
        __supported_subfilters__ = {
            'indent': 'Number of spaces to indent (default 8)'
@@ -105,7 +113,7 @@ An example ``hooks.py`` file is below:
        __default_subfilter__ = 'indent'
 
        @staticmethod
-       def filter(data: str, subfilter: Optional[Dict[str, Any]] = None) -> str:
+       def filter(data: str, subfilter: dict[str, Any] | None = None) -> str:
 
            indent = int(subfilter.get('indent', 8))
 
@@ -118,7 +126,7 @@ An example ``hooks.py`` file is below:
        MATCH = {'url': 'https://example.org/'}
 
        @staticmethod
-       def filter(data: str, subfilter: Optional[Dict[str, Any]] = None) -> str:
+       def filter(data: str, subfilter: dict[str, Any] | None = None) -> str:
            return data.replace('foo', 'bar')
 
 
@@ -128,35 +136,33 @@ An example ``hooks.py`` file is below:
        MATCH = {'url': re.compile(r'https://example.org/.*')}
 
        @staticmethod
-       def filter(data: str, subfilter: Optional[Dict[str, Any]] = None) -> str:
+       def filter(data: str, subfilter: dict[str, Any] | None = None) -> str:
            return data.replace('foo', 'bar')
 
 
    class CustomTextFileReporter(TextReporter):
-       """Custom reporter that writes the text-only report to a file.
+       """Custom reporter that writes the text-only report to a file."""
 
-       Needs to enabled in the config.yaml file:
-       report:
-         custom_file:
-           enabled: true
-       """
+       # Needs to enabled in the config.yaml file:
+       # report:
+       #   hooks_custom_file:
+       #     enabled: true
 
-       __kind__ = 'custom_file'
+       __kind__ = 'hooks_custom_file'
 
        def submit(self) -> None:
            Path(self.config['filename']).write_text('\n'.join(super().submit()))
 
 
    class CustomHtmlFileReporter(HtmlReporter):
-       """Custom reporter that writes the HTML report to a file.
+       """Custom reporter that writes the HTML report to a file."""
 
-       Needs to enabled in the config.yaml file:
-       report:
-         custom_html:
-           enabled: true
-       """
+       # Needs to enabled in the config.yaml file:
+       # report:
+       #   hooks_custom_html:
+       #     enabled: true
 
-       __kind__ = 'custom_html'
+       __kind__ = 'hooks_custom_html'
 
        def submit(self) -> None:
            Path(self.config['filename']).write_text('\n'.join(super().submit()))

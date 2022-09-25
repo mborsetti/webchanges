@@ -238,6 +238,13 @@ the environment variable. Example:
    command: wget https://www.example.com/test?resource=$RESOURCE
 
 
+Authenticated requests
+----------------------
+Set the ``Authorization`` header to provide credentials that authenticate a ``url`` job with a server, allowing access
+to a protected resource.  Some of the most popular authentication schemes are ``Basic``, ``Digest`` and ``NTLM``. For
+more information, see `here <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization>`__.
+
+
 
 .. _use_browser_local_storage:
 

@@ -183,9 +183,9 @@ def test_keep_latest(database_engine):
         assert timestamps[1] < timestamps[0]
 
         # check that history matches load
-        data, timestamp, tries, etag = cache_storage.load(guid)
-        assert data == list(history.keys())[0]
-        assert timestamp == list(history.values())[0]
+        snapshot = cache_storage.load(guid)
+        assert snapshot.data == list(history.keys())[0]
+        assert snapshot.timestamp == list(history.values())[0]
 
         # only keep last one
         # noinspection PyUnresolvedReferences
@@ -224,9 +224,9 @@ def test_clean(database_engine):
             assert timestamps[1] < timestamps[0]
 
         # check that history matches load
-        data, timestamp, tries, etag = cache_storage.load(guid)
-        assert data == list(history.keys())[0]
-        assert timestamp == list(history.values())[0]
+        snapshot = cache_storage.load(guid)
+        assert snapshot.data == list(history.keys())[0]
+        assert snapshot.timestamp == list(history.values())[0]
 
         cache_storage.clean(guid, 1)
         history = cache_storage.get_history_data(guid)
@@ -486,7 +486,7 @@ def test_get_empty_history_and_no_max_snapshots(database_engine):
 
     # get rich_history
     guid = urlwatcher.jobs[0].get_guid()
-    rich_history = cache_storage.get_rich_history_data(guid)
+    rich_history = cache_storage.get_history_snapshots(guid)
     assert len(rich_history) == 1
 
     # get history with zero count
@@ -494,7 +494,7 @@ def test_get_empty_history_and_no_max_snapshots(database_engine):
     assert history == {}
 
     # get rich_history with zero count
-    rich_history = cache_storage.get_rich_history_data(guid, count=0)
+    rich_history = cache_storage.get_history_snapshots(guid, count=0)
     assert rich_history == []
 
 

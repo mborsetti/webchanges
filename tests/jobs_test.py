@@ -12,6 +12,7 @@ from typing import Any, Dict
 
 import pytest
 import yaml
+from requests import HTTPError
 
 from webchanges import __project_name__ as project_name
 from webchanges.config import CommandConfig
@@ -19,6 +20,7 @@ from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifiedError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+from webchanges.worker import run_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -271,7 +273,7 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
 @pytest.mark.parametrize(
     'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
 )
-def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> None:
+def test_check_ignore_http_error_codes_and_error_message(job_data: Dict[str, Any], event_loop) -> None:
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
         return
@@ -281,10 +283,19 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
         job_state.process()
-        if isinstance(job_state.exception, BrowserResponseError):
+        if isinstance(job_state.exception, HTTPError):
+            assert job_state.exception.args[0] == (
+                "418 Client Error: I'm a Teapot for url: https://www.google.com/teapot\n[](https://www.google.com/)\n"
+                '**418.** I’m a teapot.\nThe requested entity body is short and stout. Tip me over and pour me out.'
+            )
+        elif isinstance(job_state.exception, BrowserResponseError):
             assert job_state.exception.status_code == 418
+            assert (
+                job_state.exception.args[0]
+                == '418. I’m a teapot. The requested entity body is short and stout. Tip me over and pour me out.'
+            )
         else:
-            assert '418' in str(job_state.exception.args)
+            pytest.fail('No exception or incorrect exception type')
         assert job_state.error_ignored is False
 
     job_data['ignore_http_error_codes'] = [418]
@@ -293,6 +304,27 @@ def test_check_ignore_http_error_codes(job_data: Dict[str, Any], event_loop) -> 
         job_state.process()
         assert job_state.error_ignored is True
     job_data['ignore_http_error_codes'] = None
+
+
+@connection_required
+@pytest.mark.parametrize(
+    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+)
+def test_http_error_message(job_data: Dict[str, Any], event_loop) -> None:
+    if sys.version_info < (3, 8) and job_data.get('use_browser'):
+        pytest.skip('Playwright testing requires Python 3.8')
+        return
+    jobs_file = data_path.joinpath('jobs-use_browser.yaml')
+    config_file = data_path.joinpath('config.yaml')
+    hooks_file = Path('')
+    config_storage = YamlConfigStorage(config_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
+    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    job_data['url'] = 'https://www.google.com/teapot'
+    urlwatcher.jobs = [JobBase.unserialize(job_data)]
+
+    run_jobs(urlwatcher)
 
 
 @py38_required
@@ -464,3 +496,42 @@ def test_shell_error():
     with JobState(cache_storage, job) as job_state:
         job_state.process()
         assert isinstance(job_state.exception, subprocess.CalledProcessError)
+
+
+def test_compared_versions():
+
+    config_file = data_path.joinpath('config.yaml')
+    hooks_file = Path('')
+    jobs_file = data_path.joinpath('jobs-time.yaml')
+    config_storage = YamlConfigStorage(config_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
+    urlwatch_config = CommandConfig([], '', here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+
+    # compared_versions = 2
+    urlwatcher.jobs[0].command = 'python -c "import random; print(random.randint(0, 1))'
+    urlwatcher.jobs[0].compared_versions = 2
+    results = set()
+    for i in range(20):
+        urlwatcher.run_jobs()
+        cache_storage._copy_temp_to_permanent(delete=True)
+        if urlwatcher.report.job_states[-1].new_data in results:
+            assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+        else:
+            results.add(urlwatcher.report.job_states[-1].new_data)
+            assert urlwatcher.report.job_states[-1].verb in ('new', 'changed')
+
+    # compared_versions = 3  (may trigger fuzzy match search)
+    cache_storage.flushdb()
+    urlwatcher.jobs[0].command = 'python -c "import random; print(random.randint(0, 2))'
+    urlwatcher.jobs[0].compared_versions = 3
+    results = set()
+    for i in range(20):
+        urlwatcher.run_jobs()
+        cache_storage._copy_temp_to_permanent(delete=True)
+        if urlwatcher.report.job_states[-1].new_data in results:
+            assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+        else:
+            results.add(urlwatcher.report.job_states[-1].new_data)
+            assert urlwatcher.report.job_states[-1].verb in ('new', 'changed')
+    print(0)

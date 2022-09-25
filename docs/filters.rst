@@ -392,8 +392,10 @@ Optional sub-directives
 
   * ``unicode_snob: true`` to ensure that accented characters are kept as they are;
   * ``body_width: 0`` to ensure that lines aren't chopped up;
+  * ``ignore_images: true`` to ignore images (since we're dealing with text);
   * ``single_line_break: true`` to ensure that additional empty lines aren't added between sections;
-  * ``ignore_images: true`` to ignore images (since we're dealing with text).
+  * ``wrap_links: false`` to ensure that links are not wrapped (in case body_width is not set to 0) as it's not Markdown
+    compatible.
 
 
 ``strip_tags``
@@ -1132,9 +1134,8 @@ Or instead we can call a script we have saved, e.g. ``- execute: python3 myscrip
 
 If the command generates an error, the output of the error will be in the first line, before the traceback.
 
-.. tip::
-   If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8 mode as
-   per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
+.. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
+   mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
 
 .. versionchanged:: 3.8
    Added additional WEBCHANGES_JOB_* environment variables.
@@ -1174,6 +1175,5 @@ Example:
    * If making the change from a different account than the one you run :program:`webchanges` from, replace
      ``$USER:$(id -g -n)`` with the username:group of the account running :program:`webchanges`.
 
-.. tip::
-   If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8 mode as
-   per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
+.. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
+   mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.

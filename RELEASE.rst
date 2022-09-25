@@ -1,27 +1,49 @@
+Notice
+------
+Support for Python 3.7 will be removed on or about 22 October 2022 as older Python versions are supported for 3
+years after being obsoleted by a new major release.
+
 Added
 -----
-* URL jobs with ``use_browser: true`` that receive an error HTTP status code from the server will now include the text
-  returned by the website in the error message (e.g. "Rate exceeded.", "upstream request timeout", etc.), except for
-  HTTP status code 404 - Not Found.
+* The new ``no_conditional_request`` directive for ``url`` jobs turns off conditional requests for those extremely rare
+  websites that don't handle it (e.g. Google Flights).
+* Selecting the database engine and the maximum number of changed snapshots saved is now set through the configuration
+  file, and the command line arguments ``--database-engine`` and ``--max-snapshots`` are used to override such
+  settings. See documentation for more information. Suggested by `jprokos <https://github.com/jprokos>`__ in `#43
+  <https://github.com/mborsetti/webchanges/issues/43>`__.
+* New configuration file setting ``empty-diff`` within the ``display`` configuration for backwards compatibility only:
+  use the ``additions_only`` job directive instead to achieve the same result. Reported by
+  `bbeevvoo <https://github.com/bbeevvoo>`__ in `#47 <https://github.com/mborsetti/webchanges/issues/47>`__.
+* Aliased the command line arguments ``--gc-cache`` with ``--gc-database``, ``--clean-cache`` with ``--clean-database``
+  and ``--rollback-cache`` with ``--rollback-database`` for clarity.
+* The configuration file (e.g. ``conf.yaml``) can now contain keys starting with a ``_`` (underscore) for remarks (they
+  are ignored).
 
 Changed
 -------
-* The command line argument ``--jobs`` used to specify a jobs file will now accept a `glob pattern
-  <https://en.wikipedia.org/wiki/Glob_(programming)>`__, e.g. wildcards, to specify multiple files. If more than one
-  file matches the pattern, their contents will be concatenated before a job list is built.  Useful e.g. if you have
-  multiple jobs files that run on different schedules and you want to clean the snapshot database of URLs/commands no
-  longer monitored ("garbage collect") using ``--gc-cache``.
-* The command line argument ``--list`` will now list the full path of the jobs file(s).
-* Traceback information for Python Exceptions is suppressed by default. Use the command line argument ``--verbose``
-  (or ``-v``) to display it.
+* Reports are now sorted alphabetically and therefore you can use the ``name`` directive to affect the order by which
+  your jobs are displayed in reports.
+* Implemented measures for ``url`` jobs using ``browser: true`` to avoid being detected: **webchanges** now passes all
+  the headless Chrome detection tests `here
+  <https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html>`__.
+  Brought to my attention by `amammad <https://github.com/amammad>`__ in `#45
+  <https://github.com/mborsetti/webchanges/issues/45>`__.
+* Running ``webchanges --test`` (without specifying a JOB) will now check the hooks file (if any) for syntax errors in
+  addition to the config and jobs file. Error reporting has also been improved.
+* No longer showing the the text returned by the server when a 404 - Not Found error HTTP status code is returned by for
+  all ``url`` jobs (previously only for jobs with ``use_browser: true``).
 
 Fixed
 -----
-* Fixed ``Unicode strings with encoding declaration are not supported.`` error in the ``xpath`` filter using
-  ``method: xml`` under certain conditions (MacOS only). Reported by `jprokos <https://github.com/jprokos>`__ in `#42
-  <https://github.com/mborsetti/webchanges/issues/42>`__.
+* Bug in command line arguments ``--config`` and ``--hooks``. Contributed by
+  `Klaus Sperner <https://github.com/klaus-tux>`__ in PR `#46 <https://github.com/mborsetti/webchanges/pull/46>`__.
+* Job directive ``compared_versions`` now works as documented and testing has been added to the test suite. Reported by
+  `jprokos <https://github.com/jprokos>`__ in `#43 <https://github.com/mborsetti/webchanges/issues/43>`__.
+* The output of command line argument ``--test-diff`` now takes into consideration ``compared_versions``.
+* Markdown containing code in a link text now converts correctly in HTML reports.
 
 Internals
 ---------
-* The source distribution is now available on PyPI to support certain packagers like ``fpm``.
-* Improved handling and reporting of Playwrigt browser errors (for URL jobs with ``use_browser: true``).
+* The job ``kind`` of ``shell`` has been renamed ``command`` to better reflect what it does and the way it's described
+  in the documentation, but ``shell`` is still recognized for backward compatibility.
+* Readthedocs build upgraded to Python 3.10

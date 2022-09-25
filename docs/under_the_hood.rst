@@ -16,10 +16,12 @@ number of processors on the machine multiplied by 5 (Python 3.10).
 Jobs that have ``use_browser: true`` (and therefore require the Google Chrome browser to run) will be run next using
 a maximum number of workers that is the lower of the number of processors on the machine and, if known, the available
 physical memory (as reported by the Python package `psutil <https://psutil.readthedocs.io/en/latest/#memory>`__) divided
-by 120 MB.
+by 200 MB.
 
 You can see the number of threads employed on your machine by running :program:`webchanges` with ``--verbose`` and
 searching for the DEBUG log messages having the text ``max_workers``.
+
+.. _conditional_requests:
 
 Use of conditional requests (timestamp, ETag)
 ---------------------------------------------
@@ -29,6 +31,9 @@ where ``use_browser`` is set to ``true`` (i.e. using Google Chrome).
 
 The conditional request is an optimization to speed up execution: if there are no changes to the resource, the server
 doesn't need to send it but instead just sends a 304 HTTP response code which :program:`webchanges` understands.
+
+In the extremely rare cases where the web server does not correctly process conditional requests (e.g. Google Flights),
+it can be turned off with the ``no_conditional_request: true`` :ref:`directive <no_conditional_request>`.
 
 Details
 ^^^^^^^

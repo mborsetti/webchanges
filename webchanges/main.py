@@ -7,15 +7,13 @@ For the entry point, see main() in the cli module."""
 from __future__ import annotations
 
 import logging
-import warnings
 from typing import List, Optional, Tuple, Union
 
-from . import __docs_url__
 from .config import CommandConfig
 from .handler import Report
 from .jobs import JobBase
 from .storage import CacheStorage, YamlConfigStorage, YamlJobsStorage
-from .util import file_ownership_checks, get_new_version_number, import_module_from_source
+from .util import get_new_version_number
 from .worker import run_jobs
 
 logger = logging.getLogger(__name__)
@@ -52,9 +50,6 @@ class Urlwatch:
 
         self.check_directories()
 
-        if not self.urlwatch_config.edit_hooks:
-            self.load_hooks()
-
         if not self.urlwatch_config.edit:
             self.load_jobs()
 
@@ -74,27 +69,6 @@ class Urlwatch:
                     f'Use "{self.urlwatch_config.project_name} --edit-config" to customize it.'
                 )
 
-    def load_hooks(self) -> None:
-        """Load hooks file."""
-        if not self.urlwatch_config.hooks_file.is_file():
-            warnings.warn(
-                f'Hooks file not imported because {self.urlwatch_config.hooks_file} is not a file',
-                ImportWarning,
-            )
-            return
-
-        hooks_file_errors = file_ownership_checks(self.urlwatch_config.hooks_file)
-        if hooks_file_errors:
-            warnings.warn(
-                f'Hooks file {self.urlwatch_config.hooks_file} not imported because '
-                f" {' and '.join(hooks_file_errors)}.\n"
-                f'(see {__docs_url__}en/stable/hooks.html#important-note-for-hooks-file)',
-                ImportWarning,
-            )
-        else:
-            import_module_from_source('hooks', self.urlwatch_config.hooks_file)
-            logger.info(f'Imported hooks module from {self.urlwatch_config.hooks_file}')
-
     def load_jobs(self) -> None:
         """Load jobs from the file(s) into self.jobs.
 
@@ -103,7 +77,7 @@ class Urlwatch:
         if any(f.is_file() for f in self.urlwatch_config.jobs_files):
             jobs = self.jobs_storage.load_secure()
         else:
-            print(f'Jobs file not found: {self.urlwatch_config.jobs_files}')
+            print(f"Jobs file not found: {' ,'.join((str(file) for file in self.urlwatch_config.jobs_files))}")
             raise SystemExit(1)
 
         self.jobs = jobs

@@ -16,7 +16,7 @@ from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Dict, Iterator, List, Optional, Type, TYPE_CHECKING, Union
+from typing import Any, ContextManager, Dict, Iterator, List, NamedTuple, Optional, Type, TYPE_CHECKING, Union
 
 from .filters import FilterBase
 from .jobs import NotModifiedError
@@ -49,6 +49,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class SnapshotShort(NamedTuple):
+    """Type for value of snapshot dict object.
+
+    * 0: timestamp: float
+    * 1: tries: int
+    * 2: etag: str
+    """
+
+    timestamp: float
+    tries: int
+    etag: str
+
+
 class JobState(ContextManager):
     """The JobState class, which contains run information about a job."""
 
@@ -56,7 +69,7 @@ class JobState(ContextManager):
     _generated_diff_html: Optional[str] = None
     error_ignored: Union[bool, str]
     exception: Optional[Exception] = None
-    history_data: Dict[str, float] = {}
+    history_dic_snapshots: Dict[str, SnapshotShort] = {}
     new_data: str
     new_etag: str
     new_timestamp: float
@@ -119,16 +132,20 @@ class JobState(ContextManager):
         return {attr: getattr(self, attr) for attr in attrs if hasattr(self, attr)}
 
     def load(self) -> None:
-        """Loads form the database the last snapshot for the job."""
+        """Loads form the database the last snapshot(s) for the job."""
         guid = self.job.get_guid()
         self.old_data, self.old_timestamp, self.tries, self.old_etag = self.cache_storage.load(guid)
-        self.history_data = self.cache_storage.get_history_data(guid, self.job.compared_versions or 1)
+        if self.job.compared_versions and self.job.compared_versions > 1:
+            self.history_dic_snapshots = {
+                s.data: SnapshotShort(s.timestamp, s.tries, s.etag)
+                for s in self.cache_storage.get_history_snapshots(guid, self.job.compared_versions)
+            }
 
     def save(self, use_old_data: bool = False) -> None:
         """Saves new data retrieved by the job into the snapshot database.
 
-        :param use_old_data: Whether old data (nd ETag) should be used (e.g. due to error, leading to new data or
-        data being an error message instead of the relevant data).
+        :param use_old_data: Whether old data (and ETag) should be used (e.g. due to error, leading to new data or
+           data being an error message instead of the relevant data).
         """
         if use_old_data:
             self.new_data = self.old_data
@@ -566,6 +583,13 @@ class Report:
                 )
                 and job_state.verb != 'changed,no_report'
             ):
+                if (
+                    job_state.verb == 'changed'
+                    and not self.config['display'].get('empty-diff', True)
+                    and job_state.get_diff() == ''
+                ):
+                    continue
+
                 yield job_state
 
     def finish(self, jobs_file: Optional[List[Path]] = None) -> None:
