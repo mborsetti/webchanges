@@ -14,6 +14,7 @@ on: [push, pull_request, workflow_dispatch]
 
 env:
   FORCE_COLOR: 1
+  PYTHONUNBUFFERED: 1
   PYTHONUTF8: 1
 
 jobs:

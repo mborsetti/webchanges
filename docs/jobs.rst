@@ -47,8 +47,8 @@ YAML :ref:`here <yaml_syntax>`.
 .. code-block:: yaml
 
    name: This is a human-readable name/label of the job  # and this is a remark
-   name: "This human-readable name/label has a: colon followed by a space and a space followed by a # hash mark"
-   name: "I can escape \"double\" quotes within a double quoted string which also has a colon: followed by a space"
+   name: "This one has a: colon followed by a space and a space followed by a # hash mark"
+   name: "I must escape \"double\" quotes within a double quoted string"
 
 * You can learn more about quoting special characters `here <https://www.yaml.info/learn/quote.html#flow>`__ (the
   library we use supports YAML 1.1, and our examples use "flow scalars"). URLs and XPaths are always safe and don't
