@@ -16,6 +16,11 @@ from typing import Iterable, Optional, TYPE_CHECKING
 from .handler import JobState
 from .jobs import BrowserJob, NotModifiedError, UrlJobBase
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from typing import List
@@ -153,9 +158,9 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 urlwatcher.report.new(job_state)
 
     def get_virt_mem() -> int:
-        try:
-            import psutil
-        except ImportError:
+        """Return the amount of virtual memory available, i.e. the memory that can be given instantly to processes
+        without the system going into swap. Expressed in bytes."""
+        if psutil is None:
             raise ImportError(
                 "Python package psutil is not installed; cannot use 'use_browser: true'. Please install "
                 "dependencies with 'pip install webchanges[use_browser]'."

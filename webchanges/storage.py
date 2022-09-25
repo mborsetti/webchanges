@@ -951,7 +951,7 @@ class CacheStorage(BaseFileStorage, ABC):
         """
         for guid in self.get_guids():
             snapshot = self.load(guid)
-            yield guid, *snapshot
+            yield (guid, *snapshot)  # Parenthesis can be removed when no longer supporting Python 3.7
 
     def restore(self, entries: Iterable[Tuple[str, str, float, int, str]]) -> None:
         """Save multiple entries into the database.
