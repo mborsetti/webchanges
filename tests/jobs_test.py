@@ -269,12 +269,13 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     job_data['ignore_connection_errors'] = None
 
 
-@pytest.skip('FAILS but cannot debug due to Playwrigth/Windows bug')  # TODO
 @connection_required
 @pytest.mark.parametrize(
     'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
 )
 def test_check_ignore_http_error_codes_and_error_message(job_data: Dict[str, Any], event_loop) -> None:
+    if job_data.get('use_browser'):
+        pytest.skip('Cannot debug due to Playwrigth/Windows bug')  # TODO Remove this and fix
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
         return
