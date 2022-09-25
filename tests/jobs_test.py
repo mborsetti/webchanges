@@ -294,8 +294,10 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: Dict[str, Any
                 job_state.exception.args[0]
                 == '418. I’m a teapot. The requested entity body is short and stout. Tip me over and pour me out.'
             )
+        elif job_state.exception:
+            pytest.fail(f'418 Teapot raised Exception of type {job_state.exception.__name__} (incorrect).')
         else:
-            pytest.fail('No exception or incorrect exception type')
+            pytest.fail('No exception raised with 418 Teapot')
         assert job_state.error_ignored is False
 
     job_data['ignore_http_error_codes'] = [418]
