@@ -1,4 +1,5 @@
 """Test that all __init__ variables have been defined."""
+from __future__ import annotations
 
 from webchanges import init_data
 
@@ -10,6 +11,7 @@ INITDATAKEYS = (
     '__spec__',
     '__path__',
     '__file__',
+    '__init__',
     '__cached__',
     '__builtins__',
     '__min_python_version__',
@@ -26,6 +28,6 @@ INITDATAKEYS = (
 )
 
 
-def test_init_data():
+def test_init_data() -> None:
     assert set(init_data().keys()).issuperset(INITDATAKEYS)
     assert sorted([key for key in init_data().keys() if key[:2] == '__']) == sorted(INITDATAKEYS)

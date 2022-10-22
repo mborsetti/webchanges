@@ -54,7 +54,7 @@ xpath_elements:
         <div>foo</div>
         <div id="bar">bar</div>
         </body></html>
-    expected_result: |
+    expected_result: |-
         <div>foo</div>
         <div id="bar">bar</div>
 xpath_text:
@@ -79,7 +79,7 @@ xpath_exclude:
         <div class="foo">f<span class="excl">interrupt!</span>o<span class="excl">interrupt!</span>o</div>
         <div id="bar">bar</div>
         </body></html>
-    expected_result: |
+    expected_result: |-
         <div>foo</div>
         <div id="bar">bar</div>
 xpath_xml_namespaces:
@@ -103,7 +103,7 @@ xpath_xml_namespaces:
         <data>xyz</data>
         </f:item>
         </feed>
-    expected_result: |
+    expected_result: |-
         <item xmlns:f="foo">
 
 
@@ -122,7 +122,7 @@ css:
         <div>foo</div>
         <div>bar</div>
         </body></html>
-    expected_result: |
+    expected_result: |-
         <div>foo</div>
         <div>bar</div>
 css_exclude:
@@ -136,7 +136,7 @@ css_exclude:
         <div class="foo">f<span class="excl">interrupt!</span>o<span class="excl">interrupt!</span>o</div>
         <div id="bar">bar</div>
         </body></html>
-    expected_result: |
+    expected_result: |-
         <div class="foo">foo</div>
 css_xml_namespaces:
     filter:
@@ -159,7 +159,7 @@ css_xml_namespaces:
         <data>xyz</data>
         </f:item>
         </feed>
-    expected_result: |
+    expected_result: |-
         <item xmlns:f="foo">
         
         

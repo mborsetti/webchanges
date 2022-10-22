@@ -335,3 +335,16 @@ library we use, it may be useful to explicitly specify an encoding from Pythonâ€
 
    url: https://example.com/
    encoding: utf-8
+
+
+Monitoring the HTTP response status code
+----------------------------------------
+To monitor the `HTTP response status code <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status>`__ of a resource
+and be notified when it changes, use an external command like `curl <https://curl.haxx.se/>`__ to extract it. Here's a
+job example:
+
+.. code-block:: yaml
+
+   command: curl --silent --output /dev/null --write-out '%{response_code}' https://example.com
+   name: Example.com response status code
+   note: Requires curl

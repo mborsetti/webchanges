@@ -1,11 +1,12 @@
 """Test the jobs embedded in the documentation's filters.rst file by running them against the data in the
 data/doc_filter_testadata.yaml file."""
+from __future__ import annotations
 
 import importlib.util
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, List, Union
 
 import docutils.frontend
 import docutils.nodes
@@ -85,7 +86,7 @@ def load_filter_doc_jobs() -> List[JobBase]:
     return jobs
 
 
-def load_filter_testdata() -> Dict[str, Any]:
+def load_filter_testdata() -> Dict[str, Dict[str, str]]:
     yaml_data = Path(here.joinpath('data').joinpath('docs_filters_testdata.yaml')).read_text()
     return yaml.safe_load(yaml_data)
 
@@ -94,19 +95,19 @@ FILTER_DOC_JOBS = load_filter_doc_jobs()
 testdata = load_filter_testdata()
 
 
-@pytest.mark.parametrize('job', FILTER_DOC_JOBS, ids=(v.url for v in FILTER_DOC_JOBS))
-def test_filter_doc_jobs(job):
+@pytest.mark.parametrize('job', FILTER_DOC_JOBS, ids=(v.url for v in FILTER_DOC_JOBS))  # type: ignore[misc]
+def test_filter_doc_jobs(job: JobBase) -> None:
     """Test the yaml code in docs/filters.rst against the source and expected results contained
     in tests/data/docs_filters_testdata.yaml using 'url' as the key."""
     # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
     # installations beyond pip)
     d = testdata[job.url]
     if 'filename' in d:
-        data = here.joinpath('data').joinpath(d['filename']).read_bytes()
+        data: Union[bytes, str] = here.joinpath('data').joinpath(d['filename']).read_bytes()
     else:
         data = d['input']
     # noinspection PyTypeChecker
-    with JobState(None, job) as job_state:
+    with JobState(None, job) as job_state:  # type: ignore[arg-type]
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
             # skip if package is not installed
             if (

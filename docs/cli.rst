@@ -219,9 +219,6 @@ You can rollback the snapshots database to an earlier time by running :program:`
 they got lost: rollback the database to the time of the last good report, then run :program:`webchanges` again to get
 a new report with the differences since that time.
 
-.. versionchanged:: 3.11
-   Renamed from ``--rollback-cache``.
-
 You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
 <https://www.unixtimestamp.com/>`__
 
@@ -232,26 +229,29 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 
 .. versionadded:: 3.2
 
+.. versionchanged:: 3.11
+   Renamed from ``--rollback-cache``.
+
 
 .. _compact-database:
 
 Compact the database
 --------------------
-You can compact the snapshots database by running :program:`webchanges` with either the ``--gc-database`` or
-``--clean-database`` command line argument.
+You can compact the snapshots database by running :program:`webchanges` with either the ``--gc-database`` ('garbage
+collect') or ``--clean-database`` command line argument.
 
 Running with ``--gc-database`` will purge all snapshots of jobs that are no longer in the jobs file **and**, for those
-in the jobs file, older snapshots other than the most recent one for each job. It will also rebuild (and therefore
-defragment) the database using VACUUM (see `here <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ for more
-details).
+in the jobs file, older changed snapshots other than the most recent one for each job. It will also rebuild (and
+therefore defragment) the database using SQLite's `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__
+command.
 
-.. tip:: If you use multiple jobs files, use ``--cg-database`` in conjunction with a glob ``--jobs`` command, e.g.
-   ``webchanges --jobs "jobs*.yaml" --gc-cache``. To ensure that the glob is correct, run e.g. ``webchanges --jobs
+.. tip:: If you use multiple jobs files, use ``--gc-database`` in conjunction with a glob ``--jobs`` command, e.g.
+   ``webchanges --jobs "jobs*.yaml" --gc-database``. To ensure that the glob is correct, run e.g. ``webchanges --jobs
    "jobs*.yaml" --list``.
 
 Running with ``--clean-database`` will remove all older snapshots keeping the most recent one for each job (whether it
-is still present in the jobs file or not) and rebuild (and therefore defragment) the database using SQL's `VACUUM
-<https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__.
+is still present in the jobs file or not) and rebuild (and therefore defragment) the database using SQLite's `VACUUM
+<https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ command.
 
 .. versionchanged:: 3.11
    Renamed from ``--gc-cache`` and ``--clean-cache``.

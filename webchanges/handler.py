@@ -7,11 +7,13 @@ from __future__ import annotations
 import difflib
 import json
 import logging
+import re
 import shlex
 import subprocess
 import tempfile
 import time
 import traceback
+import urllib.parse
 from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
@@ -416,13 +418,25 @@ class JobState(ContextManager):
                 return head + diff_text
 
             else:
+                old_data = self.old_data
+                new_data = self.new_data
+                if self.job.is_markdown:
+                    # protect the link anchor from being split (won't work)
+                    markdown_links_re = re.compile(r'\[(.*?)][(](.*?)[)]')
+                    old_data = markdown_links_re.sub(
+                        lambda x: f'[{urllib.parse.quote(x.group(1))}]({x.group(2)})', old_data
+                    )
+                    new_data = markdown_links_re.sub(
+                        lambda x: f'[{urllib.parse.quote(x.group(1))}]({x.group(2)})', new_data
+                    )
+
                 # External diff tool
                 with tempfile.TemporaryDirectory() as tmp_dir:
                     tmp_path = Path(tmp_dir)
                     old_file_path = tmp_path.joinpath('old_file')
                     new_file_path = tmp_path.joinpath('new_file')
-                    old_file_path.write_text(str(self.old_data))
-                    new_file_path.write_text(str(self.new_data))
+                    old_file_path.write_text(old_data)
+                    new_file_path.write_text(new_data)
                     cmdline = shlex.split(self.job.diff_tool) + [str(old_file_path), str(new_file_path)]
                     proc = subprocess.run(cmdline, capture_output=True, text=True)
                 if proc.stderr:
@@ -434,7 +448,18 @@ class JobState(ContextManager):
                     f'Old: {timestamp_old}\n'
                     f'New: {timestamp_new}\n' + '-' * 36 + '\n'
                 )
-                return head + proc.stdout
+                diff = proc.stdout
+                if self.job.is_markdown:
+                    # undo the protection of the link anchor from being split
+                    diff = markdown_links_re.sub(lambda x: f'[{urllib.parse.unquote(x.group(1))}]({x.group(2)})', diff)
+                if self.job.diff_tool.startswith('wdiff') and self.job.contextlines == 0:
+                    # remove lines that don't have any changes
+                    keeplines = []
+                    for line in diff.splitlines(keepends=True):
+                        if any(x in line for x in ('{+', '+}', '[-', '-]')):
+                            keeplines.append(line)
+                    diff = ''.join(keeplines)
+                return head + diff
 
         if self.job.contextlines is not None:
             contextlines = self.job.contextlines

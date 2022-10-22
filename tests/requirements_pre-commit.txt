@@ -11,6 +11,7 @@ isort
 mypy
 pre-commit
 types-backports
+types-docutils
 types-PyYAML
 types-redis
 types-requests

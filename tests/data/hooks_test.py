@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple, Union
 
 from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
 from webchanges.handler import JobState
@@ -19,9 +19,9 @@ class CustomLoginJob(UrlJob):
     username: str
     password: str
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> str:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         ...  # custom code here
-        return f'Would log in to {self.url} with {self.username} and {self.password}\n'
+        return f'Would log in to {self.url} with {self.username} and {self.password}\n', ''
 
 
 class CaseFilter(FilterBase):
@@ -33,7 +33,7 @@ class CaseFilter(FilterBase):
 
     __default_subfilter__ = 'upper'
 
-    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:  # type: ignore[override]
 
         if not subfilter or subfilter.get('upper'):
             return data.upper()
@@ -52,7 +52,7 @@ class IndentFilter(FilterBase):
 
     __default_subfilter__ = 'indent'
 
-    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
 
         indent = int(subfilter.get('indent', 8))
 
@@ -65,7 +65,7 @@ class CustomMatchUrlFilter(AutoMatchFilter):
     MATCH = {'url': 'https://example.org/'}
 
     # An auto-match filter does not have any subfilters
-    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:  # type: ignore[override]
         return data.replace('foo', 'bar')
 
 
@@ -74,7 +74,7 @@ class CustomRegexMatchUrlFilter(RegexMatchFilter):
     MATCH = {'url': re.compile('https://example.org/.*')}
 
     # An auto-match filter does not have any subfilters
-    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:
+    def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:  # type: ignore[override]
         return data.replace('foo', 'bar')
 
 
@@ -83,8 +83,8 @@ class CustomTextFileReporter(TextReporter):
 
     __kind__ = 'custom_file'
 
-    def submit(self) -> None:
-        Path(self.config['filename']).write_text('\n'.join(super().submit()))
+    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # type: ignore[typeddict-item]
 
 
 class CustomHtmlFileReporter(HtmlReporter):
@@ -92,5 +92,5 @@ class CustomHtmlFileReporter(HtmlReporter):
 
     __kind__ = 'custom_html'
 
-    def submit(self) -> None:
-        Path(self.config['filename']).write_text('\n'.join(super().submit()))
+    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # type: ignore[typeddict-item]

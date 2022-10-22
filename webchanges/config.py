@@ -11,7 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Union
 
-from . import __doc__, __docs_url__, __project_name__, __version__
+from .__init__ import __doc__ as doc
+from .__init__ import __docs_url__, __project_name__, __version__
 
 
 @dataclass
@@ -89,7 +90,7 @@ class CommandConfig(BaseConfig):
         """
 
         parser = argparse.ArgumentParser(
-            description=__doc__.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--', '\n\n'),
+            description=doc.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--', '\n\n'),
             epilog=f'Full documentation is at {__docs_url__}\n',
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )

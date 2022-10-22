@@ -1,4 +1,6 @@
 """Test reporting, primarily handling of diffs."""
+from __future__ import annotations
+
 import importlib.util
 import logging
 import os
@@ -7,6 +9,7 @@ import traceback
 from smtplib import SMTPAuthenticationError
 
 import pytest
+from _pytest.capture import CaptureFixture
 from requests.exceptions import MissingSchema
 
 from webchanges.handler import JobState, Report
@@ -79,7 +82,7 @@ DIFF_TO_HTML_TEST_DATA = [
     (' _**emphasis and strong**_', '<tr><td><em><strong>emphasis and strong</strong></em></td></tr>'),
     (' **strong**', '<tr><td><strong>strong</strong></td></tr>'),
     (' **_strong and emphasis_**', '<tr><td><strong><em>strong and emphasis</em></strong></td></tr>'),
-    (' ~~strikethrough~~', '<tr><td><strike>strikethrough</strike></td></tr>'),
+    (' ~~strikethrough~~', '<tr><td><s>strikethrough</s></td></tr>'),
     (' | table | row |', '<tr><td>| table | row |</td></tr>'),
 ]
 
@@ -93,15 +96,15 @@ class UrlwatchTest:
         config = DEFAULT_CONFIG
 
 
-def build_test_report():
-    def build_job(name, url, old, new):
+def build_test_report() -> Report:
+    def build_job(name: str, url: str, old: str, new: str) -> JobState:
         job = JobBase.unserialize({'name': name, 'url': url})
 
         # Can pass in None as cache_storage, as we are not
         # going to load or save the job state for testing;
         # also no need to use it as context manager, since
         # no processing is called on the job
-        job_state = JobState(None, job)
+        job_state = JobState(None, job)  # type: ignore[arg-type]
 
         job_state.old_data = old
         job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
@@ -110,7 +113,7 @@ def build_test_report():
 
         return job_state
 
-    def set_error(job_state, message):
+    def set_error(job_state: JobState, message: str) -> JobState:
         try:
             raise ValueError(message)
         except ValueError as e:
@@ -119,7 +122,7 @@ def build_test_report():
 
         return job_state
 
-    test_report = Report(UrlwatchTest)
+    test_report = Report(UrlwatchTest())  # type: ignore[arg-type]
     test_report.job_states = []
     test_report.new(build_job('Newly Added', 'https://example.com/new', '', ''))
     test_report.changed(
@@ -147,44 +150,43 @@ def build_test_report():
     return test_report
 
 
-report = Report(UrlwatchTest)
+report = Report(UrlwatchTest())  # type: ignore[arg-type]
 test_report = build_test_report()
 
 
-@pytest.mark.parametrize('inpt, out', DIFF_TO_HTML_TEST_DATA)
-def test_diff_to_html(inpt, out):
+@pytest.mark.parametrize('inpt, out', DIFF_TO_HTML_TEST_DATA)  # type: ignore[misc]
+def test_diff_to_html(inpt: str, out: str) -> None:
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
     job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': False})
-    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))
+    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))  # type: ignore[arg-type]
     assert result[250:-8] == out
 
 
-def test_diff_to_htm_padded_table():
+def test_diff_to_htm_padded_table() -> None:
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
     job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': True})
-    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))
+    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))  # type: ignore[arg-type]
     assert result[250:-8] == (
         '<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | row |</span></td></tr>'
     )
 
 
-def test_diff_to_htm_wdiff():
+def test_diff_to_htm_wdiff() -> None:
     # must add to fake headers to get what we want:
     inpt = '[-old-]{+new+}'
     job = JobBase.unserialize(
         {'url': 'https://www.example.com', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'}
     )
-    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))
+    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))  # type: ignore[arg-type]
     assert result == (
-        '<span style="font-family:monospace;white-space:pre-wrap">'
-        '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">[-old-]</span>'
-        '<span style="background-color:#d1ffd1;color:#082b08">{+new+}</span></span>'
+        '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">old</span>'
+        '<span style="background-color:#d1ffd1;color:#082b08">new</span>'
     )
 
 
-def test_smtp_password():
+def test_smtp_password() -> None:
     if NoKeyringError:
         try:
             assert smtp_have_password('fdsfdsfdsafdsf', '') is False
@@ -196,8 +198,8 @@ def test_smtp_password():
         assert smtp_have_password('fdsfdsfdsafdsf', '') is False
 
 
-@pytest.mark.parametrize('reporter', ALL_REPORTERS)
-def test_reporters(reporter, capsys):
+@pytest.mark.parametrize('reporter', ALL_REPORTERS)  # type: ignore[misc]
+def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
     if reporter == 'email':
         if NoKeyringError:
             with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
@@ -264,7 +266,7 @@ def test_reporters(reporter, capsys):
         test_report.finish_one(reporter, check_enabled=False)
 
 
-def test_mailer_send():
+def test_mailer_send() -> None:
     mailer = SMTPMailer(  # nosec B106:hardcoded_password_funcarg
         smtp_user='test@gmail.com',
         smtp_server='smtp.gmail.com',

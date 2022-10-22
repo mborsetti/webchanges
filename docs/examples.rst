@@ -122,13 +122,25 @@ If you want to be notified of new events on a public Facebook page, you can use 
 
 GitHub releases
 ^^^^^^^^^^^^^^^
-This is an example how to anonymously watch the GitHub "releases" page of a project to be notified of new releases:
+This is an example how to anonymously watch the GitHub "releases" page of a project to be notified of new releases
+(i.e. the latest/top-most tag):
 
 .. code-block:: yaml
 
    url: https://github.com/git/git/releases
    filter:
-     - xpath: //div[contains(@class,"release-")]//h4[1]/a|//div[contains(@class,"release-header")]/div/div/a
+     - xpath:
+         path: //*[@class="Link--primary"]
+         maxitems: 1
+     - html2text:
+
+If you only want to monitor the latest release and not include pre-releases:
+
+.. code-block:: yaml
+
+   url: https://github.com/Novik/ruTorrent/releases/latest
+   filter:
+     - xpath: //*[@class="ml-1"]
      - html2text:
 
 Note that the easiest way to be notified if you have a GitHub account is to simply "watch" the project and subscribe

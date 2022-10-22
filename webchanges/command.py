@@ -25,7 +25,7 @@ try:
 except ImportError:
     from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
 
-from . import __docs_url__, __project_name__, __version__
+from .__init__ import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
 from .handler import JobState, Report, SnapshotShort
 from .jobs import BrowserJob, JobBase, UrlJob
@@ -244,6 +244,10 @@ class UrlwatchCommand:
         report = Report(self.urlwatcher)
         self.urlwatch_config.jobs_files = [Path('--test-diff')]  # for report footer
         job = self._get_job(job_id)
+
+        # TODO: The below is a hack; must find whether it's markdown programmatically (e.g. save it in database)
+        if job.filter:
+            job.is_markdown = any('html2text' in filter_type for filter_type in job.filter)
 
         history_data = self.urlwatcher.cache_storage.get_history_snapshots(job.get_guid())
 

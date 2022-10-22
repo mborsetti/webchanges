@@ -27,7 +27,7 @@ import yaml
 from lxml import etree  # noqa: DUO107 insecure use of XML modules, prefer "defusedxml"  # nosec: B410 TODO
 from lxml.cssselect import CSSSelector  # noqa: DUO107 insecure use of XML ... "defusedxml"  # nosec: B410 TODO
 
-from . import __project_name__
+from .__init__ import __project_name__
 from .util import TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
@@ -284,9 +284,12 @@ class FilterBase(metaclass=TrackSubClasses):
 
 
 class AutoMatchFilter(FilterBase):
-    """Base class for filters that automatically match based on location."""
+    """Base class for filters that automatically exactly match one or more directives.
 
-    MATCH = None
+    MATCH is a dict of {directive: text to match}.
+    """
+
+    MATCH: Optional[Dict[str, str]] = None
 
     def match(self) -> bool:
         """Check whether the filter matches (i.e. needs to be executed).
@@ -312,10 +315,12 @@ class AutoMatchFilter(FilterBase):
 
 
 class RegexMatchFilter(FilterBase):
-    """Base class for filters that automatically match based on location.
-    Same as AutoMatchFilter but matching is done with regexes."""
+    """Base class for filters that automatically match one or more directives.
 
-    MATCH = None
+    Same as AutoMatchFilter but MATCH is a dict of {directive: Regular Expression Object}, where a Regular
+    Expression Object is a compiled regex."""
+
+    MATCH: Optional[Dict[str, re.Pattern]] = None
 
     def match(self) -> bool:
         """Check whether the filter matches (i.e. needs to be executed).
@@ -758,7 +763,7 @@ class KeepLinesContainingFilter(FilterBase):
     ) -> str:
         if 'text' in subfilter:
             if isinstance(subfilter['text'], str):
-                return '\n'.join(line for line in data.splitlines() if subfilter['text'] in line)
+                return ''.join(line for line in data.splitlines(keepends=True) if subfilter['text'] in line).rstrip()
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
@@ -766,7 +771,9 @@ class KeepLinesContainingFilter(FilterBase):
                 )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
-                return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line))
+                return ''.join(
+                    line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line)
+                ).rstrip()
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
@@ -818,7 +825,9 @@ class DeleteLinesContainingFilter(FilterBase):
     ) -> str:
         if 'text' in subfilter:
             if isinstance(subfilter['text'], str):
-                return '\n'.join(line for line in data.splitlines() if subfilter['text'] not in line)
+                return ''.join(
+                    line for line in data.splitlines(keepends=True) if subfilter['text'] not in line
+                ).rstrip()
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
@@ -826,7 +835,9 @@ class DeleteLinesContainingFilter(FilterBase):
                 )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
-                return '\n'.join(line for line in data.splitlines() if re.search(subfilter['re'], line) is None)
+                return ''.join(
+                    line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line) is None
+                ).rstrip()
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "

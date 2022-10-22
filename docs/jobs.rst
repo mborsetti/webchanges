@@ -63,8 +63,8 @@ Multiple jobs are separated by a line containing three hyphens, i.e. ``---``.
 **Naming a job**
 
 While optional, it is recommended that each job starts with a ``name`` entry. If omitted and the data monitored is
-HTML or XML, :program:`webchanges` will automatically use the first 60 characters of the document's title if present for
-a name.
+HTML or XML, :program:`webchanges` will automatically use for a name the first 60 characters of the document's title
+(if present).
 
 .. code-block:: yaml
 
@@ -350,7 +350,14 @@ query.
 
 note
 ^^^^
-Informational note added under the header in reports (a string).
+Informational note added under the header in reports (a string).  Example:
+
+.. code-block:: yaml
+
+   name: Weather warnings
+   note: If there's a hurricane watch, book a flight to get out of town
+   url: https://example.org/weatherwarnings
+
 
 .. versionadded:: 3.2
 

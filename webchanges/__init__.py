@@ -8,7 +8,10 @@ and/or sends it via e-mail and/or other supported services. Can check the output
 # documentation with Sphinx.
 
 # Older Python versions are supported for 3 years after being obsoleted by a new major release.
-__min_python_version__ = (3, 7)  # minimum version of Python required to run; supported until 13 October 2022
+
+from __future__ import annotations
+
+__min_python_version__ = (3, 8)  # minimum version of Python required to run; supported until 5 October 2023
 
 
 __project_name__ = __package__
@@ -18,7 +21,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.11'
+__version__ = '3.12rc0'
 __description__ = (
     'Check web (or commands) for changes since last run and notify.\n\nAnonymously alerts you of webpage changes.'
 )

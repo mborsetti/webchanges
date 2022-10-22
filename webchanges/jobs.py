@@ -29,7 +29,7 @@ import yaml
 from requests.structures import CaseInsensitiveDict
 from urllib3.exceptions import InsecureRequestWarning
 
-from . import __user_agent__
+from .__init__ import __user_agent__
 from .filters import FilterBase
 from .util import TrackSubClasses
 
@@ -83,9 +83,10 @@ class JobBase(metaclass=TrackSubClasses):
     __subclasses__: Dict[str, 'JobBase'] = {}
     __anonymous_subclasses__: List['JobBase'] = []
 
-    __kind__: str = ''  # no longer set at the subclass level
-    __required__: Tuple[str, ...]
-    __optional__: Tuple[str, ...]
+    __kind__: str = ''  # The kind name
+    __is_browser__: bool = False  # Whether Playwright is being launched (run separately with less parallelism)
+    __required__: Tuple[str, ...]  # List of required subdirectives
+    __optional__: Tuple[str, ...]  # List of optional subdirectives
 
     index_number: int = 0  # added at job loading
 
@@ -182,23 +183,26 @@ class JobBase(metaclass=TrackSubClasses):
         return '\n'.join(result)
 
     def get_location(self) -> str:
-        """Get the 'location' of a job, i.e. the URL or command.
+        """Get the 'location' of the job, i.e. the (user_visible) URL or command.
 
-        :returns: A string with user_visible_url or the URL or command of the job.
+        :returns: The user_visible_url, the URL, or the command of the job.
         """
         raise NotImplementedError()
 
     def get_indexed_location(self) -> str:
-        """Get the job number plus its 'location', i.e. the URL or command. Typically used in error displays.
+        """Get the job number plus its 'location', i.e. the (user_visible) URL or command. Typically used in error
+        displays.
 
-        :returns: A string with the job number and the URL or command of the job.
+        :returns: The job number followed by a colon and the 'location' of the job, i.e. its user_visible_url, URL,
+           or command.
         """
         raise NotImplementedError()
 
     def pretty_name(self) -> str:
-        """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (URL or command).
+        """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (user_visible_url,
+        URL or command).
 
-        :returns: A string with the 'pretty name' the job.
+        :returns: The 'pretty name' the job.
         """
         raise NotImplementedError()
 
@@ -502,23 +506,26 @@ class Job(JobBase):
     )
 
     def get_location(self) -> str:
-        """Get the 'location' of a job, i.e. the URL or command.
+        """Get the 'location' of the job, i.e. the (user_visible) URL or command.
 
-        :returns: A string with user_visible_url or the URL or command of the job.
+        :returns: The user_visible_url, the URL, or the command of the job.
         """
         pass
 
     def get_indexed_location(self) -> str:
-        """Get the job number plus its 'location', i.e. the URL or command. Typically used in error displays.
+        """Get the job number plus its 'location', i.e. the (user_visible) URL or command. Typically used in error
+        displays.
 
-        :returns: A string with the job number and the URL or command of the job.
+        :returns: The job number followed by a colon and the 'location' of the job, i.e. its user_visible_url, URL,
+           or command.
         """
         return f'Job {self.index_number}: {self.get_location()}'
 
     def pretty_name(self) -> str:
-        """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (URL or command).
+        """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (user_visible_url,
+        URL or command).
 
-        :returns: A string with the 'pretty name' the job.
+        :returns: The 'pretty name' the job.
         """
         return self.name or self.get_location()
 
@@ -568,9 +575,9 @@ class UrlJob(UrlJobBase):
     )
 
     def get_location(self) -> str:
-        """Get the 'location' of a job, i.e. the URL or command.
+        """Get the 'location' of the job, i.e. the (user_visible) URL.
 
-        :returns: A string with user_visible_url or the URL of the job.
+        :returns: The user_visible_url or URL of the job.
         """
         return self.user_visible_url or self.url
 
@@ -811,6 +818,7 @@ class BrowserJob(UrlJobBase):
     """Retrieve a URL using a real web browser (use_browser: true)."""
 
     __kind__ = 'browser'
+    __is_browser__ = True
 
     __required__ = ('use_browser',)
     __optional__ = (
@@ -846,9 +854,9 @@ class BrowserJob(UrlJobBase):
     proxy_password: str = ''
 
     def get_location(self) -> str:
-        """Get the 'location' of a job, i.e. the URL or command.
+        """Get the 'location' of the job, i.e. the (user_visible) URL.
 
-        :returns: A string with user_visible_url or the URL of the job.
+        :returns: The user_visible_url or URL of the job.
         """
         return self.user_visible_url or self.url
 
@@ -1021,7 +1029,7 @@ class BrowserJob(UrlJobBase):
                     no_viewport=no_viewport,
                     ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
                     extra_http_headers=dict(headers),
-                    user_agent=user_agent,
+                    user_agent=user_agent,  # will be detected if in headers
                 )
                 browser_version = ''
                 logger.info(
@@ -1433,9 +1441,9 @@ class ShellJob(Job):
     __optional__ = ('stderr',)  # ignored; here for backwards compatibility
 
     def get_location(self) -> str:
-        """Get the 'location' of a job, i.e. the URL or command.
+        """Get the 'location' of the job, i.e. the command.
 
-        :returns: A string with user_visible_url or the command of the job.
+        :returns: The command of the job.
         """
         return self.user_visible_url or self.command
 

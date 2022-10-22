@@ -121,7 +121,7 @@ An example ``hooks.py`` file is below:
 
 
    class CustomMatchUrlFilter(AutoMatchFilter):
-       """An AutoMatchFilter applies automatically to all jobs that match the MATCH properties set."""
+       """An AutoMatchFilter applies automatically to all jobs that exactly match the MATCH properties set."""
 
        MATCH = {'url': 'https://example.org/'}
 

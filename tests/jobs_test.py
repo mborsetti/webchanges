@@ -1,5 +1,7 @@
 """Test running of jobs.
 """
+from __future__ import annotations
+
 import asyncio
 import ftplib  # nosec: B402 A FTP-related module is being imported.
 import logging
@@ -7,11 +9,13 @@ import os
 import socket
 import subprocess
 import sys
+from asyncio import AbstractEventLoop
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, TYPE_CHECKING, Union
 
 import pytest
 import yaml
+from _pytest.logging import LogCaptureFixture
 from requests import HTTPError
 
 from webchanges import __project_name__ as project_name
@@ -20,7 +24,9 @@ from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifiedError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
-from webchanges.worker import run_jobs
+
+if TYPE_CHECKING:
+    from webchanges.storage import Config  # dependency not available in Python < 3.8
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +159,7 @@ def test_kind() -> None:
     )
 
 
-def test__dict_deep__merge():
+def test__dict_deep__merge() -> None:
     job = JobBase.unserialize({'url': 'test'})
     assert JobBase._dict_deep_merge(job, {'a': {'b': 'c'}}, {'a': {'d': 'e'}}) == {'a': {'b': 'c', 'd': 'e'}}
     assert JobBase._dict_deep_merge(job, {'a': {'b': 'c'}}, {'a': {'b': 'e'}}) == {'a': {'b': 'c'}}
@@ -161,11 +167,18 @@ def test__dict_deep__merge():
     assert JobBase._dict_deep_merge(job, {'a': 1}, {'b': 2}) == {'a': 1, 'b': 2}
 
 
-@connection_required
-@pytest.mark.parametrize(
-    'input_job, output', TEST_JOBS, ids=(f'{type(JobBase.unserialize(v[0])).__name__}: {v[1]}' for v in TEST_JOBS)
+@connection_required  # type: ignore[misc]
+@pytest.mark.parametrize(  # type: ignore[misc]
+    'input_job, output',
+    TEST_JOBS,
+    ids=(f'{type(JobBase.unserialize(v[0])).__name__}: {v[1]}' for v in TEST_JOBS),  # type: ignore[arg-type]
 )
-def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> None:
+def test_run_job(
+    input_job: Dict[str, Union[str, Dict[str, str], bool, int]],
+    output: str,
+    caplog: LogCaptureFixture,
+    event_loop: AbstractEventLoop,
+) -> None:
     job = JobBase.unserialize(input_job)
     if sys.version_info < (3, 8) and job.use_browser:
         pytest.skip('Playwright testing requires Python 3.8')
@@ -178,8 +191,8 @@ def test_run_job(input_job: Dict[str, Any], output: str, caplog, event_loop) -> 
         assert output in data
 
 
-@connection_required
-@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))
+@connection_required  # type: ignore[misc]
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))  # type: ignore[misc]
 def test_run_ftp_job() -> None:
     job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt', 'timeout': 2})
     with JobState(cache_storage, job) as job_state:
@@ -187,8 +200,8 @@ def test_run_ftp_job() -> None:
         assert len(data) == 319
 
 
-@connection_required
-@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, EOFError, OSError))
+@connection_required  # type: ignore[misc]
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, EOFError, OSError))  # type: ignore[misc]
 def test_run_ftp_job_needs_bytes() -> None:
     if os.getenv('GITHUB_ACTIONS'):
         pytest.skip('Test website cannot be reached from GitHub Actions')
@@ -200,11 +213,13 @@ def test_run_ftp_job_needs_bytes() -> None:
         assert len(data) == 1024
 
 
-@connection_required
-@pytest.mark.parametrize(
-    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+@connection_required  # type: ignore[misc]
+@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+    'job_data',
+    TEST_ALL_URL_JOBS,
+    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_etag(job_data: Dict[str, Any], event_loop) -> None:
+def test_check_etag(job_data: Dict[str, Any], event_loop: AbstractEventLoop) -> None:
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
         return
@@ -215,11 +230,13 @@ def test_check_etag(job_data: Dict[str, Any], event_loop) -> None:
         assert etag
 
 
-@connection_required
-@pytest.mark.parametrize(
-    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+@connection_required  # type: ignore[misc]
+@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+    'job_data',
+    TEST_ALL_URL_JOBS,
+    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
+def test_check_etag_304_request(job_data: Dict[str, Any], event_loop: AbstractEventLoop) -> None:
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
         return
@@ -241,11 +258,13 @@ def test_check_etag_304_request(job_data: Dict[str, Any], event_loop) -> None:
         assert str(pytest_wrapped_e.value) == '304'
 
 
-@connection_required
-@pytest.mark.parametrize(
-    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+@connection_required  # type: ignore[misc]
+@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+    'job_data',
+    TEST_ALL_URL_JOBS,
+    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], event_loop) -> None:
+def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], event_loop: AbstractEventLoop) -> None:
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
         return
@@ -255,7 +274,7 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
         job_state.process()
-        if not isinstance(job_state.exception, BrowserResponseError):
+        if job_state.exception and not isinstance(job_state.exception, BrowserResponseError):
             assert sum(
                 list(x in str(job_state.exception.args) for x in ('Max retries exceeded', 'Timeout 1ms exceeded.'))
             )
@@ -269,11 +288,15 @@ def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], 
     job_data['ignore_connection_errors'] = None
 
 
-@connection_required
-@pytest.mark.parametrize(
-    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
+@connection_required  # type: ignore[misc]
+@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+    'job_data',
+    TEST_ALL_URL_JOBS,
+    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_ignore_http_error_codes_and_error_message(job_data: Dict[str, Any], event_loop) -> None:
+def test_check_ignore_http_error_codes_and_error_message(
+    job_data: Dict[str, Any], event_loop: AbstractEventLoop
+) -> None:
     if job_data.get('use_browser'):
         pytest.skip('Cannot debug due to Playwrigth/Windows bug')  # TODO Remove this and fix
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
@@ -312,30 +335,9 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: Dict[str, Any
     job_data['ignore_http_error_codes'] = None
 
 
-@connection_required
-@pytest.mark.parametrize(
-    'job_data', TEST_ALL_URL_JOBS, ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS)
-)
-def test_http_error_message(job_data: Dict[str, Any], event_loop) -> None:
-    if sys.version_info < (3, 8) and job_data.get('use_browser'):
-        pytest.skip('Playwright testing requires Python 3.8')
-        return
-    jobs_file = data_path.joinpath('jobs-use_browser.yaml')
-    config_file = data_path.joinpath('config.yaml')
-    hooks_file = Path('')
-    config_storage = YamlConfigStorage(config_file)
-    jobs_storage = YamlJobsStorage([jobs_file])
-    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
-    job_data['url'] = 'https://www.google.com/teapot'
-    urlwatcher.jobs = [JobBase.unserialize(job_data)]
-
-    run_jobs(urlwatcher)
-
-
-@py38_required
-@connection_required
-def test_stress_use_browser(event_loop) -> None:
+@py38_required  # type: ignore[misc]
+@connection_required  # type: ignore[misc]
+def test_stress_use_browser(event_loop: AbstractEventLoop) -> None:
     jobs_file = data_path.joinpath('jobs-use_browser.yaml')
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path('')
@@ -417,48 +419,48 @@ def test_navigate_directive() -> None:
 #     )
 
 
-def test_url_job_without_kind():
+def test_url_job_without_kind() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, UrlJob)
 
 
-def test_url_job_use_browser_false_without_kind():
+def test_url_job_use_browser_false_without_kind() -> None:
     job_data = {'url': 'https://www.example.com', 'use_browser': False}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, UrlJob)
 
 
-@py38_required
-def test_browser_job_without_kind(event_loop):
+@py38_required  # type: ignore[misc]
+def test_browser_job_without_kind(event_loop: AbstractEventLoop) -> None:
     job_data = {'url': 'https://www.example.com', 'use_browser': True}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, BrowserJob)
 
 
-def test_shell_job_without_kind():
+def test_shell_job_without_kind() -> None:
     job_data = {'command': 'ls'}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, ShellJob)
 
 
-def test_with_defaults():
+def test_with_defaults() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    config = {'job_defaults': {'all': {'timeout': 999}}}
+    config: Config = {'job_defaults': {'all': {'timeout': 999}}}  # type: ignore[typeddict-item]
     job = job.with_defaults(config)
     assert job.timeout == 999
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
 
 
-def test_ignore_error():
+def test_ignore_error() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
     assert job.ignore_error(Exception()) is False
 
 
-@py38_required
-def test_browser_switches_not_str_or_list(event_loop):
+@py38_required  # type: ignore[misc]
+def test_browser_switches_not_str_or_list(event_loop: AbstractEventLoop) -> None:
     job_data = {
         'url': 'https://www.example.com',
         'use_browser': True,
@@ -470,8 +472,8 @@ def test_browser_switches_not_str_or_list(event_loop):
         assert isinstance(job_state.exception, TypeError)
 
 
-# @py38_required
-# def test_browser_block_elements_not_str_or_list(event_loop):
+# @py38_required  # type: ignore[misc]
+# def test_browser_block_elements_not_str_or_list(event_loop: AbstractEventLoop):
 #     job_data = {
 #         'url': 'https://www.example.com',
 #         'use_browser': True,
@@ -483,8 +485,8 @@ def test_browser_switches_not_str_or_list(event_loop):
 #         assert isinstance(job_state.exception, TypeError)
 #
 #
-# @py38_required
-# def test_browser_block_elements_invalid(event_loop):
+# @py38_required  # type: ignore[misc]
+# def test_browser_block_elements_invalid(event_loop: AbstractEventLoop):
 #     job_data = {
 #         'url': 'https://www.example.com',
 #         'use_browser': True,
@@ -496,7 +498,7 @@ def test_browser_switches_not_str_or_list(event_loop):
 #         assert isinstance(job_state.exception, ValueError)
 
 
-def test_shell_error():
+def test_shell_error() -> None:
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
@@ -504,7 +506,7 @@ def test_shell_error():
         assert isinstance(job_state.exception, subprocess.CalledProcessError)
 
 
-def test_compared_versions():
+def test_compared_versions() -> None:
 
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path('')

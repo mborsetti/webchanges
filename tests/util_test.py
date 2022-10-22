@@ -1,6 +1,8 @@
 """Test utility functions."""
+from __future__ import annotations
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 from webchanges.util import chunk_string, get_new_version_number, linkify
 
@@ -29,12 +31,12 @@ CHUNK_TEST_DATA = [
 ]
 
 
-@pytest.mark.parametrize('string, length, numbering, output', CHUNK_TEST_DATA)
-def test_chunkstring(string, length, numbering, output):
+@pytest.mark.parametrize('string, length, numbering, output', CHUNK_TEST_DATA)  # type: ignore[misc]
+def test_chunkstring(string: str, length: int, numbering: bool, output: list[str]) -> None:
     assert list(chunk_string(string, length, numbering=numbering)) == output
 
 
-def test_chunk_tooshort_1(caplog):
+def test_chunk_tooshort_1(caplog: LogCaptureFixture) -> None:
     chunk_string(
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore '
         'magna aliqua.',
@@ -45,7 +47,7 @@ def test_chunk_tooshort_1(caplog):
     assert 'Not enough space to chunkify string with line numbering (1)' in message
 
 
-def test_linkify():
+def test_linkify() -> None:
     assert linkify('Test www.example.com') == 'Test <a href="https://www.example.com">www.example.com</a>'
     assert (
         linkify(
@@ -62,12 +64,8 @@ def test_linkify():
         linkify('ftp://test', require_protocol=True, permitted_protocols=('ftp',))
         == '<a href="ftp://test">ftp://test</a>'
     )
-
-    def extra_p(x):
-        return ' rel="nofollow"'
-
     assert (
-        linkify('www.test.com', extra_params=extra_p)
+        linkify('www.test.com', extra_params=' rel="nofollow"')
         == '<a href="https://www.test.com" rel="nofollow">www.test.com</a>'
     )
     assert (
@@ -80,6 +78,6 @@ def test_linkify():
     )
 
 
-def test_get_new_version_number():
+def test_get_new_version_number() -> None:
     version = get_new_version_number(timeout=1)
-    assert not version  # this version should be higher than the one in PyPi!
+    assert not version  # this version should be equal to or higher than the one in PyPi!

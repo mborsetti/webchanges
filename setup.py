@@ -29,8 +29,8 @@ SETUP = {
     'long_description': README_rst,
     'long_description_content_type': 'text/x-rst',
     'keywords': 'webmonitoring monitoring',
-    'author': re.match(r'(.*) <(.*)>', project.__author__).groups()[0],
-    'author_email': re.match(r'(.*) <(.*)>', project.__author__).groups()[1],
+    'author': re.match(r'(.*) <(.*)>', project.__author__).groups()[0],  # type: ignore[union-attr]
+    'author_email': re.match(r'(.*) <(.*)>', project.__author__).groups()[1],  # type: ignore[union-attr]
     'url': project.__url__,
     'packages': find_packages(),
     'classifiers': [
@@ -45,10 +45,10 @@ SETUP = {
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: Implementation :: CPython',
         'Operating System :: OS Independent',
         'Natural Language :: English',

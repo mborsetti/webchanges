@@ -26,7 +26,7 @@ import msgpack
 import yaml
 import yaml.scanner
 
-from . import __docs_url__, __project_name__, __version__
+from .__init__ import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
 from .jobs import JobBase, ShellJob
 from .reporters import ReporterBase
@@ -381,7 +381,7 @@ DEFAULT_CONFIG: Config = {
             'enabled': False,
             'command': '',
         },
-        'telegram': {  # uses markdown (from 3.7)
+        'telegram': {  # uses markdown (from version 3.7)
             'enabled': False,
             'bot_token': '',
             'chat_id': '',
@@ -951,7 +951,7 @@ class CacheStorage(BaseFileStorage, ABC):
         """
         for guid in self.get_guids():
             snapshot = self.load(guid)
-            yield (guid, *snapshot)  # Parenthesis can be removed when no longer supporting Python 3.7
+            yield guid, *snapshot
 
     def restore(self, entries: Iterable[Tuple[str, str, float, int, str]]) -> None:
         """Save multiple entries into the database.
@@ -1002,6 +1002,11 @@ class CacheStorage(BaseFileStorage, ABC):
             print(f'Deleted {count} snapshots taken after {timestamp_date}')
         else:
             print(f'No snapshots found after {timestamp_date}')
+
+    @abstractmethod
+    def flushdb(self) -> None:
+        """Delete all entries of the database.  Use with care, there is no undo!"""
+        pass
 
 
 class CacheDirStorage(CacheStorage):
@@ -1095,6 +1100,11 @@ class CacheDirStorage(CacheStorage):
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("'textfiles' databases cannot be rolled back as new snapshots overwrite old ones")
+
+    def flushdb(self) -> None:
+        for file in self.filename.iterdir():
+            if file.is_file():
+                file.unlink()
 
 
 class CacheSQLite3Storage(CacheStorage):

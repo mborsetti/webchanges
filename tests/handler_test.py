@@ -1,4 +1,5 @@
 """Test the handling of jobs."""
+from __future__ import annotations
 
 import importlib.util
 import os
@@ -30,14 +31,14 @@ cache_file = ':memory:'
 hooks_file = Path('')
 
 
-def test_required_classattrs_in_subclasses():
+def test_required_classattrs_in_subclasses() -> None:
     for kind, subclass in JobBase.__subclasses__.items():
         assert hasattr(subclass, '__kind__')
         assert hasattr(subclass, '__required__')
         assert hasattr(subclass, '__optional__')
 
 
-def test_save_load_jobs():
+def test_save_load_jobs() -> None:
     jobs = [
         UrlJob(name='news', url='https://news.orf.at/'),
         ShellJob(name='list homedir', command='ls ~'),
@@ -46,8 +47,8 @@ def test_save_load_jobs():
 
     # tempfile.NamedTemporaryFile() doesn't work on Windows
     # because the returned file object cannot be opened again
-    fd, name = tempfile.mkstemp()
-    name = Path(name)
+    fd, tmpfile = tempfile.mkstemp()
+    name = Path(tmpfile)
     YamlJobsStorage([name]).save(jobs)
     jobs2 = YamlJobsStorage([name]).load()
     os.chmod(name, 0o777)  # nosec: B103 Chmod setting a permissive mask 0o777 on file (name).
@@ -61,7 +62,7 @@ def test_save_load_jobs():
         assert len(jobs3) == 1
 
 
-def test_load_config_yaml():
+def test_load_config_yaml() -> None:
     if config_file.is_file():
         config = YamlConfigStorage(config_file)
         config.load()
@@ -72,7 +73,7 @@ def test_load_config_yaml():
         warnings.warn(f'{config_file} not found', UserWarning)
 
 
-def test_load_jobs_yaml():
+def test_load_jobs_yaml() -> None:
     jobs_file = data_path.joinpath('jobs.yaml')
     if jobs_file.is_file():
         assert len(YamlJobsStorage([jobs_file]).load_secure()) > 0
@@ -80,7 +81,7 @@ def test_load_jobs_yaml():
         warnings.warn(f'{jobs_file} not found', UserWarning)
 
 
-def test_duplicates_in_jobs_yaml():
+def test_duplicates_in_jobs_yaml() -> None:
     jobs_file = data_path.joinpath('jobs-duplicate_url.broken_yaml')
     if jobs_file.is_file():
         with pytest.raises(ValueError) as pytest_wrapped_e:
@@ -93,7 +94,7 @@ def test_duplicates_in_jobs_yaml():
         warnings.warn(f'{jobs_file} not found', UserWarning)
 
 
-def test_load_hooks_py():
+def test_load_hooks_py() -> None:
     hooks_file = data_path.joinpath('hooks_test.py')
     if hooks_file.is_file():
         import_module_from_source('hooks', hooks_file)
@@ -101,7 +102,7 @@ def test_load_hooks_py():
         warnings.warn(f'{hooks_file} not found', UserWarning)
 
 
-def test_run_watcher_sqlite3():
+def test_run_watcher_sqlite3() -> None:
     jobs_file = data_path.joinpath('jobs.yaml')
 
     config_storage = YamlConfigStorage(config_file)
@@ -115,8 +116,8 @@ def test_run_watcher_sqlite3():
         cache_storage.close()
 
 
-@minidb_required
-def test_run_watcher_minidb():
+@minidb_required  # type: ignore[misc]
+def test_run_watcher_minidb() -> None:
     jobs_file = data_path.joinpath('jobs.yaml')
 
     config_storage = YamlConfigStorage(config_file)
@@ -130,7 +131,7 @@ def test_run_watcher_minidb():
         cache_storage.close()
 
 
-def prepare_retry_test_sqlite3():
+def prepare_retry_test_sqlite3() -> tuple[Urlwatch, CacheSQLite3Storage]:
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
 
     config_storage = YamlConfigStorage(config_file)
@@ -143,7 +144,7 @@ def prepare_retry_test_sqlite3():
     return urlwatcher, cache_storage
 
 
-def test_number_of_tries_in_cache_is_increased_sqlite3():
+def test_number_of_tries_in_cache_is_increased_sqlite3() -> None:
     urlwatcher, cache_storage = prepare_retry_test_sqlite3()
     try:
         guid = urlwatcher.jobs[0].get_guid()
@@ -164,7 +165,7 @@ def test_number_of_tries_in_cache_is_increased_sqlite3():
         cache_storage.close()
 
 
-def test_report_error_when_out_of_tries_sqlite3():
+def test_report_error_when_out_of_tries_sqlite3() -> None:
     urlwatcher, cache_storage = prepare_retry_test_sqlite3()
     try:
         guid = urlwatcher.jobs[0].get_guid()
@@ -182,7 +183,7 @@ def test_report_error_when_out_of_tries_sqlite3():
         cache_storage.close()
 
 
-def test_reset_tries_to_zero_when_successful_sqlite3():
+def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
     urlwatcher, cache_storage = prepare_retry_test_sqlite3()
     try:
         guid = urlwatcher.jobs[0].get_guid()
@@ -209,8 +210,8 @@ def test_reset_tries_to_zero_when_successful_sqlite3():
         cache_storage.close()
 
 
-@minidb_required
-def prepare_retry_test_minidb():
+@minidb_required  # type: ignore[misc]
+def prepare_retry_test_minidb() -> tuple[Urlwatch, CacheMiniDBStorage]:
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
     config_storage = YamlConfigStorage(config_file)
     cache_storage = CacheMiniDBStorage(cache_file)
@@ -222,8 +223,8 @@ def prepare_retry_test_minidb():
     return urlwatcher, cache_storage
 
 
-@minidb_required
-def test_number_of_tries_in_cache_is_increased_minidb():
+@minidb_required  # type: ignore[misc]
+def test_number_of_tries_in_cache_is_increased_minidb() -> None:
     urlwatcher, cache_storage = prepare_retry_test_minidb()
     try:
         job = urlwatcher.jobs[0]
@@ -242,8 +243,8 @@ def test_number_of_tries_in_cache_is_increased_minidb():
         cache_storage.close()
 
 
-@minidb_required
-def test_report_error_when_out_of_tries_minidb():
+@minidb_required  # type: ignore[misc]
+def test_report_error_when_out_of_tries_minidb() -> None:
     urlwatcher, cache_storage = prepare_retry_test_minidb()
     try:
         job = urlwatcher.jobs[0]
@@ -259,8 +260,8 @@ def test_report_error_when_out_of_tries_minidb():
         cache_storage.close()
 
 
-@minidb_required
-def test_reset_tries_to_zero_when_successful_minidb():
+@minidb_required  # type: ignore[misc]
+def test_reset_tries_to_zero_when_successful_minidb() -> None:
     urlwatcher, cache_storage = prepare_retry_test_minidb()
     try:
         job = urlwatcher.jobs[0]

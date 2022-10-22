@@ -10,8 +10,13 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+from __future__ import annotations
+
 import sys
 from pathlib import Path
+from typing import Any, Dict, List
+
+import sphinx.application
 
 # below required for local build
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused
@@ -70,7 +75,7 @@ extensions = [
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 #
-exclude_patterns = []
+exclude_patterns: List[str] = []
 
 # Add any paths that contain templates here, relative to this directory.
 #
@@ -141,7 +146,7 @@ html_copy_source = False
 #
 # See https://sphinx-rtd-theme.readthedocs.io/en/latest/configuring.html
 #
-html_theme_options = {
+html_theme_options: Dict[str, Any] = {
     # 'canonical_url': '',
     # 'analytics_id': 'UA-XXXXXXX-1',  #  Provided by Google in your dashboard
     # 'analytics_anonymize_ip': False
@@ -270,5 +275,5 @@ class PatchedHTMLTranslator(HTMLTranslator):
             self.body.append(('%s' + self.secnumber_suffix) % '.'.join(map(str, node['secnumber'])))
 
 
-def setup(app):
+def setup(app: sphinx.application.Sphinx) -> None:
     app.set_translator('html', PatchedHTMLTranslator)

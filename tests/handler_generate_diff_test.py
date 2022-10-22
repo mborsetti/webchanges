@@ -1,4 +1,6 @@
 """Test the generation of various types of diffs."""
+from __future__ import annotations
+
 from webchanges.handler import JobState
 from webchanges.jobs import ShellJob
 from webchanges.storage import CacheSQLite3Storage
@@ -9,7 +11,7 @@ job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
 job_state.new_timestamp = 1605147837.511478
 
 
-def test_generate_diff_normal():
+def test_generate_diff_normal() -> None:
     """Base case."""
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
@@ -18,7 +20,7 @@ def test_generate_diff_normal():
     assert diff.splitlines()[2:] == expected
 
 
-def test_generate_diff_additions_only():
+def test_generate_diff_additions_only() -> None:
     """Changed line with "additions" comparison_filter."""
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
@@ -28,7 +30,7 @@ def test_generate_diff_additions_only():
     assert diff.splitlines()[2:] == expected
 
 
-def test_generate_diff_additions_only_new_lines():
+def test_generate_diff_additions_only_new_lines() -> None:
     """Change of new empty lines with "additions" comparison_filter."""
     job_state.old_data = 'a\nb'
     job_state.new_data = 'a\n\nb\n'
@@ -39,7 +41,7 @@ def test_generate_diff_additions_only_new_lines():
     assert job_state.verb == 'changed,no_report'
 
 
-def test_generate_diff_deletions_only():
+def test_generate_diff_deletions_only() -> None:
     """Changed line with "deletions" comparison_filter."""
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
@@ -50,7 +52,7 @@ def test_generate_diff_deletions_only():
     assert diff.splitlines()[2:] == expected
 
 
-def test_generate_diff_deletions_only_only_removed_lines():
+def test_generate_diff_deletions_only_only_removed_lines() -> None:
     """Changed line with "deletions" comparison_filter."""
     job_state.old_data = 'a\n\nb\n'
     job_state.new_data = 'a\nb'
@@ -62,7 +64,7 @@ def test_generate_diff_deletions_only_only_removed_lines():
     assert job_state.verb == 'changed,no_report'
 
 
-def test_generate_diff_additions_only_75pct_deleted():
+def test_generate_diff_additions_only_75pct_deleted() -> None:
     """'additions' comparison_filter with 75% or more of original content deleted."""
     job_state.old_data = 'a\nb\nc\nd\n'
     job_state.new_data = 'd\n'
@@ -79,7 +81,7 @@ def test_generate_diff_additions_only_75pct_deleted():
     assert diff.splitlines()[2:] == expected
 
 
-def test_generate_diff_additions_only_deletions():
+def test_generate_diff_additions_only_deletions() -> None:
     """'additions' comparison_filter and lines were only deleted."""
     job_state.old_data = 'a\nb\nc\nd\n'
     job_state.new_data = 'a\nb\nc\n'
@@ -87,7 +89,7 @@ def test_generate_diff_additions_only_deletions():
     assert job_state._generate_diff() == ''
 
 
-def test_generate_diff_deletions_only_additions():
+def test_generate_diff_deletions_only_additions() -> None:
     """'deletions' comparison_filter and lines were only added."""
     job_state.old_data = 'a\n'
     job_state.new_data = 'a\nb\n'

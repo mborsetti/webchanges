@@ -1,5 +1,7 @@
 """Test the jobs embedded in the documentation's filters.rst file by running them against the data in the
 data/doc_filer_testadata.yaml file."""
+from __future__ import annotations
+
 import importlib.util
 import logging
 import subprocess
@@ -80,13 +82,16 @@ testdata = load_hooks_testdata()
 
 HOOKS = load_hooks_from_doc()
 spec = importlib.util.spec_from_loader('hooks', loader=None)
-hooks = importlib.util.module_from_spec(spec)
-sys.modules['hooks'] = hooks
-exec(HOOKS, hooks.__dict__)  # nosec: B102 Use of exec detected.
+if spec:
+    hooks = importlib.util.module_from_spec(spec)
+    sys.modules['hooks'] = hooks
+    exec(HOOKS, hooks.__dict__)  # nosec: B102 Use of exec detected.
+else:
+    raise ImportError('hooks not loaded')
 # TODO: ensure that this is the version loaded during testing.
 
 
-def test_flake8(tmp_path):
+def test_flake8(tmp_path: Path) -> None:
     """Check that the hooks.py example code in hooks.rst passes flake8."""
     hooks_path = tmp_path.joinpath('hooks.py')
     hooks_path.write_text(HOOKS)
@@ -95,12 +100,12 @@ def test_flake8(tmp_path):
     assert not r.returncode
 
 
-@pytest.mark.parametrize('job', HOOKS_DOC_JOBS, ids=(v.url for v in HOOKS_DOC_JOBS))
-def test_url(job: JobBase):
+@pytest.mark.parametrize('job', HOOKS_DOC_JOBS, ids=(v.url for v in HOOKS_DOC_JOBS))  # type: ignore[misc]
+def test_url(job: JobBase) -> None:
     d = testdata[job.url]
     data = d['input']
     # noinspection PyTypeChecker
-    with JobState(None, job) as job_state:
+    with JobState(None, job) as job_state:  # type: ignore[arg-type]
         data = FilterBase.auto_process(job_state, data)
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
             data = FilterBase.process(filter_kind, subfilter, job_state, data)

@@ -31,6 +31,28 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.12.1rc0
+===================
+Unreleased
+
+⚠ Breaking changes
+------------------
+* Support for Python 3.7 has been removed. As a reminder, older Python versions are supported for 3 years after being
+  obsoleted by a new major release (support for Python 3.8 will be removed on or about 5 October 2023).
+
+Fixed
+-----
+* Job sorting for reports is now case-insensitive.
+* Documentation on how to anonymously monitor GitHub releases due to changes in GitHub.
+
+Internals
+---------
+* Jobs class now has ``__is_browser__`` attribute which can be used in hooks to identify jobs that run a browser so they
+  can be added to the appropriate queue for execution.
+* Fixed static typing to conform to the latest mypy checks and extended type checking to testing scripts.
+* Running tests on Python 3.11.0-rc.2.
+
+
 Version 3.11
 ===================
 2022-09-22

@@ -20,7 +20,7 @@ from typing import List, Optional
 
 import platformdirs
 
-from . import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
+from .__init__ import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
 from .config import CommandConfig
 from .util import file_ownership_checks, get_new_version_number, import_module_from_source
 

@@ -14,7 +14,7 @@ from contextlib import ExitStack
 from typing import Iterable, Optional, TYPE_CHECKING
 
 from .handler import JobState
-from .jobs import BrowserJob, NotModifiedError, UrlJobBase
+from .jobs import NotModifiedError
 
 try:
     import psutil
@@ -39,10 +39,10 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
     def insert_delay(jobs: List[JobBase]) -> List[JobBase]:  # pragma: no cover
         """
-        TODO: Evaluate whether this is necessary; currently not being called.  Remove pragma no cover.
+        TODO: Evaluate whether this is necessary; currently not being called.  Remove pragma no cover and move import.
 
-        Sets a _delay value for URL jobs hitting the network location already hit. Used to prevent multiple jobs
-        hitting the same network location at the exact same time and being blocked as a result.
+        Sets a _delay value for URL jobs having the same network location as previous ones. Used to prevent
+        multiple jobs hitting the same network location at the exact same time and being blocked as a result.
 
         CHANGELOG:
         * When multiple URL jobs have the same network location (www.example.com), a random delay between 0.1 and 1.0
@@ -53,6 +53,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         :param jobs: The list of jobs.
         :return: The list of jobs with the _delay value set.
         """
+        from .jobs import UrlJobBase
+
         previous_netlocs = set()
         for job in jobs:
             if isinstance(job, UrlJobBase):
@@ -180,8 +182,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     # extract subset of jobs to run if joblist CLI was set
     if urlwatcher.urlwatch_config.joblist:
         for idx in urlwatcher.urlwatch_config.joblist:
-            if not (-len(urlwatcher.jobs) <= idx <= -1 or 1 <= idx <= len(urlwatcher.jobs)):
-                raise IndexError(f'Job index {idx} out of range (found {len(urlwatcher.jobs)} jobs).')
+            if not (-(num_jobs := len(urlwatcher.jobs)) <= idx <= -1 or 1 <= idx <= num_jobs):
+                raise IndexError(f'Job index {idx} out of range (found {num_jobs} jobs).')
         urlwatcher.urlwatch_config.joblist = [
             jn if jn > 0 else len(urlwatcher.jobs) + jn + 1 for jn in urlwatcher.urlwatch_config.joblist
         ]
@@ -202,7 +204,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
     with ExitStack() as stack:
         # run non-BrowserJob jobs first
-        jobs_to_run = [job for job in jobs if type(job) != BrowserJob]
+        jobs_to_run = [job for job in jobs if not job.__is_browser__]
         if jobs_to_run:
             logger.debug(
                 "Running jobs that do not require Chrome (without 'use_browser: true') in parallel with Python's "
@@ -213,7 +215,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             logger.debug("Found no jobs that do not require Chrome (i.e. without 'use_browser: true').")
 
         # run BrowserJob jobs after
-        jobs_to_run = [job for job in jobs if type(job) == BrowserJob]
+        jobs_to_run = [job for job in jobs if job.__is_browser__]
         if jobs_to_run:
             virt_mem = get_virt_mem()
             if urlwatcher.urlwatch_config.max_workers:

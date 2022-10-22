@@ -24,7 +24,7 @@ from typing import Callable, Dict, List, Match, Optional, Tuple, Union
 
 import requests
 
-from . import __project_name__, __version__
+from .__init__ import __project_name__, __version__
 
 try:
     from packaging.version import parse as parse_version
