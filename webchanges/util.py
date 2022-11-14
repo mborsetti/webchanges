@@ -29,7 +29,7 @@ from .__init__ import __project_name__, __version__
 try:
     from packaging.version import parse as parse_version
 except ImportError:
-    from ._vendored.packaging_version import parse as parse_version  # type: ignore[misc]
+    from ._vendored.packaging_version import parse as parse_version  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 

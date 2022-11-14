@@ -43,7 +43,7 @@ An example ``hooks.py`` file is below:
 
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
    from webchanges.handler import JobState
-   from webchanges.jobs import UrlJob
+   from webchanges.jobs import UrlJob, UrlJobBase
    from webchanges.reporters import HtmlReporter, TextReporter
 
 
@@ -58,8 +58,23 @@ An example ``hooks.py`` file is below:
 
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes, str | str]:
            """:returns: The data retrieved and the ETag."""
-           ...  # custom code here to actually do the login
-           return f'Would log in to {self.url} with {self.username} and {self.password}\n', ''
+           ...  # custom code here to actually do the login.
+           return super().retrieve(job_state)  # uses the existing code to then browse and capture data
+
+
+   class CustomBrowserJob(UrlJobBase):
+       """Custom browser job.
+
+       Add `kind: hooks_custom_browser` to the job to retrieve data using this class instead of the built-in ones.
+       """
+
+       __kind__ = 'hooks_custom_browser'
+       __is_browser__ = True  # This is required for executing in the correct parallel processing queue.
+
+       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes, str | str]:
+           """:returns: The data retrieved and the ETag."""
+           ...  # custom code here to launch browser and capture data.
+           return f'Data captured after browsing to {self.url}\n', 'The Etag (if any) or empty string'
 
 
    class CaseFilter(FilterBase):

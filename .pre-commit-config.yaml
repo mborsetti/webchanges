@@ -171,7 +171,6 @@ repos:
         additional_dependencies: [mypy, types-backports, types-docutils, types-PyYAML, types-redis, types-requests]
         language: python
         types: [python]
-        args: [--show-error-codes]
       - id: doc8  # https://github.com/pycqa/doc8
         name: Check for style in rst documentation (doc8)
         description: Documentation linter

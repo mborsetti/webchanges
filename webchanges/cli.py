@@ -16,7 +16,7 @@ import subprocess
 import sys
 import warnings
 from pathlib import Path, PurePath
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import platformdirs
 
@@ -209,7 +209,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
     """Handles CLI actions that do not require all classes etc. to be initialized (and command.py loaded). For speed
     purposes."""
 
-    def _exit(arg: object) -> None:
+    def _exit(arg: Union[str, int, None]) -> None:
         logger.info(f'Exiting with exit code {arg}')
         sys.exit(arg)
 

@@ -49,7 +49,7 @@ class UrlwatchCommand:
         self.urlwatch_config = urlwatcher.urlwatch_config
 
     @staticmethod
-    def _exit(arg: object) -> None:
+    def _exit(arg: Union[str, int, None]) -> None:
         logger.info(f'Exiting with exit code {arg}')
         sys.exit(arg)
 

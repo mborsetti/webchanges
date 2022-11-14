@@ -369,8 +369,8 @@ def test_no_required_directive() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        f"Error in jobs file: Job directive has no value or doesn't match a job type (check for errors/typos/escaping):"
-        f'\n{yaml.safe_dump(job_data)}'
+        f"Error in jobs file: Job directive has no value or doesn't match a job type (check for errors/typos/escaping "
+        f'or documentation):\n{yaml.safe_dump(job_data)}'
     )
 
 
@@ -396,7 +396,7 @@ def test_invalid_directive() -> None:
         '   url: https://www.example.com\n'
         '   ---\n'
         '\n'
-        '   Please check for typos.'
+        '   Please check for typos or refer to the documentation.'
     )
 
 

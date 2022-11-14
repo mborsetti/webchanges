@@ -31,26 +31,31 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.12.1rc0
+Version 3.12rc1
 ===================
 Unreleased
 
-⚠ Breaking changes
-------------------
-* Support for Python 3.7 has been removed. As a reminder, older Python versions are supported for 3 years after being
-  obsoleted by a new major release (support for Python 3.8 will be removed on or about 5 October 2023).
+Added
+-----
+* Support for Python 3.11.
+
+Removed
+-------
+* Support for Python 3.7. As a reminder, older Python versions are supported for 3 years after being obsoleted by a new
+  major release; support for Python 3.8 will be removed on or about 5 October 2023.
 
 Fixed
 -----
 * Job sorting for reports is now case-insensitive.
-* Documentation on how to anonymously monitor GitHub releases due to changes in GitHub.
+* Documentation on how to anonymously monitor GitHub releases (due to changes in GitHub) (contributed by `Luis Aranguren
+  <https://github.com/mercurytoxic>`__ `upstream <https://github.com/thp/urlwatch/issues/723>`__).
 
 Internals
 ---------
-* Jobs class now has ``__is_browser__`` attribute which can be used in hooks to identify jobs that run a browser so they
-  can be added to the appropriate queue for execution.
-* Fixed static typing to conform to the latest mypy checks and extended type checking to testing scripts.
-* Running tests on Python 3.11.0-rc.2.
+* Jobs base class now has a ``__is_browser__`` attribute, which can be used with custom hooks to identify jobs that run
+  a browser so they can be executed in the correct parallel processing queue.
+* Fixed static typing to conform to the latest mypy checks.
+* Extended type checking to testing scripts.
 
 
 Version 3.11
@@ -85,7 +90,7 @@ Changed
 * Implemented measures for ``url`` jobs using ``browser: true`` to avoid being detected: **webchanges** now passes all
   the headless Chrome detection tests `here
   <https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html>`__.
-  Brought to my attention by `amammad <https://github.com/amammad>`__ in `#45
+  Brought to attention by `amammad <https://github.com/amammad>`__ in `#45
   <https://github.com/mborsetti/webchanges/issues/45>`__.
 * Running ``webchanges --test`` (without specifying a JOB) will now check the hooks file (if any) for syntax errors in
   addition to the config and jobs file. Error reporting has also been improved.
@@ -386,7 +391,7 @@ Added
 * Extracted Discord reporting from ``webhooks`` into its own ``discord`` reporter to fix it not working and to
   add embedding functionality as well as color (contributed by `Michał Ciołek  <https://github.com/michalciolek>`__
   `upstream <https://github.com/thp/urlwatch/issues/683>`__. Reported by `jprokos <https://github.com/jprokos>`__` in
-  `#33 <https://github.com/mborsetti/webchanges/issues/33>`__.
+  `#33 <https://github.com/mborsetti/webchanges/issues/33>`__.)
 
 Fixed
 -----

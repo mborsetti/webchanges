@@ -264,7 +264,7 @@ class JobBase(metaclass=TrackSubClasses):
                 if len(data) == 1:
                     raise ValueError(
                         f"Error in jobs file: Job directive has no value or doesn't match a job type (check for "
-                        f'errors/typos/escaping):\n{yaml.safe_dump(data)}'
+                        f'errors/typos/escaping or documentation):\n{yaml.safe_dump(data)}'
                     )
                 else:
                     raise ValueError(
@@ -318,7 +318,7 @@ class JobBase(metaclass=TrackSubClasses):
                         + ['---']
                         + yaml.safe_dump(data).splitlines()
                         + ['---\n']
-                        + ['Please check for typos.']
+                        + ['Please check for typos or refer to the documentation.']
                     )
                 )
         return cls(**{k: v for k, v in list(data.items())})
@@ -505,7 +505,7 @@ class Job(JobBase):
         'user_visible_url',
     )
 
-    def get_location(self) -> str:
+    def get_location(self) -> str:  # type: ignore[empty-body]
         """Get the 'location' of the job, i.e. the (user_visible) URL or command.
 
         :returns: The user_visible_url, the URL, or the command of the job.
@@ -529,7 +529,9 @@ class Job(JobBase):
         """
         return self.name or self.get_location()
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
+    def retrieve(  # type: ignore[empty-body]
+        self, job_state: JobState, headless: bool = True
+    ) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.

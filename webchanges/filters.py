@@ -77,7 +77,7 @@ except ImportError:
 try:
     from packaging.version import parse as parse_version
 except ImportError:
-    from ._vendored.packaging_version import parse as parse_version  # type: ignore[misc]
+    from ._vendored.packaging_version import parse as parse_version  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +304,7 @@ class AutoMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:  # type: ignore[empty-body]
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
@@ -339,7 +339,7 @@ class RegexMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:  # type: ignore[empty-body]
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
@@ -1106,8 +1106,8 @@ class HexDumpFilter(FilterBase):
         """
         if isinstance(data, str):
             data = data.encode(errors='ignore')
-        data = bytearray(data)
-        blocks = [data[i * 16 : (i + 1) * 16] for i in range(int((len(data) + (16 - 1)) / 16))]
+        arr = bytearray(data)
+        blocks = [arr[i * 16 : (i + 1) * 16] for i in range(int((len(arr) + (16 - 1)) / 16))]
         return '\n'.join(
             f"{' '.join(f'{c:02x}' for c in block):49}{''.join((chr(c) if (31 < c < 127) else '.') for c in block)}"
             for block in blocks

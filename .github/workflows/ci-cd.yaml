@@ -64,7 +64,8 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-        python-version: ['3.11.0-rc.2', '3.10', '3.9', '3.8']
+        # Python versions at https://github.com/actions/python-versions/releases
+        python-version: ['3.11', '3.10', '3.9', '3.8']
         os: [ubuntu-latest]
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
@@ -151,7 +152,8 @@ jobs:
       matrix:
 #        os: [windows-latest, macos-latest]
         os: [macos-latest]
-        python-version: ['3.11.0-rc.2', '3.10', '3.9', '3.8']
+        # Python versions at https://github.com/actions/python-versions/releases
+        python-version: ['3.11', '3.10', '3.9', '3.8']
     runs-on: ${{ matrix.os }}
 
     env:
