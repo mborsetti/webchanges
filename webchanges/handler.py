@@ -26,13 +26,13 @@ from .reporters import ReporterBase
 
 try:
     import deepdiff
-except ImportError:
-    deepdiff = None  # type: ignore[no-redef]
+except ImportError as e:
+    deepdiff = e.msg  # type: ignore[no-redef]
 
 try:
     import xmltodict
-except ImportError:
-    xmltodict = None  # type: ignore[no-redef]
+except ImportError as e:
+    xmltodict = e.msg  # type: ignore[no-redef]
 
 try:
     from zoneinfo import ZoneInfo  # not available in Python < 3.9
@@ -282,10 +282,10 @@ class JobState(ContextManager):
             # become a class to keep the code organized.
             if self.job.diff_tool.startswith('deepdiff'):
                 # pragma: no cover
-                if deepdiff is None:
+                if isinstance(deepdiff, str):
                     raise ImportError(
                         f"Python package 'deepdiff' is not installed; cannot use 'diff_tool: {self.job.diff_tool}'"
-                        f' ({self.job.get_indexed_location()})'
+                        f' ({self.job.get_indexed_location()})\n{deepdiff}'
                     )
                 else:
                     from deepdiff.model import DiffLevel
@@ -393,10 +393,10 @@ class JobState(ContextManager):
                         old_data = ''
                     new_data = json.loads(self.new_data)
                 elif data_type == 'xml':
-                    if xmltodict is None:
+                    if isinstance(xmltodict, str):
                         raise ImportError(
                             f"Python package 'xmltodict' is not installed; cannot use 'diff_tool: {self.job.diff_tool}'"
-                            f' ({self.job.get_indexed_location()})'
+                            f' ({self.job.get_indexed_location()})\n{xmltodict}'
                         )
                     old_data = xmltodict.parse(self.old_data)
                     new_data = xmltodict.parse(self.new_data)

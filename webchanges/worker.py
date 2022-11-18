@@ -18,8 +18,8 @@ from .jobs import NotModifiedError
 
 try:
     import psutil
-except ImportError:
-    psutil = None
+except ImportError as e:
+    psutil = e.msg
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             if isinstance(job, UrlJobBase):
                 netloc = urllib.parse.urlparse(job.url).netloc
                 if netloc in previous_netlocs:
-                    job._delay = random.uniform(0.1, 1)  # nosec [B311:blacklist] Standard pseudo-random generator
+                    job._delay = random.uniform(0.1, 1)  # noqa: S311 Standard pseudo-random generator not suitable
                 else:
                     previous_netlocs.add(netloc)
         return jobs
@@ -162,10 +162,10 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     def get_virt_mem() -> int:
         """Return the amount of virtual memory available, i.e. the memory that can be given instantly to processes
         without the system going into swap. Expressed in bytes."""
-        if psutil is None:
+        if isinstance(psutil, str):
             raise ImportError(
-                "Python package psutil is not installed; cannot use 'use_browser: true'. Please install "
-                "dependencies with 'pip install webchanges[use_browser]'."
+                "Error when loading package 'psutil'; cannot use 'use_browser: true'. Please install "
+                f"dependencies with 'pip install webchanges[use_browser]'.\n{psutil}"
             ) from None
         try:
             virt_mem = psutil.virtual_memory().available
@@ -175,7 +175,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             )
         except psutil.Error as e:  # pragma: no cover
             virt_mem = 0
-            logger.debug(f'Could not read memory: {e}')
+            logger.debug(f'Could not read m1emory: {e}')
 
         return virt_mem
 

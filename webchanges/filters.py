@@ -20,12 +20,12 @@ from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
-from xml.dom import minidom  # nosec: B408 Replace minidom with the equivalent defusedxml package TODO
+from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent defusedxml package TODO
 
 import html2text
 import yaml
-from lxml import etree  # noqa: DUO107 insecure use of XML modules, prefer "defusedxml"  # nosec: B410 TODO
-from lxml.cssselect import CSSSelector  # noqa: DUO107 insecure use of XML ... "defusedxml"  # nosec: B410 TODO
+from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml" TODO
+from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml" TODO
 
 from .__init__ import __project_name__
 from .util import TrackSubClasses
@@ -37,43 +37,43 @@ if TYPE_CHECKING:
 
 try:
     import bs4
-except ImportError:  # pragma: has-bs4
-    bs4 = None
+except ImportError as e:  # pragma: has-bs4
+    bs4 = e.msg  # type: ignore[assignment]
 
 try:
     import cssbeautifier
-except ImportError:
-    cssbeautifier = None
+except ImportError as e:
+    cssbeautifier = e.msg  # type: ignore[assignment]
 
 try:
     import jq
-except ImportError:  # pragma: has-jq
-    jq = None
+except ImportError as e:  # pragma: has-jq
+    jq = e.msg
 
 try:
     import jsbeautifier
-except ImportError:
-    jsbeautifier = None
+except ImportError as e:
+    jsbeautifier = e.msg  # type: ignore[assignment]
 
 try:
     import pdftotext
-except ImportError:  # pragma: has-pdftotext
-    pdftotext = None
+except ImportError as e:  # pragma: has-pdftotext
+    pdftotext = e.msg  # type: ignore[assignment]
 
 try:
     from PIL import Image
-except ImportError:
-    Image = None
+except ImportError as e:
+    Image = e.msg  # type: ignore[assignment]
 
 try:
     import pytesseract
-except ImportError:  # pragma: has-pytesseract
-    pytesseract = None
+except ImportError as e:  # pragma: has-pytesseract
+    pytesseract = e.msg  # type: ignore[assignment]
 
 try:
     import vobject
-except ImportError:
-    vobject = None
+except ImportError as e:
+    vobject = e.msg  # type: ignore[assignment]
 try:
     from packaging.version import parse as parse_version
 except ImportError:
@@ -282,6 +282,20 @@ class FilterBase(metaclass=TrackSubClasses):
         """
         raise NotImplementedError()
 
+    def raise_import_error(self, package_name: str, filter_name: str, error_message: str) -> None:
+        """Raise ImportError for missing package.
+
+        :param package_name: The name of the module/package that could not be imported.
+        :param filter_name: The name of the filter that needs the package.
+        :param error_message: The error message from ImportError.
+
+        :raises: ImportError.
+        """
+        raise ImportError(
+            f"Python package '{package_name}' cannot be imported; cannot use the '{filter_name}' filter. "
+            f'({self.job.get_indexed_location()})\n{error_message}'
+        )
+
 
 class AutoMatchFilter(FilterBase):
     """Base class for filters that automatically exactly match one or more directives.
@@ -366,18 +380,15 @@ class BeautifyFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The filtered (processed) data.
         """
-        if bs4 is None:
-            raise ImportError(
-                f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}' filter. "
-                f'({self.job.get_indexed_location()})'
-            )
+        if isinstance(bs4, str):
+            self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
 
         soup = bs4.BeautifulSoup(data, features='lxml')
 
-        if jsbeautifier is None:
+        if isinstance(jsbeautifier, str):
             logger.warning(
-                f"Python package 'jsbeautifier' is not installed; will not beautify <script> tags"
-                f' ({self.job.get_indexed_location()})'
+                f"Python package 'jsbeautifier' cannot be imported; will not beautify <script> tags"
+                f' ({self.job.get_indexed_location()})\n{jsbeautifier}'
             )
         else:
             scripts = soup.find_all('script')
@@ -386,10 +397,10 @@ class BeautifyFilter(FilterBase):
                     beautified_js = jsbeautifier.beautify(script.string)
                     script.string = beautified_js
 
-        if cssbeautifier is None:
+        if isinstance(cssbeautifier, str):
             logger.warning(
-                "Python package 'cssbeautifier' is not installed; will not beautify <style> tags"
-                f' ({self.job.get_indexed_location()})'
+                "Python package 'cssbeautifier' cannot be imported; will not beautify <style> tags"
+                f' ({self.job.get_indexed_location()})\n{cssbeautifier}'
             )
         else:
             styles = soup.find_all('style')
@@ -398,9 +409,9 @@ class BeautifyFilter(FilterBase):
                     beautified_css = cssbeautifier.beautify(style.string)
                     style.string = beautified_css
 
-        if parse_version(bs4.__version__) >= parse_version('4.11'):
+        if parse_version(bs4.__version__) >= parse_version('4.11'):  # type: ignore[attr-defined]
             indent = subfilter.get('indent', 1)
-            return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent))
+            return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent))  # type: ignore[call-arg]
         else:
             return soup.prettify()
 
@@ -459,12 +470,8 @@ class Html2TextFilter(FilterBase):
         """
 
         # extract method and options from subfilter, defaulting to method html2text
-        if 'method' in subfilter:
-            method = subfilter['method']
-            del subfilter['method']
-        else:
-            method = 'html2text'
-        options = subfilter
+        options = subfilter.copy()
+        method = options.pop('method', 'html2text')
 
         if method in ('html2text', 'pyhtml2text'):  # pythtml2text for backward compatibility
             if method == 'pyhtml2text':
@@ -492,11 +499,8 @@ class Html2TextFilter(FilterBase):
             return '\n'.join(line.rstrip() for line in parser.handle(data).splitlines())
 
         elif method == 'bs4':
-            if bs4 is None:
-                raise ImportError(
-                    f"Python package 'BeautifulSoup' is not installed; cannot use the '{self.__kind__}: "
-                    f"{method}' filter. ({self.job.get_indexed_location()})"
-                )
+            if isinstance(bs4, str):
+                self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
 
             bs4_parser: str = options.pop('parser', 'lxml')
             soup = bs4.BeautifulSoup(data, bs4_parser)
@@ -599,15 +603,12 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
         # data must be bytes
         if not isinstance(data, bytes):
             raise ValueError(
-                f"The 'html2text: pdf2text' filter needs bytes input (is it the first filter?). "
+                f"The '{self.__kind__}' filter needs bytes input (is it the first filter?). "
                 f'({self.job.get_indexed_location()})'
             )
 
-        if pdftotext is None:
-            raise ImportError(
-                f"Python package 'pdftotext' (and OS-specific dependencies) is not installed; cannot use "
-                f"'html2text: pdf2text' filter. ({self.job.get_indexed_location()})"
-            )
+        if isinstance(pdftotext, str):
+            self.raise_import_error('pdftotext', self.__kind__, pdftotext)
 
         return '\n'.join(
             pdftotext.PDF(
@@ -633,11 +634,8 @@ class Ical2TextFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The filtered (processed) data.
         """
-        if vobject is None:
-            raise ImportError(
-                f"Python package 'vobject' is not installed; cannot use 'html2text: ical2text' filter. "
-                f'({self.job.get_indexed_location()})'
-            )
+        if isinstance(vobject, str):
+            self.raise_import_error('vobject', self.__kind__, vobject)
 
         result = []
         if isinstance(data, str):
@@ -741,7 +739,7 @@ class PrettyXMLFilter(FilterBase):
         :returns: The filtered (processed) data.
         """
         indentation = int(subfilter.get('indentation', 2))
-        return minidom.parseString(data).toprettyxml(indent=' ' * indentation)  # nosec: B318 use defusedxml TODO
+        return minidom.parseString(data).toprettyxml(indent=' ' * indentation)  # noqa: S318 use defusedxml TODO
 
 
 class KeepLinesContainingFilter(FilterBase):
@@ -1087,7 +1085,7 @@ class Sha1SumFilter(FilterBase):
         if isinstance(data, str):
             data = data.encode(errors='ignore')
         # Python 3.9: insert usedforsecurity=False argument in sha1() and remove nosec
-        return hashlib.sha1(data).hexdigest()  # nosec B324: Use of weak MD4, MD5, or SHA1 hash for security.
+        return hashlib.sha1(data).hexdigest()  # noqa: S324 Use of weak MD4, MD5, or SHA1 hash for security.
 
 
 class HexDumpFilter(FilterBase):
@@ -1237,7 +1235,7 @@ class LxmlParser:
         else:
             data = self.data
         try:
-            root = etree.fromstring(data, self.parser)  # nosec B320: use defusedxml TODO
+            root = etree.fromstring(data, self.parser)  # noqa: S320 use defusedxml TODO
         except ValueError as e:
             args = (
                 f"Filter '{self.filter_kind}' encountered the following error when parsing the data. Check that "
@@ -1473,7 +1471,7 @@ def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str
         shell = True
 
     try:
-        return subprocess.run(  # nosec: B602
+        return subprocess.run(  # noqa: S602 subprocess call with shell=True identified, security issue.
             command,
             input=data,
             capture_output=True,
@@ -1540,23 +1538,18 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
         """
         if not isinstance(data, bytes):
             raise ValueError(
-                f"The 'ocr' filter needs bytes input (is it the first filter?). ({self.job.get_indexed_location()})"
+                f"The '{self.__kind__}' filter needs bytes input (is it the first filter?). "
+                f'({self.job.get_indexed_location()})'
             )
 
         language = subfilter.get('language', None)
         timeout = int(subfilter.get('timeout', 10))
 
-        if pytesseract is None:
-            raise ImportError(
-                f"Python package 'pytesseract' is not installed; cannot use the '{self.__kind__}' filter. "
-                f'({self.job.get_indexed_location()})'
-            )
+        if isinstance(Image, str):
+            self.raise_import_error('PIL', self.__kind__, Image)
 
-        if Image is None:
-            raise ImportError(
-                f"Python package 'Pillow' is not installed; cannot use the '{self.__kind__}' filter. "
-                f'({self.job.get_indexed_location()})'
-            )
+        if isinstance(pytesseract, str):
+            self.raise_import_error('pytesseract', self.__kind__, pytesseract)
 
         return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip()
 
@@ -1588,11 +1581,8 @@ class JQFilter(FilterBase):  # pragma: has-jq
         except ValueError:
             raise ValueError(f"The 'jq' filter needs valid JSON. ({self.job.get_indexed_location()})")
 
-        if jq is None:
-            raise ImportError(
-                f"Python package 'jq' is not installed; cannot use the '{self.__kind__}' filter. "
-                f'({self.job.get_indexed_location()})'
-            )
+        if isinstance(jq, str):
+            self.raise_import_error('jq', self.__kind__, jq)
 
         return jq.text(subfilter['query'], jsondata)
         # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59

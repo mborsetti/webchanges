@@ -1,4 +1,4 @@
-.. _migration:
+.. _upgrading:
 
 
 .. role:: underline
@@ -45,7 +45,7 @@ Upgrading from a :program:`urlwatch` 2.25 setup is automatic (see more below), a
     ``ignore_http_error_codes`` directives
   * Faster runs due to handling of ETags allowing servers to send a simple "HTTP 304 Not Modified" message when
     relevant
-  * A new ``--no-deadless`` command line argument to help with debugging
+  * A new ``--no-headless`` command line argument to help with debugging
 
 * A new, more efficient indexed database that is smaller, allows for additional functionality such as rollbacks, and
   does not infinitely grow
@@ -66,6 +66,7 @@ Upgrading from a :program:`urlwatch` 2.25 setup is automatic (see more below), a
   * Completely new continuous integration (CI) and continuous delivery (CD) pipeline (GitHub Actions with pre-commit)
   * Uses of flake8 and doc8 linters and pre-commit checks
   * Code security checks using bandit
+  * Type-hinted code checked using mypy
   * Testing on both Linux (Ubuntu) **and** macOS, with Windows 10 x64 to come
 * A vast improvement in documentation and error text
 * And much more!
@@ -86,7 +87,7 @@ How-to
 If you are using :program:`urlwatch` 2.25, simply install :program:`webchanges` and run it. It will find the existing
 :program:`urlwatch` job and configuration files, and, unless you were still running ``lynx`` or have custom code (see
 below), it *should* run just fine as is. It may complain about some directive name being changed for clarity and other
-:ref:`deprecations <migration_deprecations>`, but you will have time to make the edits if you decide to stick around!
+:ref:`deprecations <upgrade_deprecations>`, but you will have time to make the edits if you decide to stick around!
 
 .. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
    mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
@@ -147,7 +148,7 @@ If you encounter any problems or have any suggestions please open an issue `here
         - html2text:
 
 
-.. _migration_changes:
+.. _upgrade_changes:
 
 Upgrade details
 ---------------
@@ -172,7 +173,9 @@ Relative to :program:`urlwatch` 2.25:
 * If you're using a hooks file (e.g. ``hooks.py``), all imports from ``urlwatch`` need to be replaced with identical
   imports from ``webchanges``.
 * If you are using the ``slack`` reporter you need to rename it ``webhook`` (unified reporter).
-* If you are using browser (``navigate``) jobs, see above for upgrading to Playwrightt
+* If you are using browser (``navigate``) jobs, see above for upgrading to Playwright.
+* Reporter ``shell`` imitates :program:webchanges:'s ``run_command`` and is not supported (use ``run_command``
+  reporter instead).
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -288,8 +291,13 @@ Relative to :program:`urlwatch` 2.25:
   * Whenever a HTTP client error (4xx) response is received, in ``--verbose`` mode the content of the response is
     displayed with the error.
   * The user is now alerted when the job file and/or configuration file contains unrecognized directives (e.g. typo).
-  * If a newer version of :program:`webchanges` has been released to PyPI, an advisory notice is printed to stdout and
-    added to the report footer (if footer is enabled).
+  * If a newer version of :program:`webchanges` has been released to PyPI, an advisory notice is printed to stdout.
+
+* Reports
+
+  * Reports are now sorted alphabetically.
+  * If a newer version of :program:`webchanges` has been released to PyPI, an advisory notice is added to the report
+    footer (if footer is enabled).
 
 * Internals
 
@@ -297,7 +305,7 @@ Relative to :program:`urlwatch` 2.25:
     higher stability.
   * Upgraded concurrent execution loop to `concurrent.futures.ThreadPoolExecutor.map
     <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor.map>`__.
-  * A new, more efficient indexed database no longer requiring external Python package.
+  * A new, more efficient indexed database no longer requiring external Python package  ``minidb``.
   * Changed timing from `datetime <https://docs.python.org/3/library/datetime.html>`__ to `timeit.default_timer
     <https://docs.python.org/3/library/timeit.html#timeit.default_timer>`__.
   * Replaced custom atomic_rename function with built-in `os.replace().
@@ -318,7 +326,7 @@ Relative to :program:`urlwatch` 2.25:
   * Properly arranging imports with `isort <https://pycqa.github.io/isort/>`__.
   * Added type hinting to the entire code and using `mypy <https://pypi.org/project/mypy/>`__ to check it.
   * A vast improvement in documentation and error text.
-  * The support for Python 3.10.
+  * The support for Python 3.11.
 
 Fixed
 ~~~~~
@@ -364,7 +372,7 @@ Relative to :program:`urlwatch` 2.25:
 * Rewrote most error messages for increased clarity.
 
 
-.. _migration_deprecations:
+.. _upgrade_deprecations:
 
 Deprecations
 ~~~~~~~~~~~~
@@ -392,3 +400,51 @@ Relative to :program:`urlwatch` 2.25:
     will be automatically copied into it.
   * The location of configuration and jobs files in Windows has changed to ``%USERPROFILE%/Documents/webchanges``
     where they can be more easily edited and backed up.
+
+
+Legal
+-----
+The roots of :program:`webchanges` from urlwatch 2.21 code are credited throughout, and its code is appropriately
+copyrighted/licensed:
+
+(1) :program:`webchanges`' `main page <https://github.com/mborsetti/webchanges/blob/main/README.rst>`__ reads:
+
+
+::
+
+   License
+   =======
+
+   Released under the `MIT License <https://opensource.org/licenses/MIT>`__ but redistributing modified source code from
+   `urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ licensed under a
+   `BSD 3-Clause License
+   <https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__. See the
+   complete license `here <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
+
+(2) Each file with code contains this remark at the top:
+
+::
+
+   # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+
+Note: There is no requirement anywhere in law to spam the entire 61-line, 465 words license text on Every. Single.
+File. In. Every. Single. Directory; the above notice is amply sufficient.
+
+(3) The `license file <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__ reads:
+
+::
+
+   This software redistributes source code of release 2.21 of urlwatch https://github
+   .com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f which is subject to the following copyright notice
+   and license from https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING
+   hereby retained and redistributed with the source code (of which this license file is part of), in binary form,
+   and in the documentation. The appearance of the name of the author below does not constitute an endorsement or
+   promotion of this software by such author.
+
+   Copyright (c) 2008-2020 Thomas Perl <m@thp.io>
+   All rights reserved.
+
+   [follows full text of the urlwatch license]
+
+While a lot of improvements have been made from urlwatch 2.21, there's no lack of proper acknowledgement of the
+package's roots in Thomas Perl's code -- in multiple ways.

@@ -12,12 +12,13 @@ from dataclasses import dataclass
 from email import policy
 from email.message import EmailMessage
 from pathlib import Path
+from types import ModuleType
 from typing import Optional, Union
 
 try:
     import keyring
-except ImportError:
-    keyring = None  # type: ignore[assignment]
+except ImportError as e:
+    keyring = e.msg  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +81,11 @@ class SMTPMailer(Mailer):
 
         :param msg: The message to be sent. Optional in order to allow server login testing.
         """
-        passwd = ''  # nosec: B105 Possible hardcoded password
+        passwd = ''  # noqa: S105 Possible hardcoded password
         if self.auth:
             if self.insecure_password:
                 passwd = self.insecure_password
-            elif keyring is not None:
+            elif isinstance(keyring, ModuleType):
                 key_pass = keyring.get_password(self.smtp_server, self.smtp_user)
                 if key_pass is None:
                     raise ValueError(f'No password available in keyring for {self.smtp_server} {self.smtp_user}')
@@ -136,7 +137,7 @@ def smtp_have_password(smtp_server: str, from_email: str) -> bool:
     :param from_email: The email address of the sender.
     :returns: True if the keyring password is set.
     """
-    if keyring is None:
+    if isinstance(keyring, str):
         return False
 
     return keyring.get_password(smtp_server, from_email) is not None
@@ -148,8 +149,8 @@ def smtp_set_password(smtp_server: str, from_email: str) -> None:
     :param smtp_server: The address of the SMTP server.
     :param from_email: The email address of the sender.
     """
-    if keyring is None:
-        raise ImportError('keyring module missing - service unsupported')
+    if isinstance(keyring, str):
+        raise ImportError(f"Python package 'keyring' cannot be loaded - service unsupported\n{keyring}")
 
     password = getpass.getpass(prompt=f'Enter password for {from_email} using {smtp_server}: ')
     keyring.set_password(smtp_server, from_email, password)

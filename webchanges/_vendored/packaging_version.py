@@ -3,7 +3,7 @@ See https://github.com/pypa/packaging."""
 
 # This file is dual licensed under the terms of the Apache License, Version
 # 2.0, and the BSD License.
-
+#
 #                                  Apache License
 #                            Version 2.0, January 2004
 #                         http://www.apache.org/licenses/
@@ -180,7 +180,7 @@ See https://github.com/pypa/packaging."""
 #       of your accepting any such warranty or additional liability.
 #
 #    END OF TERMS AND CONDITIONS
-
+#
 # BSD License
 # Copyright (c) Donald Stufft and individual contributors.
 # All rights reserved.
@@ -205,7 +205,7 @@ See https://github.com/pypa/packaging."""
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+#
 # Content from
 # https://github.com/pypa/packaging/blob/main/packaging/version.py
 
@@ -315,7 +315,7 @@ class InvalidVersion(ValueError):
     """Raised when a version string is not a valid version.
     >>> Version("invalid")
     Traceback (most recent call last):
-        ...
+    [...]
     packaging.version.InvalidVersion: Invalid version: 'invalid'
     """
 

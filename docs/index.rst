@@ -44,9 +44,9 @@
 
 .. toctree::
    :hidden:
-   :caption: Migration
+   :caption: Upgrading
 
-   migration
+   upgrading
 
 .. toctree::
    :hidden:

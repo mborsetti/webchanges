@@ -246,7 +246,7 @@ def test_filter_exceptions() -> None:
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), job_state).filter('<div>a</div>', {})  # type: ignore[misc]
-    assert e.value.args[0] == "The 'html2text: pdf2text' filter needs bytes input (is it the first filter?). ()"
+    assert e.value.args[0] == "The 'pdf2text' filter needs bytes input (is it the first filter?). ()"
 
     for filter in ('keep_lines_containing', 'delete_lines_containing'):
         filtercls = FilterBase.__subclasses__.get(filter)

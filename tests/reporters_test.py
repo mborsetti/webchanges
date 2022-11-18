@@ -267,7 +267,7 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
 
 
 def test_mailer_send() -> None:
-    mailer = SMTPMailer(  # nosec B106:hardcoded_password_funcarg
+    mailer = SMTPMailer(  # noqa: S106 Possible hardcoded password: 'password'
         smtp_user='test@gmail.com',
         smtp_server='smtp.gmail.com',
         smtp_port=587,

@@ -31,7 +31,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.12rc1
+Version 3.12rc2
 ===================
 Unreleased
 
@@ -49,6 +49,8 @@ Fixed
 * Job sorting for reports is now case-insensitive.
 * Documentation on how to anonymously monitor GitHub releases (due to changes in GitHub) (contributed by `Luis Aranguren
   <https://github.com/mercurytoxic>`__ `upstream <https://github.com/thp/urlwatch/issues/723>`__).
+* Handling of 'method' subfilter for filter 'html2text' (reported by `kongomondo <https://github.com/kongomondo>`__
+  `upstream <https://github.com/thp/urlwatch/issues/588>`__>).
 
 Internals
 ---------

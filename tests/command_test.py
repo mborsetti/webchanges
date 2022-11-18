@@ -644,7 +644,7 @@ def test_check_telegram_chats(capsys: CaptureFixture[str]) -> None:
     message = capsys.readouterr().out
     assert message == 'You need to set up your bot token first (see documentation)\n'
 
-    urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # nosec
+    urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # noqa: S105
     setattr(command_config, 'telegram_chats', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()

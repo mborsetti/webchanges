@@ -9,8 +9,10 @@
 Hook your own Python code
 =========================
 Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing such
-code into a ``hooks.py`` file located in the same directory as the job and configuration files. The file will be
-automatically loaded as a module at startup, and an example to get you started is below.
+code into a ``hooks.py`` file located in the same directory as the job and configuration files (or as specified in the
+command line using the ``--hooks`` argument). The file will be automatically loaded as a module at startup.
+
+An example ``hooks.py`` file to get you started is below.
 
 Smaller code snippets can also be run using the :ref:`execute` filter, for example as used :ref:`here <json_dict>`
 for filtering JSON dictionaries.
@@ -31,11 +33,11 @@ for filtering JSON dictionaries.
    * Replace ``$USER`` with the username that runs :program:`webchanges` if different than the use you're logged in when
      making the above changes, similarly with ``$(id -g -n)`` for the group.
 
-An example ``hooks.py`` file is below:
+Example ``hooks.py`` file:
 
 .. code-block:: python
 
-   """Example hooks file for webchanges (for Python 3.10)."""
+   """Example hooks file for webchanges (for Python >= 3.10)."""
 
    import re
    from pathlib import Path

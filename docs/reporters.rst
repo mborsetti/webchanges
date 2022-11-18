@@ -540,7 +540,7 @@ For example, in Windows we can make a MessageBox pop up:
        enabled: true  # don't forget to set this to true! :)
        command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
 
-All environment variables are preserved and the following one added:
+All environment variables are preserved and the following ones added:
 
 +------------------------------------+------------------------------------------------------------------+
 | Environment variable               | Description                                                      |
@@ -550,7 +550,7 @@ All environment variables are preserved and the following one added:
 | ``WEBCHANGES_CHANGED_JOBS_JSON``   | All parameters of changed jobs in JSON format                    |
 +------------------------------------+------------------------------------------------------------------+
 
-If the command generates an error, the output of the error will be in the first line, before the traceback.
+If the command generates an error, the output of the error will be reported in the first line(s).
 
 .. versionadded:: 3.8
 .. versionchanged:: 3.9

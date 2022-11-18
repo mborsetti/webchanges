@@ -51,7 +51,7 @@ def test_save_load_jobs() -> None:
     name = Path(tmpfile)
     YamlJobsStorage([name]).save(jobs)
     jobs2 = YamlJobsStorage([name]).load()
-    os.chmod(name, 0o777)  # nosec: B103 Chmod setting a permissive mask 0o777 on file (name).
+    os.chmod(name, 0o777)  # noqa: S103 Chmod setting a permissive mask 0o777 on file (name).
     jobs3 = YamlJobsStorage([name]).load_secure()
     os.close(fd)
     os.remove(name)

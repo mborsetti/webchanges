@@ -33,14 +33,9 @@ from .reporters import ReporterBase
 from .util import edit_file, file_ownership_checks
 
 try:
-    import pwd
-except ImportError:
-    pwd = None  # type: ignore[assignment]
-
-try:
     import redis
-except ImportError:
-    redis = None  # type: ignore[assignment]
+except ImportError as e:
+    redis = e.msg  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -1539,8 +1534,8 @@ class CacheRedisStorage(CacheStorage):
     def __init__(self, filename: Union[str, Path]) -> None:
         super().__init__(filename)
 
-        if redis is None:
-            raise ImportError("Python package 'redis' is missing")
+        if isinstance(redis, str):
+            raise ImportError(f"Python package 'redis' cannot be imported.\n{redis}")
 
         self.db = redis.from_url(str(filename))
         logger.info(f'Using {self.filename} for database')

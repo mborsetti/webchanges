@@ -217,9 +217,16 @@ using a system scheduler to automatically run :program:`webchanges` periodically
 Windows installation
 --------------------
 * First install (or upgrade to) the `latest version of Python <https://www.python.org/downloads/>`__; you usually want
-  the 64-bit Windows installer).
+  the 64-bit Windows installer.
 * Press ``⊞ Win + R``, enter ``cmd``, and press Enter (or click on OK).
 * Type ``py -m pip install webchanges`` and press Enter.
-* This will download :program:`webchanges` and all dependencies, and install it.
+* This will download :program:`webchanges` and install it.
 * After this, :program:`webchanges` should be available as a command (type ``webchanges --version`` to check).
 * Configure :program:`webchanges` as per this documentation.
+
+
+Android installation
+--------------------
+This program is not made to run on your phone/tablet directly, but rather on a server (including one in the cloud); the
+notifications (":ref:`reports <reports>`") can be sent to your Android device. However, if you want to run
+:program:`webchanges` on an Android device you should take a look at running it in `Termux <https://termux.dev/en/>`__.

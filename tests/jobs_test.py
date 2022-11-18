@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import ftplib  # nosec: B402 A FTP-related module is being imported.
+import ftplib  # noqa: S402 A FTP-related module is being imported.
 import logging
 import os
 import socket
@@ -415,7 +415,7 @@ def test_navigate_directive() -> None:
 #     with pytest.deprecated_call() as pytest_wrapped_warning:
 #         JobBase.unserialize(job_data.copy())
 #     assert str(pytest_wrapped_warning.list[0].message) == (
-#         f"Job directive 'kind' is deprecated and ignored: delete from job ({job_data})"  # nosec: B608
+#         f"Job directive 'kind' is deprecated and ignored: delete from job ({job_data})"  # noqa: S608
 #     )
 
 

@@ -20,11 +20,13 @@ from .storage import CacheStorage, Snapshot
 
 try:
     import minidb
-except ImportError:
+except ImportError as e:
 
     class minidb:  # type: ignore[no-redef]
         class Model:
             pass
+
+    minidb_error = e.msg
 
 
 class CacheMiniDBStorage(CacheStorage):
@@ -39,7 +41,7 @@ class CacheMiniDBStorage(CacheStorage):
         super().__init__(filename)
 
         if isinstance(minidb, type):
-            raise ImportError("Python package 'minidb' is missing")
+            raise ImportError(f"Python package 'minidb' cannot be imported.\n{minidb_error}")
 
         self.filename.parent.mkdir(parents=True, exist_ok=True)
 

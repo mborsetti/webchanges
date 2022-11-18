@@ -75,34 +75,34 @@ if TYPE_CHECKING:
 
 try:
     import aioxmpp
-except ImportError:
-    aioxmpp = None
+except ImportError as e:
+    aioxmpp = e.msg  # type: ignore[assignment]
 
 try:
     import chump
-except ImportError:
-    chump = None
+except ImportError as e:
+    chump = e.msg  # type: ignore[assignment]
 
 try:
     import keyring
-except ImportError:
-    keyring = None
+except ImportError as e:
+    keyring = e.msg  # type: ignore[assignment]
 
 try:
     import matrix_client.api
-except ImportError:
-    matrix_client = None
+except ImportError as e:
+    matrix_client = e.msg  # type: ignore[assignment]
 
 try:
     from pushbullet import Pushbullet
-except ImportError:
-    Pushbullet = None
+except ImportError as e:
+    Pushbullet = e.msg  # type: ignore[assignment]
 
 if os.name == 'nt':
     try:
         from colorama import AnsiToWin32
-    except ImportError:
-        AnsiToWin32 = None
+    except ImportError as e:
+        AnsiToWin32 = e.msg  # type: ignore[assignment,misc]
 
 try:
     from zoneinfo import ZoneInfo  # not available in Python < 3.9
@@ -235,6 +235,20 @@ class ReporterBase(metaclass=TrackSubClasses):
         :returns: The content of the report.
         """
         raise NotImplementedError()
+
+    def raise_import_error(self, package_name: str, reporter_name: str, error_message: str) -> None:
+        """Raise ImportError for missing package.
+
+        :param package_name: The name of the module/package that could not be imported.
+        :param reporter_name: The name of the reporter that needs the package.
+        :param error_message: The error message from ImportError.
+
+        :raises: ImportError.
+        """
+        raise ImportError(
+            f"Python package '{package_name}' cannot be imported; cannot use the '{reporter_name}' reporter.\n"
+            f'{error_message}'
+        )
 
 
 class HtmlReporter(ReporterBase):
@@ -961,7 +975,7 @@ class StdoutReporter(TextReporter):
         return self._incolor(4, s)
 
     def _get_print(self) -> Callable:
-        if os.name == 'nt' and self._has_color and AnsiToWin32 is not None:
+        if os.name == 'nt' and self._has_color and not isinstance(AnsiToWin32, str):
             return functools.partial(print, file=AnsiToWin32(sys.stdout).stream)
         return print
 
@@ -1114,8 +1128,8 @@ class PushoverReport(WebServiceReporter):
     config: ConfigReportPushover
 
     def web_service_get(self) -> 'chump.User':
-        if chump is None:
-            raise ImportError('Python module "chump" not installed')
+        if isinstance(chump, str):
+            self.raise_import_error('chump', self.__kind__, chump)
 
         app = chump.Application(self.config['app'])
         return app.get_user(self.config['user'])
@@ -1146,8 +1160,8 @@ class PushbulletReport(WebServiceReporter):
     config: ConfigReportPushbullet
 
     def web_service_get(self) -> 'Pushbullet':
-        if Pushbullet is None:
-            raise ImportError('Python module "pushbullet" not installed')
+        if isinstance(Pushbullet, str):
+            self.raise_import_error('pushbullet', self.__kind__, Pushbullet)
 
         return Pushbullet(self.config['api_key'])
 
@@ -1527,8 +1541,8 @@ class MatrixReporter(MarkdownReporter):
     MAX_LENGTH = 16384
 
     def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> None:  # type: ignore[override]
-        if matrix_client is None:
-            raise ImportError('Python module "matrix_client" not installed')
+        if isinstance(matrix_client, str):
+            self.raise_import_error('matrix_client', self.__kind__, matrix_client)
 
         homeserver_url = self.config['homeserver']
         access_token = self.config['access_token']
@@ -1618,9 +1632,10 @@ class BrowserReporter(HtmlReporter):
 
 class XMPP:
     def __init__(self, sender: str, recipient: str, insecure_password: Optional[str] = None) -> None:
-        if aioxmpp is None:
-            raise ImportError('Python package "aioxmpp" is not installed; cannot use the "xmpp" reporter')
-
+        if isinstance(aioxmpp, str):
+            raise ImportError(
+                f"Python package 'aioxmpp' cannot be imported; cannot use the 'xmpp' reporter.\n" f'{aioxmpp}'
+            )
         self.sender = sender
         self.recipient = recipient
         self.insecure_password = insecure_password
@@ -1652,16 +1667,16 @@ class XMPP:
 
 
 def xmpp_have_password(sender: str) -> bool:
-    if keyring is None:
-        raise ImportError('Python package "keyring" is non installed - service unsupported')
+    if isinstance(keyring, str):
+        raise ImportError(f'Python package "keyring" is non installed - service unsupported.\n{keyring}')
 
     return keyring.get_password('urlwatch_xmpp', sender) is not None
 
 
 def xmpp_set_password(sender: str) -> None:
     """Set the keyring password for the XMPP connection. Interactive."""
-    if keyring is None:
-        raise ImportError('Python package "keyring" is non installed - service unsupported')
+    if isinstance(keyring, str):
+        raise ImportError(f'Python package "keyring" is non installed - service unsupported.\n{keyring}')
 
     password = getpass.getpass(prompt=f'Enter password for {sender}: ')
     keyring.set_password('urlwatch_xmpp', sender, password)
@@ -1776,3 +1791,13 @@ class RunCommandReporter(TextReporter):
             logger.error(f"The '{self.__kind__}' filter with command {command} returned error:\n{e}")
             raise FileNotFoundError(e, f'with command {command}')
         print(result.stdout, end='')
+
+
+class ShellReporter(WebhookReporter):
+    """Deprecated; use run_command instead."""
+
+    __kind__ = 'shell'
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        warn("'shell' reporter is deprecated; use 'run_command' instead", DeprecationWarning)
+        super().__init__(*args, **kwargs)

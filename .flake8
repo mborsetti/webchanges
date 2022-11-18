@@ -3,15 +3,7 @@
 # Runs as part of pre-commit.
 # Config file documentation at https://flake8.pycqa.org/en/latest/user/configuration.html
 
-ignore = E203,I100,I101,I201,W503
-  # E203 whitespace before ':'  [black conflict]
-  # I100 Import statements are in the wrong order. [black conflict]
-  # I101 The names in your from import are in the wrong order [isort conflict]
-  # I201 Missing newline between import groups [black conflict]
-  # W503 line break before binary operator [conflicts with W504]
+ignore =
+    E203,  # whitespace before ':'  [black conflict]
+    W503   # line break before binary operator [conflicts with W504]
 max-line-length = 120
-# exclude = __init__.py,*.pyc,tests.p
-paths =
-  ./webchanges/
-  ./tests/
-application_import_names = webchanges

@@ -85,7 +85,7 @@ spec = importlib.util.spec_from_loader('hooks', loader=None)
 if spec:
     hooks = importlib.util.module_from_spec(spec)
     sys.modules['hooks'] = hooks
-    exec(HOOKS, hooks.__dict__)  # nosec: B102 Use of exec detected.
+    exec(HOOKS, hooks.__dict__)  # noqa: S102 Use of exec detected.
 else:
     raise ImportError('hooks not loaded')
 # TODO: ensure that this is the version loaded during testing.
@@ -95,7 +95,7 @@ def test_flake8(tmp_path: Path) -> None:
     """Check that the hooks.py example code in hooks.rst passes flake8."""
     hooks_path = tmp_path.joinpath('hooks.py')
     hooks_path.write_text(HOOKS)
-    r = subprocess.run(['flake8', '--extend-ignore', 'W292', hooks_path], capture_output=True, text=True)  # nosec: B607
+    r = subprocess.run(['flake8', '--extend-ignore', 'W292', hooks_path], capture_output=True, text=True)  # noqa: S607
     assert r.stdout == ''
     assert not r.returncode
 

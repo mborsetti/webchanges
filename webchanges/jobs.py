@@ -17,7 +17,7 @@ import subprocess
 import textwrap
 import time
 import warnings
-from ftplib import FTP  # nosec: B402
+from ftplib import FTP  # noqa: S402 A FTP-related module is being imported. FTP is considered insecure.
 from http.client import responses as response_names
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
@@ -400,7 +400,7 @@ class JobBase(metaclass=TrackSubClasses):
         """
         location = self.get_location()
         # Python 3.9: insert usedforsecurity=False argument in sha1() and remove nosec
-        return hashlib.sha1(location.encode()).hexdigest()  # nosec B324: Use of weak hash for security.
+        return hashlib.sha1(location.encode()).hexdigest()  # noqa: S324  Use of weak hash for security.
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
@@ -613,7 +613,7 @@ class UrlJob(UrlJobBase):
             username = url.username or 'anonymous'
             password = url.password or 'anonymous'
 
-            with FTP(  # nosec: B321
+            with FTP(  # noqa: S321 FTP-related functions are being called. FTP is considered insecure.
                 str(url.hostname),
                 str(username),
                 str(password),
@@ -1462,7 +1462,7 @@ class ShellJob(Job):
         """
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         return (
-            subprocess.run(  # nosec: B602
+            subprocess.run(  # noqa: S602 subprocess call with shell=True identified, security issue.
                 self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)
             ).stdout,
             '',
