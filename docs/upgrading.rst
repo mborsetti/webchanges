@@ -447,4 +447,4 @@ File. In. Every. Single. Directory; the above notice is amply sufficient.
    [follows full text of the urlwatch license]
 
 While a lot of improvements have been made from urlwatch 2.21, there's no lack of proper acknowledgement of the
-package's roots in Thomas Perl's code -- in multiple ways.
+package's roots in Thomas Perl's code -- in multiple ways -- and of its full, explicit licensing.

@@ -71,7 +71,7 @@ Example ``hooks.py`` file:
        """
 
        __kind__ = 'hooks_custom_browser'
-       __is_browser__ = True  # This is required for executing in the correct parallel processing queue.
+       __is_browser__ = True  # This is required for execution in the correct parallel processing queue.
 
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes, str | str]:
            """:returns: The data retrieved and the ETag."""

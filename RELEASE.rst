@@ -1,6 +1,8 @@
 Added
 -----
-* Support for Python 3.11.
+* Support for Python 3.11. Please note that the dependency ``lxml`` may fail to install on Windows due to
+  `this <https://bugs.launchpad.net/lxml/+bug/1977998>`__ bug and that therefore for now **webchanges** can only be
+  run in Python 3.10 on Windows.
 
 Removed
 -------
@@ -12,10 +14,5 @@ Fixed
 * Job sorting for reports is now case-insensitive.
 * Documentation on how to anonymously monitor GitHub releases (due to changes in GitHub) (contributed by `Luis Aranguren
   <https://github.com/mercurytoxic>`__ `upstream <https://github.com/thp/urlwatch/issues/723>`__).
-
-Internals
----------
-* Jobs base class now has a ``__is_browser__`` attribute, which can be used with custom hooks to identify jobs that run
-  a browser so they can be executed in the correct parallel processing queue.
-* Fixed static typing to conform to the latest mypy checks.
-* Extended type checking to testing scripts.
+* Handling of ``method`` subfilter for filter ``html2text`` (reported by `kongomondo <https://github.com/kongomondo>`__
+  `upstream <https://github.com/thp/urlwatch/issues/588>`__).
