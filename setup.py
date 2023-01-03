@@ -32,7 +32,7 @@ SETUP = {
     'author': re.match(r'(.*) <(.*)>', project.__author__).groups()[0],  # type: ignore[union-attr]
     'author_email': re.match(r'(.*) <(.*)>', project.__author__).groups()[1],  # type: ignore[union-attr]
     'url': project.__url__,
-    'packages': find_packages(),
+    'packages': find_packages(exclude=["tests"]),
     'classifiers': [
         'Environment :: Console',
         'Topic :: Internet',
