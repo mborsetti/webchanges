@@ -19,7 +19,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, Union
+from typing import List, Optional, TYPE_CHECKING, Union
 
 import requests
 
@@ -32,6 +32,11 @@ try:
     import apt
 except ImportError:
     apt = None  # type: ignore[assignment]
+
+try:
+    from pip._internal.metadata import get_default_environment
+except ImportError:
+    get_default_environment = None  # type: ignore[assignment]
 
 try:
     from playwright.sync_api import sync_playwright
@@ -149,6 +154,50 @@ class UrlwatchCommand:
 
         :return: 0.
         """
+
+        def dependencies() -> List[str]:
+            if get_default_environment is not None:
+                env = get_default_environment()
+                dist = None
+                for dist in env.iter_all_distributions():
+                    if dist.canonical_name == 'webchanges':
+                        break
+                if dist and dist.canonical_name == 'webchanges':
+                    return sorted(set(d.split()[0] for d in dist.metadata_dict['requires_dist']), key=str.lower)
+
+            # default list of dependencies
+            return [
+                'aioxmpp',
+                'backports.zoneinfo',
+                'beautifulsoup4',
+                'chump',
+                'colorama',
+                'cssbeautifier',
+                'cssselect',
+                'deepdiff',
+                'html2text',
+                'jq',
+                'jsbeautifier',
+                'keyring',
+                'lxml',
+                'markdown2',
+                'matrix_client',
+                'msgpack',
+                'pdftotext',
+                'Pillow',
+                'platformdirs',
+                'playwright',
+                'psutil',
+                'pushbullet.py',
+                'pytesseract',
+                'pyyaml',
+                'redis',
+                'requests',
+                'tzdata',
+                'urllib3',
+                'vobject',
+            ]
+
         print('Software:')
         print(f'• {__project_name__}: {__version__}')
         print(
@@ -178,28 +227,7 @@ class UrlwatchCommand:
 
         print()
         print('Installed PyPi dependencies:')
-        for module_name in [
-            'aioxmpp',
-            'beautifulsoup4',
-            'chump',
-            'deepdiff',
-            'jq',
-            'jsbeautifier',
-            'keyring',
-            'matrix_client',
-            'Pillow',
-            'pip',
-            'pdftotext',
-            'playwright',
-            'psutil',
-            'pushbullet.py',
-            'pytesseract',
-            'redis',
-            'setuptools',
-            'vobject',
-            'wheel',
-            'zoneinfo',
-        ]:
+        for module_name in dependencies():
             try:
                 mod = importlib.metadata.distribution(module_name)
             except ModuleNotFoundError:
