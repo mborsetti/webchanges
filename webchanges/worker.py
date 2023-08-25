@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import difflib
+import gc
 import logging
 import os
 import random
@@ -60,7 +61,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             if isinstance(job, UrlJobBase):
                 netloc = urllib.parse.urlparse(job.url).netloc
                 if netloc in previous_netlocs:
-                    job._delay = random.uniform(0.1, 1)  # noqa: S311 Standard pseudo-random generator not suitable
+                    job._delay = random.uniform(0.1, 1)  # noqa: S311 Standard pseudo-random generator not suitable.
                 else:
                     previous_netlocs.add(netloc)
         return jobs
@@ -89,7 +90,6 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             lambda jobstate: jobstate.process(headless=not urlwatcher.urlwatch_config.no_headless),
             (stack.enter_context(JobState(urlwatcher.cache_storage, job)) for job in jobs),
         ):
-
             max_tries = 0 if not job_state.job.max_tries else job_state.job.max_tries
             # tries is incremented by JobState.process when an exception (including 304) is encountered.
 
@@ -175,7 +175,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             )
         except psutil.Error as e:  # pragma: no cover
             virt_mem = 0
-            logger.debug(f'Could not read m1emory: {e}')
+            logger.debug(f'Could not read memory information: {e}')
 
         return virt_mem
 
@@ -217,6 +217,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         # run BrowserJob jobs after
         jobs_to_run = [job for job in jobs if job.__is_browser__]
         if jobs_to_run:
+            gc.collect()
             virt_mem = get_virt_mem()
             if urlwatcher.urlwatch_config.max_workers:
                 max_workers = urlwatcher.urlwatch_config.max_workers

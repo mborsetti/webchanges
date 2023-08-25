@@ -58,7 +58,8 @@ if os.getenv('REDIS_URI') and importlib.util.find_spec('redis') is not None:
 if importlib.util.find_spec('minidb') is not None:
     from webchanges.storage_minidb import CacheMiniDBStorage
 
-    DATABASE_ENGINES += (CacheMiniDBStorage(':memory:'),)
+    cache_file = ':memory:'
+    DATABASE_ENGINES += (CacheMiniDBStorage(cache_file),)
 else:
     CacheMiniDBStorage = type(None)  # type: ignore[misc,assignment]
 
@@ -88,7 +89,7 @@ def prepare_storage_test(
             setattr(urlwatch_config, k, v)
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
-    if sys.platform == 'win32':
+    if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     return urlwatcher, cache_storage
@@ -126,7 +127,7 @@ def test_check_for_unrecognized_keys_hooks() -> None:
         f'Found unrecognized directive(s) in the configuration file {config_file}:\n'
         f'report:\n  made_up_key: true\nCheck for typos (documentation at {__docs_url__})\n'
     )
-    import_module_from_source('hooks', data_path.joinpath('hooks_test.py'))
+    import_module_from_source('hooks', data_path.joinpath('hooks_example.py'))
     config_storage.check_for_unrecognized_keys(config)
 
 
@@ -149,12 +150,12 @@ def test_check_for_shell_job() -> None:
     """Test if a job is a shell job."""
     jobs_file = data_path.joinpath('jobs-is_shell_job.yaml')
     # TODO the below generates PermissionError: [Errno 1] Operation not permitted when run by GitHub Actions in macOS
-    # if sys.platform != 'win32':
+    # if os.name != 'nt':
     #     os.chown(jobs_file, 65534, 65534)
     jobs_storage = YamlJobsStorage([jobs_file])
     jobs_storage.load_secure()
     # jobs = jobs_storage.load_secure()
-    # if sys.platform != 'win32':
+    # if os.name != 'nt':
     #     assert len(jobs) == 1
 
 
@@ -596,7 +597,7 @@ def test_clean_and_history_data(database_engine: CacheStorage) -> None:
 
 def test_migrate_urlwatch_legacy_db(tmp_path: Path) -> None:
     orig_cache_file = data_path.joinpath('cache-urlwatch_legacy.db')
-    temp_cache_file = tmp_path.joinpath('cache-urlwatch_legacy-temp.db')
+    temp_cache_file = tmp_path.joinpath(f'cache-urlwatch_legacy-temp_{sys.version_info.minor}.db')
     shutil.copyfile(orig_cache_file, temp_cache_file)
     if minidb_is_installed:
         cache_storage = CacheSQLite3Storage(temp_cache_file)
@@ -621,7 +622,8 @@ def test_migrate_urlwatch_legacy_db(tmp_path: Path) -> None:
 
 
 def test_max_snapshots() -> None:
-    cache_storage = CacheSQLite3Storage(':memory:')
+    cache_file = ':memory:'
+    cache_storage = CacheSQLite3Storage(cache_file)
     cache_storage.max_snapshots = 0
     cache_storage.close()
 

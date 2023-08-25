@@ -19,7 +19,7 @@ from typing import Any, Dict, List
 import sphinx.application
 
 # below required for local build
-import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused
+import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused.
 from docutils import nodes
 from docutils.nodes import Element, Node
 from sphinx.writers.html import HTMLTranslator
@@ -27,7 +27,7 @@ from sphinx.writers.html import HTMLTranslator
 # below required to import project_data module
 sys.path.insert(1, str(Path(__file__).parent.parent))
 
-import webchanges as project_data  # noqa: E402 module level import not at top of file
+import webchanges as project_data  # noqa: E402 module level import not at top of file.
 
 # below required for autosummary build on GitHub Actions's pre-commit and on readthedocs.io
 sys.path.insert(1, str(Path(__file__).parent.joinpath('webchanges')))
@@ -89,7 +89,7 @@ pygments_style = 'sphinx'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = '4.3.2'
+needs_sphinx = '6.1.3'
 
 # -- Options for internationalization ----------------------------------------
 

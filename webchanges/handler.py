@@ -9,7 +9,7 @@ import json
 import logging
 import re
 import shlex
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import tempfile
 import time
 import traceback
@@ -101,10 +101,10 @@ class JobState(ContextManager):
         # Below is legacy code that now does nothing, so it's being skipped
         # try:
         #     self.job.main_thread_enter()
-        # except Exception as ex:
+        # except Exception as e:
         #     logger.info(f'Job {self.job.index_number}: Exception while creating resources for job', exc_info=True)
-        #     self.exception = ex
-        #     self.traceback = traceback.format_exc()
+        #     self.exception = e
+        #     self.traceback = self.job.format_error(e, traceback.format_exc())
 
         return self
 
@@ -125,7 +125,10 @@ class JobState(ContextManager):
         # except Exception:
         #     # We don't want exceptions from releasing resources to override job run results
         #     logger.warning(f'Job {self.index_number}: Exception while releasing resources for job', exc_info=True)
-
+        if isinstance(exc_value, subprocess.CalledProcessError):
+            raise subprocess.SubprocessError(exc_value.stderr)
+        elif isinstance(exc_value, FileNotFoundError):
+            raise OSError(exc_value)
         return None
 
     def added_data(self) -> Dict[str, Optional[Union[bool, str, Exception, float]]]:
@@ -204,7 +207,7 @@ class JobState(ContextManager):
         except Exception as e:
             # Job failed its chance to handle error
             self.exception = e
-            self.traceback = traceback.format_exc()
+            self.traceback = self.job.format_error(e, traceback.format_exc())
             self.error_ignored = False
             if not isinstance(e, NotModifiedError):
                 self.tries += 1
@@ -292,10 +295,9 @@ class JobState(ContextManager):
 
                 def _pretty_deepdiff(diff: deepdiff.DeepDiff, html_out: bool = False) -> str:
                     """
-                    Customized version of deepdiff.serialization.SerializationMixin.pretty method,
-                    edited to include the values deleted or added and an option for colorized HTML output.
-                    The pretty human readable string output for the diff object
-                    regardless of what view was used to generate the diff.
+                    Customized version of deepdiff.serialization.SerializationMixin.pretty method, edited to include the
+                    values deleted or added and an option for colorized HTML output. The pretty human-readable string
+                    output for the diff object regardless of what view was used to generate the diff.
                     """
 
                     if html_out:
@@ -356,14 +358,14 @@ class JobState(ContextManager):
 
                         val_t1 = (
                             f'"{diff.t1}"'
-                            if type_t1 in ('str', 'int', 'float')
+                            if type_t1 in {'str', 'int', 'float'}
                             else json.dumps(diff.t1, ensure_ascii=False, indent=2)
                             if type_t1 == 'dict'
                             else str(diff.t1)
                         )
                         val_t2 = (
                             f'"{diff.t2}"'
-                            if type_t2 in ('str', 'int', 'float')
+                            if type_t2 in {'str', 'int', 'float'}
                             else json.dumps(diff.t2, ensure_ascii=False, indent=2)
                             if type_t2 == 'dict'
                             else str(diff.t2)
@@ -438,7 +440,7 @@ class JobState(ContextManager):
                     old_file_path.write_text(old_data)
                     new_file_path.write_text(new_data)
                     cmdline = shlex.split(self.job.diff_tool) + [str(old_file_path), str(new_file_path)]
-                    proc = subprocess.run(cmdline, capture_output=True, text=True)
+                    proc = subprocess.run(cmdline, capture_output=True, text=True)  # noqa: S603 subprocess call
                 if proc.stderr:
                     raise RuntimeError(
                         f"diff_tool '{self.job.diff_tool}' returned '{proc.stderr}' ({self.job.get_indexed_location()})"
@@ -527,12 +529,12 @@ class Report:
     new_release_future: Optional[Future[Union[str, bool]]] = None
     start: float = time.perf_counter()
 
-    def __init__(self, urlwatch_config: Urlwatch) -> None:
+    def __init__(self, urlwatch: Urlwatch) -> None:
         """
 
-        :param urlwatch_config: The Urlwatch object with the program configuration information.
+        :param urlwatch: The Urlwatch object with the program configuration information.
         """
-        self.config: Config = urlwatch_config.config_storage.config
+        self.config: Config = urlwatch.config_storage.config
 
     def _result(self, verb: str, job_state: JobState) -> None:
         """Logs error and appends the verb to the job_state.

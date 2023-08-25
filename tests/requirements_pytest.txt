@@ -8,6 +8,7 @@ coverage-conditional-plugin
 cssbeautifier
 docutils
 flake8
+flake8-bandit
 flake8-quotes
 jq; os_name != 'nt' and python_version < '3.10'
 jsbeautifier
@@ -21,5 +22,7 @@ Pygments
 pytest
 pytest-asyncio
 pytest-cov
+# pytz required temporarily due to https://github.com/horazont/aioxmpp/pull/390
+pytz
 redis
 vobject

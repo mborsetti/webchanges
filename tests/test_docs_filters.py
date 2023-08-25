@@ -37,6 +37,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
     """Parse the rst document"""
     parser = docutils.parsers.rst.Parser()
     components = (docutils.parsers.rst.Parser,)
+    # TODO: The frontend.OptionParser class will be replaced by a subclass of argparse.ArgumentParser in Docutils 0.21
     settings = docutils.frontend.OptionParser(components=components).get_default_values()
     document = docutils.utils.new_document('<rst-doc>', settings=settings)
     parser.parse(text, document)
@@ -131,7 +132,7 @@ def test_filter_doc_jobs(job: JobBase) -> None:
                 logger.warning(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
                 return
             data = FilterBase.process(filter_kind, subfilter, job_state, data)
-            if filter_kind in ('pdf2text', 'shellpipe'):  # fix for macOS or OS-specific end of line
+            if filter_kind in {'pdf2text', 'shellpipe'}:  # fix for macOS or OS-specific end of line
                 data = data.rstrip()
 
         expected_output_data = d['output']
@@ -139,7 +140,7 @@ def test_filter_doc_jobs(job: JobBase) -> None:
             assert data == expected_output_data
         else:
             # see https://github.com/Alir3z4/html2text/pull/339
-            assert data in (
+            assert data in {
                 expected_output_data,
                 # The below is for when html2text > 2020.1.16 (fixes included)
                 '| Date                    | #Sales™ |\n'
@@ -147,4 +148,4 @@ def test_filter_doc_jobs(job: JobBase) -> None:
                 '| Monday, 3 February 2020 | 10,000  |\n'
                 '| Tu, 3 Mar               | 20,000  |\n'
                 '\n',
-            )
+            }

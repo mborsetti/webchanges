@@ -1,4 +1,4 @@
-# Data for test cases for hooks.rst used by docs_hooks_test.py
+# Data for test cases for hooks.rst used by test_docs_hooks.py
 # Each heading is a unique pseudo-url
 # Ensure you use a Unicode character (e.g. ™ / &trade) in your example (both input and output) to test that too!
 https://example.org/case:

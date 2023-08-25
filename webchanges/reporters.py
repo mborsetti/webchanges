@@ -15,7 +15,7 @@ import logging
 import os
 import re
 import shlex
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.s
 import sys
 import time
 from datetime import datetime
@@ -553,7 +553,7 @@ class HtmlReporter(ReporterBase):
         if job_state.verb == 'unchanged':
             return f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.old_data))}</pre>'
 
-        if job_state.old_data in (None, job_state.new_data):
+        if job_state.old_data in {None, job_state.new_data}:
             return '...'
 
         if difftype == 'unified':
@@ -671,7 +671,7 @@ class TextReporter(ReporterBase):
         if job_state.verb == 'unchanged':
             return job_state.old_data
 
-        if job_state.old_data in (None, job_state.new_data):
+        if job_state.old_data in {None, job_state.new_data}:
             return None
 
         return job_state.get_diff(tz)
@@ -879,7 +879,7 @@ class MarkdownReporter(ReporterBase):
         :returns: The fitted string.
         """
 
-        if any(s[:3] == x for x in ('+++', '---', '...')):  # is a unified diff (with our '...' modification)
+        if s[:3] in {'+++', '---', '...'}:  # is a unified diff (with our '...' modification)
             lines = s.splitlines(keepends=True)
             for i in range(len(lines)):
                 if i <= 1 or lines[i][:3] == '@@ ':
@@ -913,7 +913,7 @@ class MarkdownReporter(ReporterBase):
         if job_state.verb == 'unchanged':
             return job_state.old_data
 
-        if job_state.old_data in (None, job_state.new_data):
+        if job_state.old_data in {None, job_state.new_data}:
             return None
 
         return job_state.get_diff(tz)
@@ -1082,6 +1082,7 @@ class IFTTTReport(TextReporter):
                     'value2': pretty_name,
                     'value3': location,
                 },
+                timeout=60,
             )
             if result.status_code != requests.codes.ok:
                 raise RuntimeError(f'IFTTT error: {result.text}')
@@ -1214,6 +1215,7 @@ class MailgunReporter(TextReporter):
                 'text': body_text,
                 'html': body_html,
             },
+            timeout=60,
         )
 
         try:
@@ -1268,7 +1270,7 @@ class TelegramReporter(MarkdownReporter):
             'disable_web_page_preview': True,
             'disable_notification': self.config['silent'],
         }
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data=data)
+        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data=data, timeout=60)
 
         try:
             json_res = result.json()
@@ -1306,7 +1308,7 @@ class TelegramReporter(MarkdownReporter):
         elif version == 2:
             if entity_type is None:
                 escape_chars = r'\_*[]()~`>#+-=|{}.!'
-            elif entity_type in ('pre', 'code'):
+            elif entity_type in {'pre', 'code'}:
                 escape_chars = r'\`'
             elif entity_type == 'text_link':
                 escape_chars = r'\)[]'
@@ -1332,7 +1334,7 @@ class TelegramReporter(MarkdownReporter):
         # Escape Markdown by type
         lines = re.split(r'(`)(.*?)(`)', text)
         for i in range(len(lines)):
-            if i % 4 in (1, 3):
+            if i % 4 in {1, 3}:
                 continue
             base_entity = 'code' if i % 4 == 2 else None
             # subtext = re.split(r'(\[[^\][]*]\((?:https?|tel|mailto):[^()]*\))', text[i])
@@ -1453,9 +1455,9 @@ class DiscordReporter(TextReporter):
 
         logger.info(f'Sending Discord request with post_data: {post_data}')
 
-        result = requests.post(webhook_url, json=post_data)
+        result = requests.post(webhook_url, json=post_data, timeout=60)
         try:
-            if result.status_code in (requests.codes.ok, requests.codes.no_content):
+            if result.status_code in {requests.codes.ok, requests.codes.no_content}:
                 logger.info('Discord response: ok')
             else:
                 logger.error(f'Discord error: {result.text}')
@@ -1508,9 +1510,9 @@ class WebhookReporter(TextReporter):
     def submit_to_webhook(webhook_url: str, text: str) -> requests.Response:
         logger.debug(f'Sending request to webhook with text: {text}')
         post_data = {'text': text}
-        result = requests.post(webhook_url, json=post_data)
+        result = requests.post(webhook_url, json=post_data, timeout=60)
         try:
-            if result.status_code in (requests.codes.ok, requests.codes.no_content):
+            if result.status_code in {requests.codes.ok, requests.codes.no_content}:
                 logger.info('Webhook server response: ok')
             else:
                 raise RuntimeError(f'Webhook server error: {result.text}')
@@ -1732,10 +1734,10 @@ class ProwlReporter(TextReporter):
         }
 
         # all set up, add the notification!
-        result = requests.post(api_add, data=post_data)
+        result = requests.post(api_add, data=post_data, timeout=60)
 
         try:
-            if result.status_code in (requests.codes.ok, requests.codes.no_content):
+            if result.status_code in {requests.codes.ok, requests.codes.no_content}:
                 logger.info('Prowl response: ok')
             else:
                 raise RuntimeError(f'Prowl error: {result.text}')
@@ -1777,7 +1779,7 @@ class RunCommandReporter(TextReporter):
         command = shlex.split(self.config['command'].format(**subject_args))
 
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 subprocess call - check for execution of untrusted input.
                 command,
                 capture_output=True,
                 check=True,

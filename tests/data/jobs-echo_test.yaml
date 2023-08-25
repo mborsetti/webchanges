@@ -1,2 +1,2 @@
 command: echo test
-name: Sample webchanges job; used by command_test.py
+name: Sample webchanges job; used by test_command.py

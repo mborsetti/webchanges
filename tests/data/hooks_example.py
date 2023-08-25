@@ -1,4 +1,4 @@
-"""Example hooks file for webchanges (used in testing)."""
+"""Example hooks file for webchanges (used by test_command.py, test_handler.py, and test_storage.py)."""
 
 import re
 from pathlib import Path
@@ -34,7 +34,6 @@ class CaseFilter(FilterBase):
     __default_subfilter__ = 'upper'
 
     def filter(self, data: str, subfilter: Optional[Dict[str, Any]]) -> str:  # type: ignore[override]
-
         if not subfilter or subfilter.get('upper'):
             return data.upper()
         elif subfilter.get('lower'):
@@ -53,7 +52,6 @@ class IndentFilter(FilterBase):
     __default_subfilter__ = 'indent'
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
-
         indent = int(subfilter.get('indent', 8))
 
         return '\n'.join((' ' * indent) + line for line in data.splitlines())

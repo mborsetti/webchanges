@@ -43,9 +43,9 @@ At the moment, the following filters are available:
   - :ref:`css <css-and-xpath>`: Filter XML/HTML using CSS selectors.
   - :ref:`xpath <css-and-xpath>`: Filter XML/HTML using XPath expressions.
   - :ref:`element-by-class <element-by-…>`: Get all HTML elements matching a class.
-  - :ref:`element-by-id <element-by-…>`: Get all HTML element matching an id.
+  - :ref:`element-by-id <element-by-…>`: Get all HTML elements matching an id.
   - :ref:`element-by-style <element-by-…>`: Get all HTML elements matching a style.
-  - :ref:`element-by-tag <element-by-…>`: Get an HTML element matching a tag.
+  - :ref:`element-by-tag <element-by-…>`: Get all HTML elements matching a tag.
 
 * To extract text from HTML:
 
@@ -121,7 +121,8 @@ The ``css`` filter extracts HTML or XML content based on a `CSS selector <https:
 the `cssselect <https://pypi.org/project/cssselect/>`__ Python package, which has limitations and extensions as
 explained in its `documentation <https://cssselect.readthedocs.io/en/latest/#supported-selectors>`__.
 
-The ``xpath`` filter extracts HTML or XML content based on a `XPath <https://www.w3.org/TR/xpath>`__ expression.
+The ``xpath`` filter extracts HTML or XML content based on a `XPath <https://www.w3.org/TR/xpath>`__ version
+1.0 expression.
 
 Examples: to filter only the ``<body>`` element of the HTML document, stripping out everything else:
 
@@ -235,6 +236,25 @@ If you get multiple results from one page, but you only expected one (e.g. becau
 desktop version in the same HTML document, and shows/hides one via CSS depending on the viewport size), you can use
 ``maxitems: 1`` to only return the first item.
 
+Fixing list reorderings with CSS Selector or XPath filters
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+In some cases, the ordering of items on a webpage might change regularly without the actual content changing. By
+default, this would show up in the diff output as an element being removed from one part of the page and inserted in
+another part of the page.
+
+In cases where the order of items doesn't matter, it's possible to sort matched items lexicographically to avoid
+spurious reports when only the ordering of items changes on the page.
+
+The subfilter for ``css`` and ``xpath`` filters is ``sort``, and can be ``true`` or ``false`` (the default):
+
+.. code:: yaml
+
+   url: https://example.org/items-random-order.html
+   filter:
+     - css:
+         selector: span.item
+         sort: true
+
 
 Optional directives
 """""""""""""""""""
@@ -244,7 +264,7 @@ Optional directives
 * ``exclude``: Elements to remove from the final result.
 * ``skip``: Number of elements to skip from the beginning (default: 0).
 * ``maxitems``: Maximum number of items to return (default: all).
-
+* ``sort``: Sort elements lexographically (boolean) (default: false).
 
 
 .. _csv2text:
@@ -295,8 +315,8 @@ Optional sub-directives
 
 .. _element-by-…:
 
-element-by-…
-------------
+element-by-[class|id|style|tag]
+-------------------------------
 The filters **element-by-class**, **element-by-id**, **element-by-style**, and **element-by-tag** allow you to select
 all matching instances of a given HTML element.
 
@@ -620,6 +640,10 @@ format-json
 This filter deserializes a JSON object and formats it using Python's `json.dumps
 <https://docs.python.org/3/library/json.html#json.dumps>`__ with indentations.
 
+.. tip:: If your reports are in HTML format, use the job directive ``monospace: true`` to improve readability (see
+   :ref:`here <monospace>`).
+
+
 Optional sub-directives
 """""""""""""""""""""""
 * ``indentation``: Number of characters indent to pretty-print JSON array elements; ``None`` selects the most compact
@@ -860,6 +884,13 @@ All features are described in Python’s re.sub `documentation <https://docs.pyt
 ``pattern`` and ``repl`` values are passed to this function as-is; if ``repl`` is missing, then it's considered to be an
 empty string, and this filter deletes the the leftmost non-overlapping occurrences of ``pattern``.
 
+.. tip:: Remember that some useful Python regxx flags, such as
+   `IGNORECASE <https://docs.python.org/3/library/re.html#re.IGNORECASE>`__,
+   `MULTILINE <https://docs.python.org/3/library/re.html#re.MULTILINE>`__,
+   `DOTALL <https://docs.python.org/3/library/re.html#re.DOTALL>`__, and
+   `VERBOSE <https://docs.python.org/3/library/re.html#re.VERBOSE>`__,
+   can be specified as inline flags and therefore can be used with :program:webchanges:.
+
 The following example applies the filter 3 times:
 
 .. code-block:: yaml
@@ -1020,7 +1051,6 @@ By default, it acts over adjacent lines.  Three lines consisting of ``dog`` - ``
    filter:
      - remove_repeated
 
-
 Prepend it with :ref:`sort` to capture globally unique lines, e.g. to turn ``dog`` - ``cat`` - ``dog`` to ``cat`` -
 ``dog``:
 
@@ -1030,7 +1060,6 @@ Prepend it with :ref:`sort` to capture globally unique lines, e.g. to turn ``dog
    filter:
      - sort
      - remove_repeated
-
 
 This behavior can be changed by using an optional ``separator`` string argument. Also, ``ignore_case`` will tell it to
 ignore differences in case and of leading and/or trailing whitespace when comparing. For example, the below will turn
@@ -1044,16 +1073,29 @@ mixed-case items separated by a pipe (``|``) ``a|b|B |c`` into ``a|b|c``:
          separator: '|'
          ignore_case: true
 
+Finally, setting the ``adjacent`` sub-directive to false will cause all duplicates to be removed, even if not
+adjacent.  For example, the below will turn items separated by a pipe (``|``) ``a|b|a|c`` into ``a|b|c``:
+
+.. code:: yaml
+
+   url: https://example.net/remove-repeated-non-adjacent.txt
+   filter:
+     - remove_repeated:
+         separator: '|'
+         adjacent: false
+
 Optional sub-directives
 """""""""""""""""""""""
 * ``separator`` (default): The string used to separate items whose order is to be reversed (default: ``\n``, i.e.
   line-based); it can also be specified inline as the value of ``remove_repeated``.
 * ``ignore_case``: Ignore differences in case and of leading and/or trailing whitespace when comparing (true/false)
   (default: false).
+* ``adjacent``: Remove only adjacent lines or items (true/false) (default: true).
 
 .. versionadded:: 3.8
 
-
+.. versionadded:: 3.13
+   ``adjacent`` sub-directive.
 
 .. _reverse:
 

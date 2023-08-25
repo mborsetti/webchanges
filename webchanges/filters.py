@@ -14,18 +14,18 @@ import logging
 import os
 import re
 import shlex
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import warnings
 from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
-from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent defusedxml package TODO
+from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent defusedxml package. TODO
 
 import html2text
 import yaml
-from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml" TODO
-from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml" TODO
+from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
+from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
 
 from .__init__ import __project_name__
 from .util import TrackSubClasses
@@ -235,7 +235,7 @@ class FilterBase(metaclass=TrackSubClasses):
         :returns: The data after the filter has been applied.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
-        filtercls: Optional[Type[FilterBase]] = cls.__subclasses__.get(filter_kind)
+        filtercls: Optional[Type[FilterBase]] = cls.__subclasses__.get(filter_kind)  # type: ignore[assignment]
         if filtercls:
             return filtercls(job_state.job, job_state).filter(data, subfilter)
         else:
@@ -473,7 +473,7 @@ class Html2TextFilter(FilterBase):
         options = subfilter.copy()
         method = options.pop('method', 'html2text')
 
-        if method in ('html2text', 'pyhtml2text'):  # pythtml2text for backward compatibility
+        if method in {'html2text', 'pyhtml2text'}:  # pythtml2text for backward compatibility
             if method == 'pyhtml2text':
                 warnings.warn(
                     f"Filter html2text's method 'pyhtml2text' is deprecated: remove method as it's now the "
@@ -508,7 +508,7 @@ class Html2TextFilter(FilterBase):
             strip: bool = options.pop('strip', False)
             return soup.get_text(separator=separator, strip=strip)
 
-        elif method in ('strip_tags', 're'):  # re for backward compatibility
+        elif method in {'strip_tags', 're'}:  # re for backward compatibility
             if method == 're':
                 warnings.warn(
                     f"Filter html2text's method 're' is deprecated: replace with 'strip_tags' "
@@ -739,7 +739,7 @@ class PrettyXMLFilter(FilterBase):
         :returns: The filtered (processed) data.
         """
         indentation = int(subfilter.get('indentation', 2))
-        return minidom.parseString(data).toprettyxml(indent=' ' * indentation)  # noqa: S318 use defusedxml TODO
+        return minidom.parseString(data).toprettyxml(indent=' ' * indentation)  # noqa: S318 use defusedxml. TODO
 
 
 class KeepLinesContainingFilter(FilterBase):
@@ -883,7 +883,6 @@ class StripFilter(FilterBase):
 
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         if subfilter.get('splitlines'):
-
             lines = data.splitlines()
 
             if 'side' in subfilter:
@@ -1132,7 +1131,7 @@ class LxmlParser:
     ) -> None:
         self.filter_kind = filter_kind
         self.method = subfilter.get('method', 'html')
-        if self.method not in ('html', 'xml'):
+        if self.method not in {'html', 'xml'}:
             raise ValueError(
                 f"The '{filter_kind}' filter's method must be 'html' or 'xml', got '{self.method}'. "
                 f'({job.get_indexed_location()})'
@@ -1146,6 +1145,7 @@ class LxmlParser:
         self.exclude = subfilter.get('exclude')
         self.namespaces = subfilter.get('namespaces')
         self.skip = int(subfilter.get('skip', 0))
+        self.sort_items = bool(subfilter.get('sort', False))
         self.maxitems = int(subfilter.get('maxitems', 0))
         if self.method == 'html' and self.namespaces:
             raise ValueError(
@@ -1235,7 +1235,7 @@ class LxmlParser:
         else:
             data = self.data
         try:
-            root = etree.fromstring(data, self.parser)  # noqa: S320 use defusedxml TODO
+            root = etree.fromstring(data, self.parser)  # noqa: S320 use defusedxml.
         except ValueError as e:
             args = (
                 f"Filter '{self.filter_kind}' encountered the following error when parsing the data. Check that "
@@ -1268,7 +1268,8 @@ class LxmlParser:
             elements = elements[self.skip :]
         if self.maxitems:
             elements = elements[: self.maxitems]
-        return '\n'.join(self._to_string(element, self.method) for element in elements)
+        elementstrs = (self._to_string(element, self.method) for element in elements)
+        return '\n'.join(sorted(elementstrs) if self.sort_items else elementstrs)
 
 
 LXML_PARSER_COMMON_SUBFILTERS = {
@@ -1277,6 +1278,7 @@ LXML_PARSER_COMMON_SUBFILTERS = {
     'namespaces': 'Mapping of XML namespaces for matching',
     'skip': 'Number of elements to skip from the beginning (default: 0)',
     'maxitems': 'Maximum number of items to return (default: all)',
+    'sort': 'Sort matched items after filtering (default: False)',
 }
 
 
@@ -1382,6 +1384,7 @@ class RemoveRepeatedFilter(FilterBase):
     __supported_subfilters__ = {
         'separator': 'Item separator (default: newline)',
         'ignore_case': 'Ignore differences in case when comparing',
+        'adjacent': 'Remove only adjacent lines or items (default: true)',
     }
 
     __default_subfilter__ = 'separator'
@@ -1389,16 +1392,22 @@ class RemoveRepeatedFilter(FilterBase):
     def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
         separator = subfilter.get('separator', '\n')
         ignore_case = subfilter.get('ignore_case', False)
+        consecutive = subfilter.get('adjacent', True)
         data_lines = data.split(separator)
         uniq_lines = [data_lines[0]]
         if not ignore_case:
             for line in data_lines[1:]:
-                if line not in uniq_lines[-1]:
+                if consecutive and line not in uniq_lines[-1]:
+                    uniq_lines.append(line)
+                elif line not in uniq_lines:
                     uniq_lines.append(line)
         else:
             past_lines = [data_lines[0].strip().lower()]
             for line in data_lines[1:]:
-                if line.strip().lower() not in past_lines[-1]:
+                if consecutive and line.strip().lower() not in past_lines[-1]:
+                    past_lines.append(line.strip().lower())
+                    uniq_lines.append(line)
+                elif line.strip().lower() not in past_lines:
                     past_lines.append(line.strip().lower())
                     uniq_lines.append(line)
 
@@ -1471,11 +1480,11 @@ def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str
         shell = True
 
     try:
-        return subprocess.run(  # noqa: S602 subprocess call with shell=True identified, security issue.
+        return subprocess.run(
             command,
             input=data,
             capture_output=True,
-            shell=shell,
+            shell=shell,  # noqa: S602 subprocess call with shell=True identified, security issue.
             check=True,
             text=True,
             env=env,

@@ -5,11 +5,13 @@ doc8
 docutils
 docutils-stubs
 flake8
+flake8-bandit
 flake8-quotes
 flynt
 isort
 mypy
 pre-commit
+tox-ini-fmt
 types-backports
 types-docutils
 types-PyYAML

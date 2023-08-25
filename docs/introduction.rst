@@ -218,11 +218,15 @@ Windows installation
 --------------------
 * First install (or upgrade to) the `latest version of Python <https://www.python.org/downloads/>`__; you usually want
   the 64-bit Windows installer.
-* Press ``⊞ Win + R``, enter ``cmd``, and press Enter (or click on OK).
+* Open a command window by pressing ``⊞ Win + R``, typing ``cmd``, and pressing Enter (or clicking on OK).
 * Type ``py -m pip install webchanges`` and press Enter.
 * This will download :program:`webchanges` and install it.
 * After this, :program:`webchanges` should be available as a command (type ``webchanges --version`` to check).
 * Configure :program:`webchanges` as per this documentation.
+
+.. tip::
+  If you receive ``*** fatal error - Internal error: TP_NUM_C_BUFS too small: 50`` when running :program:`webchanges`
+  in Windows, try installing python-magic-bin by running ``pip install python-magic-bin``.
 
 
 Android installation

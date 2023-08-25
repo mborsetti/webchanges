@@ -4,7 +4,6 @@ from __future__ import annotations
 import importlib.util
 import logging
 import os
-import sys
 import traceback
 from smtplib import SMTPAuthenticationError
 
@@ -87,7 +86,7 @@ DIFF_TO_HTML_TEST_DATA = [
 ]
 
 ALL_REPORTERS = [
-    reporter for reporter, v in DEFAULT_CONFIG['report'].items() if reporter not in ('tz', 'html', 'text', 'markdown')
+    reporter for reporter, v in DEFAULT_CONFIG['report'].items() if reporter not in {'tz', 'html', 'text', 'markdown'}
 ]
 
 
@@ -234,7 +233,7 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
                         )
                     )
                 )
-    elif reporter in ('pushover', 'pushbullet', 'telegram', 'mailgun', 'ifttt', 'prowl'):
+    elif reporter in {'pushover', 'pushbullet', 'telegram', 'mailgun', 'ifttt', 'prowl'}:
         with pytest.raises(RuntimeError) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
         assert reporter in str(pytest_wrapped_e.value).lower()
@@ -245,10 +244,10 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
         with pytest.raises(MatrixError) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
-    elif reporter in ('webhook', 'discord'):
+    elif reporter in {'webhook', 'discord'}:
         with pytest.raises(MissingSchema) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
-        assert str(pytest_wrapped_e.value) == "Invalid URL '': No scheme supplied. Perhaps you meant http://?"
+        assert str(pytest_wrapped_e.value) == "Invalid URL '': No scheme supplied. Perhaps you meant https://?"
     elif reporter == 'run_command':
         if os.getenv('GITHUB_ACTIONS'):
             pytest.skip('Test triggers exit code 141 in GitHub Actions')
@@ -256,7 +255,7 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
         with pytest.raises(ValueError) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
-        if sys.platform == 'win32':
+        if os.name == 'nt':
             test_report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
         else:
             test_report.config['report']['run_command']['command'] = 'echo TEST'
@@ -267,7 +266,7 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
 
 
 def test_mailer_send() -> None:
-    mailer = SMTPMailer(  # noqa: S106 Possible hardcoded password: 'password'
+    mailer = SMTPMailer(  # noqa: S106 Possible hardcoded password: 'password'.
         smtp_user='test@gmail.com',
         smtp_server='smtp.gmail.com',
         smtp_port=587,

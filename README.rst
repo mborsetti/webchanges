@@ -28,7 +28,7 @@ only the latest bug and security fix version (3.x.y) is supported.
 
 Installation
 ============
-Install **webchanges** |pypi_version| |format| |status| with:
+Install **webchanges** |pypi_version| |format| |status| |security| with:
 
 .. code-block:: bash
 
@@ -179,3 +179,6 @@ Examples:
 .. |status| image:: https://img.shields.io/pypi/status/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: Package stability
+.. |security| image:: https://img.shields.io/badge/security-bandit-yellow.svg
+    :target: https://github.com/PyCQA/bandit
+    :alt: Security Status

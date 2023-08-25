@@ -1,4 +1,5 @@
-"""Vendored version of packaging.version.parse() from packaging repo as of 2022-10-22.
+"""Vendored version of packaging.version.parse() from packaging v23.0 released on 9-Jan-23
+(commit https://github.com/pypa/packaging/tree/e3f218269c0f2fd2aff228b310d7f474a3ffd487).
 See https://github.com/pypa/packaging."""
 
 # This file is dual licensed under the terms of the Apache License, Version
@@ -216,9 +217,9 @@ import itertools
 import re
 from typing import Callable, Optional, SupportsInt, Tuple, Union
 
-# from ._structures import Infinity, InfinityType, NegativeInfinity, NegativeInfinityType
-# replaced with the following code from
-# https://github.com/pypa/packaging/blob/main/packaging/_structures.py
+# `from ._structures import Infinity, InfinityType, NegativeInfinity, NegativeInfinityType`
+# replaced with the contents of the file
+# https://github.com/pypa/packaging/blob/main/src/packaging/_structures.py
 
 
 class InfinityType:
@@ -279,7 +280,7 @@ class NegativeInfinityType:
 NegativeInfinity = NegativeInfinityType()
 
 # the following is the rest of the content of
-# https://github.com/pypa/packaging/blob/main/packaging/version.py
+# https://github.com/pypa/packaging/blob/main/src/packaging/version.py
 
 InfiniteTypes = Union[InfinityType, NegativeInfinityType]
 PrePostDevType = Union[InfiniteTypes, Tuple[str, int]]
@@ -315,7 +316,7 @@ class InvalidVersion(ValueError):
     """Raised when a version string is not a valid version.
     >>> Version("invalid")
     Traceback (most recent call last):
-    [...]
+        ...
     packaging.version.InvalidVersion: Invalid version: 'invalid'
     """
 
@@ -326,9 +327,8 @@ class _BaseVersion:
     def __hash__(self) -> int:
         return hash(self._key)
 
-    # Please keep the duplicated `isinstance` check
-    # in the six comparisons hereunder
-    # unless you find a way to avoid adding overhead function calls.
+    # Please keep the duplicated `isinstance` check in the six comparisons hereunder unless you find a way to avoid
+    # adding overhead function calls.
     def __lt__(self, other: '_BaseVersion') -> bool:
         if not isinstance(other, _BaseVersion):
             return NotImplemented
@@ -366,8 +366,7 @@ class _BaseVersion:
         return self._key != other._key
 
 
-# Deliberately not anchored to the start and end of the string, to make it
-# easier for 3rd party code to reuse
+# Deliberately not anchored to the start and end of the string, to make it easier for 3rd party code to reuse
 _VERSION_PATTERN = r"""
     v?
     (?:
@@ -415,8 +414,7 @@ flags set.
 class Version(_BaseVersion):
     """This class abstracts handling of a project's versions.
 
-    A :class:`Version` instance is comparison aware and can be compared and
-    sorted using the standard Python interfaces.
+    A :class:`Version` instance is comparison aware and can be compared and sorted using the standard Python interfaces.
 
     >>> v1 = Version("1.0a5")
     >>> v2 = Version("1.0")
@@ -437,17 +435,16 @@ class Version(_BaseVersion):
     """
 
     _regex = re.compile(r'^\s*' + VERSION_PATTERN + r'\s*$', re.VERBOSE | re.IGNORECASE)
+    _key: CmpKey
 
     def __init__(self, version: str) -> None:
         """Initialize a Version object.
 
         :param version:
-            The string representation of a version which will be parsed and normalized
-            before use.
+            The string representation of a version which will be parsed and normalized before use.
 
         :raises InvalidVersion:
-            If the ``version`` does not conform to PEP 440 in any way then this
-            exception will be raised.
+            If the ``version`` does not conform to PEP 440 in any way then this exception will be raised.
         """
 
         # Validate the version and parse it into pieces
@@ -539,8 +536,7 @@ class Version(_BaseVersion):
         >>> Version("1!2.0.0.post0").release
         (2, 0, 0)
 
-        Includes trailing zeroes but not the epoch or any pre-release / development /
-        post-release suffixes.
+        Includes trailing zeroes but not the epoch or any pre-release / development / post-release suffixes.
         """
         _release: Tuple[int, ...] = self._version.release
         return _release
@@ -621,8 +617,7 @@ class Version(_BaseVersion):
         >>> Version("1!1.2.3+abc.dev1").base_version
         '1!1.2.3'
 
-        The "base version" is the public version of the project without any pre or post
-        release markers.
+        The "base version" is the public version of the project without any pre or post release markers.
         """
         parts = []
 
@@ -707,19 +702,16 @@ class Version(_BaseVersion):
 
 
 def _parse_letter_version(letter: str, number: Union[str, bytes, SupportsInt]) -> Optional[Tuple[str, int]]:
-
     if letter:
-        # We consider there to be an implicit 0 in a pre-release if there is
-        # not a numeral associated with it.
+        # We consider there to be an implicit 0 in a pre-release if there is not a numeral associated with it.
         if number is None:
             number = 0
 
         # We normalize any letters to their lower case form
         letter = letter.lower()
 
-        # We consider some words to be alternate spellings of other words and
-        # in those cases we want to normalize the spellings to our preferred
-        # spelling.
+        # We consider some words to be alternate spellings of other words and in those cases we want to normalize the
+        # spellings to our preferred spelling.
         if letter == 'alpha':
             letter = 'a'
         elif letter == 'beta':
@@ -731,8 +723,8 @@ def _parse_letter_version(letter: str, number: Union[str, bytes, SupportsInt]) -
 
         return letter, int(number)
     if not letter and number:
-        # We assume if we are given a number, but we are not given a letter
-        # then this is using the implicit post release syntax (e.g. 1.0-1)
+        # We assume if we are given a number, but we are not given a letter then this is using the implicit post
+        # release syntax (e.g. 1.0-1)
         letter = 'post'
 
         return letter, int(number)
@@ -762,17 +754,13 @@ def _cmpkey(
     dev: Optional[Tuple[str, int]],
     local: Optional[Tuple[SubLocalType]],
 ) -> CmpKey:
-
-    # When we compare a release version, we want to compare it with all of the
-    # trailing zeros removed. So we'll use a reverse the list, drop all the now
-    # leading zeros until we come to something non zero, then take the rest
-    # re-reverse it back into the correct order and make it a tuple and use
-    # that for our sorting key.
+    # When we compare a release version, we want to compare it with all of the trailing zeros removed. So we'll use a
+    # reverse the list, drop all the now leading zeros until we come to something non zero, then take the rest
+    # re-reverse it back into the correct order and make it a tuple and use that for our sorting key.
     _release = tuple(reversed(list(itertools.dropwhile(lambda x: x == 0, reversed(release)))))
 
-    # We need to "trick" the sorting algorithm to put 1.0.dev0 before 1.0a0.
-    # We'll do this by abusing the pre segment, but we _only_ want to do this
-    # if there is not a pre or a post segment. If we have one of those then
+    # We need to "trick" the sorting algorithm to put 1.0.dev0 before 1.0a0. We'll do this by abusing the pre
+    # segment, but we _only_ want to do this if there is not a pre or a post segment. If we have one of those then
     # the normal sorting rules will handle this case correctly.
     if pre is None and post is None and dev is not None:
         _pre: PrePostDevType = NegativeInfinity
@@ -801,13 +789,11 @@ def _cmpkey(
         # Versions without a local segment should sort before those with one.
         _local: LocalType = NegativeInfinity
     else:
-        # Versions with a local segment need that segment parsed to implement
-        # the sorting rules in PEP440.
+        # Versions with a local segment need that segment parsed to implement the sorting rules in PEP440.
         # - Alpha numeric segments sort before numeric segments
         # - Alpha numeric segments sort lexicographically
         # - Numeric segments sort numerically
-        # - Shorter versions sort before longer versions when the prefixes
-        #   match exactly
+        # - Shorter versions sort before longer versions when the prefixes match exactly
         _local = tuple((i, '') if isinstance(i, int) else (NegativeInfinity, i) for i in local)
 
     return epoch, _release, _pre, _post, _dev, _local

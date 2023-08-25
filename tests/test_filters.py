@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
 
 # https://stackoverflow.com/questions/31469707/
-if sys.version_info[0:2] == (3, 6) and sys.platform == 'win32':
+if sys.version_info[0:2] == (3, 6) and sys.platform == 'nt':
     import _locale
 
     _locale._getdefaultlocale = lambda *args: ['en_US', 'utf8']
@@ -56,7 +56,7 @@ def test_normalize_filter_list(input: Union[str, List[Union[str, Dict[str, Any]]
     assert list(FilterBase.normalize_filter_list(input)) == output
 
 
-FILTER_TESTS = list(yaml.safe_load(Path(__file__).parent.joinpath('data/filters_test.yaml').read_text()).items())
+FILTER_TESTS = list(yaml.safe_load(Path(__file__).parent.joinpath('data/filters_testdata.yaml').read_text()).items())
 job_state = JobState(CacheDirStorage(''), JobBase.unserialize({'url': 'https://test'}))
 
 
@@ -121,7 +121,7 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     # See if the execute process can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
-    if sys.platform != 'win32':
+    if os.name != 'nt':
         command = 'bash -c "echo $INHERITED_FROM/$URLWATCH_JOB_NAME"'
     else:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
@@ -148,7 +148,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     # See if the shellpipe process can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job = UrlJob(url='test')
-    if sys.platform != 'win32':
+    if os.name != 'nt':
         command = 'echo $INHERITED_FROM/$URLWATCH_JOB_NAME'
     else:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'

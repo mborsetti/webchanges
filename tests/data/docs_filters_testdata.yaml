@@ -1,4 +1,4 @@
-# Test cases for filters.rst used by docs_filters_test.py
+# Test cases for filters.rst used by test_docs_filters.py
 # Each heading is a unique url: in the filter.rst examples
 # Ensure you use a Unicode character (e.g. ™ / &trade) in your example (both input and output) to test that too!
 https://example.net/css.html:
@@ -136,6 +136,19 @@ https://example.net/css-skip-maxitems.html:
   output: |-
     <div class="cpu">Pentium™</div>
     <div class="cpu">Pentium™ MMX</div>
+https://example.org/items-random-order.html:
+  input: |
+    <body>
+      This is a test. <span class="item">B</span>
+      And some other content. <span class="item">D</span>
+      <span class="item">A</span> Sort it please.
+      Thank you. <span class="item">C</span>
+    </body>
+  output: |
+    <span class="item">A</span>
+    <span class="item">B</span>
+    <span class="item">C</span>
+    <span class="item">D</span>
 https://example.org/data.csv:
   input: |-
     name,company
@@ -541,6 +554,9 @@ https://example.com/remove-repeated-sorted.txt:
 https://example.net/remove-repeated-separator.txt:
   input: "a|b|B |c|™"
   output: "a|b|c|™"
+https://example.net/remove-repeated-non-adjacent.txt:
+  input: "a|b|a|c|™"
+  output: "a|b|c|™"
 https://example.com/reverse-lines.txt:
   input: |-
     Mercury
@@ -580,8 +596,8 @@ https://example.net/execute.html:
     The data is 'TEST'
     The job location is 'https://example.net/execute.html'
     The job name is 'Test execute filter'
-    The job number is '48'
-    The job JSON is '{"url": "https://example.net/execute.html", "filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 48, "name": "Test execute filter"}'
+    The job number is '49'
+    The job JSON is '{"url": "https://example.net/execute.html", "filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 49, "name": "Test execute filter"}'
 https://example.net/shellpipe.html:
   input: |
   output: TEST

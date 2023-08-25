@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 from pathlib import Path
 from typing import Any, Dict, List

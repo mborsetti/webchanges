@@ -13,7 +13,7 @@ import json
 import logging
 import os
 import re
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import textwrap
 import time
 import warnings
@@ -25,6 +25,7 @@ from urllib.parse import parse_qsl, quote, SplitResult, SplitResultBytes, urlenc
 
 import html2text
 import requests
+import requests.adapters
 import yaml
 from requests.structures import CaseInsensitiveDict
 from urllib3.exceptions import InsecureRequestWarning
@@ -54,7 +55,7 @@ class NotModifiedError(Exception):
 
 
 class BrowserResponseError(Exception):
-    """Raised by 'url' jobs with 'use_browser: true' (i.e. using Playwright) when a HTTP error response status code is
+    """Raised by 'url' jobs with 'use_browser: true' (i.e. using Playwright) when an HTTP error response status code is
     received."""
 
     def __init__(self, args: Tuple[Any, ...], status_code: Optional[int]) -> None:
@@ -136,6 +137,7 @@ class JobBase(metaclass=TrackSubClasses):
     no_redirects: Optional[bool] = None
     note: Optional[str] = None
     referer: Optional[str] = None  # Playwright
+    retries: Optional[int] = None
     ssl_no_verify: Optional[bool] = None
     stderr: Optional[str] = None  # urlwatch backwards compatibility for ShellJob (not used)
     switches: Optional[List[str]] = None
@@ -155,8 +157,8 @@ class JobBase(metaclass=TrackSubClasses):
         for k in self.__required__:
             if k not in kwargs:
                 raise ValueError(
-                    f"Job {self.index_number}: Required directive '{k}' missing: '{kwargs}'"
-                    f' ({self.get_indexed_location()})'
+                    f"Job {kwargs.get('index_number')}: Required directive '{k}' missing: '{kwargs}'"
+                    f" ({kwargs.get('user_visible_url', kwargs.get('url', kwargs.get('command')))})"
                 )
 
         for k, v in list(kwargs.items()):
@@ -237,7 +239,7 @@ class JobBase(metaclass=TrackSubClasses):
         if 'kind' in data:
             # Used for hooks.py.
             try:
-                job_subclass = cls.__subclasses__[data['kind']]
+                job_subclass: JobBase = cls.__subclasses__[data['kind']]  # type: ignore[assignment]
             except KeyError:
                 raise ValueError(
                     f"Error in jobs file: Job directive 'kind: {data['kind']}' does not match any known job kinds:\n"
@@ -245,13 +247,13 @@ class JobBase(metaclass=TrackSubClasses):
                 ) from None
         else:
             # Auto-detect the job subclass based on required directives.
-            matched_subclasses = [
-                subclass
+            matched_subclasses: list[JobBase] = [
+                subclass  # type: ignore[misc]
                 for subclass in list(cls.__subclasses__.values())[1:]
                 if all(data.get(required) for required in subclass.__required__)
             ]
             if len(matched_subclasses) == 1:
-                job_subclass = matched_subclasses[0]
+                job_subclass = matched_subclasses[0]  # type: ignore[assignment]
             elif len(matched_subclasses) > 1:
                 number_matched: Dict[JobBase, int] = {}
                 for match in matched_subclasses:
@@ -273,7 +275,7 @@ class JobBase(metaclass=TrackSubClasses):
                     )
 
         # Remove extra required directives ("Falsy")
-        other_subclasses = list(cls.__subclasses__.values())[1:]
+        other_subclasses: list[JobBase] = list(cls.__subclasses__.values())[1:]  # type: ignore[assignment]
         other_subclasses.remove(job_subclass)
         for other_subclass in other_subclasses:
             for k in other_subclass.__required__:
@@ -303,7 +305,7 @@ class JobBase(metaclass=TrackSubClasses):
         :returns: A JobBase type object.
         """
         for k in data.keys():
-            if k not in (cls.__required__ + cls.__optional__):
+            if k not in cls.__required__ + cls.__optional__:
                 if len(filenames) > 1:
                     jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
                 elif len(filenames) == 1:
@@ -426,7 +428,12 @@ class JobBase(metaclass=TrackSubClasses):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
-        return tb
+        error_string = tb
+        if isinstance(exception, subprocess.CalledProcessError):
+            error_string += f'\nDetailed error (returned by subprocess):\n{exception.stderr}'
+        elif isinstance(exception, FileNotFoundError):
+            error_string += f'\nDetailed error (returned by OS):\n{exception}'
+        return error_string
 
     def ignore_error(self, exception: Exception) -> Union[bool, str]:
         """Determine whether the error of the job should be ignored.
@@ -437,10 +444,11 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return False
 
-    def get_headers(self, job_state: JobState) -> CaseInsensitiveDict:
+    def get_headers(self, job_state: JobState, string: bool = False) -> CaseInsensitiveDict:
         """Get headers and modify them to add cookies and conditional request.
 
         :param job_state: The job state.
+        :param string: Flag to indicate that values need to be strings (for Playwright).
 
         :returns: The headers.
         """
@@ -478,7 +486,10 @@ class JobBase(metaclass=TrackSubClasses):
                     headers['If-None-Match'] = job_state.old_etag
                 if job_state.old_timestamp is not None:
                     headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
-        return headers
+        if string:
+            return CaseInsensitiveDict({k: str(v) for k, v in headers.items()})
+        else:
+            return headers
 
 
 class Job(JobBase):
@@ -572,6 +583,7 @@ class UrlJob(UrlJobBase):
         'ignore_dh_key_too_small',
         'method',
         'no_redirects',
+        'retries',
         'ssl_no_verify',
         'timeout',
     )
@@ -688,7 +700,13 @@ class UrlJob(UrlJobBase):
                 'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange and '
                 "thus not affected by the server's weak DH key"
             )
-            requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
+            try:
+                requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
+            except AttributeError:
+                logger.error(
+                    'Unable to ignore_dh_key_too_small due to bug in requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
+                )
+                logger.error('See https://github.com/psf/requests/issues/6443')
 
         logger.info(f'Job {self.index_number}: Sending {self.method} request to {self.url}')
         response = requests.request(
@@ -822,8 +840,8 @@ class BrowserJob(UrlJobBase):
     __kind__ = 'browser'
     __is_browser__ = True
 
-    __required__ = ('use_browser',)
-    __optional__ = (
+    __required__: Tuple[str, ...] = ('use_browser',)
+    __optional__: Tuple[str, ...] = (
         'block_elements',
         'chromium_revision',  # deprecated
         'cookies',
@@ -903,7 +921,7 @@ class BrowserJob(UrlJobBase):
                 f"Job {job_state.job.index_number}: Directive 'wait_for' is deprecated with Playwright; replace with "
                 f"'wait_for_function', 'wait_for_selector' or 'wait_for_timeout'."
             )
-        if self.wait_until in ('networkidle0', 'networkidle2'):
+        if self.wait_until in {'networkidle0', 'networkidle2'}:
             warnings.warn(
                 f"Job {self.index_number}: Value '{self.wait_until}' of the 'wait_until' directive is deprecated "
                 f"with Playwright; for future compatibility replace it with 'networkidle'.",
@@ -926,7 +944,7 @@ class BrowserJob(UrlJobBase):
                     DeprecationWarning,
                 )
 
-        headers = self.get_headers(job_state)
+        headers = self.get_headers(job_state, string=True)
 
         proxy: Optional[ProxySettings] = None
         if self.http_proxy or os.getenv('HTTP_PROXY') or self.https_proxy or os.getenv('HTTPS_PROXY'):
@@ -1035,7 +1053,7 @@ class BrowserJob(UrlJobBase):
                 )
                 browser_version = ''
                 logger.info(
-                    f'Job {self.index_number}: Pyppeteer {playwright_version} launched {browser_name} browser '
+                    f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name} browser '
                     f'from user data directory {self.user_data_dir}'
                 )
 
@@ -1207,7 +1225,8 @@ class BrowserJob(UrlJobBase):
 
             # navigate page
             logger.info(f'Job {self.index_number}: {browser_name} {browser_version} navigating to {url}')
-            logger.debug(f'Job {self.index_number}: Headers {headers}')
+            logger.debug(f'Job {self.index_number}: User agent {user_agent}')
+            logger.debug(f'Job {self.index_number}: Extra headers {headers}')
             try:
                 response = page.goto(
                     url,
@@ -1439,8 +1458,8 @@ class ShellJob(Job):
 
     __kind__ = 'command'
 
-    __required__ = ('command',)
-    __optional__ = ('stderr',)  # ignored; here for backwards compatibility
+    __required__: Tuple[str, ...] = ('command',)
+    __optional__: Tuple[str, ...] = ('stderr',)  # ignored; here for backwards compatibility
 
     def get_location(self) -> str:
         """Get the 'location' of the job, i.e. the command.
@@ -1462,8 +1481,12 @@ class ShellJob(Job):
         """
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
         return (
-            subprocess.run(  # noqa: S602 subprocess call with shell=True identified, security issue.
-                self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)
+            subprocess.run(
+                self.command,
+                capture_output=True,
+                shell=True,  # noqa: S602 subprocess call with shell=True identified, security issue.
+                check=True,
+                text=(not needs_bytes),
             ).stdout,
             '',
-        )  # noqa: DUO116 use of "shell=True" is insecure
+        )  # noqa: DUO116 use of "shell=True" is insecure.

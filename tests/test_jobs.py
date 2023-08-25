@@ -7,7 +7,7 @@ import ftplib  # noqa: S402 A FTP-related module is being imported.
 import logging
 import os
 import socket
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 from asyncio import AbstractEventLoop
 from pathlib import Path
@@ -35,7 +35,7 @@ data_path = here.joinpath('data')
 cache_file = ':memory:'
 cache_storage = CacheSQLite3Storage(cache_file)
 
-if sys.version_info[0:2] < (3, 8) and sys.platform == 'win32':
+if sys.version_info[0:2] < (3, 8) and sys.platform == 'nt':
     # https://docs.python.org/3/library/asyncio-platforms.html#asyncio-windows-subprocess
     loop = asyncio.ProactorEventLoop()
 
@@ -109,7 +109,7 @@ TEST_JOBS = [
             'name': 'testing POST url job without use_browser',
             'data': {'fieldname': 'fieldvalue'},
         },
-        '"json":{"fieldname":"fieldvalue"}',
+        '  "json": {\n    "fieldname": "fieldvalue"\n  },',
     ),
     (
         {
@@ -118,7 +118,7 @@ TEST_JOBS = [
             'use_browser': True,
             'data': {'fieldname': 'fieldvalue'},
         },
-        '"data":"fieldname=fieldvalue"',
+        '"data": "fieldname=fieldvalue"',
     ),
     (
         {
@@ -150,7 +150,7 @@ TEST_ALL_URL_JOBS = [
 def test_kind() -> None:
     with pytest.raises(ValueError) as e:
         JobBase.unserialize({'kind': 'url'})
-    assert e.value.args[0] == "Job 0: Required directive 'url' missing: '{'kind': 'url'}' (Job 0: )"
+    assert e.value.args[0] == "Job None: Required directive 'url' missing: '{'kind': 'url'}' (None)"
 
     with pytest.raises(ValueError) as e:
         JobBase.unserialize({'kind': 'anykind'})
@@ -507,7 +507,6 @@ def test_shell_error() -> None:
 
 
 def test_compared_versions() -> None:
-
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path('')
     jobs_file = data_path.joinpath('jobs-time.yaml')
@@ -527,7 +526,7 @@ def test_compared_versions() -> None:
             assert urlwatcher.report.job_states[-1].verb == 'unchanged'
         else:
             results.add(urlwatcher.report.job_states[-1].new_data)
-            assert urlwatcher.report.job_states[-1].verb in ('new', 'changed')
+            assert urlwatcher.report.job_states[-1].verb in {'new', 'changed'}
 
     # compared_versions = 3  (may trigger fuzzy match search)
     cache_storage.flushdb()
@@ -541,5 +540,5 @@ def test_compared_versions() -> None:
             assert urlwatcher.report.job_states[-1].verb == 'unchanged'
         else:
             results.add(urlwatcher.report.job_states[-1].new_data)
-            assert urlwatcher.report.job_states[-1].verb in ('new', 'changed')
+            assert urlwatcher.report.job_states[-1].verb in {'new', 'changed'}
     print(0)

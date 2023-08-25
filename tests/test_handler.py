@@ -95,7 +95,7 @@ def test_duplicates_in_jobs_yaml() -> None:
 
 
 def test_load_hooks_py() -> None:
-    hooks_file = data_path.joinpath('hooks_test.py')
+    hooks_file = data_path.joinpath('hooks_example.py')
     if hooks_file.is_file():
         import_module_from_source('hooks', hooks_file)
     else:

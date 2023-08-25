@@ -37,6 +37,7 @@ class CommandConfig(BaseConfig):
     database_engine: str
     delete: Optional[str]
     delete_snapshot: Optional[str]
+    detailed_versions: bool
     dump_history: Optional[str]
     edit: bool
     edit_config: bool
@@ -245,6 +246,11 @@ class CommandConfig(BaseConfig):
             '--features',
             action='store_true',
             help='list supported job kinds, filters and reporters (including those loaded by hooks)',
+        )
+        group.add_argument(
+            '--detailed-versions',
+            action='store_true',
+            help='list detailed versions including of installed dependencies',
         )
 
         group = parser.add_argument_group('override configuration file')

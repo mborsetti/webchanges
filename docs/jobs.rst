@@ -438,6 +438,34 @@ The following directives are available only for ``url`` jobs without ``use_brows
 
 
 
+.. _encoding:
+
+encoding
+^^^^^^^^
+Override the character encoding from the server or determined programmatically (a string).
+
+See more :ref:`here <overriding_content_encoding>`.
+
+
+
+.. _ignore_dh_key_too_small:
+
+ignore_dh_key_too_small
+^^^^^^^^^^^^^^^^^^^^^^^
+Enable insecure workaround for servers using a weak (smaller than 2048-bit) Diffie-Hellman (true/false). Defaults to
+false.
+
+A weak key can allow a man-in-the-middle attack with through the `Logjam Attack <https://weakdh.org/>`__ against the TLS
+protocol and therefore generates an error. This workaround attempts the use of a potentially weaker cipher, one that
+doesn't rely on a DH key and therefore doesn't trigger the error.
+
+Set it as a last resort if you're getting a ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh key too small (_ssl.c:1129)``
+error and can't get the anyone to fix the security vulnerability on the server.
+
+.. versionadded:: 3.9.2
+
+
+
 .. _no_redirects:
 
 no_redirects
@@ -473,6 +501,23 @@ Returns:
 
 
 
+.. _retries:
+
+retries
+^^^^^^^
+Number of times to retry a url before giving up. Default 0. Setting it to 1 will often solve the ``('Connection aborted
+.', ConnectionResetError(104, 'Connection reset by peer'))`` error received when attempting to connect to a
+misconfigured server.
+
+.. code-block:: yaml
+
+   url: "https://www.example.com/"
+   retries: 1
+   filter:
+     - html2text:
+
+
+
 .. _ssl_no_verify:
 
 ssl_no_verify
@@ -483,31 +528,6 @@ See more :ref:`here <ignoring_tls_ssl_errors>`.
 
 
 
-.. _ignore_dh_key_too_small:
-
-ignore_dh_key_too_small
-^^^^^^^^^^^^^^^^^^^^^^^
-Enable insecure workaround for servers using a weak (smaller than 2048-bit) Diffie-Hellman (true/false). Defaults to
-false.
-
-A weak key can allow a man-in-the-middle attack with through the `Logjam Attack <https://weakdh.org/>`__ against the TLS
-protocol and therefore generates an error. This workaround attempts the use of a potentially weaker cipher, one that
-doesn't rely on a DH key and therefore doesn't trigger the error.
-
-Set it as a last resort if you're getting a ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh key too small (_ssl.c:1129)``
-error and can't get the anyone to fix the security vulnerability on the server.
-
-.. versionadded:: 3.9.2
-
-
-
-.. _encoding:
-
-encoding
-^^^^^^^^
-Override the character encoding from the server or determined programmatically (a string).
-
-See more :ref:`here <overriding_content_encoding>`.
 
 
 
@@ -873,8 +893,8 @@ monospace
 ---------
 Data is to be reported using a monospace font (true/false). Defaults to false.
 
-Tells the ``html`` report that the data should be reported using a monospace font. Useful e.g. for tabular text
-extracted by the  ``pdf2text`` filter.
+When using an ``html`` report the data will be displayed using a monospace font. Useful e.g. for tabular text
+extracted by the ``pdf2text`` filter or for the output of the ``format-json`` filter.
 
 .. versionadded:: 3.9
 

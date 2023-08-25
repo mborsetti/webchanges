@@ -204,7 +204,7 @@ line-based difference, use GNU ``wdiff``:
    url: https://example.com/
    diff_tool: wdiff
 
-In order for this to work, ``wdiff`` needs to  be installed separately (e.g. ``apt install wdiff`` on Debian/Ubuntu,
+In order for this to work, ``wdiff`` needs to be installed separately (e.g. ``apt install wdiff`` on Debian/Ubuntu,
 ``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
 Windows).
 
@@ -213,6 +213,8 @@ You can more finely control the output of ``wdiff`` with command line arguments;
 
 .. hint::
    If you use an ``html`` report with ``diff_tool: wdiff``, the output of ``wdiff`` will be colorized.
+
+Alternatively you can use `PanDiff <https://github.com/davidar/pandiff>`__ to get markdown differences.
 
 Note: the use of an external differ will override the ``diff`` setting of the ``html`` report.
 

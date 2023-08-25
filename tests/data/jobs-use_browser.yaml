@@ -1,4 +1,4 @@
-name: Runs multiple use_browser jobs to stress test; used in jobs_test.py
+name: Runs multiple use_browser jobs to stress test; used in test_jobs.py
 url: https://www.google.com/#01
 use_browser: true
 ---

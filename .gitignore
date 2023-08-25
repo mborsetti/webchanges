@@ -8,6 +8,10 @@
 /dist/
 /docs/_build/
 /htmlcov/
+/pip/
+/tests/htmlcov/
 /venv*/
 /.coverage*
 /coverage.xml
+/tests/.coverage*
+/tests/coverage.xml

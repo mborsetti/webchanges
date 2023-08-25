@@ -7,7 +7,7 @@ from __future__ import annotations
 import getpass
 import logging
 import smtplib
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 from dataclasses import dataclass
 from email import policy
 from email.message import EmailMessage
@@ -81,7 +81,7 @@ class SMTPMailer(Mailer):
 
         :param msg: The message to be sent. Optional in order to allow server login testing.
         """
-        passwd = ''  # noqa: S105 Possible hardcoded password
+        passwd = ''  # noqa: S105 Possible hardcoded password.
         if self.auth:
             if self.insecure_password:
                 passwd = self.insecure_password
@@ -120,7 +120,7 @@ class SendmailMailer(Mailer):
             command = [self.sendmail_path, '-oi', msg['To']]
         else:
             command = [self.sendmail_path, '-oi', '-f', msg['From'], msg['To']]
-        p = subprocess.run(
+        p = subprocess.run(  # noqa: S603 subprocess call - check for execution of untrusted input.
             command,
             input=msg.as_string(),
             capture_output=True,

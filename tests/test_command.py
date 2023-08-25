@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from _pytest.capture import CaptureFixture
 from _pytest.logging import LogCaptureFixture
+from _pytest.monkeypatch import MonkeyPatch
 
 from webchanges import __copyright__, __min_python_version__, __project_name__, __version__
 from webchanges.cli import first_run, locate_storage_file, migrate_from_legacy, python_version_warning, setup_logger
@@ -39,8 +40,8 @@ shutil.copyfile(base_jobs_file, jobs_file)
 cache_file = ':memory:'
 
 # Copy hooks file to temporary directory
-base_hooks_file = config_path.joinpath('hooks_test.py')
-hooks_file = tmp_path.joinpath('hooks_test.py')
+base_hooks_file = config_path.joinpath('hooks_example.py')
+hooks_file = tmp_path.joinpath('hooks_example.py')
 shutil.copyfile(base_hooks_file, hooks_file)
 
 # Set up classes
@@ -54,7 +55,7 @@ urlwatch_command = UrlwatchCommand(urlwatcher)
 
 # Set up dummy editor
 editor = os.getenv('EDITOR')
-if sys.platform == 'win32':
+if os.name == 'nt':
     os.environ['EDITOR'] = 'rundll32'
 else:
     os.environ['EDITOR'] = 'true'
@@ -238,7 +239,7 @@ def test_list_jobs_verbose(capsys: CaptureFixture[str]) -> None:
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message == (
-        "  1: <command command='echo test' index_number=1 name='Sample webchanges job; used by command_test.py'\n"
+        "  1: <command command='echo test' index_number=1 name='Sample webchanges job; used by test_command.py'\n"
         f'Jobs file: {urlwatcher.urlwatch_config.jobs_files[0]}\n'
     )
 
@@ -254,7 +255,7 @@ def test_list_jobs_not_verbose(capsys: CaptureFixture[str]) -> None:
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message == (
-        '  1: Sample webchanges job; used by command_test.py (echo test)\n'
+        '  1: Sample webchanges job; used by test_command.py (echo test)\n'
         f'Jobs file: {urlwatcher.urlwatch_config.jobs_files[0]}\n'
     )
 
@@ -295,7 +296,7 @@ def test_test_job(capsys: CaptureFixture[str]) -> None:
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message.startswith(
-        'Sample webchanges job; used by command_test.py\n'
+        'Sample webchanges job; used by test_command.py\n'
         '----------------------------------------------\n'
         '\n'
         'test\n'
@@ -316,7 +317,7 @@ def test_test_job_with_test_reporter(capsys: CaptureFixture[str]) -> None:
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message.startswith(
-        'Sample webchanges job; used by command_test.py\n'
+        'Sample webchanges job; used by test_command.py\n'
         '----------------------------------------------\n'
         '\n'
         'test\n'
@@ -383,7 +384,7 @@ def test_test_diff_and_joblist(capsys: CaptureFixture[str]) -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    if sys.platform == 'win32':
+    if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
     guid = urlwatcher.jobs[0].get_guid()
 
@@ -454,7 +455,7 @@ def test_test_diff_and_joblist(capsys: CaptureFixture[str]) -> None:
         # test diff (using outside differ)
         setattr(command_config, 'test_diff', 1)
         # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
-        if sys.platform == 'win32':
+        if os.name == 'nt':
             urlwatcher.jobs[0].diff_tool = 'cmd /C exit 1 & rem '
         else:
             urlwatcher.jobs[0].diff_tool = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
@@ -524,7 +525,7 @@ def test_delete_snapshot(capsys: CaptureFixture[str]) -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    if sys.platform == 'win32':
+    if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     setattr(command_config, 'delete_snapshot', True)
@@ -583,7 +584,7 @@ def test_gc_database(capsys: CaptureFixture[str]) -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = CommandConfig([], __project_name__, config_path, config_file, jobs_file, hooks_file, cache_file)
     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    if sys.platform == 'win32':
+    if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
     guid = urlwatcher.jobs[0].get_guid()
 
@@ -606,7 +607,7 @@ def test_gc_database(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'gc_database', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    if sys.platform == 'win32':
+    if os.name == 'nt':
         assert message == f'Deleting job {guid} (no longer being tracked)\n'
     else:
         # TODO: for some reason, Linux message is ''.  Need to figure out why.
@@ -624,8 +625,10 @@ def test_clean_database(capsys: CaptureFixture[str]) -> None:
     assert message == ''
 
 
-def test_rollback_database(capsys: CaptureFixture[str]) -> None:
+def test_rollback_database(capsys: CaptureFixture[str], monkeypatch: MonkeyPatch) -> None:
     setattr(command_config, 'rollback_database', True)
+    # monkeypatch the "input" function, so that it simulates the user entering "y" in the terminal:
+    monkeypatch.setattr('builtins.input', lambda _: 'y')
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()

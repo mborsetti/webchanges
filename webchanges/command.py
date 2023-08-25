@@ -6,10 +6,13 @@ from __future__ import annotations
 
 import contextlib
 import difflib
+import importlib.metadata
 import logging
 import os
+import platform
 import shutil
-import subprocess
+import sqlite3
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 import time
 import traceback
@@ -24,6 +27,23 @@ try:
     from zoneinfo import ZoneInfo  # not available in Python < 3.9
 except ImportError:
     from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
+
+try:
+    import apt
+except ImportError:
+    apt = None  # type: ignore[assignment]
+
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    sync_playwright = None  # type: ignore[assignment]
+
+try:
+    import psutil
+    from psutil._common import bytes2human
+except ImportError:
+    psutil = None  # type: ignore[assignment]
+    bytes2human = None  # type: ignore[assignment]
 
 from .__init__ import __docs_url__, __project_name__, __version__
 from .filters import FilterBase
@@ -59,6 +79,7 @@ class UrlwatchCommand:
         :returns: 0 if edit is successful, 1 otherwise.
         """
         # Similar code to BaseTextualFileStorage.edit()
+        logger.debug(f'Edit file {self.urlwatch_config.hooks_file}')
         # Python 3.9: hooks_edit = self.urlwatch_config.hooks.with_stem(self.urlwatch_config.hooks.stem + '_edit')
         hooks_edit = self.urlwatch_config.hooks_file.parent.joinpath(
             self.urlwatch_config.hooks_file.stem + '_edit' + ''.join(self.urlwatch_config.hooks_file.suffixes)
@@ -119,6 +140,143 @@ class UrlwatchCommand:
         print()
         print(f'Please see full documentation at {__docs_url__}')
 
+        return 0
+
+    @staticmethod
+    def show_detailed_versions() -> int:
+        """
+        Prints the detailed versions, including of dependencies.
+
+        :return: 0.
+        """
+        print('Software:')
+        print(f'• {__project_name__}: {__version__}')
+        print(
+            f'• {platform.python_implementation()}: {platform.python_version()} '
+            f'{platform.python_build()} {platform.python_compiler()}'
+        )
+        print(f'• SQLite: {sqlite3.sqlite_version}')
+
+        if psutil:
+            print()
+            print('System:')
+            print(f'• Platform: {platform.platform()}, {platform.machine()}')
+            print(f'• Processor: {platform.processor()}')
+            print(f'• CPUs (logical): {psutil.cpu_count()}')
+            try:
+                virt_mem = psutil.virtual_memory().available
+                print(
+                    f'• Free memory: {bytes2human(virt_mem)} physical plus '
+                    f'{bytes2human(psutil.swap_memory().free)} swap.'
+                )
+            except psutil.Error as e:  # pragma: no cover
+                print(f'• Free memory: Could not read information: {e}')
+            print(
+                f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} "
+                f"({100 - psutil.disk_usage('/').percent:.1f}%)"
+            )
+
+        print()
+        print('Installed PyPi dependencies:')
+        for module_name in [
+            'aioxmpp',
+            'beautifulsoup4',
+            'chump',
+            'deepdiff',
+            'jq',
+            'jsbeautifier',
+            'keyring',
+            'matrix_client',
+            'Pillow',
+            'pip',
+            'pdftotext',
+            'playwright',
+            'psutil',
+            'pushbullet.py',
+            'pytesseract',
+            'redis',
+            'setuptools',
+            'vobject',
+            'wheel',
+            'zoneinfo',
+        ]:
+            try:
+                mod = importlib.metadata.distribution(module_name)
+            except ModuleNotFoundError:
+                continue
+            print(f'• {module_name}: {mod.version}')
+            # package requirements
+            if mod.requires:
+                for req_name in [i.split()[0] for i in mod.requires]:
+                    try:
+                        req = importlib.metadata.distribution(req_name)
+                    except ModuleNotFoundError:
+                        continue
+                    print(f'  - {req_name}: {req.version}')
+
+        # playwright
+        if sync_playwright is not None:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(channel='chrome')
+                print()
+                print('Playwright browser:')
+                print(f'• Name: {browser.browser_type.name}')
+                print(f'• Version: {browser.version}')
+                if psutil:
+                    try:
+                        virt_mem = psutil.virtual_memory().available
+                        print(
+                            f'• Free memory with browser loaded: {bytes2human(virt_mem)} physical plus '
+                            f'{bytes2human(psutil.swap_memory().free)} swap'
+                        )
+                    except psutil.Error:
+                        pass
+
+        if os.name == 'posix' and apt:
+            apt_cache = apt.Cache()
+
+            def print_version(libs: list[str]) -> None:
+                for lib in libs:
+                    if lib in apt_cache:
+                        if ver := apt_cache[lib].versions:
+                            print(f'   - {ver[0].package}: {ver[0].version}')
+                return None
+
+            print()
+            print('Installed dpkg dependencies:')
+            for module, apt_dists in (
+                ('jq', ['jq']),
+                # https://github.com/jalan/pdftotext#os-dependencies
+                ('pdftotext', ['libpoppler-cpp-dev']),
+                # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
+                (
+                    'Pillow',
+                    [
+                        'libjpeg-dev',
+                        'zlib-dev',
+                        'zlib1g-dev',
+                        'libtiff-dev',
+                        'libfreetype-dev',
+                        'littlecms-dev',
+                        'libwebp-dev',
+                        'tcl/tk-dev',
+                        'openjpeg-dev',
+                        'libimagequant-dev',
+                        'libraqm-dev',
+                        'libxcb-dev',
+                        'libxcb1-dev',
+                    ],
+                ),
+                ('playwright', ['google-chrome-stable']),
+                # https://tesseract-ocr.github.io/tessdoc/Installation.html
+                ('pytesseract', ['tesseract-ocr']),
+            ):
+                try:
+                    importlib.metadata.distribution(module)
+                    print(f'• {module}')
+                    print_version(apt_dists)
+                except importlib.metadata.PackageNotFoundError:
+                    pass
         return 0
 
     def list_jobs(self) -> None:
@@ -376,7 +534,7 @@ class UrlwatchCommand:
             # Force re-retrieval of job, as we're testing for errors
             job.ignore_cached = True
         with contextlib.ExitStack() as stack:
-            max_workers = min(32, os.cpu_count() or 1) if any(type(job) == BrowserJob for job in jobs) else None
+            max_workers = min(32, os.cpu_count() or 1) if any(isinstance(job, BrowserJob) for job in jobs) else None
             logger.debug(f'Max_workers set to {max_workers}')
             executor = ThreadPoolExecutor(max_workers=max_workers)
 
@@ -462,13 +620,13 @@ class UrlwatchCommand:
             print('You need to set up your bot token first (see documentation)')
             self._exit(1)
 
-        info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe').json()
+        info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
         if not info['ok']:
             print(f"Error with token {bot_token}: {info['description']}")
             self._exit(1)
 
         chats = {}
-        updates = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates').json()
+        updates = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates', timeout=60).json()
         if 'result' in updates:
             for chat_info in updates['result']:
                 chat = chat_info['message']['chat']
@@ -707,7 +865,7 @@ class UrlwatchCommand:
         env['PW_CLI_TARGET_LANG'] = 'python'
         cmd = [str(driver_executable), 'install', 'chrome']
         logger.info(f"Running playwright CLI: {' '.join(cmd)}")
-        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)  # noqa: S603 subprocess call
         if completed_process.returncode:
             print(completed_process.stderr)
             return completed_process.returncode
@@ -781,6 +939,9 @@ class UrlwatchCommand:
 
         if self.urlwatch_config.features:
             self._exit(self.show_features())
+
+        if self.urlwatch_config.detailed_versions:
+            self._exit(self.show_detailed_versions())
 
     def run(self) -> None:  # pragma: no cover
         """The main run logic."""

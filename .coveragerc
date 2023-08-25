@@ -2,22 +2,34 @@
 # Runs in Github Actions .github/workflows/ci-cd.yaml and tox.ini.
 # Config file documentation at https://coverage.readthedocs.io/en/latest/config.html
 
-[coverage:run]
+[run]
 branch = True
+concurrency = multiprocessing
 source = ./
 omit =
-    .tox/*
+    .*/*
     docs/*
+    htmlcov/*
     tests/*
+    webchanges/_vendored/*
+    webchanges.egg-info/*
     setup.py
     webchanges.py
-    webchanges/_vendored/*
 relative_files = True
-command_line = -m pytest -v
+command_line = -m pytest -vv
 plugins =
     coverage_conditional_plugin
 
-[coverage:report]
+[coverage_conditional_plugin]
+# Requires pip install coverage-conditional-plugin
+# Here we specify our pragma rules:
+rules =
+    "is_installed('bs4')": has-bs4
+    "is_installed('jq')": has-jq
+    "is_installed('pdftotext')": has-pdftotext
+    "is_installed('pytesseract')": has-pytesseract
+
+[report]
 # Regexes for lines to exclude from consideration
 exclude_lines =
     # Don't complain about missing debug-only code:
@@ -41,11 +53,3 @@ exclude_lines =
     # Don't cover IDE code:
     if TYPE_CHECKING:
 # ignore_errors = True
-
-[coverage:coverage_conditional_plugin]
-# Here we specify our pragma rules:
-rules =
-    "is_installed('bs4')": has-bs4
-    "is_installed('jq')": has-jq
-    "is_installed('pdftotext')": has-pdftotext
-    "is_installed('pytesseract')": has-pytesseract

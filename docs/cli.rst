@@ -14,8 +14,9 @@ Command line arguments
                  [--max-workers WORKERS] [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
                  [--xmpp-login] [--edit] [--edit-config] [--edit-hooks] [--gc-database]
                  [--clean-database] [--rollback-database TIMESTAMP] [--delete-snapshot JOB]
-                 [--check-new] [--install-chrome] [--features] [--database-engine DATABASE_ENGINE]
-                 [--max-snapshots NUM_SNAPSHOTS] [--add JOB] [--delete JOB]
+                 [--check-new] [--install-chrome] [--features] [--detailed-versions]
+                 [--database-engine DATABASE_ENGINE] [--max-snapshots NUM_SNAPSHOTS] [--add JOB]
+                 [--delete JOB]
                  [joblist ...]
 
    Checks web content to detect any changes since the prior run. If any are found, it shows what changed
@@ -81,6 +82,7 @@ Command line arguments
      --install-chrome      install or update Google Chrome browser (for jobs using a browser)
      --features            list supported job kinds, filters and reporters (including those loaded by
                            hooks)
+     --detailed-versions   list detailed versions including of installed dependencies
 
    override configuration file:
      --database-engine DATABASE_ENGINE
@@ -222,8 +224,9 @@ a new report with the differences since that time.
 You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
 <https://www.unixtimestamp.com/>`__
 
-**WARNING: all snapshots captured after the time of the timestamp are permanently deleted. This is irreversible.**  Back
-up the database before doing a rollback in case of a mistake (or fat-finger).
+.. warning::
+  All snapshots captured after the timestamp are **permanently** deleted. This deletion is **irreversible.** Do
+  back up the database file before doing a rollback in case of a mistake (or fat-finger).
 
 This feature does not work with database engines ``redis``, ``textfiles`` or ``minidb``.
 

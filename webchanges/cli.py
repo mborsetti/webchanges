@@ -12,7 +12,7 @@ import logging
 import os
 import shutil
 import signal
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 import warnings
 from pathlib import Path, PurePath
@@ -25,7 +25,7 @@ from .config import CommandConfig
 from .util import file_ownership_checks, get_new_version_number, import_module_from_source
 
 # Ignore signal SIGPIPE ("broken pipe") for stdout (see https://github.com/thp/urlwatch/issues/77)
-if sys.platform != 'win32':  # Windows does not have signal.SIGPIPE
+if os.name != 'nt':  # Windows does not have signal.SIGPIPE
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # type: ignore[attr-defined]  # not defined in Windows
 
 logger = logging.getLogger(__name__)
@@ -176,9 +176,10 @@ def first_run(command_config: CommandConfig) -> None:
             print(f'> Edit it with {__project_name__} --edit-config')
     if not any(f.is_file() for f in command_config.jobs_files):
         command_config.jobs_files[0].parent.mkdir(parents=True, exist_ok=True)
-        command_config.jobs_files[0].write_text(f'# {__project_name__} jobs file. See {__docs_url__}\n')
-        command_config.edit = True
-        print(f'Created default jobs file at {command_config.jobs_files}')
+        command_config.jobs_files[0].write_text(
+            f'# {__project_name__} jobs file. See {__docs_url__}en/stable/jobs.html\n'
+        )
+        print(f'Created default jobs file at {command_config.jobs_files[0]}')
         if not command_config.edit:
             print(f'> Edit it with {__project_name__} --edit')
 
@@ -247,7 +248,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
         env['PW_CLI_TARGET_LANG'] = 'python'
         cmd = [str(driver_executable), 'install', 'chrome']
         logger.info(f"Running playwright CLI: {' '.join(cmd)}")
-        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)  # noqa: S603
         if completed_process.returncode:
             print(completed_process.stderr)
             return completed_process.returncode
@@ -277,7 +278,7 @@ def main() -> None:  # pragma: no cover
     python_version_warning()
 
     # Path where the config, jobs and hooks files are located
-    if sys.platform != 'win32':
+    if os.name != 'nt':
         config_path = platformdirs.user_config_path(__project_name__)  # typically ~/.config/{__project_name__}
     else:
         config_path = Path.home().joinpath('Documents').joinpath(__project_name__)

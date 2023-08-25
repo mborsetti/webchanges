@@ -475,6 +475,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         :returns: None if edit is successful, 1 otherwise.
         """
         # Similar code to UrlwatchCommand.edit_hooks()
+        logger.debug(f'Edit file {self.filename}')
         # Python 3.9: file_edit = self.filename.with_stem(self.filename.stem + '_edit')
         if isinstance(self.filename, list):
             if len(self.filename) > 1:
@@ -522,15 +523,6 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
             file_edit.unlink()
         print('Saved edits in', filename)
         return 0
-
-    @classmethod
-    def write_default_config(cls, filename: Path) -> None:
-        """Write default configuration to file.
-
-        :param filename: The filename.
-        """
-        config_storage = cls(filename)
-        config_storage.save()
 
 
 class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
@@ -614,7 +606,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         :param d1: The first dict.
         :param d2: The second dict.
-        :ignore_underline_keys: If true, keys starting with _ are ignored (treated as remarks)
+        :param ignore_underline_keys: If true, keys starting with _ are ignored (treated as remarks)
         :return: A dict with all the elements on the first dict that are not in the second.
         """
 
@@ -691,7 +683,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         if 'hooks' in sys.modules:
             for _, obj in inspect.getmembers(sys.modules['hooks'], inspect.isclass):
                 if issubclass(obj, JobBase):
-                    if obj.__kind__ not in (DEFAULT_CONFIG['job_defaults'].keys()):
+                    if obj.__kind__ not in DEFAULT_CONFIG['job_defaults'].keys():
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
         if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
             config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
@@ -769,11 +761,22 @@ class YamlConfigStorage(BaseYamlFileStorage):
         """
         with self.filename.open('w') as fp:
             fp.write(
-                f'# {__project_name__} configuration file. See {__docs_url__}\n'
-                f'# Written on {datetime.now().replace(microsecond=0).isoformat()} using version {__version__}\n'
+                f'# {__project_name__} configuration file. See {__docs_url__}en/stable/configuration.html\n'
+                f'# Originally written on {datetime.utcnow().replace(microsecond=0).isoformat()}Z by version'
+                f' {__version__}.\n'
                 f'\n'
             )
             yaml.safe_dump(self.config, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    @classmethod
+    def write_default_config(cls, filename: Path) -> None:
+        """Write default configuration to file.
+
+        :param filename: The filename.
+        """
+        config_storage = cls(filename)
+        config_storage.config = DEFAULT_CONFIG
+        config_storage.save()
 
 
 class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
@@ -986,11 +989,20 @@ class CacheStorage(BaseFileStorage, ABC):
                     print(f'Deleted {count} old snapshots of {guid}')
 
     def rollback_cache(self, timestamp: float) -> None:
-        """Calls rollback() and prints out the result.
+        """Issues a warning, calls rollback() and prints out the result.
 
         :param timestamp: The timestamp
         """
 
+        machine_tz = datetime.now().astimezone().tzinfo
+        print(f'Rolling back database to {datetime.fromtimestamp(timestamp, tz=machine_tz).isoformat()}')
+        if sys.__stdin__.isatty():
+            print('WARNING: All snapshots after this date will be deleted! This operation cannot be undone;')
+            print('         We suggest you make a backup of the database file before proceeding.')
+            resp = input("         Please enter 'Y' to proceed: ")
+            if not resp.upper().startswith('Y'):
+                print('Quitting rollback. No snapshots have been deleted.')
+                sys.exit(1)
         count = self.rollback(timestamp)
         timestamp_date = email.utils.formatdate(timestamp, localtime=True)
         if count:

@@ -13,7 +13,7 @@ import os
 import re
 import shlex
 import stat
-import subprocess
+import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 import textwrap
 from math import floor, log10
@@ -105,7 +105,7 @@ def edit_file(filename: Union[str, bytes, PathLike]) -> None:
             print('Please set the path to the editor in the environment variable $EDITOR, e.g. "export EDITOR=nano"')
             raise SystemExit(1)
 
-    subprocess.run(
+    subprocess.run(  # noqa: S603 subprocess call - check for execution of untrusted input.
         shlex.split(editor) + [str(filename)],
         check=True,
     )
@@ -208,7 +208,7 @@ def linkify(
         r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
     &amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|
     &quot;)*\)))+)"""
-    )  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible
+    )  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible.
 
     if extra_params and not callable(extra_params):
         extra_params = f' {extra_params.strip()}'

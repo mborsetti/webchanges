@@ -3,7 +3,7 @@
 # Runs as part of pre-commit.
 # Config file documentation at https://flake8.pycqa.org/en/latest/user/configuration.html
 
-ignore =
-    E203,  # whitespace before ':'  [black conflict]
-    W503   # line break before binary operator [conflicts with W504]
+ignore = E203,W503
+    # E203  whitespace before ':' [black conflict]
+    # W503  line break before binary operator [conflicts with W504]
 max-line-length = 120
