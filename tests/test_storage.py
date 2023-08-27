@@ -377,10 +377,13 @@ def test_clean_cache(database_engine: CacheStorage) -> None:
             assert timestamps[1] < timestamps[0]
 
         # clean cache, leaving 3
-        # if not isinstance(database_engine, CacheMiniDBStorage):  # not supported
-        cache_storage.clean_cache([guid], 3)
-        history = cache_storage.get_history_data(guid)
-        assert len(history) == 3
+        if isinstance(database_engine, (CacheSQLite3Storage, CacheMiniDBStorage)):
+            cache_storage.clean_cache([guid], 3)
+            history = cache_storage.get_history_data(guid)
+            assert len(history) == 3
+        else:
+            with pytest.raises(SystemExit):
+                cache_storage.clean_cache([guid], 3)
 
         # clean cache, leaving 1
         cache_storage.clean_cache([guid])
