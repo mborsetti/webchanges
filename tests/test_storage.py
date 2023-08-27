@@ -382,7 +382,7 @@ def test_clean_cache(database_engine: CacheStorage) -> None:
             history = cache_storage.get_history_data(guid)
             assert len(history) == 3
         else:
-            with pytest.raises(SystemExit):
+            with pytest.raises(NotImplementedError):
                 cache_storage.clean_cache([guid], 3)
 
         # clean cache, leaving 1
