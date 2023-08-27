@@ -1698,8 +1698,8 @@ class CacheRedisStorage(CacheStorage):
         return 1
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
-        if keep_entries != 0:
-            raise NotImplementedError('Only deleting all entries is supported by this Redis code.')
+        if keep_entries != 1:
+            raise NotImplementedError('Only keeping latest 1 entry is supported.')
 
         key = self._make_key(guid)
         i = self.db.llen(key)
