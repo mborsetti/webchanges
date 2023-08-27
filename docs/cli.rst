@@ -9,16 +9,17 @@ Command line arguments
 
 .. code-block::
 
-   usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE] [--cache FILE] [--list]
-                 [--errors] [--test [JOB]] [--no-headless] [--test-diff JOB] [--dump-history JOB]
-                 [--max-workers WORKERS] [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
-                 [--xmpp-login] [--edit] [--edit-config] [--edit-hooks] [--gc-database [RETAIN_LIMIT]]
-                 [--clean-database [RETAIN_LIMIT]] [--rollback-database TIMESTAMP]
-                 [--delete-snapshot JOB] [--change-location JOB NEW_LOCATION] [--check-new]
-                 [--install-chrome] [--features] [--detailed-versions]
-                 [--database-engine DATABASE_ENGINE] [--max-snapshots NUM_SNAPSHOTS] [--add JOB]
-                 [--delete JOB]
-                 [joblist ...]
+  usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE] [--cache FILE] [--list]
+                    [--errors] [--test [JOB]] [--no-headless] [--test-diff JOB] [--dump-history JOB]
+                    [--max-workers WORKERS] [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
+                    [--xmpp-login] [--footnote FOOTNOTE] [--edit] [--edit-config] [--edit-hooks]
+                    [--gc-database [RETAIN_LIMIT]] [--clean-database [RETAIN_LIMIT]]
+                    [--rollback-database TIMESTAMP] [--delete-snapshot JOB]
+                    [--change-location JOB NEW_LOCATION] [--check-new] [--install-chrome] [--features]
+                    [--detailed-versions] [--database-engine DATABASE_ENGINE]
+                    [--max-snapshots NUM_SNAPSHOTS] [--add JOB] [--delete JOB]
+                    [joblist ...]
+
 
    Checks web content to detect any changes since the prior run. If any are found, it shows what changed
    ('diff') and/or sends it via e-mail and/or other supported services. Can check the output of local
@@ -60,6 +61,7 @@ Command line arguments
                            using keyring)
      --telegram-chats      list telegram chats program is joined to
      --xmpp-login          enter or check password for XMPP (stored in keyring)
+     --footnote FOOTNOTE   footnote text (quoted text)
 
    launch editor ($EDITOR/$VISUAL):
      --edit                edit job (URL/command) list
@@ -189,9 +191,19 @@ debugging issues, especially when used in conjunction with ``-vv``::
 
    webchanges -vv --test-reporter telegram
 
-
 .. versionchanged:: 3.9
    Can be used in combination with ``--test-diff`` to redirect the output of the diff to a reporter.
+
+
+.. _footnote:
+
+Add a footnote to your reports
+------------------------------
+You can use the command line argument ``--footnote`` to add a footnote to the reports::
+
+   webchanges --footnote "This report was made by me."
+
+.. versionadded:: 3.13
 
 
 .. _change-location:

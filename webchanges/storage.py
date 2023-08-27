@@ -272,6 +272,7 @@ if TYPE_CHECKING:
             'report': ConfigReport,
             'job_defaults': ConfigJobDefaults,
             'database': ConfigDatabase,
+            'footnote': Optional[str],
         },
     )
 
@@ -412,6 +413,7 @@ DEFAULT_CONFIG: Config = {
         'engine': 'sqlite3',
         'max_snapshots': 4,
     },
+    'footnote': None,
 }
 
 

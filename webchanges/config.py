@@ -45,6 +45,7 @@ class CommandConfig(BaseConfig):
     edit_hooks: bool
     errors: bool
     features: bool
+    footnote: Optional[str]
     gc_database: int
     install_chrome: bool
     joblist: List[int]
@@ -203,6 +204,7 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--xmpp-login', action='store_true', help='enter or check password for XMPP (stored in keyring)'
         )
+        group.add_argument('--footnote', type=str, help='footnote text (quoted text)')
 
         group = parser.add_argument_group('launch editor ($EDITOR/$VISUAL)')
         group.add_argument('--edit', action='store_true', help='edit job (URL/command) list')

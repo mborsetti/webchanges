@@ -33,32 +33,34 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.13rc1
+Version 3.13rc2
 ===================
 Unreleased
 
 Notice
 ------
-Support for Python 3.8 will be removed on or about 5 October 2023 as older Python versions are supported for 3
-years after being obsoleted by a new major release.
+Support for Python 3.8 will be removed on or about 5 October 2023. Older Python versions are supported for 3 years
+after being obsoleted by a new major release.
 
 Added
 -----
-* New ``adjacent`` sub-directive to the ``remove_duplicates`` filter, enabling the de-duplication of non-adjacent lines
+* New ``adjacent`` sub-directive to the ``remove_duplicates`` filter enables the de-duplication of non-adjacent lines
   or items.
-* New ``--detailed-versions`` command line argument to display detailed version information, inclusive of those of PyPi
-  dependencies and, in certain Linux distributions (e.g. Debian), of dependency libraries. Also reports available
-  memory and disk space.
-* New ``retries`` directive for ``url`` jobs without ``use_browser`` to set the number of times to retry a url before
+* New ``retries`` directive for ``url`` jobs without ``use_browser`` sets the number of times to retry a url before
   giving up. Using ``retries: 1`` or higher will often solve the ``('Connection aborted.', ConnectionResetError(104,
-  'Connection reset by peer'))`` error received initially from a misconfigured server.
+  'Connection reset by peer'))`` error received from a misconfigured server at the first connection.
 * ``css`` and ``xpath`` filters now accept a ``sort`` subfilter to sort matched elements lexicographically.
-* Improved error reporting for ``command`` jobs includes the error text from the failed command.
 * New ``separate`` configuration option for reporters to split reports into one-per-job.
-* New ``--change-location`` command line argument allowing to keep job history when the url or command
-  changes.
-* Added ``RETAIN-LIMIT`` to ``--gc-database`` and ``--clean-database`` to allow increasing the number of old
-  snapshots to retain when cleaning up the database.
+* ``command`` jobs now have improved error reporting which includes the error text from the failed command.
+* Command line arguments:
+
+  * New ``--footnote`` adds a custom footnote to reports.
+  * New ``--change-location`` allows to keep job history when the ``url`` or ``command changes``.
+  * ``--gc-database`` and ``--clean-database`` now have optional argument ``RETAIN-LIMIT`` to to allow increasing
+    the number of old snapshots to retain when cleaning up the database for the default of 1.
+  * New ``--detailed-versions`` displays detailed version and system information inclusive of the versions of
+    dependencies and, in certain Linux distributions (e.g. Debian), of dependency system libraries. Also reports
+    available memory and disk space.
 
 Changed
 -------

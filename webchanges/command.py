@@ -1003,6 +1003,7 @@ class UrlwatchCommand:
     def run(self) -> None:  # pragma: no cover
         """The main run logic."""
         self.urlwatcher.report.config = self.urlwatcher.config_storage.config
+        self.urlwatcher.report.config['footnote'] = self.urlwatch_config.footnote
 
         self.handle_actions()
 

@@ -323,11 +323,13 @@ class HtmlReporter(ReporterBase):
                 yield '<hr>'
 
         # HTML footer
+        yield '<div style="font-style:italic">'
+        if self.report.config['footnote']:
+            yield f"{self.report.config['footnote']}\n<hr>"
         yield (
-            f'<div style="font-style:italic">\n'
             f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
             f'{dur_text(self.duration)} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
-            f'{html.escape(__version__)}' + (f' ({self.footer_job_file}).<br>\n' if self.footer_job_file else '.<br>\n')
+            f'{html.escape(__version__)}' + (f' ({self.footer_job_file}).<br>\n' if self.footer_job_file else '.<br>')
         )
         if (
             self.report.new_release_future is not None
@@ -671,6 +673,8 @@ class TextReporter(ReporterBase):
 
         if summary and show_footer:
             # Text footer
+            if self.report.config['footnote']:
+                yield f"--\n{self.report.config['footnote']}"
             yield (
                 f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
                 f'{dur_text(self.duration)} with {__project_name__} {__version__}'
@@ -771,7 +775,12 @@ class MarkdownReporter(ReporterBase):
 
         if summary and show_footer:
             # Markdown footer
-            footer = (
+            if self.report.config['footnote']:
+                footer = f"--\n{self.report.config['footnote']}"
+            else:
+                footer = ''
+
+            footer += (
                 f"--\n_Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
                 f'{dur_text(self.duration)} with {__project_name__} {__version__}'
             )

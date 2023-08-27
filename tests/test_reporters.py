@@ -285,9 +285,11 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
         test_report.finish_one(reporter, check_enabled=False)
         assert capsys.readouterr().out == 'TEST\n'
     elif reporter != 'browser':
+        test_report.config['footnote'] = 'Footnote'
         test_report.finish_one(reporter, check_enabled=False)
     elif 'PYCHARM_HOSTED' in os.environ:  # browser
         test_report.config['report']['html']['separate'] = True
+        test_report.config['footnote'] = 'Footnote'
         test_report.finish_one(reporter, check_enabled=False)
 
 
