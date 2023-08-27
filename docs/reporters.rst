@@ -73,6 +73,15 @@ detailed debug logs::
    webchanges --verbose --test-reporter email
 
 
+Reporters are based on :ref:`reports <reports>`, as follows, and inherit that report's settings:
+
+.. inheritance-ascii-tree:: webchanges.reporters.ReporterBase
+
+.. note::
+   Setting the ``email`` reporter's ``html`` option to ``true`` will cause it to inherit from the ``html``
+   configuration.
+
+
 .. _tz:
 
 Time zone (global setting)

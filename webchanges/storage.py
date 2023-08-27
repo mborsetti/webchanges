@@ -58,12 +58,14 @@ if TYPE_CHECKING:
             'details': bool,
             'footer': bool,
             'minimal': bool,
+            'separate': bool,
         },
     )
     ConfigReportHtml = TypedDict(
         'ConfigReportHtml',
         {
             'diff': Literal['unified', 'table'],
+            'separate': bool,
         },
     )
     ConfigReportMarkdown = TypedDict(
@@ -72,6 +74,7 @@ if TYPE_CHECKING:
             'details': bool,
             'footer': bool,
             'minimal': bool,
+            'separate': bool,
         },
     )
     ConfigReportStdout = TypedDict(
@@ -287,14 +290,17 @@ DEFAULT_CONFIG: Config = {
             'details': True,  # whether the diff is sent
             'footer': True,
             'minimal': False,
+            'separate': False,
         },
         'html': {
             'diff': 'unified',  # 'unified' or 'table'
+            'separate': False,
         },
         'markdown': {
             'details': True,  # whether the diff is sent
             'footer': True,
             'minimal': False,
+            'separate': False,
         },
         # the directives below control 'reporters', i.e. where a report is displayed and/or sent
         'stdout': {  # the console / command line display; uses text
@@ -939,6 +945,10 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
+    def move(self, guid: str, new_guid: str) -> int:
+        pass
+
+    @abstractmethod
     def rollback(self, timestamp: float) -> Optional[int]:
         pass
 
@@ -959,32 +969,34 @@ class CacheStorage(BaseFileStorage, ABC):
         for guid, data, timestamp, tries, etag in entries:
             self.save(guid=guid, data=data, timestamp=timestamp, tries=tries, etag=etag, temporary=False)
 
-    def gc(self, known_guids: Iterable[str]) -> None:
-        """Garbage collect the database: delete all guids not included in known_guids and keep only last snapshot for
+    def gc(self, known_guids: Iterable[str], keep_entries: int = 1) -> None:
+        """Garbage collect the database: delete all guids not included in known_guids and keep only last n snapshot for
         the others.
 
         :param known_guids: The guids to keep.
+        :param keep_entries: Number of entries to keep after deletion for the guids to keep.
         """
         for guid in set(self.get_guids()) - set(known_guids):
             print(f'Deleting job {guid} (no longer being tracked)')
             self.delete(guid)
-        self.clean_cache(known_guids)
+        self.clean_cache(known_guids, keep_entries)
 
-    def clean_cache(self, known_guids: Iterable[str]) -> None:
+    def clean_cache(self, known_guids: Iterable[str], keep_entries: int = 1) -> None:
         """Convenience function to clean the cache.
 
-        If self.clean_all is present, runs clean_all(). Otherwise runs clean() on all known_guids, one at a time.
-        Prints the number of snapshots deleted
+        If self.clean_all is present, runs clean_all(). Otherwise, runs clean() on all known_guids, one at a time.
+        Prints the number of snapshots deleted.
 
         :param known_guids: An iterable of guids
+        :param keep_entries: Number of entries to keep after deletion.
         """
         if hasattr(self, 'clean_all'):
-            count = self.clean_all()  # type: ignore[attr-defined]
+            count = self.clean_all(keep_entries)  # type: ignore[attr-defined]
             if count:
                 print(f'Deleted {count} old snapshots')
         else:
             for guid in known_guids:
-                count = self.clean(guid)
+                count = self.clean(guid, keep_entries)
                 if count:
                     print(f'Deleted {count} old snapshots of {guid}')
 
@@ -1104,6 +1116,12 @@ class CacheDirStorage(CacheStorage):
             raise NotImplementedError('Only keeping latest 1 entry is supported.')
         # We only store the latest version, no need to clean
         return 0
+
+    def move(self, guid: str, new_guid: str) -> int:
+        if guid == new_guid:
+            return 0
+        os.rename(self._get_filename(guid), self._get_filename(new_guid))
+        return 1
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("'textfiles' databases cannot be rolled back as new snapshots overwrite old ones")
@@ -1439,8 +1457,9 @@ class CacheSQLite3Storage(CacheStorage):
                 '    SELECT ROWID FROM webchanges '
                 '    WHERE uuid = ? '
                 '    ORDER BY timestamp DESC '
-                '    LIMIT -1 OFFSET ? '
-                ')',
+                '    LIMIT -1 '
+                '    OFFSET ? '
+                ') ',
                 (guid, keep_entries),
             )
             num_del: int = self._execute('SELECT changes()').fetchone()[0]
@@ -1448,19 +1467,53 @@ class CacheSQLite3Storage(CacheStorage):
             self._execute('VACUUM')
         return num_del
 
-    def clean_all(self) -> int:
-        """Delete all older entries for each 'guid' (keep only last one).
+    def move(self, guid: str, new_guid: str) -> int:
+        total_moved = 0
+        if guid != new_guid:
+            # Note if there are existing records with 'new_guid', they will
+            # not be overwritten and the job histories will be merged.
+            with self.lock:
+                self._execute(
+                    'UPDATE webchanges ' 'SET uuid = REPLACE(uuid, ?, ?)',
+                    (guid, new_guid),
+                )
+                total_moved = self._execute('SELECT changes()').fetchone()[0]
+                self.db.commit()
+                self._execute('VACUUM')
+
+        return total_moved
+
+    def clean_all(self, keep_entries: int = 1) -> int:
+        """Delete all older entries for each 'guid' (keep only keep_entries).
 
         :returns: Number of records deleted.
         """
         with self.lock:
-            self._execute(
-                'DELETE FROM webchanges '
-                'WHERE EXISTS ( '
-                '    SELECT 1 FROM webchanges w '
-                '    WHERE w.uuid = webchanges.uuid AND w.timestamp > webchanges.timestamp '
-                ')'
-            )
+            if keep_entries == 1:
+                self._execute(
+                    'DELETE FROM webchanges '
+                    'WHERE EXISTS ( '
+                    '    SELECT 1 FROM webchanges '
+                    '    w WHERE w.uuid = webchanges.uuid AND w.timestamp > webchanges.timestamp '
+                    ')'
+                )
+            else:
+                self._execute(
+                    'DELETE FROM webchanges '
+                    'WHERE ROWID IN ( '
+                    '    WITH rank_added AS ('
+                    '        SELECT '
+                    '             ROWID,'
+                    '             uuid,'
+                    '             timestamp, '
+                    '             ROW_NUMBER() OVER (PARTITION BY uuid ORDER BY timestamp DESC) AS rn'
+                    '        FROM webchanges '
+                    '    ) '
+                    '    SELECT ROWID FROM rank_added '
+                    '    WHERE rn > ?'
+                    ')',
+                    (keep_entries,),
+                )
             num_del: int = self._execute('SELECT changes()').fetchone()[0]
             self.db.commit()
             self._execute('VACUUM')
@@ -1563,7 +1616,7 @@ class CacheRedisStorage(CacheStorage):
     def get_guids(self) -> List[str]:
         guids = []
         for guid in self.db.keys('guid:*'):
-            guids.append(guid.decode()[5:])
+            guids.append(guid[5:].decode())
         return guids
 
     def load(self, guid: str) -> Snapshot:
@@ -1645,8 +1698,8 @@ class CacheRedisStorage(CacheStorage):
         return 1
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
-        if keep_entries != 1:
-            raise NotImplementedError('Only keeping latest 1 entry is supported by this Redis code.')
+        if keep_entries != 0:
+            raise NotImplementedError('Only deleting all entries is supported by this Redis code.')
 
         key = self._make_key(guid)
         i = self.db.llen(key)
@@ -1654,6 +1707,16 @@ class CacheRedisStorage(CacheStorage):
             return i - self.db.llen(key)
 
         return 0
+
+    def move(self, guid: str, new_guid: str) -> int:
+        if guid == new_guid:
+            return 0
+        key = self._make_key(guid)
+        new_key = self._make_key(new_guid)
+        # Note if a list with 'new_key' already exists, the data stored there
+        # will be overwritten.
+        self.db.rename(key, new_key)  # type: ignore[no-untyped-call]
+        return self.db.llen(new_key)
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("Rolling back the database is not supported by 'redis' database engine")

@@ -117,6 +117,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
     __subclasses__: Dict[str, Type[ReporterBase]] = {}
     __anonymous_subclasses__: List[Type[ReporterBase]] = []
+    __kind__: str = ''
 
     def __init__(
         self,
@@ -160,6 +161,12 @@ class ReporterBase(metaclass=TrackSubClasses):
         return othercls(self.report, config, self.job_states, self.duration, self.jobs_files)
 
     @classmethod
+    def get_base_config(cls, report: Report) -> Dict:
+        """Gets the configuration of the base of the report (e.g. for stdout, it will be text)"""
+        report_class: ReporterBase = cls.mro()[-3]  # type: ignore[assignment]
+        return report.config['report'][report_class.__kind__]  # type: ignore[literal-required]
+
+    @classmethod
     def reporter_documentation(cls) -> str:
         """Generates simple reporter documentation for use in the --features command line argument.
 
@@ -192,8 +199,15 @@ class ReporterBase(metaclass=TrackSubClasses):
         """
         subclass = cls.__subclasses__[name]
         cfg = report.config['report'][name]  # type: ignore[literal-required]
-        if cfg['enabled'] or not check_enabled:
-            subclass(report, cfg, job_states, duration, jobs_files).submit()
+
+        if cfg.get('enabled', False) or not check_enabled:
+            logger.info(f'Submitting with {name} ({subclass})')
+            base_config = subclass.get_base_config(report)  # type: ignore[attr-defined]
+            if base_config.get('separate', False):
+                for job_state in job_states:
+                    subclass(report, cfg, [job_state], duration, jobs_files).submit()
+            else:
+                subclass(report, cfg, job_states, duration, jobs_files).submit()
         else:
             raise ValueError(f'Reporter not enabled: {name}')
 
@@ -219,12 +233,17 @@ class ReporterBase(metaclass=TrackSubClasses):
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
             cfg: ConfigReportersList = report.config['report'].get(  # type: ignore[misc] # for PyCharm
-                name, {'enabled': False}  # type: ignore[assignment]
+                name, {}  # type: ignore[assignment]
             )
-            if cfg['enabled']:
+            if cfg.get('enabled', False):
                 any_enabled = True
                 logger.info(f'Submitting with {name} ({subclass})')
-                subclass(report, cfg, job_states, duration, jobs_files).submit()
+                base_config = subclass.get_base_config(report)  # type: ignore[attr-defined]
+                if base_config.get('separate', False):
+                    for job_state in job_states:
+                        subclass(report, cfg, [job_state], duration).submit()
+                else:
+                    subclass(report, cfg, job_states, duration).submit()
 
         if not any_enabled:
             logger.warning('No reporters enabled.')
@@ -254,6 +273,8 @@ class ReporterBase(metaclass=TrackSubClasses):
 class HtmlReporter(ReporterBase):
     """The base class for all reports using HTML."""
 
+    __kind__ = 'html'
+
     def submit(self, **kwargs: Any) -> Iterator[str]:
         """Submit a job to generate the report.
 
@@ -266,7 +287,7 @@ class HtmlReporter(ReporterBase):
 
         :returns: The content of the report.
         """
-        cfg = self.report.config['report']['html']
+        cfg = self.get_base_config(self.report)
         tz = self.report.config['report']['tz']
 
         yield (
@@ -602,12 +623,14 @@ class HtmlReporter(ReporterBase):
 class TextReporter(ReporterBase):
     """The base class for all reports using plain text."""
 
+    __kind__ = 'text'
+
     def submit(self, **kwargs: Any) -> Iterator[str]:
         """Submit a job to generate the report.
 
         :returns: The content of the plain text report.
         """
-        cfg = self.report.config['report']['text']
+        cfg = self.get_base_config(self.report)
         tz = self.report.config['report']['tz']
         line_length = cfg['line_length']
         show_details = cfg['details']
@@ -713,6 +736,8 @@ class TextReporter(ReporterBase):
 class MarkdownReporter(ReporterBase):
     """The base class for all reports using Markdown."""
 
+    __kind__ = 'markdown'
+
     def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> Iterator[str]:
         """Submit a job to generate the report in Markdown format.
         We use the CommonMark spec: https://spec.commonmark.org/
@@ -721,7 +746,7 @@ class MarkdownReporter(ReporterBase):
         :param kwargs:
         :returns: The content of the Markdown report.
         """
-        cfg = self.report.config['report']['markdown']
+        cfg = self.get_base_config(self.report)
         tz = self.report.config['report']['tz']
         show_details = cfg['details']
         show_footer = cfg['footer']
@@ -982,7 +1007,7 @@ class StdoutReporter(TextReporter):
     def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
         print_color = self._get_print()
 
-        cfg = self.report.config['report']['text']
+        cfg = self.get_base_config(self.report)
         line_length = cfg['line_length']
 
         separators = (line_length * '=', line_length * '-', '--') if line_length else ()
@@ -1091,7 +1116,7 @@ class IFTTTReport(TextReporter):
 class WebServiceReporter(TextReporter):
     """Base class for other reporters, such as Pushover and Pushbullet."""
 
-    __kind__ = ''
+    __kind__ = 'webservice (no settings)'
 
     MAX_LENGTH = 1024
 

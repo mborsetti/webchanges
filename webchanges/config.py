@@ -9,7 +9,7 @@ import argparse
 # import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 from .__init__ import __doc__ as doc
 from .__init__ import __docs_url__, __project_name__, __version__
@@ -32,8 +32,9 @@ class CommandConfig(BaseConfig):
     """Command line arguments configuration; the arguments are stored as class attributes."""
 
     add: Optional[str]
+    change_location: Tuple[Union[int, str], str]
     check_new: bool
-    clean_database: bool
+    clean_database: int
     database_engine: str
     delete: Optional[str]
     delete_snapshot: Optional[str]
@@ -44,7 +45,7 @@ class CommandConfig(BaseConfig):
     edit_hooks: bool
     errors: bool
     features: bool
-    gc_database: bool
+    gc_database: int
     install_chrome: bool
     joblist: List[int]
     list: bool
@@ -212,15 +213,21 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--gc-database',
             '--gc-cache',
-            action='store_true',
-            help='garbage collect the cache database by removing old changed snapshots plus all data of jobs'
-            ' not in the jobs file',
+            nargs='?',
+            const=1,
+            type=int,
+            help='garbage collect the cache database by removing (1) all snapshots of jobs not in the jobs file and '
+            '(2) old changed snapshots, keeping the latest RETAIN_LIMIT (default 1), for the others',
+            metavar='RETAIN_LIMIT',
         )
         group.add_argument(
             '--clean-database',
             '--clean-cache',
-            action='store_true',
-            help='remove old changed snapshots from the database',
+            nargs='?',
+            const=1,
+            type=int,
+            help='remove old changed snapshots from the database, keeping the latest RETAIN_LIMIT (default 1)',
+            metavar='RETAIN_LIMIT',
         )
         group.add_argument(
             '--rollback-database',
@@ -233,6 +240,12 @@ class CommandConfig(BaseConfig):
             '--delete-snapshot',
             help='delete the last saved changed snapshot of job (index or URL/command)',
             metavar='JOB',
+        )
+        group.add_argument(
+            '--change-location',
+            nargs=2,
+            help='change the location of an existing job by location or index',
+            metavar=('JOB', 'NEW_LOCATION'),
         )
 
         group = parser.add_argument_group('miscellaneous')

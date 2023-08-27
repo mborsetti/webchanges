@@ -200,6 +200,10 @@ class JobBase(metaclass=TrackSubClasses):
         """
         raise NotImplementedError()
 
+    def set_base_location(self, location: str) -> None:
+        """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
+        raise NotImplementedError()
+
     def pretty_name(self) -> str:
         """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (user_visible_url,
         URL or command).
@@ -595,6 +599,10 @@ class UrlJob(UrlJobBase):
         """
         return self.user_visible_url or self.url
 
+    def set_base_location(self, location: str) -> None:
+        """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
+        self.url = location
+
     def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
@@ -879,6 +887,10 @@ class BrowserJob(UrlJobBase):
         :returns: The user_visible_url or URL of the job.
         """
         return self.user_visible_url or self.url
+
+    def set_base_location(self, location: str) -> None:
+        """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
+        self.url = location
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
@@ -1467,6 +1479,10 @@ class ShellJob(Job):
         :returns: The command of the job.
         """
         return self.user_visible_url or self.command
+
+    def set_base_location(self, location: str) -> None:
+        """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
+        self.command = location
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag (which is blank).

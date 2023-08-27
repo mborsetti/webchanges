@@ -293,7 +293,7 @@ def main() -> None:  # pragma: no cover
     default_hooks_file = config_path.joinpath('hooks.py')
     default_cache_file = cache_path.joinpath('cache.db')
 
-    # Check for and if found migrate legacy (urlwatch 2.25) files
+    # Check for and if found migrate legacy (urlwatch 2.28) files
     migrate_from_legacy('urlwatch', default_config_file, default_jobs_file, default_hooks_file, default_cache_file)
 
     # Parse command line arguments

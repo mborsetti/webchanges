@@ -15,9 +15,9 @@ Upgrading from urlwatch
 =======================
 
 :program:`webchanges` |version| is derived from `urlwatch <https://github.com/thp/urlwatch>`__ and is mostly
-backward-compatible with :program:`urlwatch` 2.25's job and configuration files.
+backward-compatible with :program:`urlwatch` 2.28's job and configuration files.
 
-Upgrading from a :program:`urlwatch` 2.25 setup is automatic (see more below), and gives you:
+Upgrading from a :program:`urlwatch` 2.28 setup is automatic (see more below), and gives you:
 
 * Vastly improved HTML email reporting, including:
 
@@ -84,7 +84,7 @@ Examples:
 
 How-to
 ------
-If you are using :program:`urlwatch` 2.25, simply install :program:`webchanges` and run it. It will find the existing
+If you are using :program:`urlwatch` 2.28, simply install :program:`webchanges` and run it. It will find the existing
 :program:`urlwatch` job and configuration files, and, unless you were still running ``lynx`` or have custom code (see
 below), it *should* run just fine as is. It may complain about some directive name being changed for clarity and other
 :ref:`deprecations <upgrade_deprecations>`, but you will have time to make the edits if you decide to stick around!
@@ -126,8 +126,8 @@ If you encounter any problems or have any suggestions please open an issue `here
 
 .. note::
 
-   If you are upgrading from a version of :program:`urlwatch` prior to 2.25, before running :program:`webchanges` make
-   sure that you can run :program:`urlwatch` 2.25 successfully, having implemented all :program:`urlwatch` breaking
+   If you are upgrading from a version of :program:`urlwatch` prior to 2.28, before running :program:`webchanges` make
+   sure that you can run :program:`urlwatch` 2.28 successfully, having implemented all :program:`urlwatch` breaking
    changes in your job and configuration files.
 
    For example, per :program:`urlwatch` issue `#600
@@ -138,7 +138,7 @@ If you encounter any problems or have any suggestions please open an issue `here
       url: https://example.com/
       filter: html2text
 
-   no longer works in :program:`urlwatch` 2.25, and therefore in :program:`webchanges`, as all filters must be
+   no longer works in :program:`urlwatch` 2.28, and therefore in :program:`webchanges`, as all filters must be
    specified as sub-directives like this:
 
    .. code-block:: yaml
@@ -153,12 +153,12 @@ If you encounter any problems or have any suggestions please open an issue `here
 Upgrade details
 ---------------
 Most everything, except the breaking changes below, *should* work out of the box when upgrading from a
-:program:`urlwatch` 2.25 setup, as long as you run it in Python 3.8 or higher, and you can switch back whenever you
+:program:`urlwatch` 2.28 setup, as long as you run it in Python 3.8 or higher, and you can switch back whenever you
 want.
 
 ⚠ Breaking Changes
 ~~~~~~~~~~~~~~~~~~
-Relative to :program:`urlwatch` 2.25:
+Relative to :program:`urlwatch` 2.28:
 
 * Must run on Python version 3.8 or higher.
 * By default a new much improved database engine is used; run with ``--database-engine minidb`` command line argument to
@@ -179,7 +179,7 @@ Relative to :program:`urlwatch` 2.25:
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
-Relative to :program:`urlwatch` 2.25:
+Relative to :program:`urlwatch` 2.28:
 
 * Installation and command line
 
@@ -330,7 +330,7 @@ Relative to :program:`urlwatch` 2.25:
 
 Fixed
 ~~~~~
-Relative to :program:`urlwatch` 2.25:
+Relative to :program:`urlwatch` 2.28:
 
 * Diff (change) data is no longer lost if :program:`webchanges` is interrupted mid-execution or encounters an error in
   reporting: the permanent database is updated only at the very end (after reports are sent).
@@ -376,7 +376,7 @@ Relative to :program:`urlwatch` 2.25:
 
 Deprecations
 ~~~~~~~~~~~~
-Relative to :program:`urlwatch` 2.25:
+Relative to :program:`urlwatch` 2.28:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
   default method instead or construct a custom ``execute`` command.

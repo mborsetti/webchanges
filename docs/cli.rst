@@ -12,9 +12,10 @@ Command line arguments
    usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE] [--cache FILE] [--list]
                  [--errors] [--test [JOB]] [--no-headless] [--test-diff JOB] [--dump-history JOB]
                  [--max-workers WORKERS] [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
-                 [--xmpp-login] [--edit] [--edit-config] [--edit-hooks] [--gc-database]
-                 [--clean-database] [--rollback-database TIMESTAMP] [--delete-snapshot JOB]
-                 [--check-new] [--install-chrome] [--features] [--detailed-versions]
+                 [--xmpp-login] [--edit] [--edit-config] [--edit-hooks] [--gc-database [RETAIN_LIMIT]]
+                 [--clean-database [RETAIN_LIMIT]] [--rollback-database TIMESTAMP]
+                 [--delete-snapshot JOB] [--change-location JOB NEW_LOCATION] [--check-new]
+                 [--install-chrome] [--features] [--detailed-versions]
                  [--database-engine DATABASE_ENGINE] [--max-snapshots NUM_SNAPSHOTS] [--add JOB]
                  [--delete JOB]
                  [joblist ...]
@@ -66,16 +67,20 @@ Command line arguments
      --edit-hooks          edit hooks script
 
    database:
-     --gc-database, --gc-cache
-                           garbage collect the cache database by removing old changed snapshots plus all
-                           data of jobs not in the jobs file
-     --clean-database, --clean-cache
-                           remove old changed snapshots from the database
+     --gc-database [RETAIN_LIMIT], --gc-cache [RETAIN_LIMIT]
+                           garbage collect the cache database by removing (1) all snapshots of jobs not
+                           in the jobs file and (2) old changed snapshots, keeping the latest
+                           RETAIN_LIMIT (default 1), for the others
+     --clean-database [RETAIN_LIMIT], --clean-cache [RETAIN_LIMIT]
+                           remove old changed snapshots from the database, keeping the latest
+                           RETAIN_LIMIT (default 1)
      --rollback-database TIMESTAMP, --rollback-cache TIMESTAMP
                            delete recent changed snapshots since TIMESTAMP (backup the database before
                            using!)
      --delete-snapshot JOB
                            delete the last saved changed snapshot of job (index or URL/command)
+     --change-location JOB NEW_LOCATION
+                           change the location of an existing job by location or index
 
    miscellaneous:
      --check-new           check if a new release is available
@@ -189,6 +194,20 @@ debugging issues, especially when used in conjunction with ``-vv``::
    Can be used in combination with ``--test-diff`` to redirect the output of the diff to a reporter.
 
 
+.. _change-location:
+
+Updating a URL and keeping past history
+---------------------------------------
+Job history is stored based on the value of the ``url`` or ``command`` parameter, so updating a job's URL in the
+configuration file ``urls.yaml`` will create a new job with no history. Retain history by using ``--change-location``::
+
+    webchanges --change-location https://example.org#old https://example.org#new
+    # or
+    webchanges --change-location old_command new_command
+
+.. versionadded:: 3.13
+
+
 .. _delete-snapshot:
 
 Delete the latest saved snapshot
@@ -246,18 +265,23 @@ collect') or ``--clean-database`` command line argument.
 Running with ``--gc-database`` will purge all snapshots of jobs that are no longer in the jobs file **and**, for those
 in the jobs file, older changed snapshots other than the most recent one for each job. It will also rebuild (and
 therefore defragment) the database using SQLite's `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__
-command.
+command.  You can indicate a RETAIN_LIMIT for the number of older changed snapshots to retain (default: 1, the
+latest).
 
 .. tip:: If you use multiple jobs files, use ``--gc-database`` in conjunction with a glob ``--jobs`` command, e.g.
    ``webchanges --jobs "jobs*.yaml" --gc-database``. To ensure that the glob is correct, run e.g. ``webchanges --jobs
    "jobs*.yaml" --list``.
 
-Running with ``--clean-database`` will remove all older snapshots keeping the most recent one for each job (whether it
-is still present in the jobs file or not) and rebuild (and therefore defragment) the database using SQLite's `VACUUM
-<https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ command.
+Running with ``--clean-database`` will remove all older snapshots keeping the most recent RETAIN_LIMIT ones for
+each job (whether it is still present in the jobs file or not) and rebuild (and therefore defragment) the database
+using SQLite's `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ command.
 
 .. versionchanged:: 3.11
    Renamed from ``--gc-cache`` and ``--clean-cache``.
+
+.. versionchanged:: 3.13
+   Added RETAIN_LIMIT.
+
 
 .. _database-engine:
 
@@ -266,7 +290,6 @@ Database engine
 ``--database-engine`` will override the value in the configuration file (see :ref:`database_engine`).
 
 .. versionadded:: 3.2
-
 
 
 .. _max-snapshots:

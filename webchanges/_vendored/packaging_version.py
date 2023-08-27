@@ -1,6 +1,10 @@
-"""Vendored version of packaging.version.parse() from packaging v23.0 released on 9-Jan-23
+"""
+Vendored version of packaging.version.parse() from packaging v23.0 released on 9-Jan-23
 (commit https://github.com/pypa/packaging/tree/e3f218269c0f2fd2aff228b310d7f474a3ffd487).
-See https://github.com/pypa/packaging."""
+
+See https://github.com/pypa/packaging.
+
+"""
 
 # This file is dual licensed under the terms of the Apache License, Version
 # 2.0, and the BSD License.
@@ -316,7 +320,7 @@ class InvalidVersion(ValueError):
     """Raised when a version string is not a valid version.
     >>> Version("invalid")
     Traceback (most recent call last):
-        ...
+    ...
     packaging.version.InvalidVersion: Invalid version: 'invalid'
     """
 

@@ -4,6 +4,7 @@
 
 import re
 import sys
+from typing import Dict, List, Union
 
 from setuptools import find_packages, setup
 
@@ -22,7 +23,7 @@ with open('requirements.txt') as f:
 with open('README.rst') as f:
     README_rst = f.read()
 
-SETUP = {
+SETUP: Dict[str, Union[str, bool, List[str], Dict[str, Union[list[str], str]]]] = {
     'name': project.__project_name__,
     'version': project.__version__,
     'description': project.__description__.replace('\n', ' '),
@@ -87,8 +88,10 @@ SETUP = {
         'Documentation': project.__docs_url__,
     },
 }
-SETUP['extras_require']['all'] = sorted(list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra)))
-setup(**SETUP)
+SETUP['extras_require']['all'] = sorted(  # type: ignore[index,call-overload]
+    list(set(pkg for extra in SETUP['extras_require'].values() for pkg in extra))  # type: ignore[union-attr]
+)
+setup(**SETUP)  # type: ignore[arg-type]
 
 # to build manually (https://packaging.python.org/tutorials/packaging-projects/):
 # $ python setup.py sdist bdist_wheel

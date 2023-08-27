@@ -120,31 +120,43 @@ class CacheMiniDBStorage(CacheStorage):
     def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
         raise NotImplementedError("Deleting of latest snapshot not supported by 'minidb' database engine")
 
-    def clean(self, guid: str, keep_entries: int = 1) -> int:
-        if keep_entries != 1:
-            raise NotImplementedError("Only keeping latest 1 entry is supported by 'minidb' database engine")
-
-        keep_id = next(
-            (
-                self.CacheEntry.query(
-                    self.db,
-                    self.CacheEntry.c.id,
-                    where=self.CacheEntry.c.guid == guid,
-                    order_by=self.CacheEntry.c.timestamp.desc,
-                    limit=1,
-                )
-            ),
-            (None,),
-        )[0]
-
-        if keep_id is not None:
-            result: int = self.CacheEntry.delete_where(
-                self.db, (self.CacheEntry.c.guid == guid) & (self.CacheEntry.c.id != keep_id)
+    def clean(self, guid: str, retain_limit: int = 1) -> int:
+        retain_limit = max(1, retain_limit)
+        keep_ids = [
+            row[0]
+            for row in self.CacheEntry.query(
+                self.db,
+                self.CacheEntry.c.id,
+                where=self.CacheEntry.c.guid == guid,
+                order_by=self.CacheEntry.c.timestamp.desc,
+                limit=retain_limit,
             )
+        ]
+        # If nothing's returned from the query, the given guid is not in the db
+        # and no action is needed.
+        if keep_ids:
+            where_clause = self.CacheEntry.c.guid == guid
+            for keep_id in keep_ids:
+                where_clause = where_clause & (self.CacheEntry.c.id != keep_id)
+            result = self.CacheEntry.delete_where(self.db, where_clause)
             self.db.commit()
+            self.db.vacuum()
             return result
 
         return 0
+
+    def move(self, guid: str, new_guid: str) -> int:
+        total_moved = 0
+        if guid != new_guid:
+            # Note if there are existing records with 'new_guid', they will
+            # not be overwritten and the job histories will be merged.
+            for entry in self.CacheEntry.load(self.db, self.CacheEntry.c.guid == guid):
+                entry.guid = new_guid
+                entry.save()
+                total_moved += 1
+            self.db.commit()
+
+        return total_moved
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("Rolling back of legacy 'minidb' databases is not supported")

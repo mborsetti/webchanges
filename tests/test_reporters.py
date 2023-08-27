@@ -20,7 +20,7 @@ from webchanges.storage import DEFAULT_CONFIG
 try:
     from keyring.errors import NoKeyringError
 except ImportError:
-    NoKeyringError = None
+    NoKeyringError = None  # type: ignore[misc,assignment]
 
 try:
     from matrix_client.errors import MatrixError
@@ -149,16 +149,21 @@ def build_test_report() -> Report:
     return test_report
 
 
-report = Report(UrlwatchTest())  # type: ignore[arg-type]
-test_report = build_test_report()
-
-
 @pytest.mark.parametrize('inpt, out', DIFF_TO_HTML_TEST_DATA)  # type: ignore[misc]
 def test_diff_to_html(inpt: str, out: str) -> None:
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
     job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': False})
-    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))  # type: ignore[arg-type]
+    result = ''.join(
+        list(
+            HtmlReporter(
+                Report(UrlwatchTest()),  # type: ignore[arg-type]
+                {},  # type: ignore[arg-type]
+                [],
+                0,
+            )._diff_to_html(inpt, job)
+        )
+    )
     assert result[250:-8] == out
 
 
@@ -166,7 +171,16 @@ def test_diff_to_htm_padded_table() -> None:
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
     job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': True})
-    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))  # type: ignore[arg-type]
+    result = ''.join(
+        list(
+            HtmlReporter(
+                Report(UrlwatchTest()),  # type: ignore[arg-type]
+                {},  # type: ignore[arg-type]
+                [],
+                0,
+            )._diff_to_html(inpt, job)
+        )
+    )
     assert result[250:-8] == (
         '<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | row |</span></td></tr>'
     )
@@ -178,7 +192,16 @@ def test_diff_to_htm_wdiff() -> None:
     job = JobBase.unserialize(
         {'url': 'https://www.example.com', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'}
     )
-    result = ''.join(list(HtmlReporter(report, {}, [], 0)._diff_to_html(inpt, job)))  # type: ignore[arg-type]
+    result = ''.join(
+        list(
+            HtmlReporter(
+                Report(UrlwatchTest()),  # type: ignore[arg-type]
+                {},  # type: ignore[arg-type]
+                [],
+                0,
+            )._diff_to_html(inpt, job)
+        )
+    )
     assert result == (
         '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">old</span>'
         '<span style="background-color:#d1ffd1;color:#082b08">new</span>'
@@ -186,7 +209,7 @@ def test_diff_to_htm_wdiff() -> None:
 
 
 def test_smtp_password() -> None:
-    if NoKeyringError:
+    if NoKeyringError is not None:
         try:
             assert smtp_have_password('fdsfdsfdsafdsf', '') is False
         except NoKeyringError:
@@ -199,8 +222,9 @@ def test_smtp_password() -> None:
 
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)  # type: ignore[misc]
 def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
+    test_report = build_test_report()
     if reporter == 'email':
-        if NoKeyringError:
+        if NoKeyringError is not None:
             with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)
         else:
@@ -221,7 +245,7 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
             logger.warning(f"Skipping {reporter} since 'aioxmpp' package is not installed")
             return
         else:
-            if NoKeyringError:
+            if NoKeyringError is not None:
                 with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
                     test_report.finish_one(reporter, check_enabled=False)
                 assert sum(
@@ -251,7 +275,6 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
     elif reporter == 'run_command':
         if os.getenv('GITHUB_ACTIONS'):
             pytest.skip('Test triggers exit code 141 in GitHub Actions')
-            return
         with pytest.raises(ValueError) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
@@ -261,7 +284,10 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
             test_report.config['report']['run_command']['command'] = 'echo TEST'
         test_report.finish_one(reporter, check_enabled=False)
         assert capsys.readouterr().out == 'TEST\n'
-    elif reporter != 'browser' or 'PYCHARM_HOSTED' in os.environ:
+    elif reporter != 'browser':
+        test_report.finish_one(reporter, check_enabled=False)
+    elif 'PYCHARM_HOSTED' in os.environ:  # browser
+        test_report.config['report']['html']['separate'] = True
         test_report.finish_one(reporter, check_enabled=False)
 
 

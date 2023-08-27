@@ -26,6 +26,7 @@ Optional sub-directives
 * ``line_length``: The maximum length of each line in characters; defaults to 75 (integer). Ignored if ``minimal`` is
   true.
 * ``minimal``: An abbreviated version (true/false); defaults to false.
+* ``separate``: Send a report for each job instead of a combined report with all jobs; defaults to false.
 
 
 
@@ -70,6 +71,7 @@ Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
 * ``diff``: ``unified`` (default) or ``table``. Overridden if the job directive ``diff_tool`` (external
   differ) is set.
+* ``separate``: Send a report for each job instead of a combined report with all jobs; defaults to false.
 
 
 
@@ -86,3 +88,4 @@ Optional sub-directives
 * ``show_details``: Includes the diff of each job (true/false); defaults to true. Ignored if ``minimal`` is true.
 * ``show_footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true. Ignored if
   ``minimal`` is true.
+* ``separate``: Send a report for each job instead of a combined report with all jobs; defaults to false.

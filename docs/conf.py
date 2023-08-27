@@ -26,8 +26,10 @@ from sphinx.writers.html import HTMLTranslator
 
 # below required to import project_data module
 sys.path.insert(1, str(Path(__file__).parent.parent))
-
 import webchanges as project_data  # noqa: E402 module level import not at top of file.
+
+# below required to import inheritance_ascii_tree module
+sys.path.insert(1, str(Path(__file__).parent))
 
 # below required for autosummary build on GitHub Actions's pre-commit and on readthedocs.io
 sys.path.insert(1, str(Path(__file__).parent.joinpath('webchanges')))
@@ -51,6 +53,7 @@ release = version
 # ones.
 #
 extensions = [
+    'inheritance_ascii_tree',
     # 'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -89,7 +92,7 @@ pygments_style = 'sphinx'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = '6.1.3'
+needs_sphinx = '7.2.3'
 
 # -- Options for internationalization ----------------------------------------
 

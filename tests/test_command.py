@@ -15,12 +15,13 @@ from _pytest.capture import CaptureFixture
 from _pytest.logging import LogCaptureFixture
 from _pytest.monkeypatch import MonkeyPatch
 
+from tests.test_storage import DATABASE_ENGINES, prepare_storage_test
 from webchanges import __copyright__, __min_python_version__, __project_name__, __version__
 from webchanges.cli import first_run, locate_storage_file, migrate_from_legacy, python_version_warning, setup_logger
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import CacheSQLite3Storage, CacheStorage, YamlConfigStorage, YamlJobsStorage
 
 # Paths
 here = Path(__file__).parent
@@ -32,11 +33,11 @@ base_config_file = config_path.joinpath('config.yaml')
 config_file = tmp_path.joinpath('config.yaml')
 shutil.copyfile(base_config_file, config_file)
 
-# Copy jobs file to temporary directory
-base_jobs_file = config_path.joinpath('jobs-echo_test.yaml')
-jobs_file = tmp_path.joinpath('jobs-echo_test.yaml')
-shutil.copyfile(base_jobs_file, jobs_file)
+# Copy jobs files to temporary directory
+for filename in {'jobs-echo_test.yaml', 'jobs-time.yaml'}:
+    shutil.copyfile(config_path.joinpath(filename), tmp_path.joinpath(filename))
 
+jobs_file = tmp_path.joinpath('jobs-echo_test.yaml')
 cache_file = ':memory:'
 
 # Copy hooks file to temporary directory
@@ -520,6 +521,85 @@ def test_modify_urls(capsys: CaptureFixture[str]) -> None:
     assert after_file == before_file
 
 
+@pytest.mark.parametrize(  # type: ignore[misc]
+    'database_engine',
+    DATABASE_ENGINES,
+    ids=(type(v).__name__ for v in DATABASE_ENGINES),
+)
+def test_modify_urls_move_location(database_engine: CacheStorage, capsys: CaptureFixture[str]) -> None:
+    """Test --change-location JOB NEW_LOCATION."""
+    jobs_file = tmp_path.joinpath('jobs-time.yaml')
+    urlwatcher2, cache_storage2, command_config2 = prepare_storage_test(database_engine, jobs_file=jobs_file)
+    urlwatch_command2 = UrlwatchCommand(urlwatcher2)
+
+    # try changing location of non-existing job
+    setattr(command_config2, 'change_location', ('a', 'b'))
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command2.handle_actions()
+    setattr(command_config2, 'change_location', None)
+    assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert message == 'Job not found: "a"\n'
+
+    # try changing location of un-saved job
+    old_loc = urlwatch_command2.urlwatcher.jobs[0].get_location()
+    old_guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
+    new_loc = old_loc + '  # new location'
+    setattr(command_config2, 'change_location', (old_loc, new_loc))
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command2.handle_actions()
+    setattr(command_config2, 'change_location', None)
+    assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert message == (f'Moving location of "{old_loc}" to "{new_loc}"\n' f'No snapshots found for "{old_loc}"\n')
+
+    # run jobs to save
+    urlwatcher2.run_jobs()
+    if hasattr(cache_storage2, '_copy_temp_to_permanent'):
+        cache_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+
+    # try changing job database location
+    setattr(command_config2, 'change_location', (old_loc, new_loc))
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command2.handle_actions()
+    setattr(command_config2, 'change_location', None)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert message == (
+        f'Moving location of "{old_loc}" to "{new_loc}"\n'
+        f'Moved 1 snapshots of "{old_loc}" to "{new_loc}"\n'
+        f'Saving updated list to {str(urlwatcher2.jobs_storage.filename[0])}\n'
+    )
+
+    # did it change?
+    new_guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
+    assert new_guid != old_guid
+    assert urlwatch_command2.urlwatcher.jobs[0].get_location() == new_loc
+
+    # is it in the database?
+    old_data = cache_storage2.load(old_guid)
+    assert old_data.data == ''
+    new_data = cache_storage2.load(new_guid)
+    assert new_data.timestamp != 0
+
+    # change back
+    setattr(command_config2, 'change_location', (new_loc, old_loc))
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command2.handle_actions()
+    setattr(command_config2, 'change_location', None)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert message == (
+        f'Moving location of "{new_loc}" to "{old_loc}"\n'
+        f'Moved 1 snapshots of "{new_loc}" to "{old_loc}"\n'
+        f'Saving updated list to {str(urlwatcher2.jobs_storage.filename[0])}\n'
+    )
+
+    # did it change back?
+    assert urlwatch_command2.urlwatcher.jobs[0].get_location() == old_loc
+    assert cache_storage2.load(old_guid) == new_data
+
+
 def test_delete_snapshot(capsys: CaptureFixture[str]) -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
@@ -615,14 +695,41 @@ def test_gc_database(capsys: CaptureFixture[str]) -> None:
 
 
 def test_clean_database(capsys: CaptureFixture[str]) -> None:
+    """Test --clean-database [RETAIN_LIMIT]."""
     setattr(command_config, 'clean_database', True)
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config, 'clean_database', False)
+    setattr(command_config, 'clean_database', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message == ''
+
+    # set up storage for testing
+    database_engine = CacheSQLite3Storage(':memory:')
+    urlwatcher2, cache_storage2, command_config2 = prepare_storage_test(database_engine)
+    urlwatch_command2 = UrlwatchCommand(urlwatcher2)
+
+    # run jobs to save
+    for i in range(3):
+        time.sleep(0.0001)
+        urlwatcher2.run_jobs()
+    if hasattr(cache_storage2, '_copy_temp_to_permanent'):
+        cache_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+
+    # clean database with RETAIN_LIMIT=2
+    setattr(command_config2, 'clean_database', 2)
+    urlwatcher2.cache_storage.clean_cache([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
+    setattr(command_config2, 'clean_database', None)
+    guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
+    assert len(cache_storage2.get_history_snapshots(guid)) == 2
+
+    # clean database without specifying RETAIN_LIMIT
+    setattr(command_config2, 'clean_database', True)
+    urlwatcher2.cache_storage.clean_cache([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
+    setattr(command_config2, 'clean_database', None)
+    guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
+    assert len(cache_storage2.get_history_snapshots(guid)) == 1
 
 
 def test_rollback_database(capsys: CaptureFixture[str], monkeypatch: MonkeyPatch) -> None:
@@ -659,7 +766,6 @@ def test_check_telegram_chats(capsys: CaptureFixture[str]) -> None:
     if os.getenv('TELEGRAM_TOKEN'):
         if os.getenv('GITHUB_ACTIONS'):
             pytest.skip('Telegram testing no longer working from within GitHub Actions')
-            return
         urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = os.getenv(
             'TELEGRAM_TOKEN',
             '',

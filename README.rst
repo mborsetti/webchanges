@@ -114,7 +114,7 @@ Compatibility with **urlwatch**
 ================================
 
 This project is based on `urlwatch <https://github.com/thp/urlwatch>`__ 2.21. You can easily upgrade from
-**urlwatch** 2.25 (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__) using the same job and
+**urlwatch** 2.28 (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__) using the same job and
 configuration files and benefit from many HTML-focused improvements, including:
 
 * Report links that are `clickable <https://pypi.org/project/webchanges/>`__!

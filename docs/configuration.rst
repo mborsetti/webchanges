@@ -80,6 +80,7 @@ using an SMTP server:
        minimal: false
      html:
        diff: unified
+       separate: true
      email:  # This is the email reporter
        enabled: true
        from: 'Web watcher <webwatcher@example.com>'
@@ -101,6 +102,14 @@ using an SMTP server:
 Configuration options for reports is described in :ref:`reports <reports>`.
 
 Configuration options for reporters is described in :ref:`reporters <reporters>`.
+
+Reporters are implemented in a hierarchy, and configuration settings of a report apply to all descendant reporters:
+
+.. inheritance-ascii-tree:: webchanges.reporters.ReporterBase
+
+.. note::
+   Setting the ``email`` reporter's ``html`` option to ``true`` will cause it to inherit from the ``html``
+   configuration.
 
 .. _job_defaults:
 

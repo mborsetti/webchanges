@@ -33,9 +33,14 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.13rc0
+Version 3.13rc1
 ===================
 Unreleased
+
+Notice
+------
+Support for Python 3.8 will be removed on or about 5 October 2023 as older Python versions are supported for 3
+years after being obsoleted by a new major release.
 
 Added
 -----
@@ -49,6 +54,11 @@ Added
   'Connection reset by peer'))`` error received initially from a misconfigured server.
 * ``css`` and ``xpath`` filters now accept a ``sort`` subfilter to sort matched elements lexicographically.
 * Improved error reporting for ``command`` jobs includes the error text from the failed command.
+* New ``separate`` configuration option for reporters to split reports into one-per-job.
+* New ``--change-location`` command line argument allowing to keep job history when the url or command
+  changes.
+* Added ``RETAIN-LIMIT`` to ``--gc-database`` and ``--clean-database`` to allow increasing the number of old
+  snapshots to retain when cleaning up the database.
 
 Changed
 -------
@@ -869,7 +879,7 @@ Added
   by `nitz <https://github.com/nitz>`__ upstream in PR `633 <https://github.com/thp/urlwatch/pull/633>`__.
 * Filter ``jq`` to parse, transform, and extract ASCII JSON data. Contributed by `robgmills
   <https://github.com/robgmills>`__ upstream in PR `626 <https://github.com/thp/urlwatch/pull/626>`__.
-* Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with *urlwatch* 2.25)
+* Filter ``pretty-xml`` as an alternative to ``format-xml`` (backwards-compatible with *urlwatch* 2.28)
 * Alert user when the jobs file contains unrecognized directives (e.g. typo)
 
 Changed

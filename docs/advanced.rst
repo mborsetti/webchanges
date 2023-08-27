@@ -193,8 +193,8 @@ If running on Linux/macOS, please read about file permission restrictions in the
 
 .. _word_based_differ:
 
-Using word-based differ (``wdiff``)
------------------------------------
+Using word-based differ (``wdiff`` or ``pandiff``)
+--------------------------------------------------
 You can also specify an **external** ``diff``-style tool (a tool that takes two filenames (old, new) as parameter and
 returns the difference of the files on its standard output). For example, to to get word-based differences instead of
 line-based difference, use GNU ``wdiff``:
@@ -215,6 +215,12 @@ You can more finely control the output of ``wdiff`` with command line arguments;
    If you use an ``html`` report with ``diff_tool: wdiff``, the output of ``wdiff`` will be colorized.
 
 Alternatively you can use `PanDiff <https://github.com/davidar/pandiff>`__ to get markdown differences.
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   diff_tool: pandiff
+   is_markdown: true
 
 Note: the use of an external differ will override the ``diff`` setting of the ``html`` report.
 

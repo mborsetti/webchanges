@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import optparse
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Union
@@ -33,12 +34,18 @@ vobject_is_installed = importlib.util.find_spec('vobject') is not None
 
 
 # https://stackoverflow.com/a/48719723/1047040
+# https://stackoverflow.com/a/75996218/1047040
 def parse_rst(text: str) -> docutils.nodes.document:
     """Parse the rst document"""
     parser = docutils.parsers.rst.Parser()
-    components = (docutils.parsers.rst.Parser,)
-    # TODO: The frontend.OptionParser class will be replaced by a subclass of argparse.ArgumentParser in Docutils 0.21
-    settings = docutils.frontend.OptionParser(components=components).get_default_values()
+    # components = (docutils.parsers.rst.Parser,)
+    settings: Union[optparse.Values, docutils.frontend.Values]
+    if hasattr(docutils.frontend, 'get_default_settings'):
+        # docutils >= 0.18
+        settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
+    else:
+        # docutils < 0.18
+        settings = docutils.frontend.OptionParser(components=(docutils.parsers.rst.Parser,)).get_default_values()
     document = docutils.utils.new_document('<rst-doc>', settings=settings)
     parser.parse(text, document)
     return document

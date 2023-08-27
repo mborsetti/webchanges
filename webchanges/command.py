@@ -609,8 +609,7 @@ class UrlwatchCommand:
             print(f'No snapshots found to be deleted for {job.get_indexed_location()}')
             return 1
 
-    def modify_urls(self) -> None:
-        save = True
+    def modify_urls(self) -> int:
         if self.urlwatch_config.delete is not None:
             job = self._find_job(self.urlwatch_config.delete)
             if job is not None:
@@ -618,7 +617,7 @@ class UrlwatchCommand:
                 print(f'Removed {job}')
             else:
                 print(f'Job not found: {self.urlwatch_config.delete}')
-                save = False
+                return 1
 
         if self.urlwatch_config.add is not None:
             # Allow multiple specifications of filter=, so that multiple filters can be specified on the CLI
@@ -633,8 +632,36 @@ class UrlwatchCommand:
             print(f'Adding {job}')
             self.urlwatcher.jobs.append(job)
 
-        if save:
-            self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
+        if self.urlwatch_config.change_location is not None:
+            new_loc = self.urlwatch_config.change_location[1]
+            # Ensure the user isn't overwriting an existing job with the change.
+            if new_loc in (j.get_location() for j in self.urlwatcher.jobs):
+                print(
+                    f'The new location "{new_loc}" already exists for a job. Delete the existing job or choose a '
+                    f'different value.'
+                )
+                return 1
+            else:
+                job = self._find_job(self.urlwatch_config.change_location[0])
+                if job is not None:
+                    # Update the job's location (which will also update the guid) and move any history in the database
+                    # over to the job's updated guid.
+                    old_loc = job.get_location()
+                    print(f'Moving location of "{old_loc}" to "{new_loc}"')
+                    old_guid = job.get_guid()
+                    if old_guid not in self.urlwatcher.cache_storage.get_guids():
+                        print(f'No snapshots found for "{old_loc}"')
+                        return 1
+                    job.set_base_location(new_loc)
+                    num_moved = self.urlwatcher.cache_storage.move(old_guid, job.get_guid())
+                    if num_moved:
+                        print(f'Moved {num_moved} snapshots of "{old_loc}" to "{new_loc}"')
+                else:
+                    print(f'Job not found: "{self.urlwatch_config.change_location[0]}"')
+                    return 1
+
+        self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
+        return 0
 
     def edit_config(self) -> int:
         result = self.urlwatcher.config_storage.edit()
@@ -919,11 +946,10 @@ class UrlwatchCommand:
             self._exit(self.test_diff(self.urlwatch_config.test_diff))
 
         if self.urlwatch_config.dump_history:
-            sys.exit(self.dump_history(self.urlwatch_config.dump_history))
+            self._exit(self.dump_history(self.urlwatch_config.dump_history))
 
-        if self.urlwatch_config.add or self.urlwatch_config.delete:
-            self.modify_urls()
-            self._exit(0)
+        if self.urlwatch_config.add or self.urlwatch_config.delete or self.urlwatch_config.change_location:
+            self._exit(self.modify_urls())
 
         if self.urlwatch_config.test_reporter:
             self._exit(self.check_test_reporter())
@@ -938,8 +964,7 @@ class UrlwatchCommand:
             self.check_xmpp_login()
 
         if self.urlwatch_config.edit:
-            result = self.urlwatcher.jobs_storage.edit()
-            self._exit(result)
+            self._exit(self.urlwatcher.jobs_storage.edit())
 
         if self.urlwatch_config.edit_config:
             self._exit(self.edit_config())
@@ -948,12 +973,16 @@ class UrlwatchCommand:
             self._exit(self.edit_hooks())
 
         if self.urlwatch_config.gc_database:
-            self.urlwatcher.cache_storage.gc([job.get_guid() for job in self.urlwatcher.jobs])
+            self.urlwatcher.cache_storage.gc(
+                [job.get_guid() for job in self.urlwatcher.jobs], self.urlwatch_config.gc_database
+            )
             self.urlwatcher.cache_storage.close()
             self._exit(0)
 
         if self.urlwatch_config.clean_database:
-            self.urlwatcher.cache_storage.clean_cache([job.get_guid() for job in self.urlwatcher.jobs])
+            self.urlwatcher.cache_storage.clean_cache(
+                [job.get_guid() for job in self.urlwatcher.jobs], self.urlwatch_config.clean_database
+            )
             self.urlwatcher.cache_storage.close()
             self._exit(0)
 

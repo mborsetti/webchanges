@@ -59,7 +59,7 @@ def is_connected() -> bool:
 
 connection_required = pytest.mark.skipif(not is_connected(), reason='no Internet connection')
 py38_required = pytest.mark.skipif(sys.version_info < (3, 8), reason='requires Python 3.8')
-py310_skip = pytest.mark.skipif(sys.version_info >= (3, 10), reason='Python 3.10 not supported by pyppeteer')
+py_latest_only = pytest.mark.skipif(sys.version_info < (3, 11), reason='Time consuming; testing latest version only')
 
 TEST_JOBS = [
     (
@@ -182,7 +182,6 @@ def test_run_job(
     job = JobBase.unserialize(input_job)
     if sys.version_info < (3, 8) and job.use_browser:
         pytest.skip('Playwright testing requires Python 3.8')
-        return
 
     with JobState(cache_storage, job) as job_state:
         data, etag = job.retrieve(job_state)
@@ -205,7 +204,7 @@ def test_run_ftp_job() -> None:
 def test_run_ftp_job_needs_bytes() -> None:
     if os.getenv('GITHUB_ACTIONS'):
         pytest.skip('Test website cannot be reached from GitHub Actions')
-        return
+
     job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
     with JobState(cache_storage, job) as job_state:
         data, etag = job.retrieve(job_state)
@@ -222,7 +221,7 @@ def test_run_ftp_job_needs_bytes() -> None:
 def test_check_etag(job_data: Dict[str, Any], event_loop: AbstractEventLoop) -> None:
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
-        return
+
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
@@ -239,10 +238,9 @@ def test_check_etag(job_data: Dict[str, Any], event_loop: AbstractEventLoop) -> 
 def test_check_etag_304_request(job_data: Dict[str, Any], event_loop: AbstractEventLoop) -> None:
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
-        return
+
     if job_data.get('use_browser'):
         pytest.skip('Capturing of 304 cannot be implemented in Chrome')  # last tested with Chromium 89
-        return
 
     job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
     job = JobBase.unserialize(job_data)
@@ -267,7 +265,7 @@ def test_check_etag_304_request(job_data: Dict[str, Any], event_loop: AbstractEv
 def test_check_ignore_connection_errors_and_bad_proxy(job_data: Dict[str, Any], event_loop: AbstractEventLoop) -> None:
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
-        return
+
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@google.com:8080'
     job_data['timeout'] = 0.001
@@ -301,7 +299,7 @@ def test_check_ignore_http_error_codes_and_error_message(
         pytest.skip('Cannot debug due to Playwrigth/Windows bug')  # TODO Remove this and fix
     if sys.version_info < (3, 8) and job_data.get('use_browser'):
         pytest.skip('Playwright testing requires Python 3.8')
-        return
+
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['http_proxy'] = None
     job_data['timeout'] = 30
@@ -335,7 +333,7 @@ def test_check_ignore_http_error_codes_and_error_message(
     job_data['ignore_http_error_codes'] = None
 
 
-@py38_required  # type: ignore[misc]
+@py_latest_only  # type: ignore[misc]
 @connection_required  # type: ignore[misc]
 def test_stress_use_browser(event_loop: AbstractEventLoop) -> None:
     jobs_file = data_path.joinpath('jobs-use_browser.yaml')
