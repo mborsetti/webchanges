@@ -15,6 +15,11 @@ Added
   'Connection reset by peer'))`` error received initially from a misconfigured server.
 * ``css`` and ``xpath`` filters now accept a ``sort`` subfilter to sort matched elements lexicographically.
 * Improved error reporting for ``command`` jobs includes the error text from the failed command.
+* New ``separate`` configuration option for reporters to split reports into one-per-job.
+* New ``--change-location`` command line argument allowing to keep job history when the url or command
+  changes.
+* Added ``RETAIN-LIMIT`` to ``--gc-database`` and ``--clean-database`` to allow increasing the number of old
+  snapshots to retain when cleaning up the database.
 
 Changed
 -------
@@ -30,3 +35,5 @@ Internals
 * Exclude tests from being recognized as package during build (contributed by `Max
   <https://github.com/aragon999>`__ in `#54 <https://github.com/mborsetti/webchanges/pull/54>`__).
 * Refactored and cleaned up some tests.
+* Initial testing with Python 3.12, but a reported bug in 3.12.0-rc1 ``typing.TypeVar`` prevents ``pyee`` dependency
+  of ``playwright`` from loading; awaiting for 3.12.0-rc2.

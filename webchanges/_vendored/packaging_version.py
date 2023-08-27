@@ -1,8 +1,8 @@
 """
-Vendored version of packaging.version.parse() from packaging v23.0 released on 9-Jan-23
-(commit https://github.com/pypa/packaging/tree/e3f218269c0f2fd2aff228b310d7f474a3ffd487).
+Vendored version of packaging.version.parse() from packaging v23.1 released on 12-Apr-23
+(commit https://github.com/pypa/packaging/tree/d563917280d65a6ce2e622bd3d07438e1ee259f3).
 
-See https://github.com/pypa/packaging.
+See https://github.com/pypa/packaging and https://github.com/pypa/packaging/blob/main/src/packaging/version.py.
 
 """
 
@@ -219,7 +219,7 @@ from __future__ import annotations
 import collections
 import itertools
 import re
-from typing import Callable, Optional, SupportsInt, Tuple, Union
+from typing import Any, Callable, Optional, SupportsInt, Tuple, Union
 
 # `from ._structures import Infinity, InfinityType, NegativeInfinity, NegativeInfinityType`
 # replaced with the contents of the file
@@ -326,7 +326,7 @@ class InvalidVersion(ValueError):
 
 
 class _BaseVersion:
-    _key: CmpKey
+    _key: Tuple[Any, ...]
 
     def __hash__(self) -> int:
         return hash(self._key)

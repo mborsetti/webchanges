@@ -74,6 +74,8 @@ Internals
 * Exclude tests from being recognized as package during build (contributed by `Max
   <https://github.com/aragon999>`__ in `#54 <https://github.com/mborsetti/webchanges/pull/54>`__).
 * Refactored and cleaned up some tests.
+* Initial testing with Python 3.12, but a reported bug in 3.12.0-rc1 ``typing.TypeVar`` prevents ``pyee`` dependency
+  of ``playwright`` from loading; awaiting for 3.12.0-rc2.
 
 
 Version 3.12
