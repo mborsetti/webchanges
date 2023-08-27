@@ -48,7 +48,8 @@ crontab)::
 Comparing with several latest snapshots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If a webpage frequently changes between several known stable states (e.g. A/B layout testing), it may be desirable to
-have changes reported only if the webpage changes into a new unknown state. You can use compared_versions to do this.
+have changes reported only if the content (webpage, URI, command result, etc.) changes into a new unknown state. You
+can use compared_versions to do this.
 
 .. code-block:: yaml
 

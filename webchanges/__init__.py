@@ -25,7 +25,7 @@ __version__ = '3.13rc1'
 __description__ = (
     'Check web (or command output) for changes since last run and notify.\n'
     '\n'
-    'Anonymously alerts you of webpage changes.'
+    'Anonymously alerts you of web changes.'
 )
 __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'

@@ -13,7 +13,7 @@ webchanges |downloads|
 detected. **webchanges** can also check the output of local commands. The notification includes the changed URL or
 command and a summary (diff) of what has changed.
 
-**webchanges** *anonymously* alerts you of webpage changes.
+**webchanges** *anonymously* alerts you of web changes.
 
 
 
