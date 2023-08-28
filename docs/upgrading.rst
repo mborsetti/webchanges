@@ -32,8 +32,8 @@ Upgrading from a :program:`urlwatch` 2.28 setup is automatic (see more below), a
   * Other legibility improvements
 * Improved ``telegram`` reporter that uses MarkdownV2 and preserves most formatting of HTML sites including clickable
   links, bolding, underlining, italics and strikethrough.
-* The use of Playwright instead of Pyppeteer and (old version of) Chromium for browsing jobs to render JavaScript
-  (called ``navigate`` in :program:`urlwatch`), including:
+* A more complete use of Playwright  for browsing jobs to render JavaScript (called ``navigate`` in
+  :program:`urlwatch`), including:
 
   * Upgraded browser engine to the latest released version of Google Chrome
   * Higher stability by optimizing of concurrency
@@ -60,9 +60,10 @@ Upgrading from a :program:`urlwatch` 2.28 setup is automatic (see more below), a
 * The support of Unicode throughout, including in filters and in the jobs and configuration YAML files
 * The fixing of the ``format-json`` filter from unexpectedly reordering contents of dictionaries, now controllable by
   the new sub-directive ``sort_keys``
+* The ability to undo mistakes by rolling back the database using ``--rollback-database``.
 * More reliable releases due to:
 
-  * A 39 percentage point increase in code testing coverage (to 81%)
+  * A 39 percentage point increase in code testing coverage (to ~81%)
   * Completely new continuous integration (CI) and continuous delivery (CD) pipeline (GitHub Actions with pre-commit)
   * Uses of flake8 and doc8 linters and pre-commit checks
   * Code security checks using bandit
@@ -107,7 +108,8 @@ Playwright:
 
    webchanges --install-chrome
 
-You can free up disk space if no other packages use Pyppeteer by, in order:
+If upgrading from :program:`urlwatch` 2.27 or earlier, you can free up disk space if no other packages use Pyppeteer
+by, in order:
 
 1) Removing the downloaded Chromium images by deleting the entire *directory* (and its subdirectories) shown by running:
 
@@ -316,7 +318,7 @@ Relative to :program:`urlwatch` 2.28:
   * Unicode is supported throughout, including in filters and jobs and configuration YAML files.
   * Implemented `pathlib <https://docs.python.org/3/library/pathlib.html>`__ (new in Python 3.4) for better
     code readability and functionality.
-  * A 39 percentage point increase in code testing coverage (to 81%), a completely new continuous integration
+  * A 39 percentage point increase in code testing coverage (to ~81%), a completely new continuous integration
     (CI) and continuous delivery (CD) pipeline (`GitHub Actions <https://github.com/features/actions>`__), and testing
     on Ubuntu and macOS (with Windows 10 x64 to come) increases reliability of new releases.
   * Using `flake8 <https://pypi.org/project/flake8/>`__ to check PEP-8 compliance and more.
@@ -447,4 +449,4 @@ File. In. Every. Single. Directory; the above notice is amply sufficient.
    [follows full text of the urlwatch license]
 
 While a lot of improvements have been made from urlwatch 2.21, there's no lack of proper acknowledgement of the
-package's roots in Thomas Perl's code -- in multiple ways -- and of its full, explicit licensing.
+package's use of Thomas Perl's code -- in multiple ways -- and of its full, explicit licensing.

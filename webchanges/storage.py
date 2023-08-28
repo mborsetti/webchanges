@@ -751,7 +751,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     f'The configuration file {self.filename} is missing directive(s); the following default '
                     f'values are being used:\n'
                     f'{yaml.safe_dump(missing)}'
-                    f'See documentation at {__docs_url__}/en/stable/configuration.html'
+                    f'See documentation at {__docs_url__}en/stable/configuration.html'
                 )
                 config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
             logger.info(f'Loaded configuration from {self.filename}')
