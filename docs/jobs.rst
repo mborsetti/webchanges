@@ -161,6 +161,9 @@ that this will always work (other measures, such as rate limiting or session ini
 .. tip:: Please see the :ref:`no_conditional_request` directive if you need to turn off the use of :ref:`conditional
    requests <conditional_requests>` for those extremely rare websites that don't handle it (e.g. Google Flights).
 
+.. tip:: If a job fails, you can run in verbose (``-v``) mode to save in the temporary folder a screenshot, a full
+   page image, and the HTML contents at the moment of failure (see log for filenames) to aid in debugging.
+
 Internally, this type of job has the attribute ``kind: browser``.
 
 
@@ -173,6 +176,9 @@ Internally, this type of job has the attribute ``kind: browser``.
 
 .. versionchanged:: 3.11
    Implemented measures to reduce the chance of detection.
+
+.. versionchanged:: 3.14
+   Saves the screenshot, full page image and HTML contents when a job fails while running in verbose mode.
 
 
 Required directives

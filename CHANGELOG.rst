@@ -32,15 +32,26 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
+Notice
+======
+Support for Python 3.8 will be removed on or about 5 October 2023. A reminder that older Python versions are
+supported for 3 years after being obsoleted by a new major release (i.e. about 4 years since their original release).
+
+
+Version 3.14
+===================
+2023-09-01
+
+Added
+-----
+* When running in verbose (``-v``) mode, if a ``url`` job with ``use_browser: true`` fails with a Playwright error,
+  capture and save in the temporary folder a screenshot, a full page image, and the HTML contents of the page at the
+  moment of the error (see log file for filenames).
+
 
 Version 3.13
 ===================
 2023-08-28
-
-Notice
-------
-Support for Python 3.8 will be removed on or about 5 October 2023. A reminder that older Python versions are
-supported for 3 years after being obsoleted by a new major release (i.e. about 4 years since their original release).
 
 Added
 -----

@@ -129,7 +129,8 @@ You can test a job and its filter by using the command line argument ``--test`` 
 (from ``--list``) or its URL/command; :program:`webchanges` will display the filtered output. This allows to easily
 test changes in filters. Use a negative index number to select a job from the bottom of your job list (i.e. -1 is the
 last job, -2 is the second to last job, etc.).  Combine ``--test`` with ``--verbose`` to get more information, for
-example the text returned from a website with a 4xx (client error) status code:
+example the text returned from a website with a 4xx (client error) status code, or, if using ``use_browser: true``, a
+screenshot, a full page image, and the HTML contents at the moment of failure (see log for filenames):
 
 .. code-block:: bash
 
@@ -154,6 +155,9 @@ To only check the config, job and hooks files for errors, use ``--test`` without
    When JOB is not specified, the hooks file is also checked for syntax errors (in addition to the config and jobs
    files).
 
+.. versionchanged:: 3.14
+   Saves the screenshot, full page image and HTML contents when a ``url`` job with ``use_browser: true`` fails
+   while running in verbose mode.
 
 .. _test-diff:
 

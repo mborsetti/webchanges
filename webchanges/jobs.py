@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import tempfile
 import textwrap
 import time
 import warnings
@@ -1307,6 +1308,31 @@ class BrowserJob(UrlJobBase):
 
             except PlaywrightError as e:
                 logger.info(f'Job {self.index_number}: Browser returned error {e.args[0]}\n({url})')
+                if logger.root.level <= 20:
+                    try:
+                        screenshot_filename = tempfile.NamedTemporaryFile(
+                            prefix=f'webchanges_screenshot_{self.index_number}_', suffix='.png', delete=False
+                        ).name
+                        page.screenshot(path=screenshot_filename)
+                        logger.info(f'Job {self.index_number}: Screenshot saved at {screenshot_filename}')
+                    except PlaywrightError:
+                        Path(screenshot_filename).unlink()
+                    try:
+                        full_filename = tempfile.NamedTemporaryFile(
+                            prefix=f'webchanges_screenshot-full_{self.index_number}_', suffix='.png', delete=False
+                        ).name
+                        page.screenshot(path=full_filename, full_page=True)
+                        logger.info(f'Job {self.index_number}: Full page image saved at {full_filename}')
+                    except PlaywrightError:
+                        Path(full_filename).unlink()
+                    try:
+                        html_filename = tempfile.NamedTemporaryFile(
+                            prefix=f'webchanges_content_{self.index_number}_', suffix='.html', delete=False
+                        ).name
+                        Path(html_filename).write_text(page.content())
+                        logger.info(f'Job {self.index_number}: Page HTML content saved at {html_filename}')
+                    except PlaywrightError:
+                        Path(html_filename).unlink()
                 context.close()
                 raise BrowserResponseError(e.args, None)
 

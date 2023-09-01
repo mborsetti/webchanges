@@ -202,7 +202,7 @@ class JobState(ContextManager):
                     self.tries += 1
                     logger.info(
                         f'Job {self.job.index_number}: Job ended with error; incrementing cumulative error runs to '
-                        f'{self.tries} ({str(e).strip()})'
+                        f'{self.tries}'
                     )
         except Exception as e:
             # Job failed its chance to handle error
@@ -212,8 +212,8 @@ class JobState(ContextManager):
             if not isinstance(e, NotModifiedError):
                 self.tries += 1
                 logger.info(
-                    f'Job {self.job.index_number}: Job ended with error (internal handling failed); '
-                    f'incrementing cumulative error runs to {self.tries} ({str(e).strip()})'
+                    f'Job {self.job.index_number}: Job ended with error (internal handling failed); incrementing '
+                    f'cumulative error runs to {self.tries}'
                 )
 
         logger.debug(f'Job {self.job.index_number}: Processed as {self.added_data()}')
