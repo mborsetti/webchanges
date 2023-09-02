@@ -148,20 +148,19 @@ jobs:
           COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
           COVERALLS_PARALLEL: true
 
-  test_others:
+  test_macos:
     # No redis (only works on ubuntu)
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
-    # needs: pre-commit
+    # needs: [pre-commit]
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-#        os: [windows-latest, macos-latest]  # TODO: lxml not available on Windows for Python 3.11
-        os: [macos-latest]
         # Python versions at https://github.com/actions/python-versions/releases
         python-version: ['3.11', '3.10', '3.9', '3.8']
 #        python-version: ['3.12.0-rc.1']
-    runs-on: ${{ matrix.os }}
+        os: [macos-latest]
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
@@ -186,36 +185,18 @@ jobs:
         run: |
           pip install -U pip setuptools wheel
 
-#      - name: Install wheel-less lxml for Python 3.10 (MacOS)
+#      - name: Install wheel-less lxml for Python 3.10
 #        # https://lxml.de/installation.html#installation
-#        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'macOS'
+#        if: matrix.python-version == '3.10.0-beta.4'
 #        run: |
 #          STATIC_DEPS=true sudo -H pip install lxml
 
-      - name: Install pdf2text and ocr dependencies (macOS Python latest)
+      - name: Install pdf2text and ocr dependencies (Python latest)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.11' && runner.os == 'macOS'
+        if: matrix.python-version == '3.11'
         run: |
           brew install poppler tesseract
           pip install -U pdftotext Pillow pytesseract
-
-#      ISSUE WITH THE BELOW: 'conda' is not recognized as an internal or external command,
-#      operable program or batch file.
-#      - name: Install pdf2text and ocr dependencies (Windows Python 3.10)
-#        # do full install and testing of pdf2text and ocr only on latest Python version
-#        if: matrix.python-version == '3.10' && runner.os == 'Windows'
-#        run: |
-#          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
-#          powershell Get-FileHash Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
-#          call Miniconda3-latest-Windows-x86_64.exe /S /RegisterPython=0
-#          del Miniconda3-latest-Windows-x86_64.exe /f
-#          call conda install -y -c conda-forge poppler
-#          set TESSERACT=tesseract-ocr-w64-setup-v5.0.1.20220118.exe
-#          curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
-#          call %TESSERACT% /S
-#          del %TESSERACT% /f
-#          pip install -U keyring pdftotext Pillow pytesseract
-#        shell: cmd
 
       - name: Install all other dependencies (up to py11)
         if: matrix.python-version <= '3.11'
@@ -228,13 +209,83 @@ jobs:
           pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
       - name: Run tests
-        if: runner.os != 'Windows'
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
           python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
 
-      - name: Run tests (Windows)
-        if: runner.os == 'Windows'
+      - name: Upload coverage data to coveralls.io (parallel)
+        run: coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
+          COVERALLS_PARALLEL: true
+
+  test_windows:
+    # No redis (only works on ubuntu), only run on latest python-version
+    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    # Identifies any jobs that must complete successfully before this job will run
+    # needs: [pre-commit]
+    # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
+    strategy:
+      matrix:
+        # Python versions at https://github.com/actions/python-versions/releases
+        python-version: ['3.11']
+#        python-version: ['3.12.0-rc.1']
+        os: [windows-latest]
+
+    env:
+      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
+      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
+
+    steps:
+      # Checks out a copy of the repository per https://github.com/actions/checkout
+      - name: Check out repo
+        uses: actions/checkout@main
+
+      # Build Python and packages per https://github.com/actions/setup-python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            tests/requirements_pytest.txt
+
+      - name: Upgrade pip etc.
+        run: |
+          pip install -U pip setuptools wheel
+
+#      ISSUE WITH THE BELOW: 'conda' is not recognized as an internal or external command,
+#      operable program or batch file.
+      - name: Install pdf2text and ocr dependencies (Python latest)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.11'
+        run: |
+          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
+          powershell Get-FileHash Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
+          call Miniconda3-latest-Windows-x86_64.exe /S /RegisterPython=0
+          del Miniconda3-latest-Windows-x86_64.exe /f
+          call conda install -y -c conda-forge poppler
+          set TESSERACT=tesseract-ocr-w64-setup-v5.0.1.20220118.exe
+          curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
+          call %TESSERACT% /S
+          del %TESSERACT% /f
+          pip install -U keyring pdftotext Pillow pytesseract
+        shell: cmd
+
+      - name: Install all other dependencies (up to py11)
+        if: matrix.python-version <= '3.11'
+        run: |
+          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
+
+      - name: Install all other dependencies (py12)
+        if: matrix.python-version > '3.11'
+        run: |
+          pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
+
+      - name: Run tests
         # workaround for Windows fatal exception: access violation
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
@@ -251,7 +302,7 @@ jobs:
 
   coveralls:
     name: Indicate completion to coveralls.io
-    needs: [test_ubuntu, test_others]
+    needs: [test_ubuntu, test_macos, test_windows]
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls parallel finished
@@ -262,7 +313,7 @@ jobs:
 
   deploy:
     name: Deploy release
-    needs: [test_ubuntu, test_others]
+    needs: [test_ubuntu, test_macos, test_windows]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
