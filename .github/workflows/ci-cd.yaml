@@ -55,173 +55,7 @@ jobs:
 #      # - name: Run pre-commit
 #      #   uses: pre-commit/action@v2.0.3
 
-#  test_ubuntu:
-#    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
-#    runs-on: ${{ matrix.os }}
-#    # Identifies any jobs that must complete successfully before this job will run
-#    # needs: [pre-commit]
-#    # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
-#    strategy:
-#      matrix:
-#        # Python versions at https://github.com/actions/python-versions/releases
-#        python-version: ['3.11', '3.10', '3.9', '3.8']
-##        python-version: ['3.12.0-rc.1']
-#        os: [ubuntu-latest]
-#
-#    # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
-#    # If you are using GitHub-hosted runners, you must use an Ubuntu runner
-#    services:
-#      # Label used to access the service container
-#      redis:
-#        # Docker Hub image
-#        image: redis
-#        # Set health checks to wait until redis has started
-#        options: >-
-#          --health-cmd "redis-cli ping"
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#        ports:
-#          # Maps port 6379 on service container to the host
-#          - 6379:6379
-#
-#    env:
-#      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
-#      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-#      REDIS_URI: redis://localhost:6379
-#
-#    steps:
-#      # Checks out a copy of the repository per https://github.com/actions/checkout
-#      - name: Check out repo
-#        uses: actions/checkout@main
-#
-#      # Build Python and packages per https://github.com/actions/setup-python
-#      - name: Set up Python ${{ matrix.python-version }}
-#        uses: actions/setup-python@main
-#        with:
-#          python-version: ${{ matrix.python-version }}
-#          cache: 'pip'
-#          cache-dependency-path: |
-#            requirements.txt
-#            tests/requirements_pytest.txt
-#
-#      - name: Upgrade pip etc.
-#        run: |
-#          pip install -U pip setuptools wheel
-#
-#      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
-#        # https://lxml.de/installation.html#installation
-#        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'Linux'
-#        run: |
-#          sudo apt-get -y update
-#          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
-#          CFLAGS="-O0" pip install lxml
-#
-#      - name: Install pdf2text and ocr dependencies (Linux Python latest)
-#        # do full install and testing of pdf2text and ocr only on latest Python version
-#        if: matrix.python-version == '3.11' && runner.os == 'Linux'
-#        # https://github.com/jalan/pdftotext#os-dependencies
-#        run: |
-#          sudo apt-get -y update
-#          sudo apt-get -y install python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
-#          pip install -U pdftotext Pillow pytesseract
-#
-#      - name: Install all other dependencies (up top py11)
-#        if: matrix.python-version <= '3.11'
-#        run: |
-#          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
-#
-#      - name: Install all other dependencies (py12)
-#        if: matrix.python-version > '3.11'
-#        run: |
-#          pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
-#
-#      - name: Run tests
-#        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
-#        run: >
-#          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
-#
-#      - name: Upload coverage data to coveralls.io (parallel)
-#        run: coveralls --service=github
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.github_token }}
-#          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
-#          COVERALLS_PARALLEL: true
-#
-#  test_macos:
-#    # No redis (only works on ubuntu)
-#    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
-#    runs-on: ${{ matrix.os }}
-#    # Identifies any jobs that must complete successfully before this job will run
-#    # needs: [pre-commit]
-#    # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
-#    strategy:
-#      matrix:
-#        # Python versions at https://github.com/actions/python-versions/releases
-#        python-version: ['3.11', '3.10', '3.9', '3.8']
-##        python-version: ['3.12.0-rc.1']
-#        os: [macos-latest]
-#
-#    env:
-#      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
-#      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-#
-#    steps:
-#      # Checks out a copy of the repository per https://github.com/actions/checkout
-#      - name: Check out repo
-#        uses: actions/checkout@main
-#
-#      # Build Python and packages per https://github.com/actions/setup-python
-#      - name: Set up Python ${{ matrix.python-version }}
-#        uses: actions/setup-python@main
-#        with:
-#          python-version: ${{ matrix.python-version }}
-#          cache: 'pip'
-#          cache-dependency-path: |
-#            requirements.txt
-#            tests/requirements_pytest.txt
-#
-#      - name: Upgrade pip etc.
-#        run: |
-#          pip install -U pip setuptools wheel
-#
-##      - name: Install wheel-less lxml for Python 3.10
-##        # https://lxml.de/installation.html#installation
-##        if: matrix.python-version == '3.10.0-beta.4'
-##        run: |
-##          STATIC_DEPS=true sudo -H pip install lxml
-#
-#      - name: Install pdf2text and ocr dependencies (Python latest)
-#        # do full install and testing of pdf2text and ocr only on latest Python version
-#        if: matrix.python-version == '3.11'
-#        run: |
-#          brew install poppler tesseract
-#          pip install -U pdftotext Pillow pytesseract
-#
-#      - name: Install all other dependencies (up to py11)
-#        if: matrix.python-version <= '3.11'
-#        run: |
-#          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
-#
-#      - name: Install all other dependencies (py12)
-#        if: matrix.python-version > '3.11'
-#        run: |
-#          pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
-#
-#      - name: Run tests
-#        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
-#        run: >
-#          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
-#
-#      - name: Upload coverage data to coveralls.io (parallel)
-#        run: coveralls --service=github
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.github_token }}
-#          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
-#          COVERALLS_PARALLEL: true
-
-  test_windows:
-    # No redis (only works on ubuntu), only run on latest python-version
+  test_ubuntu:
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
@@ -230,9 +64,103 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.11']
+        python-version: ['3.11', '3.10', '3.9', '3.8']
 #        python-version: ['3.12.0-rc.1']
-        os: [windows-latest]
+        os: [ubuntu-latest]
+
+    # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
+    # If you are using GitHub-hosted runners, you must use an Ubuntu runner
+    services:
+      # Label used to access the service container
+      redis:
+        # Docker Hub image
+        image: redis
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps port 6379 on service container to the host
+          - 6379:6379
+
+    env:
+      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
+      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
+      REDIS_URI: redis://localhost:6379
+
+    steps:
+      # Checks out a copy of the repository per https://github.com/actions/checkout
+      - name: Check out repo
+        uses: actions/checkout@main
+
+      # Build Python and packages per https://github.com/actions/setup-python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            tests/requirements_pytest.txt
+
+      - name: Upgrade pip etc.
+        run: |
+          pip install -U pip setuptools wheel
+
+      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
+        # https://lxml.de/installation.html#installation
+        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'Linux'
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
+          CFLAGS="-O0" pip install lxml
+
+      - name: Install pdf2text and ocr dependencies (Linux Python latest)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.11' && runner.os == 'Linux'
+        # https://github.com/jalan/pdftotext#os-dependencies
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
+          pip install -U pdftotext Pillow pytesseract
+
+      - name: Install all other dependencies (up top py11)
+        if: matrix.python-version <= '3.11'
+        run: |
+          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
+
+      - name: Install all other dependencies (py12)
+        if: matrix.python-version > '3.11'
+        run: |
+          pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
+
+      - name: Run tests
+        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
+        run: >
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
+
+      - name: Upload coverage data to coveralls.io (parallel)
+        run: coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
+          COVERALLS_PARALLEL: true
+
+  test_macos:
+    # No redis (only works on ubuntu)
+    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    # Identifies any jobs that must complete successfully before this job will run
+    # needs: [pre-commit]
+    # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
+    strategy:
+      matrix:
+        # Python versions at https://github.com/actions/python-versions/releases
+        python-version: ['3.11', '3.10', '3.9', '3.8']
+#        python-version: ['3.12.0-rc.1']
+        os: [macos-latest]
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
@@ -257,46 +185,33 @@ jobs:
         run: |
           pip install -U pip setuptools wheel
 
-#      ISSUE WITH THE BELOW:
-#      Hangs at start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
-#      - name: Install pdf2text and ocr dependencies (Python 3.11)
-#        # do full install and testing of pdf2text and ocr only on latest Python version
-#        if: matrix.python-version == '3.11'
+#      - name: Install wheel-less lxml for Python 3.10
+#        # https://lxml.de/installation.html#installation
+#        if: matrix.python-version == '3.10.0-beta.4'
 #        run: |
-#          cd %temp%
-#          dir
-#          rem # install conda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
-#          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
-#          powershell Get-FileHash Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
-#          echo hash should match the one at https://docs.conda.io/projects/miniconda/en/latest/
-#          rem # below, /S = silent mode
-#          start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
-#          del Miniconda3-latest-Windows-x86_64.exe /f
-#          call "%temp%\Miniconda3\conda" install -y -c conda-forge poppler
-#          rem # *** get latest tesseract filename from https://digi.bib.uni-mannheim.de/tesseract/?C=M;O=D
-#          set TESSERACT=tesseract-ocr-w64-setup-5.3.1.20230401.exe
-#          curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
-#          start /wait "" %TESSERACT% /S
-#          del %TESSERACT% /f
-#          pip install -U keyring pdftotext Pillow pytesseract
-#        shell: cmd
+#          STATIC_DEPS=true sudo -H pip install lxml
 
-      - name: Install all other dependencies (up to Python 3.11)
+      - name: Install pdf2text and ocr dependencies (Python latest)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.11'
+        run: |
+          brew install poppler tesseract
+          pip install -U pdftotext Pillow pytesseract
+
+      - name: Install all other dependencies (up to py11)
         if: matrix.python-version <= '3.11'
         run: |
           pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
-      - name: Install all other dependencies (Python 3.12)
+      - name: Install all other dependencies (py12)
         if: matrix.python-version > '3.11'
         run: |
           pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
       - name: Run tests
-        # workaround for Windows fatal exception: access violation
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/ -p
-          no:faulthandler
+          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
 
       - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
@@ -305,59 +220,149 @@ jobs:
           COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
           COVERALLS_PARALLEL: true
 
-#  coveralls:
-#    name: Completion -> coveralls.io
-#    needs: [test_ubuntu, test_macos, test_windows]
-#    runs-on: ubuntu-latest
-#    steps:
-#    - name: Coveralls parallel finished
-#      uses: coverallsapp/github-action@master
-#      with:
-#        github-token: ${{ secrets.github_token }}
-#        parallel-finished: true
+# NOTES FROM 02-09-2023:
+# No need to install poppler, tesseract etc. (tests will skip_
+# However, pystest would simply crash at collecting (Error: Process completed with exit code 1) so no good.
+
+#  test_windows:
+#    # No redis (only works on ubuntu), only run on latest python-version
+#    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
+#    runs-on: ${{ matrix.os }}
+#    # Identifies any jobs that must complete successfully before this job will run
+#    # needs: [pre-commit]
+#    # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
+#    strategy:
+#      matrix:
+#        # Python versions at https://github.com/actions/python-versions/releases
+#        python-version: ['3.11']
+##        python-version: ['3.12.0-rc.1']
+#        os: [windows-latest]
 #
-#  deploy:
-#    name: Deploy release
-#    needs: [test_ubuntu, test_macos, test_windows]
-#    # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
-#    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-#    runs-on: ubuntu-latest
+#    env:
+#      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
+#      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
+#
 #    steps:
+#      # Checks out a copy of the repository per https://github.com/actions/checkout
 #      - name: Check out repo
 #        uses: actions/checkout@main
 #
-#      - name: Set up Python
+#      # Build Python and packages per https://github.com/actions/setup-python
+#      - name: Set up Python ${{ matrix.python-version }}
 #        uses: actions/setup-python@main
 #        with:
-#          python-version: '3.11'
+#          python-version: ${{ matrix.python-version }}
 #          cache: 'pip'
+#          cache-dependency-path: |
+#            requirements.txt
+#            tests/requirements_pytest.txt
 #
-#      # Install pip dependencies
-#      - name: Install dependencies
+#      - name: Upgrade pip etc.
 #        run: |
-#          pip install -U pip build
+#          pip install -U pip setuptools wheel
 #
-#      # build https://pypa-build.readthedocs.io/en/latest/
-#      - name: Build dist
+##      ISSUE WITH THE BELOW:
+##      Hangs at start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
+##      - name: Install pdf2text and ocr dependencies (Python 3.11)
+##        # do full install and testing of pdf2text and ocr only on latest Python version
+##        if: matrix.python-version == '3.11'
+##        run: |
+##          cd %temp%
+##          dir
+##          rem # install conda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
+##          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
+##          powershell Get-FileHash Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
+##          echo hash should match the one at https://docs.conda.io/projects/miniconda/en/latest/
+##          rem # below, /S = silent mode
+##          start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
+##          del Miniconda3-latest-Windows-x86_64.exe /f
+##          call "%temp%\Miniconda3\conda" install -y -c conda-forge poppler
+##          rem # *** get latest tesseract filename from https://digi.bib.uni-mannheim.de/tesseract/?C=M;O=D
+##          set TESSERACT=tesseract-ocr-w64-setup-5.3.1.20230401.exe
+##          curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
+##          start /wait "" %TESSERACT% /S
+##          del %TESSERACT% /f
+##          pip install -U keyring pdftotext Pillow pytesseract
+##        shell: cmd
+#
+#      - name: Install all other dependencies (up to Python 3.11)
+#        if: matrix.python-version <= '3.11'
 #        run: |
-#          python -m build
+#          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 #
-#      # PyPI publish GitHub Action from https://github.com/pypa/gh-action-pypi-publish
-#      - name: Publish package
-#        uses: pypa/gh-action-pypi-publish@release/v1
-#        with:
-#          user: __token__
-#          password: ${{ secrets.pypi_password }}
+#      - name: Install all other dependencies (Python 3.12)
+#        if: matrix.python-version > '3.11'
+#        run: |
+#          pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
 #
-#      - name: Create GitHub release
-#        id: create_release
-#        uses: actions/create-release@main
+#      - name: Run tests
+#        # workaround for Windows fatal exception: access violation
+#        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
+#        run: >
+#          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/ -p
+#          no:faulthandler
+#
+#      - name: Upload coverage data to coveralls.io (parallel)
+#        run: coveralls --service=github
 #        env:
 #          GITHUB_TOKEN: ${{ secrets.github_token }}
-#        with:
-#          tag_name: ${{ github.ref }}
-#          release_name: ${{ github.ref }}
-#          body_path: RELEASE.rst
-#          draft: false
-#          prerelease: false
-#
+#          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
+#          COVERALLS_PARALLEL: true
+
+  coveralls:
+    name: Completion -> coveralls.io
+#    needs: [test_ubuntu, test_macos, test_windows]
+    needs: [test_ubuntu, test_macos]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls parallel finished
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        parallel-finished: true
+
+  deploy:
+    name: Deploy release
+#    needs: [test_ubuntu, test_macos, test_windows]
+    needs: [test_ubuntu, test_macos]
+    # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@main
+
+      - name: Set up Python
+        uses: actions/setup-python@main
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # Install pip dependencies
+      - name: Install dependencies
+        run: |
+          pip install -U pip build
+
+      # build https://pypa-build.readthedocs.io/en/latest/
+      - name: Build dist
+        run: |
+          python -m build
+
+      # PyPI publish GitHub Action from https://github.com/pypa/gh-action-pypi-publish
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.pypi_password }}
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body_path: RELEASE.rst
+          draft: false
+          prerelease: false
