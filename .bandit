@@ -1,7 +1,7 @@
 [bandit]
 # Find common security issues in Python code.
 # Runs as part of pre-commit.
-# Config file documentation at https://github.com/PyCQA/bandit#configuration
+# Config file documentation at https://bandit.readthedocs.io/en/latest/config.html
 
 targets: webchanges,tests
 skips: B101,B404,B602,B603

@@ -16,6 +16,7 @@ from _pytest.logging import LogCaptureFixture
 from _pytest.monkeypatch import MonkeyPatch
 
 from tests.test_storage import DATABASE_ENGINES, prepare_storage_test
+
 from webchanges import __copyright__, __min_python_version__, __project_name__, __version__
 from webchanges.cli import first_run, locate_storage_file, migrate_from_legacy, python_version_warning, setup_logger
 from webchanges.command import UrlwatchCommand

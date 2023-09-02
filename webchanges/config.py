@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import textwrap
 
 # import os
 from dataclasses import dataclass, field
@@ -91,9 +92,13 @@ class CommandConfig(BaseConfig):
 
         :returns: The Python arguments parser.
         """
+        description = '\n'.join(
+            textwrap.wrap(doc.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--(', '\n\n'), 79)
+        )
 
         parser = argparse.ArgumentParser(
-            description=doc.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--', '\n\n'),
+            prog=__project_name__,
+            description=description,
             epilog=f'Full documentation is at {__docs_url__}\n',
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
@@ -282,9 +287,7 @@ class CommandConfig(BaseConfig):
             metavar='NUM_SNAPSHOTS',
         )
 
-        group = parser.add_argument_group(
-            'backward compatibility (WARNING: all remarks are deleted from jobs file; use --edit instead)'
-        )
+        group = parser.add_argument_group('deprecated')
         group.add_argument('--add', help='add a job (key1=value1,key2=value2,...) [use --edit instead]', metavar='JOB')
         group.add_argument(
             '--delete', help='delete a job (by index or URL/command) [use --edit instead]', metavar='JOB'

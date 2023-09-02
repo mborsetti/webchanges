@@ -1,14 +1,265 @@
+# Project metadata, including build by setuptools
+# See https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+
+# TOML syntax at https://toml.io/en/
+
+
 [build-system]
 # Minimum requirements for the build system to execute.
-requires = ['setuptools', 'wheel']  # PEP 508 specifications.
+requires = ['setuptools']  # PEP 508 specifications.
+# Setuptools specification
+build-backend = "setuptools.build_meta"
 
-[tool.black]
+[project]
+# See https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+dynamic = ['version', 'dependencies']
+name = 'webchanges'
+description = """\
+    Check web (or command output) for changes since last run and notify. Anonymously alerts you of web changes.\
+    """
+readme = { file = 'README.rst', content-type = 'text/x-rst' }
+requires-python = '>=3.8'
+license = {file = 'LICENSE'}
+authors = [
+    {name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com'},
+]
+maintainers = [
+    {name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com'},
+]
+keywords = ['webmonitoring', 'monitoring']
+classifiers = [
+    'Environment :: Console',
+    'Topic :: Internet',
+    'Topic :: Internet :: WWW/HTTP',
+    'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
+    'Topic :: Utilities',
+    'Development Status :: 5 - Production/Stable',
+    'License :: OSI Approved :: MIT License',
+    'License :: OSI Approved :: BSD License',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: Implementation :: CPython',
+    'Operating System :: OS Independent',
+    'Natural Language :: English',
+    'Intended Audience :: End Users/Desktop',
+    'Intended Audience :: System Administrators',
+    'Intended Audience :: Developers',
+]
+
+[project.urls]
+Documentation = 'https://webchanges.readthedocs.io/'
+Repository = 'https://github.com/mborsetti/webchanges/'
+Changelog = 'https://webchanges.readthedocs.io/en/stable/changelog.html'
+Issues = 'https://github.com/mborsetti/webchanges/issues'
+CI = 'https://github.com/mborsetti/webchanges/actions'
+
+[project.scripts]
+# entry points https://setuptools.pypa.io/en/latest/userguide/entry_point.html
+webchanges = 'webchanges.cli:main'
+
+[project.optional-dependencies]
+use_browser = ['playwright', 'psutil']
+# lxml is now optional with beautifulsoup4
+beautify = ['beautifulsoup4', 'lxml', 'jsbeautifier', 'cssbeautifier']
+bs4 = ['beautifulsoup4', 'lxml']
+deepdiff = ['deepdiff']
+jq = ['jq; os_name != "nt"']
+ical2text = ['vobject']
+matrix = ['matrix_client']
+ocr = ['pytesseract', 'Pillow']
+pdf2text = ['pdftotext']
+pushbullet = ['pushbullet.py']
+pushover = ['chump']
+redis = ['redis']
+safe_password = ['keyring']
+xmpp = ['aioxmpp']
+all = ['webchanges[use_browser,beautify,bs4,deepdiff,jq,ical2text,matrix,ocr,pdf2text,pushbullet,pushover,redis,safe_password,xmpp]']
+
+
+# -------------------------- setuptools --------------------------
+# Called by build
+# See https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+[tool.setuptools]
+# explicit package listing is required for building in tox -e new-install
+# https://setuptools.pypa.io/en/latest/userguide/package_discovery.html
+packages = ['webchanges', 'webchanges._vendored']
+
+[tool.setuptools.dynamic]
+version = {attr = 'webchanges.__version__'}
+dependencies = {file = 'requirements.txt'}
+
+
+# -------------------------- isort --------------------------
+# isort your imports, so you don't have to.
+# Runs as part of pre-commit.
+# Config file documentation https://pycqa.github.io/isort/docs/configuration/options.html
+[tool.isort]
+profile = 'black'
+# multi_line_output = 3
+# use_parentheses = True
+# include_trailing_comma = True
+# force_grid_wrap = 0
+# ensure_newline_before_comments = True
+line_length = 120
+
+# Treat project as a git repository and ignore files listed in .gitignore.
+skip_gitignore = true
+
+# Force isort to recognize a module as being part of the current python project.
+known_first_party = 'webchanges'
+
+# Force isort to recognize a module as being a local folder.
+# Generally, this is reserved for relative imports (from . import module).
+known_local_folder = 'webchanges'
+
+# Force all imports to be sorted alphabetically within a section.
+force_alphabetical_sort_within_sections = true
+
+# Automatically create section groups by the top-level package they come from.
+group_by_package = true
+
+# Remove redundant aliases from imports, such as import os as os.
+remove_redundant_aliases = true
+
+# Use color in terminal output.
+color_output = true
+
+
+# -------------------------- black --------------------------
 # Uncompromising code formatting
 # Runs as part of pre-commit
+# Config file documentation
 # https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
+[tool.black]
 # What's in here overrides the command-line options shown by running $ black --help.
 line-length = 120
 target-version = ['py38']
 skip-string-normalization = true
 extend-exclude = '/(\.idea|\.pytest_cache|\__pycache__|\venv.*|\webchanges.egg-info)/'
 color = true
+
+
+# -------------------------- mypy --------------------------
+# Static Typing for Python
+# Runs as part of pre-commit
+# Config file documentation at https://mypy.readthedocs.io/en/stable/config_file.html
+[tool.mypy]
+
+# Disables import discovery of namespace packages (see PEP 420)
+namespace_packages = false
+
+# Specifies the Python version used to parse and check the target program.
+# python_version = 3.8
+
+# Shows error codes in error messages.
+show_error_codes = true
+
+# Suppresses error messages about imports that cannot be resolved.
+ignore_missing_imports = true
+
+# Disallows calling functions without type annotations from functions with type annotations.
+disallow_untyped_calls = true
+
+# Disallows defining functions without type annotations or with incomplete type annotations.
+disallow_untyped_defs = true
+
+# Reports an error whenever a function with type annotations is decorated with a decorator without annotations.
+disallow_untyped_decorators = true
+
+# Changes the treatment of arguments with a default value of None by not implicitly making their type Optional.
+no_implicit_optional = true
+
+# Warns about casting an expression to its inferred type.
+warn_redundant_casts = true
+
+# Warns about unneeded # type: ignore comments.
+# Disabled because it behaves differently in GitHub Actions than it does on Windows.
+# warn_unused_ignores = true
+
+# Shows a warning when returning a value with type Any from a function declared with a non-Any return type.
+# warn_return_any = true
+
+# Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis.
+warn_unreachable = false
+
+# Use visually nicer output in error messages: use soft word wrap, show source code snippets, and show error location
+# markers.
+pretty = true
+
+# Use an SQLite database to store the cache.
+sqlite_cache = true
+
+# Warns about per-module sections in the config file that do not match any files processed when invoking mypy.
+warn_unused_configs = true
+
+
+# -------------------------- rstcheck --------------------------
+# Checks syntax of reStructuredText and code blocks nested within it.
+# Runs as part of pre-commit.
+# Config file documentation at https://rstcheck.readthedocs.io/en/latest/usage/config/
+[tool.rstcheck]
+
+report_level = 'WARNING'
+# The below is needed when comments in *.rst files turn it into invalid python code
+# ignore_language = 'python'
+
+
+# -------------------------- coverage --------------------------
+# Runs in Github Actions (see .github/workflows/ci-cd.yaml) and in tox (see tox.ini).
+# Config file documentation at https://coverage.readthedocs.io/en/latest/config.html
+[tool.coverage.run]
+branch = true
+concurrency = ['multiprocessing']
+source = ['./']
+omit = [
+    '.*/*',
+    'docs/*',
+    'htmlcov/*',
+    'tests/*',
+    'webchanges/_vendored/*',
+    'webchanges.egg-info/*',
+    'setup.py',
+    'webchanges.py',
+    ]
+relative_files = true
+command_line = '-m pytest -vv'
+plugins = ['coverage_conditional_plugin']
+
+[tool.coverage.coverage_conditional_plugin.rules]
+# Requires pip install coverage-conditional-plugin
+# Here we specify our pragma rules:
+has-b4 = "is_installed('bs4')"
+has-jq = "is_installed('jq')"
+has-pdftotext = "is_installed('pdftotext')"
+has-pytesseract = "is_installed('pytesseract')"
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_lines = [
+    # Don't complain about missing debug-only code:
+    'def __repr__',
+    'if self\.debug:',
+
+    # Have to re-enable the standard pragma
+    'pragma: no cover',
+
+    # Don't complain if tests don't hit defensive assertion code:
+    'raise AssertionError',
+    'raise NotImplementedError',
+
+    # Don't complain if non-runnable code isn't run:
+    'if 0:',
+    'if __name__ == .__main__.:',
+
+    # Don't complain if module is not importable (handled by code):
+    'except ImportError:',
+
+    # Don't cover IDE code:
+    'if TYPE_CHECKING:'
+    ]
+# ignore_errors = true

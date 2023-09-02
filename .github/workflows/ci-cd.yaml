@@ -21,40 +21,39 @@ env:
 jobs:
   # Set the job key. The key is displayed as the job name
   # when a job name is not provided
-  pre-commit:
-    # Name the Job
-    name: Quality assurance (pre-commit)
-    # Set the type of machine to run on
-    runs-on: ubuntu-latest
-
-    steps:
-      # Checks out a copy of the repository per https://github.com/actions/checkout
-      - name: Check out repo
-        uses: actions/checkout@main
-
-      # Build Python and packages per https://github.com/actions/setup-python
-      - name: Set up Python
-        uses: actions/setup-python@main
-        with:
-          python-version: '3.11'  # same as https://docs.readthedocs.io/en/stable/config-file/v2.html#build-tools-python
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements.txt
-            tests/requirements_pre-commit.txt
-            docs/requirements.txt
-
-      # Install dependencies needed by the repo: local in .pre-commit-config.yaml
-      - name: Install dependencies
-        run: |
-          pip install -U pip setuptools wheel
-          pip install -U -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
-
-      # The below has been replaced with the integration in GitHub of the "pre-commit ci" app https://pre-commit.ci
-      # # Run pre-commit cache per https://github.com/pre-commit/action
-      # - name: Run pre-commit
-      #   uses: pre-commit/action@v2.0.3
-      #   env:
-      #     PYTHONUTF8: 1
+# PRE-COMMIT IS ALREADY DONE BY GIT
+#  pre-commit:
+#    # Name the Job
+#    name: Quality assurance (pre-commit)
+#    # Set the type of machine to run on
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      # Checks out a copy of the repository per https://github.com/actions/checkout
+#      - name: Check out repo
+#        uses: actions/checkout@main
+#
+#      # Build Python and packages per https://github.com/actions/setup-python
+#      - name: Set up Python
+#        uses: actions/setup-python@main
+#        with:
+#          python-version: '3.11' # same as https://docs.readthedocs.io/en/stable/config-file/v2.html#build-tools-python
+#          cache: 'pip'
+#          cache-dependency-path: |
+#            requirements.txt
+#            tests/requirements_pre-commit.txt
+#            docs/requirements.txt
+#
+#      # Install dependencies needed by the repo: local in .pre-commit-config.yaml
+#      - name: Install dependencies
+#        run: |
+#          pip install -U pip setuptools wheel
+#          pip install -U -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
+#
+#      # The below has been replaced with the integration in GitHub of the "pre-commit ci" app https://pre-commit.ci
+#      # # Run pre-commit cache per https://github.com/pre-commit/action
+#      # - name: Run pre-commit
+#      #   uses: pre-commit/action@v2.0.3
 
   test_ubuntu:
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
@@ -267,7 +266,7 @@ jobs:
     name: Deploy release
     needs: [test_ubuntu, test_others]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo
@@ -279,19 +278,19 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      # Install pip dependencies executing setup.py
+      # Install pip dependencies
       - name: Install dependencies
         run: |
-          pip install -U pip setuptools wheel
-          pip install -U .
+          pip install -U pip build
 
+      # build https://pypa-build.readthedocs.io/en/latest/
       - name: Build dist
         run: |
-          python setup.py sdist bdist_wheel
+          python -m build
 
       # PyPI publish GitHub Action from https://github.com/pypa/gh-action-pypi-publish
       - name: Publish package
-        uses: pypa/gh-action-pypi-publish@master
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.pypi_password }}

@@ -182,6 +182,13 @@ repos:
         types: [rst]
         require_serial: true
         args: [--max-line-length, '120']
+      - id: update-cli-docs
+        name: update docs\cli_help.txt file used in documentation
+        description: Update command line arguments documentation
+        entry: webchanges
+        language: python
+        pass_filenames: false
+        args: [--help, '>', 'docs\cli_help.txt']
 # Not running tox-ini-fmt as it removes all remarks
 #      - id: tox-ini-fmt  # https://github.com/tox-dev/tox-ini-fmt
 #        name: Apply a consistent format to tox.ini files (tox-ini-fmt)

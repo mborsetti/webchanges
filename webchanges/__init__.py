@@ -21,7 +21,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.14'
+__version__ = '3.14.post0'
 __description__ = (
     'Check web (or command output) for changes since last run and notify.\n'
     '\n'
@@ -31,7 +31,7 @@ __author__ = 'Mike Borsetti <mike@borsetti.com>'
 __copyright__ = 'Copyright 2020- Mike Borsetti'
 __license__ = 'MIT, BSD 3-Clause License'
 __url__ = f'https://pypi.org/project/{__project_name__}/'
-__code_url__ = f'https://www.github.com/mborsetti/{__project_name__}/'
+__code_url__ = f'https://github.com/mborsetti/{__project_name__}/'
 __docs_url__ = f'https://{__project_name__}.readthedocs.io/'
 __user_agent__ = f'{__project_name__}/{__version__} (+{__url__})'
 

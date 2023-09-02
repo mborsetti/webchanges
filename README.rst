@@ -113,9 +113,9 @@ license `here <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
 Compatibility with **urlwatch**
 ================================
 
-This project is based on `urlwatch <https://github.com/thp/urlwatch>`__ 2.21. You can easily upgrade from
-**urlwatch** 2.28 (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__) using the same job and
-configuration files and benefit from many HTML-focused improvements, including:
+This project is based on code from `urlwatch <https://github.com/thp/urlwatch>`__ 2.21. You can easily upgrade from
+the current version of **urlwatch** (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__)
+using the same job and configuration files and benefit from many HTML-focused improvements, including:
 
 * Report links that are `clickable <https://pypi.org/project/webchanges/>`__!
 * Original formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and
@@ -155,8 +155,8 @@ Examples:
 .. |format| image:: https://img.shields.io/pypi/format/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: Kit format
-.. |downloads| image:: https://pepy.tech/badge/requests
-    :target: https://pepy.tech/project/webchanges
+.. |downloads| image:: https://static.pepy.tech/badge/webchanges
+    :target: https://www.pepy.tech/project/webchanges
     :alt: PyPI downloads
 .. |license| image:: https://img.shields.io/pypi/l/webchanges.svg
     :target: https://pypi.org/project/webchanges/
