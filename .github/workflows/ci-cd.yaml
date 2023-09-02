@@ -263,9 +263,9 @@ jobs:
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.11'
         run: |
-          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -o
-          rem powershell Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
-          rem /S = silent mode
+          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
+          powershell Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
+          rem below, /S = silent mode
           start "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0
           del Miniconda3-latest-Windows-x86_64.exe /f
           call "%%LOCALAPPDATA%\miniconda3\conda" install -y -c conda-forge poppler
