@@ -264,16 +264,17 @@ jobs:
         if: matrix.python-version == '3.11'
         run: |
           cd %temp%
+          dir
           curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
           powershell Get-FileHash Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
           rem below, /S = silent mode
-          start "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0
+          start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
           del Miniconda3-latest-Windows-x86_64.exe /f
-          call "%LOCALAPPDATA%\miniconda3\conda" install -y -c conda-forge poppler
+          call "%temp%\Miniconda3\conda" install -y -c conda-forge poppler
           rem *** get latest version filename from https://digi.bib.uni-mannheim.de/tesseract/?C=M;O=D
           set TESSERACT=tesseract-ocr-w64-setup-5.3.1.20230401.exe
           curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
-          call %TESSERACT% /S
+          start /wait "" %TESSERACT% /S
           del %TESSERACT% /f
           pip install -U keyring pdftotext Pillow pytesseract
         shell: cmd
