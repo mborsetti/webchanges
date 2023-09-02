@@ -103,7 +103,6 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
             requirements.txt
-            tests/requirements_pre-commit.txt
             tests/requirements_pytest.txt
 
       - name: Upgrade pip etc.
@@ -153,7 +152,7 @@ jobs:
     # No redis (only works on ubuntu)
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
     # Identifies any jobs that must complete successfully before this job will run
-    needs: pre-commit
+    # needs: pre-commit
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
@@ -181,7 +180,6 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
             requirements.txt
-            tests/requirements_pre-commit.txt
             tests/requirements_pytest.txt
 
       - name: Upgrade pip etc.
