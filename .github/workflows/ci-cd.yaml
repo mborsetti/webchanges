@@ -259,12 +259,12 @@ jobs:
 
 #      ISSUE WITH THE BELOW: 'conda' is not recognized as an internal or external command,
 #      operable program or batch file.
-      - name: Install pdf2text and ocr dependencies (Python latest)
+      - name: Install pdf2text and ocr dependencies (Python 3.11)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.11'
         run: |
-          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -o miniconda.exe
-          powershell miniconda.exe -Algorithm SHA256
+          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O miniconda.exe
+          rem powershell miniconda.exe -Algorithm SHA256
           start "" miniconda.exe /S /RegisterPython=0
           del miniconda.exe /f
           call "%%LOCALAPPDATA%\miniconda3\conda" install -y -c conda-forge poppler
@@ -276,12 +276,12 @@ jobs:
           pip install -U keyring pdftotext Pillow pytesseract
         shell: cmd
 
-      - name: Install all other dependencies (up to py11)
+      - name: Install all other dependencies (up to Python 3.11)
         if: matrix.python-version <= '3.11'
         run: |
           pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
-      - name: Install all other dependencies (py12)
+      - name: Install all other dependencies (Python 3.12)
         if: matrix.python-version > '3.11'
         run: |
           pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
