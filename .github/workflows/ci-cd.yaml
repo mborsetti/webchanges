@@ -263,12 +263,13 @@ jobs:
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.11'
         run: |
-          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O miniconda.exe
-          rem powershell miniconda.exe -Algorithm SHA256
-          start "" miniconda.exe /S /RegisterPython=0
-          del miniconda.exe /f
+          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -o
+          rem powershell Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
+          rem /S = silent mode
+          start "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0
+          del Miniconda3-latest-Windows-x86_64.exe /f
           call "%%LOCALAPPDATA%\miniconda3\conda" install -y -c conda-forge poppler
-          rem *** latest version from https://digi.bib.uni-mannheim.de/tesseract/?C=M;O=D
+          rem *** get latest version filename from https://digi.bib.uni-mannheim.de/tesseract/?C=M;O=D
           set TESSERACT=tesseract-ocr-w64-setup-5.3.1.20230401.exe
           curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
           call %TESSERACT% /S
