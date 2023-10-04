@@ -127,7 +127,7 @@ jobs:
           pip install -U pdftotext Pillow pytesseract
 
       - name: Install all other dependencies (up top py11)
-        if: matrix.python-version <= '3.12'
+        if: matrix.python-version < '3.12'
         run: |
           pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
@@ -199,7 +199,7 @@ jobs:
           pip install -U pdftotext Pillow pytesseract
 
       - name: Install all other dependencies (up to py11)
-        if: matrix.python-version <= '3.12'
+        if: matrix.python-version < '3.12'
         run: |
           pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 

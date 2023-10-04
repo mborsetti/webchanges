@@ -482,14 +482,13 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         """
         # Similar code to UrlwatchCommand.edit_hooks()
         logger.debug(f'Edit file {self.filename}')
-        # Python 3.9: file_edit = self.filename.with_stem(self.filename.stem + '_edit')
         if isinstance(self.filename, list):
             if len(self.filename) > 1:
                 raise ValueError(f'Only one jobs file can be specified for editing; found {len(self.filename)}.')
             filename = self.filename[0]
         else:
             filename = self.filename
-        file_edit = filename.parent.joinpath(filename.stem + '_edit' + ''.join(filename.suffixes))
+        file_edit = self.filename.with_stem(self.filename.stem + '_edit')
 
         if filename.is_file():
             shutil.copy(filename, file_edit)

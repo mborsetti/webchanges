@@ -140,10 +140,10 @@ color_output = true
 # https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
 [tool.black]
 # What's in here overrides the command-line options shown by running $ black --help.
-line-length = 120
-target-version = ['py38']
-skip-string-normalization = true
-extend-exclude = '/(\.idea|\.pytest_cache|\__pycache__|\venv.*|\webchanges.egg-info)/'
+line_length = 120
+target_version = ['py39']
+skip_string_normalization = true
+extend_exclude = '/(\.idea|\.pytest_cache|\__pycache__|\venv.*|\webchanges.egg-info)/'
 color = true
 
 
