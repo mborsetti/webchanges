@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import ftplib  # noqa: S402 A FTP-related module is being imported.
-import logging
 import os
 import socket
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 from asyncio import AbstractEventLoop
 from pathlib import Path
-from typing import Any, Dict, TYPE_CHECKING, Union
+from typing import Any, Dict, Union
 
 import pytest
 import yaml
@@ -23,12 +22,7 @@ from webchanges.config import CommandConfig
 from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifiedError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
-
-if TYPE_CHECKING:
-    from webchanges.storage import Config  # dependency not available in Python < 3.8
-
-logger = logging.getLogger(__name__)
+from webchanges.storage import CacheSQLite3Storage, Config, YamlConfigStorage, YamlJobsStorage
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -58,8 +52,7 @@ def is_connected() -> bool:
 
 
 connection_required = pytest.mark.skipif(not is_connected(), reason='no Internet connection')
-py38_required = pytest.mark.skipif(sys.version_info < (3, 8), reason='requires Python 3.8')
-py_latest_only = pytest.mark.skipif(sys.version_info < (3, 11), reason='Time consuming; testing latest version only')
+py_latest_only = pytest.mark.skipif(sys.version_info < (3, 12), reason='Time consuming; testing latest version only')
 
 TEST_JOBS = [
     (
@@ -429,7 +422,6 @@ def test_url_job_use_browser_false_without_kind() -> None:
     assert isinstance(job, UrlJob)
 
 
-@py38_required  # type: ignore[misc]
 def test_browser_job_without_kind(event_loop: AbstractEventLoop) -> None:
     job_data = {'url': 'https://www.example.com', 'use_browser': True}
     job = JobBase.unserialize(job_data)
@@ -457,7 +449,6 @@ def test_ignore_error() -> None:
     assert job.ignore_error(Exception()) is False
 
 
-@py38_required  # type: ignore[misc]
 def test_browser_switches_not_str_or_list(event_loop: AbstractEventLoop) -> None:
     job_data = {
         'url': 'https://www.example.com',
@@ -470,7 +461,6 @@ def test_browser_switches_not_str_or_list(event_loop: AbstractEventLoop) -> None
         assert isinstance(job_state.exception, TypeError)
 
 
-# @py38_required  # type: ignore[misc]
 # def test_browser_block_elements_not_str_or_list(event_loop: AbstractEventLoop):
 #     job_data = {
 #         'url': 'https://www.example.com',
@@ -483,7 +473,6 @@ def test_browser_switches_not_str_or_list(event_loop: AbstractEventLoop) -> None
 #         assert isinstance(job_state.exception, TypeError)
 #
 #
-# @py38_required  # type: ignore[misc]
 # def test_browser_block_elements_invalid(event_loop: AbstractEventLoop):
 #     job_data = {
 #         'url': 'https://www.example.com',

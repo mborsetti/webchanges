@@ -20,9 +20,9 @@ from typing import List, Optional, Union
 
 import platformdirs
 
-from .__init__ import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
-from .config import CommandConfig
-from .util import file_ownership_checks, get_new_version_number, import_module_from_source
+from webchanges.__init__ import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
+from webchanges.config import CommandConfig
+from webchanges.util import file_ownership_checks, get_new_version_number, import_module_from_source
 
 # Ignore signal SIGPIPE ("broken pipe") for stdout (see https://github.com/thp/urlwatch/issues/77)
 if os.name != 'nt':  # Windows does not have signal.SIGPIPE
@@ -168,7 +168,7 @@ def first_run(command_config: CommandConfig) -> None:
     """
     if not command_config.config_file.is_file():
         command_config.config_file.parent.mkdir(parents=True, exist_ok=True)
-        from .storage import YamlConfigStorage
+        from webchanges.storage import YamlConfigStorage
 
         YamlConfigStorage.write_default_config(command_config.config_file)
         print(f'Created default config file at {command_config.config_file}')
@@ -314,9 +314,9 @@ def main() -> None:  # pragma: no cover
     handle_unitialized_actions(command_config)
 
     # Only now we can load other modules (so that logging is enabled)
-    from .command import UrlwatchCommand
-    from .main import Urlwatch
-    from .storage import (
+    from webchanges.command import UrlwatchCommand
+    from webchanges.main import Urlwatch
+    from webchanges.storage import (
         CacheDirStorage,
         CacheRedisStorage,
         CacheSQLite3Storage,
@@ -356,7 +356,9 @@ def main() -> None:  # pragma: no cover
     elif database_engine == 'textfiles':
         cache_storage = CacheDirStorage(command_config.cache)  # storage.py
     elif database_engine == 'minidb':
-        from .storage_minidb import CacheMiniDBStorage  # legacy code imported only if needed (requires minidb)
+        from webchanges.storage_minidb import (
+            CacheMiniDBStorage,  # legacy code imported only if needed (requires minidb)
+        )
 
         cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
     else:

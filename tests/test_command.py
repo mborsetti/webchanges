@@ -527,11 +527,16 @@ def test_modify_urls(capsys: CaptureFixture[str]) -> None:
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
 )
-def test_modify_urls_move_location(database_engine: CacheStorage, capsys: CaptureFixture[str]) -> None:
+def test_modify_urls_move_location(
+    database_engine: CacheStorage, capsys: CaptureFixture[str], monkeypatch: MonkeyPatch
+) -> None:
     """Test --change-location JOB NEW_LOCATION."""
     jobs_file = tmp_path.joinpath('jobs-time.yaml')
     urlwatcher2, cache_storage2, command_config2 = prepare_storage_test(database_engine, jobs_file=jobs_file)
     urlwatch_command2 = UrlwatchCommand(urlwatcher2)
+
+    # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
+    monkeypatch.setattr('builtins.input', lambda _: 'y')
 
     # try changing location of non-existing job
     setattr(command_config2, 'change_location', ('a', 'b'))
@@ -552,7 +557,7 @@ def test_modify_urls_move_location(database_engine: CacheStorage, capsys: Captur
     setattr(command_config2, 'change_location', None)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
-    assert message == (f'Moving location of "{old_loc}" to "{new_loc}"\n' f'No snapshots found for "{old_loc}"\n')
+    assert message == f'Moving location of "{old_loc}" to "{new_loc}"\n' f'No snapshots found for "{old_loc}"\n'
 
     # run jobs to save
     urlwatcher2.run_jobs()
@@ -568,7 +573,7 @@ def test_modify_urls_move_location(database_engine: CacheStorage, capsys: Captur
     message = capsys.readouterr().out
     assert message == (
         f'Moving location of "{old_loc}" to "{new_loc}"\n'
-        f'Moved 1 snapshots of "{old_loc}" to "{new_loc}"\n'
+        f'Searched through 1 snapshots and moved "{old_loc}" to "{new_loc}"\n'
         f'Saving updated list to {str(urlwatcher2.jobs_storage.filename[0])}\n'
     )
 
@@ -592,7 +597,7 @@ def test_modify_urls_move_location(database_engine: CacheStorage, capsys: Captur
     message = capsys.readouterr().out
     assert message == (
         f'Moving location of "{new_loc}" to "{old_loc}"\n'
-        f'Moved 1 snapshots of "{new_loc}" to "{old_loc}"\n'
+        f'Searched through 1 snapshots and moved "{new_loc}" to "{old_loc}"\n'
         f'Saving updated list to {str(urlwatcher2.jobs_storage.filename[0])}\n'
     )
 
@@ -735,7 +740,7 @@ def test_clean_database(capsys: CaptureFixture[str]) -> None:
 
 def test_rollback_database(capsys: CaptureFixture[str], monkeypatch: MonkeyPatch) -> None:
     setattr(command_config, 'rollback_database', True)
-    # monkeypatch the "input" function, so that it simulates the user entering "y" in the terminal:
+    # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
     monkeypatch.setattr('builtins.input', lambda _: 'y')
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)
     with pytest.raises(SystemExit) as pytest_wrapped_e:

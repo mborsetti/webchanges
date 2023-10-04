@@ -3,7 +3,6 @@ data/doc_filter_testadata.yaml file."""
 from __future__ import annotations
 
 import importlib.util
-import logging
 import optparse
 from collections import defaultdict
 from pathlib import Path
@@ -20,13 +19,12 @@ from webchanges.filters import FilterBase
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase
 
-logger = logging.getLogger(__name__)
-
 here = Path(__file__).parent
 docs_path = here.parent.joinpath('docs')
 
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
 cssbeautifier_is_installed = importlib.util.find_spec('cssbeautifier') is not None
+html5lib_is_installed = importlib.util.find_spec('html5lib') is not None
 jq_is_installed = importlib.util.find_spec('jq') is not None
 pdftotext_is_installed = importlib.util.find_spec('pdftotext') is not None
 pytesseract_is_installed = importlib.util.find_spec('pytesseract') is not None
@@ -121,23 +119,21 @@ def test_filter_doc_jobs(job: JobBase) -> None:
             if (
                 filter_kind == 'beautify' or filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
             ) and not bs4_is_installed:
-                logger.warning(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
-                return
+                pytest.skip(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
+            if (
+                subfilter.get('method') == 'bs4' and subfilter.get('parser') == 'html5lib'
+            ) and not html5lib_is_installed:
+                pytest.skip(f"Skipping {job.url} since 'html5lib' package is not installed")
             if filter_kind == 'ical2text' and not vobject_is_installed:
-                logger.warning(f"Skipping {job.url} since 'vobject' package is not installed")
-                return
+                pytest.skip(f"Skipping {job.url} since 'vobject' package is not installed")
             elif filter_kind == 'ocr' and not pytesseract_is_installed:
-                logger.warning(f"Skipping {job.url} since 'pytesseract' package is not installed")
-                return
+                pytest.skip(f"Skipping {job.url} since 'pytesseract' package is not installed")
             elif filter_kind == 'jq' and not jq_is_installed:
-                logger.warning(f"Skipping {job.url} since 'jq' package is not installed")
-                return
+                pytest.skip(f"Skipping {job.url} since 'jq' package is not installed")
             elif filter_kind == 'pdf2text' and not pdftotext_is_installed:
-                logger.warning(f"Skipping {job.url} since 'pdftotext' package is not installed")
-                return
+                pytest.skip(f"Skipping {job.url} since 'pdftotext' package is not installed")
             elif filter_kind == 'beautify' and not cssbeautifier_is_installed:
-                logger.warning(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
-                return
+                pytest.skip(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
             data = FilterBase.process(filter_kind, subfilter, job_state, data)
             if filter_kind in {'pdf2text', 'shellpipe'}:  # fix for macOS or OS-specific end of line
                 data = data.rstrip()

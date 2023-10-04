@@ -12,8 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-from .__init__ import __doc__ as doc
-from .__init__ import __docs_url__, __project_name__, __version__
+from webchanges.__init__ import __doc__ as doc
+from webchanges.__init__ import __docs_url__, __project_name__, __version__
 
 
 @dataclass

@@ -42,7 +42,7 @@ sys.path.insert(1, str(Path(__file__).parent.joinpath('webchanges')))
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = '7.2.3'
+needs_sphinx = '7.2.5'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -87,7 +87,6 @@ author = project_data.__author__
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-release = 'test'
 # The short X.Y version.
 version = project_data.__version__
 # The full version, including alpha/beta/rc tags.

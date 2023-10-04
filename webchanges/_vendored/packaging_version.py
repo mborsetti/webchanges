@@ -221,7 +221,7 @@ import itertools
 import re
 from typing import Any, Callable, Optional, SupportsInt, Tuple, Union
 
-# `from ._structures import Infinity, InfinityType, NegativeInfinity, NegativeInfinityType`
+# `from webchanges._structures import Infinity, InfinityType, NegativeInfinity, NegativeInfinityType`
 # replaced with the contents of the file
 # https://github.com/pypa/packaging/blob/main/src/packaging/_structures.py
 

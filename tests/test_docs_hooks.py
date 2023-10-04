@@ -3,8 +3,6 @@ data/doc_filer_testadata.yaml file."""
 from __future__ import annotations
 
 import importlib.util
-import logging
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -15,13 +13,12 @@ import docutils.parsers.rst
 import docutils.utils
 import pytest
 import yaml
+from flake8.api import legacy as flake8
 
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase
 from webchanges.storage import YamlJobsStorage
-
-logger = logging.getLogger(__name__)
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -91,13 +88,15 @@ else:
 # TODO: ensure that this is the version loaded during testing.
 
 
-def test_flake8(tmp_path: Path) -> None:
+def test_flake8_on_hooks_rst(tmp_path: Path) -> None:
     """Check that the hooks.py example code in hooks.rst passes flake8."""
     hooks_path = tmp_path.joinpath('hooks.py')
     hooks_path.write_text(HOOKS)
-    r = subprocess.run(['flake8', '--extend-ignore', 'W292', hooks_path], capture_output=True, text=True)  # noqa: S607
-    assert r.stdout == ''
-    assert not r.returncode
+
+    # https://flake8.pycqa.org/en/latest/user/python-api.html
+    style_guide = flake8.get_style_guide(extend_ignore=['W292'])
+    report = style_guide.input_file(str(hooks_path))
+    assert report.get_statistics('') == [], 'Flake8 found violations in hooks.py'
 
 
 @pytest.mark.parametrize('job', HOOKS_DOC_JOBS, ids=(v.url for v in HOOKS_DOC_JOBS))  # type: ignore[misc]

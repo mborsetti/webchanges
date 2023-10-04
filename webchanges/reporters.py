@@ -20,26 +20,22 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
+from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Tuple, Type, TYPE_CHECKING, Union
 from warnings import warn
 
 import requests
 from markdown2 import Markdown
 
-from .__init__ import __project_name__, __url__, __version__
-from .jobs import UrlJob
-from .mailer import Mailer, SendmailMailer, SMTPMailer
-from .util import chunk_string, dur_text, linkify, TrackSubClasses
+from webchanges.__init__ import __project_name__, __url__, __version__
+from webchanges.jobs import UrlJob
+from webchanges.mailer import Mailer, SendmailMailer, SMTPMailer
+from webchanges.util import chunk_string, dur_text, linkify, TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    from typing import Literal  # not available in Python < 3.8
-
-    from .handler import JobState, Report
-    from .jobs import JobBase
-
-    # TypedDicts only work on Python >= 3.8
-    from .storage import (
+    from webchanges.handler import JobState, Report
+    from webchanges.jobs import JobBase
+    from webchanges.storage import (
         ConfigReportBrowser,
         ConfigReportDiscord,
         ConfigReportEmail,

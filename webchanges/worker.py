@@ -14,8 +14,8 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from typing import Iterable, Optional, TYPE_CHECKING
 
-from .handler import JobState
-from .jobs import NotModifiedError
+from webchanges.handler import JobState
+from webchanges.jobs import NotModifiedError
 
 try:
     import psutil
@@ -26,8 +26,8 @@ except ImportError as e:
 if TYPE_CHECKING:
     from typing import List
 
-    from .jobs import JobBase
-    from .main import Urlwatch
+    from webchanges.jobs import JobBase
+    from webchanges.main import Urlwatch
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
     def insert_delay(jobs: List[JobBase]) -> List[JobBase]:  # pragma: no cover
         """
-        TODO: Evaluate whether this is necessary; currently not being called.  Remove pragma no cover and move import.
+        TODO: Evaluate whether this is necessary; currently not being called. Remove pragma no cover and move import.
 
         Sets a _delay value for URL jobs having the same network location as previous ones. Used to prevent
         multiple jobs hitting the same network location at the exact same time and being blocked as a result.
@@ -54,7 +54,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         :param jobs: The list of jobs.
         :return: The list of jobs with the _delay value set.
         """
-        from .jobs import UrlJobBase
+        from webchanges.jobs import UrlJobBase
 
         previous_netlocs = set()
         for job in jobs:

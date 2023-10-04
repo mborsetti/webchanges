@@ -20,17 +20,18 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Optional, TextIO, Tuple, TYPE_CHECKING, Union
+from types import NoneType
+from typing import Any, Dict, Iterable, Iterator, List, Literal, NamedTuple, Optional, TextIO, Tuple, TypedDict, Union
 
 import msgpack
 import yaml
 import yaml.scanner
 
-from .__init__ import __docs_url__, __project_name__, __version__
-from .filters import FilterBase
-from .jobs import JobBase, ShellJob
-from .reporters import ReporterBase
-from .util import edit_file, file_ownership_checks
+from webchanges.__init__ import __docs_url__, __project_name__, __version__
+from webchanges.filters import FilterBase
+from webchanges.jobs import JobBase, ShellJob
+from webchanges.reporters import ReporterBase
+from webchanges.util import edit_file, file_ownership_checks
 
 try:
     import redis
@@ -39,242 +40,239 @@ except ImportError as e:
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
-    from typing import Literal, TypedDict  # not available in Python < 3.8
+ConfigDisplay = TypedDict(
+    'ConfigDisplay',
+    {
+        'new': bool,
+        'error': bool,
+        'unchanged': bool,
+        'empty-diff': bool,
+    },
+)
+ConfigReportText = TypedDict(
+    'ConfigReportText',
+    {
+        'line_length': int,
+        'details': bool,
+        'footer': bool,
+        'minimal': bool,
+        'separate': bool,
+    },
+)
+ConfigReportHtml = TypedDict(
+    'ConfigReportHtml',
+    {
+        'diff': Literal['unified', 'table'],
+        'separate': bool,
+    },
+)
+ConfigReportMarkdown = TypedDict(
+    'ConfigReportMarkdown',
+    {
+        'details': bool,
+        'footer': bool,
+        'minimal': bool,
+        'separate': bool,
+    },
+)
+ConfigReportStdout = TypedDict(
+    'ConfigReportStdout',
+    {
+        'enabled': bool,
+        'color': bool,
+    },
+)
+ConfigReportBrowser = TypedDict(
+    'ConfigReportBrowser',
+    {
+        'enabled': bool,
+        'title': str,
+    },
+)
+ConfigReportDiscord = TypedDict(
+    'ConfigReportDiscord',
+    {
+        'enabled': bool,
+        'webhook_url': str,
+        'embed': bool,
+        'subject': str,
+        'colored': bool,
+        'max_message_length': Optional[int],
+    },
+)
+ConfigReportEmailSmtp = TypedDict(
+    'ConfigReportEmailSmtp',
+    {
+        'host': str,
+        'user': str,
+        'port': int,
+        'starttls': bool,
+        'auth': bool,
+        'insecure_password': str,
+    },
+)
+ConfigReportEmailSendmail = TypedDict(
+    'ConfigReportEmailSendmail',
+    {
+        'path': Union[str, Path],
+    },
+)
+ConfigReportEmail = TypedDict(
+    'ConfigReportEmail',
+    {
+        'enabled': bool,
+        'html': bool,
+        'to': str,
+        'from': str,
+        'subject': str,
+        'method': Literal['sendmail', 'smtp'],
+        'smtp': ConfigReportEmailSmtp,
+        'sendmail': ConfigReportEmailSendmail,
+    },
+)
+ConfigReportIfttt = TypedDict(
+    'ConfigReportIfttt',
+    {
+        'enabled': bool,
+        'key': str,
+        'event': str,
+    },
+)
+ConfigReportMailgun = TypedDict(
+    'ConfigReportMailgun',
+    {
+        'enabled': bool,
+        'region': str,
+        'api_key': str,
+        'domain': str,
+        'from_mail': str,
+        'from_name': str,
+        'to': str,
+        'subject': str,
+    },
+)
+ConfigReportMatrix = TypedDict(
+    'ConfigReportMatrix',
+    {
+        'enabled': bool,
+        'homeserver': str,
+        'access_token': str,
+        'room_id': str,
+    },
+)
+ConfigReportProwl = TypedDict(
+    'ConfigReportProwl',
+    {
+        'enabled': bool,
+        'api_key': str,
+        'priority': int,
+        'application': str,
+        'subject': str,
+    },
+)
+ConfigReportPushbullet = TypedDict(
+    'ConfigReportPushbullet',
+    {
+        'enabled': bool,
+        'api_key': str,
+    },
+)
+ConfigReportPushover = TypedDict(
+    'ConfigReportPushover',
+    {
+        'enabled': bool,
+        'app': str,
+        'device': Optional[str],
+        'sound': str,
+        'user': str,
+        'priority': str,
+    },
+)
+ConfigReportRunCommand = TypedDict(
+    'ConfigReportRunCommand',
+    {
+        'enabled': bool,
+        'command': str,
+    },
+)
+ConfigReportTelegram = TypedDict(
+    'ConfigReportTelegram',
+    {
+        'enabled': bool,
+        'bot_token': str,
+        'chat_id': Union[str, int, List[Union[str, int]]],
+        'silent': bool,
+    },
+)
+ConfigReportWebhook = TypedDict(
+    'ConfigReportWebhook',
+    {
+        'enabled': bool,
+        'markdown': bool,
+        'webhook_url': str,
+        'max_message_length': Optional[int],
+    },
+)
+ConfigReportXmpp = TypedDict(
+    'ConfigReportXmpp',
+    {
+        'enabled': bool,
+        'sender': str,
+        'recipient': str,
+        'insecure_password': Optional[str],
+    },
+)
 
-    ConfigDisplay = TypedDict(
-        'ConfigDisplay',
-        {
-            'new': bool,
-            'error': bool,
-            'unchanged': bool,
-            'empty-diff': bool,
-        },
-    )
-    ConfigReportText = TypedDict(
-        'ConfigReportText',
-        {
-            'line_length': int,
-            'details': bool,
-            'footer': bool,
-            'minimal': bool,
-            'separate': bool,
-        },
-    )
-    ConfigReportHtml = TypedDict(
-        'ConfigReportHtml',
-        {
-            'diff': Literal['unified', 'table'],
-            'separate': bool,
-        },
-    )
-    ConfigReportMarkdown = TypedDict(
-        'ConfigReportMarkdown',
-        {
-            'details': bool,
-            'footer': bool,
-            'minimal': bool,
-            'separate': bool,
-        },
-    )
-    ConfigReportStdout = TypedDict(
-        'ConfigReportStdout',
-        {
-            'enabled': bool,
-            'color': bool,
-        },
-    )
-    ConfigReportBrowser = TypedDict(
-        'ConfigReportBrowser',
-        {
-            'enabled': bool,
-            'title': str,
-        },
-    )
-    ConfigReportDiscord = TypedDict(
-        'ConfigReportDiscord',
-        {
-            'enabled': bool,
-            'webhook_url': str,
-            'embed': bool,
-            'subject': str,
-            'colored': bool,
-            'max_message_length': Optional[int],
-        },
-    )
-    ConfigReportEmailSmtp = TypedDict(
-        'ConfigReportEmailSmtp',
-        {
-            'host': str,
-            'user': str,
-            'port': int,
-            'starttls': bool,
-            'auth': bool,
-            'insecure_password': str,
-        },
-    )
-    ConfigReportEmailSendmail = TypedDict(
-        'ConfigReportEmailSendmail',
-        {
-            'path': Union[str, Path],
-        },
-    )
-    ConfigReportEmail = TypedDict(
-        'ConfigReportEmail',
-        {
-            'enabled': bool,
-            'html': bool,
-            'to': str,
-            'from': str,
-            'subject': str,
-            'method': Literal['sendmail', 'smtp'],
-            'smtp': ConfigReportEmailSmtp,
-            'sendmail': ConfigReportEmailSendmail,
-        },
-    )
-    ConfigReportIfttt = TypedDict(
-        'ConfigReportIfttt',
-        {
-            'enabled': bool,
-            'key': str,
-            'event': str,
-        },
-    )
-    ConfigReportMailgun = TypedDict(
-        'ConfigReportMailgun',
-        {
-            'enabled': bool,
-            'region': str,
-            'api_key': str,
-            'domain': str,
-            'from_mail': str,
-            'from_name': str,
-            'to': str,
-            'subject': str,
-        },
-    )
-    ConfigReportMatrix = TypedDict(
-        'ConfigReportMatrix',
-        {
-            'enabled': bool,
-            'homeserver': str,
-            'access_token': str,
-            'room_id': str,
-        },
-    )
-    ConfigReportProwl = TypedDict(
-        'ConfigReportProwl',
-        {
-            'enabled': bool,
-            'api_key': str,
-            'priority': int,
-            'application': str,
-            'subject': str,
-        },
-    )
-    ConfigReportPushbullet = TypedDict(
-        'ConfigReportPushbullet',
-        {
-            'enabled': bool,
-            'api_key': str,
-        },
-    )
-    ConfigReportPushover = TypedDict(
-        'ConfigReportPushover',
-        {
-            'enabled': bool,
-            'app': str,
-            'device': Optional[str],
-            'sound': str,
-            'user': str,
-            'priority': str,
-        },
-    )
-    ConfigReportRunCommand = TypedDict(
-        'ConfigReportRunCommand',
-        {
-            'enabled': bool,
-            'command': str,
-        },
-    )
-    ConfigReportTelegram = TypedDict(
-        'ConfigReportTelegram',
-        {
-            'enabled': bool,
-            'bot_token': str,
-            'chat_id': Union[str, int, List[Union[str, int]]],
-            'silent': bool,
-        },
-    )
-    ConfigReportWebhook = TypedDict(
-        'ConfigReportWebhook',
-        {
-            'enabled': bool,
-            'markdown': bool,
-            'webhook_url': str,
-            'max_message_length': Optional[int],
-        },
-    )
-    ConfigReportXmpp = TypedDict(
-        'ConfigReportXmpp',
-        {
-            'enabled': bool,
-            'sender': str,
-            'recipient': str,
-            'insecure_password': Optional[str],
-        },
-    )
-
-    ConfigReport = TypedDict(
-        'ConfigReport',
-        {
-            'tz': Optional[str],
-            'text': ConfigReportText,
-            'html': ConfigReportHtml,
-            'markdown': ConfigReportMarkdown,
-            'stdout': ConfigReportStdout,
-            'browser': ConfigReportBrowser,
-            'discord': ConfigReportDiscord,
-            'email': ConfigReportEmail,
-            'ifttt': ConfigReportIfttt,
-            'mailgun': ConfigReportMailgun,
-            'matrix': ConfigReportMatrix,
-            'prowl': ConfigReportProwl,
-            'pushbullet': ConfigReportPushbullet,
-            'pushover': ConfigReportPushover,
-            'run_command': ConfigReportRunCommand,
-            'telegram': ConfigReportTelegram,
-            'webhook': ConfigReportWebhook,
-            'xmpp': ConfigReportXmpp,
-        },
-    )
-    ConfigJobDefaults = TypedDict(
-        'ConfigJobDefaults',
-        {
-            '_note': str,
-            'all': Dict[str, Any],
-            'url': Dict[str, Any],
-            'browser': Dict[str, Any],
-            'command': Dict[str, Any],
-        },
-    )
-    ConfigDatabase = TypedDict(
-        'ConfigDatabase',
-        {
-            'engine': Union[Literal['sqlite3', 'redis', 'minidb', 'textfiles'], str],
-            'max_snapshots': int,
-        },
-    )
-    Config = TypedDict(
-        'Config',
-        {
-            'display': ConfigDisplay,
-            'report': ConfigReport,
-            'job_defaults': ConfigJobDefaults,
-            'database': ConfigDatabase,
-            'footnote': Optional[str],
-        },
-    )
+ConfigReport = TypedDict(
+    'ConfigReport',
+    {
+        'tz': Optional[str],
+        'text': ConfigReportText,
+        'html': ConfigReportHtml,
+        'markdown': ConfigReportMarkdown,
+        'stdout': ConfigReportStdout,
+        'browser': ConfigReportBrowser,
+        'discord': ConfigReportDiscord,
+        'email': ConfigReportEmail,
+        'ifttt': ConfigReportIfttt,
+        'mailgun': ConfigReportMailgun,
+        'matrix': ConfigReportMatrix,
+        'prowl': ConfigReportProwl,
+        'pushbullet': ConfigReportPushbullet,
+        'pushover': ConfigReportPushover,
+        'run_command': ConfigReportRunCommand,
+        'telegram': ConfigReportTelegram,
+        'webhook': ConfigReportWebhook,
+        'xmpp': ConfigReportXmpp,
+    },
+)
+ConfigJobDefaults = TypedDict(
+    'ConfigJobDefaults',
+    {
+        '_note': str,
+        'all': Dict[str, Any],
+        'url': Dict[str, Any],
+        'browser': Dict[str, Any],
+        'command': Dict[str, Any],
+    },
+)
+ConfigDatabase = TypedDict(
+    'ConfigDatabase',
+    {
+        'engine': Union[Literal['sqlite3', 'redis', 'minidb', 'textfiles'], str],
+        'max_snapshots': int,
+    },
+)
+Config = TypedDict(
+    'Config',
+    {
+        'display': ConfigDisplay,
+        'report': ConfigReport,
+        'job_defaults': ConfigJobDefaults,
+        'database': ConfigDatabase,
+        'footnote': Optional[str],
+    },
+)
 
 DEFAULT_CONFIG: Config = {
     'display': {  # select whether the report include the categories below
@@ -526,9 +524,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
             filename.write_text(file_edit.read_text())
         else:
             file_edit.replace(filename)
-        # Python 3.8: replace with file_edit.unlink(missing_ok=True)
-        if file_edit.is_file():
-            file_edit.unlink()
+        file_edit.unlink(missing_ok=True)
         print('Saved edits in', filename)
         return 0
 
@@ -799,6 +795,19 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         :raise yaml.YAMLError: If a YAML error is found in the file.
         :raise ValueError: If a duplicate URL/command is found in the list.
         """
+
+        def job_files_for_error() -> List[str]:
+            """
+            :return: A list of line containing the names of the job files.
+            """
+            if len(filenames) > 1:
+                jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
+            elif len(filenames) == 1:
+                jobs_files = [f'in jobs file {filenames[0]}.']
+            else:
+                jobs_files = []
+            return jobs_files
+
         jobs = []
         jobs_by_guid = defaultdict(list)
         try:
@@ -807,22 +816,61 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 if job_data.get('kind') == 'shell':
                     job_data['kind'] = 'command'
                 job = JobBase.unserialize(job_data, filenames)
+                # TODO: implement 100% validation and remove it from jobs.py
+                # TODO: try using pydantic to do this.
+                if not isinstance(job.data, (NoneType, str, dict)):
+                    raise ValueError(
+                        '\n   '.join(
+                            [
+                                f"The 'data' key needs to contain a string or a dictionary; found a"
+                                f' {type(job.data).__name__} ',
+                                f'in {job.get_indexed_location()}',
+                            ]
+                            + job_files_for_error()
+                        )
+                    )
+                if not isinstance(job.filter, (NoneType, list)):
+                    raise ValueError(
+                        '\n   '.join(
+                            [
+                                f"The 'filter' key needs to contain a list; found a {type(job.filter).__name__} ",
+                                f'in {job.get_indexed_location()}',
+                            ]
+                            + job_files_for_error()
+                        )
+                    )
+                if not isinstance(job.headers, (NoneType, dict)):
+                    raise ValueError(
+                        '\n   '.join(
+                            [
+                                f"The 'headers' key needs to contain a dictionary; found a "
+                                f'{type(job.headers).__name__} ',
+                                f'in {job.get_indexed_location()})',
+                            ]
+                            + job_files_for_error()
+                        )
+                    )
+                if not isinstance(job.switches, (NoneType, str, list)):
+                    raise ValueError(
+                        '\n   '.join(
+                            [
+                                f"The 'switches' key needs to contain a string or a list; found a "
+                                f'{type(job.switches).__name__} ',
+                                f'in {job.get_indexed_location()}',
+                            ]
+                            + job_files_for_error()
+                        )
+                    )
                 jobs.append(job)
                 jobs_by_guid[job.get_guid()].append(job)
         except yaml.scanner.ScannerError as e:
-            if len(filenames) > 1:
-                jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
-            elif len(filenames) == 1:
-                jobs_files = [f'in jobs file {filenames[0]}.']
-            else:
-                jobs_files = []
             raise ValueError(
                 '\n   '.join(
                     [
                         f"YAML parser {e.args[2].replace('here', '')} in line {e.args[3].line +1 }, column"
                         f' {e.args[3].column + 1}'
                     ]
-                    + jobs_files
+                    + job_files_for_error()
                 )
             ) from None
 
@@ -832,17 +880,11 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 conflicting_jobs.append(guid_jobs[0].get_location())
 
         if conflicting_jobs:
-            if len(filenames) > 1:
-                jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
-            elif len(filenames) == 1:
-                jobs_files = [f'in jobs file {filenames[0]}:']
-            else:
-                jobs_files = []
             raise ValueError(
                 '\n   '.join(
                     ['Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):']
                     + [f'• {job}' for job in conflicting_jobs]
-                    + jobs_files
+                    + job_files_for_error()
                 )
             ) from None
 
@@ -1095,9 +1137,7 @@ class CacheDirStorage(CacheStorage):
 
     def delete(self, guid: str) -> None:
         filename = self._get_filename(guid)
-        # Python 3.8: replace with filename.unlink(missing_ok=True)
-        if filename.is_file():
-            filename.unlink()
+        filename.unlink(missing_ok=True)
         return
 
     def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
@@ -1470,20 +1510,25 @@ class CacheSQLite3Storage(CacheStorage):
         return num_del
 
     def move(self, guid: str, new_guid: str) -> int:
-        total_moved = 0
+        """Replace uuid in records matching the 'guid' with the 'new_guid' value.
+
+        If there are existing records with 'new_guid', they will not be overwritten and the job histories will be
+        merged.
+
+        :returns: Number of records searched for replacement.
+        """
+        total_searched = 0
         if guid != new_guid:
-            # Note if there are existing records with 'new_guid', they will
-            # not be overwritten and the job histories will be merged.
             with self.lock:
                 self._execute(
-                    'UPDATE webchanges ' 'SET uuid = REPLACE(uuid, ?, ?)',
+                    'UPDATE webchanges SET uuid = REPLACE(uuid, ?, ?)',
                     (guid, new_guid),
                 )
-                total_moved = self._execute('SELECT changes()').fetchone()[0]
+                total_searched = self._execute('SELECT changes()').fetchone()[0]
                 self.db.commit()
                 self._execute('VACUUM')
 
-        return total_moved
+        return total_searched
 
     def clean_all(self, keep_entries: int = 1) -> int:
         """Delete all older entries for each 'guid' (keep only keep_entries).
@@ -1579,7 +1624,7 @@ class CacheSQLite3Storage(CacheStorage):
             ' installed for the conversion.'
         )
 
-        from .storage_minidb import CacheMiniDBStorage
+        from webchanges.storage_minidb import CacheMiniDBStorage
 
         legacy_db = CacheMiniDBStorage(minidb_filename)
         self.restore(legacy_db.backup())

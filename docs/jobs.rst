@@ -326,17 +326,34 @@ data
 Data to send with an `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ like ``POST``
 (a dict or string).
 
+If the data is a dict, it will be sent urlencoded unless the directive ``data_as_json: true`` is also present, in which
+case it will be sent as JSON
+
 When this directive is specified:
 
 * If no ``method`` directive is specified, it is set to ``POST``.
 * If no `Content-type
   <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` is specified, such header is
-  set to ``application/x-www-form-urlencoded``.
+  set to ``application/x-www-form-urlencoded`` unless the ``data_as_json: true`` directive is present, in which case
+  it will be set to ``application/json``.
 
 See example :ref:`here <post>`.
 
 .. versionchanged:: 3.8
    Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+.. versionchanged:: 3.15
+   Added ``data_as_json: true``.
+
+
+
+.. _data_as_json:
+
+data_as_json
+^^^^^^^^^^^^
+See explanation within directive :ref:`data`.
+
+.. versioadded:: 3.15
 
 
 

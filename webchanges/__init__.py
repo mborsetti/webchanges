@@ -11,7 +11,7 @@ and/or sends it via e-mail and/or other supported services. Can check the output
 
 from __future__ import annotations
 
-__min_python_version__ = (3, 8)  # minimum version of Python required to run; supported until 5 October 2023
+__min_python_version__ = (3, 9)  # minimum version of Python required to run; supported until 5 October 2023
 
 
 __project_name__ = __package__
@@ -21,7 +21,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.14.post0'
+__version__ = '3.15rc0'
 __description__ = (
     'Check web (or command output) for changes since last run and notify.\n'
     '\n'
@@ -44,3 +44,10 @@ def init_data() -> Dict[str, Union[str, tuple]]:
     :returns: dict of globals()
     """
     return {k: v for k, v in globals().items()}
+
+
+if __name__ == '__main__':
+    # allow running from __init__.py
+    from webchanges.cli import main
+
+    main()

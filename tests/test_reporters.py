@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import importlib.util
-import logging
 import os
 import traceback
 from smtplib import SMTPAuthenticationError
@@ -27,8 +26,6 @@ try:
 except ImportError:
     MatrixError = None
 
-
-logger = logging.getLogger(__name__)
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
 aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
@@ -242,8 +239,7 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
         )
     elif reporter == 'xmpp':
         if not aioxmpp_is_installed:
-            logger.warning(f"Skipping {reporter} since 'aioxmpp' package is not installed")
-            return
+            pytest.skip(f"Skipping {reporter} since 'aioxmpp' package is not installed")
         else:
             if NoKeyringError is not None:
                 with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
@@ -263,8 +259,7 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
         assert reporter in str(pytest_wrapped_e.value).lower()
     elif reporter == 'matrix':
         if not matrix_client_is_installed:
-            logger.warning(f"Skipping {reporter} since 'matrix' package is not installed")
-            return
+            pytest.skip(f"Skipping {reporter} since 'matrix' package is not installed")
         with pytest.raises(MatrixError) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '

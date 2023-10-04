@@ -155,14 +155,14 @@ If you encounter any problems or have any suggestions please open an issue `here
 Upgrade details
 ---------------
 Most everything, except the breaking changes below, *should* work out of the box when upgrading from a
-:program:`urlwatch` 2.28 setup, as long as you run it in Python 3.8 or higher, and you can switch back whenever you
+:program:`urlwatch` 2.28 setup, as long as you run it in Python 3.9 or higher, and you can switch back whenever you
 want.
 
 ⚠ Breaking Changes
 ~~~~~~~~~~~~~~~~~~
 Relative to :program:`urlwatch` 2.28:
 
-* Must run on Python version 3.8 or higher.
+* Must run on Python version 3.9 or higher.
 * By default a new much improved database engine is used; run with ``--database-engine minidb`` command line argument to
   preserve backwards-compatibility.
 * By default only 4 snapshots are kept with the new database engine, and older ones are purged after every run; run

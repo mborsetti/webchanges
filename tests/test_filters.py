@@ -75,8 +75,7 @@ def test_filters(test_name: str, test_data: Dict[str, str]) -> None:
     for filter_kind, subfilter in FilterBase.normalize_filter_list(filter):
         logger.info(f'filter kind: {filter_kind}, subfilter: {subfilter}')
         if filter_kind == 'html2text' and subfilter.get('method') == 'bs4' and not bs4_is_installed:
-            logger.warning(f"Skipping {test_name} since 'beautifulsoup4' package is not installed")
-            return
+            pytest.skip(f"Skipping {test_name} since 'beautifulsoup4' package is not installed")
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         if filtercls is None:
             raise ValueError('Unknown filter kind: {filter_kind}:{subfilter}')
@@ -240,7 +239,7 @@ def test_filter_exceptions() -> None:
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), job_state).filter('<div>a</div>', {'method': 'blabla'})  # type: ignore[misc]
-    assert e.value.args[0] == ("Unknown method blabla for filter 'html2text'. ()")
+    assert e.value.args[0] == "Unknown method blabla for filter 'html2text'. ()"
 
     filtercls = FilterBase.__subclasses__.get('pdf2text')
     with pytest.raises(ValueError) as e:

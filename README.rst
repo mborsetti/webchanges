@@ -95,7 +95,7 @@ We welcome any contribution no matter how small as both pull requests and `issue
 <https://github.com/mborsetti/webchanges/issues>`__.
 
 More information for developers and documentation contributors is `here
-<https://github.com/mborsetti/webchanges/blob/main/CONTRIBUTING.rst>`__, and our wishlist is `here
+<https://webchanges.readthedocs.io/en/stable/contributing.html>`__, and our wishlist is `here
 <https://github.com/mborsetti/webchanges/blob/main/WISHLIST.md>`__.
 
 
@@ -167,12 +167,9 @@ Examples:
 .. |readthedocs| image:: https://img.shields.io/readthedocs/webchanges/stable.svg?label=
     :target: https://webchanges.readthedocs.io/
     :alt: Documentation status
-.. |CI| image:: https://github.com/mborsetti/webchanges/workflows/Tests/badge.svg?branch=main
+.. |CI| image:: https://github.com/mborsetti/webchanges/actions/workflows/ci-cd.yaml/badge.svg?event=push
     :target: https://github.com/mborsetti/webchanges/actions
     :alt: CI testing status
-.. |coverage| image:: https://codecov.io/gh/mborsetti/webchanges/branch/main/graphs/badge.svg
-    :target: https://app.codecov.io/gh/mborsetti/webchanges/branch/main
-    :alt: Code coverage by Codecov
 .. |coveralls| image:: https://coveralls.io/repos/github/mborsetti/webchanges/badge.svg?branch=main
     :target: https://coveralls.io/github/mborsetti/webchanges?branch=main
     :alt: Code coverage by Coveralls

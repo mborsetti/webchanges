@@ -21,7 +21,7 @@ import warnings
 from ftplib import FTP  # noqa: S402 A FTP-related module is being imported. FTP is considered insecure.
 from http.client import responses as response_names
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, TYPE_CHECKING, Union
 from urllib.parse import parse_qsl, quote, SplitResult, SplitResultBytes, urlencode, urlparse, urlsplit
 
 import html2text
@@ -31,16 +31,14 @@ import yaml
 from requests.structures import CaseInsensitiveDict
 from urllib3.exceptions import InsecureRequestWarning
 
-from .__init__ import __user_agent__
-from .filters import FilterBase
-from .util import TrackSubClasses
+from webchanges.__init__ import __user_agent__
+from webchanges.filters import FilterBase
+from webchanges.util import TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    from typing import Literal  # not available in Python < 3.8
-
-    from .handler import JobState
-    from .storage import Config
+    from webchanges.handler import JobState
+    from webchanges.storage import Config
 
 # required to suppress warnings with 'ssl_no_verify: true'
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: ignore[attr-defined]
@@ -107,6 +105,7 @@ class JobBase(metaclass=TrackSubClasses):
     contextlines: Optional[int] = None
     cookies: Optional[Dict[str, str]] = None
     data: Union[str, Dict[str, str]] = None  # type: ignore[assignment]
+    data_as_json: Optional[bool] = None
     deletions_only: Optional[bool] = None
     diff_filter: Union[str, List[Union[str, Dict[str, Any]]]] = None  # type: ignore[assignment]
     diff_tool: Optional[str] = None
@@ -382,11 +381,6 @@ class JobBase(metaclass=TrackSubClasses):
         """
         job_with_defaults = copy.deepcopy(self)
         if job_with_defaults.headers:
-            if not isinstance(job_with_defaults.headers, dict):
-                raise ValueError(
-                    f"Error reading jobs file: 'headers' directive must be a dictionary in job "
-                    f'{job_with_defaults.url or job_with_defaults.command}'
-                )
             job_with_defaults.headers = CaseInsensitiveDict(job_with_defaults.headers)
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
@@ -580,6 +574,7 @@ class UrlJob(UrlJobBase):
     __optional__ = (
         'cookies',
         'data',
+        'data_as_json',
         'encoding',
         'headers',
         'http_proxy',
@@ -670,9 +665,15 @@ class UrlJob(UrlJobBase):
             if self.method is None:
                 self.method = 'POST'
             if 'Content-Type' not in headers:
-                headers['Content-Type'] = 'application/x-www-form-urlencoded'
+                if self.data_as_json:
+                    headers['Content-Type'] = 'application/json'
+                else:
+                    headers['Content-Type'] = 'application/x-www-form-urlencoded'
             if isinstance(self.data, dict):
-                self.data = urlencode(self.data)
+                if self.data_as_json:
+                    self.data = json.dumps(self.data, ensure_ascii=False)
+                else:
+                    self.data = urlencode(self.data)
             elif not isinstance(self.data, str):
                 raise TypeError(
                     f"Job {job_state.job.index_number}: Directive 'data' needs to be a string or a dictionary; found a "
@@ -855,6 +856,7 @@ class BrowserJob(UrlJobBase):
         'chromium_revision',  # deprecated
         'cookies',
         'data',
+        'data_as_json',
         'headers',
         'http_proxy',
         'https_proxy',
@@ -1004,7 +1006,7 @@ class BrowserJob(UrlJobBase):
         else:
             ignore_default_args = None
 
-        timeout = self.timeout * 1000 if self.timeout else 90000  # Playwright's default of 30 seconds is too short
+        timeout = self.timeout * 1000 if self.timeout else 120000  # Playwright's default of 30 seconds is too short
 
         # memory
         virtual_memory = psutil.virtual_memory().available
@@ -1159,8 +1161,16 @@ class BrowserJob(UrlJobBase):
                 if not self.method:
                     self.method = 'POST'
                 logger.info(f'Job {self.index_number}: Sending POST request to {url}')
+                if 'Content-Type' not in headers:
+                    if self.data_as_json:
+                        headers['Content-Type'] = 'application/json'
+                    else:
+                        headers['Content-Type'] = 'application/x-www-form-urlencoded'
                 if isinstance(self.data, dict):
-                    data = urlencode(self.data)
+                    if self.data_as_json:
+                        data = json.dumps(self.data, ensure_ascii=False)
+                    else:
+                        data = urlencode(self.data)
                 elif isinstance(self.data, str):
                     data = quote(self.data)
                 else:

@@ -1,4 +1,4 @@
-# pip requirements for pre-commit (in addition to /requirements.txt and /docs/requirements.txt)
+# pip requirements for pre-commit (in addition to ./requirements.txt and /docs/requirements.txt)
 bandit
 black
 doc8

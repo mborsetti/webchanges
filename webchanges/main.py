@@ -9,12 +9,12 @@ from __future__ import annotations
 import logging
 from typing import List, Optional, Tuple, Union
 
-from .config import CommandConfig
-from .handler import Report
-from .jobs import JobBase
-from .storage import CacheStorage, YamlConfigStorage, YamlJobsStorage
-from .util import get_new_version_number
-from .worker import run_jobs
+from webchanges.config import CommandConfig
+from webchanges.handler import Report
+from webchanges.jobs import JobBase
+from webchanges.storage import CacheStorage, YamlConfigStorage, YamlJobsStorage
+from webchanges.util import get_new_version_number
+from webchanges.worker import run_jobs
 
 logger = logging.getLogger(__name__)
 

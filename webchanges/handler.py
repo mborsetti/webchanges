@@ -20,9 +20,9 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, ContextManager, Dict, Iterator, List, NamedTuple, Optional, Type, TYPE_CHECKING, Union
 
-from .filters import FilterBase
-from .jobs import NotModifiedError
-from .reporters import ReporterBase
+from webchanges.filters import FilterBase
+from webchanges.jobs import NotModifiedError
+from webchanges.reporters import ReporterBase
 
 try:
     import deepdiff
@@ -42,11 +42,9 @@ except ImportError:
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    # from typing import Literal  # not available in Python < 3.8
-
-    from .jobs import JobBase
-    from .main import Urlwatch
-    from .storage import CacheStorage, Config
+    from webchanges.jobs import JobBase
+    from webchanges.main import Urlwatch
+    from webchanges.storage import CacheStorage, Config
 
 logger = logging.getLogger(__name__)
 

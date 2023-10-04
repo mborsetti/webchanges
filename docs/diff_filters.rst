@@ -160,8 +160,8 @@ contextlines
 ------------
 .. versionadded:: 3.0
 
-The ``contextlines`` directive causes a unified diffs to have a set number of context lines that might be different than
-than Python's default of 3 (or as set by the filters above).
+The ``contextlines`` directive causes a unified diffs to have a set number of context lines that might be different from
+Python's default of 3 (or 0 if the job contains ``additions_only: true`` or ``deletions_only: true``).
 
 
 Example:
@@ -194,7 +194,7 @@ Output:
     This is line 19
     This is line 20
 
-Example (default):
+Example (default, i.e. 3):
 
 .. code-block:: yaml
 

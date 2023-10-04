@@ -47,7 +47,7 @@ At the moment, the following filters are available:
   - :ref:`element-by-style <element-by-…>`: Get all HTML elements matching a style.
   - :ref:`element-by-tag <element-by-…>`: Get all HTML elements matching a tag.
 
-* To extract text from HTML:
+* To extract text from HTML (or XML):
 
   - :ref:`html2text`: Convert HTML to plaintext.
 
@@ -379,9 +379,10 @@ Optional sub-directives
 * ``method``: One of:
 
  - ``html2text`` (default): Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package and retains
-   some simple formatting (Markup language);
- - ``bs4``: Uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text;
- - ``strip_tags``: Uses regex to strip tags.
+   some simple formatting (Markup language) from HTML;
+ - ``bs4``: Uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
+   from either HTML or XML;
+ - ``strip_tags``: Uses regex to strip tags (HTML or XML).
 
 
 ``html2text``
@@ -436,10 +437,6 @@ This filter method extracts visible text from HTML using the `Beautiful Soup
 <https://pypi.org/project/beautifulsoup4/>`__ Python package, specifically its `get_text(strip=True)
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
 
-.. note:: As of Beautiful Soup version 4.9.0, when using the ``lxml`` or ``html.parser`` parser (see optional
-   sub-directive below), only human-visible content of the page is extracted and the contents of <script>, <style>, and
-   <template> tags is not included.
-
 .. code-block:: yaml
 
     url: https://example.com/html2text_bs4.html
@@ -449,13 +446,38 @@ This filter method extracts visible text from HTML using the `Beautiful Soup
           method: bs4
           strip: true
 
+Parsers
+~~~~~~~
+Beautiful Soup supports multiple parsers as documented `here
+<https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser>`__. We default to the use of the
+``lxml`` parser as recommended, but you can specify the parser by using the ``parser`` sub-directive:
+
+.. code-block:: yaml
+
+    url: https://example.com/html2text_bs4_html5lib.html
+    filter:
+      - xpath: '//section[@role="main"]'
+      - html2text:
+          method: bs4
+          parser: html5lib
+          strip: true
+
+Extracting text from XML
+~~~~~~~~~~~~~~~~~~~~~~~~
+This filter can be used to extract text from XML by using the ``xml`` parser as follows:
+
+.. code-block:: yaml
+
+    url: https://example.com/html2text_bs4_xml
+    filter:
+      - html2text:
+          method: bs4
+          parser: xml
+
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``parser``: the type of markup you want to parse (currently supported are ``html``, ``xml``, and ``html5``) or the
-  name of the parser library you want to use (currently supported options are ``lxml``, ``html5lib`` and
-  ``html.parser``) as per `documentation
+* ``parser``: the name of the parser library you want to use as per `documentation
   <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use>`__ (default: ``lxml``).
-  ``html5lib``requires having the ``html5lib`` Python package already installed.
 * ``separator``: Strings extracted from the HTML or XML object will be concatenated using this separator (defaults to
   the empty string ``````).
 * ``strip`` (true/false): If true, strings will be stripped before being concatenated (defaults to false).
@@ -468,6 +490,14 @@ follows:
 .. code-block:: bash
 
    pip install --upgrade webchanges[bs4]
+
+
+If (and only if) you specify ``parser: html5lib``, then you also need to first install :ref:`additional Python
+packages <optional_packages>` as follows:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[bs4,html5lib]
 
 
 .. versionchanged:: 3.0

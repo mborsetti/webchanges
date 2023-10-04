@@ -50,20 +50,20 @@ except ImportError:
     psutil = None  # type: ignore[assignment]
     bytes2human = None  # type: ignore[assignment]
 
-from .__init__ import __docs_url__, __project_name__, __version__
-from .filters import FilterBase
-from .handler import JobState, Report, SnapshotShort
-from .jobs import BrowserJob, JobBase, UrlJob
-from .mailer import smtp_have_password, smtp_set_password, SMTPMailer
-from .main import Urlwatch
-from .reporters import ReporterBase, xmpp_have_password, xmpp_set_password
-from .util import dur_text, edit_file, import_module_from_source
+from webchanges.__init__ import __docs_url__, __project_name__, __version__
+from webchanges.filters import FilterBase
+from webchanges.handler import JobState, Report, SnapshotShort
+from webchanges.jobs import BrowserJob, JobBase, UrlJob
+from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
+from webchanges.main import Urlwatch
+from webchanges.reporters import ReporterBase, xmpp_have_password, xmpp_set_password
+from webchanges.util import dur_text, edit_file, import_module_from_source
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .reporters import ConfigReportersList
-    from .storage import ConfigReportEmail, ConfigReportEmailSmtp, ConfigReportTelegram, ConfigReportXmpp
+    from webchanges.reporters import ConfigReportersList
+    from webchanges.storage import ConfigReportEmail, ConfigReportEmailSmtp, ConfigReportTelegram, ConfigReportXmpp
 
 
 class UrlwatchCommand:
@@ -120,9 +120,7 @@ class UrlwatchCommand:
             self.urlwatch_config.hooks_file.write_text(hooks_edit.read_text())
         else:
             hooks_edit.replace(self.urlwatch_config.hooks_file)
-        # python 3.8: replace with hooks_edit.unlink(missing_ok=True)
-        if hooks_edit.is_file():
-            hooks_edit.unlink()
+        hooks_edit.unlink(missing_ok=True)
         print(f'Saved edits in {self.urlwatch_config.hooks_file}')
         return 0
 
@@ -615,6 +613,7 @@ class UrlwatchCommand:
             if job is not None:
                 self.urlwatcher.jobs.remove(job)
                 print(f'Removed {job}')
+                self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
             else:
                 print(f'Job not found: {self.urlwatch_config.delete}')
                 return 1
@@ -631,6 +630,7 @@ class UrlwatchCommand:
             job = JobBase.unserialize(d)
             print(f'Adding {job}')
             self.urlwatcher.jobs.append(job)
+            self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
         if self.urlwatch_config.change_location is not None:
             new_loc = self.urlwatch_config.change_location[1]
@@ -638,7 +638,8 @@ class UrlwatchCommand:
             if new_loc in (j.get_location() for j in self.urlwatcher.jobs):
                 print(
                     f'The new location "{new_loc}" already exists for a job. Delete the existing job or choose a '
-                    f'different value.'
+                    f'different value.\n'
+                    f'Hint: you have to run --change-location before you update the jobs.yaml file!'
                 )
                 return 1
             else:
@@ -653,14 +654,18 @@ class UrlwatchCommand:
                         print(f'No snapshots found for "{old_loc}"')
                         return 1
                     job.set_base_location(new_loc)
-                    num_moved = self.urlwatcher.cache_storage.move(old_guid, job.get_guid())
-                    if num_moved:
-                        print(f'Moved {num_moved} snapshots of "{old_loc}" to "{new_loc}"')
+                    num_searched = self.urlwatcher.cache_storage.move(old_guid, job.get_guid())
+                    if num_searched:
+                        print(f'Searched through {num_searched:,} snapshots and moved "{old_loc}" to "{new_loc}"')
                 else:
                     print(f'Job not found: "{self.urlwatch_config.change_location[0]}"')
                     return 1
+            message = 'Do you want me to update the jobs file (remarks will be lost)? [y/N] '
+            if not input(message).lower().startswith('y'):
+                print(f'Please update the jobs file to reflect "{new_loc}".')
+            else:
+                self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
-        self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
         return 0
 
     def edit_config(self) -> int:

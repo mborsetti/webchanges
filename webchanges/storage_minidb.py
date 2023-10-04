@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from .storage import CacheStorage, Snapshot
+from webchanges.storage import CacheStorage, Snapshot
 
 try:
     import minidb

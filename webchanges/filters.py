@@ -27,13 +27,13 @@ import yaml
 from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
 from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
 
-from .__init__ import __project_name__
-from .util import TrackSubClasses
+from webchanges.__init__ import __project_name__
+from webchanges.util import TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    from .handler import JobState
-    from .jobs import JobBase
+    from webchanges.handler import JobState
+    from webchanges.jobs import JobBase
 
 try:
     import bs4
@@ -77,7 +77,7 @@ except ImportError as e:
 try:
     from packaging.version import parse as parse_version
 except ImportError:
-    from ._vendored.packaging_version import parse as parse_version  # type: ignore[assignment]
+    from webchanges._vendored.packaging_version import parse as parse_version  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -503,7 +503,15 @@ class Html2TextFilter(FilterBase):
                 self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
 
             bs4_parser: str = options.pop('parser', 'lxml')
-            soup = bs4.BeautifulSoup(data, bs4_parser)
+            try:
+                soup = bs4.BeautifulSoup(data, bs4_parser)
+            except bs4.FeatureNotFound:
+                raise ValueError(
+                    f"Filter html2text's method 'bs4' has been invoked with parser '{bs4_parser}', which is either not "
+                    f'installed or is not supported by Beautiful Soup. Please refer to the documentation at '
+                    f'https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser. '
+                    f'({self.job.get_indexed_location()})'
+                )
             separator: str = options.pop('separator', '')
             strip: bool = options.pop('strip', False)
             return soup.get_text(separator=separator, strip=strip)

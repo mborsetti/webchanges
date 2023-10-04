@@ -64,8 +64,8 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.11', '3.10', '3.9', '3.8']
-#        python-version: ['3.12.0-rc.1']
+#        python-version: ['3.12', '3.11', '3.10', '3.9']
+        python-version: ['3.12']
         os: [ubuntu-latest]
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
@@ -109,17 +109,17 @@ jobs:
         run: |
           pip install -U pip setuptools wheel
 
-      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
-        # https://lxml.de/installation.html#installation
-        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'Linux'
-        run: |
-          sudo apt-get -y update
-          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
-          CFLAGS="-O0" pip install lxml
+#      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
+#        # https://lxml.de/installation.html#installation
+#        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'Linux'
+#        run: |
+#          sudo apt-get -y update
+#          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
+#          CFLAGS="-O0" pip install lxml
 
       - name: Install pdf2text and ocr dependencies (Linux Python latest)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.11' && runner.os == 'Linux'
+        if: matrix.python-version == '3.12' && runner.os == 'Linux'
         # https://github.com/jalan/pdftotext#os-dependencies
         run: |
           sudo apt-get -y update
@@ -127,14 +127,14 @@ jobs:
           pip install -U pdftotext Pillow pytesseract
 
       - name: Install all other dependencies (up top py11)
-        if: matrix.python-version <= '3.11'
+        if: matrix.python-version <= '3.12'
         run: |
           pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
       - name: Install all other dependencies (py12)
-        if: matrix.python-version > '3.11'
+        if: matrix.python-version == '3.12'
         run: |
-          pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
+          pip install -U greenlet>=3.0.0 coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
@@ -158,8 +158,8 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.11', '3.10', '3.9', '3.8']
-#        python-version: ['3.12.0-rc.1']
+#        python-version: ['3.12', '3.11', '3.10', '3.9']
+        python-version: ['3.12']
         os: [macos-latest]
 
     env:
@@ -193,20 +193,20 @@ jobs:
 
       - name: Install pdf2text and ocr dependencies (Python latest)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.12'
         run: |
           brew install poppler tesseract
           pip install -U pdftotext Pillow pytesseract
 
       - name: Install all other dependencies (up to py11)
-        if: matrix.python-version <= '3.11'
+        if: matrix.python-version <= '3.12'
         run: |
           pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
       - name: Install all other dependencies (py12)
-        if: matrix.python-version > '3.11'
+        if: matrix.python-version == '3.12'
         run: |
-          pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
+          pip install -U greenlet>=3.0.0 coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
