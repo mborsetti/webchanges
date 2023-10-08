@@ -400,8 +400,7 @@ class JobBase(metaclass=TrackSubClasses):
         :returns: the GUID.
         """
         location = self.get_location()
-        # Python 3.9: insert usedforsecurity=False argument in sha1() and remove nosec
-        return hashlib.sha1(location.encode()).hexdigest()  # noqa: S324  Use of weak hash for security.
+        return hashlib.sha1(location.encode(), usedforsecurity=False).hexdigest()
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.

@@ -48,7 +48,7 @@ config_storage = YamlConfigStorage(config_file)
 
 DATABASE_ENGINES: Tuple[CacheStorage, ...] = (
     CacheDirStorage(tmp_path),
-    CacheSQLite3Storage(':memory:'),
+    CacheSQLite3Storage(':memory:'),  # type: ignore[arg-type]
 )
 
 if os.getenv('REDIS_URI') and importlib.util.find_spec('redis') is not None:
@@ -687,10 +687,7 @@ def test_migrate_urlwatch_legacy_db(tmp_path: Path) -> None:
         finally:
             cache_storage.close()
             temp_cache_file.unlink()
-            # Pyton 3.9: minidb_temp_cache_file = temp_cache_file.with_stem(temp_cache_file.stem + '_minidb')
-            minidb_temp_cache_file = temp_cache_file.parent.joinpath(
-                temp_cache_file.stem + '_minidb' + ''.join(temp_cache_file.suffixes)
-            )
+            minidb_temp_cache_file = temp_cache_file.with_stem(temp_cache_file.stem + '_minidb')
             minidb_temp_cache_file.unlink()
     else:
         with pytest.raises(ImportError) as pytest_wrapped_e:
@@ -702,7 +699,7 @@ def test_migrate_urlwatch_legacy_db(tmp_path: Path) -> None:
 
 def test_max_snapshots() -> None:
     cache_file = ':memory:'
-    cache_storage = CacheSQLite3Storage(cache_file)
+    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
     cache_storage.max_snapshots = 0
     cache_storage.close()
 

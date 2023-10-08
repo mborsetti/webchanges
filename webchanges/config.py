@@ -25,7 +25,7 @@ class BaseConfig:
     config_file: Path
     jobs_def_file: Path
     hooks_file: Path
-    cache: Union[str, Path]
+    cache: Path
     jobs_files: List[Path] = field(default_factory=list)
 
 
@@ -71,7 +71,7 @@ class CommandConfig(BaseConfig):
         config_file: Path,
         jobs_def_file: Path,
         hooks_file: Path,
-        cache: Union[str, Path],
+        cache: Path,
     ) -> None:
         """Command line arguments configuration; the arguments are stored as class attributes.
 

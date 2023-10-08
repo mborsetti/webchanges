@@ -1,4 +1,4 @@
-"""Handles the running of jobs and, afterwards, of the reports."""
+"""Handles the running of jobs and, afterward, of the reports."""
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
@@ -34,11 +34,7 @@ try:
 except ImportError as e:
     xmltodict = e.msg  # type: ignore[no-redef]
 
-try:
-    from zoneinfo import ZoneInfo  # not available in Python < 3.9
-except ImportError:
-    from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
-
+from zoneinfo import ZoneInfo  # not available in Python < 3.9
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:

@@ -134,7 +134,8 @@ jobs:
       - name: Install all other dependencies (py12)
         if: matrix.python-version == '3.12'
         run: |
-          pip install -U greenlet>=3.0.0 coveralls -r requirements.txt -r tests/requirements_pytest.txt
+          pip install -U --no-deps playwright >-1.37 greenlet==3.0 pyee==11.0
+          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
@@ -206,7 +207,8 @@ jobs:
       - name: Install all other dependencies (py12)
         if: matrix.python-version == '3.12'
         run: |
-          pip install -U greenlet>=3.0.0 coveralls -r requirements.txt -r tests/requirements_pytest.txt
+          pip install -U --no-deps playwright >-1.37 greenlet==3.0 pyee==11.0
+          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)

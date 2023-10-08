@@ -488,7 +488,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
             filename = self.filename[0]
         else:
             filename = self.filename
-        file_edit = self.filename.with_stem(self.filename.stem + '_edit')
+        file_edit = filename.with_stem(filename.stem + '_edit')
 
         if filename.is_file():
             shutil.copy(filename, file_edit)
@@ -1189,7 +1189,7 @@ class CacheSQLite3Storage(CacheStorage):
     * msgpack_data: a msgpack blob containing 'data', 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
     """
 
-    def __init__(self, filename: Union[str, Path], max_snapshots: int = 4) -> None:
+    def __init__(self, filename: Path, max_snapshots: int = 4) -> None:
         """
         :param filename: The full filename of the database file
         :param max_snapshots: The maximum number of snapshots to retain in the database for each 'guid'
@@ -1229,10 +1229,7 @@ class CacheSQLite3Storage(CacheStorage):
                 )
 
             self.db.close()
-            # Python 3.9: minidb_filename = filename.with_stem(filename.stem + '_minidb')
-            minidb_filename = self.filename.parent.joinpath(
-                self.filename.stem + '_minidb' + ''.join(self.filename.suffixes)
-            )
+            minidb_filename = filename.with_stem(filename.stem + '_minidb')
             self.filename.replace(minidb_filename)
             self.db = sqlite3.connect(filename, check_same_thread=False)
             self.cur = self.db.cursor()

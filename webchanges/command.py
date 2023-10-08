@@ -20,13 +20,9 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, TYPE_CHECKING, Union
+from zoneinfo import ZoneInfo
 
 import requests
-
-try:
-    from zoneinfo import ZoneInfo  # not available in Python < 3.9
-except ImportError:
-    from backports.zoneinfo import ZoneInfo  # type: ignore[no-redef]
 
 try:
     import apt
