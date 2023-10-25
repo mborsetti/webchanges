@@ -37,9 +37,9 @@ Notice
 Support for Python 3.8 will be removed on or about 5 October 2023. A reminder that older Python versions are
 supported for 3 years after being obsoleted by a new major release (i.e. about 4 years since their original release).
 
-Version 3.15rc1
+Version 3.15
 ===================
-Unreleased
+2023-10-25
 
 Added
 -----
