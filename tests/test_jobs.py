@@ -462,6 +462,23 @@ def test_with_defaults() -> None:
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
 
 
+def test_with_defaults_headers() -> None:
+    """Tests that the default headers are overwritten correctly: those more specific (i.e. ``url`` and ``browser``)
+    override those more generic (i.e. ``all``)."""
+    job_data = {'url': 'https://www.example.com'}
+    job = JobBase.unserialize(job_data)
+    config: Config = {  # type: ignore[typeddict-item]
+        'job_defaults': {
+            'all': {'headers': {'a': 1, 'b': 2}},
+            'url': {'headers': {'b': 3, 'c': 4}},
+            'browser': {'headers': {'c': 5, 'd': 6}},
+        }
+    }
+    job = job.with_defaults(config)
+    assert job.headers == {'a': 1, 'b': 3, 'c': 4}
+    assert job.get_indexed_location() == 'Job 0: https://www.example.com'
+
+
 def test_ignore_error() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)

@@ -391,6 +391,8 @@ class JobBase(metaclass=TrackSubClasses):
             if 'headers' in cfg.get('browser', {}):
                 cfg['browser']['headers'] = CaseInsensitiveDict(cfg['browser']['headers'])
             job_with_defaults._set_defaults(cfg.get(self.__kind__))  # type: ignore[arg-type]
+            # all is done afterward, so that more specific defaults are not overwritten
+            job_with_defaults._set_defaults(cfg.get('all'))
         return job_with_defaults
 
     def get_guid(self) -> str:
