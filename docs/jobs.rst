@@ -364,7 +364,7 @@ no_conditional_request
 In order to speed things up, :program:`webchanges` sets the ``If-Modified-Since`` and/or ``If-None-Match`` headers
 on all requests, making them conditional requests (see more :ref:`here <conditional_requests>`). In extremely rare cases
 (e.g. Google Flights) the ``If-Modified-Since`` will cause the website to hang or return invalid data, so you can
-disable conditional requests with the directive ``no_conditional_request : true`` to ensure it is not added to the
+disable conditional requests with the directive ``no_conditional_request: true`` to ensure it is not added to the
 query.
 
 

@@ -1,7 +1,6 @@
 Added
 -----
-* Support for Python 3.12. Note that only  the latest version of the ``greenlet`` and ``pyee`` libraries, i.e
-  ``greenlet>=3.0 pyee>=11.0``, are compatible with Python 3.12.
+* Support for Python 3.12.
 * ``data_as_json`` job directive for ``url`` jobs to indicate that ``data`` entered as a dict should be
   serialized as JSON instead of urlencoded and, if missing, the header ``Content-Type`` set to ``application/json``
   instead of ``application/x-www-form-urlencoded``.

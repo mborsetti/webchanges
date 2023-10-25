@@ -107,9 +107,17 @@ def test_run_watcher_sqlite3() -> None:
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
-    cache_storage = CacheSQLite3Storage(cache_file)
+    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
     try:
-        urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
+        urlwatch_config = CommandConfig(
+            [],
+            project_name,
+            here,
+            config_file,
+            jobs_file,
+            hooks_file,
+            cache_file,  # type: ignore[arg-type]
+        )
         urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:
@@ -122,9 +130,17 @@ def test_run_watcher_minidb() -> None:
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
-    cache_storage = CacheMiniDBStorage(cache_file)
+    cache_storage = CacheMiniDBStorage(cache_file)  # type: ignore[arg-type]
     try:
-        urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
+        urlwatch_config = CommandConfig(
+            [],
+            project_name,
+            here,
+            config_file,
+            jobs_file,
+            hooks_file,
+            cache_file,  # type: ignore[arg-type]
+        )
         urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:
@@ -135,10 +151,18 @@ def prepare_retry_test_sqlite3() -> tuple[Urlwatch, CacheSQLite3Storage]:
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
 
     config_storage = YamlConfigStorage(config_file)
-    cache_storage = CacheSQLite3Storage(cache_file)
+    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
     jobs_storage = YamlJobsStorage([jobs_file])
 
-    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatch_config = CommandConfig(
+        [],
+        project_name,
+        here,
+        config_file,
+        jobs_file,
+        hooks_file,
+        cache_file,  # type: ignore[arg-type]
+    )
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     return urlwatcher, cache_storage
@@ -214,10 +238,18 @@ def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
 def prepare_retry_test_minidb() -> tuple[Urlwatch, CacheMiniDBStorage]:
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
     config_storage = YamlConfigStorage(config_file)
-    cache_storage = CacheMiniDBStorage(cache_file)
+    cache_storage = CacheMiniDBStorage(cache_file)  # type: ignore[arg-type]
     jobs_storage = YamlJobsStorage([jobs_file])
 
-    urlwatch_config = CommandConfig([], project_name, here, config_file, jobs_file, hooks_file, cache_file)
+    urlwatch_config = CommandConfig(
+        [],
+        project_name,
+        here,
+        config_file,
+        jobs_file,
+        hooks_file,
+        cache_file,  # type: ignore[arg-type]
+    )
     urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
 
     return urlwatcher, cache_storage

@@ -37,14 +37,13 @@ Notice
 Support for Python 3.8 will be removed on or about 5 October 2023. A reminder that older Python versions are
 supported for 3 years after being obsoleted by a new major release (i.e. about 4 years since their original release).
 
-Version 3.15rc0
+Version 3.15rc1
 ===================
 Unreleased
 
 Added
 -----
-* Support for Python 3.12. Note that only  the latest version of the ``greenlet`` and ``pyee`` libraries, i.e
-  ``greenlet>=3.0 pyee>=11.0``, are compatible with Python 3.12.
+* Support for Python 3.12.
 * ``data_as_json`` job directive for ``url`` jobs to indicate that ``data`` entered as a dict should be
   serialized as JSON instead of urlencoded and, if missing, the header ``Content-Type`` set to ``application/json``
   instead of ``application/x-www-form-urlencoded``.

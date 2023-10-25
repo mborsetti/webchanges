@@ -193,12 +193,12 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             if job.index_number in urlwatcher.urlwatch_config.joblist
         ]
         logger.debug(
-            f'Processing {len(jobs)} job{"s" if len(jobs) else ""} as specified in command line: # '
-            f'{", ".join(str(j) for j in urlwatcher.urlwatch_config.joblist)}'
+            f"Processing {len(jobs)} job{'s' if len(jobs) else ''} as specified in command line: # "
+            f"{', '.join(str(j) for j in urlwatcher.urlwatch_config.joblist)}"
         )
     else:
         jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs]
-        logger.debug(f'Processing {len(jobs)} job{"s" if len(jobs) else ""}')
+        logger.debug(f"Processing {len(jobs)} job{'s' if len(jobs) else ''}")
 
     #    jobs = insert_delay(jobs)
 

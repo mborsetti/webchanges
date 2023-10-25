@@ -866,7 +866,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             raise ValueError(
                 '\n   '.join(
                     [
-                        f"YAML parser {e.args[2].replace('here', '')} in line {e.args[3].line +1 }, column"
+                        f"YAML parser {e.args[2].replace('here', '')} in line {e.args[3].line + 1}, column"
                         f' {e.args[3].column + 1}'
                     ]
                     + job_files_for_error()

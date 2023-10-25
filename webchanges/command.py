@@ -393,6 +393,9 @@ class UrlwatchCommand:
             # Force re-retrieval of job, as we're testing filters
             job.ignore_cached = True
 
+        # Add defaults, as if when run
+        job = job.with_defaults(self.urlwatcher.config_storage.config)
+
         with JobState(self.urlwatcher.cache_storage, job) as job_state:
             job_state.process(headless=not self.urlwatch_config.no_headless)
             duration = time.perf_counter() - start
@@ -541,16 +544,16 @@ class UrlwatchCommand:
                 if job.index_number in self.urlwatcher.urlwatch_config.joblist
             ]
             logger.debug(
-                f'Processing {len(jobs)} job{"s" if len(jobs) else ""} as specified in command line: # '
-                f'{", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
+                f"Processing {len(jobs)} job{'s' if len(jobs) else ''} as specified in command line: # "
+                f"{', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}"
             )
             print(
-                f'Processing {len(jobs)} job{"s" if len(jobs) else ""} as specified in command line: # '
-                f'{", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
+                f"Processing {len(jobs)} job{'s' if len(jobs) else ''} as specified in command line: # "
+                f"{', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}"
             )
         else:
             jobs = [job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs]
-            logger.debug(f'Processing {len(jobs)} job{"s" if len(jobs) else ""}')
+            logger.debug(f"Processing {len(jobs)} job{'s' if len(jobs) else ''}")
 
         for job in jobs:
             # Force re-retrieval of job, as we're testing for errors

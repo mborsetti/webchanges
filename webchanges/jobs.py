@@ -334,7 +334,7 @@ class JobBase(metaclass=TrackSubClasses):
 
         :returns: A string representing the Job.
         """
-        return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
+        return f"<{self.__kind__} {' '.join(f'{k}={v!r}' for k, v in list(self.to_dict().items()))}"
 
     def _dict_deep_merge(self, source: Union[dict, CaseInsensitiveDict], destination: dict) -> dict:
         """Deep merges source dict into destination dict.
@@ -391,7 +391,6 @@ class JobBase(metaclass=TrackSubClasses):
             if 'headers' in cfg.get('browser', {}):
                 cfg['browser']['headers'] = CaseInsensitiveDict(cfg['browser']['headers'])
             job_with_defaults._set_defaults(cfg.get(self.__kind__))  # type: ignore[arg-type]
-            job_with_defaults._set_defaults(cfg.get('all'))
         return job_with_defaults
 
     def get_guid(self) -> str:
@@ -718,6 +717,8 @@ class UrlJob(UrlJobBase):
                 logger.error('See https://github.com/psf/requests/issues/6443')
 
         logger.info(f'Job {self.index_number}: Sending {self.method} request to {self.url}')
+        logger.debug(f'Job {self.index_number}: Headers: {headers}')
+        logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
         response = requests.request(
             method=self.method,
             url=self.url,

@@ -6,7 +6,7 @@ from webchanges.jobs import ShellJob
 from webchanges.storage import CacheSQLite3Storage
 
 cache_file = ':memory:'
-cache_storage = CacheSQLite3Storage(cache_file)
+cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
 job_state = JobState(cache_storage, ShellJob(command=''))
 job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
 job_state.new_timestamp = 1605147837.511478
