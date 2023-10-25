@@ -20,7 +20,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from types import NoneType
 from typing import Any, Dict, Iterable, Iterator, List, Literal, NamedTuple, Optional, TextIO, Tuple, TypedDict, Union
 
 import msgpack
@@ -32,6 +31,11 @@ from webchanges.filters import FilterBase
 from webchanges.jobs import JobBase, ShellJob
 from webchanges.reporters import ReporterBase
 from webchanges.util import edit_file, file_ownership_checks
+
+try:
+    from types import NoneType
+except ImportError:  # Python 3.9
+    NoneType = type(None)  # type: ignore[misc,assignment]
 
 try:
     import redis
