@@ -43,7 +43,6 @@ except ImportError as e:  # pragma: has-bs4
 
 try:
     import cssbeautifier
-    import cssbeautifier.beautify
 except ImportError as e:
     cssbeautifier = e.msg  # type: ignore[assignment]
 
@@ -54,7 +53,6 @@ except ImportError as e:  # pragma: has-jq
 
 try:
     import jsbeautifier
-    import jsbeautifier.beautify
 except ImportError as e:
     jsbeautifier = e.msg  # type: ignore[assignment]
 
