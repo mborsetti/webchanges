@@ -8,7 +8,11 @@ from smtplib import SMTPAuthenticationError
 
 import pytest
 from _pytest.capture import CaptureFixture
-from requests.exceptions import MissingSchema
+
+try:
+    from httpx import UnsupportedProtocol
+except ImportError:
+    from requests.exceptions import MissingSchema as UnsupportedProtocol
 
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
@@ -205,6 +209,25 @@ def test_diff_to_htm_wdiff() -> None:
     )
 
 
+def test_diff_to_htm_link() -> None:
+    # must add to fake headers to get what we want:
+    inpt = '-fake head 1\n+fake head 2\n [link](/test.htm)'
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True})
+    result = ''.join(
+        list(
+            HtmlReporter(
+                Report(UrlwatchTest()),  # type: ignore[arg-type]
+                {},  # type: ignore[arg-type]
+                [],
+                0,
+            )._diff_to_html(inpt, job)
+        )
+    )
+    assert result[250:-8] == (
+        '<tr><td><a style="font-family:inherit" rel="noopener" target="_blank" href="/test.htm">link</a></td></tr>'
+    )
+
+
 def test_smtp_password() -> None:
     if NoKeyringError is not None:
         try:
@@ -230,11 +253,11 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
         assert sum(
             list(
                 x in str(pytest_wrapped_e.value)
-                for x in (
+                for x in {
                     'No password available in keyring for localhost ',
                     'No password available for localhost ',
                     'No recommended backend was available.',
-                )
+                }
             )
         )
     elif reporter == 'xmpp':
@@ -247,10 +270,10 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
                 assert sum(
                     list(
                         x in str(pytest_wrapped_e.value)
-                        for x in (
+                        for x in {
                             'No password available in keyring for ',
                             'No recommended backend was available.',
-                        )
+                        }
                     )
                 )
     elif reporter in {'pushover', 'pushbullet', 'telegram', 'mailgun', 'ifttt', 'prowl'}:
@@ -264,9 +287,13 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
             test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
     elif reporter in {'webhook', 'discord'}:
-        with pytest.raises(MissingSchema) as pytest_wrapped_e:
+        with pytest.raises(UnsupportedProtocol) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
-        assert str(pytest_wrapped_e.value) == "Invalid URL '': No scheme supplied. Perhaps you meant https://?"
+        err_msg = str(pytest_wrapped_e.value)
+        assert (
+            err_msg == "Request URL is missing an 'http://' or 'https://' protocol."
+            or err_msg == "Invalid URL '': No scheme supplied. Perhaps you meant https://?"
+        )
     elif reporter == 'run_command':
         if os.getenv('GITHUB_ACTIONS'):
             pytest.skip('Test triggers exit code 141 in GitHub Actions')

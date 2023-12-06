@@ -55,7 +55,8 @@ changed.
 While the ``empty-diff`` setting is included for backwards-compatibility, :program:`webchanges` uses the easier job
 directive :ref:`additions_only` to obtain similar results, which you should use. This deprecated setting controls
 what happens if a page is ``changed``, but due to e.g. a ``diff_filter`` the diff is reduced to the empty string. If set
-to ``true``, urlwatch will report an (empty) change. If set to ``false``, the change will not be included in the report.
+to ``true``, :program:`webchanges`: will report an (empty) change. If set to ``false``, the change will not be included
+in the report.
 
 
 Reports and Reporters
@@ -67,7 +68,7 @@ report (for example, the ``stdout`` reporter uses ``text``, while the ``email`` 
 ``html``; see :ref:`reporters <reporters>` for details).
 
 Here is an example configuration that reports using UTC timezone on standard output in color, as well as HTML email
-using an SMTP server:
+(one report for each job) using an SMTP server:
 
 .. code:: yaml
 
@@ -78,6 +79,7 @@ using an SMTP server:
        footer: true
        line_length: 75
        minimal: false
+       separate: false
      html:
        diff: unified
        separate: true
@@ -98,6 +100,11 @@ using an SMTP server:
        stdout:
          color: true
          enabled: true
+     markdown:
+       minimal: false
+       show_details: true
+       show_footer: true
+       separate: false
 
 Configuration options for reports is described in :ref:`reports <reports>`.
 
@@ -138,6 +145,7 @@ config file. The following example will set default headers for all ``url`` jobs
 
 The above config file sets all ``url`` jobs without the ``browser`` directive to use the specified headers.
 
+
 The possible sub-directives to ``job_defaults`` are:
 
 * ``all``: Applies to all your jobs, including those in hooks.py;
@@ -146,6 +154,13 @@ The possible sub-directives to ``job_defaults`` are:
 * ``command``: Applies only to jobs with the directive ``command``.
 
 See :ref:`jobs <jobs>` about the different job kinds and directives that can be set.
+
+Duplicate handling
+******************
+If a directive is specified both in ``all`` and either in ``url``, ``browser`` or ``command``, the one in ``all``
+will be overridden, with the contents of ``headers`` being handled as if they were separate directives before being
+overridden.
+
 
 
 Database configuration

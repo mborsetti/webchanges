@@ -10,23 +10,26 @@ report:
     details: true
     footer: true
     minimal: false
+    separate: false
   html:
     diff: unified
+    separate: false
+    title: '[webchanges] {count} changes{jobs_files}: {jobs}'
   markdown:
     details: true
     footer: true
     minimal: false
+    separate: false
   stdout:
     enabled: true
     color: true
   browser:
     enabled: false
-    title: '[webchanges] {count} changes: {jobs}'
   discord:
     enabled: false
     webhook_url: ''
     embed: true
-    subject: '{count} changes: {jobs}'
+    subject: '[webchanges] {count} changes{jobs_files}: {jobs}'
     colored: true
     max_message_length:
   email:
@@ -34,7 +37,7 @@ report:
     html: true
     to: ''
     from: ''
-    subject: '[webchanges] {count} changes: {jobs}'
+    subject: '[webchanges] {count} changes{jobs_files}: {jobs}'
     method: smtp
     smtp:
       host: localhost
@@ -57,7 +60,7 @@ report:
     from_mail: ''
     from_name: ''
     to: ''
-    subject: '[webchanges] {count} changes: {jobs}'
+    subject: '[webchanges] {count} changes{jobs_files}: {jobs}'
   matrix:
     enabled: false
     homeserver: ''
@@ -68,7 +71,7 @@ report:
     api_key: ''
     priority: 0
     application: ''
-    subject: '[webchanges] {count} changes: {jobs}'
+    subject: '[webchanges] {count} changes{jobs_files}: {jobs}'
   pushbullet:
     enabled: false
     api_key: ''

@@ -21,17 +21,13 @@ import warnings
 from ftplib import FTP  # noqa: S402 A FTP-related module is being imported. FTP is considered insecure.
 from http.client import responses as response_names
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple, TYPE_CHECKING, Union
+from typing import Any, Literal, Mapping, Optional, Sequence, TYPE_CHECKING, Union
 from urllib.parse import parse_qsl, quote, SplitResult, SplitResultBytes, urlencode, urlparse, urlsplit
 
 import html2text
-import requests
-import requests.adapters
 import yaml
-from requests.structures import CaseInsensitiveDict
-from urllib3.exceptions import InsecureRequestWarning
 
-from webchanges.__init__ import __user_agent__
+from webchanges import __project_name__, __user_agent__
 from webchanges.filters import FilterBase
 from webchanges.util import TrackSubClasses
 
@@ -40,8 +36,29 @@ if TYPE_CHECKING:
     from webchanges.handler import JobState
     from webchanges.storage import Config
 
-# required to suppress warnings with 'ssl_no_verify: true'
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # type: ignore[attr-defined]
+try:
+    import httpx
+except ImportError as e:
+    httpx = e.msg  # type: ignore[assignment]
+
+try:
+    import h2
+except ImportError:
+    h2 = None  # type: ignore[assignment]
+
+try:
+    import requests
+    import requests.adapters
+    import urllib3
+    import urllib3.exceptions
+except ImportError as e:
+    requests = e.msg  # type: ignore[assignment]
+    urllib3 = e.msg  # type: ignore[assignment]
+
+try:
+    from requests.structures import CaseInsensitiveDict
+except ImportError:
+    from webchanges._vendored.case_insensitive_dict import CaseInsensitiveDict  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +74,7 @@ class BrowserResponseError(Exception):
     """Raised by 'url' jobs with 'use_browser: true' (i.e. using Playwright) when an HTTP error response status code is
     received."""
 
-    def __init__(self, args: Tuple[Any, ...], status_code: Optional[int]) -> None:
+    def __init__(self, args: tuple[Any, ...], status_code: Optional[int]) -> None:
         """
 
         :param args: Tuple with the underlying error args, typically a string with the error text.
@@ -80,13 +97,13 @@ class BrowserResponseError(Exception):
 class JobBase(metaclass=TrackSubClasses):
     """The base class for Jobs."""
 
-    __subclasses__: Dict[str, 'JobBase'] = {}
-    __anonymous_subclasses__: List['JobBase'] = []
+    __subclasses__: dict[str, 'JobBase'] = {}
+    __anonymous_subclasses__: list['JobBase'] = []
 
     __kind__: str = ''  # The kind name
     __is_browser__: bool = False  # Whether Playwright is being launched (run separately with less parallelism)
-    __required__: Tuple[str, ...]  # List of required subdirectives
-    __optional__: Tuple[str, ...]  # List of optional subdirectives
+    __required__: tuple[str, ...]  # List of required subdirectives
+    __optional__: tuple[str, ...]  # List of optional subdirectives
 
     index_number: int = 0  # added at job loading
 
@@ -96,27 +113,27 @@ class JobBase(metaclass=TrackSubClasses):
     use_browser: Optional[bool] = False
 
     # __optional__ in derived classes
-    _beta_use_playwright: Optional[bool] = None  # deprecated
     _delay: Optional[float] = None
     additions_only: Optional[bool] = None
-    block_elements: List[str] = []
-    chromium_revision: Optional[Union[Dict[str, int], Dict[str, str], str, int]] = None  # deprecated
+    block_elements: list[str] = []
+    chromium_revision: Optional[Union[dict[str, int], dict[str, str], str, int]] = None  # deprecated
     compared_versions: Optional[int] = None
     contextlines: Optional[int] = None
-    cookies: Optional[Dict[str, str]] = None
-    data: Union[str, Dict[str, str]] = None  # type: ignore[assignment]
+    cookies: Optional[dict[str, str]] = None
+    data: Union[str, dict[str, str]] = None  # type: ignore[assignment]
     data_as_json: Optional[bool] = None
     deletions_only: Optional[bool] = None
-    diff_filter: Union[str, List[Union[str, Dict[str, Any]]]] = None  # type: ignore[assignment]
+    diff_filter: Union[str, list[Union[str, dict[str, Any]]]] = None  # type: ignore[assignment]
     diff_tool: Optional[str] = None
     encoding: Optional[str] = None
-    filter: Union[str, List[Union[str, Dict[str, Any]]]] = None  # type: ignore[assignment]
+    filter: Union[str, list[Union[str, dict[str, Any]]]] = None  # type: ignore[assignment]
     headers: Optional[Union[dict, CaseInsensitiveDict]] = None
+    http_client: Optional[Literal['httpx', 'requests']] = None
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
     ignore_cached: Optional[bool] = None
     ignore_connection_errors: Optional[bool] = None
-    ignore_default_args: Optional[Union[bool, str, List[str]]] = None
+    ignore_default_args: Optional[Union[bool, str, list[str]]] = None
     ignore_dh_key_too_small: Optional[bool] = None
     ignore_http_error_codes: Optional[bool] = None
     ignore_https_errors: Optional[bool] = None
@@ -140,16 +157,16 @@ class JobBase(metaclass=TrackSubClasses):
     retries: Optional[int] = None
     ssl_no_verify: Optional[bool] = None
     stderr: Optional[str] = None  # urlwatch backwards compatibility for ShellJob (not used)
-    switches: Optional[List[str]] = None
+    switches: Optional[list[str]] = None
     timeout: Optional[Union[int, float]] = None
     user_data_dir: Optional[str] = None
     user_visible_url: Optional[str] = None
     wait_for: Optional[Union[int, str]] = None  # pyppeteer backwards compatibility (deprecated)
-    wait_for_function: Optional[Union[str, Dict[str, Any]]] = None  # Playwright
-    wait_for_navigation: Optional[Union[str, Tuple[str, ...]]] = None
-    wait_for_selector: Optional[Union[str, Dict[str, Any]]] = None  # Playwright
+    wait_for_function: Optional[Union[str, dict[str, Any]]] = None  # Playwright
+    wait_for_navigation: Optional[Union[str, tuple[str, ...]]] = None
+    wait_for_selector: Optional[Union[str, dict[str, Any]]] = None  # Playwright
     wait_for_timeout: Optional[Union[int, float]] = None  # Playwright
-    wait_for_url: Optional[Union[str, Dict[str, Any]]] = None  # Playwright
+    wait_for_url: Optional[Union[str, dict[str, Any]]] = None  # Playwright
     wait_until: Optional[Literal['commit', 'domcontentloaded', 'load', 'networkidle']] = None
 
     def __init__(self, **kwargs: Any) -> None:
@@ -222,7 +239,7 @@ class JobBase(metaclass=TrackSubClasses):
         return d
 
     @classmethod
-    def unserialize(cls, data: dict, filenames: Optional[List[Path]] = None) -> 'JobBase':
+    def unserialize(cls, data: dict, filenames: Optional[list[Path]] = None) -> 'JobBase':
         """Unserialize a dict with job data (e.g. from the YAML jobs file) into a JobBase type object.
 
         :param data: The dict with job data (e.g. from the YAML jobs file).
@@ -259,7 +276,7 @@ class JobBase(metaclass=TrackSubClasses):
             if len(matched_subclasses) == 1:
                 job_subclass = matched_subclasses[0]  # type: ignore[assignment]
             elif len(matched_subclasses) > 1:
-                number_matched: Dict[JobBase, int] = {}
+                number_matched: dict[JobBase, int] = {}
                 for match in matched_subclasses:
                     number_matched[match] = [data.get(required) is not None for required in match.__required__].count(
                         True
@@ -295,13 +312,13 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return {
             k: dict(getattr(self, k)) if isinstance(getattr(self, k), CaseInsensitiveDict) else getattr(self, k)
-            for keys in (self.__required__, self.__optional__)
+            for keys in {self.__required__, self.__optional__}
             for k in keys
             if getattr(self, k) is not None
         }
 
     @classmethod
-    def from_dict(cls, data: dict, filenames: List[Path]) -> 'JobBase':
+    def from_dict(cls, data: dict, filenames: list[Path]) -> 'JobBase':
         """Create a JobBase class from a dict, checking that all keys are recognized (i.e. listed in __required__ or
         __optional__).
 
@@ -354,7 +371,7 @@ class JobBase(metaclass=TrackSubClasses):
 
         return destination
 
-    def _set_defaults(self, defaults: Optional[Dict[str, Any]]) -> None:
+    def _set_defaults(self, defaults: Optional[dict[str, Any]]) -> None:
         """Merge default attributes (e.g. from configuration) into those of the Job object.
 
         :param defaults: The default Job parameters.
@@ -403,7 +420,7 @@ class JobBase(metaclass=TrackSubClasses):
         location = self.get_location()
         return hashlib.sha1(location.encode(), usedforsecurity=False).hexdigest()
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -469,7 +486,7 @@ class JobBase(metaclass=TrackSubClasses):
                     f"please specify only one of them (using content of the cookies 'directive') "
                     f'( {self.get_indexed_location()} ).'
                 )
-            headers['Cookie'] = '; '.join([f'{k}={quote(v)}' for k, v in self.cookies.items()])
+            headers['Cookie'] = '; '.join([f'{k}={v}' for k, v in self.cookies.items()])
         if self.no_conditional_request:
             headers.pop('If-Modified-Since', None)
             headers.pop('If-None-Match', None)
@@ -494,8 +511,8 @@ class JobBase(metaclass=TrackSubClasses):
 class Job(JobBase):
     """Job class for jobs."""
 
-    __required__: Tuple[str, ...] = ()
-    __optional__: Tuple[str, ...] = (
+    __required__: tuple[str, ...] = ()
+    __optional__: tuple[str, ...] = (
         'additions_only',
         'compared_versions',
         'contextlines',
@@ -541,7 +558,7 @@ class Job(JobBase):
 
     def retrieve(  # type: ignore[empty-body]
         self, job_state: JobState, headless: bool = True
-    ) -> Tuple[Union[str, bytes], str]:
+    ) -> tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -557,8 +574,8 @@ CHARSET_RE = re.compile('text/(html|plain); charset=([^;]*)')
 class UrlJobBase(Job):
     """The base class for jobs that use the 'url' key."""
 
-    __required__: Tuple[str, ...] = ('url',)
-    __optional__: Tuple[str, ...] = (
+    __required__: tuple[str, ...] = ('url',)
+    __optional__: tuple[str, ...] = (
         'ignore_connection_errors',
         'ignore_http_error_codes',
         'ignore_timeout_errors',
@@ -577,6 +594,7 @@ class UrlJob(UrlJobBase):
         'data_as_json',
         'encoding',
         'headers',
+        'http_client',
         'http_proxy',
         'https_proxy',
         'ignore_cached',
@@ -599,7 +617,187 @@ class UrlJob(UrlJobBase):
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.url = location
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
+    def _retrieve_httpx(
+        self,
+        headers: Union[
+            Mapping[str, str], Mapping[bytes, bytes], Sequence[tuple[str, str]], Sequence[tuple[bytes, bytes]], None
+        ],
+        timeout: Union[int, float, None],
+    ) -> tuple[Union[str, bytes], str]:
+        """Retrieves the data and Etag using the HTTPX library.
+
+        :return: The data retrieved and the ETag.
+        :raises NotModifiedError: If an HTTP 304 response is received.
+        """
+        http2: bool = h2 is not None
+        if http2:
+            logger.info(f'Job {self.index_number}: Using the HTTPX HTTP client library with HTTP/2 support')
+        else:
+            logger.info(
+                f'Job {self.index_number}: Using the HTTPX HTTP client library (HTTP/2 support is not available since '
+                f'h2 is not installed)'
+            )
+        proxies: Union[str, None] = None
+        scheme = urlsplit(self.url).scheme
+        if getattr(self, scheme + '_proxy'):
+            proxies = getattr(self, scheme + '_proxy')
+        elif os.getenv((scheme + '_proxy').upper()):
+            proxies = os.getenv((scheme + '_proxy').upper())
+        logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
+
+        client = httpx.Client(
+            headers=headers,
+            verify=(not self.ssl_no_verify),
+            http2=http2,
+            proxies=proxies,
+            timeout=timeout,
+            follow_redirects=(not self.no_redirects),
+        )
+        response = client.request(
+            method=self.method,  # type: ignore[arg-type]
+            url=self.url,
+            data=self.data,  # type: ignore[arg-type]
+        )
+
+        if 400 <= response.status_code < 600:
+            # Custom version of request.raise_for_status() to include returned text.
+            # https://www.python-httpx.org/exceptions/
+            reason = response.reason_phrase
+
+            if response.status_code < 500:
+                http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
+            else:
+                http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
+
+            if response.status_code != 404:
+                try:
+                    parsed_json = json.loads(response.text)
+                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+                except json.decoder.JSONDecodeError:
+                    html_text = (
+                        response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
+                    )
+                    parser = html2text.HTML2Text()
+                    parser.unicode_snob = True
+                    parser.body_width = 0
+                    parser.single_line_break = True
+                    parser.ignore_images = True
+                    error_message = parser.handle(html_text).strip()
+                http_error_msg += f'\n{error_message}'
+
+            raise httpx.HTTPStatusError(http_error_msg, request=response.request, response=response)
+
+        if response.status_code == 304:
+            raise NotModifiedError(response.status_code)
+
+        # Save ETag from response into job_state; is saved in cache and used in future requests in If-None-Match header
+        etag = ''
+        if not response.history:  # no redirects
+            etag = response.headers.get('ETag', '')
+
+        if FilterBase.filter_chain_needs_bytes(self.filter):
+            return response.content, etag
+
+        if self.encoding:
+            response.encoding = self.encoding
+
+        return response.text, etag
+
+    def _retrieve_requests(
+        self, headers: Union[Mapping[str, str | bytes], None], timeout: Union[int, float, None]
+    ) -> tuple[Union[str, bytes], str]:
+        """Retrieves the data and Etag using the requests library.
+
+        :return: The data retrieved and the ETag.
+        :raises NotModifiedError: If an HTTP 304 response is received.
+        """
+        logger.info(f'Job {self.index_number}: Using the requests HTTP client library')
+        proxies = None
+        scheme = urlsplit(self.url).scheme
+        if getattr(self, scheme + '_proxy'):
+            proxies = {scheme: getattr(self, scheme + '_proxy')}
+        elif os.getenv((scheme + '_proxy').upper()):
+            proxies = {scheme: os.getenv((scheme + '_proxy').upper())}
+        logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
+
+        if self.ssl_no_verify:
+            # required to suppress warnings with 'ssl_no_verify: true'
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        response = requests.request(
+            method=self.method,  # type: ignore[arg-type]
+            url=self.url,
+            data=self.data,
+            headers=headers,
+            timeout=timeout,
+            allow_redirects=(not self.no_redirects),
+            proxies=proxies,
+            verify=(not self.ssl_no_verify),
+        )
+
+        if 400 <= response.status_code < 600:
+            # Custom version of request.raise_for_status() to include returned text.
+            # https://requests.readthedocs.io/en/master/_modules/requests/models/#Response.raise_for_status
+            if isinstance(response.reason, bytes):
+                # If the reason isn't utf-8 (HTML5 standard), we fall back to iso-8859-1
+                # (legacy standard for HTML <= 4.01).
+                try:
+                    reason = response.reason.decode()
+                except UnicodeDecodeError:
+                    reason = response.reason.decode('iso-8859-1')
+            else:
+                reason = response.reason
+
+            if response.status_code < 500:
+                http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
+            else:
+                http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
+
+            if response.status_code != 404:
+                try:
+                    parsed_json = json.loads(response.text)
+                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+                except json.decoder.JSONDecodeError:
+                    html_text = (
+                        response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
+                    )
+                    parser = html2text.HTML2Text()
+                    parser.unicode_snob = True
+                    parser.body_width = 0
+                    parser.single_line_break = True
+                    parser.ignore_images = True
+                    error_message = parser.handle(html_text).strip()
+                http_error_msg += f'\n{error_message}'
+
+            raise requests.HTTPError(http_error_msg, response=response)
+
+        if response.status_code == 304:
+            raise NotModifiedError(response.status_code)
+
+        # Save ETag from response into job_state; is saved in cache and used in future requests in If-None-Match header
+        etag = ''
+        if not response.history:  # no redirects
+            etag = response.headers.get('ETag', '')
+
+        if FilterBase.filter_chain_needs_bytes(self.filter):
+            return response.content, etag
+
+        if self.encoding:
+            response.encoding = self.encoding
+        elif response.encoding == 'ISO-8859-1' and not CHARSET_RE.match(response.headers.get('Content-type', '')):
+            # If the Content-Type header contains text and no explicit charset is present in the HTTP headers requests
+            # follows RFC 2616 and defaults encoding to ISO-8859-1, but IRL this is often wrong; the below updates it
+            # with whatever is detected by the charset_normalizer or chardet libraries used in requests
+            # (see https://requests.readthedocs.io/en/latest/user/advanced/#encodings)
+            logger.debug(
+                f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from '
+                f'{response.encoding}'
+            )
+            response.encoding = response.apparent_encoding
+
+        return response.text, etag
+
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -647,15 +845,15 @@ class UrlJob(UrlJobBase):
 
                     return data_bytes, ''
                 else:
-                    data: List[str] = []
+                    data_list: list[str] = []
 
                     def callback(dt: str) -> None:
                         """Handle FTP callback."""
-                        data.append(dt)
+                        data_list.append(dt)
 
                     ftp.retrlines(f'RETR {url.path}', callback)
 
-                    return '\n'.join(data), ''
+                    return '\n'.join(data_list), ''
 
         headers = self.get_headers(job_state)
         if 'User-Agent' not in headers:
@@ -697,109 +895,62 @@ class UrlJob(UrlJobBase):
         else:
             timeout = self.timeout
 
-        proxies = None
-        scheme = urlsplit(self.url).scheme
-        if getattr(self, scheme + '_proxy'):
-            proxies = {scheme: getattr(self, scheme + '_proxy')}
-        elif os.getenv((scheme + '_proxy').upper()):
-            proxies = {scheme: os.getenv((scheme + '_proxy').upper())}
-
-        if self.ignore_dh_key_too_small:
-            # https://stackoverflow.com/questions/38015537
-            logger.debug(
-                'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange and '
-                "thus not affected by the server's weak DH key"
-            )
-            try:
-                requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
-            except AttributeError:
-                logger.error(
-                    'Unable to ignore_dh_key_too_small due to bug in requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
-                )
-                logger.error('See https://github.com/psf/requests/issues/6443')
-
         logger.info(f'Job {self.index_number}: Sending {self.method} request to {self.url}')
         logger.debug(f'Job {self.index_number}: Headers: {headers}')
-        logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
-        response = requests.request(
-            method=self.method,
-            url=self.url,
-            data=self.data,
-            headers=headers,
-            timeout=timeout,
-            allow_redirects=(not self.no_redirects),
-            proxies=proxies,
-            verify=(not self.ssl_no_verify),
-        )
 
-        # Custom version of request.raise_for_status() to include returned text.
-        # https://requests.readthedocs.io/en/master/_modules/requests/models/#Response.raise_for_status
-        if 400 <= response.status_code < 600:
-            if isinstance(response.reason, bytes):
-                # If the reason isn't utf-8 (HTML5 standard), we fall back to iso-8859-1 (legacy standard HTML <= 4.01).
+        if self.http_client == 'requests' or isinstance(httpx, str):
+            if isinstance(requests, str):
+                raise ImportError(
+                    f"Job {job_state.job.index_number}: Python HTTP client package 'requests' cannot be imported; "
+                    f'cannot run job ( {self.get_indexed_location()} )\n{requests}'
+                )
+            job_state._http_client_used = 'requests'
+            if self.ignore_dh_key_too_small:
+                # https://stackoverflow.com/questions/38015537
+                logger.debug(
+                    'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
+                    "and thus are not affected by the server's weak DH key"
+                )
                 try:
-                    reason = response.reason.decode()
-                except UnicodeDecodeError:
-                    reason = response.reason.decode('iso-8859-1')
-            else:
-                reason = response.reason
-
-            if response.status_code < 500:
-                http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
-            else:
-                http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
-
-            if response.status_code != 404:
-                try:
-                    parsed_json = json.loads(response.text)
-                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
-                except json.decoder.JSONDecodeError:
-                    html_text = (
-                        response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
+                    # only works with urllib3 <2.0
+                    urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
+                except AttributeError:
+                    logger.error(
+                        'Unable to ignore_dh_key_too_small due to bug in '
+                        'requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
                     )
-                    parser = html2text.HTML2Text()
-                    parser.unicode_snob = True
-                    parser.body_width = 0
-                    parser.single_line_break = True
-                    parser.ignore_images = True
-                    error_message = parser.handle(html_text).strip()
-                http_error_msg += f'\n{error_message}'
-
-            raise requests.HTTPError(http_error_msg, response=response)
-
-        if response.status_code == requests.codes.not_modified:
-            raise NotModifiedError(response.status_code)
-
-        # Save ETag from response into job_state, saved in cache and used in future requests in If-None-Match header
-        etag = ''
-        if not response.history:  # no redirects
-            etag = response.headers.get('ETag', '')
-
-        if FilterBase.filter_chain_needs_bytes(self.filter):
-            return response.content, etag
-
-        if self.encoding:
-            response.encoding = self.encoding
-        elif response.encoding == 'ISO-8859-1' and not CHARSET_RE.match(response.headers.get('Content-type', '')):
-            # If the Content-Type header contains text and no explicit charset is present in the HTTP headers requests
-            # follows RFC 2616 and defaults encoding to ISO-8859-1, but IRL this is often wrong; the below updates it
-            # with whatever is detected by the charset_normalizer or chardet libraries used in requests
-            # (see https://requests.readthedocs.io/en/latest/user/advanced/#encodings)
-            logger.debug(
-                f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from '
-                f'{response.encoding}'
+                    logger.error('See https://github.com/psf/requests/issues/6443')
+            data, etag = self._retrieve_requests(headers=headers, timeout=timeout)
+        elif not self.http_client or self.http_client == 'httpx':
+            if isinstance(httpx, str):
+                raise ImportError(
+                    f"Job {job_state.job.index_number}: Python HTTP client package 'httpx' cannot be imported; cannot "
+                    f'run job ( {self.get_indexed_location()} )\n{httpx}'
+                )
+            job_state._http_client_used = 'HTTPX'
+            if self.ignore_dh_key_too_small:
+                # https://stackoverflow.com/questions/68708522
+                logger.debug(
+                    'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
+                    "and thus are not affected by the server's weak DH key"
+                )
+                httpx._config.DEFAULT_CIPHERS == 'DEFAULT@SECLEVEL=1'
+            data, etag = self._retrieve_httpx(headers=headers, timeout=timeout)
+        else:
+            raise ValueError(
+                f"Job {job_state.job.index_number}: http_client '{self.http_client}' is not supported; cannot run job "
+                f'( {self.get_indexed_location()} )'
             )
-            response.encoding = response.apparent_encoding
 
         # If no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
-        if not self.name:
-            title = re.search(r'<title.*?>(.+?)</title>', response.text)
+        if not self.name and isinstance(data, str):
+            title = re.search(r'<title.*?>(.+?)</title>', data)
             if title:
                 self.name = html.unescape(title.group(1))[:60]
 
-        return response.text, etag
+        return data, etag
 
-    # def add_custom_headers(self, headers: Dict[str, Any]) -> None:
+    # def add_custom_headers(self, headers: dict[str, Any]) -> None:
     #     """
     #     Adds custom request headers from the job list (URLs) to the pre-filled dictionary `headers`.
     #     Pre-filled values of conflicting header keys (case-insensitive) are overwritten by custom value.
@@ -816,8 +967,13 @@ class UrlJob(UrlJobBase):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
-        if isinstance(exception, requests.exceptions.RequestException):
-            # Instead of a full traceback, just show the HTTP error
+        if httpx and isinstance(
+            exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError)
+        ):
+            # Instead of a full traceback, just show the error
+            return str(exception)
+        elif requests and isinstance(exception, requests.exceptions.RequestException):
+            # Instead of a full traceback, just show the error
             return str(exception)
         return tb
 
@@ -827,22 +983,48 @@ class UrlJob(UrlJobBase):
         :param exception: The exception.
         :returns: True if the error should be ignored, False otherwise.
         """
-        if isinstance(exception, requests.exceptions.ConnectionError) and self.ignore_connection_errors:
-            return True
-        if isinstance(exception, requests.exceptions.Timeout) and self.ignore_timeout_errors:
-            return True
-        if isinstance(exception, requests.exceptions.TooManyRedirects) and self.ignore_too_many_redirects:
-            return True
-        elif isinstance(exception, requests.exceptions.HTTPError) and self.ignore_http_error_codes:
-            status_code = exception.response.status_code
-            ignored_codes: List[str] = []
-            if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
+        if httpx:
+            if self.ignore_timeout_errors and isinstance(exception, httpx.TimeoutException):
                 return True
-            elif isinstance(self.ignore_http_error_codes, str):
-                ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
-            elif isinstance(self.ignore_http_error_codes, list):
-                ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
-            return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
+            if (
+                self.ignore_connection_errors
+                and not self.ignore_timeout_errors
+                and isinstance(exception, httpx.TransportError)
+            ):
+                return True
+            if self.ignore_too_many_redirects and isinstance(exception, httpx.TooManyRedirects):
+                return True
+            elif self.ignore_http_error_codes and isinstance(exception, httpx.HTTPStatusError):
+                status_code = exception.response.status_code
+                ignored_codes: list[str] = []
+                if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
+                    return True
+                elif isinstance(self.ignore_http_error_codes, str):
+                    ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
+                elif isinstance(self.ignore_http_error_codes, list):
+                    ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
+                return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
+        elif requests and isinstance(exception, requests.exceptions.RequestException):
+            if self.ignore_connection_errors and isinstance(exception, requests.exceptions.ConnectionError):
+                return True
+            if self.ignore_timeout_errors and isinstance(exception, requests.exceptions.Timeout):
+                return True
+            if self.ignore_too_many_redirects and isinstance(exception, requests.exceptions.TooManyRedirects):
+                return True
+            elif (
+                self.ignore_http_error_codes
+                and isinstance(exception, requests.exceptions.HTTPError)
+                and exception.response is not None
+            ):
+                status_code = exception.response.status_code
+                ignored_codes = []
+                if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
+                    return True
+                elif isinstance(self.ignore_http_error_codes, str):
+                    ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
+                elif isinstance(self.ignore_http_error_codes, list):
+                    ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
+                return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
         return False
 
 
@@ -852,8 +1034,8 @@ class BrowserJob(UrlJobBase):
     __kind__ = 'browser'
     __is_browser__ = True
 
-    __required__: Tuple[str, ...] = ('use_browser',)
-    __optional__: Tuple[str, ...] = (
+    __required__: tuple[str, ...] = ('use_browser',)
+    __optional__: tuple[str, ...] = (
         'block_elements',
         'chromium_revision',  # deprecated
         'cookies',
@@ -897,7 +1079,7 @@ class BrowserJob(UrlJobBase):
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.url = location
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -909,6 +1091,8 @@ class BrowserJob(UrlJobBase):
         :raises BrowserResponseError: If a browser error or an HTTP response code between 400 and 599 is received.
         :returns: The data retrieved and the ETag.
         """
+        job_state._http_client_used = 'playwright'
+
         if self._delay:  # pragma: no cover  TODO not yet implemented.
             logger.debug(f'Delaying for {self._delay} seconds (duplicate network location)')
             time.sleep(self._delay)
@@ -990,7 +1174,7 @@ class BrowserJob(UrlJobBase):
                     f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list; found a "
                     f'{type(self.switches).__name__} ( {self.get_indexed_location()} ).'
                 )
-            args: Optional[List[str]] = [f"--{switch.lstrip('--')}" for switch in self.switches]
+            args: Optional[list[str]] = [f"--{switch.lstrip('--')}" for switch in self.switches]
         else:
             args = None
 
@@ -1224,7 +1408,7 @@ class BrowserJob(UrlJobBase):
             #             )
             #
             #     def handle_request(
-            #         request_event: pyppeteer.network_manager.Request, block_elements: List[str]
+            #         request_event: pyppeteer.network_manager.Request, block_elements: list[str]
             #     ) -> None:
             #         """Handle pyee.EventEmitter callback."""
             #         logger.info(
@@ -1252,6 +1436,16 @@ class BrowserJob(UrlJobBase):
             logger.info(f'Job {self.index_number}: {browser_name} {browser_version} navigating to {url}')
             logger.debug(f'Job {self.index_number}: User agent {user_agent}')
             logger.debug(f'Job {self.index_number}: Extra headers {headers}')
+
+            # def handle_response(response: Response) -> None:
+            #     """TODO: Handler function to detect if a 304 is returned."""
+            #     logger.debug(f'Job {self.index_number}: Intercepted response with {response.status} status')
+            #     if response.status == 304 and response.url == url:
+            #         # context.close()
+            #         raise NotModifiedError(response.status)
+            #
+            # page.on('response', handle_response)
+
             try:
                 response = page.goto(
                     url,
@@ -1320,10 +1514,10 @@ class BrowserJob(UrlJobBase):
 
             except PlaywrightError as e:
                 logger.info(f'Job {self.index_number}: Browser returned error {e.args[0]}\n({url})')
-                if logger.root.level <= 20:
+                if logger.root.level <= 20:  # logging.INFO
                     try:
                         screenshot_filename = tempfile.NamedTemporaryFile(
-                            prefix=f'webchanges_screenshot_{self.index_number}_', suffix='.png', delete=False
+                            prefix=f'{__project_name__}_screenshot_{self.index_number}_', suffix='.png', delete=False
                         ).name
                         page.screenshot(path=screenshot_filename)
                         logger.info(f'Job {self.index_number}: Screenshot saved at {screenshot_filename}')
@@ -1331,7 +1525,9 @@ class BrowserJob(UrlJobBase):
                         Path(screenshot_filename).unlink()
                     try:
                         full_filename = tempfile.NamedTemporaryFile(
-                            prefix=f'webchanges_screenshot-full_{self.index_number}_', suffix='.png', delete=False
+                            prefix=f'{__project_name__}_screenshot-full_{self.index_number}_',
+                            suffix='.png',
+                            delete=False,
                         ).name
                         page.screenshot(path=full_filename, full_page=True)
                         logger.info(f'Job {self.index_number}: Full page image saved at {full_filename}')
@@ -1339,7 +1535,7 @@ class BrowserJob(UrlJobBase):
                         Path(full_filename).unlink()
                     try:
                         html_filename = tempfile.NamedTemporaryFile(
-                            prefix=f'webchanges_content_{self.index_number}_', suffix='.html', delete=False
+                            prefix=f'{__project_name__}_content_{self.index_number}_', suffix='.html', delete=False
                         ).name
                         Path(html_filename).write_text(page.content())
                         logger.info(f'Job {self.index_number}: Page HTML content saved at {html_filename}')
@@ -1379,9 +1575,9 @@ class BrowserJob(UrlJobBase):
 
             # if no name directive is given, set it to the title element if found in HTML or XML truncated to 60 chars
             if not self.name:
-                title = re.findall(r'<title.*?>(.+?)</title>', content)
+                title = re.search(r'<title.*?>(.+?)</title>', content)
                 if title:
-                    self.name = html.unescape(title[0])[:60]
+                    self.name = html.unescape(title.group(1))[:60]
 
             context.close()
             return content, etag
@@ -1479,7 +1675,7 @@ class BrowserJob(UrlJobBase):
                     return True
             if self.ignore_timeout_errors:
                 if (
-                    isinstance(exception, (PlaywrightTimeoutError))
+                    isinstance(exception, PlaywrightTimeoutError)
                     or str(exception.args[0].split()[0]) == 'net::ERR_TIMED_OUT'
                 ):
                     return True
@@ -1489,7 +1685,7 @@ class BrowserJob(UrlJobBase):
 
         if isinstance(exception, BrowserResponseError) and self.ignore_http_error_codes:
             status_code = exception.status_code
-            ignored_codes: List[str] = []
+            ignored_codes: list[str] = []
             if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
                 return True
             elif isinstance(self.ignore_http_error_codes, str):
@@ -1508,8 +1704,8 @@ class ShellJob(Job):
 
     __kind__ = 'command'
 
-    __required__: Tuple[str, ...] = ('command',)
-    __optional__: Tuple[str, ...] = ('stderr',)  # ignored; here for backwards compatibility
+    __required__: tuple[str, ...] = ('command',)
+    __optional__: tuple[str, ...] = ('stderr',)  # ignored; here for backwards compatibility
 
     def get_location(self) -> str:
         """Get the 'location' of the job, i.e. the command.
@@ -1522,7 +1718,7 @@ class ShellJob(Job):
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.command = location
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> Tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
         """Runs job to retrieve the data, and returns data and ETag (which is blank).
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.

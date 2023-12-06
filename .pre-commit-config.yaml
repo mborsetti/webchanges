@@ -126,6 +126,7 @@ repos:
 #        description: Detect mistake of inline code touching normal text in rst
       - id: text-unicode-replacement-char
         description: Forbid files which have a UTF-8 Unicode replacement character
+        exclude: ^CHANGELOG.rst|^RELEASE.rst
 
   - repo: local
     hooks:

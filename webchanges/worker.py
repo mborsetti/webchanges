@@ -20,12 +20,10 @@ from webchanges.jobs import NotModifiedError
 try:
     import psutil
 except ImportError as e:
-    psutil = e.msg
+    psutil = e.msg  # type: ignore[assignment]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    from typing import List
-
     from webchanges.jobs import JobBase
     from webchanges.main import Urlwatch
 
@@ -38,7 +36,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     :raises IndexError: If any index(es) is/are out of range.
     """
 
-    def insert_delay(jobs: List[JobBase]) -> List[JobBase]:  # pragma: no cover
+    def insert_delay(jobs: list[JobBase]) -> list[JobBase]:  # pragma: no cover
         """
         TODO: Evaluate whether this is necessary; currently not being called. Remove pragma no cover and move import.
 

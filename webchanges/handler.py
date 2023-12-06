@@ -18,7 +18,7 @@ from concurrent.futures import Future
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Dict, Iterator, List, NamedTuple, Optional, Type, TYPE_CHECKING, Union
+from typing import Any, ContextManager, Iterator, NamedTuple, Optional, TYPE_CHECKING, Union
 
 from webchanges.filters import FilterBase
 from webchanges.jobs import NotModifiedError
@@ -63,9 +63,10 @@ class JobState(ContextManager):
 
     _generated_diff: Optional[str] = None
     _generated_diff_html: Optional[str] = None
+    _http_client_used: Optional[str] = None
     error_ignored: Union[bool, str]
     exception: Optional[Exception] = None
-    history_dic_snapshots: Dict[str, SnapshotShort] = {}
+    history_dic_snapshots: dict[str, SnapshotShort] = {}
     new_data: str
     new_etag: str
     new_timestamp: float
@@ -104,7 +105,7 @@ class JobState(ContextManager):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
@@ -125,7 +126,7 @@ class JobState(ContextManager):
             raise OSError(exc_value)
         return None
 
-    def added_data(self) -> Dict[str, Optional[Union[bool, str, Exception, float]]]:
+    def added_data(self) -> dict[str, Optional[Union[bool, str, Exception, float]]]:
         """Returns a dict with the data added in the processing of the job."""
         attrs = ('error_ignored', 'exception', 'new_data', 'new_etag', 'new_timestamp')
         return {attr: getattr(self, attr) for attr in attrs if hasattr(self, attr)}
@@ -452,7 +453,7 @@ class JobState(ContextManager):
                     # remove lines that don't have any changes
                     keeplines = []
                     for line in diff.splitlines(keepends=True):
-                        if any(x in line for x in ('{+', '+}', '[-', '-]')):
+                        if any(x in line for x in {'{+', '+}', '[-', '-]'}):
                             keeplines.append(line)
                     diff = ''.join(keeplines)
                 return head + diff
@@ -519,7 +520,7 @@ class JobState(ContextManager):
 class Report:
     """The base class for reporting."""
 
-    job_states: List[JobState] = []
+    job_states: list[JobState] = []
     new_release_future: Optional[Future[Union[str, bool]]] = None
     start: float = time.perf_counter()
 
@@ -590,7 +591,7 @@ class Report:
         """
         self._result(label, job_state)
 
-    def get_filtered_job_states(self, job_states: List[JobState]) -> Iterator[JobState]:
+    def get_filtered_job_states(self, job_states: list[JobState]) -> Iterator[JobState]:
         """Returns JobStates that have reportable changes per config['display'].  Called from :py:Class:`ReporterBase`.
 
         :param job_states: The list of JobState objects with the information of the job runs.
@@ -600,7 +601,7 @@ class Report:
             if (
                 not any(
                     job_state.verb == verb and not self.config['display'][verb]  # type: ignore[literal-required]
-                    for verb in ('unchanged', 'new', 'error')
+                    for verb in {'unchanged', 'new', 'error'}
                 )
                 and job_state.verb != 'changed,no_report'
             ):
@@ -613,7 +614,7 @@ class Report:
 
                 yield job_state
 
-    def finish(self, jobs_file: Optional[List[Path]] = None) -> None:
+    def finish(self, jobs_file: Optional[list[Path]] = None) -> None:
         """Finish job run: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_all`.
 
@@ -625,7 +626,7 @@ class Report:
         ReporterBase.submit_all(self, self.job_states, duration, jobs_file)
 
     def finish_one(
-        self, name: str, jobs_file: Optional[List[Path]] = None, check_enabled: Optional[bool] = True
+        self, name: str, jobs_file: Optional[list[Path]] = None, check_enabled: Optional[bool] = True
     ) -> None:
         """Finish job run of one: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_one`.  Used in testing.

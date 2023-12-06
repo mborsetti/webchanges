@@ -16,11 +16,11 @@ import subprocess  # noqa: S404 Consider possible security implications associat
 import sys
 import warnings
 from pathlib import Path, PurePath
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import platformdirs
 
-from webchanges.__init__ import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
+from webchanges import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
 from webchanges.config import CommandConfig
 from webchanges.util import file_ownership_checks, get_new_version_number, import_module_from_source
 
@@ -99,7 +99,7 @@ def setup_logger(verbose: Optional[int] = None) -> None:
     logger.info(f'System: {platform.platform()}')
 
 
-def locate_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = None) -> List[Path]:
+def locate_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = None) -> list[Path]:
     """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
 
     :param filename: The filename.
@@ -216,19 +216,19 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
 
     def print_new_version() -> int:
         """Will print alert message if a newer version is found on PyPi."""
-        print(f'{__project_name__} {__version__}', end='')
+        print(f'{__project_name__} {__version__}.', end='')
         new_release = get_new_version_number(timeout=2)
         if new_release:
             print(
-                f'. Release version {new_release} is available; we recommend updating using e.g. '
+                f'\nNew release version {new_release} is available; we recommend updating using e.g. '
                 f"'pip install -U {__project_name__}'."
             )
             return 0
         elif new_release == '':
-            print('. You are running the latest release.')
+            print(' You are running the latest release.')
             return 0
         else:
-            print('. Error contacting PyPI to determine the latest release.')
+            print(' Error contacting PyPI to determine the latest release.')
             return 1
 
     def playwright_install_chrome() -> int:  # pragma: no cover
@@ -349,7 +349,7 @@ def main() -> None:  # pragma: no cover
     max_snapshots = command_config.max_snapshots or config_storage.config.get('database', {}).get('max_snapshots') or 4
     if database_engine == 'sqlite3':
         cache_storage: CacheStorage = CacheSQLite3Storage(command_config.cache, max_snapshots)  # storage.py
-    elif any(str(command_config.cache).startswith(prefix) for prefix in ('redis://', 'rediss://')):
+    elif any(str(command_config.cache).startswith(prefix) for prefix in {'redis://', 'rediss://'}):
         cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
     elif database_engine.startswith('redis'):
         cache_storage = CacheRedisStorage(database_engine)

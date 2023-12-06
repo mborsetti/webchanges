@@ -10,10 +10,10 @@ import textwrap
 # import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
-from webchanges.__init__ import __doc__ as doc
-from webchanges.__init__ import __docs_url__, __project_name__, __version__
+from webchanges import __doc__ as doc
+from webchanges import __docs_url__, __project_name__, __version__
 
 
 @dataclass
@@ -26,14 +26,14 @@ class BaseConfig:
     jobs_def_file: Path
     hooks_file: Path
     cache: Path
-    jobs_files: List[Path] = field(default_factory=list)
+    jobs_files: list[Path] = field(default_factory=list)
 
 
 class CommandConfig(BaseConfig):
     """Command line arguments configuration; the arguments are stored as class attributes."""
 
     add: Optional[str]
-    change_location: Tuple[Union[int, str], str]
+    change_location: tuple[Union[int, str], str]
     check_new: bool
     clean_database: int
     database_engine: str
@@ -49,8 +49,8 @@ class CommandConfig(BaseConfig):
     footnote: Optional[str]
     gc_database: int
     install_chrome: bool
-    joblist: List[int]
-    list: bool
+    joblist: list[int]
+    list_jobs: bool
     max_snapshots: int
     max_workers: Optional[int]
     no_headless: bool
@@ -65,7 +65,7 @@ class CommandConfig(BaseConfig):
 
     def __init__(
         self,
-        args: List[str],
+        args: list[str],
         project_name: str,
         config_path: Path,
         config_file: Path,
@@ -87,7 +87,7 @@ class CommandConfig(BaseConfig):
         self.jobs_files = [jobs_def_file]
         self.parse_args(args)
 
-    def parse_args(self, cmdline_args: List[str]) -> argparse.ArgumentParser:
+    def parse_args(self, cmdline_args: list[str]) -> argparse.ArgumentParser:
         """Set up the Python arguments parser and stores the arguments in the class's variables.
 
         :returns: The Python arguments parser.
@@ -154,7 +154,7 @@ class CommandConfig(BaseConfig):
         )
 
         group = parser.add_argument_group('job management')
-        group.add_argument('--list', action='store_true', help='list jobs and their index number')
+        group.add_argument('--list-jobs', action='store_true', help='list jobs and their index number')
         group.add_argument(
             '--errors',
             action='store_true',

@@ -24,7 +24,8 @@ if errorlevel 9009 (
 )
 
 :sphinxbuild
-%SPHINXBUILD% -b html %SOURCEDIR% %BUILDDIR% -E -W -j auto -v %SPHINXOPTS% %O%
+rem %SPHINXBUILD% -b html %SOURCEDIR% %BUILDDIR% -E -W -j auto -v %SPHINXOPTS% %O%
+%SPHINXBUILD% -b html %SOURCEDIR% %BUILDDIR% -E -j auto -v %SPHINXOPTS% %O%
 
 if %errorlevel% equ 0 (
   start "" "file://%~dp0_build\index.html"

@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 import pytest
 import yaml
@@ -52,7 +52,7 @@ TESTDATA = [
 
 
 @pytest.mark.parametrize('input, output', TESTDATA, ids=(str(d[0]) for d in TESTDATA))  # type: ignore[misc]
-def test_normalize_filter_list(input: Union[str, List[Union[str, Dict[str, Any]]]], output: str) -> None:
+def test_normalize_filter_list(input: Union[str, list[Union[str, dict[str, Any]]]], output: str) -> None:
     assert list(FilterBase.normalize_filter_list(input)) == output
 
 
@@ -61,12 +61,15 @@ job_state = JobState(CacheDirStorage(''), JobBase.unserialize({'url': 'https://t
 
 
 class FakeJob(JobBase):
+    url = 'https://testfakejob.com/'
+
     def get_indexed_location(self) -> str:
         return ''
 
 
 @pytest.mark.parametrize('test_name, test_data', FILTER_TESTS, ids=(d[0] for d in FILTER_TESTS))  # type: ignore[misc]
-def test_filters(test_name: str, test_data: Dict[str, str]) -> None:
+def test_filters(test_name: str, test_data: dict[str, str]) -> None:
+    """Runs the tests defined in data/filters_testdata.yaml."""
     filter = test_data['filter']
     data = test_data['data']
     expected_result = test_data['expected_result']
@@ -90,15 +93,19 @@ def test_filters(test_name: str, test_data: Dict[str, str]) -> None:
 def test_invalid_filter_name_raises_valueerror() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list(['afilternamethatdoesnotexist']))
-    assert str(pytest_wrapped_e.value) == 'Unknown filter kind: afilternamethatdoesnotexist (subfilter: {}).'
+    assert str(pytest_wrapped_e.value) == (
+        'Unknown filter kind: afilternamethatdoesnotexist (subfilter or filter directive(s): {}).'
+    )
 
 
 def test_providing_subfilter_to_filter_without_subfilter_raises_valueerror() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         list(FilterBase.normalize_filter_list([{'beautify': {'asubfilterthatdoesnotexist': True}}]))
-    assert str(pytest_wrapped_e.value) == (
-        "Filter beautify does not support subfilter(s): {'asubfilterthatdoesnotexist'} (supported: {'indent'})."
+    err_msg = str(pytest_wrapped_e.value)
+    assert err_msg.startswith(
+        "Filter beautify does not support subfilter or filter directive(s): {'asubfilterthatdoesnotexist'} "
     )
+    assert err_msg.endswith("{'indent', 'absolute_links'}).") or err_msg.endswith("{'absolute_links', 'indent'}).")
 
 
 def test_providing_unknown_subfilter_raises_valueerror() -> None:
@@ -106,8 +113,9 @@ def test_providing_unknown_subfilter_raises_valueerror() -> None:
         list(
             FilterBase.normalize_filter_list([{'keep_lines_containing': {'re': 'Price: .*', 'anothersubfilter': '42'}}])
         )
-    assert "Filter keep_lines_containing does not support subfilter(s): {'anothersubfilter'} (supported:" in str(
-        pytest_wrapped_e.value
+    assert (
+        "Filter keep_lines_containing does not support subfilter or filter directive(s): {'anothersubfilter'} "
+        '(supported:' in str(pytest_wrapped_e.value)
     )
 
 

@@ -19,7 +19,8 @@ import warnings
 from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
+from typing import Any, Iterator, Optional, TYPE_CHECKING, Union
+from urllib.parse import urljoin
 from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent defusedxml package. TODO
 
 import html2text
@@ -27,7 +28,7 @@ import yaml
 from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
 from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
 
-from webchanges.__init__ import __project_name__
+from webchanges import __project_name__
 from webchanges.util import TrackSubClasses
 
 # https://stackoverflow.com/questions/39740632
@@ -42,6 +43,7 @@ except ImportError as e:  # pragma: has-bs4
 
 try:
     import cssbeautifier
+    import cssbeautifier.beautify
 except ImportError as e:
     cssbeautifier = e.msg  # type: ignore[assignment]
 
@@ -52,8 +54,14 @@ except ImportError as e:  # pragma: has-jq
 
 try:
     import jsbeautifier
+    import jsbeautifier.beautify
 except ImportError as e:
     jsbeautifier = e.msg  # type: ignore[assignment]
+
+try:
+    from pypdf import PdfReader
+except ImportError as e:
+    PdfReader = e.msg  # type: ignore[assignment,misc]
 
 try:
     import pdftotext
@@ -74,10 +82,6 @@ try:
     import vobject
 except ImportError as e:
     vobject = e.msg  # type: ignore[assignment]
-try:
-    from packaging.version import parse as parse_version
-except ImportError:
-    from webchanges._vendored.packaging_version import parse as parse_version  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -85,13 +89,13 @@ logger = logging.getLogger(__name__)
 class FilterBase(metaclass=TrackSubClasses):
     """The base class for filters."""
 
-    __subclasses__: Dict[str, Type[FilterBase]] = {}
-    __anonymous_subclasses__: List[Type[FilterBase]] = []
+    __subclasses__: dict[str, type[FilterBase]] = {}
+    __anonymous_subclasses__: list[type[FilterBase]] = []
 
     __kind__: str = ''
 
     # Typing
-    __supported_subfilters__: Dict[str, str]
+    __supported_subfilters__: dict[str, str]
     __default_subfilter__: str
     __no_subfilter__: bool
     __uses_bytes__: bool
@@ -112,7 +116,7 @@ class FilterBase(metaclass=TrackSubClasses):
 
         :returns: A string to display.
         """
-        result: List[str] = []
+        result: list[str] = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
             default_subfilter = getattr(sc, '__default_subfilter__', None)
             result.extend((f'  * {sc.__kind__} - {sc.__doc__}',))
@@ -148,8 +152,8 @@ class FilterBase(metaclass=TrackSubClasses):
 
     @classmethod
     def normalize_filter_list(
-        cls, filter_spec: Union[str, List[Union[str, Dict[str, Any]]]]
-    ) -> Iterator[Tuple[str, Dict[str, Any]]]:
+        cls, filter_spec: Union[str, list[Union[str, dict[str, Any]]]]
+    ) -> Iterator[tuple[str, dict[str, Any]]]:
         """Generates a list of filters that has been checked for its validity.
 
         :param filter_spec: A list of either filter_kind, subfilter (where subfilter is a dict) or a legacy
@@ -160,10 +164,10 @@ class FilterBase(metaclass=TrackSubClasses):
             filtercls = cls.__subclasses__.get(filter_kind, None)
 
             if filtercls is None:
-                raise ValueError(f'Unknown filter kind: {filter_kind} (subfilter: {subfilter}).')
+                raise ValueError(f'Unknown filter kind: {filter_kind} (subfilter or filter directive(s): {subfilter}).')
 
             if getattr(filtercls, '__no_subfilter__', False) and subfilter:
-                raise ValueError(f'No subfilters supported for {filter_kind}.')
+                raise ValueError(f'No subfilters or filter directives supported for {filter_kind}.')
 
             if hasattr(filtercls, '__supported_subfilters__'):
                 provided_keys = set(subfilter.keys())
@@ -171,7 +175,7 @@ class FilterBase(metaclass=TrackSubClasses):
                 unknown_keys = provided_keys.difference(allowed_keys)
                 if unknown_keys and '<any>' not in allowed_keys:
                     raise ValueError(
-                        f'Filter {filter_kind} does not support subfilter(s): {unknown_keys} '
+                        f'Filter {filter_kind} does not support subfilter or filter directive(s): {unknown_keys} '
                         f'(supported: {allowed_keys}).'
                     )
 
@@ -179,8 +183,8 @@ class FilterBase(metaclass=TrackSubClasses):
 
     @classmethod
     def _internal_normalize_filter_list(
-        cls, filter_spec: Union[str, List[Union[str, Dict[str, Any]]]]
-    ) -> Iterator[Tuple[str, Dict[str, Any]]]:
+        cls, filter_spec: Union[str, list[Union[str, dict[str, Any]]]]
+    ) -> Iterator[tuple[str, dict[str, Any]]]:
         """Generates a list of filters with its default subfilter if not supplied.
 
         :param filter_spec: A list of either filter_kind, subfilter (where subfilter is a dict) or a legacy
@@ -211,7 +215,7 @@ class FilterBase(metaclass=TrackSubClasses):
                 elif isinstance(item, dict):
                     filter_kind, subfilter = next(iter(item.items()))
                 else:
-                    raise ValueError('Subfilter(s) must be a string or a dictionary.')
+                    raise ValueError('Subfilter or filter directive(s) must be a string or a dictionary.')
 
                 filtercls = cls.__subclasses__.get(filter_kind, None)
 
@@ -225,7 +229,7 @@ class FilterBase(metaclass=TrackSubClasses):
                     yield filter_kind, subfilter
 
     @classmethod
-    def process(cls, filter_kind: str, subfilter: Dict[str, Any], job_state: JobState, data: Union[str, bytes]) -> str:
+    def process(cls, filter_kind: str, subfilter: dict[str, Any], job_state: JobState, data: Union[str, bytes]) -> str:
         """Process the filter.
 
         :param filter_kind: The name of the filter.
@@ -235,14 +239,14 @@ class FilterBase(metaclass=TrackSubClasses):
         :returns: The data after the filter has been applied.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
-        filtercls: Optional[Type[FilterBase]] = cls.__subclasses__.get(filter_kind)  # type: ignore[assignment]
+        filtercls: Optional[type[FilterBase]] = cls.__subclasses__.get(filter_kind)  # type: ignore[assignment]
         if filtercls:
             return filtercls(job_state.job, job_state).filter(data, subfilter)
         else:
             return str(data)
 
     @classmethod
-    def filter_chain_needs_bytes(cls, filter_name: Union[str, List[Union[str, Dict[str, Any]]]]) -> bool:
+    def filter_chain_needs_bytes(cls, filter_name: Union[str, list[Union[str, dict[str, Any]]]]) -> bool:
         """Checks whether the first filter requires data in bytes (not Unicode).
 
         :param filter_name: The filter.
@@ -273,7 +277,7 @@ class FilterBase(metaclass=TrackSubClasses):
         """
         return False
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Method used by the filter to process data.
 
         :param data: The data to be filtered (processed).
@@ -291,10 +295,6 @@ class FilterBase(metaclass=TrackSubClasses):
 
         :raises: ImportError.
         """
-        raise ImportError(
-            f"Python package '{package_name}' cannot be imported; cannot use the '{filter_name}' filter. "
-            f'({self.job.get_indexed_location()})\n{error_message}'
-        )
 
 
 class AutoMatchFilter(FilterBase):
@@ -303,7 +303,7 @@ class AutoMatchFilter(FilterBase):
     MATCH is a dict of {directive: text to match}.
     """
 
-    MATCH: Optional[Dict[str, str]] = None
+    MATCH: Optional[dict[str, str]] = None
 
     def match(self) -> bool:
         """Check whether the filter matches (i.e. needs to be executed).
@@ -318,7 +318,7 @@ class AutoMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:  # type: ignore[empty-body]
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:  # type: ignore[empty-body]
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
@@ -334,7 +334,7 @@ class RegexMatchFilter(FilterBase):
     Same as AutoMatchFilter but MATCH is a dict of {directive: Regular Expression Object}, where a Regular
     Expression Object is a compiled regex."""
 
-    MATCH: Optional[Dict[str, re.Pattern]] = None
+    MATCH: Optional[dict[str, re.Pattern]] = None
 
     def match(self) -> bool:
         """Check whether the filter matches (i.e. needs to be executed).
@@ -353,7 +353,7 @@ class RegexMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:  # type: ignore[empty-body]
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:  # type: ignore[empty-body]
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
@@ -369,11 +369,14 @@ class BeautifyFilter(FilterBase):
 
     __kind__ = 'beautify'
 
-    __supported_subfilters__ = {'indent': 'Number of spaces by which to indent HTML output.'}
+    __supported_subfilters__ = {
+        'absolute_links': 'Convert relative links to absolute ones.',
+        'indent': 'Number of spaces by which to indent HTML output.',
+    }
 
     __default_subfilter__ = 'indent'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -409,11 +412,31 @@ class BeautifyFilter(FilterBase):
                     beautified_css = cssbeautifier.beautify(style.string)
                     style.string = beautified_css
 
-        if parse_version(bs4.__version__) >= parse_version('4.11'):  # type: ignore[attr-defined]
-            indent = subfilter.get('indent', 1)
-            return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent))  # type: ignore[call-arg]
-        else:
-            return soup.prettify()
+        if subfilter.get('absolute_links') is None or subfilter.get('absolute_links'):
+            for link in soup.find_all('a', href=True):
+                link['href'] = urljoin(self.job.url, link['href'])
+
+        indent = subfilter.get('indent', 1)
+        return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent))  # type: ignore[call-arg]
+
+
+class AbsoluteLinksFilter(FilterBase):
+    """Replace relative HTML <a> href links with absolute ones."""
+
+    __kind__ = 'absolute_links'
+
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
+        tree = etree.HTML(data)
+        elem: etree._Element
+        for elem in tree.xpath('//a[@href]'):  # type: ignore[assignment,union-attr]
+            elem.attrib['href'] = urljoin(self.job.url, elem.attrib['href'])  # type: ignore[assignment,type-var]
+        return etree.tostring(tree, encoding='unicode', method='html')
 
 
 class Html2TextFilter(FilterBase):
@@ -431,7 +454,7 @@ class Html2TextFilter(FilterBase):
 
     __default_subfilter__ = 'method'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
         """Filter (process) the data.
 
         Subfilter key can be ``method`` and any method-specific option to be passed to it.
@@ -553,7 +576,13 @@ class Csv2TextFilter(FilterBase):
 
     __default_subfilter__ = 'format_message'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         has_header_config = subfilter.get('has_header')
 
         if has_header_config is None:
@@ -583,6 +612,60 @@ class Csv2TextFilter(FilterBase):
         return '\n'.join(lines)
 
 
+class PypdfFilter(FilterBase):
+    """Convert PDF to plaintext (requires Python package ``pypdf``)."""
+
+    # Dependency: pdftotext (https://github.com/jalan/pdftotext), itself based
+    # on poppler (https://poppler.freedesktop.org/)
+    # Note: check pdftotext website for OS-specific dependencies for install
+
+    __kind__ = 'pypdf'
+    __uses_bytes__ = True
+
+    __supported_subfilters__ = {
+        'password': 'PDF password for decryption',
+    }
+
+    __default_subfilter__ = 'password'
+
+    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
+        # data must be bytes
+        if not isinstance(data, bytes):
+            raise ValueError(
+                f"The '{self.__kind__}' filter needs bytes input (is it the first filter?). "
+                f'({self.job.get_indexed_location()})'
+            )
+
+        if isinstance(PdfReader, str):
+            self.raise_import_error('pypdf', self.__kind__, PdfReader)
+
+        password = subfilter.get('password', None)
+
+        if password:
+            try:
+                import cryptography  # noqa: F401 imported but unused
+            except ImportError:
+                self.raise_import_error(
+                    'cryptography',
+                    f'password sub-directive of {self.__kind__}',
+                    "Please install with 'pip install --upgrade webchanges[pypdf_crypto]'",
+                )
+
+        text = []
+        reader = PdfReader(io.BytesIO(data), password=password)
+        logger.info(f'Job {self.job.index_number}: Found {reader.pdf_header} file')
+        for page in reader.pages:
+            text.append(page.extract_text())
+
+        return '\n'.join(text)
+
+
 class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
     """Convert PDF to plaintext (requires Python package ``pdftotext`` and its dependencies)."""
 
@@ -601,7 +684,7 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
 
     __default_subfilter__ = 'password'
 
-    def filter(self, data: bytes, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -635,7 +718,7 @@ class Ical2TextFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -689,7 +772,7 @@ class FormatJsonFilter(FilterBase):
 
     __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -717,7 +800,7 @@ class FormatXMLFilter(FilterBase):
     #
     # __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -739,7 +822,7 @@ class PrettyXMLFilter(FilterBase):
 
     __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -765,8 +848,14 @@ class KeepLinesContainingFilter(FilterBase):
     def filter(  # type: ignore[override]
         self: Union['KeepLinesContainingFilter', 'GrepFilter'],
         data: str,
-        subfilter: Dict[str, Any],
+        subfilter: dict[str, Any],
     ) -> str:
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         if 'text' in subfilter:
             if isinstance(subfilter['text'], str):
                 return ''.join(line for line in data.splitlines(keepends=True) if subfilter['text'] in line).rstrip()
@@ -803,7 +892,13 @@ class GrepFilter(FilterBase):
 
     __default_subfilter__ = 're'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         warnings.warn(
             f"The 'grep' filter is deprecated; replace with 'keep_lines_containing' + 're' subfilter"
             f' ({self.job.get_indexed_location()})',
@@ -827,8 +922,14 @@ class DeleteLinesContainingFilter(FilterBase):
     def filter(  # type: ignore[override]
         self: Union['DeleteLinesContainingFilter', 'GrepIFilter'],
         data: str,
-        subfilter: Dict[str, Any],
+        subfilter: dict[str, Any],
     ) -> str:
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         if 'text' in subfilter:
             if isinstance(subfilter['text'], str):
                 return ''.join(
@@ -867,7 +968,13 @@ class GrepIFilter(FilterBase):
 
     __default_subfilter__ = 're'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         warnings.warn(
             f"The 'grepi' filter is deprecated; replace with 'delete_lines_containing' + 're' subfilter"
             f' ({self.job.get_indexed_location()})',
@@ -889,7 +996,13 @@ class StripFilter(FilterBase):
 
     __default_subfilter__ = 'chars'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         if subfilter.get('splitlines'):
             lines = data.splitlines()
 
@@ -928,7 +1041,13 @@ class StripLinesFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         warnings.warn(
             f"The 'strip_each_line' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: "
             f"true' ({self.job.get_indexed_location()})",
@@ -953,14 +1072,14 @@ class ElementsBy(HTMLParser, ABC):
             # FilterBy.TAG
             self._name = name
 
-        self._result: List[str] = []
+        self._result: list[str] = []
         self._inside: bool = False
-        self._elts: List[str] = []
+        self._elts: list[str] = []
 
     def get_html(self) -> str:
         return ''.join(self._result)
 
-    def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
         ad = dict(attrs)
 
         if self._filter_by == FilterBy.ATTRIBUTE and all(ad.get(k, None) == v for k, v in self._attributes.items()):
@@ -998,7 +1117,13 @@ class ElementByIdFilter(FilterBase):
 
     __default_subfilter__ = 'id'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         if 'id' not in subfilter:
             raise ValueError(
                 f"The 'element-by-id' filter needs an id for filtering. ({self.job.get_indexed_location()})"
@@ -1020,7 +1145,13 @@ class ElementByClassFilter(FilterBase):
 
     __default_subfilter__ = 'class'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         if 'class' not in subfilter:
             raise ValueError(
                 f"The 'element-by-class' filter needs a class for filtering. ({self.job.get_indexed_location()})"
@@ -1042,7 +1173,13 @@ class ElementByStyleFilter(FilterBase):
 
     __default_subfilter__ = 'style'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         if 'style' not in subfilter:
             raise ValueError(
                 f"The 'element-by-style' filter needs a style for filtering. ({self.job.get_indexed_location()})"
@@ -1064,7 +1201,13 @@ class ElementByTagFilter(FilterBase):
 
     __default_subfilter__ = 'tag'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         if 'tag' not in subfilter:
             raise ValueError(
                 f"The 'element-by-tag' filter needs a tag for filtering. ({self.job.get_indexed_location()})"
@@ -1082,7 +1225,7 @@ class Sha1SumFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -1101,7 +1244,7 @@ class HexDumpFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -1126,13 +1269,14 @@ class LxmlParser:
 
     expression: str
     method: str
-    namespaces: Optional[Dict[str, str]]
+    namespaces: Optional[dict[str, str]]
+    parser: etree._FeedParser
     skip: int
 
     def __init__(
-        self: Union['LxmlParser', 'CSSFilter', 'XPathFilter'],
+        self,
         filter_kind: str,
-        subfilter: Dict[str, Any],
+        subfilter: dict[str, Any],
         expr_key: str,
         job: JobBase,
     ) -> None:
@@ -1159,14 +1303,13 @@ class LxmlParser:
                 f"The '{filter_kind}' filter's namespace prefixes are only supported with 'method: xml'. "
                 f'({job.get_indexed_location()})'
             )
-        self.parser = etree.HTMLParser() if self.method == 'html' else etree.XMLParser()  # etree._FeedParser
         self.data = ''
 
     def feed(self, data: str) -> None:
         self.data += data
 
     @staticmethod
-    def _to_string(element: Union[etree.Element, str], method: str) -> str:
+    def _to_string(element: Union[etree._Element, str], method: str) -> str:
         # Handle "/text()" selector, which returns lxml.etree._ElementUnicodeResult
         # (https://github.com/thp/urlwatch/issues/282)
         if isinstance(element, str):
@@ -1175,7 +1318,7 @@ class LxmlParser:
         return etree.tostring(element, encoding='unicode', method=method, pretty_print=True, with_tail=False).strip()
 
     @staticmethod
-    def _remove_element(element: etree.Element) -> None:
+    def _remove_element(element: etree._Element) -> None:
         parent = element.getparent()
         if parent is None:
             # Do not exclude root element
@@ -1196,7 +1339,7 @@ class LxmlParser:
                     parent.text = parent.text + element.tail if parent.text else element.tail
             parent.remove(element)
 
-    def _reevaluate(self, element: etree.Element) -> Optional[Union[etree.Element, str]]:
+    def _reevaluate(self, element: etree._Element) -> Optional[Union[etree._Element, str]]:
         if self._orphaned(element):
             return None
         if isinstance(element, etree._ElementUnicodeResult):
@@ -1214,7 +1357,7 @@ class LxmlParser:
         else:
             return element
 
-    def _orphaned(self, element: etree.Element) -> bool:
+    def _orphaned(self, element: etree._Element) -> bool:
         if isinstance(element, etree._ElementUnicodeResult):
             parent = element.getparent()
             if (
@@ -1228,11 +1371,11 @@ class LxmlParser:
         try:
             tree = element.getroottree()
             path = tree.getpath(element)
-            return element is not tree.xpath(path, namespaces=self.namespaces)[0]
+            return element is not tree.xpath(path, namespaces=self.namespaces)[0]  # type: ignore[index]
         except (ValueError, IndexError):
             return True
 
-    def _get_filtered_elements(self) -> List[Union[etree.Element, str]]:
+    def _get_filtered_elements(self) -> list[Union[etree._Element, str]]:
         if self.method == 'xml' and isinstance(self.data, str):
             # see https://lxml.de/FAQ.html#why-can-t-lxml-parse-my-xml-from-unicode-strings
             data: Union[str, bytes] = self.data.encode(errors='xmlcharrefreplace')
@@ -1242,7 +1385,10 @@ class LxmlParser:
         else:
             data = self.data
         try:
-            root = etree.fromstring(data, self.parser)  # noqa: S320 use defusedxml.
+            if self.method == 'xml':
+                root = etree.XML(data)
+            else:  # html
+                root = etree.HTML(data)
         except ValueError as e:
             args = (
                 f"Filter '{self.filter_kind}' encountered the following error when parsing the data. Check that "
@@ -1251,16 +1397,22 @@ class LxmlParser:
             raise RuntimeError(args) from None
         if root is None:
             return []
-        selected_elems: Optional[List[etree.Element]] = None
-        excluded_elems: Optional[List[etree.Element]] = None
+        selected_elems: Optional[list[etree._Element]] = None
+        excluded_elems: Optional[list[etree._Element]] = None
         if self.filter_kind == 'css':
-            selected_elems = CSSSelector(self.expression, namespaces=self.namespaces).evaluate(root)
+            selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(root)  # type: ignore[assignment]
             excluded_elems = (
-                CSSSelector(self.exclude, namespaces=self.namespaces).evaluate(root) if self.exclude else None
+                CSSSelector(self.exclude, namespaces=self.namespaces)(root)  # type: ignore[assignment]
+                if self.exclude
+                else None
             )
         elif self.filter_kind == 'xpath':
-            selected_elems = root.xpath(self.expression, namespaces=self.namespaces)
-            excluded_elems = root.xpath(self.exclude, namespaces=self.namespaces) if self.exclude else None
+            selected_elems = root.xpath(self.expression, namespaces=self.namespaces)  # type: ignore[assignment]
+            excluded_elems = (
+                root.xpath(self.exclude, namespaces=self.namespaces)  # type: ignore[assignment]
+                if self.exclude
+                else None
+            )
         if excluded_elems is not None:
             for el in excluded_elems:
                 self._remove_element(el)
@@ -1301,14 +1453,20 @@ class CSSFilter(FilterBase):
 
     __default_subfilter__ = 'selector'
 
-    EXPR_NAMES: Dict[str, str]
+    EXPR_NAMES: dict[str, str]
     expression: str
     exclude: str
-    namespaces: Dict[str, str]
+    namespaces: dict[str, str]
     skip: int
     maxitems: int
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         lxml_parser = LxmlParser('css', subfilter, 'selector', self.job)
         lxml_parser.feed(data)
         return lxml_parser.get_filtered_data()
@@ -1326,14 +1484,20 @@ class XPathFilter(FilterBase):
 
     __default_subfilter__ = 'path'
 
-    EXPR_NAMES: Dict[str, str]
+    EXPR_NAMES: dict[str, str]
     expression: str
     exclude: str
-    namespaces: Dict[str, str]
+    namespaces: dict[str, str]
     skip: int
     maxitems: int
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         lxml_parser = LxmlParser('xpath', subfilter, 'path', self.job)
         lxml_parser.feed(data)
         return lxml_parser.get_filtered_data()
@@ -1351,7 +1515,7 @@ class ReSubFilter(FilterBase):
 
     __default_subfilter__ = 'pattern'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> Union[str, bytes]:  # type: ignore[override]
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> Union[str, bytes]:  # type: ignore[override]
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -1377,7 +1541,13 @@ class SortFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         reverse = isinstance(subfilter, dict) and subfilter.get('reverse', False) is True
         separator = subfilter.get('separator', '\n')
         return separator.join(sorted(data.split(separator), key=str.casefold, reverse=reverse))
@@ -1396,7 +1566,13 @@ class RemoveRepeatedFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         separator = subfilter.get('separator', '\n')
         ignore_case = subfilter.get('ignore_case', False)
         consecutive = subfilter.get('adjacent', True)
@@ -1432,11 +1608,17 @@ class RemoveDuplicateLinesFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: str, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         separator = subfilter.get('separator', '\n')
         data_lines = data.split(separator)
 
-        def get_unique_lines(lines: List[str]) -> Iterator[str]:
+        def get_unique_lines(lines: list[str]) -> Iterator[str]:
             seen = set()
             for line in lines:
                 if line not in seen:
@@ -1457,12 +1639,18 @@ class ReverseFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         separator = subfilter.get('separator', '\n')
         return separator.join(reversed(data.split(separator)))
 
 
-def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
     if 'command' not in subfilter:
         raise ValueError(f"The '{f_cls.__kind__}' filter needs a command. ({f_cls.job.get_indexed_location()})")
 
@@ -1515,7 +1703,13 @@ class ExecuteFilter(FilterBase):
 
     __default_subfilter__ = 'command'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         return _pipe_filter(self, data, subfilter)
 
 
@@ -1530,7 +1724,13 @@ class ShellPipeFilter(FilterBase):
 
     __default_subfilter__ = 'command'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
         return _pipe_filter(self, data, subfilter)
 
 
@@ -1545,7 +1745,7 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
         'timeout': 'Timeout (in seconds) for OCR (default 10 seconds)',
     }
 
-    def filter(self, data: bytes, subfilter: Dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -1583,7 +1783,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
 
     __default_subfilter__ = 'query'
 
-    def filter(self, data: Union[str, bytes], subfilter: Dict[str, Any]) -> str:
+    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).

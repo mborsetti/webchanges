@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from webchanges import init_data
 
-INITDATAKEYS = (
+INITDATAKEYS = {
     '__name__',
     '__doc__',
     '__package__',
@@ -11,7 +11,7 @@ INITDATAKEYS = (
     '__spec__',
     '__path__',
     '__file__',
-    '__init__',
+    # '__init__',
     '__cached__',
     '__builtins__',
     '__min_python_version__',
@@ -21,13 +21,13 @@ INITDATAKEYS = (
     '__author__',
     '__copyright__',
     '__license__',
+    '__url__',
     '__code_url__',
     '__docs_url__',
-    '__url__',
     '__user_agent__',
-)
+}
 
 
 def test_init_data() -> None:
-    assert set(init_data().keys()).issuperset(INITDATAKEYS)
+    assert set(key for key in init_data().keys() if key[:2] == '__').issuperset(INITDATAKEYS)
     assert sorted([key for key in init_data().keys() if key[:2] == '__']) == sorted(INITDATAKEYS)

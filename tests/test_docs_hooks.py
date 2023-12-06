@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import docutils.frontend
 import docutils.nodes
@@ -43,7 +43,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file."""
 
-    code: List[str] = []
+    code: list[str] = []
 
     def visit_literal_block(self, node: docutils.nodes.reference) -> None:
         if 'python' in node.attributes['classes']:
@@ -63,12 +63,12 @@ def load_hooks_from_doc() -> str:
     return visitor.code[0]
 
 
-def load_hooks_testdata() -> Dict[str, Any]:
+def load_hooks_testdata() -> dict[str, Any]:
     yaml_data = Path(data_path.joinpath('docs_hooks_testdata.yaml')).read_text()
     return yaml.safe_load(yaml_data)
 
 
-def load_hooks_jobs() -> List[JobBase]:
+def load_hooks_jobs() -> list[JobBase]:
     jobs_file = data_path.joinpath('docs_hooks_jobs.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     return jobs_storage.load()

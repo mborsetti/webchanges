@@ -258,14 +258,39 @@ contents of the :ref:`referer <referer>` directive if specified.
 
 
 
+.. _http_client:
+
+http_client
+^^^^^^^^^^^
+The Python client library to be used, either `HTTPX <https://www.python-httpx.org/>`__ or `requests
+<https://requests.readthedocs.io/en/latest/>`__. Defaults to ``HTTPX``.
+
+We use ``HTTPX`` as some web servers will refuse a connection or serve an error if a connection is attempted using an
+earlier version than the newer HTTP/2 network protocol.  Use ``http_client: requests`` to use the ``requests``
+library used by default in releases prior to 3.16 (but it only supports up to HTTP/1.1 protocol).
+
+Required packages
+"""""""""""""""""
+To use ``http_client: requests``, unless the ``requests`` library is already installed in the system, you need to
+first install :ref:`additional Python packages <optional_packages>` as follows:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[requests]
+
+
+.. versionadded:: 3.16
+
+
+
 .. _http_proxy:
 
 http_proxy
 ^^^^^^^^^^
 Proxy server to use for HTTP requests (a string). If unspecified or null/false, the system environment variable
-``HTTP_PROXY``, if defined, will be used.
+``HTTP_PROXY``, if defined, will be used. Can be one of ``https://``, ``http://`` or ``socks5://`` protocols.
 
-E.g. ``http://username:password@proxy.com:8080``.
+E.g. ``https://username:password@proxy.com:8080``.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
@@ -277,7 +302,7 @@ E.g. ``http://username:password@proxy.com:8080``.
 https_proxy
 ^^^^^^^^^^^
 Proxy server to use for HTTPS (i.e. secure) requests (a string). If unspecified or null/false, the system environment
-variable ``HTTPS_PROXY``, if defined, will be used.
+variable ``HTTPS_PROXY``, if defined, will be used. Can be one of ``https://``, ``http://`` or ``socks5://`` protocols.
 
 E.g. ``https://username:password@proxy.com:8080``.
 
@@ -353,7 +378,7 @@ data_as_json
 ^^^^^^^^^^^^
 See explanation within directive :ref:`data`.
 
-.. versioadded:: 3.15
+.. versionadded:: 3.15
 
 
 

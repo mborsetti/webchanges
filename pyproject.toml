@@ -73,14 +73,17 @@ ical2text = ['vobject']
 html5lib = ['html5lib']
 matrix = ['matrix_client']
 ocr = ['pytesseract', 'Pillow']
+pypdf = ['pypdf']
+pypdf_crypto = ['pypdf', 'cryptography']
 pdf2text = ['pdftotext']
 pushbullet = ['pushbullet.py']
 pushover = ['chump']
 redis = ['redis']
+requests = ['requests', 'urllib3']
 safe_password = ['keyring']
 xmpp = ['aioxmpp']
 all = [
-    'webchanges[use_browser,beautify,bs4,deepdiff,jq,ical2text,html5lib,matrix,ocr,pdf2text,pushbullet,pushover,redis,safe_password,xmpp]'
+    'webchanges[use_browser,beautify,bs4,deepdiff,jq,ical2text,html5lib,matrix,ocr,pdf2text,pushbullet,pushover,pypdf_crypto,redis,requests,safe_password,xmpp]'
 ]
 
 
@@ -95,6 +98,9 @@ packages = ['webchanges', 'webchanges._vendored']
 [tool.setuptools.dynamic]
 version = {attr = 'webchanges.__version__'}
 dependencies = {file = 'requirements.txt'}
+
+[tool.setuptools.package-data]
+'webchanges' = ['py.typed']
 
 
 # -------------------------- isort --------------------------

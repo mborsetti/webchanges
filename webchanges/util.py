@@ -20,11 +20,11 @@ from math import floor, log10
 from os import PathLike
 from pathlib import Path
 from types import ModuleType
-from typing import Callable, Dict, List, Match, Optional, Tuple, Union
+from typing import Callable, Match, Optional, Union
 
 import requests
 
-from webchanges.__init__ import __project_name__, __version__
+from webchanges import __project_name__, __version__
 
 try:
     from packaging.version import parse as parse_version
@@ -37,17 +37,17 @@ logger = logging.getLogger(__name__)
 class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
 
-    # __subclasses__ gets redefined from default "Callable[[_TT], List[_TT]]
-    __subclasses__: Dict[str, TrackSubClasses]  # type: ignore[assignment]
-    __anonymous_subclasses__: List[TrackSubClasses]
-    __required__: Tuple[str, ...] = ()
-    __optional__: Tuple[str, ...] = ()
+    # __subclasses__ gets redefined from default "Callable[[_TT], list[_TT]]
+    __subclasses__: dict[str, TrackSubClasses]  # type: ignore[assignment]
+    __anonymous_subclasses__: list[TrackSubClasses]
+    __required__: tuple[str, ...] = ()
+    __optional__: tuple[str, ...] = ()
 
     __kind__: str
-    __supported_subfilters__: Dict[str, str]
+    __supported_subfilters__: dict[str, str]
 
     @staticmethod
-    def sorted_by_kind(cls: TrackSubClasses) -> List[TrackSubClasses]:
+    def sorted_by_kind(cls: TrackSubClasses) -> list[TrackSubClasses]:
         """Generates a list of all members of a class sorted by the value of their __kind__ attribute. Useful for
         documentation.
 
@@ -56,12 +56,12 @@ class TrackSubClasses(type):
         """
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
-    def __init__(cls, name: str, bases: Tuple[type, ...], namespace: dict) -> None:
+    def __init__(cls, name: str, bases: tuple[type, ...], namespace: dict) -> None:
         for base in bases:
             if base == object:
                 continue
 
-            for attr in ('__required__', '__optional__'):
+            for attr in {'__required__', '__optional__'}:
                 if not hasattr(base, attr):
                     continue
 
@@ -131,7 +131,7 @@ def import_module_from_source(module_name: str, source_path: Union[str, bytes, P
     return module
 
 
-def chunk_string(text: str, length: int, numbering: bool = False) -> List[str]:
+def chunk_string(text: str, length: int, numbering: bool = False) -> list[str]:
     """Chunks a string.
 
     :param text: The text to be chunked.
@@ -177,7 +177,7 @@ def linkify(
     shorten: bool = False,
     extra_params: Union[str, Callable[[str], str]] = '',
     require_protocol: bool = False,
-    permitted_protocols: Tuple[str, ...] = (
+    permitted_protocols: tuple[str, ...] = (
         'http',
         'https',
         'mailto',
@@ -272,7 +272,7 @@ def linkify(
     return _URL_RE.sub(make_link, text)
 
 
-def get_new_version_number(timeout: Optional[Union[float, Tuple[float, float]]] = None) -> Union[str, bool]:
+def get_new_version_number(timeout: Optional[Union[float, tuple[float, float]]] = None) -> Union[str, bool]:
     """Check PyPi for newer version of project.
 
     :parameter timeout: Timeout in seconds after which empty string is returned.
@@ -308,7 +308,7 @@ def dur_text(duration: float) -> str:
         return f'{m:.0f}:{s:02.0f}'
 
 
-def file_ownership_checks(filename: Path) -> List[str]:
+def file_ownership_checks(filename: Path) -> list[str]:
     """Check security of file and its directory, i.e. that they belong to the current UID and only the owner
     can write to them. Return list of errors if any. Linux only.
 

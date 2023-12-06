@@ -218,7 +218,7 @@ from __future__ import annotations
 
 import itertools
 import re
-from typing import Any, Callable, NamedTuple, Optional, SupportsInt, Tuple, Union
+from typing import Any, Callable, NamedTuple, Optional, SupportsInt, Union
 
 # `from webchanges._structures import Infinity, InfinityType, NegativeInfinity, NegativeInfinityType`
 # replaced with the contents of the file
@@ -285,16 +285,16 @@ NegativeInfinity = NegativeInfinityType()
 # the following is the rest of the content of
 # https://github.com/pypa/packaging/blob/main/src/packaging/version.py
 
-LocalType = Tuple[Union[int, str], ...]
+LocalType = tuple[Union[int, str], ...]
 
-CmpPrePostDevType = Union[InfinityType, NegativeInfinityType, Tuple[str, int]]
+CmpPrePostDevType = Union[InfinityType, NegativeInfinityType, tuple[str, int]]
 CmpLocalType = Union[
     NegativeInfinityType,
-    Tuple[Union[Tuple[int, str], Tuple[NegativeInfinityType, Union[int, str]]], ...],
+    tuple[Union[tuple[int, str], tuple[NegativeInfinityType, Union[int, str]]], ...],
 ]
-CmpKey = Tuple[
+CmpKey = tuple[
     int,
-    Tuple[int, ...],
+    tuple[int, ...],
     CmpPrePostDevType,
     CmpPrePostDevType,
     CmpPrePostDevType,
@@ -305,10 +305,10 @@ VersionComparisonMethod = Callable[[CmpKey, CmpKey], bool]
 
 class _Version(NamedTuple):
     epoch: int
-    release: Tuple[int, ...]
-    dev: Optional[Tuple[str, int]]
-    pre: Optional[Tuple[str, int]]
-    post: Optional[Tuple[str, int]]
+    release: tuple[int, ...]
+    dev: Optional[tuple[str, int]]
+    pre: Optional[tuple[str, int]]
+    post: Optional[tuple[str, int]]
     local: Optional[LocalType]
 
 
@@ -332,7 +332,7 @@ class InvalidVersion(ValueError):
 
 
 class _BaseVersion:
-    _key: Tuple[Any, ...]
+    _key: tuple[Any, ...]
 
     def __hash__(self) -> int:
         return hash(self._key)
@@ -535,7 +535,7 @@ class Version(_BaseVersion):
         return self._version.epoch
 
     @property
-    def release(self) -> Tuple[int, ...]:
+    def release(self) -> tuple[int, ...]:
         """The components of the "release" segment of the version.
 
         >>> Version("1.2.3").release
@@ -550,7 +550,7 @@ class Version(_BaseVersion):
         return self._version.release
 
     @property
-    def pre(self) -> Optional[Tuple[str, int]]:
+    def pre(self) -> Optional[tuple[str, int]]:
         """The pre-release segment of the version.
 
         >>> print(Version("1.2.3").pre)
@@ -710,7 +710,7 @@ class Version(_BaseVersion):
 
 def _parse_letter_version(
     letter: Optional[str], number: Union[str, bytes, SupportsInt, None]
-) -> Optional[Tuple[str, int]]:
+) -> Optional[tuple[str, int]]:
     if letter:
         # We consider there to be an implicit 0 in a pre-release if there is not a numeral associated with it.
         if number is None:
@@ -757,10 +757,10 @@ def _parse_local_version(local: Optional[str]) -> Optional[LocalType]:
 
 def _cmpkey(
     epoch: int,
-    release: Tuple[int, ...],
-    pre: Optional[Tuple[str, int]],
-    post: Optional[Tuple[str, int]],
-    dev: Optional[Tuple[str, int]],
+    release: tuple[int, ...],
+    pre: Optional[tuple[str, int]],
+    post: Optional[tuple[str, int]],
+    dev: Optional[tuple[str, int]],
     local: Optional[LocalType],
 ) -> CmpKey:
     # When we compare a release version, we want to compare it with all of the trailing zeros removed. So we'll use a

@@ -18,15 +18,16 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List, Literal, NamedTuple, Optional, TextIO, Tuple, TypedDict, Union
+from typing import Any, Iterable, Iterator, Literal, NamedTuple, Optional, TextIO, TypedDict, Union
+from zoneinfo import ZoneInfo
 
 import msgpack
 import yaml
 import yaml.scanner
 
-from webchanges.__init__ import __docs_url__, __project_name__, __version__
+from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.filters import FilterBase
 from webchanges.jobs import JobBase, ShellJob
 from webchanges.reporters import ReporterBase
@@ -68,6 +69,7 @@ ConfigReportHtml = TypedDict(
     {
         'diff': Literal['unified', 'table'],
         'separate': bool,
+        'title': str,
     },
 )
 ConfigReportMarkdown = TypedDict(
@@ -90,7 +92,6 @@ ConfigReportBrowser = TypedDict(
     'ConfigReportBrowser',
     {
         'enabled': bool,
-        'title': str,
     },
 )
 ConfigReportDiscord = TypedDict(
@@ -204,7 +205,7 @@ ConfigReportTelegram = TypedDict(
     {
         'enabled': bool,
         'bot_token': str,
-        'chat_id': Union[str, int, List[Union[str, int]]],
+        'chat_id': Union[str, int, list[Union[str, int]]],
         'silent': bool,
     },
 )
@@ -254,10 +255,10 @@ ConfigJobDefaults = TypedDict(
     'ConfigJobDefaults',
     {
         '_note': str,
-        'all': Dict[str, Any],
-        'url': Dict[str, Any],
-        'browser': Dict[str, Any],
-        'command': Dict[str, Any],
+        'all': dict[str, Any],
+        'url': dict[str, Any],
+        'browser': dict[str, Any],
+        'command': dict[str, Any],
     },
 )
 ConfigDatabase = TypedDict(
@@ -286,18 +287,19 @@ DEFAULT_CONFIG: Config = {
         'empty-diff': True,
     },
     'report': {
-        'tz': None,  # the timezone as a IANA time zone name, e.g. 'America/Los_Angeles', or null for machine's'
+        'tz': None,  # the timezone as a IANA time zone name, e.g. 'America/Los_Angeles', or null for machine's
         # the directives below are for the report content types (text, html or markdown)
         'text': {
-            'line_length': 75,
             'details': True,  # whether the diff is sent
             'footer': True,
+            'line_length': 75,
             'minimal': False,
             'separate': False,
         },
         'html': {
             'diff': 'unified',  # 'unified' or 'table'
             'separate': False,
+            'title': f'[{__project_name__}] {{count}} changes{{jobs_files}}: {{jobs}}',
         },
         'markdown': {
             'details': True,  # whether the diff is sent
@@ -312,13 +314,12 @@ DEFAULT_CONFIG: Config = {
         },
         'browser': {  # the system's default browser; uses html
             'enabled': False,
-            'title': f'[{__project_name__}] {{count}} changes: {{jobs}}',
         },
         'discord': {
             'enabled': False,
             'webhook_url': '',
             'embed': True,
-            'subject': '{count} changes: {jobs}',
+            'subject': f'[{__project_name__}] {{count}} changes{{jobs_files}}: {{jobs}}',
             'colored': True,
             'max_message_length': None,
         },
@@ -327,7 +328,7 @@ DEFAULT_CONFIG: Config = {
             'html': True,
             'from': '',
             'to': '',
-            'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
+            'subject': f'[{__project_name__}] {{count}} changes{{jobs_files}}: {{jobs}}',
             'method': 'smtp',  # either 'smtp' or 'sendmail'
             'smtp': {
                 'host': 'localhost',
@@ -354,7 +355,7 @@ DEFAULT_CONFIG: Config = {
             'from_mail': '',
             'from_name': '',
             'to': '',
-            'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
+            'subject': f'[{__project_name__}] {{count}} changes{{jobs_files}}: {{jobs}}',
         },
         'matrix': {  # uses text
             'enabled': False,
@@ -367,7 +368,7 @@ DEFAULT_CONFIG: Config = {
             'api_key': '',
             'priority': 0,
             'application': '',
-            'subject': f'[{__project_name__}] {{count}} changes: {{jobs}}',
+            'subject': f'[{__project_name__}] {{count}} changes{{jobs_files}}: {{jobs}}',
         },
         'pushbullet': {  # uses text
             'enabled': False,
@@ -535,9 +536,9 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
 class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
     """Class for jobs textual files storage."""
 
-    filename: List[Path]  # type: ignore[assignment]
+    filename: list[Path]  # type: ignore[assignment]
 
-    def __init__(self, filename: List[Path]) -> None:  # type: ignore[arg-type]
+    def __init__(self, filename: list[Path]) -> None:  # type: ignore[arg-type]
         """
 
         :param filename: The filenames of the jobs file.
@@ -545,13 +546,13 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         super().__init__(filename)  # type: ignore[arg-type]
         self.filename = filename
 
-    def load_secure(self) -> List[JobBase]:
+    def load_secure(self) -> list[JobBase]:
         """Load the jobs from a text file checking that the file is secure (i.e. belongs to the current UID and only
         the owner can write to it - Linux only).
 
         :return: List of JobBase objects.
         """
-        jobs: List[JobBase] = self.load()
+        jobs: list[JobBase] = self.load()
 
         def is_shell_job(job: JobBase) -> bool:
             """Check if the job uses filter 'shellpipe' or an external differ, as they call subprocess.run(
@@ -674,7 +675,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param config: The configuration.
         :raises ValueError: If the configuration has keys not in DEFAULT_CONFIG (bad keys, e.g. typos)
         """
-        for key in ('_beta_use_playwright', 'chromium_revision'):
+        for key in {'chromium_revision'}:
             if key in config['job_defaults']['all'] or key in config['job_defaults']['browser']:
                 warnings.warn(
                     f'Directive {key} found in the configuration file {self.filename} has been deprecated'
@@ -726,7 +727,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         'shell'
                     )  # type: ignore[typeddict-item]
 
-            for key in ('all', 'url', 'browser', 'command'):
+            for key in {'all', 'url', 'browser', 'command'}:
                 if key not in config['job_defaults']:
                     config['job_defaults'][key] = {}  # type: ignore[literal-required]
                 elif config['job_defaults'][key] is None:  # type: ignore[literal-required]
@@ -769,7 +770,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         with self.filename.open('w') as fp:
             fp.write(
                 f'# {__project_name__} configuration file. See {__docs_url__}en/stable/configuration.html\n'
-                f'# Originally written on {datetime.utcnow().replace(microsecond=0).isoformat()}Z by version'
+                f'# Originally written on {datetime.now(UTC).replace(microsecond=0).isoformat()}Z by version'
                 f' {__version__}.\n'
                 f'\n'
             )
@@ -790,7 +791,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
     """Class for jobs file (is a YAML textual file)."""
 
     @classmethod
-    def _parse(cls, fp: TextIO, filenames: List[Path]) -> List[JobBase]:
+    def _parse(cls, fp: TextIO, filenames: list[Path]) -> list[JobBase]:
         """Parse the contents of a jobs YAML file.
 
         :param fp: The text stream to parse.
@@ -799,7 +800,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         :raise ValueError: If a duplicate URL/command is found in the list.
         """
 
-        def job_files_for_error() -> List[str]:
+        def job_files_for_error() -> list[str]:
             """
             :return: A list of line containing the names of the job files.
             """
@@ -815,6 +816,13 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         jobs_by_guid = defaultdict(list)
         try:
             for i, job_data in enumerate((job for job in yaml.safe_load_all(fp) if job)):
+                if not isinstance(job_data, dict):
+                    raise ValueError(
+                        '\n   '.join(
+                            [f'Found invalid job data (consisting of the {type(job_data).__name__} {job_data})']
+                            + job_files_for_error()
+                        )
+                    )
                 job_data['index_number'] = i + 1
                 if job_data.get('kind') == 'shell':
                     job_data['kind'] = 'command'
@@ -894,7 +902,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         return jobs
 
     @classmethod
-    def parse(cls, filename: Path) -> List[JobBase]:
+    def parse(cls, filename: Path) -> list[JobBase]:
         """Parse the contents of a jobs YAML file and return a list of jobs.
 
         :param filename: The filename Path.
@@ -905,7 +913,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 return cls._parse(fp, [filename])
         return []
 
-    def load(self, *args: Any) -> List[JobBase]:
+    def load(self, *args: Any) -> list[JobBase]:
         """Parse the contents of the jobs YAML file(s) and return a list of jobs.
 
         :return: A list of JobBase objects.
@@ -953,7 +961,7 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
-    def get_guids(self) -> List[str]:
+    def get_guids(self) -> list[str]:
         pass
 
     @abstractmethod
@@ -961,11 +969,11 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
         pass
 
     @abstractmethod
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
         pass
 
     @abstractmethod
@@ -999,7 +1007,7 @@ class CacheStorage(BaseFileStorage, ABC):
     def rollback(self, timestamp: float) -> Optional[int]:
         pass
 
-    def backup(self) -> Iterator[Tuple[str, str, float, int, str]]:
+    def backup(self) -> Iterator[tuple[str, str, float, int, str]]:
         """Return the most recent entry for each 'guid'.
 
         :returns: An generator of tuples, each consisting of (guid, data, timestamp, tries, etag)
@@ -1008,7 +1016,7 @@ class CacheStorage(BaseFileStorage, ABC):
             snapshot = self.load(guid)
             yield guid, *snapshot
 
-    def restore(self, entries: Iterable[Tuple[str, str, float, int, str]]) -> None:
+    def restore(self, entries: Iterable[tuple[str, str, float, int, str]]) -> None:
         """Save multiple entries into the database.
 
         :param entries: An iterator of tuples WHERE each consists of (guid, data, timestamp, tries, etag)
@@ -1047,14 +1055,17 @@ class CacheStorage(BaseFileStorage, ABC):
                 if count:
                     print(f'Deleted {count} old snapshots of {guid}')
 
-    def rollback_cache(self, timestamp: float) -> None:
+    def rollback_cache(self, timestamp: float, tz: Optional[str] = None) -> None:
         """Issues a warning, calls rollback() and prints out the result.
 
         :param timestamp: The timestamp
+        :param tz: The IANA tz name to use for the prompts and confirmation dialogs.
         """
 
-        machine_tz = datetime.now().astimezone().tzinfo
-        print(f'Rolling back database to {datetime.fromtimestamp(timestamp, tz=machine_tz).isoformat()}')
+        tzinfo = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
+        dt = datetime.fromtimestamp(timestamp, tzinfo)
+        timestamp_date = email.utils.format_datetime(dt)
+        print(f'Rolling back database to {timestamp_date}')
         if sys.__stdin__.isatty():
             print('WARNING: All snapshots after this date will be deleted! This operation cannot be undone;')
             print('         We suggest you make a backup of the database file before proceeding.')
@@ -1063,7 +1074,6 @@ class CacheStorage(BaseFileStorage, ABC):
                 print('Quitting rollback. No snapshots have been deleted.')
                 sys.exit(1)
         count = self.rollback(timestamp)
-        timestamp_date = email.utils.formatdate(timestamp, localtime=True)
         if count:
             print(f'Deleted {count} snapshots taken after {timestamp_date}')
         else:
@@ -1090,7 +1100,7 @@ class CacheDirStorage(CacheStorage):
     def _get_filename(self, guid: str) -> Path:
         return self.filename.joinpath(guid)  # filename is a dir (confusing!)
 
-    def get_guids(self) -> List[str]:
+    def get_guids(self) -> list[str]:
         return [filename.name for filename in self.filename.iterdir()]
 
     def load(self, guid: str) -> Snapshot:
@@ -1108,14 +1118,14 @@ class CacheDirStorage(CacheStorage):
 
         return Snapshot(data, timestamp, 0, '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
         if count is not None and count < 1:
             return {}
         else:
             data, timestamp, tries, etag = self.load(guid)
             return {data: timestamp} if data and timestamp else {}
 
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
         else:
@@ -1315,7 +1325,7 @@ class CacheSQLite3Storage(CacheStorage):
         del self.db
         del self.lock
 
-    def get_guids(self) -> List[str]:
+    def get_guids(self) -> list[str]:
         """Lists the unique 'guid's contained in the database.
 
         :returns: A list of guids.
@@ -1351,7 +1361,7 @@ class CacheSQLite3Storage(CacheStorage):
 
         return Snapshot('', 0, 0, '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
         """Return max 'count' (None = all) records of data and timestamp of **successful** runs for a 'guid'.
 
         :param guid: The guid.
@@ -1381,7 +1391,7 @@ class CacheSQLite3Storage(CacheStorage):
                             break
         return history
 
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
         """Return max 'count' (None = all) entries of all data (including from error runs) saved for a 'guid'.
 
         :param guid: The guid.
@@ -1402,7 +1412,7 @@ class CacheSQLite3Storage(CacheStorage):
             rows = self._execute(
                 'SELECT msgpack_data, timestamp FROM webchanges WHERE uuid = ? ORDER BY timestamp DESC', (guid,)
             ).fetchall()
-        history: List[Snapshot] = []
+        history: list[Snapshot] = []
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
@@ -1660,7 +1670,7 @@ class CacheRedisStorage(CacheStorage):
         self.db.connection_pool.disconnect()
         del self.db
 
-    def get_guids(self) -> List[str]:
+    def get_guids(self) -> list[str]:
         guids = []
         for guid in self.db.keys('guid:*'):
             guids.append(guid[5:].decode())
@@ -1676,7 +1686,7 @@ class CacheRedisStorage(CacheStorage):
 
         return Snapshot('', 0, 0, '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
         if count is not None and count < 1:
             return {}
 
@@ -1692,11 +1702,11 @@ class CacheRedisStorage(CacheStorage):
                         break
         return history
 
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
 
-        history: List[Snapshot] = []
+        history: list[Snapshot] = []
         key = self._make_key(guid)
         for i in range(0, self.db.llen(key)):
             r = self.db.lindex(key, i)

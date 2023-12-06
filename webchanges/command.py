@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import contextlib
 import difflib
+import email.utils
 import importlib.metadata
 import logging
 import os
@@ -19,10 +20,21 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, TYPE_CHECKING, Union
+from typing import Optional, TYPE_CHECKING, Union
 from zoneinfo import ZoneInfo
 
-import requests
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore[assignment]
+    import requests
+
+if httpx is not None:
+    try:
+        import h2
+    except ImportError:
+        h2 = None  # type: ignore[assignment]
+
 
 try:
     import apt
@@ -46,7 +58,7 @@ except ImportError:
     psutil = None  # type: ignore[assignment]
     bytes2human = None  # type: ignore[assignment]
 
-from webchanges.__init__ import __docs_url__, __project_name__, __version__
+from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState, Report, SnapshotShort
 from webchanges.jobs import BrowserJob, JobBase, UrlJob
@@ -149,7 +161,7 @@ class UrlwatchCommand:
         :return: 0.
         """
 
-        def dependencies() -> List[str]:
+        def dependencies() -> list[str]:
             if get_default_environment is not None:
                 env = get_default_environment()
                 dist = None
@@ -169,7 +181,9 @@ class UrlwatchCommand:
                 'cssbeautifier',
                 'cssselect',
                 'deepdiff',
+                'h2',
                 'html2text',
+                'httpx',
                 'jq',
                 'jsbeautifier',
                 'keyring',
@@ -186,9 +200,7 @@ class UrlwatchCommand:
                 'pytesseract',
                 'pyyaml',
                 'redis',
-                'requests',
                 'tzdata',
-                'urllib3',
                 'vobject',
             ]
 
@@ -495,15 +507,17 @@ class UrlwatchCommand:
         print(f'History for job {job.get_indexed_location()}:')
         print(f'(ID: {job.get_guid()})')
         total_failed = 0
+        if history_data:
+            print('=' * 50)
         for i, snapshot in enumerate(history_data):
             etag = f'; ETag: {snapshot[3]}' if snapshot[3] else ''
             tries = f'; error run (number {snapshot[2]})' if snapshot[2] else ''
             total_failed += snapshot[2] > 0
-            tz = self.urlwatcher.report.config['report']['tz'] or 'Etc/UTC'
-            dt = datetime.fromtimestamp(snapshot[1], ZoneInfo(tz))
-            header = f"{i + 1}) {dt.strftime('%Y-%m-%d %H:%M %Z')}{etag}{tries}"
-            sep_len = max(50, min(50, len(header)))
-            print('=' * sep_len)
+            tz = self.urlwatcher.report.config['report']['tz']
+            tzinfo = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
+            dt = datetime.fromtimestamp(snapshot[1], tzinfo)
+            header = f'{i + 1}) {email.utils.format_datetime(dt)}{etag}{tries}'
+            sep_len = max(50, len(header))
             print(header)
             print('-' * sep_len)
             print(snapshot[0])
@@ -679,13 +693,18 @@ class UrlwatchCommand:
             print('You need to set up your bot token first (see documentation)')
             self._exit(1)
 
-        info = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
+        if httpx:
+            get_client = httpx.Client(http2=h2 is not None).get
+        else:
+            get_client = requests.get  # type: ignore[assignment]
+
+        info = get_client(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
         if not info['ok']:
             print(f"Error with token {bot_token}: {info['description']}")
             self._exit(1)
 
         chats = {}
-        updates = requests.get(f'https://api.telegram.org/bot{bot_token}/getUpdates', timeout=60).json()
+        updates = get_client(f'https://api.telegram.org/bot{bot_token}/getUpdates', timeout=60).json()
         if 'result' in updates:
             for chat_info in updates['result']:
                 chat = chat_info['message']['chat']
@@ -934,7 +953,7 @@ class UrlwatchCommand:
 
     def handle_actions(self) -> None:
         """Handles the actions for command line arguments and exits."""
-        if self.urlwatch_config.list:
+        if self.urlwatch_config.list_jobs:
             self.list_jobs()
             self._exit(0)
 
@@ -991,7 +1010,8 @@ class UrlwatchCommand:
             self._exit(0)
 
         if self.urlwatch_config.rollback_database:
-            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_database)
+            tz = self.urlwatcher.report.config['report']['tz']
+            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_database, tz)
             self.urlwatcher.cache_storage.close()
             self._exit(0)
 

@@ -14,7 +14,7 @@ Having it into a standalone module allows running the program without requiring 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from webchanges.storage import CacheStorage, Snapshot
 
@@ -52,7 +52,7 @@ class CacheMiniDBStorage(CacheStorage):
         self.db.close()
         self.db = None
 
-    def get_guids(self) -> List[str]:
+    def get_guids(self) -> list[str]:
         return [guid for guid, in self.CacheEntry.query(self.db, minidb.Function('distinct', self.CacheEntry.c.guid))]
 
     def load(self, guid: str) -> Snapshot:
@@ -67,8 +67,8 @@ class CacheMiniDBStorage(CacheStorage):
 
         return Snapshot('', 0, 0, '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> Dict[str, float]:
-        history: Dict[str, float] = {}
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
+        history: dict[str, float] = {}
         if count is not None and count < 1:
             return history
         for data, timestamp in self.CacheEntry.query(
@@ -84,10 +84,10 @@ class CacheMiniDBStorage(CacheStorage):
                     break
         return history
 
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> List[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
-        history: List[Snapshot] = []
+        history: list[Snapshot] = []
         for data, timestamp in self.CacheEntry.query(
             self.db,
             self.CacheEntry.c.data // self.CacheEntry.c.timestamp,

@@ -4,12 +4,14 @@
 Reports
 =======
 Reports contain the changes detected (diff) and can be one of the following formats (depending on the :ref:`reporter
-<reporters>` and its settings):
+<reporters>` used and, at times, its settings):
 
 * :ref:`text`
 * :ref:`html`
 * :ref:`markdown`
 
+
+As a reminder, report sub-directives are set in the :ref:`configuration <reports-and-reporters>`.
 
 
 .. _text:
@@ -25,8 +27,8 @@ Optional sub-directives
   ``minimal`` is true.
 * ``line_length``: The maximum length of each line in characters; defaults to 75 (integer). Ignored if ``minimal`` is
   true.
-* ``minimal``: An abbreviated version (true/false); defaults to false.
-* ``separate``: Send a report for each job instead of a combined report with all jobs; defaults to false.
+* ``minimal``: An abbreviated report version (true/false); defaults to false.
+* ``separate``: Send a separate report for each job instead of a single combined report (true/false); defaults to false.
 
 
 
@@ -45,18 +47,19 @@ HTML
 .. role:: deletions
     :class: deletions
 
-These reports are by default ``unified`` diffs that are prettified by :program:`webchanges` by:
+These reports are by default `unified format <https://en.wikipedia.org/wiki/Diff#Unified_format>`__ diffs that are
+prettified by :program:`webchanges` by:
 
-* Making links `clickable <https://pypi.org/project/webchanges/>`__!
+* Making links `clickable <https://pypi.org/project/webchanges/>`__;
 * Correctly representing Markdown formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list
-  bullets (•) and indentation.
-* Using color and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines.
+  bullets (•) and indentation;
+* Using intuitive colors and strikethrough to highlight :additions:`added` and :deletions:`deleted` lines.
 
 
-.. note: You may receive a report that shows a deletion of some text and the addition of the same exact text: this is
-   most likely due to a change in the underlying link, since this is being tracked as well.
+.. note:: You may receive a report that shows a deletion of some text and the addition of the same exact text: this is
+   most likely due to a change in an underlying link.
 
-If for some reason you want the diff as a Python `HtmlDiff
+If for some reason you want the diff formatted as a Python `HtmlDiff
 <https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__ table, set the sub-directive ``diff`` to
 ``table``:
 
@@ -69,9 +72,13 @@ If for some reason you want the diff as a Python `HtmlDiff
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``diff``: ``unified`` (default) or ``table``. Overridden if the job directive ``diff_tool`` (external
-  differ) is set.
-* ``separate``: Send a report for each job instead of a combined report with all jobs; defaults to false.
+* ``diff``: The diffing format (``unified`` or ``table``); defaults to ``unified``. Ignored if the job directive
+  ``diff_tool`` (external differ) is set.
+* ``separate``: Send a separate report for each job instead of a single combined report (true/false); defaults to false.
+* ``title``: The document's title. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
+  reported, and {jobs_files} for a space followed by the name of the jobs file(s) used within parenthesis, stripped
+  of preceding ``jobs-``, if not using the default ``jobs.yaml``. Default: ``[webchanges] {count}
+  changes:{jobs_files} {jobs}``.
 
 
 
@@ -84,8 +91,8 @@ Markdown text, used in e.g. ``matrix``, ``telegram``, and ``webhook`` reporters 
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``minimal``: An abbreviated version (true/false); defaults to false.
-* ``show_details``: Includes the diff of each job (true/false); defaults to true. Ignored if ``minimal`` is true.
-* ``show_footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true. Ignored if
+* ``details``: Includes the diff of each job (true/false); defaults to true. Ignored if ``minimal`` is true.
+* ``footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true. Ignored if
   ``minimal`` is true.
-* ``separate``: Send a report for each job instead of a combined report with all jobs; defaults to false.
+* ``minimal``: An abbreviated report version (true/false); defaults to false.
+* ``separate``: Send a separate report for each job instead of a single combined report (true/false); defaults to false.

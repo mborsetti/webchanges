@@ -47,8 +47,8 @@ jobs:
 #      # Install dependencies needed by the repo: local in .pre-commit-config.yaml
 #      - name: Install dependencies
 #        run: |
-#          pip install -U pip setuptools wheel
-#          pip install -U -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
+#          pip install --upgrade pip wheel
+#          pip install --upgrade -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
 #
 #      # The below has been replaced with the integration in GitHub of the "pre-commit ci" app https://pre-commit.ci
 #      # # Run pre-commit cache per https://github.com/pre-commit/action
@@ -106,7 +106,7 @@ jobs:
 
       - name: Upgrade pip etc.
         run: |
-          pip install -U pip setuptools wheel
+          pip install --upgrade pip wheel
 
 #      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
 #        # https://lxml.de/installation.html#installation
@@ -123,19 +123,19 @@ jobs:
         run: |
           sudo apt-get -y update
           sudo apt-get -y install python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
-          pip install -U pdftotext Pillow pytesseract
+          pip install --upgrade pdftotext Pillow pytesseract
 
       - name: Install all other dependencies
 #        if: matrix.python-version < '3.12'
         run: |
-          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
+          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
 #      - name: Install all other dependencies (py12)
 #        if: matrix.python-version == '3.12'
 #        run: |
-#          pip install -U --no-deps playwright >=1.37 greenlet==3.0 pyee==11.0
-#          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
-#          pip install -U --no-deps pyee==11.0
+#          pip install --upgrade --no-deps playwright >=1.37 greenlet==3.0 pyee==11.0
+#          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
+#          pip install --upgrade --no-deps pyee==11.0
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
@@ -183,7 +183,7 @@ jobs:
 
       - name: Upgrade pip etc.
         run: |
-          pip install -U pip setuptools wheel
+          pip install --upgrade pip wheel
 
 #      - name: Install wheel-less lxml for Python 3.10
 #        # https://lxml.de/installation.html#installation
@@ -196,19 +196,19 @@ jobs:
         if: matrix.python-version == '3.12'
         run: |
           brew install poppler tesseract
-          pip install -U pdftotext Pillow pytesseract
+          pip install --upgrade pdftotext Pillow pytesseract
 
       - name: Install all other dependencies
 #        if: matrix.python-version < '3.12'
         run: |
-          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
+          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
 #      - name: Install all other dependencies (py12)
 #        if: matrix.python-version == '3.12'
 #        run: |
-#          pip install -U --no-deps playwright >=1.37 greenlet==3.0 pyee==11.0
-#          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
-#          pip install -U --no-deps pyee==11.0
+#          pip install --upgrade --no-deps playwright >=1.37 greenlet==3.0 pyee==11.0
+#          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
+#          pip install --upgrade --no-deps pyee==11.0
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
@@ -261,7 +261,7 @@ jobs:
 #
 #      - name: Upgrade pip etc.
 #        run: |
-#          pip install -U pip setuptools wheel
+#          pip install --upgrade pip wheel
 #
 ##      ISSUE WITH THE BELOW:
 ##      Hangs at start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
@@ -284,18 +284,18 @@ jobs:
 ##          curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
 ##          start /wait "" %TESSERACT% /S
 ##          del %TESSERACT% /f
-##          pip install -U keyring pdftotext Pillow pytesseract
+##          pip install --upgrade keyring pdftotext Pillow pytesseract
 ##        shell: cmd
 #
 #      - name: Install all other dependencies (up to Python 3.11)
 #        if: matrix.python-version <= '3.11'
 #        run: |
-#          pip install -U coveralls -r requirements.txt -r tests/requirements_pytest.txt
+#          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
 #
 #      - name: Install all other dependencies (Python 3.12)
 #        if: matrix.python-version > '3.11'
 #        run: |
-#          pip install -U greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
+#          pip install --upgrade greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
 #
 #      - name: Run tests
 #        # workaround for Windows fatal exception: access violation
@@ -343,7 +343,7 @@ jobs:
       # Install pip dependencies
       - name: Install dependencies
         run: |
-          pip install -U pip build
+          pip install --upgrade pip build
 
       # build https://pypa-build.readthedocs.io/en/latest/
       - name: Build dist

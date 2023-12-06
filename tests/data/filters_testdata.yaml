@@ -337,13 +337,29 @@ re_sub_multiline:
     One Line
 
     Another Line
+html2text:
+  filter:
+    - html2text:
+  data: |-
+    <html><body>This is some <a href="local_link">text</a></body></html>
+  expected_result: |-
+    This is some [text](https://testfakejob.com/local_link)
 html2text_bs4:
   filter:
     - html2text:
         method: bs4
         parser: html.parser
   data: |-
-    <html><body>This is some text</body></html>
+    <html><body>This is some <a href="local_link">text</a></body></html>
+  expected_result: |-
+    This is some text
+html2text_strip_tags:
+  filter:
+    - html2text:
+        method: bs4
+        parser: html.parser
+  data: |-
+    <html><body>This is some <a href="local_link">text</a></body></html>
   expected_result: |-
     This is some text
 deprecated_grep:
@@ -435,3 +451,48 @@ lstrip_each_line_with_chars:
   expected_result: |-
       line1.
       line2.
+absolute_links:
+  filter:
+    - absolute_links:
+  data: |
+      <html><body>
+      <a>1</a>
+      <a href="ftp://bla.com">2</a>
+      <a href="/test.html">3</a>
+      <a href="https://example.com/test.html">4</a>
+      </body></html>
+  expected_result: |-
+      <html><body>
+      <a>1</a>
+      <a href="ftp://bla.com">2</a>
+      <a href="https://testfakejob.com/test.html">3</a>
+      <a href="https://example.com/test.html">4</a>
+      </body></html>
+beautify_absolute_links:
+  filter:
+    - beautify:
+        absolute_links: true
+  data: |
+      <html><body>
+      <a>1</a>
+      <a href="ftp://bla.com">2</a>
+      <a href="/test.html">3</a>
+      <a href="https://example.com/test.html">4</a>
+      </body></html>
+  expected_result: |
+      <html>
+       <body>
+        <a>
+         1
+        </a>
+        <a href="ftp://bla.com">
+         2
+        </a>
+        <a href="https://testfakejob.com/test.html">
+         3
+        </a>
+        <a href="https://example.com/test.html">
+         4
+        </a>
+       </body>
+      </html>

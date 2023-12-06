@@ -319,6 +319,18 @@ https://example.net/beautify.html:
       test™
      </body>
     </html>
+https://example.net/pypdf-test.pdf:
+  filename: pdf-test.pdf
+  output: "A PDF Document that can be turned into plain text. "
+https://example.net/pypdf-test-password.pdf:
+  filename: pdf-test-password.pdf
+  output: "A password-protected PDF Document that can be turned into plain text. "
+https://example.net/pypdf-test-keep-physical-layout.pdf:
+  filename: pdf-test.pdf
+  output: "A PDF Document that can be turned into plain text. "
+https://example.net/pypdf-no-multiple-spaces.pdf:
+  filename: pdf-test-multiple-spaces.pdf
+  output: "This PDF document has lots of mult iple\nspaces."
 https://example.net/pdf-test.pdf:
   filename: pdf-test.pdf
   output: "A PDF Document that can be turned into plain text."
@@ -618,8 +630,8 @@ https://example.net/execute.html:
     The data is 'TEST'
     The job location is 'https://example.net/execute.html'
     The job name is 'Test execute filter'
-    The job number is '52'
-    The job JSON is '{"url": "https://example.net/execute.html", "filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 52, "name": "Test execute filter"}'
+    The job number is '56'
+    The job JSON is '{"filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 56, "name": "Test execute filter", "url": "https://example.net/execute.html"}'
 https://example.net/shellpipe.html:
   input: |
   output: TEST

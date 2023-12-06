@@ -15,7 +15,7 @@ import time
 from abc import ABC
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 import pytest
 
@@ -46,7 +46,7 @@ hooks_file = Path('')
 config_storage = YamlConfigStorage(config_file)
 
 
-DATABASE_ENGINES: Tuple[CacheStorage, ...] = (
+DATABASE_ENGINES: tuple[CacheStorage, ...] = (
     CacheDirStorage(tmp_path),
     CacheSQLite3Storage(':memory:'),  # type: ignore[arg-type]
 )
@@ -75,7 +75,7 @@ def test_all_database_engines() -> None:
 
 def prepare_storage_test(
     cache_storage: CacheStorage, config_args: Optional[dict] = None, jobs_file: Optional[Path] = None
-) -> Tuple[Urlwatch, CacheStorage, CommandConfig]:
+) -> tuple[Urlwatch, CacheStorage, CommandConfig]:
     """Set up storage."""
     cache_file = cache_storage.filename
 

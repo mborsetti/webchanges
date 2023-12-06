@@ -7,7 +7,7 @@ For the entry point, see main() in the cli module."""
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from webchanges.config import CommandConfig
 from webchanges.handler import Report
@@ -34,7 +34,7 @@ class Urlwatch:
         :param urlwatch_config: The CommandConfig object containing the program run information.
         :param config_storage: The YamlConfigStorage object containing the configuration information.
         :param cache_storage: The CacheStorage object containing snapshot database information
-        :param jobs_storage: The YamlJobsStorage object containing the jobs information.
+        :param jobs_storage: The YamlJobsStorage object containing information about the jobs.
         """
 
         self.urlwatch_config = urlwatch_config
@@ -44,7 +44,7 @@ class Urlwatch:
         self.jobs_storage = jobs_storage
 
         self.report = Report(self)
-        self.jobs: List[JobBase] = []
+        self.jobs: list[JobBase] = []
 
         self._latest_release: Optional[Union[str, bool]] = None
 
@@ -82,7 +82,7 @@ class Urlwatch:
 
         self.jobs = jobs
 
-    def get_new_release_version(self, timeout: Optional[Union[float, Tuple[float, float]]] = None) -> Union[str, bool]:
+    def get_new_release_version(self, timeout: Optional[Union[float, tuple[float, float]]] = None) -> Union[str, bool]:
         """Check PyPi to see if we're running the latest version. Memoized.
 
         :returns: Empty string if no higher version is available, otherwise the new version number.

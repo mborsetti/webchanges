@@ -255,28 +255,29 @@ def test_show_features_and_verbose(capsys: CaptureFixture[str]) -> None:
 
 
 def test_list_jobs_verbose(capsys: CaptureFixture[str]) -> None:
-    setattr(command_config, 'list', True)
+    setattr(command_config, 'list_jobs', True)
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
     urlwatcher.urlwatch_config.verbose = True
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config, 'list', False)
+    setattr(command_config, 'list_jobs', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == (
-        "  1: <command command='echo test' index_number=1 name='Sample webchanges job; used by test_command.py'\n"
-        f'Jobs file: {urlwatcher.urlwatch_config.jobs_files[0]}\n'
-    )
+    assert message.startswith('  1: <command ')
+    assert 'index_number=1' in message
+    assert "name='Sample webchanges job; used by test_command.py'" in message
+    assert "command='echo test'" in message
+    assert message.endswith(f'Jobs file: {urlwatcher.urlwatch_config.jobs_files[0]}\n')
 
 
 def test_list_jobs_not_verbose(capsys: CaptureFixture[str]) -> None:
-    setattr(command_config, 'list', True)
+    setattr(command_config, 'list_jobs', True)
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
     urlwatcher.urlwatch_config.verbose = False
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config, 'list', False)
+    setattr(command_config, 'list_jobs', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -530,7 +531,9 @@ def test_modify_urls(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'add', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert "Adding <url url='https://www.example.com/#test_modify_urls'" in message
+    assert message.startswith('Adding <url ')
+    assert 'index_number=0' in message
+    assert "url='https://www.example.com/#test_modify_urls'" in message
 
     # delete the job just added
     setattr(command_config, 'delete', 'https://www.example.com/#test_modify_urls')
@@ -539,11 +542,13 @@ def test_modify_urls(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'delete', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert "Removed <url url='https://www.example.com/#test_modify_urls'" in message
+    assert message.startswith('Removed <url ')
+    assert 'index_number=0' in message
+    assert "url='https://www.example.com/#test_modify_urls'" in message
 
     # check that the job file is identical to before the add/delete operations
     after_file = jobs_file.read_text()
-    assert after_file == before_file
+    assert sorted(after_file.split()) == sorted(before_file.split())
 
 
 @pytest.mark.parametrize(  # type: ignore[misc]

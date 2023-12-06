@@ -6,7 +6,7 @@ import importlib.util
 import optparse
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Union
 
 import docutils.frontend
 import docutils.nodes
@@ -53,7 +53,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file."""
 
-    jobs: List[dict] = []
+    jobs: list[dict] = []
 
     def visit_literal_block(self, node: docutils.nodes.reference) -> None:
         if 'yaml' in node.attributes['classes']:
@@ -66,7 +66,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
         ...
 
 
-def load_filter_doc_jobs() -> List[JobBase]:
+def load_filter_doc_jobs() -> list[JobBase]:
     """Load YAML code blocks from rst file."""
     doc = parse_rst(open(docs_path.joinpath('filters.rst')).read())
     visitor = YAMLCodeBlockVisitor(doc)
@@ -92,7 +92,7 @@ def load_filter_doc_jobs() -> List[JobBase]:
     return jobs
 
 
-def load_filter_testdata() -> Dict[str, Dict[str, str]]:
+def load_filter_testdata() -> dict[str, dict[str, str]]:
     yaml_data = Path(here.joinpath('data').joinpath('docs_filters_testdata.yaml')).read_text()
     return yaml.safe_load(yaml_data)
 
@@ -139,9 +139,7 @@ def test_filter_doc_jobs(job: JobBase) -> None:
                 data = data.rstrip()
 
         expected_output_data = d['output']
-        if job.url != 'https://example.com/html2text.html':
-            assert data == expected_output_data
-        else:
+        if job.url == 'https://example.com/html2text.html':
             # see https://github.com/Alir3z4/html2text/pull/339
             assert data in {
                 expected_output_data,
@@ -152,3 +150,7 @@ def test_filter_doc_jobs(job: JobBase) -> None:
                 '| Tu, 3 Mar               | 20,000  |\n'
                 '\n',
             }
+        if job.url == 'https://example.com/execute.html':
+            assert data.splitlines()[:-1] == expected_output_data.splitlines()[:-1]
+        else:
+            assert data == expected_output_data

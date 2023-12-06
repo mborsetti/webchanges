@@ -55,13 +55,18 @@ At the moment, the following filters are available:
 
   - :ref:`beautify`: Beautify HTML.
 
+* To fix HTMLs links from relative to absolute:
+
+  - :ref:`absolute_links`: fix HTML relative links.
+
 * To make CSV files more readable:
 
   - :ref:`csv2text`: Convert CSV to plaintext.
 
 * To extract text from PDFs:
 
-  - :ref:`pdf2text`: Convert PDF to plaintext.
+  - :ref:`pypdf`: Convert PDF to plaintext.
+  - :ref:`pdf2text`: Convert PDF to plaintext (Poppler required as an external dependency).
 
 * To extract text from images:
 
@@ -379,7 +384,7 @@ Optional sub-directives
 * ``method``: One of:
 
  - ``html2text`` (default): Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package and retains
-   some simple formatting (Markup language) from HTML;
+   some simple formatting from HTML, outputting Markup language with absolute links;
  - ``bs4``: Uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__ Python package to extract text
    from either HTML or XML;
  - ``strip_tags``: Uses regex to strip tags (HTML or XML).
@@ -527,14 +532,20 @@ packages to reformat the HTML in a document to make it more readable (keeping it
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``indent``: If indent is a non-negative integer or string, then the contents of HTML elements will be indented
-  appropriately when pretty-printing them. An indent level of 0, negative, or "" will only insert newlines. Using a
-  positive integer indent indents that many spaces per level. If indent is a string (such as "\t"), that string is used
-  to indent each level. The default behavior to indent one space per level.  Requires BeautifulSoup version 4.11.0 or
-  later.
+* ``absolute_links`` (true/false): Convert relative links to absolute ones (default: true).
+* ``indent`` (integer or string): If indent is a non-negative integer or string, then the contents of HTML elements will
+  be indented appropriately when pretty-printing them. An indent level of 0, negative, or "" will only insert newlines.
+  Using a positive integer indent indents that many spaces per level. If indent is a string (such as "\t"), that
+  string is used to indent each level (default: ``1``, i.e. indent one space per level).
+
+.. versionchanged:: 3.16
+   Relative links are converted to absolute ones; use the ``absolute_links: false`` sub-directive to disable.
+
+.. versionadded:: 3.16
+   ``absolute_links`` sub-directive.
 
 .. versionadded:: 3.9.2
-   ``indent`` sub-directive (requires BeautifulSoup version 4.11.0 or later).
+   ``indent`` sub-directive.
 
 Required packages
 """""""""""""""""
@@ -544,6 +555,94 @@ follows:
 .. code-block:: bash
 
    pip install --upgrade webchanges[beautify]
+
+
+.. _absolute_links:
+
+absolute_links
+--------------
+Convert relative links in HTML <a> tags to absolute ones.
+
+.. note:: This filter is not needed (and could interfere) if you already are using the :ref:`beautify` or
+  :ref:`html2text` filters.
+
+.. versionadded:: 3.17
+
+
+
+.. _pypdf:
+
+pypdf
+--------
+This filter converts a PDF file to plaintext using the `pypdf <https://pypi.org/project/pypdf/>`__ Python library.
+
+This filter *must* be the first filter in a chain of filters, since it consumes binary data.
+
+.. code-block:: yaml
+
+   url: https://example.net/pypdf-test.pdf
+   filter:
+     - pypdf
+
+If the PDF file is password protected, you can specify its password:
+
+.. code-block:: yaml
+
+   url: https://example.net/pypdf-test-password.pdf
+   filter:
+     - pypdf:
+         password: webchangessecret
+
+pypdf locates all text drawing commands, in the order they are provided in the content stream of the PDF, and extracts
+the text.
+
+.. tip:: If your reports are in HTML format and the PDF is columnar in nature, try using the job directive
+   ``monospace: true`` to improve readability (see :ref:`here <monospace>`).
+
+.. code-block:: yaml
+
+   url: https://example.net/pypdf-test-keep-physical-layout.pdf
+   filter:
+     - pypdf:
+   monospace: true
+
+To the opposite, if you don't care about the layout, you might want to strip all additional spaces that might be added
+by this filter:
+
+.. code-block:: yaml
+
+   url: https://example.net/pypdf-no-multiple-spaces.pdf
+   filter:
+     - pypdf:
+     - re.sub:
+         pattern: ' +'
+         repl: ' '
+     - strip:
+         splitlines: true
+
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``password``: Password for a password-protected PDF file (dependency required; see below).
+
+.. versionadded:: 3.16
+
+
+Required packages
+"""""""""""""""""
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>`. If
+you're not using the ``password`` sub-directive, then use the following:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[pypdf]
+
+
+To run jobs with the ``password`` sub-directive, then use the following:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[pypdf_crypto]
 
 
 .. _pdf2text:
@@ -576,7 +675,7 @@ spaces may change when a document is updated, so you may get reports containing 
 nothing but changes in the spacing between the columns; in this case try turning it off with the sub-directive
 ``physical: false``.
 
-.. tip:: If your reports are in HTML format and the pdf is columnar in nature, try using the job directive
+.. tip:: If your reports are in HTML format and the PDF is columnar in nature, try using the job directive
    ``monospace: true`` to improve readability (see :ref:`here <monospace>`).
 
 .. code-block:: yaml
@@ -919,7 +1018,7 @@ empty string, and this filter deletes the the leftmost non-overlapping occurrenc
    `MULTILINE <https://docs.python.org/3/library/re.html#re.MULTILINE>`__,
    `DOTALL <https://docs.python.org/3/library/re.html#re.DOTALL>`__, and
    `VERBOSE <https://docs.python.org/3/library/re.html#re.VERBOSE>`__,
-   can be specified as inline flags and therefore can be used with :program:webchanges:.
+   can be specified as inline flags and therefore can be used with :program:`webchanges`.
 
 The following example applies the filter 3 times:
 

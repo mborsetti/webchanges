@@ -21,7 +21,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.15'
+__version__ = '3.16rc0'
 __description__ = (
     'Check web (or command output) for changes since last run and notify.\n'
     '\n'
@@ -35,10 +35,10 @@ __code_url__ = f'https://github.com/mborsetti/{__project_name__}/'
 __docs_url__ = f'https://{__project_name__}.readthedocs.io/'
 __user_agent__ = f'{__project_name__}/{__version__} (+{__url__})'
 
-from typing import Dict, Union
+from typing import Union
 
 
-def init_data() -> Dict[str, Union[str, tuple]]:
+def init_data() -> dict[str, Union[str, tuple]]:
     """Returns dict of globals (used in testing).
 
     :returns: dict of globals()

@@ -48,6 +48,19 @@ square brackets, like this::
 |                         | * Note: you will also have to **separately install** OS-specific        |
 |                         |   dependencies [#f5]_                                                   |
 +-------------------------+-------------------------------------------------------------------------+
+| ``pypdf`` filter        | * `pypdf <https://pypi.org/project/pypdf/>`__                           |
+|                         | * Note: for PDF files that are not password-protected (otherwise use    |
+|                         |   ``pypfd_crytpo``)                                                     |
++-------------------------+-------------------------------------------------------------------------+
+| ``pypdf_crypto``        | * `pypdf[crypto] <https://pypi.org/project/pypdf/>`__                   |
+|                         | * For the ``pypdf`` filter when using the ``password`` sub-directive    |
+|                         |   to extract text from encrypted PDF files.                             |
++-------------------------+-------------------------------------------------------------------------+
+| ``requests`` (to use    | * `httpx <https://www.python-httpx.org/>`__                             |
+| ``http_client:          |                                                                         |
+| requests`` in a job     |                                                                         |
+|                         |                                                                         |
++-------------------------+-------------------------------------------------------------------------+
 | ``deepdiff`` differ     | * `deepdiff <https://github.com/seperman/deepdiff>`__                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``matrix`` reporter     | * `matrix_client <https://github.com/matrix-org/matrix-python-sdk>`__   |

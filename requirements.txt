@@ -1,11 +1,11 @@
 colorama; os_name == "nt"
 cssselect
+h2
 html2text
+httpx
 lxml
 markdown2
 msgpack
 platformdirs
 pyyaml
-requests
 tzdata; os_name == "nt"
-urllib3

@@ -35,6 +35,12 @@ Install **webchanges** |pypi_version| |format| |status| |security| with:
    pip install webchanges
 
 
+Running in Docker
+=================
+**webchanges** can be run in a `Docker <https://www.docker.com/>`__ container. Please see
+`<https://github.com/yubiuser/webchanges-docker>`__ for one such implementation.
+
+
 Documentation
 =============
 The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__ |readthedocs|.

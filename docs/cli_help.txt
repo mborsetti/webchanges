@@ -1,5 +1,5 @@
 usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
-                  [--cache FILE] [--list] [--errors] [--test [JOB]]
+                  [--cache FILE] [--list-jobs] [--errors] [--test [JOB]]
                   [--no-headless] [--test-diff JOB] [--dump-history JOB]
                   [--max-workers WORKERS] [--test-reporter REPORTER]
                   [--smtp-login] [--telegram-chats] [--xmpp-login]
@@ -36,7 +36,7 @@ override file defaults:
                         a redis URI
 
 job management:
-  --list                list jobs and their index number
+  --list-jobs           list jobs and their index number
   --errors              test run all jobs and list those with errors or no
                         data captured
   --test [JOB], --test-filter [JOB]

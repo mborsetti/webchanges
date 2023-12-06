@@ -5,18 +5,18 @@ Reporters
 =========
 Reporters display or send the :ref:`report <reports>` containing the changes detected.
 
-By default, the ``stdout`` reporter is enabled, and a :ref:`text <text>` report is sent to the standard output; this
-would be your terminal if you are running :program:`webchanges` interactively.
+By default, the ``stdout`` reporter is enabled, and a :ref:`text <text>` report is sent to the standard output
+(your terminal if you are running :program:`webchanges` interactively).
 
 .. note::
-   If running via cron or another scheduler service, the destination of the standard output depends on the scheduler and
-   its configuration.
+   If running :program:`webchanges` via cron or another scheduler service, the destination of the standard output
+   depends on the scheduler and how it is configured.
 
-The configuration file ``config.yaml`` contains the directives toggling the reporters available (see below) on
-or off and their settings. This file is editable using any text editor or with the command
+The configuration file ``config.yaml`` contains the directives toggling the reporters available on
+or off, and their sub-directives (settings). This file is editable using any text editor or with the command
 ``webchanges --edit--config``. Reporters are listed  under the ``report`` section.
 
-Each reporter has a directive called ``enabled`` that can be toggled (true/false).
+Each reporter has a directive called ``enabled`` that can be set to true or false.
 
 .. note::
    The ``config.yaml`` file is located in Linux or macOS in the ``~/.config/webchanges`` directory, in Windows in
@@ -59,7 +59,7 @@ Please note that many reporters need the installation of additional Python packa
    Reports are sorted by job name.
 
 To test a reporter, use the ``--test-reporter`` command-line option with the name of the reporter, e.g.
-``webchanges --test-reporter stdout``. :program:`webchanges` will generate test  ``new``, ``changed``, ``unchanged``
+``webchanges --test-reporter stdout``. :program:`webchanges` will generate dummy  ``new``, ``changed``, ``unchanged``
 and ``error`` notifications and send the ones configured to be sent under ``display`` via the selected
 reporter, in this example ``stdout``. Any reporter that is configured and enabled can be tested.
 
@@ -70,7 +70,7 @@ For example, to test if your email reporter is configured correctly, use::
 If the test does not work, check your configuration and/or add the ``--verbose`` command-line option to show
 detailed debug logs::
 
-   webchanges --verbose --test-reporter email
+   webchanges --test-reporter email --verbose
 
 
 Reporters are based on :ref:`reports <reports>`, as follows, and inherit that report's settings:
@@ -139,7 +139,7 @@ paste the URL into the configuration as seen below (see
        enabled: true  # don't forget to set this to true! :)
        webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
        embed: true
-       subject: "{count} changes: {jobs}"
+       subject: "[webchanges] {count} changes{jobs_files}: {jobs}"
        colored: true
 
 Embedded content might make it easier to read and identify individual reports. If ``embed`` is set to true then the
@@ -151,9 +151,10 @@ Sub-directives
 ~~~~~~~~~~~~~~
 * ``webhook_url`` (required): The Discord webhook URL.
 * ``embed``: If true, the content will be sent as an Embed object (true/false). Default is true.
-* ``subject``: Only relevant if ``embed`` is true, it's a string that precedes the embedded report; ``{count}`` will be
-  replaced with the number of changes, while ``{jobs}`` will be replaced by the names of the jobs that changed
-  (string). Default: ``{count} changes: {jobs}``.
+* ``subject``: Only relevant if ``embed`` is true, it's a string that precedes the embedded report; use ``{count}``
+  for the number of reports, ``{jobs}`` for the title of jobs reported, and {jobs_files} for a space followed by
+  the name of the jobs file(s) used within parenthesis, stripped of preceding ``jobs-``, if not using the default
+  ``jobs.yaml``. Default: ``[webchanges] {count}  changes:{jobs_files} {jobs}``.
 * ``colored``: If true, the report will an Embed object formatted as diff code to enable colored syntax highlighting
   (true/false). Default is true.
 * ``max_message_length``: The maximum length of a message in characters. Default is the maximum allowed by
@@ -174,7 +175,10 @@ Sub-directives
 * ``method``: Either ``smtp`` or ``sendmail``.
 * ``from``: The sender's email address. **Do not use your main email address** but create a throwaway one!
 * ``to``: The destination email address.
-* ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported.
+* ``subject``: The subject line. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
+  reported, and {jobs_files} for a space followed by the name of the jobs file(s) used within parenthesis, stripped
+  of preceding ``jobs-``, if not using the default ``jobs.yaml``. Default: ``[webchanges] {count}
+  changes:{jobs_files} {jobs}``.
 * ``html``: Whether the email includes HTML (true/false).
 
 .. _smtp:
@@ -381,7 +385,10 @@ Sub-directives
 * ``from_name``: Sender's name.
 * ``from_mail``: Sender's email address.
 * ``to``: Recipient's email address.
-* ``subject``: The subject line. Use {count} for the number of reports, {jobs} for the titles of the jobs reported.
+* ``subject``: The subject line. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
+  reported, and {jobs_files} for a space followed by the name of the jobs file(s) used within parenthesis, stripped
+  of preceding ``jobs-``, if not using the default ``jobs.yaml``. Default: ``[webchanges] {count}
+  changes:{jobs_files} {jobs}``.
 * ``region`` (optional): The code of the region if different from the US (e.g. ``eu``).
 
 
@@ -469,6 +476,17 @@ Here is a sample configuration:
 The "subject" field will be used as the name of the Prowl event. The application field is prepended to the event and
 shown as the source of the event in the Prowl App.
 
+Sub-directives
+~~~~~~~~~~~~~~
+* ``api_key``: The API key.
+* ``application``: The application.
+* ``priority``: The priority (integer). Default: 0
+* ``subject``: The subject line. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
+  reported, and {jobs_files} for a space followed by the name of the jobs file(s) used within parenthesis, stripped
+  of preceding ``jobs-``, if not using the default ``jobs.yaml``. Default: ``[webchanges] {count}
+  changes:{jobs_files} {jobs}``.
+
+
 .. versionadded:: 3.0.1
 
 
@@ -489,6 +507,10 @@ To use this report you need to install :ref:`optional packages <optional_package
 .. code-block:: bash
 
    pip install --upgrade webchanges[pushbullet]
+
+Sub-directives
+~~~~~~~~~~~~~~
+* ``api_key``: The API key.
 
 
 
@@ -519,6 +541,13 @@ To use this report you need to install :ref:`optional packages <optional_package
 
    pip install --upgrade webchanges[pushover]
 
+Sub-directives
+~~~~~~~~~~~~~~
+* ``app``: The application.
+* ``user``: The user.
+* ``device``: The device. Default: Null.
+* ``sound``: The sound (string). Default: ``spacealarm``.
+* ``priority``: The priority (string). Default: ``normal``.
 
 
 .. _run_command:
@@ -725,7 +754,8 @@ XMPP
 ----
 Sends a :ref:`text report <text>` using the XMPP protocol.
 
-This reporter should be only used with a new XMPP account that is exclusively used for :program:`webchanges`.
+This reporter should be only used with an XMPP account that is exclusively used for :program:`webchanges`; create a
+new one for this purpose.
 
 Here is a sample configuration:
 

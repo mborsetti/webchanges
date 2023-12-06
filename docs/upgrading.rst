@@ -176,7 +176,7 @@ Relative to :program:`urlwatch` 2.28:
   imports from ``webchanges``.
 * If you are using the ``slack`` reporter you need to rename it ``webhook`` (unified reporter).
 * If you are using browser (``navigate``) jobs, see above for upgrading to Playwright.
-* Reporter ``shell`` imitates :program:webchanges:'s ``run_command`` and is not supported (use ``run_command``
+* Reporter ``shell`` imitates :program:`webchanges`:'s ``run_command`` and is not supported (use ``run_command``
   reporter instead).
 
 Additions and changes

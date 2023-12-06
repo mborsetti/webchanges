@@ -20,13 +20,26 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Tuple, Type, TYPE_CHECKING, Union
+from typing import Any, Callable, Iterator, List, Literal, Optional, TYPE_CHECKING, Union
 from warnings import warn
 
-import requests
+try:
+    import httpx
+    from httpx import Response
+except ImportError:
+    httpx = None  # type: ignore[assignment]
+    import requests
+    from requests import Response  # type: ignore[assignment]
+
+if httpx is not None:
+    try:
+        import h2
+    except ImportError:
+        h2 = None  # type: ignore[assignment]
+
 from markdown2 import Markdown
 
-from webchanges.__init__ import __project_name__, __url__, __version__
+from webchanges import __project_name__, __url__, __version__
 from webchanges.jobs import UrlJob
 from webchanges.mailer import Mailer, SendmailMailer, SMTPMailer
 from webchanges.util import chunk_string, dur_text, linkify, TrackSubClasses
@@ -108,17 +121,17 @@ logger = logging.getLogger(__name__)
 class ReporterBase(metaclass=TrackSubClasses):
     """Base class for reporting."""
 
-    __subclasses__: Dict[str, Type[ReporterBase]] = {}
-    __anonymous_subclasses__: List[Type[ReporterBase]] = []
+    __subclasses__: dict[str, type[ReporterBase]] = {}
+    __anonymous_subclasses__: list[type[ReporterBase]] = []
     __kind__: str = ''
 
     def __init__(
         self,
         report: Report,
         config: ConfigReportersList,
-        job_states: List[JobState],
+        job_states: list[JobState],
         duration: float,
-        jobs_files: Optional[List[Path]] = None,
+        jobs_files: Optional[list[Path]] = None,
     ) -> None:
         """
 
@@ -133,12 +146,16 @@ class ReporterBase(metaclass=TrackSubClasses):
         self.job_states = job_states
         self.duration = duration
         self.jobs_files = jobs_files
-        if jobs_files is None:
-            self.footer_job_file: Optional[str] = None
+        if jobs_files and (len(jobs_files) > 1 or jobs_files[0].stem != 'jobs'):
+            self.footer_job_file = f" ({', '.join(f.stem for f in jobs_files)})"
         else:
-            self.footer_job_file = ', '.join(f.stem for f in jobs_files if f.stem != 'jobs')
+            self.footer_job_file = ''
+        if httpx:
+            self.post_client = httpx.Client(http2=h2 is not None, follow_redirects=True).post
+        else:
+            self.post_client = requests.post  # type: ignore[assignment]
 
-    def convert(self, othercls: Type[ReporterBase]) -> ReporterBase:
+    def convert(self, othercls: type[ReporterBase]) -> ReporterBase:
         """Convert self to a different ReporterBase class (object typecasting).
 
         :param othercls: The ReporterBase class to be cast into.
@@ -154,10 +171,26 @@ class ReporterBase(metaclass=TrackSubClasses):
         return othercls(self.report, config, self.job_states, self.duration, self.jobs_files)
 
     @classmethod
-    def get_base_config(cls, report: Report) -> Dict:
+    def get_base_config(cls, report: Report) -> dict:
         """Gets the configuration of the base of the report (e.g. for stdout, it will be text)"""
         report_class: ReporterBase = cls.mro()[-3]  # type: ignore[assignment]
         return report.config['report'][report_class.__kind__]  # type: ignore[literal-required]
+
+    def subject_with_args(self, filtered_job_states: List[JobState], subject: str = '') -> str:
+        if not subject:
+            subject = self.config.get('subject', '')  # type: ignore[assignment]
+        subject_args = {
+            'count': len(filtered_job_states),
+            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
+        }
+        if '{jobs_files}' in subject:
+            if self.jobs_files and (len(self.jobs_files) > 1 or self.jobs_files[0].stem != 'jobs'):
+                jobs_files = f" ({', '.join(f.stem.lstrip('jobs-') for f in self.jobs_files)})"
+            else:
+                jobs_files = ''
+            subject_args['jobs_files'] = jobs_files
+        subject = subject.format(**subject_args)
+        return subject
 
     @classmethod
     def reporter_documentation(cls) -> str:
@@ -165,7 +198,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
         :returns: A string to display.
         """
-        result: List[str] = []
+        result: list[str] = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
             result.extend((f'  * {sc.__kind__} - {sc.__doc__}',))
         return '\n'.join(result)
@@ -175,9 +208,9 @@ class ReporterBase(metaclass=TrackSubClasses):
         cls,
         name: str,
         report: Report,
-        job_states: List[JobState],
+        job_states: list[JobState],
         duration: float,
-        jobs_files: Optional[List[Path]] = None,
+        jobs_files: Optional[list[Path]] = None,
         check_enabled: Optional[bool] = True,
     ) -> None:
         """Run a single named report.
@@ -208,9 +241,9 @@ class ReporterBase(metaclass=TrackSubClasses):
     def submit_all(
         cls,
         report: Report,
-        job_states: List[JobState],
+        job_states: list[JobState],
         duration: float,
-        jobs_files: Optional[List[Path]] = None,
+        jobs_files: Optional[list[Path]] = None,
     ) -> None:
         """Run all (enabled) reports.
 
@@ -234,9 +267,9 @@ class ReporterBase(metaclass=TrackSubClasses):
                 base_config = subclass.get_base_config(report)  # type: ignore[attr-defined]
                 if base_config.get('separate', False):
                     for job_state in job_states:
-                        subclass(report, cfg, [job_state], duration).submit()
+                        subclass(report, cfg, [job_state], duration, jobs_files).submit()
                 else:
-                    subclass(report, cfg, job_states, duration).submit()
+                    subclass(report, cfg, job_states, duration, jobs_files).submit()
 
         if not any_enabled:
             logger.warning('No reporters enabled.')
@@ -283,18 +316,29 @@ class HtmlReporter(ReporterBase):
         cfg = self.get_base_config(self.report)
         tz = self.report.config['report']['tz']
 
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        title = self.subject_with_args(filtered_job_states, self.report.config['report']['html']['title'])
+
         yield (
-            f'<!DOCTYPE html>\n'
-            f'<html>\n'
-            f'<head>\n'
-            f'<title>{__project_name__} report</title>\n'
-            f'<meta http-equiv="content-type" content="text/html; charset=utf-8">\n'
-            f'<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
-            f'</head>\n'
-            f'<body style="font-family:Arial,Helvetica,sans-serif;font-size:13px;">\n'
+            '<!DOCTYPE html>\n'
+            '<html>\n'
+            '<head>\n'
+            f'<title>{title}</title>\n'
+            '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+            '<meta name="color-scheme" content="light dark">\n'
+            '<meta name="supported-color-schemes" content="light dark only">\n'
+            '</head>\n'
+            '<style>\n'
+            '  :root {\n'
+            '    color-scheme: light dark;\n'
+            '    supported-color-schemes: light dark;\n'
+            '  }\n'
+            '</style>'
+            '<body style="font-family: Roboto, Arial, Helvetica, sans-serif; font-size: 13px;">\n'
         )
 
-        for job_state in self.report.get_filtered_job_states(self.job_states):
+        for job_state in filtered_job_states:
             content = self._format_content(job_state, cfg['diff'], tz)
             if content is not None:
                 if hasattr(job_state.job, 'url'):
@@ -322,7 +366,7 @@ class HtmlReporter(ReporterBase):
         yield (
             f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
             f'{dur_text(self.duration)} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
-            f'{html.escape(__version__)}' + (f' ({self.footer_job_file}).<br>\n' if self.footer_job_file else '.<br>')
+            f'{html.escape(__version__)}{self.footer_job_file}.<br>\n'
         )
         if (
             self.report.new_release_future is not None
@@ -432,6 +476,7 @@ class HtmlReporter(ReporterBase):
                     diff = '<br>\n'.join(new_diff)
 
                 # wdiff colorization
+                # note: cannot be done with global CSS class as Gmail overrides it
                 added_style = 'background-color:#d1ffd1;color:#082b08'
                 deleted_style = 'background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through'
                 if job.monospace:
@@ -444,7 +489,7 @@ class HtmlReporter(ReporterBase):
                 )
                 diff = re.sub(
                     r'\[-(.*?)-]',
-                    lambda x: (f'<span style="{deleted_style}">{x.group(1)}</span>'),
+                    lambda x: f'<span style="{deleted_style}">{x.group(1)}</span>',
                     diff,
                     flags=re.DOTALL,
                 )
@@ -670,8 +715,7 @@ class TextReporter(ReporterBase):
                 yield f"--\n{self.report.config['footnote']}"
             yield (
                 f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
-                f'{dur_text(self.duration)} with {__project_name__} {__version__}'
-                + (f' ({self.footer_job_file}).\n' if self.footer_job_file else '.\n')
+                f'{dur_text(self.duration)} with {__project_name__} {__version__}{self.footer_job_file}.\n'
             )
             if (
                 self.report.new_release_future is not None
@@ -696,9 +740,9 @@ class TextReporter(ReporterBase):
 
         return job_state.get_diff(tz)
 
-    def _format_output(self, job_state: JobState, line_length: int, tz: Optional[str]) -> Tuple[List[str], List[str]]:
-        summary_part: List[str] = []
-        details_part: List[Optional[str]] = []
+    def _format_output(self, job_state: JobState, line_length: int, tz: Optional[str]) -> tuple[list[str], list[str]]:
+        summary_part: list[str] = []
+        details_part: list[Optional[str]] = []
 
         if job_state.verb == 'changed,no_report':
             return [], []
@@ -759,8 +803,8 @@ class MarkdownReporter(ReporterBase):
                     yield job_state.job.note
             return
 
-        summary: List[str] = []
-        details: List[Tuple[str, str]] = []
+        summary: list[str] = []
+        details: list[tuple[str, str]] = []
         for job_state in self.report.get_filtered_job_states(self.job_states):
             summary_part, details_part = self._format_output(job_state, tz)
             summary.extend(summary_part)
@@ -775,10 +819,8 @@ class MarkdownReporter(ReporterBase):
 
             footer += (
                 f"--\n_Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
-                f'{dur_text(self.duration)} with {__project_name__} {__version__}'
+                f'{dur_text(self.duration)} with {__project_name__} {__version__}{self.footer_job_file}_.\n'
             )
-            footer += f' ({self.footer_job_file})_.\n' if self.footer_job_file else '_.\n'
-
             if (
                 self.report.new_release_future is not None
                 and self.report.new_release_future.done()
@@ -815,8 +857,8 @@ class MarkdownReporter(ReporterBase):
 
     @classmethod
     def _render(
-        cls, max_length: Optional[int], summary: List[str], details: List[Tuple[str, str]], footer: str
-    ) -> Tuple[bool, List[str], List[Tuple[str, str]], str]:
+        cls, max_length: Optional[int], summary: list[str], details: list[tuple[str, str]], footer: str
+    ) -> tuple[bool, list[str], list[tuple[str, str]], str]:
         """Render the report components, trimming them if the available length is insufficient.
 
         :param max_length: The maximum length of the report.
@@ -840,7 +882,7 @@ class MarkdownReporter(ReporterBase):
         footer_len = sum(len(part) for part in footer) + len(footer) - 1
 
         if max_length is None:
-            processed_details: List[Tuple[str, str]] = []
+            processed_details: list[tuple[str, str]] = []
             for header, body in details:
                 _, body = cls._format_details_body(body)
                 processed_details.append((header, body))
@@ -868,7 +910,7 @@ class MarkdownReporter(ReporterBase):
                     # Calculate approximate available length per item, shared equally between all details components.
                     body_len_per_details = remaining_len // len(details)
 
-                    trimmed_details: List[Tuple[str, str]] = []
+                    trimmed_details: list[tuple[str, str]] = []
                     unprocessed = len(details)
 
                     for header, body in details:
@@ -898,7 +940,7 @@ class MarkdownReporter(ReporterBase):
                     return details_trimmed, summary, trimmed_details, footer
 
     @staticmethod
-    def _format_details_body(s: str, max_length: Optional[int] = None) -> Tuple[bool, str]:
+    def _format_details_body(s: str, max_length: Optional[int] = None) -> tuple[bool, str]:
         """Trim the details to fit the maximum length available; add a message when so done.
 
         :param s: The details text to fit into the maximum length.
@@ -945,9 +987,9 @@ class MarkdownReporter(ReporterBase):
 
         return job_state.get_diff(tz)
 
-    def _format_output(self, job_state: JobState, tz: Optional[str]) -> Tuple[List[str], List[Tuple[str, str]]]:
-        summary_part: List[str] = []
-        details_part: List[Tuple[str, str]] = []
+    def _format_output(self, job_state: JobState, tz: Optional[str]) -> tuple[list[str], list[tuple[str, str]]]:
+        summary_part: list[str] = []
+        details_part: list[tuple[str, str]] = []
 
         pretty_name = job_state.job.pretty_name()
         location = job_state.job.get_location()
@@ -1017,7 +1059,7 @@ class StdoutReporter(TextReporter):
 
         if any(
             diff_tool.startswith('wdiff')
-            for diff_tool in (job_state.job.diff_tool for job_state in self.job_states if job_state.job.diff_tool)
+            for diff_tool in {job_state.job.diff_tool for job_state in self.job_states if job_state.job.diff_tool}
         ):
             # wdiff colorization
             body = re.sub(r'\{\+.*?\+}', lambda x: self._green(x.group(0)), body, flags=re.DOTALL)
@@ -1031,7 +1073,7 @@ class StdoutReporter(TextReporter):
                 print_color(self._green(line))
             elif line.startswith('-'):
                 print_color(self._red(line))
-            elif any(line.startswith(prefix) for prefix in ('NEW: ', 'CHANGED: ', 'UNCHANGED: ', 'ERROR: ')):
+            elif any(line.startswith(prefix) for prefix in {'NEW: ', 'CHANGED: ', 'UNCHANGED: ', 'ERROR: '}):
                 first, second = line.split(' ', 1)
                 if line.startswith('ERROR: '):
                     print_color(first, self._red(second))
@@ -1056,11 +1098,7 @@ class EMailReporter(TextReporter):
             return
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
-        subject_args = {
-            'count': len(filtered_job_states),
-            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
-        }
-        subject = self.config['subject'].format(**subject_args)
+        subject = self.subject_with_args(filtered_job_states)
 
         if self.config['method'] == 'smtp':
             smtp_config = self.config['smtp']
@@ -1102,7 +1140,7 @@ class IFTTTReport(TextReporter):
             pretty_name = job_state.job.pretty_name()
             location = job_state.job.get_location()
             print(f'submitting {job_state}')
-            result = requests.post(
+            result = self.post_client(
                 webhook_url,
                 json={
                     'value1': job_state.verb,
@@ -1111,7 +1149,7 @@ class IFTTTReport(TextReporter):
                 },
                 timeout=60,
             )
-            if result.status_code != requests.codes.ok:
+            if result.status_code != 200:
                 raise RuntimeError(f'IFTTT error: {result.text}')
 
 
@@ -1225,14 +1263,10 @@ class MailgunReporter(TextReporter):
             return None
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
-        subject_args = {
-            'count': len(filtered_job_states),
-            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
-        }
-        subject = self.config['subject'].format(**subject_args)
+        subject = self.subject_with_args(filtered_job_states)
 
         logger.info(f"Sending Mailgun request for domain: '{domain}'")
-        result = requests.post(
+        result = self.post_client(
             f'https://api{region}.mailgun.net/v3/{domain}/messages',
             auth=('api', api_key),
             data={
@@ -1248,7 +1282,7 @@ class MailgunReporter(TextReporter):
         try:
             json_res = result.json()
 
-            if result.status_code == requests.codes.ok:
+            if result.status_code == 200:
                 logger.info(f"Mailgun response: id '{json_res['id']}'. {json_res['message']}")
             else:
                 raise RuntimeError(f"Mailgun error: {json_res['message']}")
@@ -1286,7 +1320,7 @@ class TelegramReporter(MarkdownReporter):
             for chunk in chunks:
                 self.submit_to_telegram(bot_token, chat_id, chunk)
 
-    def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str) -> requests.Response:
+    def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str) -> Response:
         """Submit to Telegram."""
         logger.info(f"Sending telegram message to chat id: '{chat_id}'")
 
@@ -1297,12 +1331,12 @@ class TelegramReporter(MarkdownReporter):
             'disable_web_page_preview': True,
             'disable_notification': self.config['silent'],
         }
-        result = requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data=data, timeout=60)
+        result = self.post_client(f'https://api.telegram.org/bot{bot_token}/sendMessage', data=data, timeout=60)
 
         try:
             json_res = result.json()
 
-            if result.status_code == requests.codes.ok:
+            if result.status_code == 200:
                 logger.info(f"Telegram response: ok '{json_res['ok']}'. {json_res['result']}")
             else:
                 raise RuntimeError(f"Telegram error: {json_res['description']}")
@@ -1354,7 +1388,7 @@ class TelegramReporter(MarkdownReporter):
 
         return ''.join(lines)
 
-    def telegram_chunk_by_line(self, text: str, max_length: int) -> List[str]:
+    def telegram_chunk_by_line(self, text: str, max_length: int) -> list[str]:
         """Chunk-ify by line while escaping markdown as required by Telegram."""
         chunks = []
 
@@ -1387,7 +1421,7 @@ class TelegramReporter(MarkdownReporter):
 
         # check if any individual line is too long and chunk it
         if any(len(line) > max_length for line in new_text):
-            new_lines: List[str] = []
+            new_lines: list[str] = []
             for line in new_text:
                 if len(line) > max_length:
                     new_lines.extend(chunk_string(line, max_length))
@@ -1396,7 +1430,7 @@ class TelegramReporter(MarkdownReporter):
             new_text = new_lines
 
         it_lines = iter(new_text)
-        chunk_lines: List[str] = []
+        chunk_lines: list[str] = []
         pre_status = False  # keep track of whether you're in the middle of a PreCode entity to close and reopen
         try:
             while True:
@@ -1433,7 +1467,7 @@ class DiscordReporter(TextReporter):
         if self.config['colored']:
             self.max_length -= 11
 
-    def submit(self) -> Optional[requests.Response]:  # type: ignore[override]
+    def submit(self) -> Optional[Response]:  # type: ignore[override]
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
@@ -1444,24 +1478,19 @@ class DiscordReporter(TextReporter):
         result = None
         for chunk in chunk_string(text, self.max_length, numbering=True):
             res = self.submit_to_discord(webhook_url, chunk)
-            if res.status_code != requests.codes.ok or res is None:
+            if res.status_code != 200 or res is None:
                 result = res
 
         return result
 
-    def submit_to_discord(self, webhook_url: str, text: str) -> requests.Response:
+    def submit_to_discord(self, webhook_url: str, text: str) -> Response:
         if self.config['colored']:
             text = '```diff\n' + text + '```'
 
         if self.config['embed']:
             filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+            subject = self.subject_with_args(filtered_job_states)
 
-            subject_args = {
-                'count': len(filtered_job_states),
-                'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
-            }
-
-            subject = self.config['subject'].format(**subject_args)
             # Content has a maximum length of 2000 characters, but the combined sum of characters in all title,
             # description, field.name, field.value, footer.text, and author.name fields across all embeds attached to
             # a message must not exceed 6000 characters.
@@ -1482,9 +1511,9 @@ class DiscordReporter(TextReporter):
 
         logger.info(f'Sending Discord request with post_data: {post_data}')
 
-        result = requests.post(webhook_url, json=post_data, timeout=60)
+        result = self.post_client(webhook_url, json=post_data, timeout=60)
         try:
-            if result.status_code in {requests.codes.ok, requests.codes.no_content}:
+            if result.status_code in {200, 204}:
                 logger.info('Discord response: ok')
             else:
                 logger.error(f'Discord error: {result.text}')
@@ -1510,7 +1539,7 @@ class WebhookReporter(TextReporter):
         else:
             self.max_length = default_max_length
 
-    def submit(self) -> Optional[requests.Response]:  # type: ignore[override]
+    def submit(self) -> Optional[Response]:  # type: ignore[override]
         webhook_url = self.config['webhook_url']
 
         if self.config['markdown']:
@@ -1528,18 +1557,17 @@ class WebhookReporter(TextReporter):
         result = None
         for chunk in chunk_string(text, self.max_length, numbering=True):
             res = self.submit_to_webhook(webhook_url, chunk)
-            if res.status_code != requests.codes.ok or res is None:
+            if res.status_code != 200 or res is None:
                 result = res
 
         return result
 
-    @staticmethod
-    def submit_to_webhook(webhook_url: str, text: str) -> requests.Response:
+    def submit_to_webhook(self, webhook_url: str, text: str) -> Response:
         logger.debug(f'Sending request to webhook with text: {text}')
         post_data = {'text': text}
-        result = requests.post(webhook_url, json=post_data, timeout=60)
+        result = self.post_client(webhook_url, json=post_data, timeout=60)
         try:
-            if result.status_code in {requests.codes.ok, requests.codes.no_content}:
+            if result.status_code in {200, 204}:
                 logger.info('Webhook server response: ok')
             else:
                 raise RuntimeError(f'Webhook server error: {result.text}')
@@ -1733,21 +1761,15 @@ class ProwlReporter(TextReporter):
             return None
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
-        subject_args = {
-            'count': len(filtered_job_states),
-            'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
-        }
 
-        # 'subject' used in the config file, but the API
-        # uses what might be called the subject as the 'event'
-        event = self.config['subject'].format(**subject_args)
+        # 'subject' used in the config file, but the API uses what might be called the subject as the 'event'
+        event = self.subject_with_args(filtered_job_states)
 
-        # 'application' is prepended to the message in prowl,
-        # to show the source of the notification. this too,
+        # 'application' is prepended to the message in prowl, to show the source of the notification. this too,
         # is user configurable, and may reference subject args
         application = self.config['application']
         if application is not None:
-            application = application.format(**subject_args)
+            application = self.subject_with_args(filtered_job_states, application)
         else:
             application = f'{__project_name__} v{__version__}'
 
@@ -1761,10 +1783,10 @@ class ProwlReporter(TextReporter):
         }
 
         # all set up, add the notification!
-        result = requests.post(api_add, data=post_data, timeout=60)
+        result = self.post_client(api_add, data=post_data, timeout=60)
 
         try:
-            if result.status_code in {requests.codes.ok, requests.codes.no_content}:
+            if result.status_code in {200, 204}:
                 logger.info('Prowl response: ok')
             else:
                 raise RuntimeError(f'Prowl error: {result.text}')

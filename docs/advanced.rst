@@ -4,6 +4,15 @@
 Advanced usage
 ==============
 
+
+.. _docker:
+
+Running in Docker
+-----------------
+:program:`webchanges` can be run in a Docker container. Please see `<https://github.com/yubiuser/webchanges-docker>`__
+for one such implementation.
+
+
 .. _post:
 
 Making POST requests
@@ -227,11 +236,11 @@ Note: the use of an external differ will override the ``diff`` setting of the ``
 
 Creating a separate notification for each change
 ------------------------------------------------
-Currently this cannot be done natively.
+Each type of reports (:ref:`text`, :ref:`HTML` or :ref:`Markdown`) have an optional sub-directive ``separate``, which
+when set to true will cause :program:`webchanges` to send a report for each job separately instead of a single combined
+report with all jobs.
 
-However, iterating over the list of jobs one by one with something like ``for i in {1..30}; do urlwatch $i; done``
-(Linux) would achieve this but at the loss of parallelism; the function is documented :ref:`here <job_subset>`. The
-current list of jobs including indexes can be printed with ``--list``.
+These sub-directives are set in the :ref:`configuration <reports-and-reporters>`.
 
 
 Using environment variables in URLs
