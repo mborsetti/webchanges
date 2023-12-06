@@ -308,7 +308,7 @@ def test_check_bad_proxy(job_data: dict[str, Any], event_loop: AbstractEventLoop
                 for x in {
                     'Max retries exceeded',
                     'Read timed out',
-                    'Timeout 1ms exceeded.',
+                    'Timeout 0.1ms exceeded.',
                     'timed out',
                     'Connection refused',
                 }
