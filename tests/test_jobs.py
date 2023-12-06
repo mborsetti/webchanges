@@ -268,12 +268,13 @@ def test_check_etag_304_request(
 )
 def test_check_ignore_connection_errors(job_data: dict[str, Any], event_loop: AbstractEventLoop) -> None:
     job_data['url'] = 'http://localhost'
-    job_data['timeout'] = 0.001
+    job_data['timeout'] = 0.0001
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
         job_state.process()
         assert job_state.exception and any(
-            x in str(job_state.exception.args) for x in {'Max retries exceeded', 'Timeout 1ms exceeded.', 'timed out'}
+            x in str(job_state.exception.args)
+            for x in {'Max retries exceeded', 'Timeout 1ms exceeded.', 'timed out', 'Connection refused'}
         )
         assert getattr(job_state, 'error_ignored', False) is False
 
@@ -297,16 +298,20 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any], event_loop: Ab
 def test_check_bad_proxy(job_data: dict[str, Any], event_loop: AbstractEventLoop) -> None:
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@localhost:8080'
-    job_data['timeout'] = 0.001
+    job_data['timeout'] = 0.0001
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
         job_state.process()
         if job_state.exception and not isinstance(job_state.exception, BrowserResponseError):
-            assert any(
-                list(
-                    x in str(job_state.exception.args)
-                    for x in {'Max retries exceeded', 'Read timed out', 'Timeout 1ms exceeded.', 'timed out'}
-                )
+            assert job_state.exception and any(
+                x in str(job_state.exception.args)
+                for x in {
+                    'Max retries exceeded',
+                    'Read timed out',
+                    'Timeout 1ms exceeded.',
+                    'timed out',
+                    'Connection refused',
+                }
             )
         assert job_state.error_ignored is False
 

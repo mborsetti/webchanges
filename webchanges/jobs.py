@@ -460,53 +460,6 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return False
 
-    def get_headers(self, job_state: JobState, string: bool = False) -> CaseInsensitiveDict:
-        """Get headers and modify them to add cookies and conditional request.
-
-        :param job_state: The job state.
-        :param string: Flag to indicate that values need to be strings (for Playwright).
-
-        :returns: The headers.
-        """
-
-        if self.headers:
-            headers = CaseInsensitiveDict({k: str(v) for k, v in self.headers.items()})
-        else:
-            headers = CaseInsensitiveDict()
-        if self.cookies:
-            if not isinstance(self.cookies, dict):
-                raise TypeError(
-                    f"Job {self.index_number}: Directive 'cookies' needs to be a dictionary; "
-                    f"found a '{type(self.cookies).__name__}' ( {self.get_indexed_location()} ).'"
-                )
-            self.cookies = {k: str(v) for k, v in self.cookies.items()}
-            if 'Cookie' in headers:
-                warnings.warn(
-                    f"Job {self.index_number}: Found both a header 'Cookie' and a directive 'cookies'; "
-                    f"please specify only one of them (using content of the cookies 'directive') "
-                    f'( {self.get_indexed_location()} ).'
-                )
-            headers['Cookie'] = '; '.join([f'{k}={v}' for k, v in self.cookies.items()])
-        if self.no_conditional_request:
-            headers.pop('If-Modified-Since', None)
-            headers.pop('If-None-Match', None)
-        else:
-            if self.ignore_cached or job_state.tries > 0:
-                headers['Cache-Control'] = 'max-age=172800'
-                headers['Expires'] = email.utils.formatdate()
-                headers['If-Modified-Since'] = email.utils.formatdate(0)
-                headers.pop('If-None-Match', None)
-            else:
-                if job_state.old_etag:
-                    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
-                    headers['If-None-Match'] = job_state.old_etag
-                if job_state.old_timestamp is not None:
-                    headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
-        if string:
-            return CaseInsensitiveDict({k: str(v) for k, v in headers.items()})
-        else:
-            return headers
-
 
 class Job(JobBase):
     """Job class for jobs."""
@@ -581,6 +534,55 @@ class UrlJobBase(Job):
         'ignore_timeout_errors',
         'ignore_too_many_redirects',
     )
+
+    def get_headers(self, job_state: JobState, string: bool = False) -> CaseInsensitiveDict:
+        """Get headers and modify them to add cookies and conditional request.
+
+        :param job_state: The job state.
+        :param string: Flag to indicate that values need to be strings (for Playwright).
+
+        :returns: The headers.
+        """
+
+        if self.headers:
+            headers = CaseInsensitiveDict({k: str(v) for k, v in self.headers.items()})
+        else:
+            headers = CaseInsensitiveDict()
+        if 'User-Agent' not in headers:
+            headers['User-Agent'] = __user_agent__
+        if self.cookies:
+            if not isinstance(self.cookies, dict):
+                raise TypeError(
+                    f"Job {self.index_number}: Directive 'cookies' needs to be a dictionary; "
+                    f"found a '{type(self.cookies).__name__}' ( {self.get_indexed_location()} ).'"
+                )
+            self.cookies = {k: str(v) for k, v in self.cookies.items()}
+            if 'Cookie' in headers:
+                warnings.warn(
+                    f"Job {self.index_number}: Found both a header 'Cookie' and a directive 'cookies'; "
+                    f"please specify only one of them (using content of the cookies 'directive') "
+                    f'( {self.get_indexed_location()} ).'
+                )
+            headers['Cookie'] = '; '.join([f'{k}={v}' for k, v in self.cookies.items()])
+        if self.no_conditional_request:
+            headers.pop('If-Modified-Since', None)
+            headers.pop('If-None-Match', None)
+        else:
+            if self.ignore_cached or job_state.tries > 0:
+                headers['Cache-Control'] = 'max-age=172800'
+                headers['Expires'] = email.utils.formatdate()
+                headers['If-Modified-Since'] = email.utils.formatdate(0)
+                headers.pop('If-None-Match', None)
+            else:
+                if job_state.old_etag:
+                    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
+                    headers['If-None-Match'] = job_state.old_etag
+                if job_state.old_timestamp is not None:
+                    headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
+        if string:
+            return CaseInsensitiveDict({k: str(v) for k, v in headers.items()})
+        else:
+            return headers
 
 
 class UrlJob(UrlJobBase):
@@ -856,8 +858,6 @@ class UrlJob(UrlJobBase):
                     return '\n'.join(data_list), ''
 
         headers = self.get_headers(job_state)
-        if 'User-Agent' not in headers:
-            headers['User-Agent'] = __user_agent__
 
         if self.data is not None:
             if self.method is None:
