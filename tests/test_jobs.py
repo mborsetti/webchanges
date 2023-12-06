@@ -274,7 +274,7 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any], event_loop: Ab
         job_state.process()
         assert job_state.exception and any(
             x in str(job_state.exception.args)
-            for x in {'Max retries exceeded', 'Timeout 1ms exceeded.', 'timed out', 'Connection refused'}
+            for x in {'Max retries exceeded', 'Timeout 0.1ms exceeded.', 'timed out', 'Connection refused'}
         )
         assert getattr(job_state, 'error_ignored', False) is False
 
