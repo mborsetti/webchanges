@@ -161,7 +161,7 @@ jobs:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
 #        python-version: ['3.12', '3.11', '3.10', '3.9']
-        python-version: []
+        python-version: ['3.12']
         os: [macos-latest]
 
     env:
