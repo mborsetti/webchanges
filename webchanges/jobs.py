@@ -983,7 +983,7 @@ class UrlJob(UrlJobBase):
         :param exception: The exception.
         :returns: True if the error should be ignored, False otherwise.
         """
-        if httpx:
+        if httpx and isinstance(exception, httpx.HTTPError):
             if self.ignore_timeout_errors and isinstance(exception, httpx.TimeoutException):
                 return True
             if (

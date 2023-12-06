@@ -3,7 +3,7 @@ data/doc_filter_testadata.yaml file."""
 from __future__ import annotations
 
 import importlib.util
-import optparse
+import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Union
@@ -36,14 +36,11 @@ vobject_is_installed = importlib.util.find_spec('vobject') is not None
 def parse_rst(text: str) -> docutils.nodes.document:
     """Parse the rst document"""
     parser = docutils.parsers.rst.Parser()
-    # components = (docutils.parsers.rst.Parser,)
-    settings: Union[optparse.Values, docutils.frontend.Values]
-    if hasattr(docutils.frontend, 'get_default_settings'):
-        # docutils >= 0.18
-        settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
-    else:
-        # docutils < 0.18
-        settings = docutils.frontend.OptionParser(components=(docutils.parsers.rst.Parser,)).get_default_values()
+    settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
+    # suppress messages of unknown directive types etc. from sphinx (e.g. "versionchanged")
+    settings.update(
+        {'report_level': 4}, docutils.frontend.OptionParser(components=(docutils.parsers.rst.Parser,))
+    )  # (critical): Only show critical messages, which indicate a fatal error that prevents completing processing.
     document = docutils.utils.new_document('<rst-doc>', settings=settings)
     parser.parse(text, document)
     return document
@@ -150,7 +147,8 @@ def test_filter_doc_jobs(job: JobBase) -> None:
                 '| Tu, 3 Mar               | 20,000  |\n'
                 '\n',
             }
-        if job.url == 'https://example.com/execute.html':
+        elif job.url == 'https://example.net/execute.html':
             assert data.splitlines()[:-1] == expected_output_data.splitlines()[:-1]
+            assert json.loads(data.splitlines()[-1][17:-1]) == json.loads(expected_output_data.splitlines()[-1][17:-1])
         else:
             assert data == expected_output_data
