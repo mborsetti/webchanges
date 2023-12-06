@@ -47,7 +47,7 @@ jobs:
 #      # Install dependencies needed by the repo: local in .pre-commit-config.yaml
 #      - name: Install dependencies
 #        run: |
-#          pip install --upgrade pip wheel
+#          pip install --upgrade pip setuptools wheel
 #          pip install --upgrade -r requirements.txt -r tests/requirements_pre-commit.txt -r docs/requirements.txt
 #
 #      # The below has been replaced with the integration in GitHub of the "pre-commit ci" app https://pre-commit.ci
@@ -107,7 +107,7 @@ jobs:
 
       - name: Upgrade pip etc.
         run: |
-          pip install --upgrade pip wheel
+          pip install --upgrade pip setuptools wheel
 
 #      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
 #        # https://lxml.de/installation.html#installation
@@ -185,7 +185,7 @@ jobs:
 
       - name: Upgrade pip etc.
         run: |
-          pip install --upgrade pip wheel
+          pip install --upgrade pip setuptools wheel
 
 #      - name: Install wheel-less lxml for Python 3.10
 #        # https://lxml.de/installation.html#installation
@@ -263,7 +263,7 @@ jobs:
 #
 #      - name: Upgrade pip etc.
 #        run: |
-#          pip install --upgrade pip wheel
+#          pip install --upgrade pip setuptools wheel
 #
 ##      ISSUE WITH THE BELOW:
 ##      Hangs at start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3

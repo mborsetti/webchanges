@@ -22,7 +22,7 @@ playwright
 psutil
 pushbullet.py
 Pygments
-pypdf['crypto']
+pypdf[crypto]
 pytest
 pytest-asyncio
 pytest-cov
