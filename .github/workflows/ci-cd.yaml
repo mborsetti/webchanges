@@ -64,8 +64,8 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-#        python-version: ['3.12', '3.11', '3.10', '3.9']
-        python-version: ['3.12']
+        python-version: ['3.12', '3.11', '3.10', '3.9']
+#        python-version: ['3.12']
         os: [ubuntu-latest]
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
@@ -160,8 +160,8 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-#        python-version: ['3.12', '3.11', '3.10', '3.9']
-        python-version: ['3.12']
+        python-version: ['3.12', '3.11', '3.10', '3.9']
+#        python-version: ['3.12']
         os: [macos-latest]
 
     env:
@@ -339,7 +339,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@main
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
 
       # Install pip dependencies
