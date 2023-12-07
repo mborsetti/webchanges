@@ -168,6 +168,7 @@ class JobState(ContextManager):
         logger.debug(f'Job {self.job.index_number}: {self.job}')
 
         if self.exception:
+            self.new_timestamp = time.time()
             logger.info(f'{self.job.get_indexed_location()} ended processing due to exception: {self.exception}')
             return self
 
