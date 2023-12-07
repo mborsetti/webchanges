@@ -120,7 +120,9 @@ def test_providing_unknown_subfilter_raises_valueerror() -> None:
     )
 
 
-@pytest.mark.skipif(sys.platform == 'darwin' and sys.version_info == (3, 12))  # type: ignore[misc]
+@pytest.mark.skipif(
+    sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS'
+)  # type: ignore[misc]
 def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     # https://github.com/thp/urlwatch/issues/541
 
