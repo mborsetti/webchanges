@@ -32,9 +32,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
-Version 3.16pre0
+Version 3.16
 ===================
-Unreleased
+2023-12-07
 
 Added
 -----
@@ -59,8 +59,7 @@ Added
   that the ``raw`` and ``physical`` sub-directives are not supported. Install the required library by running ``pip
   install --upgrade webchanges[pypdf]``.
 * New ``absolute_links`` filter to convert relative links in HTML ``<a>`` tags to absolute ones. This filter is not
-  needed (and could interfere) if you already are using the ``beautify`` or ``html2text`` filters.  Requested by
-  **pawelpbm** in issue #62.
+  needed if you are already using the ``beautify`` or ``html2text`` filters. Requested by **pawelpbm** in issue #62.
 * New ``{jobs_files}`` substitution for the ``subject`` of the ``email`` reporter. This will be replaced by the
   name of the jobs file(s) different than the default ``jobs.yaml`` in parentheses, with a prefix of ``jobs-`` in the
   name removed. To use, replace the ``subject`` line for your reporter(s) in ``config.yaml`` with e.g. ``[webchanges]
