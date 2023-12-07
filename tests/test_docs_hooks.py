@@ -30,10 +30,13 @@ if sys.version_info < (3, 10):
 
 # https://stackoverflow.com/a/48719723/1047040
 def parse_rst(text: str) -> docutils.nodes.document:
-    """Parse the rst document."""
+    """Parse the rst document"""
     parser = docutils.parsers.rst.Parser()
-    components = (docutils.parsers.rst.Parser,)
-    settings = docutils.frontend.OptionParser(components=components).get_default_values()
+    settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
+    # suppress messages of unknown directive types etc. from sphinx (e.g. "versionchanged")
+    settings.update(
+        {'report_level': 4}, docutils.frontend.OptionParser(components=(docutils.parsers.rst.Parser,))
+    )  # (critical): Only show critical messages, which indicate a fatal error that prevents completing processing.
     document = docutils.utils.new_document('<rst-doc>', settings=settings)
     parser.parse(text, document)
     return document

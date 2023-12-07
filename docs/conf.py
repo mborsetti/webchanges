@@ -17,7 +17,6 @@ import sphinx.application
 # below required for local build
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused.
 from docutils import nodes
-from docutils.nodes import Element, Node
 from sphinx.writers.html import HTMLTranslator
 
 # -- Path setup --------------------------------------------------------------
@@ -373,10 +372,10 @@ class PatchedHTMLTranslator(HTMLTranslator):
     See https://stackoverflow.com/questions/25583581.
     """
 
-    def unknown_visit(self, node: Node) -> None:
+    def unknown_visit(self, node: nodes.Node) -> None:
         pass
 
-    def visit_reference(self, node: Element) -> None:
+    def visit_reference(self, node: nodes.Element) -> None:
         atts = {'class': 'reference'}
         if node.get('internal') or 'refuri' not in node:
             atts['class'] += ' internal'
