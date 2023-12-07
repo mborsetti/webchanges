@@ -18,7 +18,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import datetime, timezone  # py311 use UTC instead of timezone.utc
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Literal, NamedTuple, Optional, TextIO, TypedDict, Union
 from zoneinfo import ZoneInfo
@@ -770,7 +770,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         with self.filename.open('w') as fp:
             fp.write(
                 f'# {__project_name__} configuration file. See {__docs_url__}en/stable/configuration.html\n'
-                f'# Originally written on {datetime.now(UTC).replace(microsecond=0).isoformat()}Z by version'
+                f'# Originally written on {datetime.now(timezone.utc).replace(microsecond=0).isoformat()}Z by version'
                 f' {__version__}.\n'
                 f'\n'
             )
