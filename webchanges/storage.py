@@ -68,6 +68,7 @@ ConfigReportHtml = TypedDict(
     'ConfigReportHtml',
     {
         'diff': Literal['unified', 'table'],
+        'footer': bool,
         'separate': bool,
         'title': str,
     },
@@ -298,6 +299,7 @@ DEFAULT_CONFIG: Config = {
         },
         'html': {
             'diff': 'unified',  # 'unified' or 'table'
+            'footer': True,
             'separate': False,
             'title': f'[{__project_name__}] {{count}} changes{{jobs_files}}: {{jobs}}',
         },

@@ -20,7 +20,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, Union
+from typing import Generator, Iterable, Optional, TYPE_CHECKING, Union
 from zoneinfo import ZoneInfo
 
 try:
@@ -537,7 +537,51 @@ class UrlwatchCommand:
 
         return 0
 
-    def list_error_jobs(self) -> None:
+    def list_error_jobs(self) -> int:
+        if self.urlwatch_config.errors not in ReporterBase.__subclasses__:
+            print(f'Invalid reporter {self.urlwatch_config.errors}')
+            return 1
+
+        def error_jobs_lines(jobs: Iterable[JobBase]) -> Generator[str, None, None]:
+            """A generator that outputs error text for jobs who fail with an exception or yield no data.
+
+            We do not save the job state or job on purpose here, since we are possibly modifying the job
+            (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
+            extract subset of jobs to run if joblist CLI was set
+            """
+            for job in jobs:
+                # Force re-retrieval of job, as we're testing for errors
+                job.ignore_cached = True
+            with contextlib.ExitStack() as stack:
+                max_workers = min(32, os.cpu_count() or 1) if any(isinstance(job, BrowserJob) for job in jobs) else None
+                logger.debug(f'Max_workers set to {max_workers}')
+                executor = ThreadPoolExecutor(max_workers=max_workers)
+
+                for job_state in executor.map(
+                    lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
+                    (stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
+                ):
+                    if job_state.exception is not None:
+                        pretty_name = job_state.job.pretty_name()
+                        location = job_state.job.get_location()
+                        if pretty_name != location:
+                            yield (
+                                f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name} '
+                                f'({location})'
+                            )
+                        else:
+                            yield (f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})')
+                    elif len(job_state.new_data.strip()) == 0:
+                        if self.urlwatch_config.verbose:
+                            yield (f'{job_state.job.index_number:3}: No data: {job_state.job!r}')
+                        else:
+                            pretty_name = job_state.job.pretty_name()
+                            location = job_state.job.get_location()
+                            if pretty_name != location:
+                                yield (f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})')
+                            else:
+                                yield (f'{job_state.job.index_number:3}: No data: {pretty_name}')
+
         start = time.perf_counter()
         if len(self.urlwatch_config.jobs_files) == 1:
             jobs_files = [f'in jobs file {self.urlwatch_config.jobs_files[0]}:']
@@ -545,7 +589,7 @@ class UrlwatchCommand:
             jobs_files = ['in the concatenation of the jobs files'] + [
                 f'• {file}' for file in self.urlwatch_config.jobs_files
             ]
-        print('\n   '.join(['Jobs with errors or returning no data (after filters, if any)'] + jobs_files))
+        header = '\n   '.join(['Jobs with errors or returning no data (after filters, if any)'] + jobs_files)
 
         # extract subset of jobs to run if joblist CLI was set
         if self.urlwatcher.urlwatch_config.joblist:
@@ -564,7 +608,8 @@ class UrlwatchCommand:
                 f"Processing {len(jobs)} job{'s' if len(jobs) else ''} as specified in command line: # "
                 f"{', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}"
             )
-            print(
+            header += (
+                '\n'
                 f"Processing {len(jobs)} job{'s' if len(jobs) else ''} as specified in command line: # "
                 f"{', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}"
             )
@@ -572,45 +617,40 @@ class UrlwatchCommand:
             jobs = [job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs]
             logger.debug(f"Processing {len(jobs)} job{'s' if len(jobs) else ''}")
 
-        for job in jobs:
-            # Force re-retrieval of job, as we're testing for errors
-            job.ignore_cached = True
-        with contextlib.ExitStack() as stack:
-            max_workers = min(32, os.cpu_count() or 1) if any(isinstance(job, BrowserJob) for job in jobs) else None
-            logger.debug(f'Max_workers set to {max_workers}')
-            executor = ThreadPoolExecutor(max_workers=max_workers)
+        if self.urlwatch_config.errors == 'stdout':
+            print(header)
+            for line in error_jobs_lines(jobs):
+                print(line)
+            print('--')
+            duration = time.perf_counter() - start
+            print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}.")
 
-            for job_state in executor.map(
-                lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
-                (stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
-            ):
-                if job_state.exception is not None:
-                    pretty_name = job_state.job.pretty_name()
-                    location = job_state.job.get_location()
-                    if pretty_name != location:
-                        print(
-                            f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name} ({location})'
-                        )
-                    else:
-                        print(f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})')
-                elif len(job_state.new_data.strip()) == 0:
-                    if self.urlwatch_config.verbose:
-                        print(f'{job_state.job.index_number:3}: No data: {job_state.job!r}')
-                    else:
-                        pretty_name = job_state.job.pretty_name()
-                        location = job_state.job.get_location()
-                        if pretty_name != location:
-                            print(f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})')
-                        else:
-                            print(f'{job_state.job.index_number:3}: No data: {pretty_name}')
+        else:
+            message = '\n'.join(error_jobs_lines(jobs))
+            if message:
+                # create a dummy job state to run a reporter on
+                job_state = JobState(
+                    None,  # type: ignore[arg-type]
+                    JobBase.unserialize({'command': 'webchanges --errors'}),
+                )
+                job_state.traceback = f'{header}\n{message}'
+                duration = time.perf_counter() - start
+                self.urlwatcher.report.config[
+                    'footnote'
+                ] = f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}."
+                self.urlwatcher.report.config['report']['html']['footer'] = False
+                self.urlwatcher.report.config['report']['markdown']['footer'] = False
+                self.urlwatcher.report.config['report']['text']['footer'] = False
+                self.urlwatcher.report.error(job_state)
+                self.urlwatcher.report.finish_one(self.urlwatch_config.errors, check_enabled=False)
+            else:
+                print(header)
+                print('--')
+                duration = time.perf_counter() - start
+                print('Found no errors')
+                print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}.")
 
-        end = time.perf_counter()
-        duration = end - start
-        print('--')
-        print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} in {dur_text(duration)}.")
-
-        # We do not save the job state or job on purpose here, since we are possibly modifying the job
-        # (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
+        return 0
 
     def delete_snapshot(self, job_id: Union[str, int]) -> int:
         job = self._get_job(job_id)
@@ -961,8 +1001,7 @@ class UrlwatchCommand:
             self._exit(0)
 
         if self.urlwatch_config.errors:
-            self.list_error_jobs()
-            self._exit(0)
+            self._exit(self.list_error_jobs())
 
         if self.urlwatch_config.test_job:
             self.test_job(self.urlwatch_config.test_job)

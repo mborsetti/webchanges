@@ -538,6 +538,15 @@ Optional sub-directives
   Using a positive integer indent indents that many spaces per level. If indent is a string (such as "\t"), that
   string is used to indent each level (default: ``1``, i.e. indent one space per level).
 
+.. code-block:: yaml
+
+   url: https://example.net/beautify_absolute_links_false.html
+   filter:
+     - beautify:
+         absolute_links: false
+         indent: 1
+
+
 .. versionchanged:: 3.16
    Relative links are converted to absolute ones; use the ``absolute_links: false`` sub-directive to disable.
 
@@ -563,10 +572,18 @@ absolute_links
 --------------
 Convert relative links in HTML <a> tags to absolute ones.
 
-.. note:: This filter is not needed (and could interfere) if you already are using the :ref:`beautify` or
-  :ref:`html2text` filters.
+.. note:: This filter is not needed (and could interfere) if you already are using the :ref:`beautify` filter (which has
+   an ``absolute_links`` sub-directive that defaults to true) or the :ref:`html2text` filter (which already converts
+   relative links).
 
-.. versionadded:: 3.17
+.. code-block:: yaml
+
+   url: https://example.net/absolute_links.html
+   filter:
+     - absolute_links
+
+
+.. versionadded:: 3.16
 
 
 

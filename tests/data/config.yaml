@@ -13,6 +13,7 @@ report:
     separate: false
   html:
     diff: unified
+    footer: true
     separate: false
     title: '[webchanges] {count} changes{jobs_files}: {jobs}'
   markdown:
@@ -112,3 +113,4 @@ job_defaults:
 database:
   engine: sqlite3
   max_snapshots: 4
+footnote: null

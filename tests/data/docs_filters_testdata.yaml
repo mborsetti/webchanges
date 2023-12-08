@@ -300,7 +300,7 @@ https://example.net/beautify.html:
     <html itemscope="" itemtype="http://schema.org/WebPage" lang="en-US">
     <head><meta charset="UTF-8"><meta content="origin" name="referrer">
     <style data-iml="1618111006770">.L3eUgb{display:flex;flex-direction:column;height:100%}</style>
-    </head><body>test™</body></html>
+    </head><body><a href="/link.htm">link™</a></body></html>
   output: |
     <!DOCTYPE html>
     <html itemscope="" itemtype="http://schema.org/WebPage" lang="en-US">
@@ -316,9 +316,26 @@ https://example.net/beautify.html:
       </style>
      </head>
      <body>
-      test™
+      <a href="https://example.net/link.htm">
+       link™
+      </a>
      </body>
     </html>
+https://example.net/beautify_absolute_links_false.html:
+  input: |
+    <!DOCTYPE html><body><a href="/link.htm">link™</a></body></html>
+  output: |
+    <!DOCTYPE html>
+    <html>
+     <body>
+      <a href="/link.htm">
+       link™
+      </a>
+     </body>
+    </html>
+https://example.net/absolute_links.html:
+  input: <html><body><a href="/link.htm">link</a></body></html>
+  output: <html><body><a href="https://example.net/link.htm">link</a></body></html>
 https://example.net/pypdf-test.pdf:
   filename: pdf-test.pdf
   output: "A PDF Document that can be turned into plain text. "
@@ -630,8 +647,8 @@ https://example.net/execute.html:
     The data is 'TEST'
     The job location is 'https://example.net/execute.html'
     The job name is 'Test execute filter'
-    The job number is '56'
-    The job JSON is '{"filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 56, "name": "Test execute filter", "url": "https://example.net/execute.html"}'
+    The job number is '58'
+    The job JSON is '{"filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 58, "name": "Test execute filter", "url": "https://example.net/execute.html"}'
 https://example.net/shellpipe.html:
   input: |
   output: TEST

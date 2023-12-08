@@ -535,11 +535,14 @@ class UrlJobBase(Job):
         'ignore_too_many_redirects',
     )
 
-    def get_headers(self, job_state: JobState, string: bool = False) -> CaseInsensitiveDict:
+    def get_headers(
+        self, job_state: JobState, string: bool = False, user_agent: Optional[str] = __user_agent__
+    ) -> CaseInsensitiveDict:
         """Get headers and modify them to add cookies and conditional request.
 
         :param job_state: The job state.
         :param string: Flag to indicate that values need to be strings (for Playwright).
+        :param user_agent: The user agent string.
 
         :returns: The headers.
         """
@@ -548,8 +551,8 @@ class UrlJobBase(Job):
             headers = CaseInsensitiveDict({k: str(v) for k, v in self.headers.items()})
         else:
             headers = CaseInsensitiveDict()
-        if 'User-Agent' not in headers:
-            headers['User-Agent'] = __user_agent__
+        if 'User-Agent' not in headers and user_agent:
+            headers['User-Agent'] = user_agent
         if self.cookies:
             if not isinstance(self.cookies, dict):
                 raise TypeError(
@@ -1145,7 +1148,7 @@ class BrowserJob(UrlJobBase):
                     DeprecationWarning,
                 )
 
-        headers = self.get_headers(job_state, string=True)
+        headers = self.get_headers(job_state, string=True, user_agent=None)
 
         proxy: Optional[ProxySettings] = None
         if self.http_proxy or os.getenv('HTTP_PROXY') or self.https_proxy or os.getenv('HTTPS_PROXY'):
@@ -1730,13 +1733,20 @@ class ShellJob(Job):
            a child process.
         """
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
-        return (
-            subprocess.run(
-                self.command,
-                capture_output=True,
-                shell=True,  # noqa: S602 subprocess call with shell=True identified, security issue.
-                check=True,
-                text=(not needs_bytes),
-            ).stdout,
-            '',
-        )  # noqa: DUO116 use of "shell=True" is insecure.
+        try:
+            return (
+                subprocess.run(
+                    self.command,
+                    capture_output=True,
+                    shell=True,  # noqa: S602 subprocess call with shell=True identified, security issue.
+                    check=True,
+                    text=(not needs_bytes),
+                ).stdout,
+                '',
+            )  # noqa: DUO116 use of "shell=True" is insecure.
+        except subprocess.CalledProcessError as e:
+            logger.error(f'Job {self.index_number}: Command failed with returncode {e.returncode}')
+            logger.error(f'Job {self.index_number}: Command: {e.cmd} ')
+            logger.error(f'Job {self.index_number}: Output : {e.output}')
+            logger.error(f'Job {self.index_number}: stderr : {e.stderr}')
+            raise e

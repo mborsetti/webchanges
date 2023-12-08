@@ -362,12 +362,15 @@ class HtmlReporter(ReporterBase):
         # HTML footer
         yield '<div style="font-style:italic">'
         if self.report.config['footnote']:
-            yield f"{self.report.config['footnote']}\n<hr>"
-        yield (
-            f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
-            f'{dur_text(self.duration)} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
-            f'{html.escape(__version__)}{self.footer_job_file}.<br>\n'
-        )
+            yield f"{self.report.config['footnote']}\n"
+        if cfg['footer']:
+            if self.report.config['footnote']:
+                yield '\n<hr>'
+            yield (
+                f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
+                f'{dur_text(self.duration)} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
+                f'{html.escape(__version__)}{self.footer_job_file}.<br>\n'
+            )
         if (
             self.report.new_release_future is not None
             and self.report.new_release_future.done()

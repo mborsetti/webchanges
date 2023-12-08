@@ -44,7 +44,7 @@ class CommandConfig(BaseConfig):
     edit: bool
     edit_config: bool
     edit_hooks: bool
-    errors: bool
+    errors: str
     features: bool
     footnote: Optional[str]
     gc_database: int
@@ -157,8 +157,10 @@ class CommandConfig(BaseConfig):
         group.add_argument('--list-jobs', action='store_true', help='list jobs and their index number')
         group.add_argument(
             '--errors',
-            action='store_true',
+            nargs='?',
+            const='stdout',
             help='test run all jobs and list those with errors or no data captured',
+            metavar='REPORTER',
         )
         group.add_argument(
             '--test',
@@ -209,7 +211,7 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--xmpp-login', action='store_true', help='enter or check password for XMPP (stored in keyring)'
         )
-        group.add_argument('--footnote', type=str, help='footnote text (quoted text)')
+        group.add_argument('--footnote', help='footnote text (quoted text)')
 
         group = parser.add_argument_group('launch editor ($EDITOR/$VISUAL)')
         group.add_argument('--edit', action='store_true', help='edit job (URL/command) list')

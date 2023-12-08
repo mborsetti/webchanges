@@ -74,6 +74,7 @@ Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
 * ``diff``: The diffing format (``unified`` or ``table``); defaults to ``unified``. Ignored if the job directive
   ``diff_tool`` (external differ) is set.
+* ``footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true.
 * ``separate``: Send a separate report for each job instead of a single combined report (true/false); defaults to false.
 * ``title``: The document's title. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
   reported, and {jobs_files} for a space followed by the name of the jobs file(s) used within parenthesis, stripped

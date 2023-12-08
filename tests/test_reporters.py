@@ -100,10 +100,8 @@ def build_test_report() -> Report:
     def build_job(name: str, url: str, old: str, new: str) -> JobState:
         job = JobBase.unserialize({'name': name, 'url': url})
 
-        # Can pass in None as cache_storage, as we are not
-        # going to load or save the job state for testing;
-        # also no need to use it as context manager, since
-        # no processing is called on the job
+        # Can pass in None for cache_storage as we are not going to load or save the job state for testing; also no
+        # need to use it as context manager, since no processing is called on the job
         job_state = JobState(None, job)  # type: ignore[arg-type]
 
         job_state.old_data = old
@@ -145,7 +143,17 @@ def build_test_report() -> Report:
     test_report.unchanged(
         build_job('Same As Before', 'https://example.com/unchanged', 'Same Old, Same Old\n', 'Same Old, Same Old\n')
     )
-    test_report.error(set_error(build_job('Error Reporting', 'https://example.com/error', '', ''), 'Sample error text'))
+    test_report.error(
+        set_error(
+            build_job(
+                'Error Reporting',
+                'https://example.com/error',
+                '',
+                '',
+            ),
+            'Sample error text',
+        )
+    )
 
     return test_report
 

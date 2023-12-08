@@ -30,6 +30,18 @@ You can run all jobs and see those that result in an error or who, after filteri
 :program:`webchanges` with the ``--error`` command line argument. This can help with detecting jobs that may no longer
 be monitoring resources as expected. No snapshots are saved from this run.
 
+By default, the output will go to :ref:`stdout`, but you can add any :ref:`reporter <reporters>` name to the command
+line argument to have the output use that reporter. For example, to be notified by email of any errors, run the
+following:
+
+.. code-block:: bash
+
+   webchanges --errors email
+
+.. versionchanged:: 3.17
+   Send output to any reporter.
+
+
 .. _test:
 
 Test run a job or check config and job files for errors
@@ -98,9 +110,9 @@ how diffs from job 1 look like in HTML if running on a machine with a web browse
 
 Test a reporter
 ---------------
-You can test a reporter by using the command line argument ``--test-reporter`` followed by the reporter name;
-:program:`webchanges` will create a dummy report and send it through the selected reporter. This will help in
-debugging issues, especially when used in conjunction with ``-vv``::
+You can test a reporter by using the command line argument ``--test-reporter`` followed by the
+:ref:`reporter <reporters>` name; :program:`webchanges` will create a dummy report and send it through the selected
+reporter. This will help in debugging issues, especially when used in conjunction with ``-vv``::
 
    webchanges -vv --test-reporter telegram
 

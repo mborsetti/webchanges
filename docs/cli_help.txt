@@ -1,10 +1,11 @@
 usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
-                  [--cache FILE] [--list-jobs] [--errors] [--test [JOB]]
-                  [--no-headless] [--test-diff JOB] [--dump-history JOB]
-                  [--max-workers WORKERS] [--test-reporter REPORTER]
-                  [--smtp-login] [--telegram-chats] [--xmpp-login]
-                  [--footnote FOOTNOTE] [--edit] [--edit-config]
-                  [--edit-hooks] [--gc-database [RETAIN_LIMIT]]
+                  [--cache FILE] [--list-jobs] [--errors [REPORTER]]
+                  [--test [JOB]] [--no-headless] [--test-diff JOB]
+                  [--dump-history JOB] [--max-workers WORKERS]
+                  [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
+                  [--xmpp-login] [--footnote FOOTNOTE] [--edit]
+                  [--edit-config] [--edit-hooks]
+                  [--gc-database [RETAIN_LIMIT]]
                   [--clean-database [RETAIN_LIMIT]]
                   [--rollback-database TIMESTAMP] [--delete-snapshot JOB]
                   [--change-location JOB NEW_LOCATION] [--check-new]
@@ -37,7 +38,7 @@ override file defaults:
 
 job management:
   --list-jobs           list jobs and their index number
-  --errors              test run all jobs and list those with errors or no
+  --errors [REPORTER]   test run all jobs and list those with errors or no
                         data captured
   --test [JOB], --test-filter [JOB]
                         test a job (by index or URL/command) and show filtered

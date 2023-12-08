@@ -32,6 +32,19 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
+Version 3.17rc0
+===================
+Unreleased
+
+Added
+-----
+* You can now specify a reporter name after the command line argument ``--errors``. This will send the output to the
+  reporter specified. For example, to be notified by email of any jobs that result in an error or who, after filtering,
+  return no data (indicating they may no longer be monitoring resources as expected), run ``webchanges --errors
+  email``.
+* The ``html`` report now has a ``footer`` sub-directive (like ``text`` and ``markdown``).
+
+
 Version 3.16
 ===================
 2023-12-07
@@ -70,8 +83,8 @@ Added
 
 Changed
 -------
-* ``url`` jobs will use the ``HTTPX`` library instead of ``requests` if it's installed since it uses the HTTP/2 network
-  protocol (when the ``h2` library is also installed) as browsers do. To revert to the use of ``requests`` even if
+* ``url`` jobs will use the ``HTTPX`` library instead of ``requests`` if it's installed since it uses the HTTP/2 network
+  protocol (when the ``h2`` library is also installed) as browsers do. To revert to the use of ``requests`` even if
   ``HTTPX`` is installed on the system, add ``http_client: requests`` to the relevant jobs or make it a default by
   editing the configuration file to add the sub-directive ``http_client: requests`` for ``url`` jobs under
   ``job_defaults``.
@@ -80,8 +93,8 @@ Changed
 
 Internal
 --------
-* Removed transitional support for ``beautifulsoup <4.11`` library (i.e. older than 7 April 2022) for the ``beautify``
-  filter.
+* Removed transitional support for the ``beautifulsoup<4.11`` library (i.e. older than 7 April 2022) for the
+  ``beautify`` filter.
 * Removed dependency on the ``requests`` library and its own dependency on the ``urllib3`` library.
 * Code cleanup, including removing support for Python 3.8.
 

@@ -510,13 +510,23 @@ def test_test_diff_and_joblist(capsys: CaptureFixture[str]) -> None:
 
 
 def test_list_error_jobs(capsys: CaptureFixture[str]) -> None:
-    setattr(command_config, 'errors', True)
+    setattr(command_config, 'errors', 'stdout')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
-    setattr(command_config, 'errors', False)
+    setattr(command_config, 'errors', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message.startswith('Jobs with errors or returning no data (after filters, if any)\n   in jobs file ')
+
+
+def test_list_error_jobs_reporter(capsys: CaptureFixture[str]) -> None:
+    setattr(command_config, 'errors', 'garbageinput')
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'errors', None)
+    assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert message == 'Invalid reporter garbageinput\n'
 
 
 def test_modify_urls(capsys: CaptureFixture[str]) -> None:
@@ -969,3 +979,21 @@ def test_job_states_verb_notimestamp_changed() -> None:
     urlwatcher.run_jobs()
     cache_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+
+def test_list_error_jobs_with_error(capsys: CaptureFixture[str]) -> None:
+    jobs_file = config_path.joinpath('jobs-invalid_url.yaml')
+    command_config = new_command_config(jobs_file=jobs_file)
+    setattr(command_config, 'errors', 'stdout')
+    config_storage = YamlConfigStorage(config_file)
+    config_storage.load()
+    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    jobs_storage = YamlJobsStorage([jobs_file])
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'errors', None)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert '\n  1: Error "' in message
