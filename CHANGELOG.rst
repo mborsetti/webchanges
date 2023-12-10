@@ -32,6 +32,16 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
+Version 3.17.1
+===================
+2023-12-10
+
+Fixed
+-----
+* Removed dependency on ``requests`` library inadvertently left behind (reported by
+  `yubiuser <https://github.com/yubiuser>`__ in `#65 <https://github.com/mborsetti/webchanges/issues/65>`__).
+
+
 Version 3.17
 ===================
 2023-12-10
@@ -41,7 +51,8 @@ Added
 * You can now specify a reporter name after the command line argument ``--errors`` to send the output to the reporter
   specified. For example, to be notified by email of any jobs that result in an error or who, after filtering,
   return no data (indicating they may no longer be monitoring resources as expected), run ``webchanges --errors
-  email``.
+  email`` (requested by `yubiuser <https://github.com/yubiuser>`__ in `#63
+  <https://github.com/mborsetti/webchanges/issues/63>`__).
 * You can now suppress the ``footer`` in an ``html`` report using the new ``footer: false`` sub-directive in
   ``config.yaml`` (same as the one already existing with ``text`` and ``markdown``).
 
@@ -77,14 +88,16 @@ Added
   that the ``raw`` and ``physical`` sub-directives are not supported. Install the required library by running ``pip
   install --upgrade webchanges[pypdf]``.
 * New ``absolute_links`` filter to convert relative links in HTML ``<a>`` tags to absolute ones. This filter is not
-  needed if you are already using the ``beautify`` or ``html2text`` filters. Requested by **pawelpbm** in issue #62.
+  needed if you are already using the ``beautify`` or ``html2text`` filters (requested by by `Paweł Szubert
+  <https://github.com/pawelpbm>`__ in `#62 <https://github.com/mborsetti/webchanges/issues/62>`__).
 * New ``{jobs_files}`` substitution for the ``subject`` of the ``email`` reporter. This will be replaced by the
   name of the jobs file(s) different than the default ``jobs.yaml`` in parentheses, with a prefix of ``jobs-`` in the
   name removed. To use, replace the ``subject`` line for your reporter(s) in ``config.yaml`` with e.g. ``[webchanges]
   {count} changes{jobs_files}: {jobs}``.
 * ``html`` reports now have a configurable ``title`` to set the HTML document title, defaulting to
   ``[webchanges] {count} changes{jobs_files}: {jobs}``.
-* Added reference to a Docker implementation to the documentation (contributed by **yubiuser** in #64).
+* Added reference to a Docker implementation to the documentation (requested by by `yubiuser
+  <https://github.com/yubiuser>`__ in `#64 <https://github.com/mborsetti/webchanges/issues/64>`__).
 
 Changed
 -------

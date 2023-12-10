@@ -22,7 +22,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Callable, Match, Optional, Union
 
-import requests
+import httpx
 
 from webchanges import __project_name__, __version__
 
@@ -280,12 +280,12 @@ def get_new_version_number(timeout: Optional[Union[float, tuple[float, float]]] 
       error retrieving the new version number is encountered.
     """
     try:
-        r = requests.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
-    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
+        r = httpx.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
+    except httpx.RequestError as e:
         logger.info(f'Exception when querying PyPi for latest release: {e}')
         return False
 
-    if r.ok:
+    if r.is_success:
         latest_release: str = r.json()['info']['version']
         if parse_version(latest_release) > parse_version(__version__):
             return latest_release

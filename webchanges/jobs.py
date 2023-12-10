@@ -1317,7 +1317,7 @@ class BrowserJob(UrlJobBase):
                         self.initialization_url,
                     )
                 except PlaywrightError as e:
-                    logger.info(f'Job {self.index_number}: Website initialization page returned error' f' {e.args[0]}')
+                    logger.info(f'Job {self.index_number}: Website initialization page returned error {e.args[0]}')
                     context.close()
                     raise e
 

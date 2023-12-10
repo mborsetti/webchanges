@@ -596,7 +596,7 @@ def test_modify_urls_move_location(
     setattr(command_config2, 'change_location', None)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
-    assert message == f'Moving location of "{old_loc}" to "{new_loc}"\n' f'No snapshots found for "{old_loc}"\n'
+    assert message == f'Moving location of "{old_loc}" to "{new_loc}"\nNo snapshots found for "{old_loc}"\n'
 
     # run jobs to save
     urlwatcher2.run_jobs()
