@@ -32,9 +32,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
-Version 3.17rc0
+Version 3.17
 ===================
-Unreleased
+2023-12-10
 
 Added
 -----
@@ -42,8 +42,12 @@ Added
   specified. For example, to be notified by email of any jobs that result in an error or who, after filtering,
   return no data (indicating they may no longer be monitoring resources as expected), run ``webchanges --errors
   email``.
-* You can now suppress the ``footer`` in an ``html`` report using the new ``footer`` sub-directive (same as the one
-  already existing with ``text`` and ``markdown``).
+* You can now suppress the ``footer`` in an ``html`` report using the new ``footer: false`` sub-directive in
+  ``config.yaml`` (same as the one already existing with ``text`` and ``markdown``).
+
+Internal
+--------
+* Fixed a regression on the default ``User-Agent`` header for ``url`` jobs with the ``use_browser: true`` directive.
 
 
 Version 3.16

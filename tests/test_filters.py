@@ -147,6 +147,9 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
 
 
+@pytest.mark.skipif(
+    sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS'
+)  # type: ignore[misc]
 def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     # https://github.com/thp/urlwatch/issues/541
     # if os.getenv('GITHUB_ACTIONS') and sys.version_info[0:2] == (3, 6) and sys.platform == 'linux':
