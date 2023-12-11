@@ -970,12 +970,12 @@ class UrlJob(UrlJobBase):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
-        if httpx and isinstance(
+        if not isinstance(httpx, str) and isinstance(
             exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError)
         ):
             # Instead of a full traceback, just show the error
             return str(exception)
-        elif requests and isinstance(exception, requests.exceptions.RequestException):
+        elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
             # Instead of a full traceback, just show the error
             return str(exception)
         return tb
@@ -986,7 +986,7 @@ class UrlJob(UrlJobBase):
         :param exception: The exception.
         :returns: True if the error should be ignored, False otherwise.
         """
-        if httpx and isinstance(exception, httpx.HTTPError):
+        if not isinstance(httpx, str) and isinstance(exception, httpx.HTTPError):
             if self.ignore_timeout_errors and isinstance(exception, httpx.TimeoutException):
                 return True
             if (
@@ -1007,7 +1007,7 @@ class UrlJob(UrlJobBase):
                 elif isinstance(self.ignore_http_error_codes, list):
                     ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
                 return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
-        elif requests and isinstance(exception, requests.exceptions.RequestException):
+        elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
             if self.ignore_connection_errors and isinstance(exception, requests.exceptions.ConnectionError):
                 return True
             if self.ignore_timeout_errors and isinstance(exception, requests.exceptions.Timeout):

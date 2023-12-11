@@ -1,4 +1,4 @@
 Fixed
 -----
-* Removed dependency on ``requests`` library inadvertently left behind (reported by
-  `yubiuser <https://github.com/yubiuser>`__ in `#65 <https://github.com/mborsetti/webchanges/issues/65>`__).
+* Exception in error handling when ``requests`` is not installed (reported by
+  `yubiuser <https://github.com/yubiuser>`__ in `#66 <https://github.com/mborsetti/webchanges/issues/66>`__).

@@ -32,6 +32,16 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
+Version 3.17.2
+===================
+2023-12-11
+
+Fixed
+-----
+* Exception in error handling when ``requests`` is not installed (reported by
+  `yubiuser <https://github.com/yubiuser>`__ in `#66 <https://github.com/mborsetti/webchanges/issues/66>`__).
+
+
 Version 3.17.1
 ===================
 2023-12-10

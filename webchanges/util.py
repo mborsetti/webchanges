@@ -22,7 +22,15 @@ from pathlib import Path
 from types import ModuleType
 from typing import Callable, Match, Optional, Union
 
-import httpx
+try:
+    import httpx
+except ImportError as e:
+    httpx = e.msg  # type: ignore[assignment]
+
+try:
+    import h2
+except ImportError:
+    h2 = None  # type: ignore[assignment]
 
 from webchanges import __project_name__, __version__
 
@@ -279,8 +287,12 @@ def get_new_version_number(timeout: Optional[Union[float, tuple[float, float]]] 
     :returns: The new version number if a newer version of project is found on PyPi, empty string otherwise, False if
       error retrieving the new version number is encountered.
     """
+    if httpx is None:
+        logger.info('Cannot query PyPi for latest release: HTTPX not installed')
+        return ''
+
     try:
-        r = httpx.get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
+        r = httpx.Client(http2=h2 is not None).get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
     except httpx.RequestError as e:
         logger.info(f'Exception when querying PyPi for latest release: {e}')
         return False
