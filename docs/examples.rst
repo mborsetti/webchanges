@@ -84,8 +84,8 @@ Watching specific sites
 
 Facebook posts
 ^^^^^^^^^^^^^^
-If you want to be notified of new posts on a public Facebook page, you can use the following job pattern; just replace
-``USERNAME`` with the name of the user (which can be found by navigating to user's page on your browser):
+If you want to be notified of new posts on a public Facebook page, you can use the following job pattern; just
+replace ``USERNAME`` with the name of the user (which can be found by navigating to user's page on your browser):
 
 .. code-block:: yaml
 
@@ -101,8 +101,8 @@ If you want to be notified of new posts on a public Facebook page, you can use t
 
 Facebook events
 ^^^^^^^^^^^^^^^
-If you want to be notified of new events on a public Facebook page, you can use the following job pattern; just replace
-``USERNAME`` with the name of the user (which can be found by navigating to the user's page on your browser):
+If you want to be notified of new events on a public Facebook page, you can use the following job pattern; just
+replace ``USERNAME`` with the name of the user (which can be found by navigating to the user's page on your browser):
 
 .. code-block:: yaml
 
@@ -170,53 +170,36 @@ Resolving typical issues
 -------------------------
 Below are some job configurations that have helped to solve typical issues.
 
-
-.. _example_timeout:
-
-Changing the default timeout
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-By default, ``url`` jobs timeout after 60 seconds. If you want a different timeout period, use the ``timeout`` directive
-to specify it in number of seconds, or set it to 0 to never timeout.
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   timeout: 300
-
-
 .. _default_headers:
 
 Setting default headers
 ^^^^^^^^^^^^^^^^^^^^^^^
-It is possible to set default headers for HTTP requests by entering them in ``config.yaml`` under ``job_defaults``, as
-per the example below. If a ``headers`` key is also found in a job, for that job the headers will be merged
-(case-insensitively) one by one with any conflict resolved in favor of the header specified in the job.
+Many websites expect to receive headers that look like they came from a browser, and will fail if they don't. It is
+possible to set default headers for HTTP requests by entering them in ``config.yaml`` under ``job_defaults``. If a
+``headers`` key is also found in a job, for that job the headers will be merged (case-insensitively) one by one with
+any conflict resolved in favor of the header specified in the job.
+
+Below are headers extracted from Google Chrome 120.0.6099.225 running in incognito mode in the YAML format of the
+default for the ``config.yaml`` file  (note that the header "Accept-Encoding" is set by the ref:`Python HTTP client
+library <http_client>` based on the encoding protocols it supports):
 
 .. code-block:: yaml
 
    job_defaults:
      url:
        headers:
-         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
-         Accept-Language: en-US,en
-         Device-Memory: '0.25'
-         DNT: '1'
-         Downlink: '0.384'
-         DPR: '1.5'
-         ECT: slow-2g
-         RTT: '250'
-         Sec-CH-UA: '"Google Chrome";v="89", "Chromium";v="89", ";Not A Brand";v="99"'
-         Sec-CH-UA-Mobile: '?0'
-         Sec-CH-UA-Platform: 'Windows'
-         Sec-CH-UA-Platform-Version: '10.0'
+         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+         Accept-Language: en-US,en;q=0.9
+         DNT: 1
+         Sec-CH-UA: '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"'
+         Sec-CH-UA-Mobile: ?0
+         Sec-CH-UA-Platform: '"Windows"'
          Sec-Fetch-Dest: document
          Sec-Fetch-Mode: navigate
          Sec-Fetch-Site: none
-         Sec-Fetch-User: '?1'
-         Sec-GPC: '1'
-         Upgrade-Insecure-Requests: '1'
-         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; 64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4389.114 Safari/537.36
-         Viewport-Width: '1707'
+         Sec-Fetch-User: ?1
+         Upgrade-Insecure-Requests: 1
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; 64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
 
 
 .. _example_cookies:
@@ -229,8 +212,21 @@ It is possible to add cookies to HTTP requests for pages that need them. For exa
 
    url: https://example.com/
    cookies:
-       Key: ValueForKey
-       OtherKey: OtherValue
+     Key: ValueForKey
+     OtherKey: OtherValue
+
+
+.. _example_timeout:
+
+Changing the default timeout
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+By default, ``url`` jobs timeout after 60 seconds. If you want a different timeout period, use the ``timeout`` directive
+to specify it in number of seconds, or set it to 0 to never timeout.
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   timeout: 300
 
 
 .. _ignoring_tls_ssl_errors:
@@ -273,7 +269,7 @@ Similarly, you might want to ignore some (temporary) HTTP errors on the server s
    url: https://example.com/
    ignore_http_error_codes: 408, 429, 500, 502, 503, 504
 
-or ignore all HTTP errors if you like by using :ref:`ignore_http_error_codes`
+or ignore all HTTP errors if you like by using :ref:`ignore_http_error_codes`:
 
 .. code-block:: yaml
 

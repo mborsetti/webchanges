@@ -118,6 +118,78 @@ Advanced Python programmers can write their own custom filters; see :ref:`hooks`
 
 
 
+.. _absolute_links:
+
+absolute_links
+--------------
+Convert relative links in HTML <a> tags to absolute ones.
+
+.. note:: This filter is not needed (and could interfere) if you already are using the :ref:`beautify` filter (which has
+   an ``absolute_links`` sub-directive that defaults to true) or the :ref:`html2text` filter (which already converts
+   relative links).
+
+.. code-block:: yaml
+
+   url: https://example.net/absolute_links.html
+   filter:
+     - absolute_links
+
+
+.. versionadded:: 3.16
+
+
+
+.. _beautify:
+
+beautify
+--------
+This filter uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
+<https://pypi.org/project/jsbeautifier/>`__ and `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ Python
+packages to reformat the HTML in a document to make it more readable (keeping it as HTML).
+
+.. code-block:: yaml
+
+   url: https://example.net/beautify.html
+   filter:
+     - beautify: 1
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``absolute_links`` (true/false): Convert relative links to absolute ones (default: true).
+* ``indent`` (integer or string): If indent is a non-negative integer or string, then the contents of HTML elements will
+  be indented appropriately when pretty-printing them. An indent level of 0, negative, or "" will only insert newlines.
+  Using a positive integer indent indents that many spaces per level. If indent is a string (such as "\t"), that
+  string is used to indent each level (default: ``1``, i.e. indent one space per level).
+
+.. code-block:: yaml
+
+   url: https://example.net/beautify_absolute_links_false.html
+   filter:
+     - beautify:
+         absolute_links: false
+         indent: 1
+
+
+.. versionchanged:: 3.16
+   Relative links are converted to absolute ones; use the ``absolute_links: false`` sub-directive to disable.
+
+.. versionadded:: 3.16
+   ``absolute_links`` sub-directive.
+
+.. versionadded:: 3.9.2
+   ``indent`` sub-directive.
+
+Required packages
+"""""""""""""""""
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[beautify]
+
+
+
 .. _css-and-xpath:
 
 css and xpath
@@ -318,6 +390,48 @@ Optional sub-directives
   even if the data has column headers (or ``has_header``, immediately above, is set to true).
 
 
+
+.. _delete_lines_containing:
+
+delete_lines_containing
+-----------------------
+This filter is the inverse of ``keep_lines_containing`` above and discards all lines that contain the text specified
+(default) or match the Python `regular expression
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__, keeping the others.
+
+Examples:
+
+.. code-block:: yaml
+
+   name: "eliminate lines that contain 'xyz'"
+   url: https://example.com/delete_lines_containing.txt
+   filter:
+     - delete_lines_containing: 'xyz'
+
+
+.. code-block:: yaml
+
+   name: "eliminate lines that start with 'warning' irrespective of its case (e.g. Warning, Warning, warning, etc.)"
+   url: https://example.com/delete_lines_containing_re.txt
+   filter:
+     - delete_lines_containing:
+         re: '(?i)^warning'
+
+Notes: in regex, ``(?i)`` is the inline flag for `case-insensitive matching
+<https://docs.python.org/3/library/re.html#re.I>`__ and ``^`` (caret) matches the `start of the string
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``text`` (default): Match the text provided.
+* ``re``: Match the the Python `regular
+  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
+
+.. versionchanged:: 3.0
+   Renamed from ``grepi`` to avoid confusion.
+
+
+
 .. _element-by-…:
 
 element-by-[class|id|style|tag]
@@ -370,6 +484,112 @@ To extract ``<div style="something">.../<div>`` from a page:
    url: https://example.org/styletest.html
    filter:
      - element-by-style: something
+
+
+
+.. _execute:
+
+execute
+---------
+The data to be filtered is passed as the input to a command to be run, and the output from the command is used in
+:program:`webchanges`'s next step. All environment variables are preserved and the following ones added:
+
++-----------------------------+-------------------------------------------------------------------------+
+| Environment variable        | Description                                                             |
++=============================+=========================================================================+
+| ``WEBCHANGES_JOB_JSON``     | All job parameters in JSON format                                       |
++-----------------------------+-------------------------------------------------------------------------+
+| ``WEBCHANGES_JOB_LOCATION`` | Value of either ``url`` or ``command``                                  |
++-----------------------------+-------------------------------------------------------------------------+
+| ``WEBCHANGES_JOB_NAME``     | Name of the job                                                         |
++-----------------------------+-------------------------------------------------------------------------+
+| ``WEBCHANGES_JOB_NUMBER``   | The job's index number                                                  |
++-----------------------------+-------------------------------------------------------------------------+
+
+For example, we can execute a Python script:
+
+.. code-block:: yaml
+
+   name: Test execute filter
+   url: https://example.net/execute.html
+   filter:
+     # For multiline YAML, quote the string and unindent its continuation. A space is added at the end
+     # of each line. Pay attention to escaping!
+     - execute: "python -c \"import os, sys;
+     print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is
+     '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is
+     '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is
+     '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is
+     '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""
+
+Or instead we can call a script we have saved, e.g. ``- execute: python3 myscript.py``.
+
+If the command generates an error, the output of the error will be in the first line, before the traceback.
+
+.. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
+   mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
+
+.. versionchanged:: 3.8
+   Added additional WEBCHANGES_JOB_* environment variables.
+
+
+
+.. _format-json:
+
+format-json
+---------------
+This filter deserializes a JSON object and formats it using Python's `json.dumps
+<https://docs.python.org/3/library/json.html#json.dumps>`__ with indentations.
+
+.. note:: This filter uses the ``simplejson`` library if it is installed, and revert to using the built-in ``json``
+   module if not.
+
+.. tip:: If your reports are in HTML format, use the job directive ``monospace: true`` to improve readability (see
+   :ref:`here <monospace>`).
+
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``indentation``: Number of characters indent to pretty-print JSON array elements; ``None`` selects the most compact
+  representation (default: 4).
+* ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false).
+
+
+.. versionadded:: 3.0.1
+   ``sort_keys`` sub-directive.
+
+
+
+.. _format-xml:
+
+format-xml
+----------
+This filter deserializes an XML object and reformats it. It uses the `lxml <https://lxml.de>`__ Python package's
+etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ function.
+
+.. code-block:: yaml
+
+   name: "reformat XML using lxml's etree.tostring"
+   url: https://example.com/format_xml.xml
+   filter:
+     - format-xml:
+
+.. versionadded:: 3.0
+
+
+
+.. _hexdump:
+
+hexdump
+-----------
+This filter displays the contents both in binary and ASCII using the hex dump format.
+
+.. code-block:: yaml
+
+   name: Display binary and ASCII test
+   command: cat testfile
+   filter:
+     - hexdump:
 
 
 
@@ -516,45 +736,18 @@ packages <optional_packages>` as follows:
 
 
 
-.. _beautify:
+.. _ical2text:
 
-beautify
---------
-This filter uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
-<https://pypi.org/project/jsbeautifier/>`__ and `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ Python
-packages to reformat the HTML in a document to make it more readable (keeping it as HTML).
+ical2text
+---------
+This filter reads an iCalendar document and converts it to easy-to read text.
 
 .. code-block:: yaml
 
-   url: https://example.net/beautify.html
+   name: "Make iCal file readable"
+   url: https://example.com/cal.ics
    filter:
-     - beautify: 1
-
-Optional sub-directives
-"""""""""""""""""""""""
-* ``absolute_links`` (true/false): Convert relative links to absolute ones (default: true).
-* ``indent`` (integer or string): If indent is a non-negative integer or string, then the contents of HTML elements will
-  be indented appropriately when pretty-printing them. An indent level of 0, negative, or "" will only insert newlines.
-  Using a positive integer indent indents that many spaces per level. If indent is a string (such as "\t"), that
-  string is used to indent each level (default: ``1``, i.e. indent one space per level).
-
-.. code-block:: yaml
-
-   url: https://example.net/beautify_absolute_links_false.html
-   filter:
-     - beautify:
-         absolute_links: false
-         indent: 1
-
-
-.. versionchanged:: 3.16
-   Relative links are converted to absolute ones; use the ``absolute_links: false`` sub-directive to disable.
-
-.. versionadded:: 3.16
-   ``absolute_links`` sub-directive.
-
-.. versionadded:: 3.9.2
-   ``indent`` sub-directive.
+     - ical2text:
 
 Required packages
 """""""""""""""""
@@ -563,103 +756,124 @@ follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[beautify]
+   pip install --upgrade webchanges[ical2text]
 
 
-.. _absolute_links:
 
-absolute_links
---------------
-Convert relative links in HTML <a> tags to absolute ones.
+.. _jq:
 
-.. note:: This filter is not needed (and could interfere) if you already are using the :ref:`beautify` filter (which has
-   an ``absolute_links`` sub-directive that defaults to true) or the :ref:`html2text` filter (which already converts
-   relative links).
+jq
+--
+
+Linux/macOS ASCII only
+""""""""""""""""""""""
+
+The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight ASCII JSON
+processor. It is currently available only for Linux (most flavors) and macOS (no Windows) and does not handle Unicode;
+see :ref:`below <filtering_json>` for a cross-platform and Unicode-friendly way of selecting JSON.
 
 .. code-block:: yaml
 
-   url: https://example.net/absolute_links.html
+   url: https://example.net/jq-ascii.json
    filter:
-     - absolute_links
+      - jq: '.[].title'
+
+Supports aggregations, selections, and the built-in operators like ``length``.
+
+For more information on the operations permitted, see the `jq Manual
+<https://stedolan.github.io/jq/manual/#Basicfilters>`__.
+
+Required packages
+^^^^^^^^^^^^^^^^^
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
+
+.. code-block:: yaml
+
+   pip install --upgrade webchanges[jq]
+
+.. _filtering_json:
+
+Filtering JSON on Windows or containing Unicode and without ``jq``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Python programmers on all OSs can use an advanced technique to select only certain elements of the JSON object; see
+:ref:`json_dict`. This method will preserve Unicode characters.
 
 
-.. versionadded:: 3.16
+
+.. _keep_lines_containing:
+
+keep_lines_containing
+---------------------
+This filter keeps only lines that contain the text specified (default) or match the Python `regular
+expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified, discarding the others.
+Note that while this filter emulates Linux's *grep*, it **does not** use the executable *grep*.
+
+Examples:
+
+.. code-block:: yaml
+
+   name: "convert HTML to text, strip whitespace, and only keep lines that have the sequence ``a,b:`` in them"
+   url: https://example.com/keep_lines_containing.html
+   filter:
+     - html2text:
+     - keep_lines_containing: 'a,b:'
+
+.. code-block:: yaml
+
+   name: "keep only lines that contain 'error' irrespective of its case (e.g. Error, ERROR, error, etc.)"
+   url: https://example.com/keep_lines_containing_re.txt
+   filter:
+     - keep_lines_containing:
+         re: '(?i)error'
+
+Note: in regex ``(?i)`` is the inline flag for `case-insensitive matching
+<https://docs.python.org/3/library/re.html#re.I>`__.
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``text`` (default): Match the text provided.
+* ``re``: Match the the Python `regular
+  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
+
+.. versionchanged:: 3.0
+   Renamed from ``grep`` to avoid confusion.
 
 
 
-.. _pypdf:
+.. _ocr:
 
-pypdf
---------
-This filter converts a PDF file to plaintext using the `pypdf <https://pypi.org/project/pypdf/>`__ Python library.
+ocr
+---
+This filter extracts text from images using the `Tesseract OCR engine <https://github.com/tesseract-ocr>`_. Any file
+format supported by the `Pillow <https://python-pillow.org>`_ (PIL Fork) Python package is supported.
 
 This filter *must* be the first filter in a chain of filters, since it consumes binary data.
 
 .. code-block:: yaml
 
-   url: https://example.net/pypdf-test.pdf
+   url: https://example.net/ocr-test.png
    filter:
-     - pypdf
-
-If the PDF file is password protected, you can specify its password:
-
-.. code-block:: yaml
-
-   url: https://example.net/pypdf-test-password.pdf
-   filter:
-     - pypdf:
-         password: webchangessecret
-
-pypdf locates all text drawing commands, in the order they are provided in the content stream of the PDF, and extracts
-the text.
-
-.. tip:: If your reports are in HTML format and the PDF is columnar in nature, try using the job directive
-   ``monospace: true`` to improve readability (see :ref:`here <monospace>`).
-
-.. code-block:: yaml
-
-   url: https://example.net/pypdf-test-keep-physical-layout.pdf
-   filter:
-     - pypdf:
-   monospace: true
-
-To the opposite, if you don't care about the layout, you might want to strip all additional spaces that might be added
-by this filter:
-
-.. code-block:: yaml
-
-   url: https://example.net/pypdf-no-multiple-spaces.pdf
-   filter:
-     - pypdf:
-     - re.sub:
-         pattern: ' +'
-         repl: ' '
-     - strip:
-         splitlines: true
-
+     - ocr:
+         timeout: 5
+         language: eng
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``password``: Password for a password-protected PDF file (dependency required; see below).
-
-.. versionadded:: 3.16
-
+* ``timeout``: Timeout for the recognition, in seconds (default: 10 seconds).
+* ``language``: Text language (e.g. ``fra`` or ``eng+fra``) (default: ``eng``).
 
 Required packages
 """""""""""""""""
-To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>`. If
-you're not using the ``password`` sub-directive, then use the following:
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[pypdf]
+   pip install --upgrade webchanges[ocr]
 
+In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__ itself.
 
-To run jobs with the ``password`` sub-directive, then use the following:
-
-.. code-block:: bash
-
-   pip install --upgrade webchanges[pypdf_crypto]
 
 
 .. _pdf2text:
@@ -744,124 +958,6 @@ In addition, you need to install any of the OS-specific dependencies of Poppler 
 
 
 
-.. _ocr:
-
-ocr
----
-This filter extracts text from images using the `Tesseract OCR engine <https://github.com/tesseract-ocr>`_. Any file
-format supported by the `Pillow <https://python-pillow.org>`_ (PIL Fork) Python package is supported.
-
-This filter *must* be the first filter in a chain of filters, since it consumes binary data.
-
-.. code-block:: yaml
-
-   url: https://example.net/ocr-test.png
-   filter:
-     - ocr:
-         timeout: 5
-         language: eng
-
-Optional sub-directives
-"""""""""""""""""""""""
-* ``timeout``: Timeout for the recognition, in seconds (default: 10 seconds).
-* ``language``: Text language (e.g. ``fra`` or ``eng+fra``) (default: ``eng``).
-
-Required packages
-"""""""""""""""""
-To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
-follows:
-
-.. code-block:: bash
-
-   pip install --upgrade webchanges[ocr]
-
-In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__ itself.
-
-
-
-.. _format-json:
-
-format-json
----------------
-This filter deserializes a JSON object and formats it using Python's `json.dumps
-<https://docs.python.org/3/library/json.html#json.dumps>`__ with indentations.
-
-.. tip:: If your reports are in HTML format, use the job directive ``monospace: true`` to improve readability (see
-   :ref:`here <monospace>`).
-
-
-Optional sub-directives
-"""""""""""""""""""""""
-* ``indentation``: Number of characters indent to pretty-print JSON array elements; ``None`` selects the most compact
-  representation (default: 4).
-* ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false).
-
-
-.. versionadded:: 3.0.1
-   ``sort_keys`` sub-directive.
-
-
-.. _jq:
-
-jq
---
-
-Linux/macOS ASCII only
-""""""""""""""""""""""
-
-The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight ASCII JSON
-processor. It is currently available only for Linux (most flavors) and macOS (no Windows) and does not handle Unicode;
-see :ref:`below <filtering_json>` for a cross-platform and Unicode-friendly way of selecting JSON.
-
-.. code-block:: yaml
-
-   url: https://example.net/jq-ascii.json
-   filter:
-      - jq: '.[].title'
-
-Supports aggregations, selections, and the built-in operators like ``length``.
-
-For more information on the operations permitted, see the `jq Manual
-<https://stedolan.github.io/jq/manual/#Basicfilters>`__.
-
-Required packages
-^^^^^^^^^^^^^^^^^
-To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
-follows:
-
-.. code-block:: yaml
-
-   pip install --upgrade webchanges[jq]
-
-
-
-.. _filtering_json:
-
-Filtering JSON on Windows or containing Unicode and without ``jq``
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Python programmers on all OSs can use an advanced technique to select only certain elements of the JSON object; see
-:ref:`json_dict`. This method will preserve Unicode characters.
-
-
-
-.. _format-xml:
-
-format-xml
-----------
-This filter deserializes an XML object and reformats it. It uses the `lxml <https://lxml.de>`__ Python package's
-etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ function.
-
-.. code-block:: yaml
-
-   name: "reformat XML using lxml's etree.tostring"
-   url: https://example.com/format_xml.xml
-   filter:
-     - format-xml:
-
-.. versionadded:: 3.0
-
-
-
 .. _pretty-xml:
 
 pretty-xml
@@ -880,139 +976,79 @@ This filter deserializes an XML object and pretty-prints it. It uses Python's xm
 
 
 
-.. _ical2text:
+.. _pypdf:
 
-ical2text
----------
-This filter reads an iCalendar document and converts it to easy-to read text.
+pypdf
+--------
+This filter converts a PDF file to plaintext using the `pypdf <https://pypi.org/project/pypdf/>`__ Python library.
+
+This filter *must* be the first filter in a chain of filters, since it consumes binary data.
 
 .. code-block:: yaml
 
-   name: "Make iCal file readable"
-   url: https://example.com/cal.ics
+   url: https://example.net/pypdf-test.pdf
    filter:
-     - ical2text:
+     - pypdf
+
+If the PDF file is password protected, you can specify its password:
+
+.. code-block:: yaml
+
+   url: https://example.net/pypdf-test-password.pdf
+   filter:
+     - pypdf:
+         password: webchangessecret
+
+pypdf locates all text drawing commands, in the order they are provided in the content stream of the PDF, and extracts
+the text.
+
+.. tip:: If your reports are in HTML format and the PDF is columnar in nature, try using the job directive
+   ``monospace: true`` to improve readability (see :ref:`here <monospace>`).
+
+.. code-block:: yaml
+
+   url: https://example.net/pypdf-test-keep-physical-layout.pdf
+   filter:
+     - pypdf:
+   monospace: true
+
+To the opposite, if you don't care about the layout, you might want to strip all additional spaces that might be added
+by this filter:
+
+.. code-block:: yaml
+
+   url: https://example.net/pypdf-no-multiple-spaces.pdf
+   filter:
+     - pypdf:
+     - re.sub:
+         pattern: ' +'
+         repl: ' '
+     - strip:
+         splitlines: true
+
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``password``: Password for a password-protected PDF file (dependency required; see below).
+
+.. versionadded:: 3.16
+
 
 Required packages
 """""""""""""""""
-To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
-follows:
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>`. If
+you're not using the ``password`` sub-directive, then use the following:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[ical2text]
+   pip install --upgrade webchanges[pypdf]
 
 
+To run jobs with the ``password`` sub-directive, then use the following:
 
-.. _hexdump:
+.. code-block:: bash
 
-hexdump
------------
-This filter displays the contents both in binary and ASCII using the hex dump format.
-
-.. code-block:: yaml
-
-   name: Display binary and ASCII test
-   command: cat testfile
-   filter:
-     - hexdump:
-
-
-
-.. _sha1sum:
-
-sha1sum
------------
-This filter calculates a SHA-1 hash for the contents. Useful to be notified when anything has changed without
-any detail and avoiding saving large snapshots of data.
-
-.. code-block:: yaml
-
-   name: "Calculate SHA-1 hash"
-   url: https://example.com/sha.html
-   filter:
-     - sha1sum:
-
-
-
-.. _keep_lines_containing:
-
-keep_lines_containing
----------------------
-This filter keeps only lines that contain the text specified (default) or match the Python `regular
-expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified, discarding the others.
-Note that while this filter emulates Linux's *grep*, it **does not** use the executable *grep*.
-
-Examples:
-
-.. code-block:: yaml
-
-   name: "convert HTML to text, strip whitespace, and only keep lines that have the sequence ``a,b:`` in them"
-   url: https://example.com/keep_lines_containing.html
-   filter:
-     - html2text:
-     - keep_lines_containing: 'a,b:'
-
-.. code-block:: yaml
-
-   name: "keep only lines that contain 'error' irrespective of its case (e.g. Error, ERROR, error, etc.)"
-   url: https://example.com/keep_lines_containing_re.txt
-   filter:
-     - keep_lines_containing:
-         re: '(?i)error'
-
-Note: in regex ``(?i)`` is the inline flag for `case-insensitive matching
-<https://docs.python.org/3/library/re.html#re.I>`__.
-
-Optional sub-directives
-"""""""""""""""""""""""
-* ``text`` (default): Match the text provided.
-* ``re``: Match the the Python `regular
-  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
-
-.. versionchanged:: 3.0
-   Renamed from ``grep`` to avoid confusion.
-
-
-
-.. _delete_lines_containing:
-
-delete_lines_containing
------------------------
-This filter is the inverse of ``keep_lines_containing`` above and discards all lines that contain the text specified
-(default) or match the Python `regular expression
-<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__, keeping the others.
-
-Examples:
-
-.. code-block:: yaml
-
-   name: "eliminate lines that contain 'xyz'"
-   url: https://example.com/delete_lines_containing.txt
-   filter:
-     - delete_lines_containing: 'xyz'
-
-
-.. code-block:: yaml
-
-   name: "eliminate lines that start with 'warning' irrespective of its case (e.g. Warning, Warning, warning, etc.)"
-   url: https://example.com/delete_lines_containing_re.txt
-   filter:
-     - delete_lines_containing:
-         re: '(?i)^warning'
-
-Notes: in regex, ``(?i)`` is the inline flag for `case-insensitive matching
-<https://docs.python.org/3/library/re.html#re.I>`__ and ``^`` (caret) matches the `start of the string
-<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
-
-Optional sub-directives
-"""""""""""""""""""""""
-* ``text`` (default): Match the text provided.
-* ``re``: Match the the Python `regular
-  expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
-
-.. versionchanged:: 3.0
-   Renamed from ``grepi`` to avoid confusion.
+   pip install --upgrade webchanges[pypdf_crypto]
 
 
 
@@ -1078,109 +1114,6 @@ Optional sub-directives
 
 
 
-.. _strip:
-
-strip
------
-This filter removes leading and trailing whitespace or specified characters from a set of characters. Whitespace
-includes the characters space, tab, linefeed, return, formfeed, and vertical tab.
-
-.. code-block:: yaml
-
-   name: "Strip leading and trailing whitespace from the block of data"
-   url: https://example.com/strip.html
-   filter:
-     - strip:
-
-
-.. code-block:: yaml
-
-   name: "Strip trailing commas or periods from all lines"
-   url: https://example.com/strip_by_line.html
-   filter:
-     - strip:
-         chars: ',.'
-         side: right
-         splitlines: true
-
-
-.. code-block:: yaml
-
-   name: "Strip beginning spaces, tabs, etc. from all lines"
-   url: https://example.com/strip_leading_spaces.txt
-   filter:
-     - strip:
-         side: left
-         splitlines: true
-
-
-.. code-block:: yaml
-
-   name: "Strip spaces, tabs etc. from both ends of all lines"
-   url: https://example.com/strip_each_line.html
-   filter:
-     - strip:
-         splitlines: true
-
-
-Optional sub-directives
-"""""""""""""""""""""""
-* ``chars`` (default): A string specifying the set of characters to be removed instead of the default whitespace.
-* ``side``: For one-sided removal: either ``left`` (strip only leading whitespace or matching characters)
-  or ``right`` (strip only trailing whitespace or matching characters).
-* ``splitlines`` (true/false): Apply the filter on each line of text (default: false, apply to the entire data as a
-  block).
-
-.. versionchanged:: 3.5
-   Added optional sub-directives ``chars``, ``side`` and ``splitlines``.
-
-
-
-.. _sort:
-
-sort
-----
-This filter performs a line-based sorting, ignoring cases (i.e. case folding as per Python's `implementation
-<https://docs.python.org/3/library/stdtypes.html#str.casefold>`__).
-
-If the source provides data in random order, you should sort it before the comparison in order to avoid diffing based
-only on changes in the sequence.
-
-.. code-block:: yaml
-
-   name: "Sorting lines test"
-   url: https://example.net/sorting.txt
-   filter:
-     - sort
-
-The sort filter takes an optional ``separator`` parameter that defines the item separator (by default sorting is
-line-based), for example to sort text paragraphs (text separated by an empty line):
-
-.. code:: yaml
-
-   url: https://example.org/paragraphs.txt
-   filter:
-     - sort:
-         separator: "\n\n"
-
-This can be combined with a boolean ``reverse`` option, which is useful for sorting and reversing with the same
-separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1``):
-
-.. code:: yaml
-
-   url: https://example.org/sort-reverse-percent.txt
-   filter:
-     - sort:
-         separator: '%'
-         reverse: true
-
-Optional sub-directives
-"""""""""""""""""""""""
-* ``separator`` (default): The string used to separate items to be sorted (default: ``\n``, i.e. line-based sorting).
-* ``reverse`` (true/false): Whether the sorting direction is reversed (default: false).
-
-
-
 .. _remove_repeated:
 
 remove_repeated
@@ -1243,6 +1176,8 @@ Optional sub-directives
 .. versionadded:: 3.13
    ``adjacent`` sub-directive.
 
+
+
 .. _reverse:
 
 reverse
@@ -1283,50 +1218,20 @@ Optional sub-directives
 
 
 
-.. _execute:
+.. _sha1sum:
 
-execute
----------
-The data to be filtered is passed as the input to a command to be run, and the output from the command is used in
-:program:`webchanges`'s next step. All environment variables are preserved and the following ones added:
-
-+-----------------------------+-------------------------------------------------------------------------+
-| Environment variable        | Description                                                             |
-+=============================+=========================================================================+
-| ``WEBCHANGES_JOB_JSON``     | All job parameters in JSON format                                       |
-+-----------------------------+-------------------------------------------------------------------------+
-| ``WEBCHANGES_JOB_LOCATION`` | Value of either ``url`` or ``command``                                  |
-+-----------------------------+-------------------------------------------------------------------------+
-| ``WEBCHANGES_JOB_NAME``     | Name of the job                                                         |
-+-----------------------------+-------------------------------------------------------------------------+
-| ``WEBCHANGES_JOB_NUMBER``   | The job's index number                                                  |
-+-----------------------------+-------------------------------------------------------------------------+
-
-For example, we can execute a Python script:
+sha1sum
+-----------
+This filter calculates a SHA-1 hash for the contents. Useful to be notified when anything has changed without
+any detail and avoiding saving large snapshots of data.
 
 .. code-block:: yaml
 
-   name: Test execute filter
-   url: https://example.net/execute.html
+   name: "Calculate SHA-1 hash"
+   url: https://example.com/sha.html
    filter:
-     # For multiline YAML, quote the string and unindent its continuation. A space is added at the end
-     # of each line. Pay attention to escaping!
-     - execute: "python -c \"import os, sys;
-     print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is
-     '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is
-     '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is
-     '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is
-     '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""
+     - sha1sum:
 
-Or instead we can call a script we have saved, e.g. ``- execute: python3 myscript.py``.
-
-If the command generates an error, the output of the error will be in the first line, before the traceback.
-
-.. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
-   mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
-
-.. versionchanged:: 3.8
-   Added additional WEBCHANGES_JOB_* environment variables.
 
 
 .. _shellpipe:
@@ -1365,3 +1270,106 @@ Example:
 
 .. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
    mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
+
+
+
+.. _sort:
+
+sort
+----
+This filter performs a line-based sorting, ignoring cases (i.e. case folding as per Python's `implementation
+<https://docs.python.org/3/library/stdtypes.html#str.casefold>`__).
+
+If the source provides data in random order, you should sort it before the comparison in order to avoid diffing based
+only on changes in the sequence.
+
+.. code-block:: yaml
+
+   name: "Sorting lines test"
+   url: https://example.net/sorting.txt
+   filter:
+     - sort
+
+The sort filter takes an optional ``separator`` parameter that defines the item separator (by default sorting is
+line-based), for example to sort text paragraphs (text separated by an empty line):
+
+.. code:: yaml
+
+   url: https://example.org/paragraphs.txt
+   filter:
+     - sort:
+         separator: "\n\n"
+
+This can be combined with a boolean ``reverse`` option, which is useful for sorting and reversing with the same
+separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1``):
+
+.. code:: yaml
+
+   url: https://example.org/sort-reverse-percent.txt
+   filter:
+     - sort:
+         separator: '%'
+         reverse: true
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``separator`` (default): The string used to separate items to be sorted (default: ``\n``, i.e. line-based sorting).
+* ``reverse`` (true/false): Whether the sorting direction is reversed (default: false).
+
+
+
+.. _strip:
+
+strip
+-----
+This filter removes leading and trailing whitespace or specified characters from a set of characters. Whitespace
+includes the characters space, tab, linefeed, return, formfeed, and vertical tab.
+
+.. code-block:: yaml
+
+   name: "Strip leading and trailing whitespace from the block of data"
+   url: https://example.com/strip.html
+   filter:
+     - strip:
+
+
+.. code-block:: yaml
+
+   name: "Strip trailing commas or periods from all lines"
+   url: https://example.com/strip_by_line.html
+   filter:
+     - strip:
+         chars: ',.'
+         side: right
+         splitlines: true
+
+
+.. code-block:: yaml
+
+   name: "Strip beginning spaces, tabs, etc. from all lines"
+   url: https://example.com/strip_leading_spaces.txt
+   filter:
+     - strip:
+         side: left
+         splitlines: true
+
+
+.. code-block:: yaml
+
+   name: "Strip spaces, tabs etc. from both ends of all lines"
+   url: https://example.com/strip_each_line.html
+   filter:
+     - strip:
+         splitlines: true
+
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``chars`` (default): A string specifying the set of characters to be removed instead of the default whitespace.
+* ``side``: For one-sided removal: either ``left`` (strip only leading whitespace or matching characters)
+  or ``right`` (strip only trailing whitespace or matching characters).
+* ``splitlines`` (true/false): Apply the filter on each line of text (default: false, apply to the entire data as a
+  block).
+
+.. versionchanged:: 3.5
+   Added optional sub-directives ``chars``, ``side`` and ``splitlines``.

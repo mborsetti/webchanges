@@ -64,26 +64,30 @@ webchanges = 'webchanges.cli:main'
 
 [project.optional-dependencies]
 use_browser = ['playwright', 'psutil']
+# filters
 # lxml is now optional with beautifulsoup4
-beautify = ['beautifulsoup4', 'lxml', 'jsbeautifier', 'cssbeautifier']
-bs4 = ['beautifulsoup4', 'lxml']
-deepdiff = ['deepdiff']
-jq = ['jq; os_name != "nt"']
-ical2text = ['vobject']
+beautify = ['beautifulsoup4', 'jsbeautifier', 'cssbeautifier']
+bs4 = ['beautifulsoup4']
 html5lib = ['html5lib']
-matrix = ['matrix_client']
+ical2text = ['vobject']
+jq = ['jq; os_name != "nt"']
 ocr = ['pytesseract', 'Pillow']
+pdf2text = ['pdftotext']
 pypdf = ['pypdf']
 pypdf_crypto = ['pypdf', 'cryptography']
-pdf2text = ['pdftotext']
+# differs
+deepdiff = ['deepdiff']
+# reporters
+matrix = ['matrix_client']
 pushbullet = ['pushbullet.py']
 pushover = ['chump']
-redis = ['redis']
-requests = ['requests', 'urllib3']
-safe_password = ['keyring']
 xmpp = ['aioxmpp']
+# other
+redis = ['redis']
+requests = ['requests']
+safe_password = ['keyring']
 all = [
-    'webchanges[use_browser,beautify,bs4,deepdiff,jq,ical2text,html5lib,matrix,ocr,pdf2text,pushbullet,pushover,pypdf_crypto,redis,requests,safe_password,xmpp]'
+    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff,matrix,pushbullet,pushover,xmpp,redis,requests,safe_password]'
 ]
 
 

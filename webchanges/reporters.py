@@ -10,7 +10,6 @@ import functools
 import getpass
 import html
 import itertools
-import json
 import logging
 import os
 import re
@@ -22,6 +21,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Iterator, List, Literal, Optional, TYPE_CHECKING, Union
 from warnings import warn
+
+# https://stackoverflow.com/questions/712791
+try:
+    import simplejson as jsonlib
+except ImportError:
+    import json as jsonlib  # type: ignore[no-redef]
 
 try:
     import httpx
@@ -1528,7 +1533,7 @@ class DiscordReporter(TextReporter):
 
 
 class WebhookReporter(TextReporter):
-    """Send a text message to a webhook such as Slack or Mattermost.  For Mattermost,  set 'markdown' to true."""
+    """Send a text message to a webhook such as Slack or Mattermost.  For Mattermost, set 'markdown' to true."""
 
     __kind__ = 'webhook'
 
@@ -1567,7 +1572,7 @@ class WebhookReporter(TextReporter):
 
     def submit_to_webhook(self, webhook_url: str, text: str) -> Response:
         logger.debug(f'Sending request to webhook with text: {text}')
-        post_data = {'text': text}
+        post_data = self.prepare_post_data(text)
         result = self.post_client(webhook_url, json=post_data, timeout=60)
         try:
             if result.status_code in {200, 204}:
@@ -1580,6 +1585,31 @@ class WebhookReporter(TextReporter):
                 f'content: {result.content!s}'
             )
         return result
+
+    def prepare_post_data(
+        self, text: str
+    ) -> dict[str, str | list[dict[str, str | list[dict[str, str | list[dict[str, str]]]]]]]:
+        if self.config.get('rich_text', False):
+            return {
+                'blocks': [
+                    {
+                        'type': 'rich_text',
+                        'elements': [
+                            {
+                                'type': 'rich_text_preformatted',
+                                'elements': [
+                                    {
+                                        'type': 'text',
+                                        'text': text,
+                                    },
+                                ],
+                            },
+                        ],
+                    }
+                ]
+            }
+        else:
+            return {'text': text}
 
 
 class SlackReporter(WebhookReporter):
@@ -1820,8 +1850,8 @@ class RunCommandReporter(TextReporter):
 
         # Work on a copy to not modify the outside environment
         env = dict(os.environ)
-        env.update({f'{__project_name__.upper()}_REPORT_CONFIG_JSON': json.dumps(self.report.config)})
-        env.update({f'{__project_name__.upper()}_REPORT_REPORTED_JOBS_JSON': json.dumps(self.report.config)})
+        env.update({f'{__project_name__.upper()}_REPORT_CONFIG_JSON': jsonlib.dumps(self.report.config)})
+        env.update({f'{__project_name__.upper()}_REPORT_REPORTED_JOBS_JSON': jsonlib.dumps(self.report.config)})
 
         subject_args = {
             'text': text,

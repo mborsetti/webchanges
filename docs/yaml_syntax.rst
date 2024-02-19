@@ -283,6 +283,10 @@ double-quotes:
    name: "\u00A9 Megaco"  # The copyright sign ©
 
 
+Note that while YAML allows for aliases (anchors/references) as a way to reuse the same content, each job is a different
+"document" and YAML does not allow anchors/references between documents, even if they are in the same file
+(`reference <https://yaml.org/spec/1.2-old/spec.html#id2800132>`__).
+
 .. seealso::
 
    `YAMLLint <http://yamllint.com/>`__

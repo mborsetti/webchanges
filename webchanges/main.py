@@ -82,7 +82,7 @@ class Urlwatch:
 
         self.jobs = jobs
 
-    def get_new_release_version(self, timeout: Optional[Union[float, tuple[float, float]]] = None) -> Union[str, bool]:
+    def get_new_release_version(self, timeout: Optional[float] = None) -> Union[str, bool]:
         """Check PyPi to see if we're running the latest version. Memoized.
 
         :returns: Empty string if no higher version is available, otherwise the new version number.

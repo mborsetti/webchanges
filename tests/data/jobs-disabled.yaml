@@ -1,0 +1,6 @@
+name: disabled job
+command: echo disabled job
+enabled: false
+---
+name: enabled job
+command: echo enabled job

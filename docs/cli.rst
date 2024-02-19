@@ -30,6 +30,12 @@ You can run all jobs and see those that result in an error or who, after filteri
 :program:`webchanges` with the ``--error`` command line argument. This can help with detecting jobs that may no longer
 be monitoring resources as expected. No snapshots are saved from this run.
 
+.. warning::
+   Do not use this argument to test newly modified jobs since it does `conditional requests
+   <https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests>`__ on websites, and those reporting
+   no changes since the time :program:`webchanges` saved a snapshot are skipped. Use ``--test`` instead. To remove a
+   blank snapshot use ``--delete-snapshot``; to see the saved snapshots use ``--dump-history``.
+
 By default, the output will go to :ref:`stdout`, but you can add any :ref:`reporter <reporters>` name to the command
 line argument to have the output use that reporter. For example, to be notified by email of any errors, run the
 following:
@@ -40,6 +46,9 @@ following:
 
 .. versionchanged:: 3.17
    Send output to any reporter.
+
+.. versionchanged:: 3.18
+   Use conditional requests to improve speed.
 
 
 .. _test:
@@ -79,6 +88,7 @@ To only check the config, job and hooks files for errors, use ``--test`` without
 .. versionchanged:: 3.14
    Saves the screenshot, full page image and HTML contents when a ``url`` job with ``use_browser: true`` fails
    while running in verbose mode.
+
 
 .. _test-diff:
 

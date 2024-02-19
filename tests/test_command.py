@@ -8,7 +8,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path, PurePath
-from typing import Any
 
 import pytest
 from _pytest.capture import CaptureFixture
@@ -80,7 +79,7 @@ urlwatch_command = UrlwatchCommand(urlwatcher)
 
 
 @pytest.fixture(scope='module', autouse=True)  # type: ignore[misc]
-def cleanup(request: Any) -> None:  # TODO: find correct type hint
+def cleanup(request: pytest.FixtureRequest) -> None:
     """Cleanup once we are finished."""
 
     def finalizer() -> None:
@@ -373,7 +372,7 @@ def test_dump_history(capsys: CaptureFixture[str]) -> None:
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert (
-            'History for job Job 1: echo 1:\n' '(ID: 452b9ef6128065e9e0329ba8d32daf9715595fa4)\n' 'Found 0 snapshots.\n'
+            'History for job Job 1: echo 1:\n(ID: 452b9ef6128065e9e0329ba8d32daf9715595fa4)\nFound 0 snapshots.\n'
         ) in message
 
         # run once
@@ -516,7 +515,9 @@ def test_list_error_jobs(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'errors', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message.startswith('Jobs with errors or returning no data (after filters, if any)\n   in jobs file ')
+    assert message.startswith(
+        'Jobs with errors or returning no data (after unmodified filters, if any)\n   in jobs file '
+    )
 
 
 def test_list_error_jobs_reporter(capsys: CaptureFixture[str]) -> None:

@@ -47,17 +47,19 @@ the configuration:
      new: true
      error: true
      unchanged: false
-     empty-diff: true
+     empty_diff: true
 
 If you set ``unchanged`` to ``true``, :program:`webchanges` will always report all pages that are checked but have not
 changed.
 
-While the ``empty-diff`` setting is included for backwards-compatibility, :program:`webchanges` uses the easier job
+While the ``empty_diff`` setting is included for backwards-compatibility, :program:`webchanges` uses the easier job
 directive :ref:`additions_only` to obtain similar results, which you should use. This deprecated setting controls
 what happens if a page is ``changed``, but due to e.g. a ``diff_filter`` the diff is reduced to the empty string. If set
 to ``true``, :program:`webchanges`: will report an (empty) change. If set to ``false``, the change will not be included
 in the report.
 
+
+.. _reports-and-reporters:
 
 Reports and Reporters
 ----------------------

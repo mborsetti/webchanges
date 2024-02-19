@@ -13,7 +13,7 @@
 
 # NOTE: in this package tox runs 'pre-commit run -a'
 
-minimum_pre_commit_version: 3.4.0
+minimum_pre_commit_version: 3.5.0
 
 # Force all unspecified python hooks to run python3
 default_language_version:
@@ -171,7 +171,14 @@ repos:
       - id: mypy  # https://github.com/python/mypy
         name: Static typing for Python (mypy)
         entry: mypy
-        additional_dependencies: [mypy, types-backports, types-docutils, types-PyYAML, types-redis, types-requests]
+        additional_dependencies:
+          - mypy
+          - types-backports
+          - types-docutils
+          - types-PyYAML
+          - types-redis
+          - types-requests
+          - types-simplejson
         language: python
         types: [python]
       - id: doc8  # https://github.com/pycqa/doc8

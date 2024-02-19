@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import difflib
-import json
 import logging
 import re
 import shlex
@@ -23,6 +22,12 @@ from typing import Any, ContextManager, Iterator, NamedTuple, Optional, TYPE_CHE
 from webchanges.filters import FilterBase
 from webchanges.jobs import NotModifiedError
 from webchanges.reporters import ReporterBase
+
+# https://stackoverflow.com/questions/712791
+try:
+    import simplejson as jsonlib
+except ImportError:
+    import json as jsonlib  # type: ignore[no-redef]
 
 try:
     import deepdiff
@@ -355,16 +360,20 @@ class JobState(ContextManager):
                         val_t1 = (
                             f'"{diff.t1}"'
                             if type_t1 in {'str', 'int', 'float'}
-                            else json.dumps(diff.t1, ensure_ascii=False, indent=2)
-                            if type_t1 == 'dict'
-                            else str(diff.t1)
+                            else (
+                                jsonlib.dumps(diff.t1, ensure_ascii=False, indent=2)
+                                if type_t1 == 'dict'
+                                else str(diff.t1)
+                            )
                         )
                         val_t2 = (
                             f'"{diff.t2}"'
                             if type_t2 in {'str', 'int', 'float'}
-                            else json.dumps(diff.t2, ensure_ascii=False, indent=2)
-                            if type_t2 == 'dict'
-                            else str(diff.t2)
+                            else (
+                                jsonlib.dumps(diff.t2, ensure_ascii=False, indent=2)
+                                if type_t2 == 'dict'
+                                else str(diff.t2)
+                            )
                         )
 
                         diff_path = diff.path(root='root')
@@ -386,10 +395,16 @@ class JobState(ContextManager):
                 data_type = self.job.diff_tool.split('-')[1] if len(self.job.diff_tool.split('-')) > 1 else 'json'
                 if data_type == 'json':
                     try:
-                        old_data = json.loads(self.old_data)
-                    except json.JSONDecodeError:
+                        old_data = jsonlib.loads(self.old_data)
+                    except jsonlib.JSONDecodeError:
                         old_data = ''
-                    new_data = json.loads(self.new_data)
+                    try:
+                        new_data = jsonlib.loads(self.new_data)
+                    except jsonlib.JSONDecodeError as e:
+                        self.exception = e
+                        self.traceback = self.job.format_error(e, traceback.format_exc())
+                        logger.error(f'{self.job.index_number}: Invalid JSON data: {e.msg} ({self.job.get_location()})')
+                        return f'Using {self.job.diff_tool}\nData is invalid JSON: {e.msg}'
                 elif data_type == 'xml':
                     if isinstance(xmltodict, str):
                         raise ImportError(
@@ -608,7 +623,7 @@ class Report:
             ):
                 if (
                     job_state.verb == 'changed'
-                    and not self.config['display'].get('empty-diff', True)
+                    and not self.config['display'].get('empty_diff', True)
                     and job_state.get_diff() == ''
                 ):
                     continue

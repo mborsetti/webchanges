@@ -743,6 +743,7 @@ Sub-directives
 * ``webhook_url`` (required): The webhook URL.
 * ``markdown``: Whether to send Markdown instead of plain text (true/false). Default is false.
 * ``max_message_length``: The maximum length of a message in characters. Default is 40,000.
+* ``rich_text``: Whether to send preformatted rich text (for Slack) (true/false). Default is false.
 
 .. versionchanged:: 3.0.1
    Renamed from ``slack`` to ``webhook`` and added the ``markdown`` sub-directive.

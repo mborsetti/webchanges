@@ -24,8 +24,8 @@ from typing import Callable, Match, Optional, Union
 
 try:
     import httpx
-except ImportError as e:
-    httpx = e.msg  # type: ignore[assignment]
+except ImportError:
+    httpx = None  # type: ignore[assignment]
 
 try:
     import h2
@@ -280,7 +280,7 @@ def linkify(
     return _URL_RE.sub(make_link, text)
 
 
-def get_new_version_number(timeout: Optional[Union[float, tuple[float, float]]] = None) -> Union[str, bool]:
+def get_new_version_number(timeout: Optional[float] = None) -> Union[str, bool]:
     """Check PyPi for newer version of project.
 
     :parameter timeout: Timeout in seconds after which empty string is returned.

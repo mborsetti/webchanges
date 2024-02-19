@@ -2,7 +2,7 @@ display:
   new: true
   error: true
   unchanged: false
-  empty-diff: true
+  empty_diff: true
 report:
   tz:
   text:

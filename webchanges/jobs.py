@@ -9,7 +9,6 @@ import copy
 import email.utils
 import hashlib
 import html
-import json
 import logging
 import os
 import re
@@ -31,6 +30,12 @@ from webchanges import __project_name__, __user_agent__
 from webchanges.filters import FilterBase
 from webchanges.util import TrackSubClasses
 
+# https://stackoverflow.com/questions/712791
+try:
+    import simplejson as jsonlib
+except ImportError:
+    import json as jsonlib  # type: ignore[no-redef]
+
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from webchanges.handler import JobState
@@ -38,8 +43,8 @@ if TYPE_CHECKING:
 
 try:
     import httpx
-except ImportError as e:
-    httpx = e.msg  # type: ignore[assignment]
+except ImportError:
+    httpx = None  # type: ignore[assignment]
 
 try:
     import h2
@@ -125,6 +130,7 @@ class JobBase(metaclass=TrackSubClasses):
     deletions_only: Optional[bool] = None
     diff_filter: Union[str, list[Union[str, dict[str, Any]]]] = None  # type: ignore[assignment]
     diff_tool: Optional[str] = None
+    enabled: Optional[bool] = None
     encoding: Optional[str] = None
     filter: Union[str, list[Union[str, dict[str, Any]]]] = None  # type: ignore[assignment]
     headers: Optional[Union[dict, CaseInsensitiveDict]] = None
@@ -460,6 +466,13 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return False
 
+    def is_enabled(self) -> bool:
+        """Returns whether job is enabled.
+
+        :returns: Whether the job is enabled.
+        """
+        return self.enabled is None or self.enabled
+
 
 class Job(JobBase):
     """Job class for jobs."""
@@ -472,6 +485,7 @@ class Job(JobBase):
         'deletions_only',
         'diff_filter',
         'diff_tool',
+        'enabled',
         'filter',
         'index_number',
         'is_markdown',
@@ -676,9 +690,9 @@ class UrlJob(UrlJobBase):
 
             if response.status_code != 404:
                 try:
-                    parsed_json = json.loads(response.text)
-                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
-                except json.decoder.JSONDecodeError:
+                    parsed_json = jsonlib.loads(response.text)
+                    error_message = jsonlib.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+                except jsonlib.JSONDecodeError:
                     html_text = (
                         response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
                     )
@@ -729,6 +743,7 @@ class UrlJob(UrlJobBase):
             # required to suppress warnings with 'ssl_no_verify: true'
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+        # noinspection PyTypeChecker
         response = requests.request(
             method=self.method,  # type: ignore[arg-type]
             url=self.url,
@@ -760,9 +775,9 @@ class UrlJob(UrlJobBase):
 
             if response.status_code != 404:
                 try:
-                    parsed_json = json.loads(response.text)
-                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
-                except json.decoder.JSONDecodeError:
+                    parsed_json = jsonlib.loads(response.text)
+                    error_message = jsonlib.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+                except jsonlib.JSONDecodeError:
                     html_text = (
                         response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
                     )
@@ -872,7 +887,7 @@ class UrlJob(UrlJobBase):
                     headers['Content-Type'] = 'application/x-www-form-urlencoded'
             if isinstance(self.data, dict):
                 if self.data_as_json:
-                    self.data = json.dumps(self.data, ensure_ascii=False)
+                    self.data = jsonlib.dumps(self.data, ensure_ascii=False)
                 else:
                     self.data = urlencode(self.data)
             elif not isinstance(self.data, str):
@@ -1162,9 +1177,11 @@ class BrowserJob(UrlJobBase):
                 proxy_split = None
             if proxy_split:
                 proxy = {  # type: ignore[misc] # for PyCharm
-                    'server': f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
-                    if proxy_split.port
-                    else '',
+                    'server': (
+                        f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
+                        if proxy_split.port
+                        else ''
+                    ),
                     'username': str(proxy_split.username),
                     'password': str(proxy_split.password),
                 }
@@ -1357,7 +1374,7 @@ class BrowserJob(UrlJobBase):
                         headers['Content-Type'] = 'application/x-www-form-urlencoded'
                 if isinstance(self.data, dict):
                     if self.data_as_json:
-                        data = json.dumps(self.data, ensure_ascii=False)
+                        data = jsonlib.dumps(self.data, ensure_ascii=False)
                     else:
                         data = urlencode(self.data)
                 elif isinstance(self.data, str):

@@ -9,7 +9,6 @@ import hashlib
 import html
 import io
 import itertools
-import json
 import logging
 import os
 import re
@@ -30,6 +29,12 @@ from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "de
 
 from webchanges import __project_name__
 from webchanges.util import TrackSubClasses
+
+# https://stackoverflow.com/questions/712791
+try:
+    import simplejson as jsonlib
+except ImportError:
+    import json as jsonlib  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -479,7 +484,7 @@ class Html2TextFilter(FilterBase):
               ``html5lib`` and ``html.parser``) as per
               https://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use.  Different parsers
               are compared at https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser.
-              Note: ``html5lib``requires having the ``html5lib`` Python package already installed.
+              Note: ``html5lib``requires having the ``html5lib`` Python package already installed. Defaults to 'lxml'.
             * separator: Strings will be concatenated using this separator. Defaults to `````` (empty string).
             * strip: If True, strings will be stripped before being concatenated. Defaults to False.
 
@@ -779,8 +784,8 @@ class FormatJsonFilter(FilterBase):
         """
         sort_keys = subfilter.get('sort_keys', False)
         indentation = int(subfilter.get('indentation', 4))
-        parsed_json = json.loads(data)
-        return json.dumps(
+        parsed_json = jsonlib.loads(data)
+        return jsonlib.dumps(
             parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation, separators=(',', ': ')
         )
 
@@ -1656,7 +1661,7 @@ def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: dict[str
     env = os.environ.copy()
     env.update(
         {
-            f'{__project_name__.upper()}_JOB_JSON': json.dumps(f_cls.job.to_dict()),
+            f'{__project_name__.upper()}_JOB_JSON': jsonlib.dumps(f_cls.job.to_dict()),
             f'{__project_name__.upper()}_JOB_NAME': f_cls.job.pretty_name(),
             f'{__project_name__.upper()}_JOB_LOCATION': f_cls.job.get_location(),
             f'{__project_name__.upper()}_JOB_INDEX_NUMBER': str(f_cls.job.index_number),
@@ -1791,7 +1796,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
         if 'query' not in subfilter:
             raise ValueError(f"The 'jq' filter needs a query. ({self.job.get_indexed_location()})")
         try:
-            jsondata = json.loads(data)
+            jsondata = jsonlib.loads(data)
         except ValueError:
             raise ValueError(f"The 'jq' filter needs valid JSON. ({self.job.get_indexed_location()})")
 

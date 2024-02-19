@@ -1,5 +1,4 @@
 # pip requirements for pre-commit (in addition to ./requirements.txt and /docs/requirements.txt)
-bandit
 black
 doc8
 docutils
@@ -17,3 +16,4 @@ types-docutils
 types-PyYAML
 types-redis
 types-requests
+types-simplejson

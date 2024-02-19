@@ -41,9 +41,9 @@ Running in Docker
 `<https://github.com/yubiuser/webchanges-docker>`__ for one such implementation.
 
 
-Documentation
-=============
-The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__ |readthedocs|.
+Documentation |readthedocs|
+===========================
+The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__.
 
 
 Quick Start
@@ -130,12 +130,11 @@ using the same job and configuration files and benefit from many HTML-focused im
   wrap around;
 * Correct rendering by email clients who override stylesheets (e.g. Gmail);
 * Other legibility improvements;
-* Use of stable Playwright instead of buggy Pyppeteer for websites that need JavaScript rendering before capture,
-  increasing stability, reliability, flexibility and control;
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
   which makes it easier to track content that was added without the distractions of the content that was deleted;
+* New features such as ``--errors`` to catch jobs that no longer work;
 * Much better `documentation <https://webchanges.readthedocs.io/>`__;
-* More reliability and stability, including a 39 percentage point increase in testing coverage to 81%;
+* More reliability and stability, including a 30+ percentage point increase in testing coverage;
 * Many other additions, refinements and fixes (see `detailed information
   <https://webchanges.readthedocs.io/en/stable/migration.html#upgrade-details>`__).
 

@@ -1,4 +1,5 @@
 """Test the handling of jobs."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -29,6 +30,17 @@ data_path = here.joinpath('data')
 config_file = data_path.joinpath('config.yaml')
 cache_file = ':memory:'
 hooks_file = Path('')
+cache_storage: CacheSQLite3Storage
+
+
+def cleanup(request: pytest.FixtureRequest) -> None:
+    """Cleanup once we are finished."""
+
+    def finalizer() -> None:
+        """Cleanup once we are finished."""
+        cache_storage.delete_all()
+
+    request.addfinalizer(finalizer)
 
 
 def test_required_classattrs_in_subclasses() -> None:
@@ -94,6 +106,33 @@ def test_duplicates_in_jobs_yaml() -> None:
         warnings.warn(f'{jobs_file} not found', UserWarning)
 
 
+def test_disabled_job() -> None:
+    jobs_file = data_path.joinpath('jobs-disabled.yaml')
+
+    urlwatch_config = CommandConfig(
+        [],
+        project_name,
+        here,
+        config_file,
+        jobs_file,
+        hooks_file,
+        cache_file,  # type: ignore[arg-type]
+    )
+    config_storage = YamlConfigStorage(config_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
+    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    cache_storage.delete_all()
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    urlwatcher.report.job_states = []
+    try:
+        urlwatcher.run_jobs()
+
+        assert len(urlwatcher.report.job_states) == 1
+        assert urlwatcher.report.job_states[0].new_data == 'enabled job\n'
+    finally:
+        cache_storage.delete_all()
+
+
 def test_load_hooks_py() -> None:
     hooks_file = data_path.joinpath('hooks_example.py')
     if hooks_file.is_file():
@@ -121,7 +160,7 @@ def test_run_watcher_sqlite3() -> None:
         urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:
-        cache_storage.close()
+        cache_storage.delete_all()
 
 
 @minidb_required  # type: ignore[misc]
@@ -186,7 +225,7 @@ def test_number_of_tries_in_cache_is_increased_sqlite3() -> None:
         assert tries == 2
         assert urlwatcher.report.job_states[-1].verb == 'error'
     finally:
-        cache_storage.close()
+        cache_storage.delete_all()
 
 
 def test_report_error_when_out_of_tries_sqlite3() -> None:
@@ -204,7 +243,7 @@ def test_report_error_when_out_of_tries_sqlite3() -> None:
         report = urlwatcher.report
         assert report.job_states[-1].verb == 'error'
     finally:
-        cache_storage.close()
+        cache_storage.delete_all()
 
 
 def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
@@ -231,7 +270,7 @@ def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
         old_data, timestamp, tries, etag = cache_storage.load(guid)
         assert tries == 0
     finally:
-        cache_storage.close()
+        cache_storage.delete_all()
 
 
 @minidb_required  # type: ignore[misc]

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+import platform
 import shutil
 import signal
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
@@ -78,12 +79,16 @@ def setup_logger(verbose: Optional[int] = None) -> None:
 
     :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
     """
-    import platform
-
     log_level = None
     if verbose is not None:
+        if verbose >= 3:
+            log_level = 'NOTSET'
+            # https://playwright.dev/python/docs/debug#verbose-api-logs
+            os.environ['DEBUG'] = 'pw:api pytest -s'
         if verbose >= 2:
             log_level = 'DEBUG'
+            # https://playwright.dev/python/docs/debug#verbose-api-logs
+            os.environ['DEBUG'] = 'pw:api pytest -s'
         elif verbose == 1:
             log_level = 'INFO'
 
@@ -97,6 +102,17 @@ def setup_logger(verbose: Optional[int] = None) -> None:
         f'{platform.python_build()} {platform.python_compiler()}'
     )
     logger.info(f'System: {platform.platform()}')
+
+
+def teardown_logger(verbose: Optional[int] = None) -> None:
+    """Clean up logging.
+
+    :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
+    """
+    if verbose is not None:
+        if verbose >= 2:
+            # https://playwright.dev/python/docs/debug#verbose-api-logs
+            os.environ.pop('DEBUG', None)
 
 
 def locate_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = None) -> list[Path]:
@@ -313,7 +329,7 @@ def main() -> None:  # pragma: no cover
     # For speed, run these here
     handle_unitialized_actions(command_config)
 
-    # Only now we can load other modules (so that logging is enabled)
+    # Only now, after configuring logging, we can load other modules
     from webchanges.command import UrlwatchCommand
     from webchanges.main import Urlwatch
     from webchanges.storage import (
@@ -373,6 +389,9 @@ def main() -> None:  # pragma: no cover
 
     # Run 'urlwatch', starting with processing command line arguments
     urlwatch_command.run()
+
+    # Remove Playwright debug mode if there
+    teardown_logger(command_config.verbose)
 
 
 if __name__ == '__main__':

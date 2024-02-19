@@ -51,7 +51,7 @@ ConfigDisplay = TypedDict(
         'new': bool,
         'error': bool,
         'unchanged': bool,
-        'empty-diff': bool,
+        'empty_diff': bool,
     },
 )
 ConfigReportText = TypedDict(
@@ -216,6 +216,7 @@ ConfigReportWebhook = TypedDict(
         'enabled': bool,
         'markdown': bool,
         'webhook_url': str,
+        'rich_text': Optional[bool],
         'max_message_length': Optional[int],
     },
 )
@@ -285,7 +286,7 @@ DEFAULT_CONFIG: Config = {
         'new': True,
         'error': True,
         'unchanged': False,
-        'empty-diff': True,
+        'empty_diff': True,
     },
     'report': {
         'tz': None,  # the timezone as a IANA time zone name, e.g. 'America/Los_Angeles', or null for machine's
@@ -398,6 +399,7 @@ DEFAULT_CONFIG: Config = {
             'enabled': False,
             'webhook_url': '',
             'markdown': False,
+            'rich_text': None,
             'max_message_length': None,
         },
         'xmpp': {  # uses text
@@ -998,6 +1000,14 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
+    def delete_all(self) -> int:
+        """Delete all entries; used for testing only.
+
+        :returns: Number of records deleted.
+        """
+        pass
+
+    @abstractmethod
     def clean(self, guid: str, keep_entries: int = 1) -> int:
         pass
 
@@ -1160,6 +1170,16 @@ class CacheDirStorage(CacheStorage):
 
         :param guid: The guid.
         :param delete_entries: The number of most recent entries to delete.
+
+        :raises NotImplementedError: This function is not implemented for 'textfiles' databases.
+        """
+        raise NotImplementedError(
+            "Deleting of latest snapshot not supported by 'textfiles' database engine since only one snapshot is "
+            "saved. Delete all snapshots if that's what you are trying to do."
+        )
+
+    def delete_all(self) -> int:
+        """Delete all entries; used for testing only.
 
         :raises NotImplementedError: This function is not implemented for 'textfiles' databases.
         """
@@ -1493,6 +1513,20 @@ class CacheSQLite3Storage(CacheStorage):
                 (guid, delete_entries),
             )
             num_del: int = self._execute('SELECT changes()').fetchone()[0]
+            self.db.commit()
+        return num_del
+
+    def delete_all(self) -> int:
+        """Delete all entries; used for testing only.
+
+        :returns: Number of records deleted.
+        """
+        with self.lock:
+            self._execute('DELETE FROM webchanges')
+            self.db.commit()
+            num_del: int = self._execute('SELECT changes()').fetchone()[0]
+            self.db.commit()
+
         return num_del
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
@@ -1755,6 +1789,13 @@ class CacheRedisStorage(CacheStorage):
             return 0
 
         return 1
+
+    def delete_all(self) -> int:
+        """Delete all entries; used for testing only.
+
+        :returns: Number of records deleted.
+        """
+        raise NotImplementedError('This method is not implemented for Redis.')
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
         if keep_entries != 1:

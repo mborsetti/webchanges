@@ -120,6 +120,9 @@ class CacheMiniDBStorage(CacheStorage):
     def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
         raise NotImplementedError("Deleting of latest snapshot not supported by 'minidb' database engine")
 
+    def delete_all(self) -> int:
+        raise NotImplementedError("Deleting of all data not supported by 'minidb' database engine")
+
     def clean(self, guid: str, retain_limit: int = 1) -> int:
         retain_limit = max(1, retain_limit)
         keep_ids = [

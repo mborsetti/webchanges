@@ -61,7 +61,7 @@ except ImportError:
 from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState, Report, SnapshotShort
-from webchanges.jobs import BrowserJob, JobBase, UrlJob
+from webchanges.jobs import BrowserJob, JobBase, NotModifiedError, UrlJob
 from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
 from webchanges.main import Urlwatch
 from webchanges.reporters import ReporterBase, xmpp_have_password, xmpp_set_password
@@ -394,7 +394,9 @@ class UrlwatchCommand:
                 message.append(f'{conj}jobs file {self.urlwatch_config.jobs_files[0]}')
             else:
                 message.append(
-                    '\n   '.join([f'{conj}jobs files'] + [f'• {file}' for file in self.urlwatch_config.jobs_files])
+                    '\n   '.join(
+                        [f'{conj}jobs files'] + [f'• {file}' for file in sorted(self.urlwatch_config.jobs_files)]
+                    )
                 )
             if 'hooks' in sys.modules:
                 message.append(f",\nand hooks file {sys.modules['hooks'].__file__}")
@@ -545,13 +547,10 @@ class UrlwatchCommand:
         def error_jobs_lines(jobs: Iterable[JobBase]) -> Generator[str, None, None]:
             """A generator that outputs error text for jobs who fail with an exception or yield no data.
 
-            We do not save the job state or job on purpose here, since we are possibly modifying the job
-            (ignore_cached) and we do not want to store the newly-retrieved data yet (just showing errors)
-            extract subset of jobs to run if joblist CLI was set
+            Do not use it to test newly modified jobs since it does conditional requests on the websites (i.e. uses
+            stored data if the website reports no changes in the data since the last time it downloaded it -- see
+            https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests).
             """
-            for job in jobs:
-                # Force re-retrieval of job, as we're testing for errors
-                job.ignore_cached = True
             with contextlib.ExitStack() as stack:
                 max_workers = min(32, os.cpu_count() or 1) if any(isinstance(job, BrowserJob) for job in jobs) else None
                 logger.debug(f'Max_workers set to {max_workers}')
@@ -561,7 +560,22 @@ class UrlwatchCommand:
                     lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
                     (stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
                 ):
-                    if job_state.exception is not None:
+                    if job_state.exception is None or isinstance(job_state.exception, NotModifiedError):
+                        if (
+                            len(job_state.new_data.strip()) == 0
+                            if hasattr(job_state, 'new_data')
+                            else len(job_state.old_data.strip()) == 0
+                        ):
+                            if self.urlwatch_config.verbose:
+                                yield (f'{job_state.job.index_number:3}: No data: {job_state.job!r}')
+                            else:
+                                pretty_name = job_state.job.pretty_name()
+                                location = job_state.job.get_location()
+                                if pretty_name != location:
+                                    yield (f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})')
+                                else:
+                                    yield (f'{job_state.job.index_number:3}: No data: {pretty_name}')
+                    else:
                         pretty_name = job_state.job.pretty_name()
                         location = job_state.job.get_location()
                         if pretty_name != location:
@@ -571,16 +585,6 @@ class UrlwatchCommand:
                             )
                         else:
                             yield (f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})')
-                    elif len(job_state.new_data.strip()) == 0:
-                        if self.urlwatch_config.verbose:
-                            yield (f'{job_state.job.index_number:3}: No data: {job_state.job!r}')
-                        else:
-                            pretty_name = job_state.job.pretty_name()
-                            location = job_state.job.get_location()
-                            if pretty_name != location:
-                                yield (f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})')
-                            else:
-                                yield (f'{job_state.job.index_number:3}: No data: {pretty_name}')
 
         start = time.perf_counter()
         if len(self.urlwatch_config.jobs_files) == 1:
@@ -589,7 +593,7 @@ class UrlwatchCommand:
             jobs_files = ['in the concatenation of the jobs files'] + [
                 f'• {file}' for file in self.urlwatch_config.jobs_files
             ]
-        header = '\n   '.join(['Jobs with errors or returning no data (after filters, if any)'] + jobs_files)
+        header = '\n   '.join(['Jobs with errors or returning no data (after unmodified filters, if any)'] + jobs_files)
 
         # extract subset of jobs to run if joblist CLI was set
         if self.urlwatcher.urlwatch_config.joblist:

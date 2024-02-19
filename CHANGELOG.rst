@@ -32,6 +32,32 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
+Version 3.18
+===================
+Unreleased
+
+Fixed
+-----
+* Fixed incorrect handling of HTTP client libraries when ``httpx`` is not installed (should graciously fallback to
+  ``requests``).  Reported by `drws <https://github.com/drws>`__ as an add-on to `issuse #66
+  <https://github.com/mborsetti/webchanges/issues/66>`__.
+
+Added
+-----
+* Job directive ``enabled`` to allow disabling of a job without removing or commenting it in the jobs file (contributed
+  by `James Hewitt <https://github.com/Jamstah>`__ `upstream <https://github.com/thp/urlwatch/pull/785>`__).
+* ``webhook`` reporter has a new ``rich_text`` config option for preformatted rich text for Slack (contributed
+  by `K̶e̶v̶i̶n̶ <https://github.com/vimagick>`__ `upstream <https://github.com/thp/urlwatch/pull/780>`__).
+
+Changed
+-------
+* Command line argument ``--errors`` now uses conditional requests to improve speed. Do not use to test newly modified
+  jobs since websites reporting no changes from the last snapshot stored by **webchanges** are skipped; use
+  ``--test`` instead.
+* If the ``simplejson`` library is installed, it will be used instead of the built-in ``json`` module (see
+  https://stackoverflow.com/questions/712791).
+
+
 Version 3.17.2
 ===================
 2023-12-11
@@ -258,7 +284,7 @@ Added
   file, and the command line arguments ``--database-engine`` and ``--max-snapshots`` are used to override such
   settings. See documentation for more information. Suggested by `jprokos <https://github.com/jprokos>`__ in `#43
   <https://github.com/mborsetti/webchanges/issues/43>`__.
-* New configuration setting ``empty-diff`` within the ``display`` configuration for backwards compatibility only:
+* New configuration setting ``empty_diff`` within the ``display`` configuration for backwards compatibility only:
   use the ``additions_only`` job directive instead to achieve the same result. Reported by
   `bbeevvoo <https://github.com/bbeevvoo>`__ in `#47 <https://github.com/mborsetti/webchanges/issues/47>`__.
 * Aliased the command line arguments ``--gc-cache`` with ``--gc-database``, ``--clean-cache`` with ``--clean-database``

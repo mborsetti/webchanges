@@ -112,7 +112,7 @@ class CommandConfig(BaseConfig):
             '-V',
             '--version',
             action='version',
-            version=f'{__project_name__} {__version__}\n\n'
+            version=f'{__project_name__} {__version__}\n'
             f"Run '{__project_name__} --check-new' to check if a new release is available.",
         )
         parser.add_argument(

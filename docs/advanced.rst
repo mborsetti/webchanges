@@ -289,6 +289,52 @@ You can now run a :program:`webchanges` job defined like this:
    user_data_dir: ~/chrome_user_data_webchanges
 
 
+.. _overriding_content_encoding:
+
+Overriding the content encoding
+-------------------------------
+(rare) For web pages with missing or incorrect ``'Content-type'`` HTTP header or whose encoding cannot be
+`correctly guessed <https://docs.python-requests.org/en/master/api/#requests.Response.apparent_encoding>`__
+by the `chardet <https://chardet.readthedocs.io/en/latest/faq.html#what-is-character-encoding-auto-detection>`__
+library we use, it may be useful to explicitly specify an encoding from Python’s `Standard Encodings
+<https://docs.python.org/3/library/codecs.html#standard-encodings>`__ list like this:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   encoding: utf-8
+
+
+Monitoring the HTTP response status code
+----------------------------------------
+To monitor the `HTTP response status code <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status>`__ of a resource
+and be notified when it changes, use an external command like `curl <https://curl.haxx.se/>`__ to extract it. Here's a
+job example:
+
+.. code-block:: yaml
+
+   command: curl --silent --output /dev/null --write-out '%{response_code}' https://example.com
+   name: Example.com response status code
+   note: Requires curl
+
+
+Selecting recipients by individual job
+--------------------------------------
+Right now, reporter-related configuration per job isn't possible.
+
+To achieve this, you have to rely on having multiple configurations and/or set up mailing lists or something. Because
+reports are grouped (so there's only one notification sent out if both are changed) it wouldn't even be possible
+without some additional logic to split reports in those cases. Also, there are some reporters that don't have the
+concept of a "recipient".
+
+
+Creating job urls based on keywords
+-----------------------------------
+:program:`webchanges` does not support arrays and loops to generate jobs (e.g. to check different pricing of a set of
+products on a set of shots). The best way to do this is to use some template language outside of
+:program:`webchanges` and let it generate the ``urls.yaml`` file from that template.
+
+
 .. _use_browser_block_elements:
 
 .. role:: strike
@@ -336,32 +382,3 @@ or like this in the config file for all ``use_browser: true`` jobs:
          - font
          - image
          - media
-
-
-.. _overriding_content_encoding:
-
-Overriding the content encoding
--------------------------------
-(rare) For web pages with missing or incorrect ``'Content-type'`` HTTP header or whose encoding cannot be
-`correctly guessed <https://docs.python-requests.org/en/master/api/#requests.Response.apparent_encoding>`__
-by the `chardet <https://chardet.readthedocs.io/en/latest/faq.html#what-is-character-encoding-auto-detection>`__
-library we use, it may be useful to explicitly specify an encoding from Python’s `Standard Encodings
-<https://docs.python.org/3/library/codecs.html#standard-encodings>`__ list like this:
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   encoding: utf-8
-
-
-Monitoring the HTTP response status code
-----------------------------------------
-To monitor the `HTTP response status code <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status>`__ of a resource
-and be notified when it changes, use an external command like `curl <https://curl.haxx.se/>`__ to extract it. Here's a
-job example:
-
-.. code-block:: yaml
-
-   command: curl --silent --output /dev/null --write-out '%{response_code}' https://example.com
-   name: Example.com response status code
-   note: Requires curl

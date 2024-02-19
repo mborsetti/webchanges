@@ -115,7 +115,6 @@ Internally, this type of job has the attribute ``kind: url``.
    Added support for ``ftp://`` URIs.
 
 
-
 .. _use_browser:
 
 JavaScript rendering (``use_browser: true``)
@@ -185,7 +184,6 @@ Required directives
 -------------------
 
 
-
 .. _ulr:
 
 url
@@ -198,7 +196,6 @@ Optional directives (all ``url`` jobs)
 The following optional directives are available for all ``url`` jobs:
 
 
-
 .. _use_browser_directive:
 
 use_browser
@@ -207,7 +204,6 @@ Whether to use a Chrome web browser (true/false). Defaults to false.
 
 If true, it renders the URL via a JavaScript-enabled web browser and extracts the HTML after rendering (see
 :ref:`above <use_browser>` for important information).
-
 
 
 .. _compared_versions:
@@ -227,7 +223,6 @@ for this directive to run successfully (default is 4) (see :ref:`here<max-snapsh
 .. versionadded:: 3.10.2
 
 
-
 .. _cookies:
 
 cookies
@@ -239,6 +234,14 @@ See examples :ref:`here <cookies>`.
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
+
+.. _enabled:
+
+enabled
+^^^^^^^
+Convenience setting to disable running the job while leaving it in the jobs file (true/false).  Defaults to true.
+
+.. versionadded:: 3.18
 
 
 .. _headers:
@@ -257,16 +260,15 @@ contents of the :ref:`referer <referer>` directive if specified.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
-
 .. _http_client:
 
 http_client
 ^^^^^^^^^^^
-The Python client library to be used, either `HTTPX <https://www.python-httpx.org/>`__ or `requests
+The Python HTTP client library to be used, either `HTTPX <https://www.python-httpx.org/>`__ or `requests
 <https://requests.readthedocs.io/en/latest/>`__. Defaults to ``HTTPX``.
 
 We use ``HTTPX`` as some web servers will refuse a connection or serve an error if a connection is attempted using an
-earlier version than the newer HTTP/2 network protocol.  Use ``http_client: requests`` to use the ``requests``
+earlier version than the newer HTTP/2 network protocol. Use ``http_client: requests`` to use the ``requests``
 library used by default in releases prior to 3.16 (but it only supports up to HTTP/1.1 protocol).
 
 Required packages
@@ -282,7 +284,6 @@ first install :ref:`additional Python packages <optional_packages>` as follows:
 .. versionadded:: 3.16
 
 
-
 .. _http_proxy:
 
 http_proxy
@@ -294,7 +295,6 @@ E.g. ``https://username:password@proxy.com:8080``.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
-
 
 
 .. _https_proxy:
@@ -310,19 +310,48 @@ E.g. ``https://username:password@proxy.com:8080``.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
+.. _data:
 
-.. _timeout:
+data
+^^^^
+The request payload to send with an `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__
+like ``POST`` (a dict or string).
 
-timeout
-^^^^^^^
-Override the default timeout, in seconds (a number). The default is 60 seconds for ``url`` jobs unless they have the
-directive ```use_browser: true``, in which case it's 90 seconds.  If set to 0, timeout is disabled.
+If the data is a dict, it will be sent `urlencoded <https://en.wikipedia.org/wiki/URL_encoding>`__ unless the
+directive ``data_as_json: true`` is also present, in which case it will be serialized as `JSON
+<https://en.wikipedia.org/wiki/JSON>`__ before being sent.
 
-See example :ref:`here <timeout>`.
+When this directive is specified:
 
-.. versionchanged:: 3.0
+* If no ``method`` directive is specified, it is set to ``POST``.
+* If no `Content-type
+  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` is specified, such header is
+  set to ``application/x-www-form-urlencoded`` unless the ``data_as_json: true`` directive is present, in which case
+  it is set to ``application/json``.
+
+See example :ref:`here <post>`.
+
+.. versionchanged:: 3.8
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
+.. versionchanged:: 3.15
+   Added ``data_as_json: true``.
+
+
+.. _data_as_json:
+
+data_as_json
+^^^^^^^^^^^^
+The data in ``data`` is to be sent in `JSON <https://en.wikipedia.org/wiki/JSON>`__ format (true/false). Defaults to
+false.
+
+If true, the ``data`` will be serialized into JSON before being sent, and if no `Content-type
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` is specified, such header is
+set to ``application/json``.
+
+See example within the directive ':ref:`data`'.
+
+.. versionadded:: 3.15
 
 
 .. _method:
@@ -343,45 +372,6 @@ unless the ``data`` directive, below, is set when it defaults to ``POST``.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
-
-.. _data:
-
-data
-^^^^
-Data to send with an `HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ like ``POST``
-(a dict or string).
-
-If the data is a dict, it will be sent urlencoded unless the directive ``data_as_json: true`` is also present, in which
-case it will be sent as JSON
-
-When this directive is specified:
-
-* If no ``method`` directive is specified, it is set to ``POST``.
-* If no `Content-type
-  <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` is specified, such header is
-  set to ``application/x-www-form-urlencoded`` unless the ``data_as_json: true`` directive is present, in which case
-  it will be set to ``application/json``.
-
-See example :ref:`here <post>`.
-
-.. versionchanged:: 3.8
-   Works for all ``url`` jobs, including those with ``use_browser: true``.
-
-.. versionchanged:: 3.15
-   Added ``data_as_json: true``.
-
-
-
-.. _data_as_json:
-
-data_as_json
-^^^^^^^^^^^^
-See explanation within directive :ref:`data`.
-
-.. versionadded:: 3.15
-
-
-
 .. _no_conditional_request:
 
 no_conditional_request
@@ -391,7 +381,6 @@ on all requests, making them conditional requests (see more :ref:`here <conditio
 (e.g. Google Flights) the ``If-Modified-Since`` will cause the website to hang or return invalid data, so you can
 disable conditional requests with the directive ``no_conditional_request: true`` to ensure it is not added to the
 query.
-
 
 
 .. _note:
@@ -410,6 +399,17 @@ Informational note added under the header in reports (a string).  Example:
 .. versionadded:: 3.2
 
 
+.. _ignore_cached:
+
+ignore_cached
+^^^^^^^^^^^^^
+Do not use cache control values (ETag/Last-Modified) (true/false). Defaults to false.
+
+Also see :ref:`no_conditional_request`.
+
+.. versionchanged:: 3.10
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
 
 .. _ignore_connection_errors:
 
@@ -421,33 +421,6 @@ See more :ref:`here <ignoring_http_connection_errors>`.
 
 .. versionchanged:: 3.5
    Works for all ``url`` jobs, including those with ``use_browser: true``.
-
-
-
-.. _ignore_timeout_errors:
-
-ignore_timeout_errors
-^^^^^^^^^^^^^^^^^^^^^
-Ignore error if caused by a timeout (true/false). Defaults to false.
-
-See more :ref:`here <ignoring_http_connection_errors>`.
-
-.. versionchanged:: 3.5
-   Works for all ``url`` jobs, including those with ``use_browser: true``.
-
-
-
-.. _ignore_too_many_redirects:
-
-ignore_too_many_redirects
-^^^^^^^^^^^^^^^^^^^^^^^^^
-Ignore error if caused by a redirect loop (true/false). Defaults to false.
-
-See more :ref:`here <ignoring_http_connection_errors>`.
-
-.. versionchanged:: 3.5
-   Works for all ``url`` jobs, including those with ``use_browser: true``.
-
 
 
 .. _ignore_http_error_codes:
@@ -466,16 +439,40 @@ See more :ref:`here <ignoring_http_connection_errors>`.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
+.. _ignore_timeout_errors:
 
-.. _ignore_cached:
+ignore_timeout_errors
+^^^^^^^^^^^^^^^^^^^^^
+Ignore error if caused by a timeout (true/false). Defaults to false.
 
-ignore_cached
-^^^^^^^^^^^^^
-Do not use cache control values (ETag/Last-Modified) (true/false). Defaults to false.
+See more :ref:`here <ignoring_http_connection_errors>`.
 
-Also see :ref:`no_conditional_request`.
+.. versionchanged:: 3.5
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
-.. versionchanged:: 3.10
+
+.. _ignore_too_many_redirects:
+
+ignore_too_many_redirects
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Ignore error if caused by a redirect loop (true/false). Defaults to false.
+
+See more :ref:`here <ignoring_http_connection_errors>`.
+
+.. versionchanged:: 3.5
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+
+.. _timeout:
+
+timeout
+^^^^^^^
+Override the default timeout, in seconds (a number). The default is 60 seconds for ``url`` jobs unless they have the
+directive ```use_browser: true``, in which case it's 90 seconds.  If set to 0, timeout is disabled.
+
+See example :ref:`here <timeout>`.
+
+.. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
@@ -485,7 +482,6 @@ Optional directives (without ``use_browser: true``)
 The following directives are available only for ``url`` jobs without ``use_browser: true``:
 
 
-
 .. _encoding:
 
 encoding
@@ -493,7 +489,6 @@ encoding
 Override the character encoding from the server or determined programmatically (a string).
 
 See more :ref:`here <overriding_content_encoding>`.
-
 
 
 .. _ignore_dh_key_too_small:
@@ -511,7 +506,6 @@ Set it as a last resort if you're getting a ``ssl.SSLError: [SSL: DH_KEY_TOO_SMA
 error and can't get the anyone to fix the security vulnerability on the server.
 
 .. versionadded:: 3.9.2
-
 
 
 .. _no_redirects:
@@ -548,7 +542,6 @@ Returns:
 .. versionadded:: 3.2.7
 
 
-
 .. _retries:
 
 retries
@@ -565,7 +558,6 @@ misconfigured server.
      - html2text:
 
 
-
 .. _ssl_no_verify:
 
 ssl_no_verify
@@ -576,16 +568,12 @@ See more :ref:`here <ignoring_tls_ssl_errors>`.
 
 
 
-
-
-
 Optional directives (only with ``use_browser: true``)
 -----------------------------------------------------
 The following directives are available only for ``url`` jobs with ``use_browser: true`` (i.e. using :program:`Chrome`):
 
 
-
-.. ignore_default_args:
+.. _ignore_default_args:
 
 ignore_default_args
 ^^^^^^^^^^^^^^^^^^^
@@ -604,7 +592,6 @@ Dangerous option; use with care. However, the following settings at times improv
 .. versionadded:: 3.10
 
 
-
 .. _ignore_https_errors:
 
 ignore_https_errors
@@ -612,6 +599,41 @@ ignore_https_errors
 Ignore HTTPS errors (true/false). Defaults to false.
 
 .. versionadded:: 3.0
+
+
+.. _initialization_js:
+
+initialization_js
+^^^^^^^^^^^^^^^^^^
+Only used with ``initialization_url``, executes the JavaScript after loading ```initialization_url`` and before
+navigating to ``url`` (a string). This could be useful to e.g. logging in when it's done by calling a JavaScript
+function.
+
+.. versionadded:: 3.10
+
+
+.. _initialization_url:
+
+initialization_url
+^^^^^^^^^^^^^^^^^^
+The browser will load the ``initialization_url`` before navigating to ``url`` (a string). This could be useful for
+monitoring pages on websites that rely on a state established when you first land on their "home" page.  Also see
+``initialization_js`` below.
+
+Note that all the ``wait_for_*`` directives are apply only after navigating to ``url``.
+
+.. versionadded:: 3.10
+
+
+.. _referer:
+
+referer
+^^^^^^^
+The referer header value (a string). If provided, it will take preference over the the `Referer
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header value set within the :ref:`headers`
+directive.
+
+.. versionadded:: 3.10
 
 
 .. _switches:
@@ -679,7 +701,7 @@ If ``wait_for_url`` is also used, ``wait_for_selector`` is applied after.
    Replaces ``wait_for`` with a selector or xpath string.
 
 
-.. wait_for_timeout:
+.. _wait_for_timeout:
 
 wait_for_timeout
 ^^^^^^^^^^^^^^^^^^^
@@ -740,40 +762,6 @@ The event of when to consider navigation succeeded (a string):
    ``networkidle0`` and ``networkidle2`` are replaced by ``networkidle``;  added ``commit``.
 
 
-.. _initialization_url:
-
-initialization_url
-^^^^^^^^^^^^^^^^^^
-The browser will load the ``initialization_url`` before navigating to ``url`` (a string). This could be useful for
-monitoring pages on websites that rely on a state established when you first land on their "home" page.  Also see
-``initialization_js`` below.
-
-Note that all the ``wait_for_*`` directives are apply only after navigating to ``url``.
-
-.. versionadded:: 3.10
-
-
-.. _initialization_js:
-
-initialization_js
-^^^^^^^^^^^^^^^^^^
-Only used with ``initialization_url``, executes the JavaScript after loading ```initialization_url`` and before
-navigating to ``url`` (a string). This could be useful to e.g. logging in when it's done by calling a JavaScript
-function.
-
-.. versionadded:: 3.10
-
-
-.. _referer:
-
-referer
-^^^^^^^
-The referer header value (a string). If provided, it will take preference over the the `Referer
-<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header value set within the :ref:`headers`
-directive.
-
-.. versionadded:: 3.10
-
 
 .. _command:
 
@@ -822,6 +810,120 @@ Optional directives (for all job types)
 These optional directives apply to all job types:
 
 
+.. _additions_only_(jobs):
+
+additions_only
+--------------
+Filter the unified diff output to keep only addition lines (no value required).
+
+See :ref:`here <additions_only>`.
+
+.. versionadded:: 3.0
+
+
+.. _deletions_only_(jobs):
+
+deletions_only
+--------------
+Filter the unified diff output to keep only deleted lines (no value required).
+
+See :ref:`here <deletions_only>`.
+
+.. versionadded:: 3.0
+
+
+.. _diff_filter:
+
+diff_filter
+-----------
+Filter(s) to be applied to the diff result (a list of dicts).
+
+See :ref:`here <diff_filters>`.
+
+Can be tested with ``--test-diff``.
+
+
+.. _diff_tool:
+
+diff_tool
+---------
+Command to an external tool for generating diff text (a string).
+
+Please see warning :ref:`above <important_note_for_command_jobs>` for file security required to run jobs with this
+directive in Linux.
+
+See example usage :ref:`here <word_based_differ>`.
+
+.. versionchanged:: 3.0.1
+   * Reports now show date/time of diffs generated using ``diff_tool``.
+   * Output from ``diff_tool: wdiff`` is colorized in html reports.
+
+
+.. _filter:
+
+filter
+------
+Filter(s) to apply to the data retrieved (a list of dicts).
+
+See :ref:`here <filters>`.
+
+Can be tested with ``--test``.
+
+
+.. _kind:
+
+kind
+----
+For Python programmers only, this is used to associate the job to a custom job Class defined in ``hooks.py``, by
+matching the contents of this directive to the ``__kind__`` variable of the custom Class.
+
+The three built-in job Classes are:
+
+- ``kind: url`` for ``url`` jobs without the ``browser`` directive;
+- ``kind: browser`` for ``url`` jobs with the ``browser: true`` directive;
+- ``kind: command`` for ``command`` jobs (formerly called ``shell``).
+
+
+.. _is_markdown:
+
+is_markdown
+-----------
+Data is in Markdown format (true/false). Defaults to false unless set by a filter such as ``html2text``.
+
+Tells the ``html`` report that the data is in Markdown format and should be reconstructed into HTML.
+
+
+.. _max_tries:
+
+max_tries
+---------
+Number of consecutive times the job has to fail before reporting an error (an integer). Defaults to 1.
+
+Due to legacy naming, this directive doesn't do what intuition would tell you it should do, rather, it tells
+:program:`webchanges` **not** to report a job error until the job has failed for the number of consecutive times of
+``max_tries``.
+
+Specifically, when a job fails for *any* reason, :program:`webchanges` increases an internal counter; it will report an
+error only when this counter reaches or exceeds the number of ``max_tries`` (default: 1, i.e. at the first error
+encountered). The internal counter is reset to 0 when the job succeeds.
+
+For example, if you set a job with ``max_tries: 12`` and run :program:`webchanges` every 5 minutes, you will only get
+notified after the job has failed every single time during the span of one hour (5 minutes * 12 = 60 minutes), and from
+then onwards at every run until the job succeeds again and the counter resets to 0.
+
+
+.. _monospace:
+
+monospace
+---------
+Data is to be reported using a monospace font (true/false). Defaults to false.
+
+When using an ``html`` report the data will be displayed using a monospace font. Useful e.g. for tabular text
+extracted by the ``pdf2text`` filter or for the output of the ``format-json`` filter.
+
+.. versionadded:: 3.9
+
+
 .. _name:
 
 name
@@ -854,120 +956,6 @@ webpage on your report.
 
 .. versionchanged:: 3.8
    Added support for ``command`` jobs; previously worked only with ``url`` jobs.
-
-
-.. _max_tries:
-
-max_tries
----------
-Number of consecutive times the job has to fail before reporting an error (an integer). Defaults to 1.
-
-Due to legacy naming, this directive doesn't do what intuition would tell you it should do, rather, it tells
-:program:`webchanges` **not** to report a job error until the job has failed for the number of consecutive times of
-``max_tries``.
-
-Specifically, when a job fails for *any* reason, :program:`webchanges` increases an internal counter; it will report an
-error only when this counter reaches or exceeds the number of ``max_tries`` (default: 1, i.e. at the first error
-encountered). The internal counter is reset to 0 when the job succeeds.
-
-For example, if you set a job with ``max_tries: 12`` and run :program:`webchanges` every 5 minutes, you will only get
-notified if the job has failed every single time during the span of one hour (5 minutes * 12 = 60 minutes) and from then
-onwards at every run until the job succeeds again.
-
-
-.. _filter:
-
-filter
-------
-Filter(s) to apply to the data retrieved (a list of dicts).
-
-See :ref:`here <filters>`.
-
-Can be tested with ``--test``.
-
-
-.. _diff_tool:
-
-diff_tool
----------
-Command to an external tool for generating diff text (a string).
-
-Please see warning :ref:`above <important_note_for_command_jobs>` for file security required to run jobs with this
-directive in Linux.
-
-See example usage :ref:`here <word_based_differ>`.
-
-.. versionchanged:: 3.0.1
-   * Reports now show date/time of diffs generated using ``diff_tool``.
-   * Output from ``diff_tool: wdiff`` is colorized in html reports.
-
-
-.. _diff_filter:
-
-diff_filter
------------
-Filter(s) to be applied to the diff result (a list of dicts).
-
-See :ref:`here <diff_filters>`.
-
-Can be tested with ``--test-diff``.
-
-
-.. _additions_only_(jobs):
-
-additions_only
---------------
-Filter the unified diff output to keep only addition lines (no value required).
-
-See :ref:`here <additions_only>`.
-
-.. versionadded:: 3.0
-
-
-.. _deletions_only_(jobs):
-
-deletions_only
---------------
-Filter the unified diff output to keep only deleted lines (no value required).
-
-See :ref:`here <deletions_only>`.
-
-.. versionadded:: 3.0
-
-
-.. _monospace:
-
-monospace
----------
-Data is to be reported using a monospace font (true/false). Defaults to false.
-
-When using an ``html`` report the data will be displayed using a monospace font. Useful e.g. for tabular text
-extracted by the ``pdf2text`` filter or for the output of the ``format-json`` filter.
-
-.. versionadded:: 3.9
-
-
-.. _is_markdown:
-
-is_markdown
------------
-Data is in Markdown format (true/false). Defaults to false unless set by a filter such as ``html2text``.
-
-Tells the ``html`` report that the data is in Markdown format and should be reconstructed into HTML.
-
-
-.. kind
-
-kind
-----
-For Python programmers only, this is used to associate the job to a custom job Class defined in ``hooks.py``, by
-matching the contents of this directive to the ``__kind__`` variable of the custom Class.
-
-The three built-in job Classes are:
-
-- ``kind: url`` for ``url`` jobs without the ``browser`` directive;
-- ``kind: browser`` for ``url`` jobs with the ``browser: true`` directive;
-- ``kind: command`` for ``command`` jobs (formerly called ``shell``).
 
 
 Setting default directives

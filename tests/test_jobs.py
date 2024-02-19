@@ -223,7 +223,7 @@ def test_run_ftp_job_needs_bytes() -> None:
     ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
 def test_check_etag(job_data: dict[str, Any], event_loop: AbstractEventLoop) -> None:
-    job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
+    job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
         data, etag = job.retrieve(job_state)
@@ -242,7 +242,7 @@ def test_check_etag_304_request(
     """Check for 304 Not Modified response."""
     if job_data.get('use_browser'):
         pytest.skip('Capturing of 304 cannot be implemented in Chrome')  # last tested with Chromium 89
-    job_data['url'] = 'https://github.githubassets.com/images/search-key-slash.svg'
+    job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
         if 'check__etag_304_etag' not in doctest_namespace:
@@ -581,3 +581,4 @@ def test_compared_versions() -> None:
             results.add(urlwatcher.report.job_states[-1].new_data)
             assert urlwatcher.report.job_states[-1].verb in {'new', 'changed'}
     print(0)
+    cache_storage.close()

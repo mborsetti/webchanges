@@ -1,3 +1,6 @@
+.. role:: underline
+    :class: underline
+
 .. _dependencies:
 
 ============
@@ -23,16 +26,18 @@ square brackets, like this::
 |                         | * Note: Google Chrome (if not present) will be auto-installed at first  |
 |                         |   run                                                                   |
 +-------------------------+-------------------------------------------------------------------------+
+| :underline:`Filters`                                                                              |
++-------------------------+-------------------------------------------------------------------------+
+| ``beautify`` filter     | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
+|                         | * `jsbeautifier <https://pypi.org/project/jsbeautifier/>`__ [#f2]_      |
+|                         | * `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ [#f3]_    |
++-------------------------+-------------------------------------------------------------------------+
 | ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
 | html2text filter        |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
 | ``html5lib`` parser for | * `html5lib <https://pypi.org/project/html5lib/>`__                     |
 | the bs4 method of the   |                                                                         |
 | html2text filter        |                                                                         |
-+-------------------------+-------------------------------------------------------------------------+
-| ``beautify`` filter     | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
-|                         | * `jsbeautifier <https://pypi.org/project/jsbeautifier/>`__ [#f2]_      |
-|                         | * `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ [#f3]_    |
 +-------------------------+-------------------------------------------------------------------------+
 | ``ical2text`` filter    | * `vobject <https://eventable.github.io/vobject/>`__                    |
 +-------------------------+-------------------------------------------------------------------------+
@@ -56,12 +61,11 @@ square brackets, like this::
 |                         | * For the ``pypdf`` filter when using the ``password`` sub-directive    |
 |                         |   to extract text from encrypted PDF files.                             |
 +-------------------------+-------------------------------------------------------------------------+
-| ``requests`` (to use    | * `httpx <https://www.python-httpx.org/>`__                             |
-| ``http_client:          |                                                                         |
-| requests`` in a job     |                                                                         |
-|                         |                                                                         |
+| :underline:`Differs`                                                                              |
 +-------------------------+-------------------------------------------------------------------------+
 | ``deepdiff`` differ     | * `deepdiff <https://github.com/seperman/deepdiff>`__                   |
++-------------------------+-------------------------------------------------------------------------+
+| :underline:`Reporters`                                                                            |
 +-------------------------+-------------------------------------------------------------------------+
 | ``matrix`` reporter     | * `matrix_client <https://github.com/matrix-org/matrix-python-sdk>`__   |
 +-------------------------+-------------------------------------------------------------------------+
@@ -71,7 +75,14 @@ square brackets, like this::
 +-------------------------+-------------------------------------------------------------------------+
 | ``xmpp`` reporter       | * `aioxmpp <https://github.com/horazont/aioxmpp>`__                     |
 +-------------------------+-------------------------------------------------------------------------+
+| :underline:`Others`                                                                               |
++-------------------------+-------------------------------------------------------------------------+
 | ``redis`` database      | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
++-------------------------+-------------------------------------------------------------------------+
+| ``requests`` (to use    | * `requests <https://requests.readthedocs.io/>`__                       |
+| ``http_client:          |                                                                         |
+| requests`` in a job)    |                                                                         |
+|                         |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
 | ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`__                       |
 | keyring storage         |                                                                         |
@@ -93,12 +104,14 @@ Installed packages
 ------------------
 These Python packages are installed automatically by :program:`pip` when installing :program:`webchanges`:
 
-* `colorama <https://github.com/tartley/colorama>`__  (only in Windows installations).
+* `colorama <https://github.com/tartley/colorama>`__ (only in Windows installations);
 * `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect);
+* `h2 <https://github.com/python-hyper/h2>`__;
 * `html2text <https://github.com/Alir3z4/html2text>`__;
+* `httpx <https://github.com/encode/httpx>`__;
 * `lxml <https://lxml.de>`__;
 * `markdown2 <https://github.com/trentm/python-markdown2>`__;
 * `msgpack <https://msgpack.org/>`__;
 * `platformdirs <https://github.com/platformdirs/platformdirs>`__;
 * `PyYAML <https://pyyaml.org/>`__;
-* `requests <https://requests.readthedocs.io/>`__;
+* `tzdata <https://tzdata.readthedocs.io/>`__ (only in Windows installations).

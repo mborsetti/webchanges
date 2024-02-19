@@ -103,55 +103,12 @@ or (text):
    -[More information...](https://www.iana.org/domains/example)
    ---------------------------------------------------------------------------
 
-Note: When using ``additions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
-course, this can be changed by specifying the key with the desired value in the job.
+Note: When using ``additions_only: true``, the directive :ref:`contextlines` (the number of context lines) is set to
+0 instead of the default 3; of course, this can be changed by specifying the directive with the desired value in the
+job.
 
 .. versionchanged:: 3.5
    Additions consisting of only empty lines are not reported.
-
-.. _deletions_only:
-
-deletions_only
---------------
-.. versionadded:: 3.0
-
-The ``deletions_only: true`` directive causes the report for that source to contain only lines that are deleted by the
-diff (no additions).
-
-Changes consisting exclusively of deleted empty lines are not reported.
-
-
-Example:
-
-.. code-block:: yaml
-
-   url: https://example.com/#del_only
-   deletions_only: true
-
-Output:
-
-.. image:: html_diff_filters_example_3.png
-  :width: 500
-  :alt: HTML reporter example output
-
-or (text):
-
-.. code-block::
-
-   ---------------------------------------------------------------------------
-   CHANGED: https://example.com/#del_only
-   ---------------------------------------------------------------------------
-   --- @   Sat, 12 Jul 2020 00:00:00 +0000
-   ... @   Sat, 12 Jul 2020 01:00:00 +0000
-   /**Comparison type: Deletions only**
-   @@ -1,2 +1,2 @@
-   -This is a line that has been deleted or changed
-
-Note: When using ``deletions_only: true``, the key :ref:`contextlines` (the number of context lines) is set to 0; of
-course, this can be changed by specifying the key with the desired value in the job.
-
-.. versionchanged:: 3.5
-   Deletions consisting of only empty lines are not reported.
 
 
 .. _contextlines:
@@ -218,3 +175,49 @@ Output:
     This is line 16
     This is line 17
     This is line 18
+
+
+.. _deletions_only:
+
+deletions_only
+--------------
+.. versionadded:: 3.0
+
+The ``deletions_only: true`` directive causes the report for that source to contain only lines that are deleted by the
+diff (no additions).
+
+Changes consisting exclusively of deleted empty lines are not reported.
+
+
+Example:
+
+.. code-block:: yaml
+
+   url: https://example.com/#del_only
+   deletions_only: true
+
+Output:
+
+.. image:: html_diff_filters_example_3.png
+  :width: 500
+  :alt: HTML reporter example output
+
+or (text):
+
+.. code-block::
+
+   ---------------------------------------------------------------------------
+   CHANGED: https://example.com/#del_only
+   ---------------------------------------------------------------------------
+   --- @   Sat, 12 Jul 2020 00:00:00 +0000
+   ... @   Sat, 12 Jul 2020 01:00:00 +0000
+   /**Comparison type: Deletions only**
+   @@ -1,2 +1,2 @@
+   -This is a line that has been deleted or changed
+
+Note: When using ``deletions_only: true``, the directive :ref:`contextlines` (the number of context lines) is set to
+0 instead of the default 3; of course, this can be changed by specifying the directive with the desired value in the
+job.
+
+.. versionchanged:: 3.5
+   Deletions consisting of only empty lines are not reported.
