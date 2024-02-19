@@ -34,7 +34,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
 
 Version 3.18
 ===================
-Unreleased
+2024-02-19
 
 Fixed
 -----
