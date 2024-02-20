@@ -45,17 +45,17 @@ except ImportError as e:
 
 logger = logging.getLogger(__name__)
 
-ConfigDisplay = TypedDict(
-    'ConfigDisplay',
+_ConfigDisplay = TypedDict(
+    '_ConfigDisplay',
     {
         'new': bool,
         'error': bool,
         'unchanged': bool,
-        'empty_diff': bool,
+        'empty-diff': bool,
     },
 )
-ConfigReportText = TypedDict(
-    'ConfigReportText',
+_ConfigReportText = TypedDict(
+    '_ConfigReportText',
     {
         'line_length': int,
         'details': bool,
@@ -64,8 +64,8 @@ ConfigReportText = TypedDict(
         'separate': bool,
     },
 )
-ConfigReportHtml = TypedDict(
-    'ConfigReportHtml',
+_ConfigReportHtml = TypedDict(
+    '_ConfigReportHtml',
     {
         'diff': Literal['unified', 'table'],
         'footer': bool,
@@ -73,8 +73,8 @@ ConfigReportHtml = TypedDict(
         'title': str,
     },
 )
-ConfigReportMarkdown = TypedDict(
-    'ConfigReportMarkdown',
+_ConfigReportMarkdown = TypedDict(
+    '_ConfigReportMarkdown',
     {
         'details': bool,
         'footer': bool,
@@ -82,21 +82,21 @@ ConfigReportMarkdown = TypedDict(
         'separate': bool,
     },
 )
-ConfigReportStdout = TypedDict(
-    'ConfigReportStdout',
+_ConfigReportStdout = TypedDict(
+    '_ConfigReportStdout',
     {
         'enabled': bool,
         'color': bool,
     },
 )
-ConfigReportBrowser = TypedDict(
-    'ConfigReportBrowser',
+_ConfigReportBrowser = TypedDict(
+    '_ConfigReportBrowser',
     {
         'enabled': bool,
     },
 )
-ConfigReportDiscord = TypedDict(
-    'ConfigReportDiscord',
+_ConfigReportDiscord = TypedDict(
+    '_ConfigReportDiscord',
     {
         'enabled': bool,
         'webhook_url': str,
@@ -106,8 +106,8 @@ ConfigReportDiscord = TypedDict(
         'max_message_length': Optional[int],
     },
 )
-ConfigReportEmailSmtp = TypedDict(
-    'ConfigReportEmailSmtp',
+_ConfigReportEmailSmtp = TypedDict(
+    '_ConfigReportEmailSmtp',
     {
         'host': str,
         'user': str,
@@ -117,14 +117,14 @@ ConfigReportEmailSmtp = TypedDict(
         'insecure_password': str,
     },
 )
-ConfigReportEmailSendmail = TypedDict(
-    'ConfigReportEmailSendmail',
+_ConfigReportEmailSendmail = TypedDict(
+    '_ConfigReportEmailSendmail',
     {
         'path': Union[str, Path],
     },
 )
-ConfigReportEmail = TypedDict(
-    'ConfigReportEmail',
+_ConfigReportEmail = TypedDict(
+    '_ConfigReportEmail',
     {
         'enabled': bool,
         'html': bool,
@@ -132,20 +132,20 @@ ConfigReportEmail = TypedDict(
         'from': str,
         'subject': str,
         'method': Literal['sendmail', 'smtp'],
-        'smtp': ConfigReportEmailSmtp,
-        'sendmail': ConfigReportEmailSendmail,
+        'smtp': _ConfigReportEmailSmtp,
+        'sendmail': _ConfigReportEmailSendmail,
     },
 )
-ConfigReportIfttt = TypedDict(
-    'ConfigReportIfttt',
+_ConfigReportIfttt = TypedDict(
+    '_ConfigReportIfttt',
     {
         'enabled': bool,
         'key': str,
         'event': str,
     },
 )
-ConfigReportMailgun = TypedDict(
-    'ConfigReportMailgun',
+_ConfigReportMailgun = TypedDict(
+    '_ConfigReportMailgun',
     {
         'enabled': bool,
         'region': str,
@@ -157,8 +157,8 @@ ConfigReportMailgun = TypedDict(
         'subject': str,
     },
 )
-ConfigReportMatrix = TypedDict(
-    'ConfigReportMatrix',
+_ConfigReportMatrix = TypedDict(
+    '_ConfigReportMatrix',
     {
         'enabled': bool,
         'homeserver': str,
@@ -166,8 +166,8 @@ ConfigReportMatrix = TypedDict(
         'room_id': str,
     },
 )
-ConfigReportProwl = TypedDict(
-    'ConfigReportProwl',
+_ConfigReportProwl = TypedDict(
+    '_ConfigReportProwl',
     {
         'enabled': bool,
         'api_key': str,
@@ -176,15 +176,15 @@ ConfigReportProwl = TypedDict(
         'subject': str,
     },
 )
-ConfigReportPushbullet = TypedDict(
-    'ConfigReportPushbullet',
+_ConfigReportPushbullet = TypedDict(
+    '_ConfigReportPushbullet',
     {
         'enabled': bool,
         'api_key': str,
     },
 )
-ConfigReportPushover = TypedDict(
-    'ConfigReportPushover',
+_ConfigReportPushover = TypedDict(
+    '_ConfigReportPushover',
     {
         'enabled': bool,
         'app': str,
@@ -194,15 +194,15 @@ ConfigReportPushover = TypedDict(
         'priority': str,
     },
 )
-ConfigReportRunCommand = TypedDict(
-    'ConfigReportRunCommand',
+_ConfigReportRunCommand = TypedDict(
+    '_ConfigReportRunCommand',
     {
         'enabled': bool,
         'command': str,
     },
 )
-ConfigReportTelegram = TypedDict(
-    'ConfigReportTelegram',
+_ConfigReportTelegram = TypedDict(
+    '_ConfigReportTelegram',
     {
         'enabled': bool,
         'bot_token': str,
@@ -210,8 +210,8 @@ ConfigReportTelegram = TypedDict(
         'silent': bool,
     },
 )
-ConfigReportWebhook = TypedDict(
-    'ConfigReportWebhook',
+_ConfigReportWebhook = TypedDict(
+    '_ConfigReportWebhook',
     {
         'enabled': bool,
         'markdown': bool,
@@ -220,8 +220,8 @@ ConfigReportWebhook = TypedDict(
         'max_message_length': Optional[int],
     },
 )
-ConfigReportXmpp = TypedDict(
-    'ConfigReportXmpp',
+_ConfigReportXmpp = TypedDict(
+    '_ConfigReportXmpp',
     {
         'enabled': bool,
         'sender': str,
@@ -230,31 +230,31 @@ ConfigReportXmpp = TypedDict(
     },
 )
 
-ConfigReport = TypedDict(
-    'ConfigReport',
+_ConfigReport = TypedDict(
+    '_ConfigReport',
     {
         'tz': Optional[str],
-        'text': ConfigReportText,
-        'html': ConfigReportHtml,
-        'markdown': ConfigReportMarkdown,
-        'stdout': ConfigReportStdout,
-        'browser': ConfigReportBrowser,
-        'discord': ConfigReportDiscord,
-        'email': ConfigReportEmail,
-        'ifttt': ConfigReportIfttt,
-        'mailgun': ConfigReportMailgun,
-        'matrix': ConfigReportMatrix,
-        'prowl': ConfigReportProwl,
-        'pushbullet': ConfigReportPushbullet,
-        'pushover': ConfigReportPushover,
-        'run_command': ConfigReportRunCommand,
-        'telegram': ConfigReportTelegram,
-        'webhook': ConfigReportWebhook,
-        'xmpp': ConfigReportXmpp,
+        'text': _ConfigReportText,
+        'html': _ConfigReportHtml,
+        'markdown': _ConfigReportMarkdown,
+        'stdout': _ConfigReportStdout,
+        'browser': _ConfigReportBrowser,
+        'discord': _ConfigReportDiscord,
+        'email': _ConfigReportEmail,
+        'ifttt': _ConfigReportIfttt,
+        'mailgun': _ConfigReportMailgun,
+        'matrix': _ConfigReportMatrix,
+        'prowl': _ConfigReportProwl,
+        'pushbullet': _ConfigReportPushbullet,
+        'pushover': _ConfigReportPushover,
+        'run_command': _ConfigReportRunCommand,
+        'telegram': _ConfigReportTelegram,
+        'webhook': _ConfigReportWebhook,
+        'xmpp': _ConfigReportXmpp,
     },
 )
-ConfigJobDefaults = TypedDict(
-    'ConfigJobDefaults',
+_ConfigJobDefaults = TypedDict(
+    '_ConfigJobDefaults',
     {
         '_note': str,
         'all': dict[str, Any],
@@ -262,31 +262,32 @@ ConfigJobDefaults = TypedDict(
         'browser': dict[str, Any],
         'command': dict[str, Any],
     },
+    total=False,
 )
-ConfigDatabase = TypedDict(
-    'ConfigDatabase',
+_ConfigDatabase = TypedDict(
+    '_ConfigDatabase',
     {
         'engine': Union[Literal['sqlite3', 'redis', 'minidb', 'textfiles'], str],
         'max_snapshots': int,
     },
 )
-Config = TypedDict(
-    'Config',
+_Config = TypedDict(
+    '_Config',
     {
-        'display': ConfigDisplay,
-        'report': ConfigReport,
-        'job_defaults': ConfigJobDefaults,
-        'database': ConfigDatabase,
+        'display': _ConfigDisplay,
+        'report': _ConfigReport,
+        'job_defaults': _ConfigJobDefaults,
+        'database': _ConfigDatabase,
         'footnote': Optional[str],
     },
 )
 
-DEFAULT_CONFIG: Config = {
+DEFAULT_CONFIG: _Config = {
     'display': {  # select whether the report include the categories below
         'new': True,
         'error': True,
         'unchanged': False,
-        'empty_diff': True,
+        'empty-diff': True,
     },
     'report': {
         'tz': None,  # the timezone as a IANA time zone name, e.g. 'America/Los_Angeles', or null for machine's
@@ -610,10 +611,10 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 class YamlConfigStorage(BaseYamlFileStorage):
     """Class for configuration file (is a YAML textual file)."""
 
-    config: Config = {}  # type: ignore[typeddict-item]
+    config: _Config = {}  # type: ignore[typeddict-item]
 
     @staticmethod
-    def dict_deep_difference(d1: Config, d2: Config, ignore_underline_keys: bool = False) -> Config:
+    def dict_deep_difference(d1: _Config, d2: _Config, ignore_underline_keys: bool = False) -> _Config:
         """Recursively find elements in the first dict that are not in the second.
 
         :param d1: The first dict.
@@ -622,7 +623,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :return: A dict with all the elements on the first dict that are not in the second.
         """
 
-        def _sub_dict_deep_difference(d1_: Config, d2_: Config) -> Config:
+        def _sub_dict_deep_difference(d1_: _Config, d2_: _Config) -> _Config:
             """Recursive sub-function to find elements in the first dict that are not in the second.
 
             :param d1_: The first dict.
@@ -644,7 +645,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         return _sub_dict_deep_difference(copy.deepcopy(d1), d2)
 
     @staticmethod
-    def dict_deep_merge(source: Config, destination: Config) -> Config:
+    def dict_deep_merge(source: _Config, destination: _Config) -> _Config:
         """Recursively deep merges source dict into destination dict.
 
         :param source: The first dict.
@@ -654,7 +655,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         # https://stackoverflow.com/a/20666342
 
-        def _sub_dict_deep_merge(source_: Config, destination_: Config) -> Config:
+        def _sub_dict_deep_merge(source_: _Config, destination_: _Config) -> _Config:
             """Recursive sub-function to merges source_ dict into destination_ dict.
 
             :param source_: The first dict.
@@ -673,7 +674,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         return _sub_dict_deep_merge(source, copy.deepcopy(destination))
 
-    def check_for_unrecognized_keys(self, config: Config) -> None:
+    def check_for_unrecognized_keys(self, config: _Config) -> None:
         """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError.
 
         :param config: The configuration.
@@ -699,7 +700,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
         if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
             config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
-        extras: Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG, ignore_underline_keys=True)
+        extras: _Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG, ignore_underline_keys=True)
         if extras.get('report') and 'hooks' in sys.modules:
             # skip reports added by hooks
             for name, obj in inspect.getmembers(sys.modules['hooks'], inspect.isclass):
@@ -715,7 +716,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             )
 
     @staticmethod
-    def replace_none_keys(config: Config) -> None:
+    def replace_none_keys(config: _Config) -> None:
         """Fixes None keys in loaded config that should be empty dicts instead."""
         if 'job_defaults' not in config:
             config['job_defaults'] = DEFAULT_CONFIG['job_defaults']
@@ -742,7 +743,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         :param args: None used.
         """
-        config: Config = self.parse(self.filename)
+        config: _Config = self.parse(self.filename)
 
         if config:
             self.replace_none_keys(config)

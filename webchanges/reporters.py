@@ -54,37 +54,37 @@ if TYPE_CHECKING:
     from webchanges.handler import JobState, Report
     from webchanges.jobs import JobBase
     from webchanges.storage import (
-        ConfigReportBrowser,
-        ConfigReportDiscord,
-        ConfigReportEmail,
-        ConfigReportIfttt,
-        ConfigReportMailgun,
-        ConfigReportMatrix,
-        ConfigReportProwl,
-        ConfigReportPushbullet,
-        ConfigReportPushover,
-        ConfigReportRunCommand,
-        ConfigReportStdout,
-        ConfigReportTelegram,
-        ConfigReportWebhook,
-        ConfigReportXmpp,
+        _ConfigReportBrowser,
+        _ConfigReportDiscord,
+        _ConfigReportEmail,
+        _ConfigReportIfttt,
+        _ConfigReportMailgun,
+        _ConfigReportMatrix,
+        _ConfigReportProwl,
+        _ConfigReportPushbullet,
+        _ConfigReportPushover,
+        _ConfigReportRunCommand,
+        _ConfigReportStdout,
+        _ConfigReportTelegram,
+        _ConfigReportWebhook,
+        _ConfigReportXmpp,
     )
 
-    ConfigReportersList = Union[
-        ConfigReportBrowser,
-        ConfigReportDiscord,
-        ConfigReportEmail,
-        ConfigReportIfttt,
-        ConfigReportMailgun,
-        ConfigReportMatrix,
-        ConfigReportProwl,
-        ConfigReportPushbullet,
-        ConfigReportPushover,
-        ConfigReportRunCommand,
-        ConfigReportStdout,
-        ConfigReportTelegram,
-        ConfigReportWebhook,
-        ConfigReportXmpp,
+    _ConfigReportersList = Union[
+        _ConfigReportBrowser,
+        _ConfigReportDiscord,
+        _ConfigReportEmail,
+        _ConfigReportIfttt,
+        _ConfigReportMailgun,
+        _ConfigReportMatrix,
+        _ConfigReportProwl,
+        _ConfigReportPushbullet,
+        _ConfigReportPushover,
+        _ConfigReportRunCommand,
+        _ConfigReportStdout,
+        _ConfigReportTelegram,
+        _ConfigReportWebhook,
+        _ConfigReportXmpp,
     ]
 
 try:
@@ -133,7 +133,7 @@ class ReporterBase(metaclass=TrackSubClasses):
     def __init__(
         self,
         report: Report,
-        config: ConfigReportersList,
+        config: _ConfigReportersList,
         job_states: list[JobState],
         duration: float,
         jobs_files: Optional[list[Path]] = None,
@@ -167,7 +167,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         :returns: The typecasted object.
         """
         if hasattr(othercls, '__kind__'):
-            config: ConfigReportersList = self.report.config['report'][
+            config: _ConfigReportersList = self.report.config['report'][
                 othercls.__kind__  # type: ignore[literal-required]
             ]
         else:
@@ -263,7 +263,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
-            cfg: ConfigReportersList = report.config['report'].get(  # type: ignore[misc] # for PyCharm
+            cfg: _ConfigReportersList = report.config['report'].get(  # type: ignore[misc] # for PyCharm
                 name, {}  # type: ignore[assignment]
             )
             if cfg.get('enabled', False):
@@ -1028,7 +1028,7 @@ class StdoutReporter(TextReporter):
 
     __kind__ = 'stdout'
 
-    config: ConfigReportStdout
+    config: _ConfigReportStdout
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -1096,7 +1096,7 @@ class EMailReporter(TextReporter):
 
     __kind__ = 'email'
 
-    config: ConfigReportEmail
+    config: _ConfigReportEmail
 
     def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
         body_text = '\n'.join(super().submit())
@@ -1140,7 +1140,7 @@ class IFTTTReport(TextReporter):
 
     __kind__ = 'ifttt'
 
-    config: ConfigReportIfttt
+    config: _ConfigReportIfttt
 
     def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
         webhook_url = 'https://maker.ifttt.com/trigger/{event}/with/key/{key}'.format(**self.config)
@@ -1199,7 +1199,7 @@ class PushoverReport(WebServiceReporter):
 
     __kind__ = 'pushover'
 
-    config: ConfigReportPushover
+    config: _ConfigReportPushover
 
     def web_service_get(self) -> 'chump.User':
         if isinstance(chump, str):
@@ -1231,7 +1231,7 @@ class PushbulletReport(WebServiceReporter):
 
     __kind__ = 'pushbullet'
 
-    config: ConfigReportPushbullet
+    config: _ConfigReportPushbullet
 
     def web_service_get(self) -> 'Pushbullet':
         if isinstance(Pushbullet, str):
@@ -1248,7 +1248,7 @@ class MailgunReporter(TextReporter):
 
     __kind__ = 'mailgun'
 
-    config: ConfigReportMailgun
+    config: _ConfigReportMailgun
 
     def submit(self) -> Optional[str]:  # type: ignore[override]
         region = self.config['region']
@@ -1308,7 +1308,7 @@ class TelegramReporter(MarkdownReporter):
 
     __kind__ = 'telegram'
 
-    config: ConfigReportTelegram
+    config: _ConfigReportTelegram
 
     def submit(self, max_length: int = 4096, **kwargs: Any) -> None:  # type: ignore[override]
         """Submit report."""
@@ -1463,7 +1463,7 @@ class DiscordReporter(TextReporter):
 
     __kind__ = 'discord'
 
-    config: ConfigReportDiscord
+    config: _ConfigReportDiscord
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -1537,7 +1537,7 @@ class WebhookReporter(TextReporter):
 
     __kind__ = 'webhook'
 
-    config: ConfigReportWebhook
+    config: _ConfigReportWebhook
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -1627,7 +1627,7 @@ class MatrixReporter(MarkdownReporter):
 
     __kind__ = 'matrix'
 
-    config: ConfigReportMatrix
+    config: _ConfigReportMatrix
     MAX_LENGTH = 16384
 
     def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> None:  # type: ignore[override]
@@ -1668,7 +1668,7 @@ class XMPPReporter(TextReporter):
 
     __kind__ = 'xmpp'
 
-    config: ConfigReportXmpp
+    config: _ConfigReportXmpp
     MAX_LENGTH = 262144
 
     def submit(self) -> None:  # type: ignore[override]
@@ -1692,7 +1692,7 @@ class BrowserReporter(HtmlReporter):
 
     __kind__ = 'browser'
 
-    config: ConfigReportBrowser
+    config: _ConfigReportBrowser
 
     def submit(self) -> None:  # type: ignore[override]
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
@@ -1779,7 +1779,7 @@ class ProwlReporter(TextReporter):
 
     __kind__ = 'prowl'
 
-    config: ConfigReportProwl
+    config: _ConfigReportProwl
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
@@ -1834,7 +1834,7 @@ class RunCommandReporter(TextReporter):
 
     __kind__ = 'run_command'
 
-    config: ConfigReportRunCommand
+    config: _ConfigReportRunCommand
 
     def submit(self) -> None:  # type: ignore[override]
         if not self.config['command']:

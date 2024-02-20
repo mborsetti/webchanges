@@ -1,5 +1,6 @@
 """Test running of jobs.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -23,7 +24,7 @@ from webchanges.config import CommandConfig
 from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifiedError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, Config, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import _Config, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -472,7 +473,7 @@ def test_shell_job_without_kind() -> None:
 def test_with_defaults() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    config: Config = {'job_defaults': {'all': {'timeout': 999}}}  # type: ignore[typeddict-item]
+    config: _Config = {'job_defaults': {'all': {'timeout': 999}}}  # type: ignore[typeddict-item]
     job = job.with_defaults(config)
     assert job.timeout == 999
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
@@ -483,7 +484,7 @@ def test_with_defaults_headers() -> None:
     override those more generic (i.e. ``all``)."""
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    config: Config = {  # type: ignore[typeddict-item]
+    config: _Config = {  # type: ignore[typeddict-item]
         'job_defaults': {
             'all': {'headers': {'a': 1, 'b': 2}},
             'url': {'headers': {'b': 3, 'c': 4}},

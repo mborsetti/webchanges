@@ -39,7 +39,7 @@ except ImportError:
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from webchanges.handler import JobState
-    from webchanges.storage import Config
+    from webchanges.storage import _Config
 
 try:
     import httpx
@@ -396,7 +396,7 @@ class JobBase(metaclass=TrackSubClasses):
                             if hasattr(self, key) and subkey not in getattr(self, key):
                                 getattr(self, key)[subkey] = subvalue
 
-    def with_defaults(self, config: Config) -> 'JobBase':
+    def with_defaults(self, config: _Config) -> 'JobBase':
         """Obtain a Job object that also contains defaults from the configuration.
 
         :param config: The configuration as a dict.

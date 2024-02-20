@@ -45,7 +45,7 @@ from zoneinfo import ZoneInfo  # not available in Python < 3.9
 if TYPE_CHECKING:
     from webchanges.jobs import JobBase
     from webchanges.main import Urlwatch
-    from webchanges.storage import CacheStorage, Config
+    from webchanges.storage import _Config, CacheStorage
 
 logger = logging.getLogger(__name__)
 
@@ -545,7 +545,7 @@ class Report:
 
         :param urlwatch: The Urlwatch object with the program configuration information.
         """
-        self.config: Config = urlwatch.config_storage.config
+        self.config: _Config = urlwatch.config_storage.config
 
     def _result(self, verb: str, job_state: JobState) -> None:
         """Logs error and appends the verb to the job_state.
@@ -623,7 +623,7 @@ class Report:
             ):
                 if (
                     job_state.verb == 'changed'
-                    and not self.config['display'].get('empty_diff', True)
+                    and not self.config['display'].get('empty-diff', True)
                     and job_state.get_diff() == ''
                 ):
                     continue

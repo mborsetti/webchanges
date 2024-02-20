@@ -70,8 +70,8 @@ from webchanges.util import dur_text, edit_file, import_module_from_source
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from webchanges.reporters import ConfigReportersList
-    from webchanges.storage import ConfigReportEmail, ConfigReportEmailSmtp, ConfigReportTelegram, ConfigReportXmpp
+    from webchanges.reporters import _ConfigReportersList
+    from webchanges.storage import _ConfigReportEmail, _ConfigReportEmailSmtp, _ConfigReportTelegram, _ConfigReportXmpp
 
 
 class UrlwatchCommand:
@@ -733,7 +733,7 @@ class UrlwatchCommand:
         return result
 
     def check_telegram_chats(self) -> None:
-        config: ConfigReportTelegram = self.urlwatcher.config_storage.config['report']['telegram']
+        config: _ConfigReportTelegram = self.urlwatcher.config_storage.config['report']['telegram']
 
         bot_token = config['bot_token']
         if not bot_token:
@@ -822,7 +822,7 @@ class UrlwatchCommand:
             print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
             return 1
 
-        cfg: ConfigReportersList = self.urlwatcher.config_storage.config['report'][
+        cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][
             reporter_name  # type: ignore[literal-required]
         ]
         if job_state:  # we want a full report
@@ -885,8 +885,8 @@ class UrlwatchCommand:
         return 0
 
     def check_smtp_login(self) -> None:
-        config: ConfigReportEmail = self.urlwatcher.config_storage.config['report']['email']
-        smtp_config: ConfigReportEmailSmtp = config['smtp']
+        config: _ConfigReportEmail = self.urlwatcher.config_storage.config['report']['email']
+        smtp_config: _ConfigReportEmailSmtp = config['smtp']
 
         success = True
 
@@ -937,7 +937,7 @@ class UrlwatchCommand:
         self._exit(0)
 
     def check_xmpp_login(self) -> None:
-        xmpp_config: ConfigReportXmpp = self.urlwatcher.config_storage.config['report']['xmpp']
+        xmpp_config: _ConfigReportXmpp = self.urlwatcher.config_storage.config['report']['xmpp']
 
         success = True
 
