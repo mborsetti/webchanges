@@ -32,9 +32,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
-Version 3.19rc0
+Version 3.19
 ===================
-Unreleased
+2024-02-28
 
 Fixed
 -----
