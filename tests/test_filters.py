@@ -12,11 +12,11 @@ from typing import Any, Union
 import pytest
 import yaml
 from _pytest._code import ExceptionInfo
-from reporters import HtmlReporter
 
 from webchanges.filters import FilterBase, Html2TextFilter
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase, UrlJob
+from webchanges.reporters import HtmlReporter
 from webchanges.storage import CacheDirStorage
 
 logger = logging.getLogger(__name__)
@@ -372,7 +372,7 @@ def test_html2text_roundtrip() -> None:
     pytest.xfail('Not working due to an html2text bug')
     html = '1 | <a href="https://www.example.com">1</a><br><strong>2 | <a href="https://www.example.com">2</a></strong>'
     text = Html2TextFilter(FakeJob(), None).filter(html, {})  # type: ignore[arg-type]
-    reporter = HtmlReporter({}, {}, {}, 0)
+    reporter = HtmlReporter({}, {}, {}, 0)  # type: ignore[arg-type]
     html2_lines = []
     for line in text.splitlines():
         html2_lines.append(
