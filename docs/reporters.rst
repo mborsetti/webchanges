@@ -78,8 +78,8 @@ Reporters are based on :ref:`reports <reports>`, as follows, and inherit that re
 .. inheritance-ascii-tree:: webchanges.reporters.ReporterBase
 
 .. note::
-   The ``email`` reporter also inherits from the ``html`` report when setting its ``html`` option to ``true``
-   (default).
+   Even though the ``email`` reporter is listed under ``text`` for historical reason, it also inherits from the
+   ``html`` report when its ``html`` option is set to ``true`` (default).
 
 
 .. _tz:

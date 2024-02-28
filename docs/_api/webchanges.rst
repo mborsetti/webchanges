@@ -15,5 +15,4 @@ webchanges package
    webchanges.storage
    webchanges.util
    webchanges.worker
-   webchanges._vendored
    exceptions

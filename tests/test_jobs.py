@@ -89,6 +89,7 @@ TEST_JOBS = [
             'block_elements': ['stylesheet', 'font', 'image', 'media'],
             'cookies': {'X-test': '', 'X-test-2': ''},
             'headers': {'Accept-Language': 'en-US,en'},
+            'init_script': "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });",
             'ignore_https_errors': False,
             'switches': ['--window-size=1298,1406'],
             'timeout': 15,

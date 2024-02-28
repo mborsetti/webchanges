@@ -352,8 +352,8 @@ products on a set of shots). The best way to do this is to use some template lan
 
 If you're running a browser job (``use_browser: true``) and not interested in all elements of a website, you can skip
 downloading the ones that you don't care, paying attention that some elements may be required for the correct rendering
-of the website (always test!). Typical elements to skip include ``stylesheet``, ``font``, ``image``, and ``media``, and
-they can be specified like this on a job-by-job basis:
+of the website (always test!). Typical elements to skip include ``stylesheet``, ``font``, ``image``, ``media``, and
+``other``, and they can be specified like this on a job-by-job basis:
 
 .. code-block:: yaml
    :class: strike
@@ -367,6 +367,7 @@ they can be specified like this on a job-by-job basis:
      - font
      - image
      - media
+     - other
 
 .. rst-class:: strike
 
@@ -382,3 +383,21 @@ or like this in the config file for all ``use_browser: true`` jobs:
          - font
          - image
          - media
+         - other
+
+The full list of supported resources is the following (from `here
+<https://playwright.dev/docs/api/class-request#request-resource-type>`__):
+
+- ``document``
+- ``stylesheet``
+- ``image``
+- ``media``
+- ``font``
+- ``script``
+- ``texttrack``
+- ``xhr``
+- ``fetch``
+- ``eventsource``
+- ``websocket``
+- ``manifest``
+- ``other``

@@ -44,6 +44,7 @@ if TYPE_CHECKING:
 try:
     import httpx
 except ImportError:
+    print("Required package 'httpx' not found; will attempt to run using 'requests'")
     httpx = None  # type: ignore[assignment]
 
 try:
@@ -145,6 +146,7 @@ class JobBase(metaclass=TrackSubClasses):
     ignore_https_errors: Optional[bool] = None
     ignore_timeout_errors: Optional[bool] = None
     ignore_too_many_redirects: Optional[bool] = None
+    init_script: Optional[str] = None  # Playwright
     initialization_js: Optional[str] = None  # Playwright
     initialization_url: Optional[str] = None  # Playwright
     is_markdown: Optional[bool] = None
@@ -387,7 +389,7 @@ class JobBase(metaclass=TrackSubClasses):
             # merge defaults from configuration (including dicts) into Job attributes without overwriting them
             for key, value in defaults.items():
                 if key in self.__optional__:
-                    if getattr(self, key) is None:
+                    if getattr(self, key) is None:  # for speed
                         setattr(self, key, value)
                     elif isinstance(defaults[key], (dict, CaseInsensitiveDict)) and isinstance(
                         getattr(self, key), (dict, CaseInsensitiveDict)
@@ -395,6 +397,10 @@ class JobBase(metaclass=TrackSubClasses):
                         for subkey, subvalue in defaults[key].items():
                             if hasattr(self, key) and subkey not in getattr(self, key):
                                 getattr(self, key)[subkey] = subvalue
+                    # elif isinstance(defaults[key], list) and isinstance(getattr(self, key), list):
+                    #     setattr(self, key, list(set(getattr(self, key) + defaults[key])))
+                    else:
+                        setattr(self, key, value)
 
     def with_defaults(self, config: _Config) -> 'JobBase':
         """Obtain a Job object that also contains defaults from the configuration.
@@ -916,7 +922,7 @@ class UrlJob(UrlJobBase):
         logger.info(f'Job {self.index_number}: Sending {self.method} request to {self.url}')
         logger.debug(f'Job {self.index_number}: Headers: {headers}')
 
-        if self.http_client == 'requests' or isinstance(httpx, str):
+        if self.http_client == 'requests' or not httpx:
             if isinstance(requests, str):
                 raise ImportError(
                     f"Job {job_state.job.index_number}: Python HTTP client package 'requests' cannot be imported; "
@@ -985,7 +991,7 @@ class UrlJob(UrlJobBase):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
-        if not isinstance(httpx, str) and isinstance(
+        if httpx and isinstance(
             exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError)
         ):
             # Instead of a full traceback, just show the error
@@ -1001,7 +1007,7 @@ class UrlJob(UrlJobBase):
         :param exception: The exception.
         :returns: True if the error should be ignored, False otherwise.
         """
-        if not isinstance(httpx, str) and isinstance(exception, httpx.HTTPError):
+        if httpx and isinstance(exception, httpx.HTTPError):
             if self.ignore_timeout_errors and isinstance(exception, httpx.TimeoutException):
                 return True
             if (
@@ -1064,6 +1070,7 @@ class BrowserJob(UrlJobBase):
         'https_proxy',
         'ignore_default_args',  # Playwright
         'ignore_https_errors',
+        'init_script',  # Playwright,
         'initialization_js',  # Playwright
         'initialization_url',  # Playwright
         'method',
@@ -1278,6 +1285,9 @@ class BrowserJob(UrlJobBase):
                     f'from user data directory {self.user_data_dir}'
                 )
 
+            if self.init_script:
+                context.add_init_script(self.init_script)
+
             # set default timeout
             context.set_default_timeout(timeout)
 
@@ -1393,6 +1403,53 @@ class BrowserJob(UrlJobBase):
                     route.continue_(method=str(self.method), post_data=data)  # type: ignore[arg-type]
 
                 page.route(url, handler=handle_route)
+
+            if self.block_elements:
+                if isinstance(self.block_elements, str):
+                    self.block_elements = self.block_elements.split(',')
+                if not isinstance(self.block_elements, list):
+                    browser.close()
+                    raise TypeError(
+                        f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
+                        f'( {self.get_indexed_location()} )'
+                    )
+                playwright_request_resource_types = [
+                    # https://playwright.dev/docs/api/class-request#request-resource-type
+                    'document',
+                    'stylesheet',
+                    'image',
+                    'media',
+                    'font',
+                    'script',
+                    'texttrack',
+                    'xhr',
+                    'fetch',
+                    'eventsource',
+                    'websocket',
+                    'manifest',
+                    'other',
+                ]
+                for element in self.block_elements:
+                    if element not in playwright_request_resource_types:
+                        context.close()
+                        raise ValueError(
+                            f"Unknown '{element}' resource type in 'block_elements' "
+                            f'( {self.get_indexed_location()} )'
+                        )
+                logger.info(f"Job {self.index_number}: Found 'block_elements' and adding a route to intercept elements")
+
+                def handle_elements(route: Route) -> None:
+                    """Handler function to block elements (a pyee.EventEmitter callback)."""
+                    if route.request.resource_type in self.block_elements:
+                        logger.debug(
+                            f'Job {self.index_number}: Intercepted retrieval of resource_type '
+                            f"'{route.request.resource_type}' and aborting"
+                        )
+                        route.abort()
+                    else:
+                        route.continue_()
+
+                page.route('**/*', handler=handle_elements)
 
             # if self.block_elements and not self.method or self.method == 'GET':
             #     # FIXME: Pyppeteer freezes on certain sites if this is on; contribute if you know why

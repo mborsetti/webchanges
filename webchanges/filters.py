@@ -785,9 +785,7 @@ class FormatJsonFilter(FilterBase):
         sort_keys = subfilter.get('sort_keys', False)
         indentation = int(subfilter.get('indentation', 4))
         parsed_json = jsonlib.loads(data)
-        return jsonlib.dumps(
-            parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation, separators=(',', ': ')
-        )
+        return jsonlib.dumps(parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation)
 
 
 class FormatXMLFilter(FilterBase):

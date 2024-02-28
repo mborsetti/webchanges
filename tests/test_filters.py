@@ -1,4 +1,5 @@
 """Test filters based on a set of patterns."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -11,8 +12,9 @@ from typing import Any, Union
 import pytest
 import yaml
 from _pytest._code import ExceptionInfo
+from reporters import HtmlReporter
 
-from webchanges.filters import FilterBase
+from webchanges.filters import FilterBase, Html2TextFilter
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase, UrlJob
 from webchanges.storage import CacheDirStorage
@@ -364,3 +366,17 @@ def test_filter_exceptions() -> None:
         # noinspection PyTypeChecker
         filtercls(FakeJob(), job_state).filter('{""""""}', {'query': 'any'})  # type: ignore[misc]
     assert e.value.args[0] == "The 'jq' filter needs valid JSON. ()"
+
+
+def test_html2text_roundtrip() -> None:
+    pytest.xfail('Not working due to an html2text bug')
+    html = '1 | <a href="https://www.example.com">1</a><br><strong>2 | <a href="https://www.example.com">2</a></strong>'
+    text = Html2TextFilter(FakeJob(), None).filter(html, {})  # type: ignore[arg-type]
+    reporter = HtmlReporter({}, {}, {}, 0)
+    html2_lines = []
+    for line in text.splitlines():
+        html2_lines.append(
+            reporter.mark_to_html(line).replace('style="font-family:inherit" rel="noopener" target="_blank" ', '')
+        )
+    html2 = '<br>'.join(html2_lines)
+    assert html2 == html

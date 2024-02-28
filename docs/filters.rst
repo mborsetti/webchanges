@@ -538,11 +538,10 @@ If the command generates an error, the output of the error will be in the first 
 
 format-json
 ---------------
-This filter deserializes a JSON object and formats it using Python's `json.dumps
-<https://docs.python.org/3/library/json.html#json.dumps>`__ with indentations.
-
-.. note:: This filter uses the ``simplejson`` library if it is installed, and revert to using the built-in ``json``
-   module if not.
+This filter serializes the JSON data to a pretty-printed indented string using Python's `json.dumps
+<https://docs.python.org/3/library/json.html#json.dumps>`__ (or, if installed, the same function from the `simplejson
+<https://simplejson.readthedocs.io/en/latest/index.html?highlight=dumps#simplejson.dumps>`__ library) with a default
+indent level of 4.
 
 .. tip:: If your reports are in HTML format, use the job directive ``monospace: true`` to improve readability (see
    :ref:`here <monospace>`).
@@ -550,8 +549,8 @@ This filter deserializes a JSON object and formats it using Python's `json.dumps
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``indentation``: Number of characters indent to pretty-print JSON array elements; ``None`` selects the most compact
-  representation (default: 4).
+* ``indentation``: Either the number of spaces to indent each level with or a string to be used to indent each level
+  (if ``0``, a negative number or ``""`` then no indentation) (default: 4).
 * ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false).
 
 

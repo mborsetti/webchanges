@@ -468,7 +468,7 @@ See more :ref:`here <ignoring_http_connection_errors>`.
 timeout
 ^^^^^^^
 Override the default timeout, in seconds (a number). The default is 60 seconds for ``url`` jobs unless they have the
-directive ```use_browser: true``, in which case it's 90 seconds.  If set to 0, timeout is disabled.
+directive ```use_browser: true``, in which case it's 90 seconds. If set to 0, timeout is disabled.
 
 See example :ref:`here <timeout>`.
 
@@ -486,7 +486,7 @@ The following directives are available only for ``url`` jobs without ``use_brows
 
 encoding
 ^^^^^^^^
-Override the character encoding from the server or determined programmatically (a string).
+Override the character encoding from the server or determined programmatically by the HTTP client library (a string).
 
 See more :ref:`here <overriding_content_encoding>`.
 
@@ -521,7 +521,7 @@ Example:
 
 .. code-block:: yaml
 
-   url: "https://donneespubliques.meteofrance.fr/donnees_libres/bulletins/BCM/203001.pdf"
+   url: https://donneespubliques.meteofrance.fr/donnees_libres/bulletins/BCM/203001.pdf
    no_redirects: true
    filter:
      - html2text:
@@ -546,13 +546,14 @@ Returns:
 
 retries
 ^^^^^^^
-Number of times to retry a url before giving up. Default 0. Setting it to 1 will often solve the ``('Connection aborted
-.', ConnectionResetError(104, 'Connection reset by peer'))`` error received when attempting to connect to a
-misconfigured server.
+Number of times to retry a url after receiving an error before giving up (a number). Default 0.
+
+Setting it to 1 will often solve the ``('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))``
+error received when attempting to connect to a misconfigured server.
 
 .. code-block:: yaml
 
-   url: "https://www.example.com/"
+   url: https://www.example.com/
    retries: 1
    filter:
      - html2text:
@@ -571,6 +572,35 @@ See more :ref:`here <ignoring_tls_ssl_errors>`.
 Optional directives (only with ``use_browser: true``)
 -----------------------------------------------------
 The following directives are available only for ``url`` jobs with ``use_browser: true`` (i.e. using :program:`Chrome`):
+
+.. _block_elements:
+
+block_elements
+^^^^^^^^^^^^^^
+Do not load specified resource types requested by page loading (a list).
+
+Used to speed up loading (typical elements to skip  include ``stylesheet``, ``font``, ``image``, ``media``, and
+``other``).
+
+.. code-block:: yaml
+   :class: strike
+
+   name: This is a Javascript site
+   note: It's just a test
+   url: https://www.example.com
+   use_browser: true
+   block_elements:
+     - stylesheet
+     - font
+     - image
+     - media
+     - other
+
+Supported `resources <https://playwright.dev/docs/api/class-request#request-resource-type>`__ are ``document``,
+``stylesheet``, ``image``, ``media``, ``font``, ``script``, ``texttrack``, ``xhr``, ``fetch``, ``eventsource``,
+``websocket``, ``manifest``, and ``other``.
+
+.. versionadded:: 3.19
 
 
 .. _ignore_default_args:
@@ -601,13 +631,26 @@ Ignore HTTPS errors (true/false). Defaults to false.
 .. versionadded:: 3.0
 
 
+.. _init_script:
+
+init_script
+^^^^^^^^^^^
+Executes the JavaScript in Chrome after launching it and before navigating to ``url`` (a string).
+
+This could be useful to e.g. unset certain default Chrome ``navigator`` properties by calling a JavaScript function
+to do so.
+
+.. versionadded:: 3.19
+
+
 .. _initialization_js:
 
 initialization_js
 ^^^^^^^^^^^^^^^^^^
-Only used with ``initialization_url``, executes the JavaScript after loading ```initialization_url`` and before
-navigating to ``url`` (a string). This could be useful to e.g. logging in when it's done by calling a JavaScript
-function.
+Only used with ``initialization_url``, executes the JavaScript in Chrome after navigating to ``initialization_url`` and
+before navigating to ``url`` (a string).
+
+This could be useful to e.g. emulate logging in when it's done by a JavaScript function.
 
 .. versionadded:: 3.10
 
@@ -616,11 +659,11 @@ function.
 
 initialization_url
 ^^^^^^^^^^^^^^^^^^
-The browser will load the ``initialization_url`` before navigating to ``url`` (a string). This could be useful for
-monitoring pages on websites that rely on a state established when you first land on their "home" page.  Also see
-``initialization_js`` below.
+The browser will navigate to ``initialization_url`` before navigating to ``url`` (a string).
 
-Note that all the ``wait_for_*`` directives are apply only after navigating to ``url``.
+This could be useful for monitoring subpages on websites that rely on a state established when first landing on their
+"home" page. Also see ``initialization_js`` above. Note that all the ``wait_for_*`` directives apply only after
+navigating to ``url`` and not after ``initialization_url``.
 
 .. versionadded:: 3.10
 
@@ -629,7 +672,9 @@ Note that all the ``wait_for_*`` directives are apply only after navigating to `
 
 referer
 ^^^^^^^
-The referer header value (a string). If provided, it will take preference over the the `Referer
+The referer header value (a string).
+
+If provided, it will take preference over the the `Referer
 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header value set within the :ref:`headers`
 directive.
 
@@ -640,8 +685,8 @@ directive.
 
 switches
 ^^^^^^^^^^^^^^^^^^^
-Additional command line `switch(es) <https://peter.sh/experiments/chromium-command-line-switches/>`__  to pass to
-Google Chrome, which is a derivative of Chromium (a list). These are called args in Playwright.
+Additional command line `switch(es) <https://peter.sh/experiments/chromium-command-line-switches/>`__ to pass to
+Google Chrome, which is a derivative of Chromium (a list). These are called ``args`` in Playwright.
 
 .. versionadded:: 3.0
 
