@@ -9,7 +9,7 @@ import logging
 import smtplib
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 from dataclasses import dataclass
-from email import policy
+from email import policy, utils
 from email.message import EmailMessage
 from pathlib import Path
 from types import ModuleType
@@ -50,6 +50,7 @@ class Mailer:
         msg['From'] = from_email
         msg['To'] = to_email
         msg['Subject'] = subject
+        msg['Date'] = utils.formatdate(localtime=True)
         msg.set_content(text_body, subtype='plain')
         if html_body is not None:
             msg.add_alternative(html_body, subtype='html')
