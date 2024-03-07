@@ -11,6 +11,7 @@ import subprocess  # noqa: S404 Consider possible security implications associat
 from dataclasses import dataclass
 from email import policy
 from email.message import EmailMessage
+from email.utils import formatdate
 from pathlib import Path
 from types import ModuleType
 from typing import Optional, Union
@@ -50,6 +51,7 @@ class Mailer:
         msg['From'] = from_email
         msg['To'] = to_email
         msg['Subject'] = subject
+        msg['Date'] = formatdate(localtime=True)
         msg.set_content(text_body, subtype='plain')
         if html_body is not None:
             msg.add_alternative(html_body, subtype='html')

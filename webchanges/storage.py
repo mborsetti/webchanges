@@ -523,7 +523,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
                 print('')
                 print(f'The file {filename} was NOT updated.')
                 user_input = input('Do you want to retry the same edit? (Y/n)')
-                if not user_input or user_input.lower()[0] == 'y':
+                if not user_input or user_input.lower().startswith('y'):
                     continue
                 file_edit.unlink()
                 print('No changes have been saved.')

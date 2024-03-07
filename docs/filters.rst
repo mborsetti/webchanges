@@ -260,7 +260,7 @@ expression.
          selector: 'item > media|keywords'
          namespaces:
            media: http://search.yahoo.com/mrss/
-     - html2text
+     - html2text:
 
 .. code-block:: yaml
 
@@ -613,6 +613,10 @@ Optional sub-directives
 ^^^^^^^^^^^^^
 This method is the default (does not need to be specified) and converts HTML into `Markdown
 <https://www.markdownguide.org/>`__ using the `html2text <https://pypi.org/project/html2text/>`__ Python package.
+
+.. warning:: As this filter relies on the external ``html2text`` Python package, new `releases
+   <https://github.com/Alir3z4/html2text/releases>`__ of this package may generate text that is formatted slightly
+   differently, and, if so, will cause :program:`webchanges` to send a one-off change report.
 
 It is the recommended option to convert all types of HTML into readable text, as it can be displayed (after conversion)
 in HTML.

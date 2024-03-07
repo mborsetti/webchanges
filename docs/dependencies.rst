@@ -18,6 +18,8 @@ square brackets, like this::
     pip install --upgrade webchanges[use_browser]
     pip install --upgrade webchanges[use_browser,redis]
 
+.. note: also update the list of all possible dependencies in pyproject.tom and show_detailed_versions() in command.py!
+
 +-------------------------+-------------------------------------------------------------------------+
 | Feature                 | Python package(s) installed                                             |
 +=========================+=========================================================================+

@@ -66,6 +66,7 @@ webchanges = 'webchanges.cli:main'
 use_browser = ['playwright', 'psutil']
 # filters
 # lxml is now optional with beautifulsoup4
+# note: also update the list of all possible dependencies in show_detailed_versions() in command.py!
 beautify = ['beautifulsoup4', 'jsbeautifier', 'cssbeautifier']
 bs4 = ['beautifulsoup4']
 html5lib = ['html5lib']

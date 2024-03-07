@@ -32,6 +32,18 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
+
+Version 3.19.1
+===================
+2024-03-07
+
+Fixed
+-----
+* Added the ``Date`` header field to SMTP email messages to ensure the timestamp is present even when it is not added
+  by the server upon receipt. Contributed by `Dominik <https://github.com/DL6ER>`__ in `#71
+  <https://github.com/mborsetti/webchanges/pull/71>`__.
+
+
 Version 3.19
 ===================
 2024-02-28

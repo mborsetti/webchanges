@@ -166,15 +166,15 @@ class UrlwatchCommand:
                 env = get_default_environment()
                 dist = None
                 for dist in env.iter_all_distributions():
-                    if dist.canonical_name == 'webchanges':
+                    if dist.canonical_name == __project_name__:
                         break
-                if dist and dist.canonical_name == 'webchanges':
+                if dist and dist.canonical_name == __project_name__:
                     return sorted(set(d.split()[0] for d in dist.metadata_dict['requires_dist']), key=str.lower)
 
-            # default list of dependencies
+            # default list of all possible dependencies
+            logger.info(f'Found no pip distribution for {__project_name__}; returning all possible dependencies.')
             return [
                 'aioxmpp',
-                'backports.zoneinfo',
                 'beautifulsoup4',
                 'chump',
                 'colorama',
@@ -260,6 +260,7 @@ class UrlwatchCommand:
                 print(f'• Name: {browser.browser_type.name}')
                 print(f'• Version: {browser.version}')
                 if psutil:
+                    browser.new_page()
                     try:
                         virt_mem = psutil.virtual_memory().available
                         print(
@@ -635,7 +636,7 @@ class UrlwatchCommand:
                 # create a dummy job state to run a reporter on
                 job_state = JobState(
                     None,  # type: ignore[arg-type]
-                    JobBase.unserialize({'command': 'webchanges --errors'}),
+                    JobBase.unserialize({'command': f'{__project_name__} --errors'}),
                 )
                 job_state.traceback = f'{header}\n{message}'
                 duration = time.perf_counter() - start
