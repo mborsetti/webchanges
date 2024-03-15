@@ -1,4 +1,5 @@
 """Test that all __init__ variables have been defined."""
+
 from __future__ import annotations
 
 from webchanges import init_data

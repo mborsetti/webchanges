@@ -1,4 +1,5 @@
 """Test the generation of various types of diffs."""
+
 from __future__ import annotations
 
 from webchanges.handler import JobState

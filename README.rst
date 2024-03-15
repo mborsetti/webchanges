@@ -9,8 +9,9 @@
 webchanges |downloads|
 ======================
 
-**webchanges** checks web content and notifies you via e-mail (or one of many other supported services) if a change is
-detected. **webchanges** can also check the output of local commands. The notification includes the changed URL or
+**webchanges** checks web content and notifies you via email (or one of many other `supported services
+<https://webchanges.readthedocs.io/en/stable/introduction.html#reporters-list>`__) if a change is detected.
+**webchanges** can also check the output of local commands. The notification includes the changed URL or
 command and a summary (diff) of what has changed.
 
 **webchanges** *anonymously* alerts you of web changes.
@@ -62,7 +63,7 @@ Initialize
 #. Run the following command to change the default `configuration
    <https://webchanges.readthedocs.io/en/stable/configuration.html>`__, e.g. to receive change notifications
    ("`reports <https://webchanges.readthedocs.io/en/stable/reporters.html>`__")
-   by `e-mail <https://webchanges.readthedocs.io/en/stable/reporters.html#smtp>`__ and/or one of many other methods:
+   by `email <https://webchanges.readthedocs.io/en/stable/reporters.html#smtp>`__ and/or one of many other methods:
 
    .. code-block:: bash
 
@@ -71,7 +72,7 @@ Initialize
 
 Run
 ---
-To check the sources in your jobs and report on (e.g. display or via e-mail) any changes found from the previous
+To check the sources in your jobs and report on (e.g. display or via email) any changes found from the previous
 execution, just run:
 
 .. code-block:: bash
@@ -110,8 +111,8 @@ License
 |license|
 
 Released under the `MIT License <https://opensource.org/licenses/MIT>`__ but redistributing modified source code from
-`urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ licensed under a
-`BSD 3-Clause License
+`urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020
+licensed under a `BSD 3-Clause License
 <https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__. See the complete
 license `here <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
 
@@ -119,9 +120,11 @@ license `here <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
 Compatibility with **urlwatch**
 ================================
 
-This project is based on code from `urlwatch <https://github.com/thp/urlwatch>`__ 2.21. You can easily upgrade from
-the current version of **urlwatch** (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__)
-using the same job and configuration files and benefit from many HTML-focused improvements, including:
+This project is based on code from `urlwatch 2.21
+<https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020. You can
+easily upgrade from the current version of **urlwatch** (see `here
+<https://webchanges.readthedocs.io/en/stable/migration.html>`__) using the same job and configuration files and
+benefit from many HTML-focused improvements, including:
 
 * Report links that are `clickable <https://pypi.org/project/webchanges/>`__!
 * Original formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets (•) and
@@ -134,7 +137,7 @@ using the same job and configuration files and benefit from many HTML-focused im
   which makes it easier to track content that was added without the distractions of the content that was deleted;
 * New features such as ``--errors`` to catch jobs that no longer work;
 * Much better `documentation <https://webchanges.readthedocs.io/>`__;
-* More reliability and stability, including a 30+ percentage point increase in testing coverage;
+* More reliability and stability, including a ~30 percentage point increase in testing coverage;
 * Many other additions, refinements and fixes (see `detailed information
   <https://webchanges.readthedocs.io/en/stable/migration.html#upgrade-details>`__).
 

@@ -7,6 +7,7 @@ but more evaluation is needed (TODO).
 
 See https://github.com/psf/requests and https://github.com/psf/requests/blob/main/src/requests/structures.py
 """
+
 from __future__ import annotations
 
 from collections import OrderedDict
@@ -20,10 +21,10 @@ _VT_co = TypeVar('_VT_co', covariant=True)
 
 class SupportsKeysAndGetItem(Protocol[_KT, _VT_co]):
     def keys(self) -> Iterable[_KT]:
-        ...
+        pass
 
     def __getitem__(self, __key: _KT) -> _VT_co:
-        ...
+        pass
 
 
 # class SupportsKeysAndGetItem(Protocol):

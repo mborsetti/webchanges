@@ -66,7 +66,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
             self.jobs.append(yaml.safe_load(yaml_block))
 
     def unknown_visit(self, node: docutils.nodes.Node) -> None:
-        ...
+        pass
 
 
 def load_filter_doc_jobs() -> list[JobBase]:

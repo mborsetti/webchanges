@@ -640,9 +640,9 @@ class UrlwatchCommand:
                 )
                 job_state.traceback = f'{header}\n{message}'
                 duration = time.perf_counter() - start
-                self.urlwatcher.report.config[
-                    'footnote'
-                ] = f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}."
+                self.urlwatcher.report.config['footnote'] = (
+                    f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}."
+                )
                 self.urlwatcher.report.config['report']['html']['footer'] = False
                 self.urlwatcher.report.config['report']['markdown']['footer'] = False
                 self.urlwatcher.report.config['report']['text']['footer'] = False
@@ -835,9 +835,10 @@ class UrlwatchCommand:
             self.urlwatcher.config_storage.config['report']['markdown']['footer'] = True
             self.urlwatcher.config_storage.config['report']['markdown']['minimal'] = False
         if not cfg['enabled']:
-            print(f'Reporter is not enabled/configured: {reporter_name}')
+            print(f'WARNING: Reporter being tested is not enabled: {reporter_name}')
+            print('Will still attempt to test it, but this may not work')
             print(f'Use {__project_name__} --edit-config to configure reporters')
-            return 1
+            cfg['enabled'] = True
 
         if report is None:
             report = Report(self.urlwatcher)
@@ -892,11 +893,11 @@ class UrlwatchCommand:
         success = True
 
         if not config['enabled']:
-            print('Please enable e-mail reporting in the config first.')
+            print('Please enable email reporting in the config first.')
             success = False
 
         if config['method'] != 'smtp':
-            print('Please set the method to SMTP for the e-mail reporter.')
+            print('Please set the method to SMTP for the email reporter.')
             success = False
 
         smtp_auth = smtp_config['auth']

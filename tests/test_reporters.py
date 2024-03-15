@@ -1,4 +1,5 @@
 """Test reporting, primarily handling of diffs."""
+
 from __future__ import annotations
 
 import importlib.util

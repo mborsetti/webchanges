@@ -33,6 +33,25 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.20rc0
+===================
+2024-03-15
+
+Added
+-----
+* ``re.findall`` filter to extract, delete or replace non-overlapping text using Python ``re.findall``.
+
+Changed
+-------
+* ``--test-reporter`` now allows testing of reporters that are not enabled; the error that the reporter is not enabled
+  is now a warning. This simplifies testing.
+* ``email`` reporter supports sending to multiple "to" addresses (both SMTP and sendmail)
+
+Fixed
+-----
+* Reports from jobs with ``monospace: true`` were not being rendered correctly in Gmail.
+
+
 Version 3.19.1
 ===================
 2024-03-07
@@ -61,8 +80,8 @@ Added
   (see the advanced section of the documentation for a suggestion of elements to block). This was available under
   Pypetteer and has been reintroduced for Playwright.
 * ``init_script`` directive for jobs with ``use_browser: true`` to execute a JavaScript in Chrome after launching it
-  and before navigating to ``url``. This can be useful to e.g. unset certain default Chrome ``navigator``
-  properties by calling a JavaScript function to do so.
+  and before navigating to ``url``. This can be useful to e.g. unset certain default Chrome ``navigator`` properties
+  by calling a JavaScript function to do so.
 
 
 Version 3.18.1
@@ -670,9 +689,9 @@ Internals
 ---------
 * Updated licensing file to `GitHub naming standards
   <https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository>`__
-  and updated its contents to more clearly state that this software redistributes source code of release 2.21
-  of urlwatch (https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f), retaining its license,
-  which is distributed as part of the source code.
+  and updated its contents to more clearly state that this software redistributes source code of release 2.21 dated 30
+  July 2020 of urlwatch (https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f) retaining its
+  license, which is distributed as part of the source code.
 * Pyppeteer has been removed from the test suite.
 * Deprecated ``webchanges.jobs.ShellError`` exception in favor of Python's native ``subprocess.SubprocessError`` one and
   its subclasses.
@@ -1350,7 +1369,7 @@ Version 3.0
 
 Milestone
 ---------
-Initial release of **webchanges**, based on reworking of code from *urlwatch* 2.21.
+Initial release of **webchanges**, based on reworking of code from *urlwatch* 2.21 dated 30 July 2020.
 
 Added
 -----
@@ -1473,5 +1492,4 @@ Relative to *urlwatch* 2.21:
 
 Known bugs
 ----------
-* Documentation could be more complete
-* Almost complete lack of inline docstrings in the code
+* None

@@ -1,5 +1,6 @@
 """Test the jobs embedded in the documentation's filters.rst file by running them against the data in the
 data/doc_filer_testadata.yaml file."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -55,7 +56,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
             self.code.append(node.rawsource[22:].strip())
 
     def unknown_visit(self, node: docutils.nodes.Node) -> None:
-        ...
+        pass
 
 
 def load_hooks_from_doc() -> str:

@@ -1,4 +1,5 @@
 """Test commands."""
+
 from __future__ import annotations
 
 import logging
@@ -840,9 +841,9 @@ def test_check_test_reporter(capsys: CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'test_reporter', None)
-    assert pytest_wrapped_e.value.code == 1
+    assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert 'Reporter is not enabled/configured: stdout\n' in message
+    assert 'WARNING: Reporter being tested is not enabled: stdout\n' in message
 
     setattr(command_config, 'test_reporter', 'does_not_exist')
     with pytest.raises(SystemExit) as pytest_wrapped_e:

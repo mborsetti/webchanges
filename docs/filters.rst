@@ -105,6 +105,8 @@ At the moment, the following filters are available:
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`re.sub`: Replace or remove text matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
+  - :ref:`re.findall`: Extract, replace or remove all non-overlapping text matching a `Python regular expression
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`strip`: Strip leading and/or trailing whitespace or specified characters.
   - :ref:`sort`: Sort lines.
   - :ref:`remove_repeated`: Remove repeated items (lines).
@@ -1055,21 +1057,81 @@ To run jobs with the ``password`` sub-directive, then use the following:
 
 
 
+
+
+
+.. _re.findall:
+
+re.findall
+----------
+This filter extracts, deletes or replaces non-overlapping text using Python `re.findall
+<https://docs.python.org/3/library/re.html#re.findall>`__ `regular expression
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ operation.
+
+Just specifying a regular expression (regex) or string as the value will extract the match. Patterns can be replaced
+with another string using ``pattern`` as the expression and ``repl`` as the replacement, or deleted by setting
+``repl`` to an empty string.
+
+All features are described in Python’s re.findall's `documentation
+<https://docs.python.org/3/library/re.html#re.findall>`__. The ``pattern`` is first iteratively matched using
+`re.finditer <https://docs.python.org/3/library/re.html#re.finditer>`__ and the ``repl`` value is applied to each
+non-overlapping match; if ``repl`` is missing, then group "0" (the entire match) is extracted.
+
+Each match is outputted on its own line.
+
+The following example applies the filter twice:
+
+1. Just specifying a string as the value will include the full match in the output.
+2. You can use groups (``()``) and back-reference them with ``\1`` (etc..) to put groups into the replacement string.
+
+By default, the full match will be included in the output.
+
+.. code-block:: yaml
+
+   url: https://example.com/regex-findall.html
+   filter:
+       - re.findall: '<span class="price">.*</span>'
+       - re.findall:
+           pattern: 'Price: \$([0-9]+)'
+           repl: '\1'
+
+.. tip:: Remember that some useful Python regex flags, such as
+   `IGNORECASE <https://docs.python.org/3/library/re.html#re.IGNORECASE>`__,
+   `MULTILINE <https://docs.python.org/3/library/re.html#re.MULTILINE>`__,
+   `DOTALL <https://docs.python.org/3/library/re.html#re.DOTALL>`__, and
+   `VERBOSE <https://docs.python.org/3/library/re.html#re.VERBOSE>`__,
+   can be specified as inline flags and therefore can be used with :program:`webchanges`.
+
+You can use the entire range of Python's `regular expression (regex) syntax
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
+
+Optional sub-directives
+"""""""""""""""""""""""
+* ``pattern``: Regular expression pattern or string for matching; this sub-directive must be specified when
+  using the ``repl`` sub-directive, otherwise the pattern can be specified as the value of ``re.sub`` (in which case
+  a match will be extracted).
+* ``repl``: The string applied iteratively to each match (default: '\g<0>', or extract all matches).
+
+.. versionadded:: 3.20
+
+
+
 .. _re.sub:
 
 re.sub
 ------
-This filter deletes or replaces text using Python `regular expressions
-<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
+This filter deletes or replaces text using Python Python `re.sub
+<https://docs.python.org/3/library/re.html#re.sub>`__ `regular expression
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ operation.
 
-Just specifying a regular expression (regex) as the value will remove the match. Patterns can be replaced with another
-string using ``pattern`` as the expression and ``repl`` as the replacement.
+Just specifying a regular expression (regex) or string as the value will remove the match. Patterns can be replaced
+with another string by specifying ``repl`` as the replacement.
 
-All features are described in Python’s re.sub `documentation <https://docs.python.org/3/library/re.html#re.sub>`__. The
-``pattern`` and ``repl`` values are passed to this function as-is; if ``repl`` is missing, then it's considered to be an
-empty string, and this filter deletes the the leftmost non-overlapping occurrences of ``pattern``.
+All features are described in Python’s re.sub's `documentation <https://docs.python.org/3/library/re.html#re.sub>`__.
+The ``pattern`` and ``repl`` values are passed to this function as-is; if ``repl`` is missing, then it's considered
+to be an empty string, and this filter deletes the the leftmost non-overlapping occurrences of ``pattern``.
 
-.. tip:: Remember that some useful Python regxx flags, such as
+.. tip:: Remember that some useful Python regex flags, such as
    `IGNORECASE <https://docs.python.org/3/library/re.html#re.IGNORECASE>`__,
    `MULTILINE <https://docs.python.org/3/library/re.html#re.MULTILINE>`__,
    `DOTALL <https://docs.python.org/3/library/re.html#re.DOTALL>`__, and
@@ -1109,11 +1171,10 @@ never changes):
 
 Optional sub-directives
 """""""""""""""""""""""
-* ``pattern``: Regular expression to match for replacement; this sub-directive must be specified when using the ``repl``
-  sub-directive, otherwise the pattern can be specified as the value of ``re.sub`` (in which case a match will be
-  deleted).
-* ``repl``: The string for replacement. If this sub-directive is missing, defaults to empty string (i.e. deletes the
-  string matched in ``pattern``).
+* ``pattern``: Regular expression pattern or string to match for replacement; this sub-directive must be specified when
+  using the ``repl`` sub-directive, otherwise the pattern can be specified as the value of ``re.sub`` (in which case
+  a match will be deleted).
+* ``repl``: The string for replacement (default: empty string, i.e. deletes the string matched in ``pattern``).
 
 
 

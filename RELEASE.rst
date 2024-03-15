@@ -1,5 +1,13 @@
+Added
+-----
+* ``re.findall`` filter to extract, delete or replace non-overlapping text using Python ``re.findall``.
+
+Changed
+-------
+* ``--test-reporter`` now allows testing of reporters that are not enabled; the error that the reporter is not enabled
+  is now a warning. This simplifies testing.
+* ``email`` reporter supports sending to multiple "to" addresses (both SMTP and sendmail)
+
 Fixed
 -----
-* Added the ``Date`` header field to SMTP email messages to ensure the timestamp is present even when it is not added
-  by the server upon receipt. Contributed by `Dominik <https://github.com/DL6ER>`__ in `#71
-  <https://github.com/mborsetti/webchanges/pull/71>`__.
+* Reports from jobs with ``monospace: true`` were not being rendered correctly in Gmail.

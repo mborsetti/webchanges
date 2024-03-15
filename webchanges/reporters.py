@@ -579,6 +579,7 @@ class HtmlReporter(ReporterBase):
                             yield f'<tr{style}><td>{linkify(line[1:])}</td></tr>'
                 yield '</table>'
             else:
+                # monospace
                 yield '<table style="border-collapse:collapse;font-family:monospace;white-space:pre-wrap">'
                 for i, line in enumerate(diff.splitlines()):
                     if line[0] == '+':
@@ -600,9 +601,9 @@ class HtmlReporter(ReporterBase):
                     if (
                         i <= 1 or line[0] == '@' or line[0] == '.'
                     ):  # unified_diff headers or additions_only/deletions_only
-                        yield f'<tr{style}><td>{line}</td></tr>'
+                        yield f'<tr{style}><td style="font-family:monospace">{line}</td></tr>'
                     else:
-                        yield f'<tr{style}><td>{linkify(line[1:])}</td></tr>'
+                        yield f'<tr{style}><td style="font-family:monospace">{linkify(line[1:])}</td></tr>'
                 yield '</table>'
 
     def _format_content(
@@ -1094,7 +1095,7 @@ class StdoutReporter(TextReporter):
 
 
 class EMailReporter(TextReporter):
-    """Send summary via e-mail (including SMTP)."""
+    """Send summary via email (including SMTP)."""
 
     __kind__ = 'email'
 
@@ -1246,7 +1247,7 @@ class PushbulletReport(WebServiceReporter):
 
 
 class MailgunReporter(TextReporter):
-    """Send e-mail via the Mailgun service."""
+    """Send email via the Mailgun service."""
 
     __kind__ = 'mailgun'
 

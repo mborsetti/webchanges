@@ -406,8 +406,8 @@ Relative to :program:`urlwatch` 2.28:
 
 Legal
 -----
-The roots of :program:`webchanges` from urlwatch 2.21 code are credited throughout, and its code is appropriately
-copyrighted/licensed:
+The roots of :program:`webchanges` from code of urlwatch 2.21 dated 30 July 2020 are credited throughout, and its
+code is appropriately copyrighted/licensed:
 
 (1) :program:`webchanges`' `main page <https://github.com/mborsetti/webchanges/blob/main/README.rst>`__ reads:
 
@@ -418,8 +418,8 @@ copyrighted/licensed:
    =======
 
    Released under the `MIT License <https://opensource.org/licenses/MIT>`__ but redistributing modified source code from
-   `urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ licensed under a
-   `BSD 3-Clause License
+   `urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020
+   licensed under a `BSD 3-Clause License
    <https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__. See the
    complete license `here <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
 
@@ -436,12 +436,13 @@ File. In. Every. Single. Directory; the above notice is amply sufficient.
 
 ::
 
-   This software redistributes source code of release 2.21 of urlwatch https://github
-   .com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f which is subject to the following copyright notice
-   and license from https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING
-   hereby retained and redistributed with the source code (of which this license file is part of), in binary form,
-   and in the documentation. The appearance of the name of the author below does not constitute an endorsement or
-   promotion of this software by such author.
+   This software redistributes source code of release 2.21 of urlwatch
+   https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f of 30 July 2021 which is subject to
+   the following copyright notice and license from
+   https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING hereby retained
+   and redistributed with the source code (of which this license file is part of), in binary form, and in the
+   documentation. The appearance of the name of the author below does not constitute an endorsement or promotion of
+   this software by such author.
 
    Copyright (c) 2008-2020 Thomas Perl <m@thp.io>
    All rights reserved.

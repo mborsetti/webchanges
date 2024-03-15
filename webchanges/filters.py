@@ -200,9 +200,11 @@ class FilterBase(metaclass=TrackSubClasses):
             # Legacy string-based filter list specification:
             # "filter1:param1,filter2,filter3,filter4:param4"
             filter_spec = [
-                {filter_kind.split(':', maxsplit=1)[0]: filter_kind.split(':', maxsplit=1)[1]}
-                if ':' in filter_kind
-                else {filter_kind: ''}
+                (
+                    {filter_kind.split(':', maxsplit=1)[0]: filter_kind.split(':', maxsplit=1)[1]}
+                    if ':' in filter_kind
+                    else {filter_kind: ''}
+                )
                 for filter_kind in old_filter_spec.split(',')
             ]
             warnings.warn(
@@ -1516,7 +1518,7 @@ class ReSubFilter(FilterBase):
 
     __default_subfilter__ = 'pattern'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> Union[str, bytes]:  # type: ignore[override]
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
@@ -1524,10 +1526,38 @@ class ReSubFilter(FilterBase):
         :returns: The filtered (processed) data.
         """
         if 'pattern' not in subfilter:
-            raise ValueError(f"The 're.sub' filter needs a pattern. ({self.job.get_indexed_location()})")
+            raise ValueError(f"The '{self.__kind__}' filter needs a pattern. ({self.job.get_indexed_location()})")
 
         # Default: Replace with empty string if no "repl" value is set
         return re.sub(subfilter['pattern'], subfilter.get('repl', ''), data)
+
+
+class RegexFindall(FilterBase):
+    """Extract text using regular expressions using Python's re.findall"""
+
+    __kind__ = 're.findall'
+
+    __supported_subfilters__ = {
+        'pattern': 'Regular expression to search for (required)',
+        'repl': "Replacement string applied iteratively to each match (default: '\\g<0>', or extract all matches)",
+    }
+
+    __default_subfilter__ = 'pattern'
+
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        """Filter (process) the data.
+
+        :param data: The data to be filtered (processed).
+        :param subfilter: The subfilter information.
+        :returns: The filtered (processed) data.
+        """
+        if 'pattern' not in subfilter:
+            raise ValueError(f"The '{self.__kind__}' filter needs a pattern. ({self.job.get_indexed_location()})")
+
+        # Default: Replace with full match if no "repl" value is set
+        return '\n'.join(
+            [match.expand(subfilter.get('repl', r'\g<0>')) for match in re.finditer(subfilter['pattern'], data)]
+        )
 
 
 class SortFilter(FilterBase):
@@ -1640,7 +1670,7 @@ class ReverseFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).

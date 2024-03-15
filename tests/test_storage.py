@@ -3,6 +3,7 @@
 To test Redis, set an environment variable REDIS_URI with the URI to the Redis server.  E.g.:
 $ export REDIS_URI=redis://localhost:6379
 """
+
 from __future__ import annotations
 
 import copy

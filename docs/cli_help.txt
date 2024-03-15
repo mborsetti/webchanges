@@ -15,8 +15,8 @@ usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
                   [joblist ...]
 
 Checks web content to detect any changes since the prior run. If any are found,
-it shows what changed ('diff') and/or sends it via e-mail and/or other
-supported services. Can check the output of local commands as well.
+it shows what changed ('diff') and/or sends it via email and/or other supported
+services. Can check the output of local commands as well.
 
 positional arguments:
   joblist               job(s) to run (by index as per --list) (default: run

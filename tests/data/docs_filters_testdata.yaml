@@ -688,6 +688,23 @@ https://example.com/regex-substitute.html:
       HEADING 1: Welcome to this™ webpage<END OF TAG h1>
       <a>Some Link<END OF TAG a>
     <END OF TAG div>
+https://example.com/regex-findall.html:
+  input: |-
+    <div>
+      <div class="product">Product 1:
+        <span class="price">Price: $123</span>
+      </div>
+      <div class="product">Product 2:
+        <span class="price">Price: $456</span>
+      </div>
+      <div class="product">Product 3:
+        <span class="price">Price: $789</span>
+      </div>
+    </div>
+  output: |-
+    123
+    456
+    789
 https://example.net/shellpipe-grep.txt:
   input: |-
     <h1>Welcome to our price watching page!</h1>

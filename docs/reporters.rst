@@ -28,6 +28,8 @@ Each reporter has a directive called ``enabled`` that can be set to true or fals
 Tip: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:`tz`
 below to set the time zone to be uses for reporting.
 
+.. _reporters-list:
+
 At the moment, the following reporters are available:
 
 * :ref:`stdout` (enabled by default): Display on stdout (the console).
@@ -45,6 +47,8 @@ At the moment, the following reporters are available:
 * :ref:`webhook`: Send to an e.g. Slack or Mattermost channel using the service's webhook.
 * :ref:`xmpp`: Send using the Extensible Messaging and Presence Protocol (XMPP).
 
+Programmers can write their own reporter(s) as a :ref:`hook <hooks>`. file.
+
 .. To convert the "webchanges --features" output, use:
    webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
 
@@ -52,8 +56,8 @@ Please note that many reporters need the installation of additional Python packa
 :ref:`dependencies <dependencies>`.
 
 
-.. tip:: While jobs are executed in parallel for speed, they are sorted alphabetically in reports so you can use
-   :ref:`name` to control the order in which they appear in the report.
+.. tip:: While jobs are executed in parallel for speed, the output is sorted alphabetically in reports so you can
+   use the :ref:`name` to control the order in which they appear in the report.
 
 .. versionchanged:: 3.11
    Reports are sorted by job name.
@@ -174,7 +178,8 @@ Sub-directives
 ~~~~~~~~~~~~~~
 * ``method``: Either ``smtp`` or ``sendmail``.
 * ``from``: The sender's email address. **Do not use your main email address** but create a throwaway one!
-* ``to``: The destination email address.
+* ``to``: The destination email address(es); if sending to more than one recipient, concatenate the addresses with a
+  comma (``,``).
 * ``subject``: The subject line. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
   reported, and {jobs_files} for a space followed by the name of the jobs file(s) used within parenthesis, stripped
   of preceding ``jobs-``, if not using the default ``jobs.yaml``. Default: ``[webchanges] {count}
@@ -200,7 +205,7 @@ low-risk way to run unattended.
      email:
        enabled: true  # don't forget to set this to true! :)
        from: webchanges <throwawayaccount@example.com>  # (edit accordingly; don't use your primary account for this!!)
-       to: myself@example.com  # The email address of where want to receive reports
+       to: myself@example.com, someonelse@example.com  # The email address(es) of where want to receive reports
        subject: "[webchanges] {count} changes: {jobs}"
        html: true
        method: smtp
@@ -317,7 +322,7 @@ sendmail
 ~~~~~~~~
 
 Calls the external `sendmail <https://www.proofpoint.com/us/products/email-protection/open-source-email-solution>`__
-program, which must already be installed and configured.
+program (linux only), which must already be installed and configured.
 
 Optional packages
 ~~~~~~~~~~~~~~~~~
@@ -332,6 +337,9 @@ If using a Keychain to store the password, you also need to:
 .. code-block:: bash
 
    pip install --upgrade webchanges[safe_password]
+
+.. versionchanged:: 3.10
+   Can specify multiple "to" email addresses.
 
 
 
