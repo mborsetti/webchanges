@@ -33,7 +33,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.20rc0
+Version 3.20
 ===================
 2024-03-15
 
@@ -43,9 +43,9 @@ Added
 
 Changed
 -------
-* ``--test-reporter`` now allows testing of reporters that are not enabled; the error that the reporter is not enabled
-  is now a warning. This simplifies testing.
-* ``email`` reporter supports sending to multiple "to" addresses (both SMTP and sendmail)
+* ``--test-reporter`` now allows testing of reporters that are not enabled; if a reporter is not enabled, a warning
+  will be issued. This simplifies testing.
+* ``email`` reporter (both SMTP and sendmail) supports sending to multiple "to" addresses.
 
 Fixed
 -----
