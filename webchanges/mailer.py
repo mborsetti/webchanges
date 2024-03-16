@@ -10,8 +10,6 @@ import smtplib
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 from dataclasses import dataclass
 from email import policy
-from email.errors import InvalidHeaderDefect
-from email.headerregistry import Address
 from email.message import EmailMessage
 from email.utils import formatdate
 from pathlib import Path
@@ -50,14 +48,8 @@ class Mailer:
         :param html_body: The body in html format (optional)
         """
         msg = EmailMessage(policy=policy.SMTPUTF8)
-        try:
-            msg['From'] = Address(from_email)  # type: ignore[assignment]  # mypy bug
-        except InvalidHeaderDefect as e:
-            raise ValueError(f"Reporter email's 'from' email address is incorrect: {e.args[0]}")
-        try:
-            msg['To'] = (Address(addr.strip()) for addr in to_email.split(','))  # type: ignore[assignment]  # mypy bug
-        except InvalidHeaderDefect as e:
-            raise ValueError(f"Reporter email's 'to' email address is incorrect: {e.args[0]}")
+        msg['from'] = from_email
+        msg['to'] = to_email
         msg['Subject'] = subject
         msg['Date'] = formatdate(localtime=True)
         msg.set_content(text_body, subtype='plain')
