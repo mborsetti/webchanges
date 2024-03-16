@@ -1,3 +1,3 @@
 Fixed
 -----
-* Regression introduced in supporting sending to multiple "to" addresses.
+* Parsing the ``to`` address for the ``sendmail`` ``email`` reporter.

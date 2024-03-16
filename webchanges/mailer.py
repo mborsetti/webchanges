@@ -119,14 +119,11 @@ class SendmailMailer(Mailer):
         :param msg: The message to be sent.
         """
         if msg['From']:
-            command = [self.sendmail_path, '-oi', msg['To'] + [addr.strip() for addr in msg['To'].split(',')]]
-        else:
-            command = [
-                self.sendmail_path,
-                '-oi',
-                '-f',
-                msg['From'] + [addr.strip() for addr in msg['To'].split(',')],
+            command = [self.sendmail_path, '-oi', '-f', msg['From']] + [
+                addr.strip() for addr in msg['To'].split(',' '')
             ]
+        else:
+            command = [self.sendmail_path, '-oi'] + [addr.strip() for addr in msg['To'].split(',')]
         p = subprocess.run(  # noqa: S603 subprocess call - check for execution of untrusted input.
             command,
             input=msg.as_string(),

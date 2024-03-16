@@ -32,6 +32,14 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Security, in case of vulnerabilities. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
+Version 3.20.2
+===================
+2024-03-16
+
+Fixed
+-----
+* Parsing the ``to`` address for the ``sendmail`` ``email`` reporter.
+
 Version 3.20.1
 ===================
 2024-03-16
