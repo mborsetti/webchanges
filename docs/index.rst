@@ -3,6 +3,7 @@
    Tutorial at https://sphinx-tutorial.readthedocs.io/start/
 
 .. Excellent cheat sheet at https://sphinx-tutorial.readthedocs.io/cheatsheet/
+   We use the recommended sequence for heading levels: = - ` : . ' " ~ ^ - * + # ! $ % & ( ) , / ; < > ? @ [ \ ] { | }
 
 .. To rebuild the API autodoc files run $ sphinx-apidoc -o docs\_api -f -T -e webchanges -n
 
@@ -20,6 +21,7 @@
 
    jobs
    filters
+   differs
    diff_filters
    reports
    reporters

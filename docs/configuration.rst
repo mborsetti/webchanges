@@ -83,7 +83,7 @@ Here is an example configuration that reports using UTC timezone on standard out
        minimal: false
        separate: false
      html:
-       diff: unified
+       diff: unified  # Deprecated; specify a :ref:`differs <differs>` in the job
        separate: true
      email:  # This is the email reporter
        enabled: true
@@ -232,8 +232,8 @@ configuration file or, for an individual run, with the with the ``--max-snapshot
 
 If set to 0, all changed snapshots are retained (the database will grow unbounded).
 
-.. tip:: Changes (diffs) between saved snapshots can be redisplayed with the ``--test-diff`` command line argument (see
-   :ref:`here <test-diff>`).
+.. tip:: Changes (diffs) between saved snapshots can be redisplayed with the ``--test-differ`` command line argument (see
+   :ref:`here <test-differ>`).
 
 ¹ Note that when using ``redis`` or ``minidb`` database engines all snapshots will be kept, while when using the
 ``textfiles`` database engine only the last snapshot is kept.

@@ -12,7 +12,7 @@ Checking different sources at different intervals
 You can divide your jobs into multiple job lists depending on how often you want to check. For example, you can have
 a ``daily.yaml`` job list for daily jobs, and a ``weekly.yaml`` for weekly ones. You then set up the scheduler to
 run :program:`webchanges`, defining which job list to use, at different intervals. For example in Linux/macOS using
-crontab::
+cron (``crontab -e``)::
 
   0 0 * * * webchanges --jobs daily.yaml
   0 0 0 * * webchanges --jobs weekly  # alias for weekly.yaml (if 'weekly' isn't found)
@@ -36,7 +36,7 @@ For example, you can create two configuration files, e.g. ``config-slack.yaml`` 
 first set for slack reporting and the second for email reporting) and two job lists, e.g. ``slack.yaml`` and
 ``email.yaml`` (the first containing jobs you want to be notified of via slack, the second for jobs you want to be
 notified of via email). You can then run :program:`webchanges` similarly to the below example (taken from Linux/macOS
-crontab)::
+``crontab -e``)::
 
   00 00 * * * webchanges --jobs slack.yaml --config config-slack.yaml
   05 00 * * * webchanges --jobs email --config config-email  # .yaml not necessary if no conflict

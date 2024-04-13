@@ -189,9 +189,9 @@ Relative to :program:`urlwatch` 2.28:
     after filters are applied.
   * ``--test`` command line argument is used to test a job (formerly ``--test-filter``, deprecated and will be removed
     in a future release).
-  * ``--test-diff`` command line argument is used to test a jobs' diff (formerly ``--test-diff-filter``, deprecated and
-    will be removed in a future release) and display diff history.
-  * ``--test-diff`` command line argument is no longer limited to displaying the last 10 snapshots.
+  * ``--test-differ`` command line argument is used to test a jobs' differ (formerly ``--test-diff-filter``, deprecated
+    and will be removed in a future release) and display diff history.
+  * ``--test-differ`` command line argument is no longer limited to displaying the last 10 snapshots.
   * Add job number(s) in command line to run a subset of jobs; for example, run ``webchanges 2 3`` to only run jobs #2
     and #3 of your jobs list (find job numbers by running ``webchanges --list``). Negative job indices are allowed; for
     example, run ``webchanges -1`` to only run the last job of your jobs list, or ``webchanges --test -2`` to test
@@ -363,7 +363,7 @@ Relative to :program:`urlwatch` 2.28:
 * Fixed a rare case when html report would not correctly reconstruct a clickable link from Markdown for (an) item(s)
   inside an element in a list.
 * No longer errors out when ``telegram`` reporter's ``chat_id`` is numeric.
-* ``test-diff`` command line argument was showing historical diffs in wrong order; now showing most recent first
+* ``test-differ`` command line argument was showing historical diffs in wrong order; now showing most recent first
 * An error is now raised when a ``url`` job with ``use_browser: true`` returns no data due to an HTTP error (e.g.
   proxy_authentication_required).
 * Jobs were included in email subject line even if there was nothing to report after filtering with ``additions_only``
@@ -392,7 +392,7 @@ Relative to :program:`urlwatch` 2.28:
   * Filter ``grep`` is renamed to ``keep_lines_containing`` for clarity.
   * Filter ``grepi`` is renamed to ``delete_lines_containing`` for clarity.
   * Command line ``--test-filter`` argument is renamed to ``--test`` for clarity.
-  * Command line ``--test-diff-filter`` argument is renamed to ``--test-diff`` for clarity.
+  * Command line ``--test-diff-filter`` argument is renamed to ``--test-differ`` for clarity.
 
 * Also be aware that:
 

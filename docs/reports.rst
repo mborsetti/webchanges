@@ -59,21 +59,9 @@ prettified by :program:`webchanges` by:
 .. note:: You may receive a report that shows a deletion of some text and the addition of the same exact text: this is
    most likely due to a change in an underlying link.
 
-If for some reason you want the diff formatted as a Python `HtmlDiff
-<https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__ table, set the sub-directive ``diff`` to
-``table``:
-
-
-.. code-block:: yaml
-
-   report:
-     html:
-       diff: table
-
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``diff``: The diffing format (``unified`` or ``table``); defaults to ``unified``. Ignored if the job directive
-  ``diff_tool`` (external differ) is set.
+* ``diff``: Deprecated; specify a :ref:`differ <differs>` in the job instead.
 * ``footer``: Show footer listing number of jobs and elapsed time (true/false); defaults to true.
 * ``separate``: Send a separate report for each job instead of a single combined report (true/false); defaults to false.
 * ``title``: The document's title. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
@@ -81,6 +69,8 @@ Optional sub-directives
   of preceding ``jobs-``, if not using the default ``jobs.yaml``. Default: ``[webchanges] {count}
   changes:{jobs_files} {jobs}``.
 
+.. versionchanged:: 3.21
+   Deprecated the sub-directive ``diff``.
 
 
 .. _markdown:

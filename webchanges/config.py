@@ -49,7 +49,7 @@ class CommandConfig(BaseConfig):
     footnote: Optional[str]
     gc_database: int
     install_chrome: bool
-    joblist: list[int]
+    joblist: list[str]
     list_jobs: bool
     max_snapshots: int
     max_workers: Optional[int]
@@ -57,7 +57,7 @@ class CommandConfig(BaseConfig):
     rollback_database: Optional[int]
     smtp_login: bool
     telegram_chats: bool
-    test_diff: Optional[str]
+    test_differ: Optional[str]
     test_job: Union[bool, Optional[str]]
     test_reporter: Optional[str]
     verbose: Optional[int]
@@ -105,8 +105,11 @@ class CommandConfig(BaseConfig):
         parser.add_argument(
             'joblist',
             nargs='*',
-            type=int,
-            help='job(s) to run (by index as per --list) (default: run all jobs)',
+            help=(
+                'JOB(S) to run (if one, index as per --list or URL/command, if multiple, by index) (default: run all '
+                'jobs)'
+            ),
+            metavar='JOB(S)',
         )
         parser.add_argument(
             '-V',
@@ -125,7 +128,7 @@ class CommandConfig(BaseConfig):
             '--urls',
             default=self.jobs_def_file,
             type=Path,
-            help='read job list (URLs) from FILE or files matching a glob pattern',
+            help='read job list (URLs/commands) from FILE or files matching a glob pattern',
             metavar='FILE',
             dest='jobs_def_file',
         )
@@ -141,7 +144,7 @@ class CommandConfig(BaseConfig):
             '--hooks',
             default=self.hooks_file,
             type=Path,
-            help='use FILE as imported hooks.py module',
+            help='use FILE as hooks.py module to import',
             metavar='FILE',
             dest='hooks_file',
         )
@@ -149,17 +152,21 @@ class CommandConfig(BaseConfig):
             '--cache',
             default=self.cache,
             type=Path,
-            help='use FILE as cache (snapshots database), alternatively a redis URI',
+            help='use FILE as cache (snapshots database); FILE can be a redis URI',
             metavar='FILE',
         )
 
         group = parser.add_argument_group('job management')
-        group.add_argument('--list-jobs', action='store_true', help='list jobs and their index number')
+        group.add_argument(
+            '--list-jobs',
+            action='store_true',
+            help='list jobs and their index number',
+        )
         group.add_argument(
             '--errors',
             nargs='?',
             const='stdout',
-            help='test run all jobs and list those with errors or no data captured',
+            help='test run all jobs and list those with errors or no data captured; optionally send output to REPORTER',
             metavar='REPORTER',
         )
         group.add_argument(
@@ -167,7 +174,7 @@ class CommandConfig(BaseConfig):
             '--test-filter',
             nargs='?',
             const=True,
-            help='test a job (by index or URL/command) and show filtered output; if no JOB, check syntax of config and '
+            help='test a JOB (by index or URL/command) and show filtered output; if no JOB, check syntax of config and '
             'jobs file(s)',
             metavar='JOB',
             dest='test_job',
@@ -178,28 +185,30 @@ class CommandConfig(BaseConfig):
             help='turn off browser headless mode (for jobs using a browser)',
         )
         group.add_argument(
+            '--test-differ',
             '--test-diff',
             '--test-diff-filter',
-            help='show diff(s) using existing saved snapshots of a job (by index or URL/command)',
+            nargs='+',
+            help='show diff(s) using existing saved snapshots of a JOB (by index or URL/command)',
             metavar='JOB',
-            dest='test_diff',
+            dest='test_differ',
         )
         group.add_argument(
             '--dump-history',
-            help='print all saved changed snapshots for a job (by index or URL/command)',
+            help='print all saved changed snapshots for a JOB (by index or URL/command)',
             metavar='JOB',
         )
         group.add_argument(
             '--max-workers',
             type=int,
-            help='maximum number of parallel threads',
+            help='maximum number of parallel threads (WORKERS)',
             metavar='WORKERS',
         )
 
         group = parser.add_argument_group('reporters')
         group.add_argument(
             '--test-reporter',
-            help='test a reporter or redirect output of --test-diff',
+            help='test the REPORTER or redirect output of --test-differ',
             metavar='REPORTER',
         )
         group.add_argument(
@@ -207,16 +216,37 @@ class CommandConfig(BaseConfig):
             action='store_true',
             help='verify SMTP login credentials with server (and enter or check password if using keyring)',
         )
-        group.add_argument('--telegram-chats', action='store_true', help='list telegram chats program is joined to')
         group.add_argument(
-            '--xmpp-login', action='store_true', help='enter or check password for XMPP (stored in keyring)'
+            '--telegram-chats',
+            action='store_true',
+            help=f'list telegram chats {__project_name__} is joined to',
         )
-        group.add_argument('--footnote', help='footnote text (quoted text)')
+        group.add_argument(
+            '--xmpp-login',
+            action='store_true',
+            help='enter or check password for XMPP (stored in keyring)',
+        )
+        group.add_argument(
+            '--footnote',
+            help='FOOTNOTE text (quoted text)',
+        )
 
         group = parser.add_argument_group('launch editor ($EDITOR/$VISUAL)')
-        group.add_argument('--edit', action='store_true', help='edit job (URL/command) list')
-        group.add_argument('--edit-config', action='store_true', help='edit configuration file')
-        group.add_argument('--edit-hooks', action='store_true', help='edit hooks script')
+        group.add_argument(
+            '--edit',
+            action='store_true',
+            help='edit job (URL/command) list',
+        )
+        group.add_argument(
+            '--edit-config',
+            action='store_true',
+            help='edit configuration file',
+        )
+        group.add_argument(
+            '--edit-hooks',
+            action='store_true',
+            help='edit hooks script',
+        )
 
         group = parser.add_argument_group('database')
         group.add_argument(
@@ -225,8 +255,8 @@ class CommandConfig(BaseConfig):
             nargs='?',
             const=1,
             type=int,
-            help='garbage collect the cache database by removing (1) all snapshots of jobs not in the jobs file and '
-            '(2) old changed snapshots, keeping the latest RETAIN_LIMIT (default 1), for the others',
+            help='garbage collect the database: remove all snapshots of jobs not listed in the jobs file and keep only '
+            'the latest RETAIN_LIMIT snapshots for remaining jobs (default: 1)',
             metavar='RETAIN_LIMIT',
         )
         group.add_argument(
@@ -235,44 +265,48 @@ class CommandConfig(BaseConfig):
             nargs='?',
             const=1,
             type=int,
-            help='remove old changed snapshots from the database, keeping the latest RETAIN_LIMIT (default 1)',
+            help='clean up the database by keeping only the latest RETAIN_LIMIT snapshots (default: 1)',
             metavar='RETAIN_LIMIT',
         )
         group.add_argument(
             '--rollback-database',
             '--rollback-cache',
             type=int,
-            help='delete recent changed snapshots since TIMESTAMP (backup the database before using!)',
+            help='delete changed snapshots added since TIMESTAMP (backup the database before using!)',
             metavar='TIMESTAMP',
         )
         group.add_argument(
             '--delete-snapshot',
-            help='delete the last saved changed snapshot of job (index or URL/command)',
+            help='delete the last saved changed snapshot of JOB (index or URL/command)',
             metavar='JOB',
         )
         group.add_argument(
             '--change-location',
             nargs=2,
-            help='change the location of an existing job by location or index',
+            help='change the location of an existing JOB (index or URL/command)',
             metavar=('JOB', 'NEW_LOCATION'),
         )
 
         group = parser.add_argument_group('miscellaneous')
-        group.add_argument('--check-new', action='store_true', help='check if a new release is available')
+        group.add_argument(
+            '--check-new',
+            action='store_true',
+            help='check if a new release is available',
+        )
         group.add_argument(
             '--install-chrome',
             action='store_true',
-            help='install or update Google Chrome browser (for jobs using a browser)',
+            help='install or update Google Chrome browser',
         )
         group.add_argument(
             '--features',
             action='store_true',
-            help='list supported job kinds, filters and reporters (including those loaded by hooks)',
+            help='list supported job kinds, filters and reporters (including those loaded from hooks.py)',
         )
         group.add_argument(
             '--detailed-versions',
             action='store_true',
-            help='list detailed versions including of installed dependencies',
+            help='list detailed versions including those of installed dependencies',
         )
 
         group = parser.add_argument_group('override configuration file')
@@ -290,9 +324,15 @@ class CommandConfig(BaseConfig):
         )
 
         group = parser.add_argument_group('deprecated')
-        group.add_argument('--add', help='add a job (key1=value1,key2=value2,...) [use --edit instead]', metavar='JOB')
         group.add_argument(
-            '--delete', help='delete a job (by index or URL/command) [use --edit instead]', metavar='JOB'
+            '--add',
+            help='add a job (key1=value1,key2=value2,...) [use --edit instead]',
+            metavar='JOB',
+        )
+        group.add_argument(
+            '--delete',
+            help='delete a job (by index or URL/command) [use --edit instead]',
+            metavar='JOB',
         )
 
         # # workaround for avoiding triggering error when invoked by pytest

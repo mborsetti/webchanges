@@ -16,6 +16,7 @@ import pytest
 import yaml
 from flake8.api import legacy as flake8
 
+from webchanges.cli import load_hooks
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase
@@ -25,8 +26,8 @@ here = Path(__file__).parent
 data_path = here.joinpath('data')
 docs_path = here.parent.joinpath('docs')
 
-if sys.version_info < (3, 10):
-    pytest.skip('hooks.py is written for Python 3.10', allow_module_level=True)
+if sys.version_info < (3, 12):
+    pytest.skip('hooks.py is written for Python 3.12', allow_module_level=True)
 
 
 # https://stackoverflow.com/a/48719723/1047040
@@ -90,6 +91,12 @@ if spec:
 else:
     raise ImportError('hooks not loaded')
 # TODO: ensure that this is the version loaded during testing.
+
+
+def test_load_hooks(caplog: pytest.LogCaptureFixture) -> None:
+    """Check the cli.py load of hooks.com"""
+    load_hooks(data_path.joinpath('hooks.example.py'))
+    assert caplog.text == '' or 'not imported because' in caplog.text
 
 
 def test_flake8_on_hooks_rst(tmp_path: Path) -> None:

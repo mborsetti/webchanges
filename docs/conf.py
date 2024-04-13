@@ -191,7 +191,7 @@ html_theme_options: dict[str, Any] = {
 #
 # html_title = 'test vtest'
 
-# A shorter title for the navigation bar.  Default is the same as html_title.
+# A shorter title for the navigation bar. Default is the same as html_title.
 #
 # html_short_title = None
 
@@ -201,7 +201,7 @@ html_theme_options: dict[str, Any] = {
 # html_logo = None
 
 # The name of an image file (relative to this directory) to use as a favicon of
-# the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
+# the docs. This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
 #
 # html_favicon = None
@@ -262,7 +262,7 @@ html_static_path = ['_static']
 # html_show_copyright = True
 
 # If true, an OpenSearch description file will be output, and all pages will
-# contain a <link> tag referring to it.  The value of this option must be the
+# contain a <link> tag referring to it. The value of this option must be the
 # base URL from which the finished HTML is served.
 #
 # html_use_opensearch = ''

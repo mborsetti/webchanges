@@ -20,7 +20,7 @@ from webchanges.storage import CacheStorage, Snapshot
 
 try:
     import minidb
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
 
     class minidb:  # type: ignore[no-redef]
         class Model:

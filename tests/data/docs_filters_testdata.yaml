@@ -334,8 +334,20 @@ https://example.net/beautify_absolute_links_false.html:
      </body>
     </html>
 https://example.net/absolute_links.html:
-  input: <html><body><a href="/link.htm">link</a></body></html>
-  output: <html><body><a href="https://example.net/link.htm">link</a></body></html>
+  input: |
+    <html><body>
+    <a href="/link.htm">link</a>
+    <img src="/link.htm">image
+    <object data="/link.htm">object</object>
+    <form action="/link.htm"></form>
+    </body></html>
+  output: |-
+    <html><body>
+    <a href="https://example.net/link.htm">link</a>
+    <img src="https://example.net/link.htm">image
+    <object data="https://example.net/link.htm">object</object>
+    <form action="https://example.net/link.htm"></form>
+    </body></html>
 https://example.net/pypdf-test.pdf:
   filename: pdf-test.pdf
   output: "A PDF Document that can be turned into plain text. "

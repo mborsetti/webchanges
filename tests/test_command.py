@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path, PurePath
+from typing import Callable, cast
 
 import pytest
 from _pytest.capture import CaptureFixture
@@ -18,11 +19,20 @@ from _pytest.monkeypatch import MonkeyPatch
 from tests.test_storage import DATABASE_ENGINES, prepare_storage_test
 
 from webchanges import __copyright__, __min_python_version__, __project_name__, __version__
-from webchanges.cli import first_run, locate_storage_file, migrate_from_legacy, python_version_warning, setup_logger
+from webchanges.cli import (
+    first_run,
+    handle_unitialized_actions,
+    locate_jobs_files,
+    locate_storage_file,
+    migrate_from_legacy,
+    python_version_warning,
+    setup_logger,
+)
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import CacheSQLite3Storage, CacheStorage, YamlConfigStorage, YamlJobsStorage
+from webchanges.util import import_module_from_source
 
 # Paths
 here = Path(__file__).parent
@@ -56,8 +66,13 @@ visual = os.getenv('VISUAL')
 if visual:
     del os.environ['VISUAL']
 
+py_latest_only = cast(
+    Callable[[Callable], Callable],
+    pytest.mark.skipif(sys.version_info < (3, 12), reason='Time ' 'consuming; testing latest version only'),
+)
 
-def new_command_config(jobs_file: Path = jobs_file) -> CommandConfig:
+
+def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_file) -> CommandConfig:
     return CommandConfig(
         args=[],
         project_name=__project_name__,
@@ -67,6 +82,18 @@ def new_command_config(jobs_file: Path = jobs_file) -> CommandConfig:
         hooks_file=hooks_file,
         cache=cache_file,  # type: ignore[arg-type]
     )
+
+
+# @pytest.fixture()  # type: ignore[misc]
+# def urlwatch_command() -> UrlwatchCommand:
+#     command_config = new_command_config(jobs_file=jobs_file)
+#     config_storage = YamlConfigStorage(config_file)
+#     config_storage.load()
+#     cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+#     jobs_storage = YamlJobsStorage([jobs_file])
+#     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+#     urlwatch_command = UrlwatchCommand(urlwatcher)
+#     return urlwatch_command
 
 
 # Set up classes
@@ -179,7 +206,7 @@ def test_edit_fail(capsys: CaptureFixture[str]) -> None:
         'pytest: reading from stdin while output is captured!  Consider using `-s`.'
     )
     message = capsys.readouterr().out
-    assert 'Errors in file:' in message
+    assert 'Errors in updating file:' in message
 
 
 def test_edit_config() -> None:
@@ -208,7 +235,7 @@ def test_edit_config_fail(capsys: CaptureFixture[str]) -> None:
         'pytest: reading from stdin while output is captured!  Consider using `-s`.'
     )
     message = capsys.readouterr().out
-    assert 'Errors in file:' in message
+    assert 'Errors in updating file:' in message
 
 
 def test_edit_hooks(capsys: CaptureFixture[str]) -> None:
@@ -254,6 +281,17 @@ def test_show_features_and_verbose(capsys: CaptureFixture[str]) -> None:
     assert '* browser - Retrieve a URL using a real web browser (use_browser: true).' in message
 
 
+def test_show_detailed_versions(capsys: CaptureFixture[str]) -> None:
+    setattr(command_config, 'detailed_versions', 'stdout')
+    urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'detailed_versions', None)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert f'• {__project_name__}: {__version__}\n' in message
+
+
 def test_list_jobs_verbose(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'list_jobs', True)
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
@@ -268,10 +306,11 @@ def test_list_jobs_verbose(capsys: CaptureFixture[str]) -> None:
     assert 'index_number=1' in message
     assert "name='Sample webchanges job; used by test_command.py'" in message
     assert "command='echo test'" in message
-    assert message.endswith(f'Jobs file: {urlwatcher.urlwatch_config.jobs_files[0]}\n')
+    assert message.endswith(f'\nJobs file: {command_config.jobs_files[0]}\n')
 
 
 def test_list_jobs_not_verbose(capsys: CaptureFixture[str]) -> None:
+    command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml'), tmp_path.joinpath('jobs-echo_test.yaml')]
     setattr(command_config, 'list_jobs', True)
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
     urlwatcher.urlwatch_config.verbose = False
@@ -279,12 +318,33 @@ def test_list_jobs_not_verbose(capsys: CaptureFixture[str]) -> None:
         urlwatch_command.handle_actions()
     setattr(command_config, 'list_jobs', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
+    command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml')]
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == (
-        '  1: Sample webchanges job; used by test_command.py (echo test)\n'
-        f'Jobs file: {urlwatcher.urlwatch_config.jobs_files[0]}\n'
-    )
+    assert message.splitlines() == [
+        '  1: Sample webchanges job; used by test_command.py (echo test)',
+        'Jobs files concatenated:',
+        f'   • {command_config.jobs_files[0]}',
+        f'   • {command_config.jobs_files[0]}',
+    ]
+
+
+def test_list_jobs_no_filename(capsys: CaptureFixture[str]) -> None:
+    command_config.jobs_files = []
+    setattr(command_config, 'list_jobs', True)
+    urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
+    urlwatcher.urlwatch_config.verbose = False
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'list_jobs', False)
+    urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
+    command_config.jobs_files = [jobs_file]
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert message.splitlines() == [
+        '  1: Sample webchanges job; used by test_command.py (echo test)',
+        '',
+    ]
 
 
 def test__find_job() -> None:
@@ -292,27 +352,32 @@ def test__find_job() -> None:
 
 
 def test__find_job_zero() -> None:
-    assert urlwatch_command._find_job(0) is None
+    with pytest.raises(IndexError) as pytest_wrapped_e:
+        assert urlwatch_command._find_job(0) is None
+    message = str(pytest_wrapped_e.value)
+    assert message == 'Job index 0 out of range.'
+
+
+def test__find_job_negative() -> None:
+    assert urlwatch_command._find_job(-1) is urlwatcher.jobs[0]
 
 
 def test__find_job_index_error() -> None:
-    assert urlwatch_command._find_job(100) is None
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        assert urlwatch_command._find_job(100) is None
+    message = str(pytest_wrapped_e.value)
+    assert message == 'Job index 100 out of range (found 1 jobs).'
+
+
+def test__find_job_index_no_match() -> None:
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        assert urlwatch_command._find_job('nomatch') is None
+    message = str(pytest_wrapped_e.value)
+    assert message == "Job nomatch does not match any job's url/user_visible_url or command."
 
 
 def test__get_job() -> None:
-    assert urlwatch_command._get_job(1).get_location() == 'echo test'
-
-
-def test__get_job_negative(capsys: CaptureFixture[str]) -> None:
-    assert urlwatch_command._get_job(-1).get_location() == 'echo test'
-
-
-def test_get_job_index_error(capsys: CaptureFixture[str]) -> None:
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command._get_job(100).get_location()
-    assert pytest_wrapped_e.value.code == 1
-    message = capsys.readouterr().out
-    assert message == 'Job not found: 100\n'
+    assert urlwatch_command._find_job_with_defaults(1).get_location() == 'echo test'
 
 
 def test_test_job(capsys: CaptureFixture[str]) -> None:
@@ -332,6 +397,39 @@ def test_test_job(capsys: CaptureFixture[str]) -> None:
         '--\n'
         'Job tested in '
     )
+
+
+def test_test_job_all(capsys: CaptureFixture[str]) -> None:
+    urlwatch_command.urlwatch_config.hooks_file = hooks_file
+    import_module_from_source('hooks', hooks_file)
+    setattr(command_config, 'test_job', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'test_job', None)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert message.splitlines() == [
+        f'No syntax errors in config file {urlwatch_command.urlwatch_config.config_file},',
+        f'jobs file ' f'{urlwatch_command.urlwatch_config.jobs_files[0]},',
+        f'and hooks file {urlwatch_command.urlwatch_config.hooks_file}.',
+    ]
+
+    # with multiple files
+    command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml'), tmp_path.joinpath('jobs-echo_test.yaml')]
+    setattr(command_config, 'test_job', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'test_job', None)
+    command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml')]
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert message.splitlines() == [
+        f'No syntax errors in config file {urlwatcher.urlwatch_config.config_file},',
+        'jobs files',
+        f'   • {urlwatch_command.urlwatch_config.jobs_files[0]}',
+        f'   • {urlwatch_command.urlwatch_config.jobs_files[0]},',
+        f'and hooks file {urlwatch_command.urlwatch_config.hooks_file}.',
+    ]
 
 
 def test_test_job_with_test_reporter(capsys: CaptureFixture[str]) -> None:
@@ -406,7 +504,7 @@ def test_dump_history(capsys: CaptureFixture[str]) -> None:
         urlwatcher.cache_storage.delete(guid)
 
 
-def test_test_diff_and_joblist(capsys: CaptureFixture[str]) -> None:
+def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
@@ -417,35 +515,37 @@ def test_test_diff_and_joblist(capsys: CaptureFixture[str]) -> None:
 
     try:
         # never run
-        setattr(command_config, 'test_diff', 1)
+        setattr(command_config, 'test_differ', 1)
         urlwatch_command = UrlwatchCommand(urlwatcher)
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
-        setattr(command_config, 'test_diff', None)
+        setattr(command_config, 'test_differ', None)
         assert pytest_wrapped_e.value.code == 1
         message = capsys.readouterr().out
         assert message == 'This job has never been run before.\n'
 
         # run once
         # also testing joblist
-        urlwatcher.urlwatch_config.joblist = [1]
+        urlwatcher.urlwatch_config.joblist = ['1']
         urlwatcher.run_jobs()
         cache_storage._copy_temp_to_permanent(delete=True)
         urlwatcher.urlwatch_config.joblist = []
 
-        setattr(command_config, 'test_diff', 1)
+        setattr(command_config, 'test_differ', [1, 1])
+        urlwatcher.jobs[0].compared_versions = 2
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
-        setattr(command_config, 'test_diff', None)
+        setattr(command_config, 'test_differ', None)
+        urlwatcher.jobs[0].compared_versions = None
         assert pytest_wrapped_e.value.code == 1
         message = capsys.readouterr().out
         assert message == 'Not enough historic data available (need at least 2 different snapshots).\n'
 
         # test invalid joblist
-        urlwatcher.urlwatch_config.joblist = [999]
+        urlwatcher.urlwatch_config.joblist = ['-999']
         with pytest.raises(IndexError) as pytest_wrapped_e2:
             urlwatcher.run_jobs()
-        assert pytest_wrapped_e2.value.args[0] == 'Job index 999 out of range (found 1 jobs).'
+        assert pytest_wrapped_e2.value.args[0] == 'Job index -999 out of range (found 1 jobs).'
         urlwatcher.urlwatch_config.joblist = []
 
         # run twice
@@ -456,13 +556,13 @@ def test_test_diff_and_joblist(capsys: CaptureFixture[str]) -> None:
         assert len(history) == 2
 
         # test diff (unified) with diff_filter, tz, and contextlines
-        setattr(command_config, 'test_diff', 1)
+        setattr(command_config, 'test_differ', 1)
         urlwatcher.jobs[0].diff_filter = [{'strip': ''}]
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/GMT+12'
         urlwatcher.jobs[0].contextlines = 2
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
-        setattr(command_config, 'test_diff', None)
+        setattr(command_config, 'test_differ', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
@@ -470,40 +570,25 @@ def test_test_diff_and_joblist(capsys: CaptureFixture[str]) -> None:
 
         # rerun to reuse cached _generated_diff but change timezone
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/UTC'
-        setattr(command_config, 'test_diff', 1)
+        setattr(command_config, 'test_differ', 1)
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
-        setattr(command_config, 'test_diff', None)
+        setattr(command_config, 'test_differ', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
-        assert message.splitlines()[10][-6:] == ' +0000'
-
-        # test diff (using outside differ)
-        setattr(command_config, 'test_diff', 1)
-        # Diff tools return 0 for "nothing changed" or 1 for "files differ", anything else is an error
-        if os.name == 'nt':
-            urlwatcher.jobs[0].diff_tool = 'cmd /C exit 1 & rem '
-        else:
-            urlwatcher.jobs[0].diff_tool = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
-        with pytest.raises(SystemExit) as pytest_wrapped_e:
-            urlwatch_command.handle_actions()
-        setattr(command_config, 'test_diff', None)
-        assert pytest_wrapped_e.value.code == 0
-        message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
-        assert message.splitlines()[11][-6:] == ' +0000'
+        assert message.splitlines()[10][-12:] == ' +0000 (UTC)'
 
         # Try another timezone
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/GMT+1'
-        setattr(command_config, 'test_diff', 1)
+        setattr(command_config, 'test_differ', 1)
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
-        setattr(command_config, 'test_diff', None)
+        setattr(command_config, 'test_differ', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
-        assert message.splitlines()[11][-6:] == ' -0100'
+        assert message.splitlines()[10][-6:] == ' -0100'
 
     finally:
         urlwatcher.cache_storage.delete(guid)
@@ -516,9 +601,16 @@ def test_list_error_jobs(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'errors', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message.startswith(
-        'Jobs with errors or returning no data (after unmodified filters, if any)\n   in jobs file '
+    expect = '\n'.join(
+        [
+            'Jobs with errors or returning no data (after unmodified filters, if any)',
+            f'   in jobs file '
+            f"{str(urlwatch_command.urlwatch_config.jobs_files[0]) + ':' if urlwatch_command.urlwatch_config.jobs_files else ''}",  # noqa: E501
+            '--',
+            'Checked 1 enabled jobs for errors in',
+        ]
     )
+    assert message[: len(expect)] == expect
 
 
 def test_list_error_jobs_reporter(capsys: CaptureFixture[str]) -> None:
@@ -854,26 +946,142 @@ def test_check_test_reporter(capsys: CaptureFixture[str]) -> None:
     assert 'No such reporter: does_not_exist\n' in message
 
 
-def test_check_smtp_login() -> None:
+def test_check_smtp_login(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'smtp_login', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'smtp_login', False)
     assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert message.splitlines() == [
+        'Please enable email reporting in the config first.',
+        'Please configure the SMTP user in the config first.',
+    ]
 
 
-def test_check_xmpp_login() -> None:
+def test_check_smtp_login_not_config(capsys: CaptureFixture[str]) -> None:
+    urlwatcher.config_storage.config['report']['email'].update(
+        {
+            'enabled': True,
+            'method': 'sendmail',
+            'smtp': {  # type: ignore[typeddict-item]
+                'auth': '',
+                'host': '',
+                'user': '',
+            },
+        }
+    )
+    setattr(command_config, 'smtp_login', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'smtp_login', False)
+    assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert message.splitlines() == [
+        'Please set the method to SMTP for the email reporter.',
+        'Authentication must be enabled for SMTP.',
+        'Please configure the SMTP hostname in the config first.',
+        'Please configure the SMTP user in the config first.',
+    ]
+
+
+@py_latest_only
+def test_check_smtp_insecure_password(capsys: CaptureFixture[str]) -> None:
+    urlwatcher.config_storage.config['report']['email'].update(
+        {
+            'enabled': True,
+            'method': 'smtp',
+            'smtp': {
+                'auth': 'blah',  # type: ignore[typeddict-item]
+                'host': 'localhost',
+                'user': 'me',
+                'insecure_password': 'pwd',
+                'port': 25,
+                'starttls': True,
+            },
+        }
+    )
+    setattr(command_config, 'smtp_login', True)
+    with pytest.raises(ConnectionRefusedError):
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'smtp_login', False)
+    # assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert message.splitlines() == [
+        'The SMTP password is set in the config file (key "insecure_password")',
+        'Trying to log into the SMTP server...',
+    ]
+
+
+def test_check_xmpp_login(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'xmpp_login', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     setattr(command_config, 'xmpp_login', False)
     assert pytest_wrapped_e.value.code == 1
+    message = capsys.readouterr().out
+    assert message.splitlines() == [
+        'Please enable XMPP reporting in the config first.',
+        'Please configure the XMPP sender in the config first.',
+        'Please configure the XMPP recipient in the config first.',
+    ]
+
+
+def test_check_xmpp_login_insecure_password(capsys: CaptureFixture[str]) -> None:
+    urlwatcher.config_storage.config['report']['xmpp'] = {
+        'enabled': True,
+        'sender': 'me',
+        'recipient': 'you',
+        'insecure_password': 'pwd',
+    }
+    setattr(command_config, 'xmpp_login', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(command_config, 'xmpp_login', False)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert message == 'The XMPP password is already set in the config (key "insecure_password").\n'
 
 
 def test_setup_logger_verbose(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     setup_logger()
     assert f' {__project_name__}: {__version__} {__copyright__}\n' in caplog.text
+
+    # """Set up logging in CLI."""
+    # setup_logger(1)
+    # assert not os.environ.get('DEBUG')
+    # assert 30 == logging.getLogger('webchanges').getEffectiveLevel()
+    # teardown_logger(1)
+    # assert not os.environ.get('DEBUG')
+    #
+    # setup_logger(2)
+    # assert os.environ['DEBUG'] == 'pw:api pytest -s'
+    # assert 20 == logging.getLogger('webchanges').getEffectiveLevel()
+    # teardown_logger(2)
+    # assert not os.environ.get('DEBUG')
+    #
+    # setup_logger(3)
+    # assert os.environ['DEBUG'] == 'pw:api pytest -s'
+    # assert 10 == logging.getLogger('webchanges').getEffectiveLevel()
+    # teardown_logger(3)
+    # assert not os.environ.get('DEBUG')
+
+
+@py_latest_only
+def test_print_new_version(capsys: CaptureFixture[str]) -> None:
+    setattr(command_config, 'check_new', True)
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        handle_unitialized_actions(command_config)
+    setattr(command_config, 'check_new', False)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert message.startswith(f'{__project_name__} {__version__}.')
+
+
+def test_locate_jobs_files() -> None:
+    file = locate_jobs_files(Path('test'), Path('nowhere'), '.noext')
+    assert file == [PurePath('test')]
 
 
 def test_locate_storage_file() -> None:

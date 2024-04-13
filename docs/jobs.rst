@@ -17,14 +17,14 @@ some tips and things to look for when using YAML, but please also see a more com
 YAML :ref:`here <yaml_syntax>`.
 
 * Indentation: All indentation must be done with spaces (2 spaces is suggested); tabs are not recognized/allowed.
-  Indentation is mandatory.
-* Nesting: the indentation logic sometimes changes when nesting dictionaries.
+  Indentation is mandatory and needs to be consistent throughout the file.
+* Nesting: The indentation logic sometimes changes when nesting dictionaries.
 
 .. code-block:: yaml
 
     filter:
-      - html2text:           # notice 2 spaces before the '-'
-          pad_tables: true   # notice 6 spaces before the name
+      - html2text:           # a list item; notice 2 spaces before the '-'
+          pad_tables: true   # a directory item; notice 6 spaces before the name
 
 
 * There must be a space after the ``:`` between the key name and its value. The lack of such space is often the
@@ -63,8 +63,8 @@ Multiple jobs are separated by a line containing three hyphens, i.e. ``---``.
 **Naming a job**
 
 While optional, it is recommended that each job starts with a ``name`` entry. If omitted and the data monitored is
-HTML or XML, :program:`webchanges` will automatically use for a name the first 60 characters of the document's title
-(if present).
+HTML or XML, :program:`webchanges` will automatically use the first 60 characters of the document's title (if
+present) as the job's name.
 
 .. code-block:: yaml
 
@@ -77,7 +77,7 @@ HTML or XML, :program:`webchanges` will automatically use for a name the first 6
 
 URL
 ===
-This is the main job type. It retrieves a document from a web server (``https://`` and ``http://``), an ftp server
+This is the main job type. It retrieves a document from a web server (``https://`` or ``http://``), an ftp server
 (``ftp://``), or a local file (``file://``).
 
 .. code-block:: yaml
@@ -108,6 +108,8 @@ This is the main job type. It retrieves a document from a web server (``https://
       name: Example homepage -- again!
       url: https://example.org/#2
 
+   If you specify :ref:`user_visible_url`, then the value of this directive is the one used for this restriction.
+
 Internally, this type of job has the attribute ``kind: url``.
 
 
@@ -130,32 +132,32 @@ you are interested in, add the directive ``use_browser: true`` to the job:
 
 .. warning::
    As this job type renders the page in a headless Google Chrome instance, it requires more resources and time than a
-   simple ``url`` job; use it only for resources where omitting ``use_browser: true`` does not give the right results
-   and when you can't find alternate sources (e.g. an API).
+   simple ``url`` job. Only use when you can't find alternate ways to get to the data (e.g. an API being called by
+   the page, see tip below) you want to monitor.
 
 .. _rest_api:
 
 .. tip:: In many instances you can get the data you want to monitor directly from a REST API (URL) called by the site
-   during its page loading. Monitor what happens during the page load with a browser's Developer's Tools (e.g. `Chrome
-   DevTools <https://developers.google.com/web/tools/chrome-devtools>`__ using Ctrl+Shift+I, specifically its `network
-   activity inspection tab <https://developer.chrome.com/docs/devtools/network/>`__) to see if this is the case. If so,
-   get the URL, method, and data for this API and use it in a job that you can run without ``use_browser: true``.
+   during its page loading. Use browser developer tools (e.g., `Chrome DevTools
+   <https://developers.google.com/web/tools/chrome-devtools>`__ - Ctrl+Shift+I) to inspect network activity (use the
+   its `network activity inspection tab <https://developer.chrome.com/docs/devtools/network/>`__. If you find
+   relevant API calls, extract the URL, method, and data to monitor it in a ``url`` job without the need to
+   specify ``use_browser: true``.
 
 .. important::
    * The optional `Playwright <https://playwright.dev/python/>`__ Python package must be installed; run
      ``pip install webchanges[use_browser]`` to install it.
    * The first time you run a job with ``use_browser:true``, if the latest version of Google Chrome is not found,
      :program:`Playwright` will download it (~350 MiB). This it could take some time (and bandwidth). You can
-     pre-install the latest version of Chrome at any time with ``webchanges --install-chrome``.
+     pre-install the latest version of Chrome at any time by running ``webchanges --install-chrome``.
 
 When using ``use_browser: true``, you do not need to set any headers in the configuration file or job unless the site
 you're monitoring has special requirements.
 
-We implement measures to reduce the chance that a website can detect that the request is coming from a
-headless Google Chrome instance, and we pass all detection tests `here
-<https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html>`__, but we cannot guarantee
-that this will always work (other measures, such as rate limiting or session initialization, for which you can use
-:ref:`initialization_url`, may be in place to block or limit the effectiveness of automated tools).
+While we implement measures to minimize website detection of headless Chrome, passing basic detection tests `here
+<https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html>`__, some sites use advanced
+anti-automation methods such as rate limiting, session initialization (see :ref:initialization_url for handling),
+CAPTCHAs, browser fingerprinting, etc. that might block your monitoring.
 
 .. tip:: Please see the :ref:`no_conditional_request` directive if you need to turn off the use of :ref:`conditional
    requests <conditional_requests>` for those extremely rare websites that don't handle it (e.g. Google Flights).
@@ -218,7 +220,7 @@ stable states (e.g. they're doing A/B testing), as changes will be reported only
 unknown state, in which case the differences are shown relative to the closest match.
 
 Refer to the command line argument ``--max-snapshots`` to ensure that you are saving the number of snapshots you need
-for this directive to run successfully (default is 4) (see :ref:`here<max-snapshots>`).
+for this directive to run successfully (default is 4) (see :ref:`here <max-snapshots>`).
 
 .. versionadded:: 3.10.2
 
@@ -239,7 +241,7 @@ See examples :ref:`here <cookies>`.
 
 enabled
 ^^^^^^^
-Convenience setting to disable running the job while leaving it in the jobs file (true/false).  Defaults to true.
+Convenience setting to disable running the job while leaving it in the jobs file (true/false). Defaults to true.
 
 .. versionadded:: 3.18
 
@@ -272,7 +274,7 @@ earlier version than the newer HTTP/2 network protocol. Use ``http_client: reque
 library used by default in releases prior to 3.16 (but it only supports up to HTTP/1.1 protocol).
 
 Required packages
-"""""""""""""""""
+`````````````````
 To use ``http_client: requests``, unless the ``requests`` library is already installed in the system, you need to
 first install :ref:`additional Python packages <optional_packages>` as follows:
 
@@ -387,7 +389,7 @@ query.
 
 note
 ^^^^
-Informational note added under the header in reports (a string).  Example:
+Informational note added under the header in reports (a string). Example:
 
 .. code-block:: yaml
 
@@ -514,7 +516,7 @@ no_redirects
 ^^^^^^^^^^^^
 Disables GET, OPTIONS, POST, PUT, PATCH, DELETE, HEAD redirection (true/false). Defaults to false (i.e. redirection
 is enabled) for all methods except HEAD. See more `here
-<https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history>`__.  Redirection takes place
+<https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history>`__. Redirection takes place
 whenever an HTTP status code of 301, 302, 303, 307 or 308 is returned.
 
 Example:
@@ -885,19 +887,30 @@ Filter(s) to be applied to the diff result (a list of dicts).
 
 See :ref:`here <diff_filters>`.
 
-Can be tested with ``--test-diff``.
+Can be tested with ``--test-differ``.
 
 
-.. _diff_tool:
+diff_tool (deprecated)
+----------------------
+Deprecated command to an external tool for generating diff text (a string). See new :ref:`differs` directive
+:ref:`command_diff`.
 
-diff_tool
----------
-Command to an external tool for generating diff text (a string).
+Replace:
 
-Please see warning :ref:`above <important_note_for_command_jobs>` for file security required to run jobs with this
-directive in Linux.
+.. code-block:: yaml
 
-See example usage :ref:`here <word_based_differ>`.
+    diff_tool: my_command
+
+
+with:
+
+.. code-block:: yaml
+
+    differ:
+      command: my_command
+
+.. versionchanged:: 3.21
+   *Deprecated* and replaced with differ :ref:`command_diff`.
 
 .. versionchanged:: 3.0.1
    * Reports now show date/time of diffs generated using ``diff_tool``.
@@ -961,13 +974,16 @@ then onwards at every run until the job succeeds again and the counter resets to
 
 monospace
 ---------
-Data is to be reported using a monospace font (true/false). Defaults to false.
+Data is to be reported using a monospace font (true/false). Defaults to false unless set to true by a filter of a
+differ (see that filter/differ).
 
-When using an ``html`` report the data will be displayed using a monospace font. Useful e.g. for tabular text
-extracted by the ``pdf2text`` filter or for the output of the ``format-json`` filter.
+When using an ``html`` report the data will be displayed using a monospace font. Useful e.g. when the ``pdf2text``
+filter extracts tabular text.
 
 .. versionadded:: 3.9
 
+.. versionchanged:: 3.20
+   Default setting can be overridden by a filter or differ.
 
 .. _name:
 

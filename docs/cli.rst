@@ -4,7 +4,7 @@
 Command line arguments
 ======================
 
-.. code block to column ~103 only; beyond has horizontal scroll bar
+.. code-block to column ~103 only; beyond has horizontal scroll bar
    1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
 
 .. include:: cli_help.txt
@@ -58,7 +58,7 @@ Test run a job or check config and job files for errors
 You can test a job and its filter by using the command line argument ``--test`` followed by the job index number
 (from ``--list``) or its URL/command; :program:`webchanges` will display the filtered output. This allows to easily
 test changes in filters. Use a negative index number to select a job from the bottom of your job list (i.e. -1 is the
-last job, -2 is the second to last job, etc.).  Combine ``--test`` with ``--verbose`` to get more information, for
+last job, -2 is the second to last job, etc.). Combine ``--test`` with ``--verbose`` to get more information, for
 example the text returned from a website with a 4xx (client error) status code, or, if using ``use_browser: true``, a
 screenshot, a full page image, and the HTML contents at the moment of failure (see log for filenames):
 
@@ -90,11 +90,11 @@ To only check the config, job and hooks files for errors, use ``--test`` without
    while running in verbose mode.
 
 
-.. _test-diff:
+.. _test-differ:
 
 Show diff from saved snapshots
 ------------------------------
-You can use the command line argument ``--test-diff`` followed by the job index number (from ``--list``) or its
+You can use the command line argument ``--test-differ`` followed by the job index number (from ``--list``) or its
 URL/command will display diffs and apply the :ref:`diff filters <diff_filters>` currently defined from all snapshots
 that have been saved; obviously a minimum of 2 saved snapshots are required. This allows you to test the effect of a
 diff filter and/or retrieve historical diffs (changes). Use a negative index number to select a job from the bottom
@@ -103,7 +103,7 @@ of your job list (i.e. -1 is the last job, -2 is the second to last job, etc.)
 You can test how the diff looks like with a reporter by combining this with ``--test-reporter``. For example, to see
 how diffs from job 1 look like in HTML if running on a machine with a web browser, run this::
 
-   webchanges --test-diff 1 --test-reporter browser
+   webchanges --test-differ 1 --test-reporter browser
 
 
 .. versionchanged:: 3.3
@@ -127,7 +127,7 @@ reporter. This will help in debugging issues, especially when used in conjunctio
    webchanges -vv --test-reporter telegram
 
 .. versionchanged:: 3.9
-   Can be used in combination with ``--test-diff`` to redirect the output of the diff to a reporter.
+   Can be used in combination with ``--test-differ`` to redirect the output of the diff to a reporter.
 
 
 .. _footnote:
@@ -146,7 +146,10 @@ You can use the command line argument ``--footnote`` to add a footnote to the re
 Updating a URL and keeping past history
 ---------------------------------------
 Job history is stored based on the value of the ``url`` or ``command`` parameter, so updating a job's URL in the
-configuration file ``urls.yaml`` will create a new job with no history. Retain history by using ``--change-location``::
+configuration file ``urls.yaml`` will create a new job with no history. Retain history by using
+``--change-location``, before modifying the jobs file (i.e. while the job is still listed with the old URL or command):
+
+.. code-block:: bash
 
     webchanges --change-location https://example.org#old https://example.org#new
     # or
@@ -212,7 +215,7 @@ collect') or ``--clean-database`` command line argument.
 Running with ``--gc-database`` will purge all snapshots of jobs that are no longer in the jobs file **and**, for those
 in the jobs file, older changed snapshots other than the most recent one for each job. It will also rebuild (and
 therefore defragment) the database using SQLite's `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__
-command.  You can indicate a RETAIN_LIMIT for the number of older changed snapshots to retain (default: 1, the
+command. You can indicate a RETAIN_LIMIT for the number of older changed snapshots to retain (default: 1, the
 latest).
 
 .. tip:: If you use multiple jobs files, use ``--gc-database`` in conjunction with a glob ``--jobs`` command, e.g.

@@ -71,11 +71,11 @@ def test_linkify() -> None:
     )
     assert (
         linkify('www.5678901234567890123.com/&amp;', shorten=True)
-        == '<a href="https://www.5678901234567890123.com/">www.5678901234567890123.com/</a>&amp;amp;'
+        == '<a href="https://www.5678901234567890123.com/">www.5678901234567890123.com/</a>&amp;'
     )
     assert (
         linkify('www.56789012345678901234567.com/&amp;&copy;', shorten=True)
-        == '<a href="https://www.56789012345678901234567.com/">www.56789012345678901234567.com/</a>&amp;amp;&amp;copy;'
+        == '<a href="https://www.56789012345678901234567.com/">www.56789012345678901234567.com/</a>&amp;&copy;'
     )
 
 

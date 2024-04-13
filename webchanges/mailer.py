@@ -18,7 +18,7 @@ from typing import Optional, Union
 
 try:
     import keyring
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     keyring = e.msg  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
@@ -48,8 +48,8 @@ class Mailer:
         :param html_body: The body in html format (optional)
         """
         msg = EmailMessage(policy=policy.SMTPUTF8)
-        msg['from'] = from_email
-        msg['to'] = to_email
+        msg['From'] = from_email
+        msg['To'] = to_email
         msg['Subject'] = subject
         msg['Date'] = formatdate(localtime=True)
         msg.set_content(text_body, subtype='plain')

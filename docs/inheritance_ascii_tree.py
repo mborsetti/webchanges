@@ -5,7 +5,7 @@ Extension to Sphinx that generates a hierarchical list of classes using the cont
 from __future__ import annotations
 
 import importlib
-from typing import Generator, List, TypeVar
+from typing import Iterator, List, TypeVar
 
 from docutils.nodes import literal_block
 from docutils.parsers.rst import Directive
@@ -22,7 +22,7 @@ def patch_subclasses(klass: type) -> None:
         patch_subclasses(kls)
 
 
-def build_tree(klass: type, level: int) -> Generator[str, None, None]:
+def build_tree(klass: type, level: int) -> Iterator[str]:
     """Recurse into klass to build tree."""
     for i, kls in enumerate(klass.__subclasses__()):
         branch = '└───' if i + 1 == len(klass.__subclasses__()) else '├───'

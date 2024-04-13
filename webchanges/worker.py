@@ -14,12 +14,13 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from typing import Iterable, Optional, TYPE_CHECKING
 
+from webchanges.command import UrlwatchCommand
 from webchanges.handler import JobState
 from webchanges.jobs import NotModifiedError
 
 try:
     import psutil
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     psutil = e.msg  # type: ignore[assignment]
 
 # https://stackoverflow.com/questions/39740632
@@ -177,26 +178,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
         return virt_mem
 
-    # extract subset of jobs to run if joblist CLI was set
-    if urlwatcher.urlwatch_config.joblist:
-        for idx in urlwatcher.urlwatch_config.joblist:
-            if not (-(num_jobs := len(urlwatcher.jobs)) <= idx <= -1 or 1 <= idx <= num_jobs):
-                raise IndexError(f'Job index {idx} out of range (found {num_jobs} jobs).')
-        urlwatcher.urlwatch_config.joblist = [
-            jn if jn > 0 else len(urlwatcher.jobs) + jn + 1 for jn in urlwatcher.urlwatch_config.joblist
-        ]
-        jobs = [
-            job.with_defaults(urlwatcher.config_storage.config)
-            for job in urlwatcher.jobs
-            if job.is_enabled() and job.index_number in urlwatcher.urlwatch_config.joblist
-        ]
-        logger.debug(
-            f"Processing {len(jobs)} job{'s' if len(jobs) else ''} as specified in command line: # "
-            f"{', '.join(str(j) for j in urlwatcher.urlwatch_config.joblist)}"
-        )
-    else:
-        jobs = [job.with_defaults(urlwatcher.config_storage.config) for job in urlwatcher.jobs if job.is_enabled()]
-        logger.debug(f"Processing {len(jobs)} job{'s' if len(jobs) else ''}")
+    jobs = set(UrlwatchCommand(urlwatcher).jobs_from_joblist())
 
     #    jobs = insert_delay(jobs)
 

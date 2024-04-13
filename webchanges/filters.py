@@ -33,7 +33,7 @@ from webchanges.util import TrackSubClasses
 # https://stackoverflow.com/questions/712791
 try:
     import simplejson as jsonlib
-except ImportError:
+except ImportError:  # pragma: no cover
     import json as jsonlib  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
@@ -48,7 +48,7 @@ except ImportError as e:  # pragma: has-bs4
 
 try:
     import cssbeautifier
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     cssbeautifier = e.msg  # type: ignore[assignment]
 
 try:
@@ -58,12 +58,12 @@ except ImportError as e:  # pragma: has-jq
 
 try:
     import jsbeautifier
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     jsbeautifier = e.msg  # type: ignore[assignment]
 
 try:
     from pypdf import PdfReader
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     PdfReader = e.msg  # type: ignore[assignment,misc]
 
 try:
@@ -73,7 +73,7 @@ except ImportError as e:  # pragma: has-pdftotext
 
 try:
     from PIL import Image
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     Image = e.msg  # type: ignore[assignment]
 
 try:
@@ -83,7 +83,7 @@ except ImportError as e:  # pragma: has-pytesseract
 
 try:
     import vobject
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     vobject = e.msg  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
@@ -104,13 +104,12 @@ class FilterBase(metaclass=TrackSubClasses):
     __uses_bytes__: bool
     method: str
 
-    def __init__(self, job: JobBase, state: JobState) -> None:
+    def __init__(self, state: JobState) -> None:
         """
 
-        :param job: the JobBase.
         :param state: the JobState.
         """
-        self.job = job
+        self.job = state.job
         self.state = state
 
     @classmethod
@@ -126,8 +125,8 @@ class FilterBase(metaclass=TrackSubClasses):
             if hasattr(sc, '__supported_subfilters__'):
                 for key, doc in sc.__supported_subfilters__.items():
                     result.append(
-                        '      %s%s%s ... %s'
-                        % ('[' if key == default_subfilter else '', key, ']' if key == default_subfilter else '', doc)
+                        f"      {'[' if key == default_subfilter else ''}{key}{']' if key == default_subfilter else ''}"
+                        f' ... {doc}'
                     )
         result.append('\n[] ... Parameter can be supplied as unnamed value\n')
         return '\n'.join(result)
@@ -146,7 +145,7 @@ class FilterBase(metaclass=TrackSubClasses):
         )
 
         for filtercls in filters:
-            filter_instance = filtercls(state.job, state)
+            filter_instance = filtercls(state)
             if filter_instance.match():
                 logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
                 data = filter_instance.filter(data, {})  # All filters take a subfilter
@@ -155,22 +154,30 @@ class FilterBase(metaclass=TrackSubClasses):
 
     @classmethod
     def normalize_filter_list(
-        cls, filter_spec: Union[str, list[Union[str, dict[str, Any]]]]
+        cls,
+        filter_spec: Union[str, list[Union[str, dict[str, Any]]]],
+        job_index_number: Optional[int] = None,
     ) -> Iterator[tuple[str, dict[str, Any]]]:
         """Generates a list of filters that has been checked for its validity.
 
         :param filter_spec: A list of either filter_kind, subfilter (where subfilter is a dict) or a legacy
            string-based filter list specification.
+        :param job_index_number: The job index number.
         :returns: Iterator of filter_kind, subfilter (where subfilter is a dict).
         """
-        for filter_kind, subfilter in cls._internal_normalize_filter_list(filter_spec):
+        for filter_kind, subfilter in cls._internal_normalize_filter_list(filter_spec, job_index_number):
             filtercls = cls.__subclasses__.get(filter_kind, None)
 
             if filtercls is None:
-                raise ValueError(f'Unknown filter kind: {filter_kind} (subfilter or filter directive(s): {subfilter}).')
+                raise ValueError(
+                    f'Job {job_index_number}: Unknown filter kind: {filter_kind} (subfilter or filter directive(s): '
+                    f'{subfilter}).'
+                )
 
             if getattr(filtercls, '__no_subfilter__', False) and subfilter:
-                raise ValueError(f'No subfilters or filter directives supported for {filter_kind}.')
+                raise ValueError(
+                    f'Job {job_index_number}: No subfilters or filter directives supported for {filter_kind}.'
+                )
 
             if hasattr(filtercls, '__supported_subfilters__'):
                 provided_keys = set(subfilter.keys())
@@ -178,15 +185,17 @@ class FilterBase(metaclass=TrackSubClasses):
                 unknown_keys = provided_keys.difference(allowed_keys)
                 if unknown_keys and '<any>' not in allowed_keys:
                     raise ValueError(
-                        f'Filter {filter_kind} does not support subfilter or filter directive(s): {unknown_keys} '
-                        f'(supported: {allowed_keys}).'
+                        f'Job {job_index_number}: Filter {filter_kind} does not support subfilter or filter '
+                        f"directive(s) {', '.join(unknown_keys)} (supported: {', '.join(allowed_keys)})."
                     )
 
             yield filter_kind, subfilter
 
     @classmethod
     def _internal_normalize_filter_list(
-        cls, filter_spec: Union[str, list[Union[str, dict[str, Any]]]]
+        cls,
+        filter_spec: Union[str, list[Union[str, dict[str, Any]]]],
+        job_index_number: Optional[int] = None,
     ) -> Iterator[tuple[str, dict[str, Any]]]:
         """Generates a list of filters with its default subfilter if not supplied.
 
@@ -220,7 +229,9 @@ class FilterBase(metaclass=TrackSubClasses):
                 elif isinstance(item, dict):
                     filter_kind, subfilter = next(iter(item.items()))
                 else:
-                    raise ValueError('Subfilter or filter directive(s) must be a string or a dictionary.')
+                    raise ValueError(
+                        f'Job {job_index_number}: Subfilter or filter directive(s) must be a string or a dictionary.'
+                    )
 
                 filtercls = cls.__subclasses__.get(filter_kind, None)
 
@@ -246,7 +257,7 @@ class FilterBase(metaclass=TrackSubClasses):
         logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
         filtercls: Optional[type[FilterBase]] = cls.__subclasses__.get(filter_kind)  # type: ignore[assignment]
         if filtercls:
-            return filtercls(job_state.job, job_state).filter(data, subfilter)
+            return filtercls(job_state).filter(data, subfilter)
         else:
             return str(data)
 
@@ -431,16 +442,16 @@ class AbsoluteLinksFilter(FilterBase):
     __kind__ = 'absolute_links'
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         tree = etree.HTML(data)
         elem: etree._Element
-        for elem in tree.xpath('//a[@href]'):  # type: ignore[assignment,union-attr]
+        for elem in tree.xpath('//*[@action]'):  # type: ignore[assignment,union-attr]
+            elem.attrib['action'] = urljoin(self.job.url, elem.attrib['action'])  # type: ignore[assignment,type-var]
+        for elem in tree.xpath('//object[@data]'):  # type: ignore[assignment,union-attr]
+            elem.attrib['data'] = urljoin(self.job.url, elem.attrib['data'])  # type: ignore[assignment,type-var]
+        for elem in tree.xpath('//*[@href]'):  # type: ignore[assignment,union-attr]
             elem.attrib['href'] = urljoin(self.job.url, elem.attrib['href'])  # type: ignore[assignment,type-var]
+        for elem in tree.xpath('//*[@src]'):  # type: ignore[assignment,union-attr]
+            elem.attrib['src'] = urljoin(self.job.url, elem.attrib['src'])  # type: ignore[assignment,type-var]
         return etree.tostring(tree, encoding='unicode', method='html')
 
 
@@ -582,12 +593,6 @@ class Csv2TextFilter(FilterBase):
     __default_subfilter__ = 'format_message'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         has_header_config = subfilter.get('has_header')
 
         if has_header_config is None:
@@ -634,12 +639,6 @@ class PypdfFilter(FilterBase):
     __default_subfilter__ = 'password'
 
     def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         # data must be bytes
         if not isinstance(data, bytes):
             raise ValueError(
@@ -655,7 +654,7 @@ class PypdfFilter(FilterBase):
         if password:
             try:
                 import cryptography  # noqa: F401 imported but unused
-            except ImportError:
+            except ImportError:  # pragma: no cover
                 self.raise_import_error(
                     'cryptography',
                     f'password sub-directive of {self.__kind__}',
@@ -690,12 +689,6 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
     __default_subfilter__ = 'password'
 
     def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         # data must be bytes
         if not isinstance(data, bytes):
             raise ValueError(
@@ -724,12 +717,6 @@ class Ical2TextFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if isinstance(vobject, str):
             self.raise_import_error('vobject', self.__kind__, vobject)
 
@@ -778,12 +765,7 @@ class FormatJsonFilter(FilterBase):
     __default_subfilter__ = 'indentation'
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
+        self.job.set_to_monospace()
         sort_keys = subfilter.get('sort_keys', False)
         indentation = int(subfilter.get('indentation', 4))
         parsed_json = jsonlib.loads(data)
@@ -804,12 +786,6 @@ class FormatXMLFilter(FilterBase):
     # __default_subfilter__ = 'indentation'
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         parsed_xml = etree.XML(data)
         return etree.tostring(parsed_xml, encoding='unicode', pretty_print=True)
 
@@ -826,12 +802,6 @@ class PrettyXMLFilter(FilterBase):
     __default_subfilter__ = 'indentation'
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         indentation = int(subfilter.get('indentation', 2))
         return minidom.parseString(data).toprettyxml(indent=' ' * indentation)  # noqa: S318 use defusedxml. TODO
 
@@ -853,12 +823,6 @@ class KeepLinesContainingFilter(FilterBase):
         data: str,
         subfilter: dict[str, Any],
     ) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'text' in subfilter:
             if isinstance(subfilter['text'], str):
                 return ''.join(line for line in data.splitlines(keepends=True) if subfilter['text'] in line).rstrip()
@@ -927,12 +891,6 @@ class DeleteLinesContainingFilter(FilterBase):
         data: str,
         subfilter: dict[str, Any],
     ) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'text' in subfilter:
             if isinstance(subfilter['text'], str):
                 return ''.join(
@@ -972,12 +930,6 @@ class GrepIFilter(FilterBase):
     __default_subfilter__ = 're'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         warnings.warn(
             f"The 'grepi' filter is deprecated; replace with 'delete_lines_containing' + 're' subfilter"
             f' ({self.job.get_indexed_location()})',
@@ -1000,12 +952,6 @@ class StripFilter(FilterBase):
     __default_subfilter__ = 'chars'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if subfilter.get('splitlines'):
             lines = data.splitlines()
 
@@ -1045,12 +991,6 @@ class StripLinesFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         warnings.warn(
             f"The 'strip_each_line' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: "
             f"true' ({self.job.get_indexed_location()})",
@@ -1121,12 +1061,6 @@ class ElementByIdFilter(FilterBase):
     __default_subfilter__ = 'id'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'id' not in subfilter:
             raise ValueError(
                 f"The 'element-by-id' filter needs an id for filtering. ({self.job.get_indexed_location()})"
@@ -1149,12 +1083,6 @@ class ElementByClassFilter(FilterBase):
     __default_subfilter__ = 'class'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'class' not in subfilter:
             raise ValueError(
                 f"The 'element-by-class' filter needs a class for filtering. ({self.job.get_indexed_location()})"
@@ -1177,12 +1105,6 @@ class ElementByStyleFilter(FilterBase):
     __default_subfilter__ = 'style'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'style' not in subfilter:
             raise ValueError(
                 f"The 'element-by-style' filter needs a style for filtering. ({self.job.get_indexed_location()})"
@@ -1205,12 +1127,6 @@ class ElementByTagFilter(FilterBase):
     __default_subfilter__ = 'tag'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'tag' not in subfilter:
             raise ValueError(
                 f"The 'element-by-tag' filter needs a tag for filtering. ({self.job.get_indexed_location()})"
@@ -1229,12 +1145,6 @@ class Sha1SumFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if isinstance(data, str):
             data = data.encode(errors='ignore')
         return hashlib.sha1(data, usedforsecurity=False).hexdigest()
@@ -1248,12 +1158,6 @@ class HexDumpFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if isinstance(data, str):
             data = data.encode(errors='ignore')
         arr = bytearray(data)
@@ -1378,7 +1282,10 @@ class LxmlParser:
         except (ValueError, IndexError):
             return True
 
-    def _get_filtered_elements(self) -> list[Union[etree._Element, str]]:
+    def _get_filtered_elements(
+        self,
+        job_index_number: Optional[int] = None,
+    ) -> list[Union[etree._Element, str]]:
         if self.method == 'xml' and isinstance(self.data, str):
             # see https://lxml.de/FAQ.html#why-can-t-lxml-parse-my-xml-from-unicode-strings
             data: Union[str, bytes] = self.data.encode(errors='xmlcharrefreplace')
@@ -1402,20 +1309,25 @@ class LxmlParser:
             return []
         selected_elems: Optional[list[etree._Element]] = None
         excluded_elems: Optional[list[etree._Element]] = None
-        if self.filter_kind == 'css':
-            selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(root)  # type: ignore[assignment]
-            excluded_elems = (
-                CSSSelector(self.exclude, namespaces=self.namespaces)(root)  # type: ignore[assignment]
-                if self.exclude
-                else None
-            )
-        elif self.filter_kind == 'xpath':
-            selected_elems = root.xpath(self.expression, namespaces=self.namespaces)  # type: ignore[assignment]
-            excluded_elems = (
-                root.xpath(self.exclude, namespaces=self.namespaces)  # type: ignore[assignment]
-                if self.exclude
-                else None
-            )
+        try:
+            if self.filter_kind == 'css':
+                selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(  # type: ignore[assignment]
+                    root
+                )
+                excluded_elems = (
+                    CSSSelector(self.exclude, namespaces=self.namespaces)(root)  # type: ignore[assignment]
+                    if self.exclude
+                    else None
+                )
+            elif self.filter_kind == 'xpath':
+                selected_elems = root.xpath(self.expression, namespaces=self.namespaces)  # type: ignore[assignment]
+                excluded_elems = (
+                    root.xpath(self.exclude, namespaces=self.namespaces)  # type: ignore[assignment]
+                    if self.exclude
+                    else None
+                )
+        except (etree.ParserError, etree.XMLSchemaError, etree.XPathError) as e:
+            raise ValueError(f'Job {job_index_number} {type(e).__name__}: {e.args[0]} {self.expression}') from e
         if excluded_elems is not None:
             for el in excluded_elems:
                 self._remove_element(el)
@@ -1424,8 +1336,8 @@ class LxmlParser:
         else:
             return []
 
-    def get_filtered_data(self) -> str:
-        elements = self._get_filtered_elements()
+    def get_filtered_data(self, job_index_number: Optional[int] = None) -> str:
+        elements = self._get_filtered_elements(job_index_number)
         if self.skip:
             elements = elements[self.skip :]
         if self.maxitems:
@@ -1464,15 +1376,9 @@ class CSSFilter(FilterBase):
     maxitems: int
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         lxml_parser = LxmlParser('css', subfilter, 'selector', self.job)
         lxml_parser.feed(data)
-        return lxml_parser.get_filtered_data()
+        return lxml_parser.get_filtered_data(self.job.index_number)
 
 
 class XPathFilter(FilterBase):
@@ -1495,15 +1401,9 @@ class XPathFilter(FilterBase):
     maxitems: int
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         lxml_parser = LxmlParser('xpath', subfilter, 'path', self.job)
         lxml_parser.feed(data)
-        return lxml_parser.get_filtered_data()
+        return lxml_parser.get_filtered_data(self.job.index_number)
 
 
 class ReSubFilter(FilterBase):
@@ -1519,12 +1419,6 @@ class ReSubFilter(FilterBase):
     __default_subfilter__ = 'pattern'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'pattern' not in subfilter:
             raise ValueError(f"The '{self.__kind__}' filter needs a pattern. ({self.job.get_indexed_location()})")
 
@@ -1545,12 +1439,6 @@ class RegexFindall(FilterBase):
     __default_subfilter__ = 'pattern'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'pattern' not in subfilter:
             raise ValueError(f"The '{self.__kind__}' filter needs a pattern. ({self.job.get_indexed_location()})")
 
@@ -1598,12 +1486,6 @@ class RemoveRepeatedFilter(FilterBase):
     __default_subfilter__ = 'separator'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         separator = subfilter.get('separator', '\n')
         ignore_case = subfilter.get('ignore_case', False)
         consecutive = subfilter.get('adjacent', True)
@@ -1640,12 +1522,6 @@ class RemoveDuplicateLinesFilter(FilterBase):
     __default_subfilter__ = 'separator'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         separator = subfilter.get('separator', '\n')
         data_lines = data.split(separator)
 
@@ -1671,12 +1547,6 @@ class ReverseFilter(FilterBase):
     __default_subfilter__ = 'separator'
 
     def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         separator = subfilter.get('separator', '\n')
         return separator.join(reversed(data.split(separator)))
 
@@ -1735,12 +1605,6 @@ class ExecuteFilter(FilterBase):
     __default_subfilter__ = 'command'
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         return _pipe_filter(self, data, subfilter)
 
 
@@ -1756,12 +1620,6 @@ class ShellPipeFilter(FilterBase):
     __default_subfilter__ = 'command'
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         return _pipe_filter(self, data, subfilter)
 
 
@@ -1777,12 +1635,6 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
     }
 
     def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if not isinstance(data, bytes):
             raise ValueError(
                 f"The '{self.__kind__}' filter needs bytes input (is it the first filter?). "
@@ -1815,12 +1667,6 @@ class JQFilter(FilterBase):  # pragma: has-jq
     __default_subfilter__ = 'query'
 
     def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        """Filter (process) the data.
-
-        :param data: The data to be filtered (processed).
-        :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
-        """
         if 'query' not in subfilter:
             raise ValueError(f"The 'jq' filter needs a query. ({self.job.get_indexed_location()})")
         try:

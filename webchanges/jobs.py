@@ -33,7 +33,7 @@ from webchanges.util import TrackSubClasses
 # https://stackoverflow.com/questions/712791
 try:
     import simplejson as jsonlib
-except ImportError:
+except ImportError:  # pragma: no cover
     import json as jsonlib  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
@@ -43,30 +43,36 @@ if TYPE_CHECKING:
 
 try:
     import httpx
-except ImportError:
+except ImportError:  # pragma: no cover
     print("Required package 'httpx' not found; will attempt to run using 'requests'")
     httpx = None  # type: ignore[assignment]
 
-try:
-    import h2
-except ImportError:
-    h2 = None  # type: ignore[assignment]
+if httpx is not None:
+    try:
+        import h2
+    except ImportError:  # pragma: no cover
+        h2 = None  # type: ignore[assignment]
 
 try:
     import requests
     import requests.adapters
     import urllib3
     import urllib3.exceptions
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     requests = e.msg  # type: ignore[assignment]
     urllib3 = e.msg  # type: ignore[assignment]
 
 try:
     from requests.structures import CaseInsensitiveDict
-except ImportError:
+except ImportError:  # pragma: no cover
     from webchanges._vendored.case_insensitive_dict import CaseInsensitiveDict  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
+
+# reduce logging from httpx's sub-modules
+if httpx is not None and logger.getEffectiveLevel() == logging.DEBUG:
+    logging.getLogger('hpack').setLevel(logging.INFO)
+    logging.getLogger('httpcore').setLevel(logging.INFO)
 
 
 class NotModifiedError(Exception):
@@ -129,8 +135,9 @@ class JobBase(metaclass=TrackSubClasses):
     data: Union[str, dict[str, str]] = None  # type: ignore[assignment]
     data_as_json: Optional[bool] = None
     deletions_only: Optional[bool] = None
+    differ: Optional[dict[str, Any]] = None  # added in 3.21
     diff_filter: Union[str, list[Union[str, dict[str, Any]]]] = None  # type: ignore[assignment]
-    diff_tool: Optional[str] = None
+    diff_tool: Optional[str] = None  # deprecated in 3.21
     enabled: Optional[bool] = None
     encoding: Optional[str] = None
     filter: Union[str, list[Union[str, dict[str, Any]]]] = None  # type: ignore[assignment]
@@ -167,6 +174,7 @@ class JobBase(metaclass=TrackSubClasses):
     stderr: Optional[str] = None  # urlwatch backwards compatibility for ShellJob (not used)
     switches: Optional[list[str]] = None
     timeout: Optional[Union[int, float]] = None
+    tz: Optional[str] = None  # added by with_defaults, taken from reporter configuration
     user_data_dir: Optional[str] = None
     user_visible_url: Optional[str] = None
     wait_for: Optional[Union[int, str]] = None  # pyppeteer backwards compatibility (deprecated)
@@ -265,6 +273,18 @@ class JobBase(metaclass=TrackSubClasses):
             data['url'] = data.get('url', data['navigate'])
             data['use_browser'] = True
 
+        # Backwards-compatible with diff_tool
+        if data.get('diff_tool') and not data.get('differ'):
+            data['differ'] = {'name': 'command', 'command': data['diff_tool']}
+        # Accept differ as a string
+        elif isinstance(data.get('differ'), str):
+            data['differ'] = {'name': data['differ']}
+        elif data.get('differ') and not isinstance(data['differ'], dict):
+            raise ValueError(
+                f"Error in jobs file: Job directive 'differ: {data['differ']}' has to be a string or dict:\n"
+                f'{yaml.safe_dump(data)}'
+            )
+
         if 'kind' in data:
             # Used for hooks.py.
             try:
@@ -326,7 +346,7 @@ class JobBase(metaclass=TrackSubClasses):
         }
 
     @classmethod
-    def from_dict(cls, data: dict, filenames: list[Path]) -> 'JobBase':
+    def from_dict(cls, data: dict, filenames: list[Path]) -> JobBase:
         """Create a JobBase class from a dict, checking that all keys are recognized (i.e. listed in __required__ or
         __optional__).
 
@@ -402,7 +422,7 @@ class JobBase(metaclass=TrackSubClasses):
                     else:
                         setattr(self, key, value)
 
-    def with_defaults(self, config: _Config) -> 'JobBase':
+    def with_defaults(self, config: _Config) -> JobBase:
         """Obtain a Job object that also contains defaults from the configuration.
 
         :param config: The configuration as a dict.
@@ -422,6 +442,26 @@ class JobBase(metaclass=TrackSubClasses):
             job_with_defaults._set_defaults(cfg.get(self.__kind__))  # type: ignore[arg-type]
             # all is done afterward, so that more specific defaults are not overwritten
             job_with_defaults._set_defaults(cfg.get('all'))
+
+        # backwards-compatible
+        if hasattr(job_with_defaults, 'diff_tool'):
+            if isinstance(job_with_defaults.diff_tool, str):
+                job_with_defaults.differ = {
+                    'command': {'command': job_with_defaults.diff_tool}  # type: ignore[assignment]
+                }
+                warnings.warn(
+                    f"Job {job_with_defaults.index_number}'diff_tool' is a deprecated job directive. Please use"
+                    f" differ '{{'command': {job_with_defaults.diff_tool}}}' instead.",
+                    DeprecationWarning,
+                )
+            elif job_with_defaults.diff_tool is not None:
+                raise ValueError("'diff_tool' is a deprecated job directive. Please use 'differ' 'command:' instead.")
+
+        rep_cfg = config.get('report')
+        if isinstance(rep_cfg, dict):
+            tz = rep_cfg.get('tz')
+            job_with_defaults.tz = tz
+
         return job_with_defaults
 
     def get_guid(self) -> str:
@@ -479,6 +519,11 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return self.enabled is None or self.enabled
 
+    def set_to_monospace(self) -> None:
+        """If unset, sets the monospace flag to True (will not override)."""
+        if self.monospace is None:
+            self.monospace = True
+
 
 class Job(JobBase):
     """Job class for jobs."""
@@ -489,8 +534,9 @@ class Job(JobBase):
         'compared_versions',
         'contextlines',
         'deletions_only',
+        'differ',
         'diff_filter',
-        'diff_tool',
+        'diff_tool',  # deprecated in 3.21
         'enabled',
         'filter',
         'index_number',
@@ -750,7 +796,7 @@ class UrlJob(UrlJobBase):
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         # noinspection PyTypeChecker
-        response = requests.request(
+        response = requests.request(  # type: ignore[attr-defined]
             method=self.method,  # type: ignore[arg-type]
             url=self.url,
             data=self.data,
@@ -795,7 +841,7 @@ class UrlJob(UrlJobBase):
                     error_message = parser.handle(html_text).strip()
                 http_error_msg += f'\n{error_message}'
 
-            raise requests.HTTPError(http_error_msg, response=response)
+            raise requests.HTTPError(http_error_msg, response=response)  # type: ignore[attr-defined]
 
         if response.status_code == 304:
             raise NotModifiedError(response.status_code)
@@ -923,11 +969,6 @@ class UrlJob(UrlJobBase):
         logger.debug(f'Job {self.index_number}: Headers: {headers}')
 
         if self.http_client == 'requests' or not httpx:
-            if isinstance(requests, str):
-                raise ImportError(
-                    f"Job {job_state.job.index_number}: Python HTTP client package 'requests' cannot be imported; "
-                    f'cannot run job ( {self.get_indexed_location()} )\n{requests}'
-                )
             job_state._http_client_used = 'requests'
             if self.ignore_dh_key_too_small:
                 # https://stackoverflow.com/questions/38015537
@@ -958,7 +999,7 @@ class UrlJob(UrlJobBase):
                     'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
                     "and thus are not affected by the server's weak DH key"
                 )
-                httpx._config.DEFAULT_CIPHERS == 'DEFAULT@SECLEVEL=1'
+                httpx._config.DEFAULT_CIPHERS = 'DEFAULT@SECLEVEL=1'
             data, etag = self._retrieve_httpx(headers=headers, timeout=timeout)
         else:
             raise ValueError(
@@ -996,7 +1037,7 @@ class UrlJob(UrlJobBase):
         ):
             # Instead of a full traceback, just show the error
             return str(exception)
-        elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
+        elif requests is not None and isinstance(exception, requests.exceptions.RequestException):
             # Instead of a full traceback, just show the error
             return str(exception)
         return tb
@@ -1028,7 +1069,7 @@ class UrlJob(UrlJobBase):
                 elif isinstance(self.ignore_http_error_codes, list):
                     ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
                 return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
-        elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
+        elif requests is not None and isinstance(exception, requests.exceptions.RequestException):
             if self.ignore_connection_errors and isinstance(exception, requests.exceptions.ConnectionError):
                 return True
             if self.ignore_timeout_errors and isinstance(exception, requests.exceptions.Timeout):
@@ -1126,7 +1167,7 @@ class BrowserJob(UrlJobBase):
             from playwright._repo_version import version as playwright_version
             from playwright.sync_api import Error as PlaywrightError
             from playwright.sync_api import ProxySettings, Route, sync_playwright
-        except ImportError:
+        except ImportError:  # pragma: no cover
             raise ImportError(
                 f"Python package 'playwright' is not installed; cannot run jobs with the 'use_browser: true' "
                 f"directive. Please install dependencies with 'pip install webchanges[use_browser]' and run again. "
@@ -1134,7 +1175,7 @@ class BrowserJob(UrlJobBase):
             ) from None
         try:
             import psutil
-        except ImportError:
+        except ImportError:  # pragma: no cover
             raise ImportError(
                 f"Python package 'psutil' is not installed; cannot run jobs with the 'use_browser: true' "
                 f"directive. Please install dependencies with 'pip install webchanges[use_browser]' and run again. "
@@ -1356,7 +1397,7 @@ class BrowserJob(UrlJobBase):
                     logger.info(f"Job {self.index_number}: Running init script '{self.initialization_js}'")
                     page.evaluate(self.initialization_js)
                     if self.wait_for_url:
-                        logger.info(f'Job {self.index_number}: Waiting for url {self.wait_for_url}')
+                        logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
                         page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)  # type: ignore[arg-type]
                 updated_url = page.url
                 params = dict(parse_qsl(urlparse(updated_url).params))
@@ -1536,6 +1577,7 @@ class BrowserJob(UrlJobBase):
 
                 if response.ok:
                     if self.wait_for_url:
+                        logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
                         if isinstance(self.wait_for_url, str):
                             page.wait_for_url(
                                 self.wait_for_url,
@@ -1552,6 +1594,7 @@ class BrowserJob(UrlJobBase):
                                 f'( {self.get_indexed_location()} ).'
                             )
                     if self.wait_for_selector:
+                        logger.info(f'Job {self.index_number}: Waiting for selector {self.wait_for_selector}')
                         if isinstance(self.wait_for_selector, str):
                             page.wait_for_selector(self.wait_for_selector)
                         elif isinstance(self.wait_for_selector, dict):
@@ -1564,9 +1607,9 @@ class BrowserJob(UrlJobBase):
                                 f' ( {self.get_indexed_location()} ).'
                             )
                     if self.wait_for_function:
+                        logger.info(f'Job {self.index_number}: Waiting for function {self.wait_for_function}')
                         if isinstance(self.wait_for_function, str):
                             page.wait_for_function(self.wait_for_function)
-
                         elif isinstance(self.wait_for_function, dict):
                             page.wait_for_function(**self.wait_for_function)
                         else:
@@ -1577,6 +1620,7 @@ class BrowserJob(UrlJobBase):
                                 f' ( {self.get_indexed_location()} ).'
                             )
                     if self.wait_for_timeout:
+                        logger.info(f'Job {self.index_number}: Waiting for timeout {self.wait_for_timeout}')
                         if isinstance(self.wait_for_timeout, (int, float)) and not isinstance(
                             self.wait_for_timeout, bool
                         ):
@@ -1817,7 +1861,7 @@ class ShellJob(Job):
                     text=(not needs_bytes),
                 ).stdout,
                 '',
-            )  # noqa: DUO116 use of "shell=True" is insecure.
+            )
         except subprocess.CalledProcessError as e:
             logger.error(f'Job {self.index_number}: Command failed with returncode {e.returncode}')
             logger.error(f'Job {self.index_number}: Command: {e.cmd} ')

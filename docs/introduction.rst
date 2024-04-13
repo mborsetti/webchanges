@@ -19,10 +19,10 @@ it finds changes. Specifically, every time you run :program:`webchanges`, it:
 
 :ref:`Jobs`
 -----------
-Each source or command to be monitored is a "job".
+Each source of data to be monitored (URL or command) is a "job".
 
-The instructions for each such job are contained in a file in the :ref:`YAML format <yaml_syntax>` called
-``jobs.yaml`` and located in the following directory:
+The instructions for each such job are contained in a file in the :ref:`YAML format <yaml_syntax>` called ``jobs.yaml``
+and located in the following directory:
 
 * Linux: ``~/.config/webchanges``
 * MacOS: ``~/Library/Preferences/webchanges``
@@ -45,11 +45,11 @@ A different file can be specified with the ``--jobs`` command line argument as f
 
    webchanges --jobs mycustomjobs.yaml --edit
 
-For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.  Some gotchas include that indentation is mandatory,
+For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`. Some gotchas include that indentation is mandatory,
 spaces (and not tabs!) must be used for such indentation, and there must be a space after a colon separating a key from
 its value.
 
-For examples of jobs, see :ref:`here <watching_sites>`.
+For examples of jobs, see :ref:`here <examples>`.
 
 The minimum configuration necessary for :program:`webchanges` to work is a single ``url`` directive (for web
 resources) or ``command`` directive (for the output of a shell command):
@@ -154,20 +154,23 @@ only lines matching a specific regular expression with ``keep_lines_containing``
 Filters are explained :ref:`here <filters>`.
 
 
-Comparison
-----------
+:ref:`Differ <differs>` (comparison)
+------------------------------------
 Once all filters (if any) are applied, :program:`webchanges` automatically performs a comparison between the filtered
 data collected in this run with the one saved from a prior run, by default computing a *diff* in the `unified format
-<https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ("unified *diff*").
+<https://en.wikipedia.org/wiki/Diff#Unified_format>`__ ("unified *diff*"). Other comparison methods are avaialable,
+such as deepdiff for JSON or XML, HTML table, and Gen AI summarization.
+
+Differs are explained :ref:`here <differs>`.
 
 
 :ref:`Diff filters <diff_filters>`
 ----------------------------------
 After the comparison is generated, you can apply **any** of the filters above to the *diff itself* using
-``diff_filter``, and/or one of the additional diff-specific ones to:
+``diff_filter``, and/or one of the additional ones (work with unified format-diff only):
 
-* Only show lines representing additions: ``additions_only``;
-* Only show lines representing deletions: ``deletions_only``.
+* To only show lines representing additions: ``additions_only``;
+* To only show lines representing deletions: ``deletions_only``.
 
 Diff filters are explained :ref:`here <diff_filters>`.
 
@@ -194,44 +197,54 @@ can add (or change to) one or more reporters to:
 * Send it via **prowlapp.com**: ``prowl``;
 * Send it via **pushbullet**.com: ``pushbullet``;
 * Send it via **pushover**.net: ``pushover``;
-* Run a command on the local system to take care of the notification: ``run_command``.
+* Run a command on the local system to take care of the notification: ``run_command``;
 * Display it on stdout (the text console): ``stdout``;
 * Send it via **Telegram**: ``telegram``;
 * Send it to a **Slack** or **Mattermost** channel using the service's webhook: ``webhook``;
-* Send it as a message using the Extensible Messaging and Presence Protocol (**XMPP**): ``xmpp``;
+* Send it as a message using the Extensible Messaging and Presence Protocol (**XMPP**): ``xmpp``.
 
 Reporters are explained :ref:`here <reporters>`.
+
 
 Scheduling
 ----------
 :program:`webchanges` will check for changes every time you run it, but does not include a scheduler. We recommend
 using a system scheduler to automatically run :program:`webchanges` periodically:
 
-- On Linux or macOS, you can use cron (if you have never used cron before, see
+- On Linux (or macOS), you can use ``cron`` (if you have never used cron before, see
   `here <https://www.computerhope.com/unix/ucrontab.htm>`__); `crontab.guru <https://crontab.guru>`__ will build a
   schedule expression for you.
+- On macOS, `Apple recommends <https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/
+  BPSystemStartup/Chapters/ScheduledJobs.html>`__ to use `launchd
+  <https://developer.apple.com/documentation/xpc/launchd>`__.
 - On Windows, you can use the built-in `Windows Task Scheduler
   <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.
 
 
-Windows installation
---------------------
-* First install (or upgrade to) the `latest version of Python <https://www.python.org/downloads/>`__; you usually want
-  the 64-bit Windows installer.
-* Open a command window by pressing ``⊞ Win + R``, typing ``cmd``, and pressing Enter (or clicking on OK).
-* Type ``py -m pip install webchanges`` (or ``py -m pip install webchanges[browser]`` etc.) and press Enter.
-* This will download :program:`webchanges` and install it.
-* After this, :program:`webchanges` should be available as a command (type ``webchanges --version`` to check).
-* Configure :program:`webchanges` as per this documentation.
+Installing on Windows
+---------------------
+* Install (or upgrade to) the `latest version of Python <https://www.python.org/downloads/>`__;
+* Open a command window by pressing ``⊞ Win`` + ``R`` together, typing ``cmd``, and pressing Enter (or clicking on OK);
+* Type ``py -m pip install webchanges`` (or ``py -m pip install webchanges[browser]`` etc.) and press Enter;
+
+  - This will download :program:`webchanges` and install it;
+* After this, :program:`webchanges` should be available as a command (type ``webchanges --version`` to check);
+* Follow this documentation to configure the program :program:`webchanges`.
 
 .. tip::
   If you receive ``*** fatal error - Internal error: TP_NUM_C_BUFS too small: 50`` when running :program:`webchanges`
   in Windows, try installing python-magic-bin by running ``pip install python-magic-bin``.
 
 
-Android installation
---------------------
-This program is not made to run on your phone/tablet directly, but rather on a server (including one in the cloud); the
-notifications (":ref:`reports <reports>`") can be sent to your Android device. However, if you want to run
-:program:`webchanges` on an Android device you may be able to do so by tinkering with  `Termux
-<https://termux.dev/>`__.
+Installing on Android
+---------------------
+:program:`webchanges` is not made to run on your phone/tablet directly, but rather on a server (including one in the
+cloud), and can be configured to send notifications (":ref:`reports <reports>`") to your Android device. However,
+if you want to run :program:`webchanges` on an Android device as if it were a server, you *may* be able to do so by
+tinkering with `Termux <https://termux.dev/>`__.
+
+
+Installing as a Docker container
+--------------------------------
+:program:`webchanges` can be run as a Docker container. Please see `here
+<https://github.com/yubiuser/webchanges-docker>`__ for one such implementation.

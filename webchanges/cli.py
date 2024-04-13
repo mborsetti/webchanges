@@ -218,8 +218,9 @@ def load_hooks(hooks_file: Path) -> None:
             ImportWarning,
         )
     else:
+        logger.info(f'Importing hooks module from {hooks_file}')
         import_module_from_source('hooks', hooks_file)
-        logger.info(f'Imported hooks module from {hooks_file}')
+        logger.info('Finished importing hooks module')
 
 
 def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
@@ -256,7 +257,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
         """
         try:
             from playwright._impl._driver import compute_driver_executable
-        except ImportError:
+        except ImportError:  # pragma: no cover
             raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
 
         driver_executable = compute_driver_executable()

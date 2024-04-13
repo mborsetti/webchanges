@@ -35,12 +35,12 @@ from webchanges.util import edit_file, file_ownership_checks
 
 try:
     from types import NoneType
-except ImportError:  # Python 3.9
+except ImportError:  # pragma: no cover # Python 3.9
     NoneType = type(None)  # type: ignore[misc,assignment]
 
 try:
     import redis
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     redis = e.msg  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
@@ -516,13 +516,13 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
                 raise
             except Exception as e:
                 print()
-                print('Errors in file:')
+                print('Errors in updating file:')
                 print('======')
                 print(e)
                 print('======')
                 print('')
                 print(f'The file {filename} was NOT updated.')
-                user_input = input('Do you want to retry the same edit? (Y/n)')
+                user_input = input('Do you want to retry the same edit? [Y/n] ')
                 if not user_input or user_input.lower().startswith('y'):
                     continue
                 file_edit.unlink()
@@ -560,19 +560,19 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         jobs: list[JobBase] = self.load()
 
         def is_shell_job(job: JobBase) -> bool:
-            """Check if the job uses filter 'shellpipe' or an external differ, as they call subprocess.run(
-            Shell=True) (insecure).
+            """Check if the job uses filter 'shellpipe' or an external differ, as they call
+            subprocess.run(shell=True) (insecure).
 
-            :returns: True if subprocess.run(Shell=True) is invoked by job, False otherwise.
+            :returns: True if subprocess.run(shell=True) is invoked by job, False otherwise.
             """
             if isinstance(job, ShellJob):
                 return True
 
-            for filter_kind, subfilter in FilterBase.normalize_filter_list(job.filter):
+            for filter_kind, subfilter in FilterBase.normalize_filter_list(job.filter, job.index_number):
                 if filter_kind == 'shellpipe':
                     return True
 
-                if job.diff_tool is not None and not job.diff_tool.startswith('deepdiff'):
+                if job.differ and job.differ.get('name') == 'command':
                     return True
 
             return False
@@ -690,28 +690,31 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         config_for_extras = copy.deepcopy(config)
         if 'job_defaults' in config_for_extras:
-            # 'job_defaults' is not set in DEFAULT_CONFIG
+            # Create missing 'job_defaults' keys from DEFAULT_CONFIG
             for key in DEFAULT_CONFIG['job_defaults']:
-                config_for_extras['job_defaults'][key] = {}  # type: ignore[literal-required]
+                config_for_extras['job_defaults'][key] = None  # type: ignore[literal-required]
         if 'hooks' in sys.modules:
-            for _, obj in inspect.getmembers(sys.modules['hooks'], inspect.isclass):
+            # Remove extra keys in config used in hooks (they are not in DEFAULT_CONFIG)
+            for _, obj in inspect.getmembers(
+                sys.modules['hooks'], lambda x: inspect.isclass(x) and x.__module__ == 'hooks'
+            ):
                 if issubclass(obj, JobBase):
                     if obj.__kind__ not in DEFAULT_CONFIG['job_defaults'].keys():
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
-        if 'slack' in config_for_extras.get('report', {}):  # legacy key; ignore
+                elif issubclass(obj, ReporterBase):
+                    if obj.__kind__ not in DEFAULT_CONFIG['report'].keys():
+                        config_for_extras['report'].pop(obj.__kind__, None)  # type: ignore[misc]
+        if 'slack' in config_for_extras.get('report', {}):
+            # Ignore legacy key
             config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
         extras: _Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG, ignore_underline_keys=True)
-        if extras.get('report') and 'hooks' in sys.modules:
-            # skip reports added by hooks
-            for name, obj in inspect.getmembers(sys.modules['hooks'], inspect.isclass):
-                if obj.__module__ == 'hooks' and issubclass(obj, ReporterBase):
-                    extras['report'].pop(obj.__kind__, None)  # type: ignore[misc]
-            if not len(extras['report']):
-                extras.pop('report')  # type: ignore[misc]
+        if not extras.get('report'):
+            extras.pop('report', None)  # type: ignore[misc]
         if extras:
             warnings.warn(
                 f'Found unrecognized directive(s) in the configuration file {self.filename}:\n'
-                f'{yaml.safe_dump(extras)}Check for typos (documentation at {__docs_url__})\n',
+                f'{yaml.safe_dump(extras)}Check for typos or the hooks.py file (if any); documentation is at '
+                f'{__docs_url__}\n',
                 RuntimeWarning,
             )
 

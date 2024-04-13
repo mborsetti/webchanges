@@ -113,7 +113,7 @@ def test_check_for_unrecognized_keys() -> None:
         message = pytest_wrapped_e.list[0].message
     assert message == (
         f'Found unrecognized directive(s) in the configuration file {config_file}:\n'
-        f'this_is_a_typo: true\nCheck for typos (documentation at {__docs_url__})\n'
+        f'this_is_a_typo: true\nCheck for typos or the hooks.py file (if any); documentation is at {__docs_url__}\n'
     )
 
 
@@ -129,8 +129,8 @@ def test_check_for_unrecognized_keys_hooks() -> None:
     else:
         message = pytest_wrapped_e.list[0].message
     assert message == (
-        f'Found unrecognized directive(s) in the configuration file {config_file}:\n'
-        f'report:\n  made_up_key: true\nCheck for typos (documentation at {__docs_url__})\n'
+        f'Found unrecognized directive(s) in the configuration file {config_file}:\nreport:\n  made_up_key: true\n'
+        f'Check for typos or the hooks.py file (if any); documentation is at {__docs_url__}\n'
     )
     import_module_from_source('hooks', data_path.joinpath('hooks_example.py'))
     config_storage.check_for_unrecognized_keys(config)

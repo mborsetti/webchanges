@@ -3,15 +3,14 @@
 
 from __future__ import annotations
 
-import asyncio
 import ftplib  # noqa: S402 A FTP-related module is being imported.
+import importlib.util
 import os
 import socket
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
-from asyncio import AbstractEventLoop
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Callable, cast, Union
 
 import pytest
 import yaml
@@ -31,14 +30,6 @@ data_path = here.joinpath('data')
 cache_file = ':memory:'
 cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
 
-if sys.version_info[0:2] < (3, 8) and sys.platform == 'nt':
-    # https://docs.python.org/3/library/asyncio-platforms.html#asyncio-windows-subprocess
-    loop = asyncio.ProactorEventLoop()
-
-    @pytest.fixture
-    def event_loop():
-        return loop
-
 
 def is_connected() -> bool:
     """Check if connected to Internet."""
@@ -53,9 +44,13 @@ def is_connected() -> bool:
     return False
 
 
-connection_required = pytest.mark.skipif(not is_connected(), reason='no Internet connection')
-py_latest_only = pytest.mark.skipif(sys.version_info < (3, 12), reason='Time consuming; testing latest version only')
-
+connection_required = cast(
+    Callable[[Callable], Callable], pytest.mark.skipif(not is_connected(), reason='no Internet connection')
+)
+py_latest_only = cast(
+    Callable[[Callable], Callable],
+    pytest.mark.skipif(sys.version_info < (3, 12), reason='Time ' 'consuming; testing latest version only'),
+)
 TEST_JOBS = [
     (
         {
@@ -137,14 +132,23 @@ TEST_JOBS = [
     ),
 ]
 
+
 TEST_ALL_URL_JOBS = [
     {},
-    {'http_client': 'requests'},
     {'use_browser': True},
 ]
+if importlib.util.find_spec('requests') is not None:
+    TEST_ALL_URL_JOBS.append({'http_client': 'requests'})
 
 
 def new_command_config(config_file: Path, jobs_file: Path, hooks_file: Path) -> CommandConfig:
+    """Create a new command config.
+
+    :param config_file: The location of the config file.
+    :param jobs_file: The location of the jobs file.
+    :param hooks_file: The location of the hooks file.
+    :return: The CommandConfig.
+    """
     return CommandConfig(
         args=[],
         project_name=__project_name__,
@@ -186,7 +190,6 @@ def test_run_job(
     input_job: dict[str, Union[str, dict[str, str], bool, int]],
     output: str,
     caplog: LogCaptureFixture,
-    event_loop: AbstractEventLoop,
 ) -> None:
     job = JobBase.unserialize(input_job)
     with JobState(cache_storage, job) as job_state:
@@ -224,7 +227,7 @@ def test_run_ftp_job_needs_bytes() -> None:
     TEST_ALL_URL_JOBS,
     ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_etag(job_data: dict[str, Any], event_loop: AbstractEventLoop) -> None:
+def test_check_etag(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
     with JobState(cache_storage, job) as job_state:
@@ -238,9 +241,7 @@ def test_check_etag(job_data: dict[str, Any], event_loop: AbstractEventLoop) -> 
     TEST_ALL_URL_JOBS,
     ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_etag_304_request(
-    job_data: dict[str, Any], event_loop: AbstractEventLoop, doctest_namespace: dict
-) -> None:
+def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dict) -> None:
     """Check for 304 Not Modified response."""
     if job_data.get('use_browser'):
         pytest.skip('Capturing of 304 cannot be implemented in Chrome')  # last tested with Chromium 89
@@ -268,7 +269,7 @@ def test_check_etag_304_request(
     TEST_ALL_URL_JOBS,
     ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_ignore_connection_errors(job_data: dict[str, Any], event_loop: AbstractEventLoop) -> None:
+def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'http://localhost'
     job_data['timeout'] = 0.0001
     job = JobBase.unserialize(job_data)
@@ -297,7 +298,7 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any], event_loop: Ab
     TEST_ALL_URL_JOBS,
     ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_bad_proxy(job_data: dict[str, Any], event_loop: AbstractEventLoop) -> None:
+def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@localhost:8080'
     job_data['timeout'] = 0.0001
@@ -324,9 +325,7 @@ def test_check_bad_proxy(job_data: dict[str, Any], event_loop: AbstractEventLoop
     TEST_ALL_URL_JOBS,
     ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
-def test_check_ignore_http_error_codes_and_error_message(
-    job_data: dict[str, Any], event_loop: AbstractEventLoop
-) -> None:
+def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any]) -> None:
     if job_data.get('use_browser'):
         pytest.skip('Cannot debug due to Playwrigth/Windows bug')  # TODO Remove this and fix
 
@@ -365,7 +364,7 @@ def test_check_ignore_http_error_codes_and_error_message(
 
 @py_latest_only  # type: ignore[misc]
 @connection_required  # type: ignore[misc]
-def test_stress_use_browser(event_loop: AbstractEventLoop) -> None:
+def test_stress_use_browser() -> None:
     jobs_file = data_path.joinpath('jobs-use_browser.yaml')
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path('')
@@ -459,7 +458,7 @@ def test_url_job_use_browser_false_without_kind() -> None:
     assert isinstance(job, UrlJob)
 
 
-def test_browser_job_without_kind(event_loop: AbstractEventLoop) -> None:
+def test_browser_job_without_kind() -> None:
     job_data = {'url': 'https://www.example.com', 'use_browser': True}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, BrowserJob)
@@ -503,7 +502,7 @@ def test_ignore_error() -> None:
     assert job.ignore_error(Exception()) is False
 
 
-def test_browser_switches_not_str_or_list(event_loop: AbstractEventLoop) -> None:
+def test_browser_switches_not_str_or_list() -> None:
     job_data = {
         'url': 'https://www.example.com',
         'use_browser': True,
@@ -515,7 +514,7 @@ def test_browser_switches_not_str_or_list(event_loop: AbstractEventLoop) -> None
         assert isinstance(job_state.exception, TypeError)
 
 
-# def test_browser_block_elements_not_str_or_list(event_loop: AbstractEventLoop):
+# def test_browser_block_elements_not_str_or_list():
 #     job_data = {
 #         'url': 'https://www.example.com',
 #         'use_browser': True,
@@ -527,7 +526,7 @@ def test_browser_switches_not_str_or_list(event_loop: AbstractEventLoop) -> None
 #         assert isinstance(job_state.exception, TypeError)
 #
 #
-# def test_browser_block_elements_invalid(event_loop: AbstractEventLoop):
+# def test_browser_block_elements_invalid():
 #     job_data = {
 #         'url': 'https://www.example.com',
 #         'use_browser': True,
@@ -584,3 +583,14 @@ def test_compared_versions() -> None:
             assert urlwatcher.report.job_states[-1].verb in {'new', 'changed'}
     print(0)
     cache_storage.close()
+
+
+def test_differ_name_not_str_dict_raises_valueerror() -> None:
+    job_data = {'differ': [2]}
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        JobBase.unserialize(job_data)
+    assert str(pytest_wrapped_e.value).splitlines() == [
+        "Error in jobs file: Job directive 'differ: [2]' has to be a string or dict:",
+        'differ:',
+        '- 2',
+    ]

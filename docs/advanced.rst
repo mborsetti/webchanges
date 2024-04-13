@@ -163,7 +163,7 @@ server (see `here <https://github.com/urllib3/urllib3/issues/1035>`__).
 Setting up Tor is out of scope for this document, but in Windows install the Windows Expert Bundle from `here
 <https://www.torproject.org/download/tor/>`__ and execute ``tor --service install`` as an Administrator per
 instructions `here <https://www.torproject.org/docs/faq#NTService>`__; in Linux the installation of the *tor* package
-usually is sufficient to create a SOCKS5 proxy service, otherwise run with ``tor --options RunAsDaemon 1``.  Some
+usually is sufficient to create a SOCKS5 proxy service, otherwise run with ``tor --options RunAsDaemon 1``. Some
 useful options may be ``HardwareAccel 1 CircuitPadding 0 ConnectionPadding 0 ClientUseIPv6 1 FascistFirewall 1``
 (check documentation).
 
@@ -258,7 +258,7 @@ the environment variable. Example:
 Authenticated requests
 ----------------------
 Set the ``Authorization`` header to provide credentials that authenticate a ``url`` job with a server, allowing access
-to a protected resource.  Some of the most popular authentication schemes are ``Basic``, ``Digest`` and ``NTLM``. For
+to a protected resource. Some of the most popular authentication schemes are ``Basic``, ``Digest`` and ``NTLM``. For
 more information, see `here <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization>`__.
 
 

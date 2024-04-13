@@ -18,7 +18,6 @@ except ImportError:
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
 from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
-from webchanges.reporters import HtmlReporter
 from webchanges.storage import DEFAULT_CONFIG
 
 try:
@@ -35,70 +34,35 @@ except ImportError:
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
 aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
 
-DIFF_TO_HTML_TEST_DATA = [
-    ('+Added line', '<tr style="background-color:#d1ffd1;color:#082b08"><td>Added line</td></tr>'),
-    (
-        '-Deleted line',
-        '<tr style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through"><td>Deleted line</td></tr>',
-    ),
-    # Changes line
-    (
-        '@@ -1,1 +1,1 @@',
-        '<tr style="background-color:#fbfbfb"><td style="font-family:monospace">@@ -1,1 +1,1 @@</td></tr>',
-    ),
-    # Horizontal ruler is manually expanded since <hr> tag is used to separate jobs
-    (
-        '+* * *',
-        '<tr style="background-color:#d1ffd1;color:#082b08"><td>'
-        '--------------------------------------------------------------------------------</td></tr>',
-    ),
-    (
-        '+[Link](https://example.com)',
-        '<tr style="background-color:#d1ffd1;color:#082b08"><td><a style="font-family:inherit" rel="noopener" '
-        'target="_blank" href="https://example.com">Link</a></td></tr>',
-    ),
-    (
-        ' ![Image](https://example.com/picture.png "picture")',
-        '<tr><td><img style="max-width:100%;height:auto;max-height:100%" src="https://example.com/picture.png"'
-        ' alt="Image" title="picture" /></td></tr>',
-    ),
-    (
-        '   Indented text (replace leading spaces)',
-        '<tr><td>&nbsp;&nbsp;Indented text (replace leading spaces)</td></tr>',
-    ),
-    (' # Heading level 1', '<tr><td><strong>Heading level 1</strong></td></tr>'),
-    (' ## Heading level 2', '<tr><td><strong>Heading level 2</strong></td></tr>'),
-    (' ### Heading level 3', '<tr><td><strong>Heading level 3</strong></td></tr>'),
-    (' #### Heading level 4', '<tr><td><strong>Heading level 4</strong></td></tr>'),
-    (' ##### Heading level 5', '<tr><td><strong>Heading level 5</strong></td></tr>'),
-    (' ###### Heading level 6', '<tr><td><strong>Heading level 6</strong></td></tr>'),
-    ('   * Bullet point level 1', '<tr><td>&nbsp;&nbsp;● Bullet point level 1</td></tr>'),
-    ('     * Bullet point level 2', '<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;⯀ Bullet point level 2</td></tr>'),
-    ('       * Bullet point level 3', '<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;○ Bullet point level 3</td></tr>'),
-    (
-        '         * Bullet point level 4',
-        '<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;○ Bullet point level 4</td></tr>',
-    ),
-    (' *emphasis*', '<tr><td><em>emphasis</em></td></tr>'),
-    (' _**emphasis and strong**_', '<tr><td><em><strong>emphasis and strong</strong></em></td></tr>'),
-    (' **strong**', '<tr><td><strong>strong</strong></td></tr>'),
-    (' **_strong and emphasis_**', '<tr><td><strong><em>strong and emphasis</em></strong></td></tr>'),
-    (' ~~strikethrough~~', '<tr><td><s>strikethrough</s></td></tr>'),
-    (' | table | row |', '<tr><td>| table | row |</td></tr>'),
-]
-
 ALL_REPORTERS = [
     reporter for reporter, v in DEFAULT_CONFIG['report'].items() if reporter not in {'tz', 'html', 'text', 'markdown'}
 ]
 
 
 class UrlwatchTest:
+    """A mock Urlwatch class for testing."""
+
     class config_storage:
+        """A mock config_storage class for testing."""
+
         config = DEFAULT_CONFIG
 
 
 def build_test_report() -> Report:
+    """Builds a report with mock data for testing.
+
+    :return: The test report.
+    """
+
     def build_job(name: str, url: str, old: str, new: str) -> JobState:
+        """Builds a job state with mock data for testing.
+
+        :param name: The name of the job.
+        :param url: The URL of the job.
+        :param old: The old data of the job.
+        :param new: The new data of the job.
+        :return: The job state.
+        """
         job = JobBase.unserialize({'name': name, 'url': url})
 
         # Can pass in None for cache_storage as we are not going to load or save the job state for testing; also no
@@ -113,6 +77,12 @@ def build_test_report() -> Report:
         return job_state
 
     def set_error(job_state: JobState, message: str) -> JobState:
+        """Sets an error on the job state.
+
+        :param job_state: The job state to set the error on.
+        :param message: The error message.
+        :return: The job state with the error set.
+        """
         try:
             raise ValueError(message)
         except ValueError as e:
@@ -157,84 +127,6 @@ def build_test_report() -> Report:
     )
 
     return test_report
-
-
-@pytest.mark.parametrize('inpt, out', DIFF_TO_HTML_TEST_DATA)  # type: ignore[misc]
-def test_diff_to_html(inpt: str, out: str) -> None:
-    # must add to fake headers to get what we want:
-    inpt = '-fake head 1\n+fake head 2\n' + inpt
-    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': False})
-    result = ''.join(
-        list(
-            HtmlReporter(
-                Report(UrlwatchTest()),  # type: ignore[arg-type]
-                {},  # type: ignore[arg-type]
-                [],
-                0,
-            )._diff_to_html(inpt, job)
-        )
-    )
-    assert result[250:-8] == out
-
-
-def test_diff_to_htm_padded_table() -> None:
-    # must add to fake headers to get what we want:
-    inpt = '-fake head 1\n+fake head 2\n | table | row |'
-    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': True})
-    result = ''.join(
-        list(
-            HtmlReporter(
-                Report(UrlwatchTest()),  # type: ignore[arg-type]
-                {},  # type: ignore[arg-type]
-                [],
-                0,
-            )._diff_to_html(inpt, job)
-        )
-    )
-    assert result[250:-8] == (
-        '<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | row |</span></td></tr>'
-    )
-
-
-def test_diff_to_htm_wdiff() -> None:
-    # must add to fake headers to get what we want:
-    inpt = '[-old-]{+new+}'
-    job = JobBase.unserialize(
-        {'url': 'https://www.example.com', 'is_markdown': False, 'markdown_padded_tables': False, 'diff_tool': 'wdiff'}
-    )
-    result = ''.join(
-        list(
-            HtmlReporter(
-                Report(UrlwatchTest()),  # type: ignore[arg-type]
-                {},  # type: ignore[arg-type]
-                [],
-                0,
-            )._diff_to_html(inpt, job)
-        )
-    )
-    assert result == (
-        '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">old</span>'
-        '<span style="background-color:#d1ffd1;color:#082b08">new</span>'
-    )
-
-
-def test_diff_to_htm_link() -> None:
-    # must add to fake headers to get what we want:
-    inpt = '-fake head 1\n+fake head 2\n [link](/test.htm)'
-    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True})
-    result = ''.join(
-        list(
-            HtmlReporter(
-                Report(UrlwatchTest()),  # type: ignore[arg-type]
-                {},  # type: ignore[arg-type]
-                [],
-                0,
-            )._diff_to_html(inpt, job)
-        )
-    )
-    assert result[250:-8] == (
-        '<tr><td><a style="font-family:inherit" rel="noopener" target="_blank" href="/test.htm">link</a></td></tr>'
-    )
 
 
 def test_smtp_password() -> None:

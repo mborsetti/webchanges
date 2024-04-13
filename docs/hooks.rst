@@ -37,12 +37,13 @@ Example ``hooks.py`` file:
 
 .. code-block:: python
 
-   """Example hooks file for webchanges (for Python >= 3.10)."""
+   """Example hooks file for webchanges (for Python >= 3.12)."""
 
    import re
    from pathlib import Path
-   from typing import Any
+   from typing import Any, Literal
 
+   from webchanges.differs import DifferBase
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
    from webchanges.handler import JobState
    from webchanges.jobs import UrlJob, UrlJobBase
@@ -58,7 +59,7 @@ Example ``hooks.py`` file:
        __kind__ = 'hooks_custom_login'
        __required__ = ('username', 'password')  # These are added to the ones from the super classes.
 
-       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes, str | str]:
+       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str]:
            """:returns: The data retrieved and the ETag."""
            ...  # custom code here to actually do the login.
            return super().retrieve(job_state)  # uses the existing code to then browse and capture data
@@ -73,7 +74,7 @@ Example ``hooks.py`` file:
        __kind__ = 'hooks_custom_browser'
        __is_browser__ = True  # This is required for execution in the correct parallel processing queue.
 
-       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes, str | str]:
+       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str]:
            """:returns: The data retrieved and the ETag."""
            ...  # custom code here to launch browser and capture data.
            return f'Data captured after browsing to {self.url}\n', 'The Etag (if any) or empty string'
@@ -115,7 +116,7 @@ Example ``hooks.py`` file:
        """Custom filter for indenting."""
 
        # Needs to be selected manually, i.e. add ``- hooks_indent:`` (or e.g. ``- hooks_indent: 4``) to the list of
-       # filters in the job's ``filter:`` directive.  E.g.:
+       # filters in the job's ``filter:`` directive. E.g.:
        #
        # url: example.com/hooks/indent
        # filter:
@@ -157,6 +158,35 @@ Example ``hooks.py`` file:
            return data.replace('foo', 'bar')
 
 
+   class LenDiffer(DifferBase):
+       """Custom differ to show difference in length of the data."""
+
+       # Needs to be selected manually, i.e. add the directive ``differ: hooks_differ`` the job. E.g.:
+       #
+       # url: example.com/hooks/len
+       # differ: hooks_lendiffer
+
+       __kind__ = 'hooks_lendiffer'
+
+       __no_subdiffer__ = True
+       __supported__report_kinds__ = {'html'}
+
+       def differ(
+           self,
+           subdiffer: dict[str, Any],
+           report_kind: Literal['text', 'markdown', 'html'],
+           _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+           tz: str | None = None,
+       ) -> dict[Literal['text', 'markdown', 'html'], str]:
+           len_diff = len(self.state.new_data) - len(self.state.old_data)
+           diff_text = f'Length of data has changed by {len_diff:+,}'
+           return {
+               'text': diff_text,
+               'markdown': diff_text,
+               'html': diff_text,
+           }
+
+
    class CustomTextFileReporter(TextReporter):
        """Custom reporter that writes the text-only report to a file."""
 
@@ -165,7 +195,7 @@ Example ``hooks.py`` file:
        #   hooks_custom_file:
        #     enabled: true
 
-       __kind__ = 'hooks_custom_file'
+       __kind__ = 'hooks_save_text_report'
 
        def submit(self) -> None:
            Path(self.config['filename']).write_text('\n'.join(super().submit()))
@@ -179,7 +209,7 @@ Example ``hooks.py`` file:
        #   hooks_custom_html:
        #     enabled: true
 
-       __kind__ = 'hooks_custom_html'
+       __kind__ = 'hooks_save_html_report'
 
        def submit(self) -> None:
            Path(self.config['filename']).write_text('\n'.join(super().submit()))

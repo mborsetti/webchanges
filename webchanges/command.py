@@ -20,56 +20,62 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Generator, Iterable, Optional, TYPE_CHECKING, Union
+from typing import Iterable, Iterator, Optional, TYPE_CHECKING, Union
 from zoneinfo import ZoneInfo
+
+from webchanges import __docs_url__, __project_name__, __version__
+from webchanges.differs import DifferBase
+from webchanges.filters import FilterBase
+from webchanges.handler import JobState, Report, SnapshotShort
+from webchanges.jobs import BrowserJob, JobBase, NotModifiedError, UrlJob
+from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
+from webchanges.reporters import ReporterBase, xmpp_have_password, xmpp_set_password
+from webchanges.util import dur_text, edit_file, import_module_from_source
 
 try:
     import httpx
-except ImportError:
+except ImportError:  # pragma: no cover
     httpx = None  # type: ignore[assignment]
-    import requests
-
+    print("Required package 'httpx' not found; will attempt to run using 'requests'")
+    try:
+        import requests
+    except ImportError as e:  # pragma: no cover
+        raise RuntimeError(
+            f"A Python HTTP client package (either 'httpx' or 'requests' is required to run {__project_name__}; "
+            'neither can be imported.'
+        ) from e
 if httpx is not None:
     try:
         import h2
-    except ImportError:
+    except ImportError:  # pragma: no cover
         h2 = None  # type: ignore[assignment]
-
 
 try:
     import apt
-except ImportError:
+except ImportError:  # pragma: no cover
     apt = None  # type: ignore[assignment]
 
 try:
     from pip._internal.metadata import get_default_environment
-except ImportError:
+except ImportError:  # pragma: no cover
     get_default_environment = None  # type: ignore[assignment]
 
 try:
     from playwright.sync_api import sync_playwright
-except ImportError:
+except ImportError:  # pragma: no cover
     sync_playwright = None  # type: ignore[assignment]
 
 try:
     import psutil
     from psutil._common import bytes2human
-except ImportError:
+except ImportError:  # pragma: no cover
     psutil = None  # type: ignore[assignment]
     bytes2human = None  # type: ignore[assignment]
-
-from webchanges import __docs_url__, __project_name__, __version__
-from webchanges.filters import FilterBase
-from webchanges.handler import JobState, Report, SnapshotShort
-from webchanges.jobs import BrowserJob, JobBase, NotModifiedError, UrlJob
-from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
-from webchanges.main import Urlwatch
-from webchanges.reporters import ReporterBase, xmpp_have_password, xmpp_set_password
-from webchanges.util import dur_text, edit_file, import_module_from_source
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from webchanges.main import Urlwatch
     from webchanges.reporters import _ConfigReportersList
     from webchanges.storage import _ConfigReportEmail, _ConfigReportEmailSmtp, _ConfigReportTelegram, _ConfigReportXmpp
 
@@ -85,6 +91,25 @@ class UrlwatchCommand:
     def _exit(arg: Union[str, int, None]) -> None:
         logger.info(f'Exiting with exit code {arg}')
         sys.exit(arg)
+
+    def jobs_from_joblist(self) -> Iterator[JobBase]:
+        """Generates the jobs to process from the joblist entered in the CLI."""
+        if self.urlwatcher.urlwatch_config.joblist:
+            jobs = {self._find_job(job_entry) for job_entry in self.urlwatcher.urlwatch_config.joblist}
+            enabled_jobs = {job for job in jobs if job.is_enabled()}
+            disabled = len(enabled_jobs) - len(jobs)
+            disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
+            logger.debug(
+                f"Processing {len(enabled_jobs)} job{'s' if len(enabled_jobs) else ''}{disabled_str} as specified in "
+                f"command line: {', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}"
+            )
+        else:
+            enabled_jobs = {job for job in self.urlwatcher.jobs if job.is_enabled()}
+            disabled = len(enabled_jobs) - len(self.urlwatcher.jobs)
+            disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
+            logger.debug(f"Processing {len(enabled_jobs)} job{'s' if len(enabled_jobs) else ''}{disabled_str}")
+        for job in enabled_jobs:
+            yield job.with_defaults(self.urlwatcher.config_storage.config)
 
     def edit_hooks(self) -> int:
         """Edit hooks file.
@@ -145,6 +170,9 @@ class UrlwatchCommand:
         print(JobBase.job_documentation())
         print('Supported filters:\n')
         print(FilterBase.filter_documentation())
+        print()
+        print('Supported differs:\n')
+        print(DifferBase.differ_documentation())
         print()
         print('Supported reporters:\n')
         print(ReporterBase.reporter_documentation())
@@ -341,46 +369,48 @@ class UrlwatchCommand:
             jobs_files = []
         print('\n   '.join(jobs_files))
 
-    def _find_job(self, query: Union[str, int]) -> Optional[JobBase]:
+    def _find_job(self, query: Union[str, int]) -> JobBase:
+        """Finds the job based on a query, which is matched to the job index (also negative) or a job location
+        (i.e. the url/user_visible_url or command).
+
+        :param query: The query.
+        :return: The matching JobBase.
+        :raises IndexError: If job is not found.
+        """
+
         try:
             index = int(query)
             if index == 0:
-                return None
+                raise IndexError(f'Job index {index} out of range.')
             try:
                 if index <= 0:
                     return self.urlwatcher.jobs[index]
                 else:
                     return self.urlwatcher.jobs[index - 1]
-            except IndexError:
-                return None
+            except IndexError as e:
+                raise ValueError(f'Job index {index} out of range (found {len(self.urlwatcher.jobs)} jobs).') from e
         except ValueError:
-            return next((job for job in self.urlwatcher.jobs if job.get_location() == query), None)
+            try:
+                return next((job for job in self.urlwatcher.jobs if job.get_location() == query))
+            except StopIteration as e:
+                raise ValueError(f"Job {query} does not match any job's url/user_visible_url or command.") from e
 
-    def _get_job(self, job_id: Union[str, int]) -> JobBase:
+    def _find_job_with_defaults(self, query: Union[str, int]) -> JobBase:
         """
-        Finds the job based on job_id, which could match an index, be a range, or match a url or command field.
+        Returns the job with defaults based on job_id, which could match an index or match a location
+        (url/user_visible_url or command). Accepts negative numbers.
 
-        :param job_id:
-        :return: JobBase.
-        :raises SystemExit: If job is not found, setting argument to 1.
+        :param query: The query.
+        :return: The matching JobBase with defaults.
+        :raises SystemExit: If job is not found.
         """
-        try:
-            job_id = int(job_id)
-            if job_id < 0:
-                job_id = len(self.urlwatcher.jobs) + job_id + 1
-        except ValueError:
-            pass
-        job = self._find_job(job_id)
-        if job is None:
-            print(f'Job not found: {job_id}')
-            raise SystemExit(1)
+        job = self._find_job(query)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
     def test_job(self, job_id: Union[bool, str, int]) -> None:
         """
-        Tests the running of a single job outputting the filtered text to stdout or whatever reporter is selected with
-        --test-reporter.  If job_id is True, don't run any jobs as it's a test of loading config, jobs and hook files
-        for syntax.
+        Tests the running of a single job outputting the filtered text to stdout. If job_id is True, don't run any
+        jobs as it's a test of loading config, jobs and hook files for syntax.
 
         :param job_id: The job_id or True.
 
@@ -404,7 +434,7 @@ class UrlwatchCommand:
             print(f"{''.join(message)}.")
             return
 
-        job = self._get_job(job_id)
+        job = self._find_job_with_defaults(job_id)
         start = time.perf_counter()
 
         if isinstance(job, UrlJob):
@@ -418,7 +448,7 @@ class UrlwatchCommand:
             job_state.process(headless=not self.urlwatch_config.no_headless)
             duration = time.perf_counter() - start
             if job_state.exception is not None:
-                raise job_state.exception
+                raise job_state.exception from job_state.exception
             print(job_state.job.pretty_name())
             print('-' * len(job_state.job.pretty_name()))
             if job_state.job.note:
@@ -434,19 +464,25 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
-    def test_diff(self, job_id: str) -> int:
+    def test_differ(self, arg_test_differ: Union[str, list[str]]) -> int:
         """
         Runs diffs for a job on all the saved snapshots and outputs the result to stdout or whatever reporter is
         selected with --test-reporter.
 
-        :param job_id: The job_id.
+        :param arg_test_differ: Either the job_id or a list containing [job_id, max_diffs]
         :return: 1 if error, 0 if successful.
         """
         report = Report(self.urlwatcher)
-        self.urlwatch_config.jobs_files = [Path('--test-diff')]  # for report footer
-        job = self._get_job(job_id)
+        self.urlwatch_config.jobs_files = [Path('--test-differ')]  # for report footer
+        if isinstance(arg_test_differ, list):
+            job_id, max_diffs_str = arg_test_differ
+            max_diffs = int(max_diffs_str)
+        else:
+            job_id = arg_test_differ
+            max_diffs = None
+        job = self._find_job_with_defaults(job_id)
 
-        # TODO: The below is a hack; must find whether it's markdown programmatically (e.g. save it in database)
+        # TODO: The below is a hack; must find whether data is markdown programmatically (e.g. save it in database)
         if job.filter:
             job.is_markdown = any('html2text' in filter_type for filter_type in job.filter)
 
@@ -463,7 +499,8 @@ class UrlwatchCommand:
         if job.compared_versions and job.compared_versions != 1:
             print(f"Note: The job's 'compared_versions' directive is set to {job.compared_versions}.")
 
-        for i in range(num_snapshots - 1):
+        max_diffs = max_diffs or num_snapshots - 1
+        for i in range(max_diffs):
             with JobState(self.urlwatcher.cache_storage, job) as job_state:
                 job_state.new_data = history_data[i].data
                 job_state.new_timestamp = history_data[i].timestamp
@@ -507,7 +544,7 @@ class UrlwatchCommand:
         return 0
 
     def dump_history(self, job_id: str) -> int:
-        job = self._get_job(job_id)
+        job = self._find_job_with_defaults(job_id)
         history_data = self.urlwatcher.cache_storage.get_history_snapshots(job.get_guid())
 
         print(f'History for job {job.get_indexed_location()}:')
@@ -545,7 +582,7 @@ class UrlwatchCommand:
             print(f'Invalid reporter {self.urlwatch_config.errors}')
             return 1
 
-        def error_jobs_lines(jobs: Iterable[JobBase]) -> Generator[str, None, None]:
+        def error_jobs_lines(jobs: Iterable[JobBase]) -> Iterator[str]:
             """A generator that outputs error text for jobs who fail with an exception or yield no data.
 
             Do not use it to test newly modified jobs since it does conditional requests on the websites (i.e. uses
@@ -568,14 +605,14 @@ class UrlwatchCommand:
                             else len(job_state.old_data.strip()) == 0
                         ):
                             if self.urlwatch_config.verbose:
-                                yield (f'{job_state.job.index_number:3}: No data: {job_state.job!r}')
+                                yield f'{job_state.job.index_number:3}: No data: {job_state.job!r}'
                             else:
                                 pretty_name = job_state.job.pretty_name()
                                 location = job_state.job.get_location()
                                 if pretty_name != location:
-                                    yield (f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})')
+                                    yield f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})'
                                 else:
-                                    yield (f'{job_state.job.index_number:3}: No data: {pretty_name}')
+                                    yield f'{job_state.job.index_number:3}: No data: {pretty_name}'
                     else:
                         pretty_name = job_state.job.pretty_name()
                         location = job_state.job.get_location()
@@ -585,7 +622,7 @@ class UrlwatchCommand:
                                 f'({location})'
                             )
                         else:
-                            yield (f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})')
+                            yield f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})'
 
         start = time.perf_counter()
         if len(self.urlwatch_config.jobs_files) == 1:
@@ -596,39 +633,16 @@ class UrlwatchCommand:
             ]
         header = '\n   '.join(['Jobs with errors or returning no data (after unmodified filters, if any)'] + jobs_files)
 
-        # extract subset of jobs to run if joblist CLI was set
-        if self.urlwatcher.urlwatch_config.joblist:
-            for idx in self.urlwatcher.urlwatch_config.joblist:
-                if not (-len(self.urlwatcher.jobs) <= idx <= -1 or 1 <= idx <= len(self.urlwatcher.jobs)):
-                    raise IndexError(f'Job index {idx} out of range (found {len(self.urlwatcher.jobs)} jobs).')
-            self.urlwatcher.urlwatch_config.joblist = [
-                jn if jn > 0 else len(self.urlwatcher.jobs) + jn + 1 for jn in self.urlwatcher.urlwatch_config.joblist
-            ]
-            jobs = [
-                job.with_defaults(self.urlwatcher.config_storage.config)
-                for job in self.urlwatcher.jobs
-                if job.index_number in self.urlwatcher.urlwatch_config.joblist
-            ]
-            logger.debug(
-                f"Processing {len(jobs)} job{'s' if len(jobs) else ''} as specified in command line: # "
-                f"{', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}"
-            )
-            header += (
-                '\n'
-                f"Processing {len(jobs)} job{'s' if len(jobs) else ''} as specified in command line: # "
-                f"{', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}"
-            )
-        else:
-            jobs = [job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs]
-            logger.debug(f"Processing {len(jobs)} job{'s' if len(jobs) else ''}")
-
+        jobs = {
+            job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs if job.is_enabled()
+        }
         if self.urlwatch_config.errors == 'stdout':
             print(header)
             for line in error_jobs_lines(jobs):
                 print(line)
             print('--')
             duration = time.perf_counter() - start
-            print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}.")
+            print(f"Checked {len(jobs)} enabled job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}.")
 
         else:
             message = '\n'.join(error_jobs_lines(jobs))
@@ -658,7 +672,7 @@ class UrlwatchCommand:
         return 0
 
     def delete_snapshot(self, job_id: Union[str, int]) -> int:
-        job = self._get_job(job_id)
+        job = self._find_job_with_defaults(job_id)
 
         deleted = self.urlwatcher.cache_storage.delete_latest(job.get_guid())
         if deleted:
@@ -723,7 +737,7 @@ class UrlwatchCommand:
                     return 1
             message = 'Do you want me to update the jobs file (remarks will be lost)? [y/N] '
             if not input(message).lower().startswith('y'):
-                print(f'Please update the jobs file to reflect "{new_loc}".')
+                print(f'Please manually update the jobs file by replacing "{old_loc}" with "{new_loc}".')
             else:
                 self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
@@ -780,11 +794,14 @@ class UrlwatchCommand:
     def check_test_reporter(
         self,
         job_state: Optional[JobState] = None,
-        label: str = 'test',
+        label: str = 'test',  # type: ignore[assignment]
         report: Optional[Report] = None,
     ) -> int:
         """
-        Tests a reporter.
+        Tests a reporter by creating pseudo-jobs of new, changed, unchanged, and error outcomes ('verb').
+
+        Note: The report will only show new, unchanged and error content if enabled in the respective `display` keys
+        of the configuration file.
 
         :param job_state: The JobState (Optional).
         :param label: The label to be used in the report; defaults to 'test'.
@@ -844,7 +861,7 @@ class UrlwatchCommand:
             report = Report(self.urlwatcher)
 
         if job_state:
-            report.custom(job_state, label)
+            report.custom(job_state, label)  # type: ignore[arg-type]
         else:
             report.new(
                 build_job(
@@ -984,7 +1001,7 @@ class UrlwatchCommand:
         """
         try:
             from playwright._impl._driver import compute_driver_executable
-        except ImportError:
+        except ImportError:  # pragma: no cover
             raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
 
         driver_executable = compute_driver_executable()
@@ -1013,8 +1030,8 @@ class UrlwatchCommand:
             self.test_job(self.urlwatch_config.test_job)
             self._exit(0)
 
-        if self.urlwatch_config.test_diff:
-            self._exit(self.test_diff(self.urlwatch_config.test_diff))
+        if self.urlwatch_config.test_differ:
+            self._exit(self.test_differ(self.urlwatch_config.test_differ))
 
         if self.urlwatch_config.dump_history:
             self._exit(self.dump_history(self.urlwatch_config.dump_history))

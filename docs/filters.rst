@@ -27,11 +27,11 @@ This command will show the output that will be captured, stored, and used for th
 from a previous run against the same url or command.
 
 Once :program:`webchanges` has collected at least 2 historic snapshots of a job (e.g. two different states of a webpage)
-you can start testing the effects of your ``diff_filter`` with the command-line option ``--test-diff``, passing in the
+you can start testing the effects of your ``diff_filter`` with the command-line option ``--test-differ``, passing in the
 index (from ``--list``) or the URL/command of the job to be tested::
 
-   webchanges --test-diff 1    # Test the first job in the jobs list and show the report
-   webchanges --test-diff -2   # Test the second-to-last job in the jobs list and show the report
+   webchanges --test-differ 1    # Test the first job in the jobs list and show the report
+   webchanges --test-differ -2   # Test the second-to-last job in the jobs list and show the report
 
 At the moment, the following filters are available:
 
@@ -124,7 +124,8 @@ Advanced Python programmers can write their own custom filters; see :ref:`hooks`
 
 absolute_links
 --------------
-Convert relative links in HTML <a> tags to absolute ones.
+Convert relative URLs of all ``action``, ``href` and ``src`` attribute in any HTML tag, as well the ``data``
+attribute of the ``<object>`` tag, to absolute ones.
 
 .. note:: This filter is not needed (and could interfere) if you already are using the :ref:`beautify` filter (which has
    an ``absolute_links`` sub-directive that defaults to true) or the :ref:`html2text` filter (which already converts
@@ -139,6 +140,9 @@ Convert relative links in HTML <a> tags to absolute ones.
 
 .. versionadded:: 3.16
 
+.. versionchanged:: 3.21
+   Converts URLs of all ``action``, ``href`` and ``src`` attributes found in any tag as well the ``data`` attribute
+   of the ``<object>`` tag.
 
 
 .. _beautify:
@@ -156,7 +160,7 @@ packages to reformat the HTML in a document to make it more readable (keeping it
      - beautify: 1
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``absolute_links`` (true/false): Convert relative links to absolute ones (default: true).
 * ``indent`` (integer or string): If indent is a non-negative integer or string, then the contents of HTML elements will
   be indented appropriately when pretty-printing them. An indent level of 0, negative, or "" will only insert newlines.
@@ -182,7 +186,7 @@ Optional sub-directives
    ``indent`` sub-directive.
 
 Required packages
-"""""""""""""""""
+`````````````````
 To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
 follows:
 
@@ -226,7 +230,7 @@ See Microsoft’s `XPath Examples
 additional information on XPath.
 
 Using CSS and XPath filters with XML
-""""""""""""""""""""""""""""""""""""
+````````````````````````````````````
 By default, CSS and XPath filters are set up for HTML documents, but they also work on XML documents by declaring the
 sub-directive ``method: xml``.
 
@@ -277,7 +281,7 @@ expression.
 Alternatively, use the XPath expression ``//*[name()='<tag_name>']`` to bypass the namespace entirely.
 
 Using CSS and XPath filters to exclude content
-""""""""""""""""""""""""""""""""""""""""""""""
+``````````````````````````````````````````````
 Elements selected by the ``exclude`` sub-directive are removed from the final result. For example, the following job
 will not have any ``<a>`` tag in its results:
 
@@ -290,7 +294,7 @@ will not have any ``<a>`` tag in its results:
          exclude: 'a'
 
 Limiting the returned items from a CSS Selector or XPath
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+````````````````````````````````````````````````````````
 If you only want to return a subset of the items returned by a CSS selector or XPath filter, you can use two additional
 sub-directives:
 
@@ -310,13 +314,13 @@ the first, and return at most two elements), you can use this filter:
          maxitems: 2
 
 Duplicated results
-""""""""""""""""""
+``````````````````
 If you get multiple results from one page, but you only expected one (e.g. because the page contains both a mobile and
 desktop version in the same HTML document, and shows/hides one via CSS depending on the viewport size), you can use
 ``maxitems: 1`` to only return the first item.
 
 Fixing list reorderings with CSS Selector or XPath filters
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+``````````````````````````````````````````````````````````
 In some cases, the ordering of items on a webpage might change regularly without the actual content changing. By
 default, this would show up in the diff output as an element being removed from one part of the page and inserted in
 another part of the page.
@@ -336,7 +340,7 @@ The subfilter for ``css`` and ``xpath`` filters is ``sort``, and can be ``true``
 
 
 Optional directives
-"""""""""""""""""""
+```````````````````
 * ``selector`` (for css) or ``path`` (for xpath) [can be entered as the value of the ``xpath`` or ``css`` directive].
 * ``method``: Either of ``html`` (default) or ``xml``.
 * ``namespaces`` Mapping of XML namespaces for matching.
@@ -380,7 +384,7 @@ If there is no header row, or ``ignore_header`` is set to true, you will need to
 or Mrs. {0} works at {1}.``.
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``format_message`` (default): The Python `format string
   <https://docs.python.org/3/library/string.html#format-string-syntax>`__ containing "replacement fields" into which the
   data from the csv is substituted. Field names are the column headers (in lowercase) if the data has column headers or
@@ -424,8 +428,8 @@ Notes: in regex, ``(?i)`` is the inline flag for `case-insensitive matching
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
 
 Optional sub-directives
-"""""""""""""""""""""""
-* ``text`` (default): Match the text provided.
+```````````````````````
+* ``text``: (default) Match the text provided.
 * ``re``: Match the the Python `regular
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
 
@@ -545,19 +549,22 @@ This filter serializes the JSON data to a pretty-printed indented string using P
 <https://simplejson.readthedocs.io/en/latest/index.html?highlight=dumps#simplejson.dumps>`__ library) with a default
 indent level of 4.
 
-.. tip:: If your reports are in HTML format, use the job directive ``monospace: true`` to improve readability (see
-   :ref:`here <monospace>`).
+If the job directive ``monospace`` is unset, to improve the readability in HTML reports this filter will set it to
+``true``. To override, add the directive ``monospace: true`` to the job (see :ref:`here <monospace>`).
 
 
 Optional sub-directives
-"""""""""""""""""""""""
-* ``indentation``: Either the number of spaces to indent each level with or a string to be used to indent each level
-  (if ``0``, a negative number or ``""`` then no indentation) (default: 4).
+```````````````````````
+* ``indentation`` (integer or string): Either the number of spaces or a string to be used to indent each level with; if
+  ``0``, a negative number or ``""`` then no indentation (default: 4, i.e. 4 spaces).
 * ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false).
 
 
 .. versionadded:: 3.0.1
    ``sort_keys`` sub-directive.
+
+.. versionchanged:: 3.20
+   The filter sets the job's ``monospace`` directive to ``true``.
 
 
 
@@ -601,7 +608,7 @@ html2text
 This filter converts HTML (or XML) to Unicode text.
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``method``: One of:
 
  - ``html2text`` (default): Uses the `html2text <https://pypi.org/project/html2text/>`__ Python package and retains
@@ -612,7 +619,7 @@ Optional sub-directives
 
 
 ``html2text``
-^^^^^^^^^^^^^
+:::::::::::::
 This method is the default (does not need to be specified) and converts HTML into `Markdown
 <https://www.markdownguide.org/>`__ using the `html2text <https://pypi.org/project/html2text/>`__ Python package.
 
@@ -650,7 +657,7 @@ Optional sub-directives
 
 
 ``strip_tags``
-^^^^^^^^^^^^^^
+::::::::::::::
 This filter method is a simple HTML/XML tag stripper based on applying a regular expression-based function. Very fast
 but may not yield the prettiest of results.
 
@@ -662,7 +669,7 @@ but may not yield the prettiest of results.
 
 
 ``bs4``
-^^^^^^^
+:::::::
 This filter method extracts visible text from HTML using the `Beautiful Soup
 <https://pypi.org/project/beautifulsoup4/>`__ Python package, specifically its `get_text(strip=True)
 <https://www.crummy.com/software/BeautifulSoup/bs4/doc/#get-text>`__ method.
@@ -755,7 +762,7 @@ This filter reads an iCalendar document and converts it to easy-to read text.
      - ical2text:
 
 Required packages
-"""""""""""""""""
+`````````````````
 To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
 follows:
 
@@ -771,7 +778,7 @@ jq
 --
 
 Linux/macOS ASCII only
-""""""""""""""""""""""
+``````````````````````
 
 The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight ASCII JSON
 processor. It is currently available only for Linux (most flavors) and macOS (no Windows) and does not handle Unicode;
@@ -789,7 +796,7 @@ For more information on the operations permitted, see the `jq Manual
 <https://stedolan.github.io/jq/manual/#Basicfilters>`__.
 
 Required packages
-^^^^^^^^^^^^^^^^^
+:::::::::::::::::
 To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
 follows:
 
@@ -800,7 +807,7 @@ follows:
 .. _filtering_json:
 
 Filtering JSON on Windows or containing Unicode and without ``jq``
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+``````````````````````````````````````````````````````````````````
 Python programmers on all OSs can use an advanced technique to select only certain elements of the JSON object; see
 :ref:`json_dict`. This method will preserve Unicode characters.
 
@@ -836,7 +843,7 @@ Note: in regex ``(?i)`` is the inline flag for `case-insensitive matching
 <https://docs.python.org/3/library/re.html#re.I>`__.
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``text`` (default): Match the text provided.
 * ``re``: Match the the Python `regular
   expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ provided.
@@ -864,12 +871,12 @@ This filter *must* be the first filter in a chain of filters, since it consumes 
          language: eng
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``timeout``: Timeout for the recognition, in seconds (default: 10 seconds).
 * ``language``: Text language (e.g. ``fra`` or ``eng+fra``) (default: ``eng``).
 
 Required packages
-"""""""""""""""""
+`````````````````
 To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
 follows:
 
@@ -938,7 +945,7 @@ by this filter:
 
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``password``: Password for a password-protected PDF file.
 * ``physical`` (true/false): If true, page text is output in the order it appears on the page, regardless of columns or
   other layout features (default: true). Only one of ``raw`` and ``physical`` can be set to true.
@@ -950,7 +957,7 @@ Optional sub-directives
 
 
 Required packages
-"""""""""""""""""
+`````````````````
 To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
 follows:
 
@@ -1033,14 +1040,14 @@ by this filter:
 
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``password``: Password for a password-protected PDF file (dependency required; see below).
 
 .. versionadded:: 3.16
 
 
 Required packages
-"""""""""""""""""
+`````````````````
 To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>`. If
 you're not using the ``password`` sub-directive, then use the following:
 
@@ -1106,7 +1113,7 @@ You can use the entire range of Python's `regular expression (regex) syntax
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``pattern``: Regular expression pattern or string for matching; this sub-directive must be specified when
   using the ``repl`` sub-directive, otherwise the pattern can be specified as the value of ``re.sub`` (in which case
   a match will be extracted).
@@ -1170,7 +1177,7 @@ never changes):
          repl: '\1X\3'
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``pattern``: Regular expression pattern or string to match for replacement; this sub-directive must be specified when
   using the ``repl`` sub-directive, otherwise the pattern can be specified as the value of ``re.sub`` (in which case
   a match will be deleted).
@@ -1185,7 +1192,7 @@ remove_repeated
 This filter compares adjacent items (lines), and the second and succeeding copies of repeated items (lines) are
 removed. Repeated items (lines) must be adjacent in order to be found. Works similarly to Unix's ``uniq``.
 
-By default, it acts over adjacent lines.  Three lines consisting of ``dog`` - ``dog`` - ``cat`` will be turned into
+By default, it acts over adjacent lines. Three lines consisting of ``dog`` - ``dog`` - ``cat`` will be turned into
 ``dog`` - ``cat``, while ``dog`` - ``cat`` - ``dog`` will stay the same
 
 .. code:: yaml
@@ -1217,7 +1224,7 @@ mixed-case items separated by a pipe (``|``) ``a|b|B |c`` into ``a|b|c``:
          ignore_case: true
 
 Finally, setting the ``adjacent`` sub-directive to false will cause all duplicates to be removed, even if not
-adjacent.  For example, the below will turn items separated by a pipe (``|``) ``a|b|a|c`` into ``a|b|c``:
+adjacent. For example, the below will turn items separated by a pipe (``|``) ``a|b|a|c`` into ``a|b|c``:
 
 .. code:: yaml
 
@@ -1228,7 +1235,7 @@ adjacent.  For example, the below will turn items separated by a pipe (``|``) ``
          adjacent: false
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``separator`` (default): The string used to separate items whose order is to be reversed (default: ``\n``, i.e.
   line-based); it can also be specified inline as the value of ``remove_repeated``.
 * ``ignore_case``: Ignore differences in case and of leading and/or trailing whitespace when comparing (true/false)
@@ -1276,7 +1283,7 @@ paragraphs (items that are separated by an empty line):
 
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``separator``: The string used to separate items whose order is to be reversed (default: ``\n``, i.e. line-based
   reversing); it can also be specified inline as the value of ``reverse``.
 
@@ -1376,7 +1383,7 @@ separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1`
          reverse: true
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``separator`` (default): The string used to separate items to be sorted (default: ``\n``, i.e. line-based sorting).
 * ``reverse`` (true/false): Whether the sorting direction is reversed (default: false).
 
@@ -1428,7 +1435,7 @@ includes the characters space, tab, linefeed, return, formfeed, and vertical tab
 
 
 Optional sub-directives
-"""""""""""""""""""""""
+```````````````````````
 * ``chars`` (default): A string specifying the set of characters to be removed instead of the default whitespace.
 * ``side``: For one-sided removal: either ``left`` (strip only leading whitespace or matching characters)
   or ``right`` (strip only trailing whitespace or matching characters).

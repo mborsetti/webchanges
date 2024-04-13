@@ -5,14 +5,15 @@ Filtering the diff
 ==================
 All the filters listed in :ref:`filters` can be applied to the diff before it's sent (see below how).
 
-In addition, two filters are custom-made for diff results:
+In addition, two filters are custom-made for unified diff (default):
 
 * :ref:`additions_only`
 * :ref:`deletions_only`
 
-Finally, if you're using unified diff (default), you can change the number of context lines.
+If you're using unified diff (default), you can change the number of context lines.
 
 * :ref:`contextlines`
+
 
 .. _standard_filters:
 
@@ -31,19 +32,19 @@ to the result from the diff:
 .. _additions_only:
 
 additions_only
----------------
+--------------
 .. versionadded:: 3.0
 
 The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the
-diff (no deletions). This is extremely useful for monitoring new content on sites where content gets added while old
-content "scrolls" away.
+unified diff (no deletions). This is extremely useful for monitoring new content on sites where content gets added at
+the top and old content "scrolls" away.
 
 Because lines that are modified generate both a deleted and an added line by the diff, this filter always displays
 modified lines.
 
-As a safeguard, ``additions_only: true`` will display a warning (and all lines deleted) when the size of the source
-shrinks by 75% or more, as this could be due to changes in where or how the information is published (requiring the job
-to be reconfigured to continue monitoring the relevant information).
+As a safeguard, ``additions_only: true`` will display a warning when the size of the source shrinks by 75% or more,
+as this could be due to changes in where or how the information is published (requiring the job to be reconfigured to
+continue monitoring the relevant information), as well as all lines deleted.
 
 Changes consisting exclusively of added empty lines are not reported.
 
@@ -117,9 +118,8 @@ contextlines
 ------------
 .. versionadded:: 3.0
 
-The ``contextlines`` directive causes a unified diffs to have a set number of context lines that might be different from
+The ``contextlines`` directive causes a unified diff to have a set number of context lines that might be different from
 Python's default of 3 (or 0 if the job contains ``additions_only: true`` or ``deletions_only: true``).
-
 
 Example:
 
@@ -183,8 +183,8 @@ deletions_only
 --------------
 .. versionadded:: 3.0
 
-The ``deletions_only: true`` directive causes the report for that source to contain only lines that are deleted by the
-diff (no additions).
+The ``deletions_only: true`` directive causes a unified diff to contain only lines that are deleted by the diff (no
+additions).
 
 Changes consisting exclusively of deleted empty lines are not reported.
 

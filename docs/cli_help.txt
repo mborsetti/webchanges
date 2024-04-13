@@ -1,6 +1,6 @@
 usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
                   [--cache FILE] [--list-jobs] [--errors [REPORTER]]
-                  [--test [JOB]] [--no-headless] [--test-diff JOB]
+                  [--test [JOB]] [--no-headless] [--test-differ JOB [JOB ...]]
                   [--dump-history JOB] [--max-workers WORKERS]
                   [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
                   [--xmpp-login] [--footnote FOOTNOTE] [--edit]
@@ -12,15 +12,16 @@ usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
                   [--install-chrome] [--features] [--detailed-versions]
                   [--database-engine DATABASE_ENGINE]
                   [--max-snapshots NUM_SNAPSHOTS] [--add JOB] [--delete JOB]
-                  [joblist ...]
+                  [JOB(S) ...]
 
 Checks web content to detect any changes since the prior run. If any are found,
 it shows what changed ('diff') and/or sends it via email and/or other supported
 services. Can check the output of local commands as well.
 
 positional arguments:
-  joblist               job(s) to run (by index as per --list) (default: run
-                        all jobs)
+  JOB(S)                JOB(S) to run (if one, index as per --list or
+                        URL/command, if multiple, by index) (default: run all
+                        jobs)
 
 options:
   -h, --help            show this help message and exit
@@ -29,39 +30,39 @@ options:
 
 override file defaults:
   --jobs FILE, --urls FILE
-                        read job list (URLs) from FILE or files matching a
-                        glob pattern
+                        read job list (URLs/commands) from FILE or files
+                        matching a glob pattern
   --config FILE         read configuration from FILE
-  --hooks FILE          use FILE as imported hooks.py module
-  --cache FILE          use FILE as cache (snapshots database), alternatively
-                        a redis URI
+  --hooks FILE          use FILE as hooks.py module to import
+  --cache FILE          use FILE as cache (snapshots database); FILE can be a
+                        redis URI
 
 job management:
   --list-jobs           list jobs and their index number
   --errors [REPORTER]   test run all jobs and list those with errors or no
-                        data captured
+                        data captured; optionally send output to REPORTER
   --test [JOB], --test-filter [JOB]
-                        test a job (by index or URL/command) and show filtered
+                        test a JOB (by index or URL/command) and show filtered
                         output; if no JOB, check syntax of config and jobs
                         file(s)
   --no-headless         turn off browser headless mode (for jobs using a
                         browser)
-  --test-diff JOB, --test-diff-filter JOB
-                        show diff(s) using existing saved snapshots of a job
+  --test-differ JOB [JOB ...], --test-diff JOB [JOB ...], --test-diff-filter JOB [JOB ...]
+                        show diff(s) using existing saved snapshots of a JOB
                         (by index or URL/command)
-  --dump-history JOB    print all saved changed snapshots for a job (by index
+  --dump-history JOB    print all saved changed snapshots for a JOB (by index
                         or URL/command)
   --max-workers WORKERS
-                        maximum number of parallel threads
+                        maximum number of parallel threads (WORKERS)
 
 reporters:
   --test-reporter REPORTER
-                        test a reporter or redirect output of --test-diff
+                        test the REPORTER or redirect output of --test-differ
   --smtp-login          verify SMTP login credentials with server (and enter
                         or check password if using keyring)
-  --telegram-chats      list telegram chats program is joined to
+  --telegram-chats      list telegram chats webchanges is joined to
   --xmpp-login          enter or check password for XMPP (stored in keyring)
-  --footnote FOOTNOTE   footnote text (quoted text)
+  --footnote FOOTNOTE   FOOTNOTE text (quoted text)
 
 launch editor ($EDITOR/$VISUAL):
   --edit                edit job (URL/command) list
@@ -70,30 +71,29 @@ launch editor ($EDITOR/$VISUAL):
 
 database:
   --gc-database [RETAIN_LIMIT], --gc-cache [RETAIN_LIMIT]
-                        garbage collect the cache database by removing (1) all
-                        snapshots of jobs not in the jobs file and (2) old
-                        changed snapshots, keeping the latest RETAIN_LIMIT
-                        (default 1), for the others
+                        garbage collect the database: remove all snapshots of
+                        jobs not listed in the jobs file and keep only the
+                        latest RETAIN_LIMIT snapshots for remaining jobs
+                        (default: 1)
   --clean-database [RETAIN_LIMIT], --clean-cache [RETAIN_LIMIT]
-                        remove old changed snapshots from the database,
-                        keeping the latest RETAIN_LIMIT (default 1)
+                        clean up the database by keeping only the latest
+                        RETAIN_LIMIT snapshots (default: 1)
   --rollback-database TIMESTAMP, --rollback-cache TIMESTAMP
-                        delete recent changed snapshots since TIMESTAMP
-                        (backup the database before using!)
+                        delete changed snapshots added since TIMESTAMP (backup
+                        the database before using!)
   --delete-snapshot JOB
-                        delete the last saved changed snapshot of job (index
+                        delete the last saved changed snapshot of JOB (index
                         or URL/command)
   --change-location JOB NEW_LOCATION
-                        change the location of an existing job by location or
-                        index
+                        change the location of an existing JOB (index or
+                        URL/command)
 
 miscellaneous:
   --check-new           check if a new release is available
-  --install-chrome      install or update Google Chrome browser (for jobs
-                        using a browser)
+  --install-chrome      install or update Google Chrome browser
   --features            list supported job kinds, filters and reporters
-                        (including those loaded by hooks)
-  --detailed-versions   list detailed versions including of installed
+                        (including those loaded from hooks.py)
+  --detailed-versions   list detailed versions including those of installed
                         dependencies
 
 override configuration file:

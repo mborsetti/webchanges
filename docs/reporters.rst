@@ -292,7 +292,7 @@ apps to login:
 #. Go to https://myaccount.google.com/lesssecureapps
 #. Turn Allow less secure apps access ON
 
-For more information, see `Google's help <https://support.google.com/accounts/answer/6010255>`__.  This setting may not
+For more information, see `Google's help <https://support.google.com/accounts/answer/6010255>`__. This setting may not
 be available if the account administrator turned the functionality off and you therefore cannot use this functionality.
 
 Then configure these directives as follows:
