@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Callable, cast
 
 import pytest
-from PIL import Image
 
 from webchanges.differs import CommandDiffer, DifferBase, UnifiedDiffer
 from webchanges.handler import JobState
@@ -697,11 +696,14 @@ def test_image_filenames(job_state: JobState) -> None:
     assert diff[: len(expected)] == expected
 
 
+@py_latest_only
 def test_image_base_64_and_resize(job_state: JobState) -> None:
     """Test image differ with base_64 images."""
     # if not os.getenv('GITHUB_ACTIONS'):
     #     # we are doing interactive debugging and want to display logging
     #     logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
+    from PIL import Image
+
     current_dir = Path(__file__).parent
     old_file = current_dir.joinpath('data', 'pic_1.png')
     new_file = current_dir.joinpath('data', 'pic_2.png')
@@ -748,6 +750,8 @@ def test_image_resize(job_state: JobState) -> None:
     # if not os.getenv('GITHUB_ACTIONS'):
     #     # we are doing interactive debugging and want to display logging
     #     logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
+    from PIL import Image
+
     current_dir = Path(__file__).parent
     img_file = current_dir.joinpath('data', 'pic_1.png')
     # blow up the old image to trigger resizing
