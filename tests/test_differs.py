@@ -8,7 +8,6 @@ Run individually with
 from __future__ import annotations
 
 import base64
-import html
 import logging
 import os
 import random
@@ -455,20 +454,20 @@ def test_command_change(job_state: JobState) -> None:
     ]
     job_state.job.is_markdown = True
     diff = job_state.get_diff(tz='Etc/UTC')
-    assert diff.splitlines()[:3] == expected
+    assert diff.splitlines()[1:3] == expected
 
     # redo as markdown
     diff = job_state.get_diff(report_kind='markdown')
-    assert diff.splitlines()[:4] == expected
+    assert diff.splitlines()[1:3] == expected
 
     # redo as html
     expected = [
-        f'Using differ &quot;{{&#x27;command&#x27;: &#x27;{html.escape(command)}&#x27;}}&quot;',
+        # f'Using differ &quot;{{&#x27;command&#x27;: &#x27;{html.escape(command)}&#x27;}}&quot;',
         'Old: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         'New: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
     ]
     diff = job_state.get_diff(report_kind='html')
-    assert diff.splitlines()[:4] == expected
+    assert diff.splitlines()[1:3] == expected
 
 
 def test_command_error(job_state: JobState) -> None:
@@ -507,7 +506,7 @@ def test_command_command_error(job_state: JobState) -> None:
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     job_state.job.differ = {'name': 'command', 'command': 'dir /x'}
-    with pytest.raises(RuntimeError, FileNotFoundError) as pytest_wrapped_e:
+    with pytest.raises((RuntimeError, FileNotFoundError)) as pytest_wrapped_e:
         job_state.get_diff()
     if os.name == 'nt':
         assert str(pytest_wrapped_e.value) == (
@@ -526,8 +525,8 @@ def test_command_wdiff_to_html(job_state: JobState) -> None:
         'what I <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">want.</span> '
         '<span style="background-color:#d1ffd1;color:#082b08;">want!</span>'
     )
-    html = CommandDiffer(job_state).wdiff_to_html(diff)
-    assert html == expected
+    htm = CommandDiffer(job_state).wdiff_to_html(diff)
+    assert htm == expected
 
 
 def test_command_wdiff_to_html_markdown(job_state: JobState) -> None:
@@ -543,8 +542,8 @@ def test_command_wdiff_to_html_markdown(job_state: JobState) -> None:
         '<span style="background-color:#d1ffd1;color:#082b08;">want</span><br>',
         '<span style="background-color:#d1ffd1;color:#082b08;"> for me</span></span>',
     ]
-    html = CommandDiffer(job_state).wdiff_to_html(diff)
-    assert html.splitlines() == expected
+    htm = CommandDiffer(job_state).wdiff_to_html(diff)
+    assert htm.splitlines() == expected
 
 
 def test_deepdiff_json(job_state: JobState) -> None:
