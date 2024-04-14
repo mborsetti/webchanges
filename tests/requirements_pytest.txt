@@ -28,6 +28,7 @@ pypdf[crypto]
 pytest
 pytest-asyncio
 pytest-cov
+pytz  # bug in aioxmpp
 redis
 requests
 urllib3

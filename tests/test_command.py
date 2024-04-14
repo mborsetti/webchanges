@@ -84,16 +84,24 @@ def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_fil
     )
 
 
-# @pytest.fixture()  # type: ignore[misc]
-# def urlwatch_command() -> UrlwatchCommand:
-#     command_config = new_command_config(jobs_file=jobs_file)
-#     config_storage = YamlConfigStorage(config_file)
-#     config_storage.load()
-#     cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
-#     jobs_storage = YamlJobsStorage([jobs_file])
-#     urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-#     urlwatch_command = UrlwatchCommand(urlwatcher)
-#     return urlwatch_command
+@pytest.fixture()  # type: ignore[misc]
+def urlwatch_command() -> UrlwatchCommand:
+    command_config = CommandConfig(
+        args=[],
+        project_name=__project_name__,
+        config_path=config_path,
+        config_file=config_file,
+        jobs_def_file=jobs_file,
+        hooks_file=hooks_file,
+        cache=cache_file,  # type: ignore[arg-type]
+    )
+    config_storage = YamlConfigStorage(config_file)
+    config_storage.load()
+    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    jobs_storage = YamlJobsStorage([jobs_file])
+    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    return urlwatch_command
 
 
 # Set up classes
@@ -103,7 +111,7 @@ config_storage.load()
 cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
 jobs_storage = YamlJobsStorage([jobs_file])
 urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-urlwatch_command = UrlwatchCommand(urlwatcher)
+urlwatch_command_common = UrlwatchCommand(urlwatcher)
 
 
 @pytest.fixture(scope='module', autouse=True)  # type: ignore[misc]
@@ -171,7 +179,7 @@ def test_first_run(capsys: CaptureFixture[str], tmp_path: Path) -> None:
 def test_edit() -> None:
     setattr(command_config, 'edit', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.run()
+        urlwatch_command_common.run()
     setattr(command_config, 'edit', False)
     assert pytest_wrapped_e.value.code == 0
 
@@ -181,7 +189,7 @@ def test_edit_using_visual() -> None:
     del os.environ['EDITOR']
     setattr(command_config, 'edit', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.run()
+        urlwatch_command_common.run()
     setattr(command_config, 'edit', False)
     os.environ['EDITOR'] = os.environ['VISUAL']
     del os.environ['VISUAL']
@@ -193,7 +201,7 @@ def test_edit_fail(capsys: CaptureFixture[str]) -> None:
     os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
     setattr(command_config, 'edit', True)
     with pytest.raises(OSError) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'edit', False)
     if editor is not None:
         os.environ['EDITOR'] = editor
@@ -212,7 +220,7 @@ def test_edit_fail(capsys: CaptureFixture[str]) -> None:
 def test_edit_config() -> None:
     setattr(command_config, 'edit_config', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.run()
+        urlwatch_command_common.run()
     setattr(command_config, 'edit_config', False)
     assert pytest_wrapped_e.value.code == 0
 
@@ -222,7 +230,7 @@ def test_edit_config_fail(capsys: CaptureFixture[str]) -> None:
     os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
     setattr(command_config, 'edit_config', True)
     with pytest.raises(OSError) as pytest_wrapped_e:
-        urlwatch_command.run()
+        urlwatch_command_common.run()
     setattr(command_config, 'edit_config', False)
     if editor is not None:
         os.environ['EDITOR'] = editor
@@ -241,11 +249,11 @@ def test_edit_config_fail(capsys: CaptureFixture[str]) -> None:
 def test_edit_hooks(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'edit_hooks', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'edit_hooks', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == f'Saved edits in {urlwatch_command.urlwatch_config.hooks_file}\n'
+    assert message == f'Saved edits in {urlwatch_command_common.urlwatch_config.hooks_file}\n'
 
 
 def test_edit_hooks_fail(capsys: CaptureFixture[str]) -> None:
@@ -253,7 +261,7 @@ def test_edit_hooks_fail(capsys: CaptureFixture[str]) -> None:
     os.environ['EDITOR'] = 'does_not_exist_and_should_trigger_an_error'
     setattr(command_config, 'edit_hooks', True)
     with pytest.raises(OSError) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'edit_hooks', False)
     if editor is not None:
         os.environ['EDITOR'] = editor
@@ -273,7 +281,7 @@ def test_show_features_and_verbose(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'features', True)
     setattr(command_config, 'verbose', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'features', False)
     setattr(command_config, 'verbose', False)
     assert pytest_wrapped_e.value.code == 0
@@ -283,9 +291,9 @@ def test_show_features_and_verbose(capsys: CaptureFixture[str]) -> None:
 
 def test_show_detailed_versions(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'detailed_versions', 'stdout')
-    urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
+    urlwatch_command_common.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'detailed_versions', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -297,7 +305,7 @@ def test_list_jobs_verbose(capsys: CaptureFixture[str]) -> None:
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
     urlwatcher.urlwatch_config.verbose = True
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'list_jobs', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     assert pytest_wrapped_e.value.code == 0
@@ -315,7 +323,7 @@ def test_list_jobs_not_verbose(capsys: CaptureFixture[str]) -> None:
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
     urlwatcher.urlwatch_config.verbose = False
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'list_jobs', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml')]
@@ -335,7 +343,7 @@ def test_list_jobs_no_filename(capsys: CaptureFixture[str]) -> None:
     urlwatch_config_verbose = urlwatcher.urlwatch_config.verbose
     urlwatcher.urlwatch_config.verbose = False
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'list_jobs', False)
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     command_config.jobs_files = [jobs_file]
@@ -349,44 +357,44 @@ def test_list_jobs_no_filename(capsys: CaptureFixture[str]) -> None:
 
 def test__find_job() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        urlwatch_command._find_job('https://example.com/')
+        urlwatch_command_common._find_job('https://example.com/')
     message = str(pytest_wrapped_e.value)
     assert message == "Job https://example.com/ does not match any job's url/user_visible_url or command."
 
 
 def test__find_job_zero() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        urlwatch_command._find_job(0)
+        urlwatch_command_common._find_job(0)
     message = str(pytest_wrapped_e.value)
     assert message == 'Job index 0 out of range.'
 
 
 def test__find_job_negative() -> None:
-    assert urlwatch_command._find_job(-1) is urlwatcher.jobs[0]
+    assert urlwatch_command_common._find_job(-1) is urlwatcher.jobs[0]
 
 
 def test__find_job_index_error() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        urlwatch_command._find_job(100)
+        urlwatch_command_common._find_job(100)
     message = str(pytest_wrapped_e.value)
     assert message == 'Job index 100 out of range (found 1 jobs).'
 
 
 def test__find_job_index_no_match() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        urlwatch_command._find_job('nomatch')
+        urlwatch_command_common._find_job('nomatch')
     message = str(pytest_wrapped_e.value)
     assert message == "Job nomatch does not match any job's url/user_visible_url or command."
 
 
 def test__get_job() -> None:
-    assert urlwatch_command._find_job_with_defaults(1).get_location() == 'echo test'
+    assert urlwatch_command_common._find_job_with_defaults(1).get_location() == 'echo test'
 
 
 def test_test_job(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'test_job', 1)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'test_job', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -403,25 +411,25 @@ def test_test_job(capsys: CaptureFixture[str]) -> None:
 
 
 def test_test_job_all(capsys: CaptureFixture[str]) -> None:
-    urlwatch_command.urlwatch_config.hooks_file = hooks_file
+    urlwatch_command_common.urlwatch_config.hooks_file = hooks_file
     import_module_from_source('hooks', hooks_file)
     setattr(command_config, 'test_job', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'test_job', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message.splitlines() == [
-        f'No syntax errors in config file {urlwatch_command.urlwatch_config.config_file},',
-        f'jobs file ' f'{urlwatch_command.urlwatch_config.jobs_files[0]},',
-        f'and hooks file {urlwatch_command.urlwatch_config.hooks_file}.',
+        f'No syntax errors in config file {urlwatch_command_common.urlwatch_config.config_file},',
+        f'jobs file ' f'{urlwatch_command_common.urlwatch_config.jobs_files[0]},',
+        f'and hooks file {urlwatch_command_common.urlwatch_config.hooks_file}.',
     ]
 
     # with multiple files
     command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml'), tmp_path.joinpath('jobs-echo_test.yaml')]
     setattr(command_config, 'test_job', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'test_job', None)
     command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml')]
     assert pytest_wrapped_e.value.code == 0
@@ -429,9 +437,9 @@ def test_test_job_all(capsys: CaptureFixture[str]) -> None:
     assert message.splitlines() == [
         f'No syntax errors in config file {urlwatcher.urlwatch_config.config_file},',
         'jobs files',
-        f'   • {urlwatch_command.urlwatch_config.jobs_files[0]}',
-        f'   • {urlwatch_command.urlwatch_config.jobs_files[0]},',
-        f'and hooks file {urlwatch_command.urlwatch_config.hooks_file}.',
+        f'   • {urlwatch_command_common.urlwatch_config.jobs_files[0]}',
+        f'   • {urlwatch_command_common.urlwatch_config.jobs_files[0]},',
+        f'and hooks file {urlwatch_command_common.urlwatch_config.hooks_file}.',
     ]
 
 
@@ -439,7 +447,7 @@ def test_test_job_with_test_reporter(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'test_job', 1)
     setattr(command_config, 'test_reporter', 'stdout')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'test_job', None)
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 0
@@ -600,7 +608,7 @@ def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
 def test_list_error_jobs(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'errors', 'stdout')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'errors', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -608,7 +616,7 @@ def test_list_error_jobs(capsys: CaptureFixture[str]) -> None:
         [
             'Jobs with errors or returning no data (after unmodified filters, if any)',
             f'   in jobs file '
-            f"{str(urlwatch_command.urlwatch_config.jobs_files[0]) + ':' if urlwatch_command.urlwatch_config.jobs_files else ''}",  # noqa: E501
+            f"{str(urlwatch_command_common.urlwatch_config.jobs_files[0]) + ':' if urlwatch_command_common.urlwatch_config.jobs_files else ''}",  # noqa: E501
             '--',
             'Checked 1 enabled jobs for errors in',
         ]
@@ -619,7 +627,7 @@ def test_list_error_jobs(capsys: CaptureFixture[str]) -> None:
 def test_list_error_jobs_reporter(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'errors', 'garbageinput')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'errors', None)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
@@ -634,7 +642,7 @@ def test_modify_urls(capsys: CaptureFixture[str]) -> None:
     # add new job
     setattr(command_config, 'add', 'url=https://www.example.com/#test_modify_urls')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'add', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -645,7 +653,7 @@ def test_modify_urls(capsys: CaptureFixture[str]) -> None:
     # delete the job just added
     setattr(command_config, 'delete', 'https://www.example.com/#test_modify_urls')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'delete', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -840,7 +848,7 @@ def test_clean_database(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'clean_database', True)
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'clean_database', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -854,21 +862,21 @@ def test_clean_database(capsys: CaptureFixture[str]) -> None:
     # run jobs to save
     for i in range(3):
         time.sleep(0.0001)
-        urlwatcher2.run_jobs()
+        urlwatch_command2.urlwatcher.run_jobs()
     if hasattr(cache_storage2, '_copy_temp_to_permanent'):
         cache_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
 
     # clean database with RETAIN_LIMIT=2
-    setattr(command_config2, 'clean_database', 2)
+    setattr(urlwatch_command2.urlwatch_config, 'clean_database', 2)
     urlwatcher2.cache_storage.clean_cache([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
-    setattr(command_config2, 'clean_database', None)
+    setattr(urlwatch_command2.urlwatch_config, 'clean_database', None)
     guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
     assert len(cache_storage2.get_history_snapshots(guid)) == 2
 
     # clean database without specifying RETAIN_LIMIT
-    setattr(command_config2, 'clean_database', True)
+    setattr(urlwatch_command2.urlwatch_config, 'clean_database', True)
     urlwatcher2.cache_storage.clean_cache([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
-    setattr(command_config2, 'clean_database', None)
+    setattr(urlwatch_command2.urlwatch_config, 'clean_database', None)
     guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
     assert len(cache_storage2.get_history_snapshots(guid)) == 1
 
@@ -879,7 +887,7 @@ def test_rollback_database(capsys: CaptureFixture[str], monkeypatch: MonkeyPatch
     monkeypatch.setattr('builtins.input', lambda _: 'y')
     urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'rollback_database', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -889,16 +897,16 @@ def test_rollback_database(capsys: CaptureFixture[str], monkeypatch: MonkeyPatch
 def test_check_telegram_chats(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'telegram_chats', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'telegram_chats', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
     assert message == 'You need to set up your bot token first (see documentation)\n'
 
-    urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # noqa: S105
+    urlwatch_command_common.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # noqa: S105
     setattr(command_config, 'telegram_chats', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'telegram_chats', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
@@ -907,13 +915,13 @@ def test_check_telegram_chats(capsys: CaptureFixture[str]) -> None:
     if os.getenv('TELEGRAM_TOKEN'):
         if os.getenv('GITHUB_ACTIONS'):
             pytest.skip('Telegram testing no longer working from within GitHub Actions')
-        urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = os.getenv(
+        urlwatch_command_common.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = os.getenv(
             'TELEGRAM_TOKEN',
             '',
         )
         setattr(command_config, 'telegram_chats', True)
         with pytest.raises(SystemExit):
-            urlwatch_command.handle_actions()
+            urlwatch_command_common.handle_actions()
         setattr(command_config, 'telegram_chats', False)
         message = capsys.readouterr().out
         assert 'Say hello to your bot at https://t.me/' in message
@@ -924,16 +932,16 @@ def test_check_telegram_chats(capsys: CaptureFixture[str]) -> None:
 def test_check_test_reporter(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'test_reporter', 'stdout')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert '01. NEW: ' in message
 
     setattr(command_config, 'test_reporter', 'stdout')
-    urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
+    urlwatch_command_common.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -941,7 +949,7 @@ def test_check_test_reporter(capsys: CaptureFixture[str]) -> None:
 
     setattr(command_config, 'test_reporter', 'does_not_exist')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
@@ -951,7 +959,7 @@ def test_check_test_reporter(capsys: CaptureFixture[str]) -> None:
 def test_check_smtp_login(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'smtp_login', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'smtp_login', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
@@ -975,7 +983,7 @@ def test_check_smtp_login_not_config(capsys: CaptureFixture[str]) -> None:
     )
     setattr(command_config, 'smtp_login', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'smtp_login', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
@@ -1005,7 +1013,7 @@ def test_check_smtp_insecure_password(capsys: CaptureFixture[str]) -> None:
     )
     setattr(command_config, 'smtp_login', True)
     with pytest.raises(ConnectionRefusedError):
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'smtp_login', False)
     # assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
@@ -1018,7 +1026,7 @@ def test_check_smtp_insecure_password(capsys: CaptureFixture[str]) -> None:
 def test_check_xmpp_login(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'xmpp_login', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'xmpp_login', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
@@ -1038,7 +1046,7 @@ def test_check_xmpp_login_insecure_password(capsys: CaptureFixture[str]) -> None
     }
     setattr(command_config, 'xmpp_login', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
+        urlwatch_command_common.handle_actions()
     setattr(command_config, 'xmpp_login', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
@@ -1193,19 +1201,14 @@ def test_job_states_verb_notimestamp_changed() -> None:
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
 
-def test_list_error_jobs_with_error(capsys: CaptureFixture[str]) -> None:
-    jobs_file2 = config_path.joinpath('jobs-invalid_url.yaml')
-    command_config2 = new_command_config(jobs_file=jobs_file2)
-    setattr(command_config2, 'errors', 'stdout')
-    config_storage2 = YamlConfigStorage(config_file)
-    config_storage2.load()
-    cache_storage2 = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
-    jobs_storage2 = YamlJobsStorage([jobs_file2])
-    urlwatcher2 = Urlwatch(command_config2, config_storage2, cache_storage2, jobs_storage2)  # main.py
-    urlwatch_command2 = UrlwatchCommand(urlwatcher2)
+def test_list_error_jobs_with_error(urlwatch_command: UrlwatchCommand, capsys: CaptureFixture[str]) -> None:
+    capsys.readouterr()  # Clears the capture buffer by reading it
+    urlwatch_command.urlwatcher.jobs_storage = YamlJobsStorage([config_path.joinpath('jobs-invalid_url.yaml')])
+    urlwatch_command.urlwatcher.load_jobs()
+    setattr(urlwatch_command.urlwatch_config, 'errors', 'stdout')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command2.handle_actions()
-    setattr(command_config2, 'errors', None)
+        urlwatch_command.handle_actions()
+    setattr(urlwatch_command.urlwatch_config, 'errors', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert '\n  1: Error "' in message
