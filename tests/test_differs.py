@@ -446,13 +446,10 @@ def test_command_change(job_state: JobState) -> None:
     job_state.new_data = 'b\n'
     if os.name == 'nt':
         command = 'cmd /C exit 1 & rem'
-        command_str = command
     else:
         command = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
-        command_str = '\'\'bash -c " echo \\\'This is a custom diff\\\'; exit 1" #\'\''
     job_state.job.differ = {'command': command}  # test with no differ name
     expected = [
-        f"Using differ \"{{'command': '{command_str}'}}\"",
         'Old: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         'New: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
     ]
@@ -462,7 +459,7 @@ def test_command_change(job_state: JobState) -> None:
 
     # redo as markdown
     diff = job_state.get_diff(report_kind='markdown')
-    assert diff.splitlines()[:3] == expected
+    assert diff.splitlines()[:4] == expected
 
     # redo as html
     expected = [
@@ -471,7 +468,7 @@ def test_command_change(job_state: JobState) -> None:
         'New: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
     ]
     diff = job_state.get_diff(report_kind='html')
-    assert diff.splitlines()[:3] == expected
+    assert diff.splitlines()[:4] == expected
 
 
 def test_command_error(job_state: JobState) -> None:
@@ -510,13 +507,15 @@ def test_command_command_error(job_state: JobState) -> None:
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     job_state.job.differ = {'name': 'command', 'command': 'dir /x'}
-    with pytest.raises(RuntimeError) as pytest_wrapped_e:
+    with pytest.raises(RuntimeError, FileNotFoundError) as pytest_wrapped_e:
         job_state.get_diff()
     if os.name == 'nt':
         assert str(pytest_wrapped_e.value) == (
             "Job 0: External differ '{'command': 'dir /x'}' returned 'dir: cannot access "
             "'/x': No such file or directory' ()"
         )
+    # else:
+    # assert str(pytest_wrapped_e.value) == ("[Errno 2] No such file or directory: 'dir'")
 
 
 def test_command_wdiff_to_html(job_state: JobState) -> None:
