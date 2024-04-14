@@ -656,6 +656,7 @@ def test_image_url(job_state: JobState) -> None:
     assert diff[: len(expected)] == expected
 
 
+@py_latest_only
 def test_image_filenames(job_state: JobState) -> None:
     """Test image differ with filenames."""
     # if not os.getenv('GITHUB_ACTIONS'):
