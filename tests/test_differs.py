@@ -39,6 +39,14 @@ py_no_github = cast(
         reason='Google AI API call not placed from GitHub Actions',
     ),
 )
+# py_nt_only = cast(
+#     Callable[[Callable], Callable],
+#     pytest.mark.skipif(
+#         os.name == 'nt',
+#         reason='Not working on Linux',
+#     ),
+# )
+
 
 DIFF_TO_HTML_TEST_DATA = [
     ('+Added line', '<td style="background-color:#d1ffd1;color:#082b08;">Added line</td>'),
@@ -611,6 +619,7 @@ def test_deepdiff_xml(job_state: JobState) -> None:
     assert diff.splitlines() == expected
 
 
+# @py_nt_only
 @py_latest_only
 def test_image_url(job_state: JobState) -> None:
     """Test image differ with urls."""
@@ -619,7 +628,7 @@ def test_image_url(job_state: JobState) -> None:
     #     logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
     job_state.old_data = 'https://aviationweather.gov/data/products/progs/F006_wpc_prog.gif'
     job_state.new_data = 'https://aviationweather.gov/data/products/progs/F012_wpc_prog.gif'
-    job_state.job.differ = {'name': 'image', 'data_type': 'url'}
+    job_state.job.differ = {'name': 'image', 'data_type': 'url', 'mse_treshold': 10}
     expected = '\n'.join(
         [
             'Differ: image for url<br>',
