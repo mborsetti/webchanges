@@ -51,6 +51,7 @@ py_latest_only = cast(
     Callable[[Callable], Callable],
     pytest.mark.skipif(sys.version_info < (3, 12), reason='Time ' 'consuming; testing latest version only'),
 )
+
 TEST_JOBS = [
     (
         {
@@ -131,8 +132,6 @@ TEST_JOBS = [
         'test echo command',
     ),
 ]
-
-
 TEST_ALL_URL_JOBS = [
     {},
     {'use_browser': True},
@@ -362,8 +361,8 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
     job_data['ignore_http_error_codes'] = None
 
 
-@py_latest_only  # type: ignore[misc]
-@connection_required  # type: ignore[misc]
+@py_latest_only
+@connection_required
 def test_stress_use_browser() -> None:
     jobs_file = data_path.joinpath('jobs-use_browser.yaml')
     config_file = data_path.joinpath('config.yaml')

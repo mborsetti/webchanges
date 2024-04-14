@@ -369,6 +369,8 @@ This differ is currently in BETA and the directives may change in the future.
 
 * ``data_type`` (``url``, ``filename``, or ``bytes``): What the data represent: a link to the image, the path to the
   file containing the image or the image itself as bytes (default: ``url``).
+* ``mse_threshold`` (float): The minimum mean squared error (MSE) between two images to consider them changed;
+  requires the package ``numppy`` to be installed (default: 2.5).
 
 Required packages
 `````````````````

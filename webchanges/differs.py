@@ -940,7 +940,8 @@ class ImageDiffer(DifferBase):
             return {'text': '', 'markdown': '', 'html': ''}
 
         diff_image, mse_value = compute_diff_image(old_image, new_image)
-        logger.debug(f'Job {self.job.index_number}: MSE value {mse_value:.2f}')
+        if mse_value:
+            logger.debug(f'Job {self.job.index_number}: MSE value {mse_value:.2f}')
 
         if mse_value and mse_value < mse_threshold:
             logger.info(

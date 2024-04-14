@@ -37,8 +37,6 @@ square brackets, like this::
 | ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
 | html2text filter        |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
-| ``deepdiff`` differ     | * `deepdiff <https://github.com/seperman/deepdiff>`__                   |
-+-------------------------+-------------------------------------------------------------------------+
 | ``html5lib`` parser for | * `html5lib <https://pypi.org/project/html5lib/>`__                     |
 | the bs4 method of the   |                                                                         |
 | html2text filter        |                                                                         |
@@ -70,6 +68,9 @@ square brackets, like this::
 | :underline:`Differs`                                                                              |
 +-------------------------+-------------------------------------------------------------------------+
 | ``deepdiff`` differ     | * `deepdiff <https://github.com/seperman/deepdiff>`__                   |
++-------------------------+-------------------------------------------------------------------------+
+| ``deepdiff_xml`` differ | * `deepdiff <https://github.com/seperman/deepdiff>`__                   |
+| for XML                 | * `xmltodict <https://github.com/martinblech/xmltodict>`__              |
 +-------------------------+-------------------------------------------------------------------------+
 | :underline:`Reporters`                                                                            |
 +-------------------------+-------------------------------------------------------------------------+
