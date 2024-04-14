@@ -809,7 +809,7 @@ class ImageDiffer(DifferBase):
             "'url' (to retrieve an image), 'base_64' (Base 64 data) or 'filename' (the path to an image file) "
             "(default: 'url')"
         ),
-        'mse_treshold': (
+        'mse_threshold': (
             'the minimum mean squared error (MSE) between two images to consider them changed if numpy in installed '
             '(default: 2.5)'
         ),
@@ -940,6 +940,7 @@ class ImageDiffer(DifferBase):
             return {'text': '', 'markdown': '', 'html': ''}
 
         diff_image, mse_value = compute_diff_image(old_image, new_image)
+        logger.debug(f'Job {self.job.index_number}: MSE value {mse_value:.2f}')
 
         if mse_value and mse_value < mse_threshold:
             logger.info(

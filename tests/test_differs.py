@@ -628,7 +628,7 @@ def test_image_url(job_state: JobState) -> None:
     #     logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
     job_state.old_data = 'https://aviationweather.gov/data/products/progs/F006_wpc_prog.gif'
     job_state.new_data = 'https://aviationweather.gov/data/products/progs/F012_wpc_prog.gif'
-    job_state.job.differ = {'name': 'image', 'data_type': 'url', 'mse_treshold': 10}
+    job_state.job.differ = {'name': 'image', 'data_type': 'url', 'mse_threshold': 10}
     expected = '\n'.join(
         [
             'Differ: image for url<br>',
