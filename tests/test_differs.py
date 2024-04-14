@@ -147,7 +147,7 @@ def test_providing_unknown_subdirective_raises_valueerror() -> None:
     err_msg = str(pytest_wrapped_e.value)
     assert err_msg == (
         'Job None: Differ image does not support sub-directive(s) anothersubdirective (supported: data_type, '
-        'mse_treshold).'
+        'mse_threshold).'
     )
 
 
@@ -627,7 +627,7 @@ def test_image_url(job_state: JobState) -> None:
     #     logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
     job_state.old_data = 'https://aviationweather.gov/data/products/progs/F006_wpc_prog.gif'
     job_state.new_data = 'https://aviationweather.gov/data/products/progs/F012_wpc_prog.gif'
-    job_state.job.differ = {'name': 'image', 'data_type': 'url', 'mse_threshold': 10}
+    job_state.job.differ = {'name': 'image', 'data_type': 'url', 'mse_threshold': 5}
     expected = '\n'.join(
         [
             'Differ: image for url<br>',
