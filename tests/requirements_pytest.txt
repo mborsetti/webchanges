@@ -32,3 +32,4 @@ redis
 requests
 urllib3
 vobject
+xmltodict

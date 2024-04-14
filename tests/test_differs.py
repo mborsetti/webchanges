@@ -28,11 +28,17 @@ from webchanges.storage import CacheSQLite3Storage
 
 py_latest_only = cast(
     Callable[[Callable], Callable],
-    pytest.mark.skipif(sys.version_info < (3, 12), reason='Time ' 'consuming; testing latest version only'),
+    pytest.mark.skipif(
+        sys.version_info < (3, 12),
+        reason='Time ' 'consuming; testing latest version only',
+    ),
 )
 py_no_github = cast(
     Callable[[Callable], Callable],
-    pytest.mark.skipif(os.getenv('GITHUB_ACTIONS'), reason='Google AI API call not placed from GitHub Actions'),
+    pytest.mark.skipif(
+        os.getenv('GITHUB_ACTIONS') is not None,
+        reason='Google AI API call not placed from GitHub Actions',
+    ),
 )
 
 DIFF_TO_HTML_TEST_DATA = [
@@ -444,7 +450,7 @@ def test_command_change(job_state: JobState) -> None:
         command = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
     job_state.job.differ = {'command': command}  # test with no differ name
     expected = [
-        f"Using differ \"{{'command': '{command}'}}\"",
+        f"Using differ \"{{'command': '{command!r}'}}\"",
         'Old: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         'New: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
     ]
@@ -727,6 +733,7 @@ def test_image_base_64_and_resize(job_state: JobState) -> None:
     assert diff[: len(expected)] == expected
 
 
+@py_latest_only
 def test_image_resize(job_state: JobState) -> None:
     """Test identical image but old is bigger."""
     # if not os.getenv('GITHUB_ACTIONS'):

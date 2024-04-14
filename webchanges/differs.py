@@ -1178,7 +1178,7 @@ class AIGoogleDiffer(DifferBase):
         for rep_kind in {'text', 'html'}:  # markdown is same as text
             unified_report = DifferBase.process(
                 'unified',
-                directives.get('unified'),  # type: ignore[arg-type]
+                directives.get('unified') or {},  # type: ignore[arg-type]
                 self.state,
                 rep_kind,  # type: ignore[arg-type]
                 tz,

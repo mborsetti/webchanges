@@ -1194,18 +1194,18 @@ def test_job_states_verb_notimestamp_changed() -> None:
 
 
 def test_list_error_jobs_with_error(capsys: CaptureFixture[str]) -> None:
-    jobs_file = config_path.joinpath('jobs-invalid_url.yaml')
-    command_config = new_command_config(jobs_file=jobs_file)
-    setattr(command_config, 'errors', 'stdout')
-    config_storage = YamlConfigStorage(config_file)
-    config_storage.load()
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
-    jobs_storage = YamlJobsStorage([jobs_file])
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
-    urlwatch_command = UrlwatchCommand(urlwatcher)
+    jobs_file2 = config_path.joinpath('jobs-invalid_url.yaml')
+    command_config2 = new_command_config(jobs_file=jobs_file2)
+    setattr(command_config2, 'errors', 'stdout')
+    config_storage2 = YamlConfigStorage(config_file)
+    config_storage2.load()
+    cache_storage2 = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    jobs_storage2 = YamlJobsStorage([jobs_file2])
+    urlwatcher2 = Urlwatch(command_config2, config_storage2, cache_storage2, jobs_storage2)  # main.py
+    urlwatch_command2 = UrlwatchCommand(urlwatcher2)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
-    setattr(command_config, 'errors', None)
+        urlwatch_command2.handle_actions()
+    setattr(command_config2, 'errors', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert '\n  1: Error "' in message
