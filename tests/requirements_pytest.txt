@@ -19,8 +19,8 @@ jsbeautifier
 keyring
 matrix-client
 minidb
-numpy; python_version == '3.12
-Pillow; python_version == '3.12
+numpy; python_version == '3.12'
+Pillow; python_version == '3.12'
 playwright
 psutil
 pushbullet.py
