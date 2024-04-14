@@ -86,20 +86,22 @@ def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_fil
 
 @pytest.fixture()  # type: ignore[misc]
 def urlwatch_command() -> UrlwatchCommand:
-    command_config = CommandConfig(
-        args=[],
-        project_name=__project_name__,
-        config_path=config_path,
-        config_file=config_file,
-        jobs_def_file=jobs_file,
-        hooks_file=hooks_file,
-        cache=cache_file,  # type: ignore[arg-type]
-    )
     config_storage = YamlConfigStorage(config_file)
     config_storage.load()
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
-    jobs_storage = YamlJobsStorage([jobs_file])
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(
+        urlwatch_config=CommandConfig(
+            args=[],
+            project_name=__project_name__,
+            config_path=config_path,
+            config_file=config_file,
+            jobs_def_file=jobs_file,
+            hooks_file=hooks_file,
+            cache=':memory:',  # type: ignore[arg-type]
+        ),
+        config_storage=config_storage,
+        cache_storage=CacheSQLite3Storage(':memory:'),  # type: ignore[arg-type]
+        jobs_storage=YamlJobsStorage([jobs_file]),
+    )  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)
     return urlwatch_command
 
@@ -126,7 +128,7 @@ def cleanup(request: pytest.FixtureRequest) -> None:
             os.environ['VISUAL'] = visual
         try:
             urlwatcher.close()
-        except AttributeError:
+        except:  # noqa: S110,E722
             pass
 
     request.addfinalizer(finalizer)
@@ -1202,7 +1204,6 @@ def test_job_states_verb_notimestamp_changed() -> None:
 
 
 def test_list_error_jobs_with_error(urlwatch_command: UrlwatchCommand, capsys: CaptureFixture[str]) -> None:
-    capsys.readouterr()  # Clears the capture buffer by reading it
     urlwatch_command.urlwatcher.jobs_storage = YamlJobsStorage([config_path.joinpath('jobs-invalid_url.yaml')])
     urlwatch_command.urlwatcher.load_jobs()
     setattr(urlwatch_command.urlwatch_config, 'errors', 'stdout')

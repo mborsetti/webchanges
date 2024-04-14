@@ -446,11 +446,13 @@ def test_command_change(job_state: JobState) -> None:
     job_state.new_data = 'b\n'
     if os.name == 'nt':
         command = 'cmd /C exit 1 & rem'
+        command_str = command
     else:
         command = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
+        command_str = '\'\'bash -c " echo \\\'This is a custom diff\\\'; exit 1" #\'\''
     job_state.job.differ = {'command': command}  # test with no differ name
     expected = [
-        f"Using differ \"{{'command': '{command!r}'}}\"",
+        f"Using differ \"{{'command': '{command_str}'}}\"",
         'Old: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         'New: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
     ]
