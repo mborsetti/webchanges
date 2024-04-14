@@ -348,12 +348,15 @@ def test_list_jobs_no_filename(capsys: CaptureFixture[str]) -> None:
 
 
 def test__find_job() -> None:
-    assert urlwatch_command._find_job('https://example.com/') is None
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        urlwatch_command._find_job('https://example.com/')
+    message = str(pytest_wrapped_e.value)
+    assert message == "Job https://example.com/ does not match any job's url/user_visible_url or command."
 
 
 def test__find_job_zero() -> None:
-    with pytest.raises(IndexError) as pytest_wrapped_e:
-        assert urlwatch_command._find_job(0) is None
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        urlwatch_command._find_job(0)
     message = str(pytest_wrapped_e.value)
     assert message == 'Job index 0 out of range.'
 
@@ -364,14 +367,14 @@ def test__find_job_negative() -> None:
 
 def test__find_job_index_error() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        assert urlwatch_command._find_job(100) is None
+        urlwatch_command._find_job(100)
     message = str(pytest_wrapped_e.value)
     assert message == 'Job index 100 out of range (found 1 jobs).'
 
 
 def test__find_job_index_no_match() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        assert urlwatch_command._find_job('nomatch') is None
+        urlwatch_command._find_job('nomatch')
     message = str(pytest_wrapped_e.value)
     assert message == "Job nomatch does not match any job's url/user_visible_url or command."
 
@@ -543,7 +546,7 @@ def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
 
         # test invalid joblist
         urlwatcher.urlwatch_config.joblist = ['-999']
-        with pytest.raises(IndexError) as pytest_wrapped_e2:
+        with pytest.raises(ValueError) as pytest_wrapped_e2:
             urlwatcher.run_jobs()
         assert pytest_wrapped_e2.value.args[0] == 'Job index -999 out of range (found 1 jobs).'
         urlwatcher.urlwatch_config.joblist = []
@@ -673,12 +676,11 @@ def test_modify_urls_move_location(
 
     # try changing location of non-existing job
     setattr(command_config2, 'change_location', ('a', 'b'))
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(ValueError) as pytest_wrapped_e:
         urlwatch_command2.handle_actions()
     setattr(command_config2, 'change_location', None)
-    assert pytest_wrapped_e.value.code == 1
-    message = capsys.readouterr().out
-    assert message == 'Job not found: "a"\n'
+    message = str(pytest_wrapped_e.value)
+    assert message == "Job a does not match any job's url/user_visible_url or command."
 
     # try changing location of un-saved job
     old_loc = urlwatch_command2.urlwatcher.jobs[0].get_location()

@@ -3,16 +3,11 @@
 ==================
 Filtering the diff
 ==================
-All the filters listed in :ref:`filters` can be applied to the diff before it's sent (see below how).
-
-In addition, two filters are custom-made for unified diff (default):
+All the filters listed in :ref:`filters` can be applied to the differ's output ("diff") before it's sent (see below
+how). In addition to these, two filters are custom-made for the default differ :ref:`unified_diff`:
 
 * :ref:`additions_only`
 * :ref:`deletions_only`
-
-If you're using unified diff (default), you can change the number of context lines.
-
-* :ref:`contextlines`
 
 
 .. _standard_filters:
@@ -104,77 +99,12 @@ or (text):
    -[More information...](https://www.iana.org/domains/example)
    ---------------------------------------------------------------------------
 
-Note: When using ``additions_only: true``, the directive :ref:`contextlines` (the number of context lines) is set to
-0 instead of the default 3; of course, this can be changed by specifying the directive with the desired value in the
-job.
+Note: When using ``additions_only: true``, the differ directive :ref:`context_lines <contextlines>` (the number of
+context lines) is set to 0 instead of the default 3; of course, this can be overriden by specifying the directive with
+the desired value in the differ directive.
 
 .. versionchanged:: 3.5
    Additions consisting of only empty lines are not reported.
-
-
-.. _contextlines:
-
-contextlines
-------------
-.. versionadded:: 3.0
-
-The ``contextlines`` directive causes a unified diff to have a set number of context lines that might be different from
-Python's default of 3 (or 0 if the job contains ``additions_only: true`` or ``deletions_only: true``).
-
-Example:
-
-.. code-block:: yaml
-
-   url: https://example.com/#lots_of_contextlines
-   contextlines: 5
-
-Output:
-
-.. code-block::
-
-   ---------------------------------------------------------------------------
-   CHANGED: https://example.com/#lots_of_contextlines
-   ---------------------------------------------------------------------------
-   --- @   Sat, 01 Oct 2020 00:00:00 +0000
-   ... @   Sat, 01 Oct 2020 01:00:00 +0000
-   @@ -1,15 +1,15 @@
-    This is line 10
-    This is line 11
-    This is line 12
-    This is line 13
-    This is line 14
-   -This is line fifteen
-   +This is line 15
-    This is line 16
-    This is line 17
-    This is line 18
-    This is line 19
-    This is line 20
-
-Example (default, i.e. 3):
-
-.. code-block:: yaml
-
-   url: https://example.com/#default_contextlines
-
-Output:
-
-.. code-block::
-
-   ---------------------------------------------------------------------------
-   CHANGED: https://example.com/#default_contextlines
-   ---------------------------------------------------------------------------
-   --- @   Sat, 01 Oct 2020 00:00:00 +0000
-   ... @   Sat, 01 Oct 2020 01:00:00 +0000
-   @@ -1,15 +1,15 @@
-    This is line 12
-    This is line 13
-    This is line 14
-   -This is line fifteen
-   +This is line 15
-    This is line 16
-    This is line 17
-    This is line 18
 
 
 .. _deletions_only:
@@ -215,9 +145,10 @@ or (text):
    @@ -1,2 +1,2 @@
    -This is a line that has been deleted or changed
 
-Note: When using ``deletions_only: true``, the directive :ref:`contextlines` (the number of context lines) is set to
-0 instead of the default 3; of course, this can be changed by specifying the directive with the desired value in the
-job.
+Note: When using ``deletions_only: true``, the differ directive :ref:`context_lines <contextlines>` (the number of
+context lines) is set to 0 instead of the default 3; of course, this can be overriden by specifying the directive with
+the desired value in the differ directive.
+
 
 .. versionchanged:: 3.5
    Deletions consisting of only empty lines are not reported.

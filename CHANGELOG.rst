@@ -49,8 +49,8 @@ Added
 
   - ``difflib`` to report element-by-element changes in JSON or XML structured data.
   - ``imagediff`` (BETA) to report an image showing changes in an **image** being tracked.
-  - ``ai_google`` (BETA) to use a **Generative AI provide a summary of changes** (API key required). We use Google's
-    Gemini Pro 1.5 since it is the first model that can ingest 1M tokens, allowing to analyze changes in
+  - ``ai_google`` (BETA) to use a **Generative AI provide a summary of changes** (free API key required). We use
+    Google's Gemini Pro 1.5 since it is the first model that can ingest 1M tokens, allowing to analyze changes in
     long documents (up to 350,000 words, or about 700 pages single-spaced) such as terms and conditions, privacy
     policies, etc. where summarization adds the most value and which other models can't handle. The differ can call
     the Gen AI model to summarize a unified diff or to find and summarize the differences itself. Also supported is

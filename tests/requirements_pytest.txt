@@ -19,6 +19,7 @@ jsbeautifier
 keyring
 matrix-client
 minidb
+Pillow
 playwright
 psutil
 pushbullet.py

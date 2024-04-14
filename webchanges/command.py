@@ -377,23 +377,23 @@ class UrlwatchCommand:
         :return: The matching JobBase.
         :raises IndexError: If job is not found.
         """
-
         try:
             index = int(query)
-            if index == 0:
-                raise IndexError(f'Job index {index} out of range.')
-            try:
-                if index <= 0:
-                    return self.urlwatcher.jobs[index]
-                else:
-                    return self.urlwatcher.jobs[index - 1]
-            except IndexError as e:
-                raise ValueError(f'Job index {index} out of range (found {len(self.urlwatcher.jobs)} jobs).') from e
         except ValueError:
             try:
                 return next((job for job in self.urlwatcher.jobs if job.get_location() == query))
             except StopIteration as e:
                 raise ValueError(f"Job {query} does not match any job's url/user_visible_url or command.") from e
+
+        if index == 0:
+            raise ValueError(f'Job index {index} out of range.')
+        try:
+            if index <= 0:
+                return self.urlwatcher.jobs[index]
+            else:
+                return self.urlwatcher.jobs[index - 1]
+        except IndexError as e:
+            raise ValueError(f'Job index {index} out of range (found {len(self.urlwatcher.jobs)} jobs).') from e
 
     def _find_job_with_defaults(self, query: Union[str, int]) -> JobBase:
         """
