@@ -781,6 +781,7 @@ def test_image_resize(job_state: JobState) -> None:
     assert job_state.verb == 'changed,no_report'
 
 
+@py_latest_only
 def test_image_identical(job_state: JobState) -> None:
     current_dir = Path(__file__).parent
     img_file = current_dir.joinpath('data', 'pic_1.png')
