@@ -367,11 +367,17 @@ Optional directives
 ```````````````````
 This differ is currently in BETA and the directives may change in the future.
 
-* ``data_type`` (``url``, ``filename``, or ``base_64``): What the data represent: a link to the image, the path to the
-  file containing the image or the image itself as `Base_64 <https://en.wikipedia.org/wiki/Base64>`__ (default:
-  ``url``).
+* ``data_type`` (``url``, ``filename``, ``ascii85`` or ``base64``): What the data represent: a link to the image, the
+  path to the file containing the image or the image itself as `Ascii85 <https://en.wikipedia.org/wiki/Ascii85>`__ or
+  `RFC 4648 <https://datatracker.ietf.org/doc/html/rfc4648.html>`__ `Base_64 <https://en.wikipedia.org/wiki/Base64>`__
+  text (default: ``url``).
 * ``mse_threshold`` (float): The minimum mean squared error (MSE) between two images to consider them changed;
-  requires the package ``numppy`` to be installed (default: 2.5).
+  requires the package ``numpy`` to be installed (default: 2.5).
+
+.. note:: If you pass a ``url`` or ``filename`` to the differ, it will detect changes only if the url or
+  filename changes, not if the image behind the url/filename does. To detect changes in an image when the url or
+  filename doesn't change, build a job that captures the image itself encoded in Ascii85 or Base64 (potentially using
+  the :ref:`ascii85` filter) and set ``data_type: ascii85`` or ``data_type: base64``.
 
 Required packages
 `````````````````

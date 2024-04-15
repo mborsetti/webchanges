@@ -1,8 +1,9 @@
 @ECHO OFF
+
+REM Command file to generate Sphinx documentation in Windows
+
 setlocal EnableDelayedExpansion
 pushd %~dp0
-
-REM Command file to generate Sphinx documentation
 
 if "%SPHINXBUILD%" == "" (
     set SPHINXBUILD=sphinx-build

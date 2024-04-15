@@ -698,8 +698,48 @@ def test_image_filenames(job_state: JobState) -> None:
 
 
 @py_latest_only
-def test_image_base_64_and_resize(job_state: JobState) -> None:
-    """Test image differ with base_64 images."""
+def test_image_ascii85(job_state: JobState) -> None:
+    """Test image differ with ascii85 encoded images."""
+    # if not os.getenv('GITHUB_ACTIONS'):
+    #     # we are doing interactive debugging and want to display logging
+    #     logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
+    current_dir = Path(__file__).parent
+    old_file = current_dir.joinpath('data', 'pic_1.png')
+    new_file = current_dir.joinpath('data', 'pic_2.png')
+    job_state.old_data = base64.a85encode(old_file.read_bytes()).decode()
+    job_state.new_data = base64.a85encode(new_file.read_bytes()).decode()
+    job_state.job.differ = {'name': 'image', 'data_type': 'ascii85'}
+    expected = '\n'.join(
+        [
+            'Differ: image for ascii85<br>',
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">Old</span> '
+            'Thu, 12 Nov 2020 02:23:57 +0000 (UTC)<br>',
+            '<span style="background-color:#d1ffd1;color:#082b08;">New</span> Thu, 12 Nov 2020 02:23:57 +0000 '
+            '(UTC)<br>',
+            '------------------------------------<br>',
+            '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
+            '<img src="data:image/png;base64,',
+        ]
+    )
+    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    # if not os.getenv('GITHUB_ACTIONS'):
+    #     # we are doing interactive debugging and want to display the result
+    #     import tempfile
+    #     import time
+    #     import webbrowser
+    #
+    #     f = tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False)
+    #     f.write(f'<span style="font-family: Roboto, Arial, Helvetica, sans-serif; font-size: 13px;">{diff}</span>')
+    #     f.close()
+    #     webbrowser.open(f.name)
+    #     time.sleep(1)
+    #     os.remove(f.name)
+    assert diff[: len(expected)] == expected
+
+
+@py_latest_only
+def test_image_base64_and_resize(job_state: JobState) -> None:
+    """Test image differ with base64 encoded images."""
     # if not os.getenv('GITHUB_ACTIONS'):
     #     # we are doing interactive debugging and want to display logging
     #     logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
@@ -716,10 +756,10 @@ def test_image_base_64_and_resize(job_state: JobState) -> None:
     output_stream = BytesIO()
     new_img.save(output_stream, format=img_format)
     job_state.new_data = base64.b64encode(output_stream.getvalue()).decode()
-    job_state.job.differ = {'name': 'image', 'data_type': 'base_64'}
+    job_state.job.differ = {'name': 'image', 'data_type': 'base64'}
     expected = '\n'.join(
         [
-            'Differ: image for base_64<br>',
+            'Differ: image for base64<br>',
             '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">Old</span> '
             'Thu, 12 Nov 2020 02:23:57 +0000 (UTC)<br>',
             '<span style="background-color:#d1ffd1;color:#082b08;">New</span> Thu, 12 Nov 2020 02:23:57 +0000 '
@@ -763,7 +803,7 @@ def test_image_resize(job_state: JobState) -> None:
     old_img.save(output_stream, format=img_format)
     job_state.old_data = base64.b64encode(output_stream.getvalue()).decode()
     job_state.new_data = base64.b64encode(img_file.read_bytes()).decode()
-    job_state.job.differ = {'name': 'image', 'data_type': 'base_64'}
+    job_state.job.differ = {'name': 'image', 'data_type': 'base64'}
     diff = job_state.get_diff(report_kind='html')
     # if not os.getenv('GITHUB_ACTIONS') and diff:
     #     # we are doing interactive debugging and want to display the result

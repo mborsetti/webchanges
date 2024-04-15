@@ -127,7 +127,11 @@ def test_filter_doc_jobs(job: JobBase) -> None:
                 subfilter.get('method') == 'bs4' and subfilter.get('parser') == 'html5lib'
             ) and not html5lib_is_installed:
                 pytest.skip(f"Skipping {job.url} since 'html5lib' package is not installed")
-            if filter_kind == 'ical2text' and not vobject_is_installed:
+            if filter_kind == 'ascii85':
+                data = b'@/'
+            elif filter_kind == 'base64':
+                data = b'YQ=='
+            elif filter_kind == 'ical2text' and not vobject_is_installed:
                 pytest.skip(f"Skipping {job.url} since 'vobject' package is not installed")
             elif filter_kind == 'ocr' and not pytesseract_is_installed:
                 pytest.skip(f"Skipping {job.url} since 'pytesseract' package is not installed")

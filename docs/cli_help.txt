@@ -14,8 +14,9 @@ usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
                   [--max-snapshots NUM_SNAPSHOTS] [--add JOB] [--delete JOB]
                   [JOB(S) ...]
 
-Checks web content to detect any changes since the prior run. If any are found,
-it shows what changed ('diff') and/or sends it via email and/or other supported
+Checks web content, including images, to detect any changes since the prior
+run. If any are found, it summarizes (including with Gen AI) what changed
+('diff') and displays it and/or sends it via email and/or other supported
 services. Can check the output of local commands as well.
 
 positional arguments:

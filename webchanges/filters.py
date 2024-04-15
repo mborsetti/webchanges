@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import base64
 import csv
 import hashlib
 import html
@@ -1681,3 +1682,39 @@ class JQFilter(FilterBase):  # pragma: has-jq
         # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59
         # however it aborts execution(!) during testing
         # return '\n'.join(json.dumps(v, ensure_ascii=False) for v in (jq.compile(subfilter['query'], jsondata)))
+
+
+class Ascii85(FilterBase):
+    """Convert bytes data (e.g. images) into an ascii85 string.
+
+    Ascii85 encoding is much more efficient than Base64.
+    """
+
+    # contributed by robgmills https://github.com/thp/urlwatch/pull/626
+
+    __kind__ = 'ascii85'
+
+    __no_subfilter__ = True
+
+    __uses_bytes__ = True
+
+    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        return base64.a85decode(data).decode()
+
+
+class Base64(FilterBase):
+    """Convert bytes data (e.g. images) into a base64 string.
+
+    Base64 encoding causes an overhead of 33–37% relative to the size of the original binary data.
+    """
+
+    # contributed by robgmills https://github.com/thp/urlwatch/pull/626
+
+    __kind__ = 'base64'
+
+    __no_subfilter__ = True
+
+    __uses_bytes__ = True
+
+    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+        return base64.b64decode(data).decode()

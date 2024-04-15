@@ -806,8 +806,8 @@ class ImageDiffer(DifferBase):
 
     __supported_directives__ = {
         'data_type': (
-            "'url' (to retrieve an image), 'base_64' (Base 64 data) or 'filename' (the path to an image file) "
-            "(default: 'url')"
+            "'url' (to retrieve an image), 'ascii85' (Ascii85 data), 'base64' (Base64 data) or 'filename' (the path "
+            "to an image file) (default: 'url')"
         ),
         'mse_threshold': (
             'the minimum mean squared error (MSE) between two images to consider them changed if numpy in installed '
@@ -848,10 +848,15 @@ class ImageDiffer(DifferBase):
             logging.debug(f'Reading image from {filename}')
             return Image.open(filename)
 
-        def load_image_from_base_64(base_64: str) -> Image:
+        def load_image_from_base64(base_64: str) -> Image:
             """Load an image from an encoded bytes object."""
-            logging.debug('Retrieving image from a bytes object')
+            logging.debug('Retrieving image from a base64 string')
             return Image.open(BytesIO(base64.b64decode(base_64)))
+
+        def load_image_from_ascii85(ascii85: str) -> Image:
+            """Load an image from an encoded bytes object."""
+            logging.debug('Retrieving image from an ascii85 string')
+            return Image.open(BytesIO(base64.a85decode(ascii85)))
 
         def compute_diff_image(img1: Image, img2: Image) -> tuple[Image, Optional[np.float64]]:
             """Compute the difference between two images."""
@@ -903,9 +908,14 @@ class ImageDiffer(DifferBase):
             new_image = load_image_from_web(self.state.new_data)
             old_data = f' (<a href="{self.state.old_data}">Old image</a>)'
             new_data = f' (<a href="{self.state.new_data}">New image</a>)'
-        elif data_type == 'base_64':
-            old_image = load_image_from_base_64(self.state.old_data)
-            new_image = load_image_from_base_64(self.state.new_data)
+        elif data_type == 'ascii85':
+            old_image = load_image_from_ascii85(self.state.old_data)
+            new_image = load_image_from_ascii85(self.state.new_data)
+            old_data = ''
+            new_data = ''
+        elif data_type == 'base64':
+            old_image = load_image_from_base64(self.state.old_data)
+            new_image = load_image_from_base64(self.state.new_data)
             old_data = ''
             new_data = ''
         else:  # 'filename'

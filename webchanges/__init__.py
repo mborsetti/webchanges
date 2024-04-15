@@ -1,5 +1,6 @@
-"""Checks web content to detect any changes since the prior run. If any are found, it shows what changed ('diff')
-and/or sends it via email and/or other supported services. Can check the output of local commands as well.
+"""Checks web content, including images, to detect any changes since the prior run. If any are found,
+it summarizes (including with Gen AI) what changed ('diff') and displays it and/or sends it via email and/or other
+supported services. Can check the output of local commands as well.
 """
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.

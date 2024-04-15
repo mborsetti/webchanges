@@ -15,7 +15,8 @@ build-backend = "setuptools.build_meta"
 dynamic = ['version', 'dependencies']
 name = 'webchanges'
 description = """\
-    Check web (or command output) for changes since last run and notify. Anonymously alerts you of web changes.\
+    Check web (or command output) for changes since last run and notify. Anonymously alerts you of web changes, with
+    Gen AI summaries (BETA).\
     """
 readme = { file = 'README.rst', content-type = 'text/x-rst' }
 requires-python = '>=3.9'

@@ -68,6 +68,10 @@ At the moment, the following filters are available:
   - :ref:`pypdf`: Convert PDF to plaintext.
   - :ref:`pdf2text`: Convert PDF to plaintext (Poppler required as an external dependency).
 
+* To save images:
+
+  - :ref:`ascii85`: Convert binary data such as images to text (for downstream differ :ref:`image_diff`).
+
 * To extract text from images:
 
   - :ref:`ocr`: Extract text from images.
@@ -143,6 +147,45 @@ attribute of the ``<object>`` tag, to absolute ones.
 .. versionchanged:: 3.21
    Converts URLs of all ``action``, ``href`` and ``src`` attributes found in any tag as well the ``data`` attribute
    of the ``<object>`` tag.
+
+
+
+.. _ascii85:
+
+ascii85
+-------
+Encodes binary data (e.g. image data) to text using `Ascii85 <https://en.wikipedia.org/wiki/Ascii85>`__. Ascii85 is
+more space-efficient than Base64, encoding more bytes into fewer characters. This filter can be useful to monitor
+images in combination with the :ref:`image_diff` differ.
+
+.. code-block:: yaml
+
+   url: https://example.net/favicon_85.ico
+   filter:
+     - ascii85
+
+
+.. versionadded:: 3.21
+
+
+..
+   .. _base64:
+
+   base64
+   ------
+   Encodes binary data (e.g. image data) to text using `RFC 4648 <https://datatracker.ietf.org/doc/html/rfc4648.html>`__
+   `Base64 <https://en.wikipedia.org/wiki/Base64>`__. This filter can be useful to monitor images in combination with
+   the :ref:`image_diff` differ.  Also see :ref:`ascii85`, which is more efficient.
+
+   .. code-block:: yaml
+
+      url: https://example.net/favicon.ico
+      filter:
+        - base64
+
+
+   .. versionadded:: 3.16
+
 
 
 .. _beautify:
