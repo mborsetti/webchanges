@@ -291,7 +291,7 @@ def get_new_version_number(timeout: Optional[float] = None) -> Union[str, bool]:
     """
     if httpx is None:
         logger.info('Cannot query PyPi for latest release: HTTPX not installed')
-        return ''
+        return False
 
     try:
         r = httpx.Client(http2=h2 is not None).get(f'https://pypi.org/pypi/{__project_name__}/json', timeout=timeout)
