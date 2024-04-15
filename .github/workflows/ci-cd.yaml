@@ -167,7 +167,7 @@ jobs:
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-      REDIS_URI: redis://localhost:6379
+#      REDIS_URI: redis://localhost:6379  # no redis running
 
     steps:
       # Checks out a copy of the repository per https://github.com/actions/checkout
