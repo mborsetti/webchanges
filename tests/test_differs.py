@@ -363,7 +363,7 @@ def test_unified_diff_to_html_no_link_text(job_state: JobState) -> None:
 def test_unified_diff_to_html_url_no_link(job_state: JobState) -> None:
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n https://test.htm'
-    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True})
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'differ': {'name': 'unified'}})
     job_state.job = job
     result = ''.join(list(UnifiedDiffer(job_state).unified_diff_to_html(inpt)))
     assert result[193:-8] == (
