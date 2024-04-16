@@ -6,9 +6,10 @@ url: job2
 filter:
   - shellpipe: anything
 ---
-name: This job is a shelljob (diff_tool)
+name: This job is a shelljob (differ command)
 url: job3
-diff_tool: anything
+differ:
+  command: anything
 ---
 name: This job is *not* a shelljob
 url: job4

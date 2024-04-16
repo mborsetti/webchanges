@@ -1203,6 +1203,7 @@ class AIGoogleDiffer(DifferBase):
                 mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>')
                 + '<br>'
                 + unified_report['html']
-                + f'---<i><small>{footer}</small></i>'
+                + '-----<br>'
+                + f'<i><small>{footer}</small></i>'
             ),
         }

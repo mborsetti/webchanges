@@ -93,7 +93,7 @@ Time zone (global setting)
 You can set the timezone for reports by entering a `IANA time zone name
 <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`__ in the ``tz`` directive of the ``report`` section.
 This is useful if for example you are running :program:`webchanges` on a cloud server on a different timezone (e.g.
-UTC). Note that this directive is ignored by the ``diff_tool`` job directive.
+UTC). Note that this directive is ignored by any outside differs called by the :ref:``command_diff`` differ.
 
 .. code-block:: yaml
 

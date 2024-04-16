@@ -211,7 +211,8 @@ line-based difference, use GNU ``wdiff``:
 .. code-block:: yaml
 
    url: https://example.com/
-   diff_tool: wdiff
+   differ:
+     command: wdiff
 
 In order for this to work, ``wdiff`` needs to be installed separately (e.g. ``apt install wdiff`` on Debian/Ubuntu,
 ``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
@@ -221,17 +222,16 @@ You can more finely control the output of ``wdiff`` with command line arguments;
 (or a generic one `here <https://www.gnu.org/software/wdiff/manual/>`__) for more information.
 
 .. hint::
-   If you use an ``html`` report with ``diff_tool: wdiff``, the output of ``wdiff`` will be colorized.
+   If you use an ``html`` report with a ``command: wdiff`` differ, the output of ``wdiff`` will be colorized.
 
 Alternatively you can use `PanDiff <https://github.com/davidar/pandiff>`__ to get markdown differences.
 
 .. code-block:: yaml
 
    url: https://example.com/
-   diff_tool: pandiff
+   differ:
+     command: pandiff
    is_markdown: true
-
-Note: the use of an external differ will override the ``diff`` setting of the ``html`` report.
 
 
 Creating a separate notification for each change

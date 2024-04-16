@@ -292,8 +292,8 @@ Example:
    differ:
      command: wdiff
 
-Please see warning :ref:`important_note_for_command_jobs` for the file security settings required to run jobs with
-this differ in Linux.
+Please see :ref:`important note <important_note_for_command_jobs>` for the file security settings required to run jobs
+with this differ in Linux.
 
 .. versionchanged:: 3.21
    Was previously a job sub-directive by the name of ``diff_tool``.

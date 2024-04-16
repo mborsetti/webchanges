@@ -824,8 +824,8 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
 
 .. _important_note_for_command_jobs:
 
-.. important:: On Linux and macOS systems, due to security reasons a ``command`` job or a job with ``diff_tool`` will
-   not run unless **both** the jobs file **and** the directory it is located in are **owned** and **writeable** by
+.. important:: On Linux and macOS systems, due to security reasons, a ``command`` job or a job with a ``command`` differ
+   will not run unless **both** the jobs file **and** the directory it is located in are **owned** and **writeable** by
    **only** the user who is running the job (and not by its group or by other users). To set this up:
 
    .. code-block:: bash

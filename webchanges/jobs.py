@@ -450,12 +450,15 @@ class JobBase(metaclass=TrackSubClasses):
                     'command': {'command': job_with_defaults.diff_tool}  # type: ignore[assignment]
                 }
                 warnings.warn(
-                    f"Job {job_with_defaults.index_number}'diff_tool' is a deprecated job directive. Please use"
+                    f"Job {job_with_defaults.index_number}: 'diff_tool' is a deprecated job directive. Please use"
                     f" differ '{{'command': {job_with_defaults.diff_tool}}}' instead.",
                     DeprecationWarning,
                 )
             elif job_with_defaults.diff_tool is not None:
-                raise ValueError("'diff_tool' is a deprecated job directive. Please use 'differ' 'command:' instead.")
+                raise ValueError(
+                    f"Job {job_with_defaults.index_number}: 'diff_tool' is a deprecated job directive. Please use "
+                    'differ command instead.'
+                )
 
         rep_cfg = config.get('report')
         if isinstance(rep_cfg, dict):
