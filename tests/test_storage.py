@@ -19,10 +19,10 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
-from handler import Snapshot
 
 from webchanges import __docs_url__
 from webchanges.config import CommandConfig
+from webchanges.handler import Snapshot
 from webchanges.main import Urlwatch
 from webchanges.storage import (
     BaseTextualFileStorage,
