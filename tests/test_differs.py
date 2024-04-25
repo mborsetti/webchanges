@@ -491,13 +491,9 @@ def test_command_error(job_state: JobState) -> None:
     job_state.job.differ = {'command': command}  # test with no differ name
     job_state.get_diff()
     assert isinstance(job_state.exception, RuntimeError)
-    if os.name == 'nt':
-        assert str(job_state.exception) == (f"Job 0: External differ '{{'command': '{command}'}}' returned '' ()")
-    else:
-        assert str(job_state.exception) == (
-            f"Job 0: External differ '{{'command': '{command}'}}' returned 'dir: cannot access "
-            "'/x': No such file or directory' ()"
-        )
+    if os.name != 'nt':
+        command = command.replace("'", "\\'")
+    assert str(job_state.exception) == (f"Job 0: External differ '{{'command': '{command}'}}' returned '' ()")
 
 
 def test_command_bad_command(job_state: JobState) -> None:
@@ -858,6 +854,7 @@ def test_ai_google_no_key(job_state: JobState) -> None:
         expected = (
             '## ERROR in summarizing the changes using ai_google:\n'
             'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length 0.\n'
+            '\n'
             '\n'
             'Differ unified with directive(s) None encountered an error:\n'
             '\n'
