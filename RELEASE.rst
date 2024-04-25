@@ -1,45 +1,53 @@
-Added
------
-* **Job selectable differs**: The differ, i.e. the method by which changes are detected and summarized, can now be
-  selected job by job. Also gone is the restriction to have only unified diffs, HTML table diff, or calling an outside
-  executable, as differs have become modular.
-
-  - Python programmers can write their own custom differs using the ``hooks.py`` file.
-  - Backward-compatibility is preserved, so your current jobs will continue to work.
-* **New differs**:
-
-  - ``difflib`` to report element-by-element changes in JSON or XML structured data.
-  - ``imagediff`` (BETA) to report an image showing changes in an **image** being tracked.
-  - ``ai_google`` (BETA) to use a **Generative AI provide a summary of changes** (free API key required). We use
-    Google's Gemini Pro 1.5 since it is the first model that can ingest 1M tokens, allowing to analyze changes in
-    long documents (up to 350,000 words, or about 700 pages single-spaced) such as terms and conditions, privacy
-    policies, etc. where summarization adds the most value and which other models can't handle. The differ can call
-    the Gen AI model to summarize a unified diff or to find and summarize the differences itself. Also supported is
-    Gemini 1.0, but it can handle a lower number of tokens.
+⚠ Breaking Changes
+------------------
+* Developers integrating custom Python code (``hooks.py``) should refer to the "Internals" section below for important
+  changes.
 
 Changed
 -------
-* Filter ``absolute_links`` now converts URLs of the ``action``, ``href`` and ``src`` attributes in any HTML tag, as
-  well as the ``data`` attribute of the ``<object>`` tag; it previously converted only the ``href`` attribute of
-  ``<a>`` tags.
-* Updated explanatory text and error messages for increased clarity.
-* You can now select jobs to run by using its url/command instead of its number, e.g. ``webchanges https://test.com`` is
-  just as valid as ``webchanges 1``.
+* Snapshot database
 
-Deprecated
-----------
-* Job directive ``diff_tool``. Replaced with the ``command`` differ (see `here
-  <https://webchanges.readthedocs.io/en/stable/differs.html#command_diff>`__.
+  - Moved the snapshot database from the "user_cache" directory (typically not backed up) to the "user_data" directory.
+    The new paths are (typically):
+
+    - Linux: ``~/.local/share/webchanges`` or ``$XDG_DATA_HOME/webchanges``
+    - macOS: ``~/Library/Application Support/webchanges``
+    - Windows: ``%LOCALAPPDATA%\webchanges\webchanges``
+
+  - Renamed the file from ``cache.db`` to ``snapshots.db`` to more clearly denote its contents.
+  - Introduced a new command line option ``--database`` to specify the filename for the snapshot database, replacing
+    the previous ``--cache`` option (which is deprecated but still supported).
+  - Many thanks to `Markus Weimar <https://github.com/Markus00000>`__ for pointing this problem out in issue `#75
+    <https://github.com/mborsetti/webchanges/issues/75>`__.
+
+* Modified the command line argument ``--test-differ`` to accept a second parameter, specifying the maximum number of
+  diffs to generate.
+* Updated the command line argument ``--dump-history`` to display the ``mime_type`` attribute when present.
+* Enhanced differs functionality:
+
+  - Standardized headers for ``deepdiff`` and ``imagediff`` to align more closely with those of ``unified``.
+  - Improved the ``google_ai`` differ:
+
+    - Enhanced error handling: now, the differ will continue operation and report errors rather than failing outright
+      when Google API errors occur.
+    - Improved the default prompt to ``Analyze this unified diff and create a summary listing only the
+      changes:\n\n{unified_diff}`` for improved results.
 
 Fixed
 -----
-* ``webchanges --errors`` will no longer check jobs who have ``disabled: true`` (thanks to `yubiuser
-  <https://github.com/yubiuser>`__ for reporting this in issue `# 73
-  <https://github.com/mborsetti/webchanges/issues/73>`__).
-* Markdown links with no text were not clickable when converted to HTML; conversion now adds a 'Link without text'
-  label.
+* Fixed an AttributeError Exception when the fallback HTTP client package ``requests`` is not installed, as reported
+  by `yubiuser <https://github.com/yubiuser>`__ in `issue #76 <https://github.com/mborsetti/webchanges/issues/76>`__.
+* Addressed a ValueError in the ``--test-differ`` command, a regression reported by `Markus Weimar
+  <https://github.com/Markus00000>`__ in `issue #79 <https://github.com/mborsetti/webchanges/issues/79>`__.
+* To prevent overlooking changes, webchanges now refrains from saving a new snapshot if a differ operation fails
+  with an Exception.
 
 Internals
 ---------
-* Improved speed of creating a unified diff for an HTML report.
-* Reduced excessive logging from ``httpx``'s sub-modules ``hpack`` and ``httpcore`` when running with ``-vv``.
+* New ``mime_type`` attribute: we are now capturing and storing the data type (as a MIME type) alongside data in the
+  snapshot database to facilitate future automation of filtering, diffing, and reporting. Developers using custom
+  Python code will need to update their filter and retrieval methods in classes inheriting from FilterBase and
+  JobBase, respectively, to accommodate the ``mime_type`` attribute. Detailed updates are available in the `hooks
+  documentation <https://webchanges.readthedocs.io/en/stable/hooks.html#:~:text=Changed%20in%20version%203.22>`__.
+* Updated terminology: References to ``cache`` in object names have been replaced with ``ssdb`` (snapshot database).
+* Int

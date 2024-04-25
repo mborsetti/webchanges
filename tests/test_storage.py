@@ -61,7 +61,7 @@ if importlib.util.find_spec('minidb') is not None:
     ssdb_file = ':memory:'
     DATABASE_ENGINES += (SsdbMiniDBStorage(ssdb_file),)
 else:
-    CacheMiniDBStorage = type(None)  # type: ignore[misc,assignment]
+    SsdbMiniDBStorage = type(None)  # type: ignore[misc,assignment]
 
 
 def test_all_database_engines() -> None:
@@ -174,7 +174,7 @@ def test_legacy_slack_keys() -> None:
 
 
 # @py37_required
-# CacheSQLite3Storage.keep_latest() requires Python 3.7 to work (returns 0 otherwise).
+# SsdbSQLite3Storage.keep_latest() requires Python 3.7 to work (returns 0 otherwise).
 @pytest.mark.parametrize(  # type: ignore[misc]
     'database_engine',
     DATABASE_ENGINES,
@@ -499,7 +499,7 @@ def test_clean_ssdb_no_clean_all(database_engine: SsdbStorage) -> None:
             assert timestamps[1] < timestamps[0]
 
         # clean ssdb without using clean_all
-        # delattr(CacheSQLite3Storage, 'clean_all')
+        # delattr(SsdbSQLite3Storage, 'clean_all')
         ssdb_storage.clean_ssdb([guid])
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 1

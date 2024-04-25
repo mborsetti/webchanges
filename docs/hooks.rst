@@ -53,14 +53,15 @@ Example ``hooks.py`` file:
    class CustomLoginJob(UrlJob):
        """Custom login for my webpage.
 
-       Add ``kind: hooks_custom_login`` to the job to retrieve data using this class instead of the built-in ones.
+       Add ``kind: hooks_custom_login`` to the job to retrieve data using this class instead of the
+       built-in ones.
        """
 
        __kind__ = 'hooks_custom_login'
        __required__ = ('username', 'password')  # These are added to the ones from the super classes.
 
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
-           """:returns: The data retrieved, the ETag, and the mime_type (Content-Type)."""
+           """:returns: The data retrieved, the ETag, and the mime_type (e.g. HTTP Content-Type)."""
            ...  # custom code here to actually do the login.
            return super().retrieve(job_state)  # uses the existing code to then browse and capture data
 
@@ -68,7 +69,8 @@ Example ``hooks.py`` file:
    class CustomBrowserJob(UrlJobBase):
        """Custom browser job.
 
-       Add ``kind: hooks_custom_browser`` to the job to retrieve data using this class instead of the built-in ones.
+       Add ``kind: hooks_custom_browser`` to the job to retrieve data using this class instead of the
+       built-in ones.
        """
 
        __kind__ = 'hooks_custom_browser'
@@ -76,7 +78,7 @@ Example ``hooks.py`` file:
 
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
            """
-           :returns: The data retrieved, the ETag, and the mime_type (Content-Type).
+           :returns: The data retrieved, the ETag, and the data's MIME type (e.g. HTTP Content-Type).
            """
 
            ...  # custom code here to launch browser and capture data.
@@ -90,8 +92,8 @@ Example ``hooks.py`` file:
    class CaseFilter(FilterBase):
        """Custom filter for changing case.
 
-       Needs to be selected manually, i.e. add `- hooks_case:` (or e.g. `- hooks_case: lower`) to the list of filters in
-       the job's `filter:` directive. E.g.:
+       Needs to be selected manually, i.e. add `- hooks_case:` (or e.g. `- hooks_case: lower`) to the
+       list of filters in the job's `filter:` directive. E.g.:
 
        .. code-block:: yaml
 
@@ -111,8 +113,10 @@ Example ``hooks.py`` file:
        __default_subfilter__ = 'upper'
 
        @staticmethod
-       def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
-           """:returns: The data after being filtered and its mime_type."""
+       def filter(
+           data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[Union[str, bytes], str]:
+           """:returns: The filtered data and its MIME type."""
 
            if not subfilter or subfilter.get('upper'):
                return data.upper(), mime_type
@@ -125,8 +129,8 @@ Example ``hooks.py`` file:
    class IndentFilter(FilterBase):
        """Custom filter for indenting.
 
-       Needs to be selected manually, i.e. add ``- hooks_indent:`` (or e.g. ``- hooks_indent: 4``) to the list of
-       filters in the job's ``filter:`` directive. E.g.:
+       Needs to be selected manually, i.e. add ``- hooks_indent:`` (or e.g. ``- hooks_indent: 4``) to
+       the list of filters in the job's ``filter:`` directive. E.g.:
 
 
        .. code-block:: yaml
@@ -146,8 +150,10 @@ Example ``hooks.py`` file:
        __default_subfilter__ = 'indent'
 
        @staticmethod
-       def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
-           """:returns: The data after being filtered and its mime_type."""
+       def filter(
+           data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[Union[str, bytes], str]:
+           """:returns: The filtered data and its MIME type."""
 
            indent = int(subfilter.get('indent', 8))
 
@@ -155,24 +161,32 @@ Example ``hooks.py`` file:
 
 
    class CustomMatchUrlFilter(AutoMatchFilter):
-       """An AutoMatchFilter applies automatically to all jobs that exactly match the MATCH properties set."""
+       """
+       An AutoMatchFilter applies automatically to all jobs that exactly match the MATCH properties set.
+       """
 
        MATCH = {'url': 'https://example.org/'}
 
        @staticmethod
-       def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
-           """:returns: The data after being filtered and its mime_type."""
+       def filter(
+           data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[Union[str, bytes], str]:
+           """:returns: The filtered data and its MIME type."""
            return data.replace('foo', 'bar'), mime_type
 
 
    class CustomRegexMatchUrlFilter(RegexMatchFilter):
-       """A RegexMatchFilter applies automatically to all jobs that match the MATCH regex properties set."""
+       """
+       A RegexMatchFilter applies automatically to all jobs that match the MATCH regex properties set.
+       """
 
        MATCH = {'url': re.compile(r'https://example.org/.*')}
 
        @staticmethod
-       def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
-           """:returns: The data after being filtered and its mime_type."""
+       def filter(
+           data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[Union[str, bytes], str]:
+           """:returns: The filtered data and its MIME type."""
            return data.replace('foo', 'bar'), mime_type
 
 
@@ -210,8 +224,8 @@ Example ``hooks.py`` file:
 
 
    class CustomTextFileReporter(TextReporter):
-       """Custom reporter that writes the text-only report to a file. Insert the filename in config.py as a filename
-       key to the text reporter.
+       """Custom reporter that writes the text-only report to a file. Insert the filename in config.py
+       as a filename key to the text reporter.
 
        Needs to enabled in the config.yaml file:
 
@@ -230,8 +244,8 @@ Example ``hooks.py`` file:
 
 
    class CustomHtmlFileReporter(HtmlReporter):
-       """Custom reporter that writes the HTML report to a file. Insert the filename in config.py as a filename
-       key to the html reporter.
+       """Custom reporter that writes the HTML report to a file. Insert the filename in config.py
+       as a filename key to the html reporter.
 
        .. code-block:: yaml
 
@@ -248,20 +262,17 @@ Example ``hooks.py`` file:
 
 
 .. versionchanged:: 3.22
-   The definition of the filter method has changed to the one below; ``mime_type`` is both received and returned to
-   enable future features (e.g. to automate filtering and/or diffing).
+   The definitions of the filter method (of FilterBase and its subclasses) and of the retrieve method (of JobBase and
+   its subclasses) have been updated to accommodate the capturing and processing of ``mime_type``:
 
-.. code-block:: python
+   .. code-block:: python
 
-   def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
-   """:returns: The data after being filtered and its mime_type."""
+      def filter(
+          data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+      ) -> tuple[Union[str, bytes], str]:
+      """:returns: The filtered data and its MIME type."""
+      ...
 
-
-.. versionchanged:: 3.22
-   The definition of the retrieve method has changed to the one below; ``mime_type`` is now returned to enable future
-   features (e.g. to automate with filtering and/or diffing).
-
-.. code-block:: python
-
-   def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
-   """:returns: The data retrieved, the ETag, and the mime_type (Content-Type)."""
+      def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
+      """:returns: The data retrieved, the ETag, and the data's MIME type (e.g. HTTP Content-Type)."""
+      ...

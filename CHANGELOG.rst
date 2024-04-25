@@ -33,61 +33,63 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.22rc0
+Version 3.22
 ===================
-Unreleased
+2024-04-25
 
 ⚠ Breaking Changes
 ------------------
-* For developers hooking their own Python code, see "Internals" below.
+* Developers integrating custom Python code (hooks.py) should refer to the "Internals" section below for important
+  changes.
 
 Changed
 -------
-* Moved the snapshot database from the "user_cache" directory (which is typically not backed up) to within the
-  "user_data" directory (i.e. ``~/.local/share/webchanges`` or ``$XDG_DATA_HOME/webchanges`` in linux,
-  ``~/Library/Application Support/webchanges`` in macOS  and ``%LOCALAPPDATA%\webchanges\webchanges`` in
-  Windows. Also renamed the file ``snapshots.db`` to more clearly denote its contents. Many thanks to `Markus Weimar
-  <https://github.com/Markus00000>`__ for pointing this problem out in issue `#75
-  <https://github.com/mborsetti/webchanges/issues/75>`__.
+* Snapshot database
 
-  - Added command line ``--database`` to specify the filename to use for the snapshot database (renamed from
-    ``--cache``, deprecated but still supported)
+  - Moved the snapshot database from the "user_cache" directory (typically not backed up) to the "user_data" directory.
+    The new paths are (typically):
 
-* Command line argument ``--test-differ`` not takes a second argument, the maximum number of diffs to produce.
-* Command line argument ``--dump_history`` shows the ``mime_type`` field.
-* Various improvements to differs:
+    - Linux: ``~/.local/share/webchanges`` or ``$XDG_DATA_HOME/webchanges``
+    - macOS: ``~/Library/Application Support/webchanges``
+    - Windows: ``%LOCALAPPDATA%\webchanges\webchanges``
 
-  - Standardized the headers of ``deepdiff`` and ``imagediff`` to more closely resemble those of ``unified``;
-  - Various improvements to ``google_ai`` differ:
+  - Renamed the file from ``cache.db`` to ``snapshots.db`` to more clearly denote its contents.
+  - Introduced a new command line option ``--database`` to specify the filename for the snapshot database, replacing
+    the previous ``--cache`` option (which is deprecated but still supported).
+  - Many thanks to `Markus Weimar <https://github.com/Markus00000>`__ for pointing this problem out in issue `#75
+    <https://github.com/mborsetti/webchanges/issues/75>`__.
 
-    - Better error handling (differ will no longer fail if Google API returns an error, but will produce a report
-      containing the error and the unified diff);
+* Modified the command line argument ``--test-differ`` to accept a second parameter, specifying the maximum number of
+  diffs to generate.
+* Updated the command line argument ``--dump-history`` to display the ``mime_type`` attribute when present.
+* Enhanced differs functionality:
+
+  - Standardized headers for ``deepdiff`` and ``imagediff`` to align more closely with those of ``unified``.
+  - Improved the ``google_ai`` differ:
+
+    - Enhanced error handling: now, the differ will continue operation and report errors rather than failing outright
+      when Google API errors occur.
     - Improved the default prompt to ``Analyze this unified diff and create a summary listing only the
-      changes:\n\n{unified_diff}``.
-
-  - Documentation updates.
-
+      changes:\n\n{unified_diff}`` for improved results.
 
 Fixed
 -----
-* AttributeError Exception when the fallback HTTP client package ``requests`` is not installed. Reported by `yubiuser
-  <https://github.com/yubiuser>`__ in issue `#76 <https://github.com/mborsetti/webchanges/issues/76>`__.
-* ValueError when using ``--test-differ`` regression reported by `Markus Weimar
-  <https://github.com/Markus00000>`__ in issue `#79 <https://github.com/mborsetti/webchanges/issues/79>`__.
-* To avoid missing changes, a new snapshot is not saved if a differ fails with an Exception.
-
+* Fixed an AttributeError Exception when the fallback HTTP client package ``requests`` is not installed, as reported
+  by `yubiuser <https://github.com/yubiuser>`__ in `issue #76 <https://github.com/mborsetti/webchanges/issues/76>`__.
+* Addressed a ValueError in the ``--test-differ`` command, a regression reported by `Markus Weimar
+  <https://github.com/Markus00000>`__ in `issue #79 <https://github.com/mborsetti/webchanges/issues/79>`__.
+* To prevent overlooking changes, webchanges now refrains from saving a new snapshot if a differ operation fails
+  with an Exception.
 
 Internals
 ---------
-* We are now capturing the ``mime_type`` attribute of the data (and store it alongside the data in the snapshot
-  database) to enable automated handling of filtering, diffing and reporting (in the future). For programmers using
-  their own hooked Python code, this change unfortunately requires updating the filter method of a class that inherits
-  from FilterBase and the retrieve method of any class inheriting from JobBase to handle mime_type. You can see new
-  definitions in the `hooks documentation
-  <https://webchanges.readthedocs.io/en/stable/hooks.html#:~:text=Changed%20in%20version%203.22>`__.
-* Object names containing ``cache`` have been updated to use ``ssdb`` (snapshot database) instead.
-* Created a NamedTuple called ``Snapshot`` to simplify code retrieving and saving snapshots to the database.
-
+* New ``mime_type`` attribute: we are now capturing and storing the data type (as a MIME type) alongside data in the
+  snapshot database to facilitate future automation of filtering, diffing, and reporting. Developers using custom
+  Python code will need to update their filter and retrieval methods in classes inheriting from FilterBase and
+  JobBase, respectively, to accommodate the ``mime_type`` attribute. Detailed updates are available in the `hooks
+  documentation <https://webchanges.readthedocs.io/en/stable/hooks.html#:~:text=Changed%20in%20version%203.22>`__.
+* Updated terminology: References to ``cache`` in object names have been replaced with ``ssdb`` (snapshot database).
+* Introduced a new NamedTuple, ``Snapshot``, to streamline the process of retrieving and saving data to the database.
 
 
 Version 3.21
