@@ -67,11 +67,11 @@ else:
 def test_all_database_engines() -> None:
     if not os.getenv('REDIS_URI') or importlib.util.find_spec('redis') is None:
         pytest.mark.xfail(
-            'Cannot test the CacheRedisStorage class. The REDIS_URI environment variable is not set or '
+            'Cannot test the SsdbRedisStorage class. The REDIS_URI environment variable is not set or '
             "the 'redis' package is not installed"
         )
     if importlib.util.find_spec('minidb') is None:
-        pytest.mark.xfail("Cannot test the CacheMiniDBStorage class. The 'minidb' package is not installed")
+        pytest.mark.xfail("Cannot test the SsdbMiniDBStorage class. The 'minidb' package is not installed")
 
 
 def prepare_storage_test(
@@ -246,7 +246,7 @@ def test_clean(database_engine: SsdbStorage) -> None:
         assert len(history) == 2
         timestamps = list(history.values())
         # returned in reverse order
-        if not isinstance(database_engine, SsdbStorage):  # rounds to the closest second
+        if not isinstance(database_engine, SsdbMiniDBStorage):  # rounds to the closest second
             assert timestamps[1] < timestamps[0]
 
         # check that history matches load
@@ -322,7 +322,7 @@ def test_gc_delete_2_of_4(database_engine: SsdbStorage) -> None:
         pytest.skip(f'database_engine {database_engine.__class__.__name__} can only save one snapshot at a time')
     if isinstance(database_engine, SsdbRedisStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} does not support this')
-    if isinstance(database_engine, SsdbStorage):
+    if isinstance(database_engine, SsdbMiniDBStorage):
         pytest.skip(f'database_engine {database_engine.__class__.__name__} not implemented')
 
     urlwatcher, ssdb_storage, _ = prepare_storage_test(database_engine)
@@ -374,11 +374,11 @@ def test_clean_ssdb(database_engine: SsdbStorage) -> None:
         assert len(history) == 5
         timestamps = list(history.values())
         # returned in reverse order
-        if not isinstance(database_engine, SsdbStorage):  # rounds to the closest second
+        if not isinstance(database_engine, SsdbMiniDBStorage):  # rounds to the closest second
             assert timestamps[1] < timestamps[0]
 
         # clean ssdb, leaving 3
-        if isinstance(database_engine, (SsdbSQLite3Storage, SsdbStorage)):
+        if isinstance(database_engine, (SsdbSQLite3Storage, SsdbMiniDBStorage)):
             ssdb_storage.clean_ssdb([guid], 3)
             history = ssdb_storage.get_history_data(guid)
             assert len(history) == 3
@@ -455,7 +455,7 @@ def test_clean_all(database_engine: SsdbStorage) -> None:
         assert len(history) == 2
         timestamps = list(history.values())
         # returned in reverse order
-        if not isinstance(database_engine, SsdbStorage):  # rounds to the closest second
+        if not isinstance(database_engine, SsdbMiniDBStorage):  # rounds to the closest second
             assert timestamps[1] <= timestamps[0]
 
         # clean all
@@ -495,7 +495,7 @@ def test_clean_ssdb_no_clean_all(database_engine: SsdbStorage) -> None:
         assert len(history) == 2
         timestamps = list(history.values())
         # returned in reverse order
-        if not isinstance(database_engine, SsdbStorage):  # rounds to the closest second
+        if not isinstance(database_engine, SsdbMiniDBStorage):  # rounds to the closest second
             assert timestamps[1] < timestamps[0]
 
         # clean ssdb without using clean_all
