@@ -264,9 +264,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
-            cfg: _ConfigReportersList = report.config['report'].get(  # type: ignore[misc] # for PyCharm
-                name, {}  # type: ignore[assignment]
-            )
+            cfg: _ConfigReportersList = report.config['report'].get(name, {})  # type: ignore[assignment]
             if cfg.get('enabled', False):
                 any_enabled = True
                 logger.info(f'Submitting with {name} ({subclass})')
@@ -486,7 +484,7 @@ class TextReporter(ReporterBase):
                 )
 
     @staticmethod
-    def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[str]:
+    def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[Union[str, bytes]]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -519,7 +517,7 @@ class TextReporter(ReporterBase):
         details_part.extend([sep, summary, sep])
         if hasattr(job_state.job, 'note'):
             details_part.extend([job_state.job.note, ''])
-        if content is not None:
+        if isinstance(content, str):
             details_part.extend([content, sep])
         details_part.extend(
             ['', '']
@@ -738,7 +736,7 @@ class MarkdownReporter(ReporterBase):
             return job_state.traceback.strip()
 
         if job_state.verb == 'unchanged':
-            return job_state.old_data
+            return str(job_state.old_data)
 
         if job_state.old_data in {None, job_state.new_data}:
             return None

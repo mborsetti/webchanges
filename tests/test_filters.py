@@ -16,7 +16,7 @@ from _pytest._code import ExceptionInfo
 from webchanges.filters import FilterBase, Html2TextFilter
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase, UrlJob
-from webchanges.storage import CacheDirStorage
+from webchanges.storage import SsdbDirStorage
 from webchanges.util import mark_to_html
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def test_normalize_filter_list(
 
 
 FILTER_TESTS = list(yaml.safe_load(Path(__file__).parent.joinpath('data/filters_testdata.yaml').read_text()).items())
-job_state = JobState(CacheDirStorage(''), JobBase.unserialize({'url': 'https://testfakejob.com/'}))
+job_state = JobState(SsdbDirStorage(''), JobBase.unserialize({'url': 'https://testfakejob.com/'}))
 
 
 class FakeJob(JobBase):
@@ -82,11 +82,11 @@ def test_filters(test_name: str, test_data: dict[str, str]) -> None:
         if filtercls is None:
             raise ValueError('Unknown filter kind: {filter_kind}:{subfilter}')
         # noinspection PyTypeChecker
-        result = filtercls(job_state).filter(result, subfilter)
+        result = filtercls(job_state).filter(result, '', subfilter)
 
     logger.debug(f'Expected result:\n{expected_result}')
     logger.debug(f'Actual result:\n{result}')
-    assert result == expected_result
+    assert result[0] == expected_result
 
 
 def test_invalid_filter_name_raises_valueerror() -> None:
@@ -139,10 +139,14 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('execute')
     # noinspection PyTypeChecker
-    result = filtercls(job_state).filter('input-string', {'command': command})  # type: ignore[misc]
+    data, mime_type = filtercls(job_state).filter(  # type: ignore[misc]
+        'input-string',
+        'text/plain',
+        {'command': command},
+    )
 
     # Check that the inherited value and the job name are set properly
-    assert result.rstrip('"') == 'parent-process/test\n'
+    assert data.rstrip('"') == 'parent-process/test\n'
 
     # Check that the outside variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
@@ -169,10 +173,14 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('shellpipe')
     # noinspection PyTypeChecker
-    result = filtercls(job_state).filter('input-string', {'command': command})  # type: ignore[misc]
+    data, mime_type = filtercls(job_state).filter(  # type: ignore[misc]
+        'input-string',
+        'text/plain',
+        {'command': command},
+    )
 
     # Check that the inherited value and the job name are set properly
-    assert result.rstrip('"') == 'parent-process/test\n'
+    assert data.rstrip('"') == 'parent-process/test\n'
 
     # Check that the outside variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
@@ -193,8 +201,12 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
-        # noinspection PyTypeChecker
-        assert filtercls(job_state).filter('<div>a</div>', {'method': 'pyhtml2text'}) == 'a'  # type: ignore[misc]
+        data, mime_type = filtercls(job_state).filter(  # type: ignore[misc]
+            '<div>a</div>',
+            'text/plain',
+            {'method': 'pyhtml2text'},
+        )
+    assert data == 'a'
     assert len(w) == 1
     expected = (
         "Filter html2text's method 'pyhtml2text' is deprecated: remove method as it's now the filter's default (Job 0: "
@@ -203,16 +215,18 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
-        # noinspection PyTypeChecker
-        assert filtercls(job_state).filter('<div>a</div>', {'method': 're'}) == 'a'  # type: ignore[misc]
+        data, mime_type = filtercls(job_state).filter(  # type: ignore[misc]
+            '<div>a</div>', 'text/plain', {'method': 're'}
+        )
+    assert data == 'a'
     assert len(w) == 1
     expected = "Filter html2text's method 're' is deprecated: replace with 'strip_tags' (Job 0: "
     assert _warning_message(w[0].message)[: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('grep')
     with pytest.warns(DeprecationWarning) as w:
-        # noinspection PyTypeChecker
-        assert filtercls(job_state).filter('a\nb', {'text': 'b'}) == 'b'  # type: ignore[misc]
+        data, mime_type = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # type: ignore[misc]
+    assert data == 'b'
     assert len(w) == 1
     expected = "The 'grep' filter is deprecated; replace with 'keep_lines_containing' + 're' subfilter (Job 0: "
     assert _warning_message(w[0].message)[: len(expected)] == expected
@@ -220,15 +234,16 @@ def test_deprecated_filters() -> None:
     filtercls = FilterBase.__subclasses__.get('grepi')
     with pytest.warns(DeprecationWarning) as w:
         # noinspection PyTypeChecker
-        assert filtercls(job_state).filter('a\nb', {'text': 'b'}) == 'a'  # type: ignore[misc]
+        data, mime_type = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # type: ignore[misc]
+    assert data == 'a'
     assert len(w) == 1
     expected = "The 'grepi' filter is deprecated; replace with 'delete_lines_containing' + 're' subfilter (Job 0: "
     assert _warning_message(w[0].message)[: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('striplines')
     with pytest.warns(DeprecationWarning) as w:
-        # noinspection PyTypeChecker
-        assert filtercls(job_state).filter('a  \nb', {}) == 'a\nb'  # type: ignore[misc]
+        data, mime_type = filtercls(job_state).filter('a  \nb', 'text/plain', {})  # type: ignore[misc]
+    assert data == 'a\nb'
     assert len(w) == 1
     expected = (
         "The 'strip_each_line' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: true' (Job "
@@ -241,7 +256,7 @@ def test_filter_exceptions() -> None:
     e: ExceptionInfo  # mypy
     with pytest.raises(NotImplementedError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('<div>a</div>', {'method': 'lynx'})  # type: ignore[misc]
+        filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 'lynx'})  # type: ignore[misc]
     expected = (
         "Filter html2text's method 'lynx' is no longer supported; for similar results, use the filter without "
         'specifying a method. (Job 0:'
@@ -251,14 +266,14 @@ def test_filter_exceptions() -> None:
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('<div>a</div>', {'method': 'blabla'})  # type: ignore[misc]
+        filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 'blabla'})  # type: ignore[misc]
     expected = "Unknown method blabla for filter 'html2text'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('pdf2text')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('<div>a</div>', {})  # type: ignore[misc]
+        filtercls(job_state).filter('<div>a</div>', 'text/plain', {})  # type: ignore[misc]
     expected = "The 'pdf2text' filter needs bytes input (is it the first filter?). (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
@@ -266,119 +281,119 @@ def test_filter_exceptions() -> None:
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         with pytest.raises(TypeError) as e:
             # noinspection PyTypeChecker
-            filtercls(job_state).filter('a', {'text': 2})  # type: ignore[misc]
+            filtercls(job_state).filter('a', 'text/plain', {'text': 2})  # type: ignore[misc]
         expected = f"The '{filter_kind}' filter requires a string but you provided a int. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
 
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         with pytest.raises(TypeError) as e:
             # noinspection PyTypeChecker
-            filtercls(job_state).filter('a', {'re': 2})  # type: ignore[misc]
+            filtercls(job_state).filter('a', 'text/plain', {'re': 2})  # type: ignore[misc]
         expected = f"The '{filter_kind}' filter requires a string but you provided a int. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
 
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         with pytest.raises(ValueError) as e:
             # noinspection PyTypeChecker
-            filtercls(job_state).filter('a', {})  # type: ignore[misc]
+            filtercls(job_state).filter('a', 'text/plain', {})  # type: ignore[misc]
         expected = f"The '{filter_kind}' filter requires a 'text' or 're' sub-directive. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('strip')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {'splitlines': True, 'side': 'whatever'})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {'splitlines': True, 'side': 'whatever'})  # type: ignore[misc]
     expected = "The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('strip')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {'side': 'whatever'})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {'side': 'whatever'})  # type: ignore[misc]
     expected = "The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('element-by-id')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
     expected = "The 'element-by-id' filter needs an id for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('element-by-class')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
     expected = "The 'element-by-class' filter needs a class for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('element-by-style')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
     expected = "The 'element-by-style' filter needs a style for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('element-by-tag')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
     expected = "The 'element-by-tag' filter needs a tag for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {'method': 'any'})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {'method': 'any'})  # type: ignore[misc]
     expected = "The 'xpath' filter's method must be 'html' or 'xml', got 'any'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
     expected = "The 'xpath' filter needs an XPath expression for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {'path': 'any', 'namespaces': 'whatever'})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {'path': 'any', 'namespaces': 'whatever'})  # type: ignore[misc]
     expected = "The 'xpath' filter's namespace prefixes are only supported with 'method: xml'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('re.sub')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {})  # type: ignore[misc]
     expected = "The 're.sub' filter needs a pattern. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('execute')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {})  # type: ignore[misc]
     expected = "The 'execute' filter needs a command. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('ocr')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {})  # type: ignore[misc]
     expected = "The 'ocr' filter needs bytes input (is it the first filter?). (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('jq')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/json', {})  # type: ignore[misc]
     expected = "The 'jq' filter needs a query. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('jq')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('{""""""}', {'query': 'any'})  # type: ignore[misc]
+        filtercls(job_state).filter('{""""""}', 'text/json', {'query': 'any'})  # type: ignore[misc]
     expected = "The 'jq' filter needs valid JSON. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
@@ -386,9 +401,9 @@ def test_filter_exceptions() -> None:
 def test_html2text_roundtrip() -> None:
     pytest.xfail('Not working due to an html2text bug')
     html = '1 | <a href="https://www.example.com">1</a><br><strong>2 | <a href="https://www.example.com">2</a></strong>'
-    text = Html2TextFilter(job_state).filter(html, {})  # type: ignore[arg-type]
+    data, mime_type = Html2TextFilter(job_state).filter(html, 'text/plain', {})  # type: ignore[arg-type]
     html2_lines = []
-    for line in text.splitlines():
+    for line in str(data).splitlines():
         html2_lines.append(
             mark_to_html(line).replace('style="font-family:inherit" rel="noopener" target="_blank" ', '')
         )

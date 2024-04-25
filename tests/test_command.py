@@ -30,8 +30,9 @@ from webchanges.cli import (
 )
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
+from webchanges.handler import Snapshot
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, CacheStorage, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import SsdbSQLite3Storage, SsdbStorage, YamlConfigStorage, YamlJobsStorage
 from webchanges.util import import_module_from_source
 
 # Paths
@@ -49,7 +50,7 @@ for filename in {'jobs-echo_test.yaml', 'jobs-time.yaml'}:
     shutil.copyfile(config_path.joinpath(filename), tmp_path.joinpath(filename))
 
 jobs_file = tmp_path.joinpath('jobs-echo_test.yaml')
-cache_file = ':memory:'
+ssdb_file = ':memory:'
 
 # Copy hooks file to temporary directory
 base_hooks_file = config_path.joinpath('hooks_example.py')
@@ -75,12 +76,11 @@ py_latest_only = cast(
 def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_file) -> CommandConfig:
     return CommandConfig(
         args=[],
-        project_name=__project_name__,
         config_path=config_path,
         config_file=config_file,
         jobs_def_file=jobs_file,
         hooks_file=hooks_file,
-        cache=cache_file,  # type: ignore[arg-type]
+        ssdb_file=ssdb_file,  # type: ignore[arg-type]
     )
 
 
@@ -91,15 +91,14 @@ def urlwatch_command() -> UrlwatchCommand:
     urlwatcher = Urlwatch(
         urlwatch_config=CommandConfig(
             args=[],
-            project_name=__project_name__,
             config_path=config_path,
             config_file=config_file,
             jobs_def_file=jobs_file,
             hooks_file=hooks_file,
-            cache=':memory:',  # type: ignore[arg-type]
+            ssdb_file=':memory:',  # type: ignore[arg-type]
         ),
         config_storage=config_storage,
-        cache_storage=CacheSQLite3Storage(':memory:'),  # type: ignore[arg-type]
+        ssdb_storage=SsdbSQLite3Storage(':memory:'),  # type: ignore[arg-type]
         jobs_storage=YamlJobsStorage([jobs_file]),
     )  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)
@@ -110,9 +109,9 @@ def urlwatch_command() -> UrlwatchCommand:
 command_config = new_command_config(jobs_file=jobs_file)
 config_storage = YamlConfigStorage(config_file)
 config_storage.load()
-cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+snapshot_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
 jobs_storage = YamlJobsStorage([jobs_file])
-urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
 urlwatch_command_common = UrlwatchCommand(urlwatcher)
 
 
@@ -154,7 +153,7 @@ def test_migration() -> None:
         config_file,
         jobs_file,
         hooks_file,
-        cache_file,  # type: ignore[arg-type]
+        ssdb_file,  # type: ignore[arg-type]
     )
 
 
@@ -164,12 +163,11 @@ def test_first_run(capsys: CaptureFixture[str], tmp_path: Path) -> None:
     jobs_file2 = tmp_path.joinpath('jobs.yaml')
     command_config2 = CommandConfig(
         [],
-        __project_name__,
         tmp_path,
         config_file2,
         jobs_file2,
         hooks_file,
-        cache_file,  # type: ignore[arg-type]
+        ssdb_file,  # type: ignore[arg-type]
     )
     command_config2.edit = False
     first_run(command_config2)
@@ -470,7 +468,7 @@ def test_dump_history(capsys: CaptureFixture[str]) -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo 1'
     guid = urlwatcher.jobs[0].get_guid()
 
@@ -489,7 +487,7 @@ def test_dump_history(capsys: CaptureFixture[str]) -> None:
 
         # run once
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        snapshot_storage._copy_temp_to_permanent(delete=True)
         urlwatcher.urlwatch_config.joblist = []
 
         # test diff (unified) with diff_filter, tz, and contextlines
@@ -514,21 +512,21 @@ def test_dump_history(capsys: CaptureFixture[str]) -> None:
         ) in message
 
     finally:
-        urlwatcher.cache_storage.delete(guid)
+        urlwatcher.ssdb_storage.delete(guid)
 
 
 def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
     guid = urlwatcher.jobs[0].get_guid()
 
     try:
         # never run
-        setattr(command_config, 'test_differ', 1)
+        setattr(command_config, 'test_differ', [1])
         urlwatch_command = UrlwatchCommand(urlwatcher)
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
@@ -541,7 +539,7 @@ def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
         # also testing joblist
         urlwatcher.urlwatch_config.joblist = ['1']
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        snapshot_storage._copy_temp_to_permanent(delete=True)
         urlwatcher.urlwatch_config.joblist = []
 
         setattr(command_config, 'test_differ', [1, 1])
@@ -564,12 +562,12 @@ def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
         # run twice
         time.sleep(0.0001)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
-        history = cache_storage.get_history_data(guid)
+        snapshot_storage._copy_temp_to_permanent(delete=True)
+        history = snapshot_storage.get_history_data(guid)
         assert len(history) == 2
 
         # test diff (unified) with diff_filter, tz, and contextlines
-        setattr(command_config, 'test_differ', 1)
+        setattr(command_config, 'test_differ', [1])
         urlwatcher.jobs[0].diff_filter = [{'strip': ''}]
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/GMT+12'
         urlwatcher.jobs[0].contextlines = 2
@@ -583,7 +581,7 @@ def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
 
         # rerun to reuse cached _generated_diff but change timezone
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/UTC'
-        setattr(command_config, 'test_differ', 1)
+        setattr(command_config, 'test_differ', [1])
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_differ', None)
@@ -594,7 +592,7 @@ def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
 
         # Try another timezone
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/GMT+1'
-        setattr(command_config, 'test_differ', 1)
+        setattr(command_config, 'test_differ', [1])
         with pytest.raises(SystemExit) as pytest_wrapped_e:
             urlwatch_command.handle_actions()
         setattr(command_config, 'test_differ', None)
@@ -604,7 +602,7 @@ def test_test_differ_and_joblist(capsys: CaptureFixture[str]) -> None:
         assert message.splitlines()[10][-6:] == ' -0100'
 
     finally:
-        urlwatcher.cache_storage.delete(guid)
+        urlwatcher.ssdb_storage.delete(guid)
 
 
 def test_list_error_jobs(capsys: CaptureFixture[str]) -> None:
@@ -674,11 +672,11 @@ def test_modify_urls(capsys: CaptureFixture[str]) -> None:
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
 )
 def test_modify_urls_move_location(
-    database_engine: CacheStorage, capsys: CaptureFixture[str], monkeypatch: MonkeyPatch
+    database_engine: SsdbStorage, capsys: CaptureFixture[str], monkeypatch: MonkeyPatch
 ) -> None:
     """Test --change-location JOB NEW_LOCATION."""
     jobs_file = tmp_path.joinpath('jobs-time.yaml')
-    urlwatcher2, cache_storage2, command_config2 = prepare_storage_test(database_engine, jobs_file=jobs_file)
+    urlwatcher2, ssdb_storage2, command_config2 = prepare_storage_test(database_engine, jobs_file=jobs_file)
     urlwatch_command2 = UrlwatchCommand(urlwatcher2)
 
     # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
@@ -706,8 +704,8 @@ def test_modify_urls_move_location(
 
     # run jobs to save
     urlwatcher2.run_jobs()
-    if hasattr(cache_storage2, '_copy_temp_to_permanent'):
-        cache_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+    if hasattr(ssdb_storage2, '_copy_temp_to_permanent'):
+        ssdb_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
 
     # try changing job database location
     setattr(command_config2, 'change_location', (old_loc, new_loc))
@@ -728,9 +726,9 @@ def test_modify_urls_move_location(
     assert urlwatch_command2.urlwatcher.jobs[0].get_location() == new_loc
 
     # is it in the database?
-    old_data = cache_storage2.load(old_guid)
+    old_data = ssdb_storage2.load(old_guid)
     assert old_data.data == ''
-    new_data = cache_storage2.load(new_guid)
+    new_data = ssdb_storage2.load(new_guid)
     assert new_data.timestamp != 0
 
     # change back
@@ -748,14 +746,14 @@ def test_modify_urls_move_location(
 
     # did it change back?
     assert urlwatch_command2.urlwatcher.jobs[0].get_location() == old_loc
-    assert cache_storage2.load(old_guid) == new_data
+    assert ssdb_storage2.load(old_guid) == new_data
 
 
 def test_delete_snapshot(capsys: CaptureFixture[str]) -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
@@ -770,16 +768,16 @@ def test_delete_snapshot(capsys: CaptureFixture[str]) -> None:
 
     # run once
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+    snapshot_storage._copy_temp_to_permanent(delete=True)
     guid = urlwatcher.jobs[0].get_guid()
-    history = cache_storage.get_history_data(guid)
+    history = snapshot_storage.get_history_data(guid)
     assert len(history) == 1
 
     # run twice
     time.sleep(0.0001)
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
-    history = cache_storage.get_history_data(guid)
+    snapshot_storage._copy_temp_to_permanent(delete=True)
+    history = snapshot_storage.get_history_data(guid)
     assert len(history) == 2
 
     # delete once
@@ -814,21 +812,21 @@ def test_gc_database(capsys: CaptureFixture[str]) -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     if os.name == 'nt':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
     guid = urlwatcher.jobs[0].get_guid()
 
     # run once to save the job from 'jobs-time.yaml'
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
-    history = cache_storage.get_history_data(guid)
+    snapshot_storage._copy_temp_to_permanent(delete=True)
+    history = snapshot_storage.get_history_data(guid)
     assert len(history) == 1
 
     # set job file to a different one
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)
 
     # run gc_database and check that it deletes the snapshot of the job no longer being tracked
@@ -848,7 +846,7 @@ def test_gc_database(capsys: CaptureFixture[str]) -> None:
 def test_clean_database(capsys: CaptureFixture[str]) -> None:
     """Test --clean-database [RETAIN_LIMIT]."""
     setattr(command_config, 'clean_database', True)
-    urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'clean_database', None)
@@ -857,37 +855,37 @@ def test_clean_database(capsys: CaptureFixture[str]) -> None:
     assert message == ''
 
     # set up storage for testing
-    database_engine = CacheSQLite3Storage(':memory:')  # type: ignore[arg-type]
-    urlwatcher2, cache_storage2, command_config2 = prepare_storage_test(database_engine)
+    database_engine = SsdbSQLite3Storage(':memory:')  # type: ignore[arg-type]
+    urlwatcher2, ssdb_storage2, command_config2 = prepare_storage_test(database_engine)
     urlwatch_command2 = UrlwatchCommand(urlwatcher2)
 
     # run jobs to save
     for i in range(3):
         time.sleep(0.0001)
         urlwatch_command2.urlwatcher.run_jobs()
-    if hasattr(cache_storage2, '_copy_temp_to_permanent'):
-        cache_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+    if hasattr(ssdb_storage2, '_copy_temp_to_permanent'):
+        ssdb_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
 
     # clean database with RETAIN_LIMIT=2
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', 2)
-    urlwatcher2.cache_storage.clean_cache([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
+    urlwatcher2.ssdb_storage.clean_ssdb([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', None)
     guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
-    assert len(cache_storage2.get_history_snapshots(guid)) == 2
+    assert len(ssdb_storage2.get_history_snapshots(guid)) == 2
 
     # clean database without specifying RETAIN_LIMIT
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', True)
-    urlwatcher2.cache_storage.clean_cache([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
+    urlwatcher2.ssdb_storage.clean_ssdb([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', None)
     guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
-    assert len(cache_storage2.get_history_snapshots(guid)) == 1
+    assert len(ssdb_storage2.get_history_snapshots(guid)) == 1
 
 
 def test_rollback_database(capsys: CaptureFixture[str], monkeypatch: MonkeyPatch) -> None:
     setattr(command_config, 'rollback_database', True)
     # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
     monkeypatch.setattr('builtins.input', lambda _: 'y')
-    urlwatcher.cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'rollback_database', False)
@@ -1103,16 +1101,16 @@ def test_locate_storage_file() -> None:
 
 def test_job_states_verb() -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'
     urlwatcher.jobs[0].name = 'echo TEST'
 
     # run once
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'new'
 
     # run twice
@@ -1122,24 +1120,33 @@ def test_job_states_verb() -> None:
 
 def test_job_states_verb_notimestamp_unchanged() -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'
     urlwatcher.jobs[0].name = 'echo TEST'
 
     # run once
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'new'
 
     # modify database
-    guid = urlwatcher.cache_storage.get_guids()[0]
-    snapshot = urlwatcher.cache_storage.load(guid)
-    urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=snapshot.data, timestamp=0, tries=1, etag=snapshot.etag)
-    cache_storage._copy_temp_to_permanent(delete=True)
+    guid = urlwatcher.ssdb_storage.get_guids()[0]
+    snapshot = urlwatcher.ssdb_storage.load(guid)
+    urlwatcher.ssdb_storage.delete(guid)
+    urlwatcher.ssdb_storage.save(
+        guid=guid,
+        snapshot=Snapshot(
+            data=snapshot.data,
+            timestamp=0,
+            tries=1,
+            etag=snapshot.etag,
+            mime_type=snapshot.mime_type,
+        ),
+    )
+    ssdb_storage._copy_temp_to_permanent(delete=True)
 
     # run twice
     urlwatcher.run_jobs()
@@ -1148,58 +1155,58 @@ def test_job_states_verb_notimestamp_unchanged() -> None:
 
 def test_job_states_verb_notimestamp_changed() -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo TEST'
     urlwatcher.jobs[0].name = 'echo TEST'
 
     # run once
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'new'
 
     # modify database (save no timestamp)
     guid = urlwatcher.jobs[0].get_guid()
-    snapshot = urlwatcher.cache_storage.load(guid)
-    urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=snapshot.data, timestamp=0, tries=snapshot.tries, etag=snapshot.etag)
-    cache_storage._copy_temp_to_permanent(delete=True)
+    snapshot = urlwatcher.ssdb_storage.load(guid)
+    urlwatcher.ssdb_storage.delete(guid)
+    urlwatcher.ssdb_storage.save(guid=guid, snapshot=snapshot)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
 
     # run twice
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
     # modify database to 1 try
-    snapshot = urlwatcher.cache_storage.load(guid)
-    urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(
-        guid=guid, data=snapshot.data, timestamp=snapshot.timestamp, tries=1, etag=snapshot.etag
-    )
-    cache_storage._copy_temp_to_permanent(delete=True)
+    snapshot = urlwatcher.ssdb_storage.load(guid)
+    urlwatcher.ssdb_storage.delete(guid)
+    urlwatcher.ssdb_storage.save(guid=guid, snapshot=snapshot)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     # run again
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
     # modify database to no timestamp
-    urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=snapshot.data, timestamp=0, tries=snapshot.tries, etag=snapshot.etag)
-    cache_storage._copy_temp_to_permanent(delete=True)
+    urlwatcher.ssdb_storage.delete(guid)
+    new_snapshot = Snapshot(snapshot.data, 0, snapshot.tries, snapshot.etag, snapshot.mime_type)
+    urlwatcher.ssdb_storage.save(guid=guid, snapshot=new_snapshot)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     # run again
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
     # modify database to no timestamp and 1 try
-    urlwatcher.cache_storage.delete(guid)
-    urlwatcher.cache_storage.save(guid=guid, data=snapshot.data, timestamp=0, tries=1, etag=snapshot.etag)
-    cache_storage._copy_temp_to_permanent(delete=True)
+    urlwatcher.ssdb_storage.delete(guid)
+    new_snapshot = Snapshot(snapshot.data, 0, 1, snapshot.etag, snapshot.mime_type)
+    urlwatcher.ssdb_storage.save(guid=guid, snapshot=new_snapshot)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     # run again
     urlwatcher.run_jobs()
-    cache_storage._copy_temp_to_permanent(delete=True)
+    ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
 

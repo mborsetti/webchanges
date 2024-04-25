@@ -169,7 +169,7 @@ repos:
         require_serial: true
         args: [--max-line-length, '120']
       - id: mypy  # https://github.com/python/mypy
-        name: Static typing for Python (mypy)
+        name: Check Python static typing (mypy)
         entry: mypy
         additional_dependencies:
           - mypy

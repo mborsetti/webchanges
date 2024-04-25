@@ -16,7 +16,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional, Union
 
-from webchanges.storage import CacheStorage, Snapshot
+from webchanges.handler import Snapshot
+from webchanges.storage import SsdbStorage
 
 try:
     import minidb
@@ -29,7 +30,7 @@ except ImportError as e:  # pragma: no cover
     minidb_error = e.msg
 
 
-class CacheMiniDBStorage(CacheStorage):
+class SsdbMiniDBStorage(SsdbStorage):
     class CacheEntry(minidb.Model):
         guid = str
         timestamp = int
@@ -63,12 +64,12 @@ class CacheMiniDBStorage(CacheStorage):
             where=self.CacheEntry.c.guid == guid,
             limit=1,
         ):
-            return Snapshot(data, timestamp, tries, etag)
+            return Snapshot(data, timestamp, tries, etag, '')
 
-        return Snapshot('', 0, 0, '')
+        return Snapshot('', 0, 0, '', '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
-        history: dict[str, float] = {}
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
+        history: dict[Union[str, bytes], float] = {}
         if count is not None and count < 1:
             return history
         for data, timestamp in self.CacheEntry.query(
@@ -95,29 +96,28 @@ class CacheMiniDBStorage(CacheStorage):
             where=(self.CacheEntry.c.guid == guid)
             & ((self.CacheEntry.c.tries == 0) | (self.CacheEntry.c.tries is None)),
         ):
-            history.append(Snapshot(data, timestamp, 0, ''))
+            history.append(Snapshot(data, timestamp, 0, '', ''))
             if count is not None and len(history) >= count:
                 break
         return history
 
-    def save(
-        self,
-        *args: Any,
-        guid: str,
-        data: str,
-        timestamp: float,
-        tries: int,
-        etag: Optional[str],
-        **kwargs: Any,
-    ) -> None:
-        self.db.save(self.CacheEntry(guid=guid, timestamp=timestamp, data=data, tries=tries, etag=etag))
+    def save(self, *args: Any, guid: str, snapshot: Snapshot, **kwargs: Any) -> None:
+        self.db.save(
+            self.CacheEntry(
+                guid=guid,
+                timestamp=snapshot.timestamp,
+                data=snapshot.data,
+                tries=snapshot.tries,
+                etag=snapshot.etag,
+            )
+        )
         self.db.commit()
 
     def delete(self, guid: str) -> None:
         self.CacheEntry.delete_where(self.db, self.CacheEntry.c.guid == guid)
         self.db.commit()
 
-    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
+    def delete_latest(self, guid: str, delete_entries: int = 1, **kwargs: Any) -> int:
         raise NotImplementedError("Deleting of latest snapshot not supported by 'minidb' database engine")
 
     def delete_all(self) -> int:

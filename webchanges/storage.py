@@ -20,7 +20,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone  # py311 use UTC instead of timezone.utc
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Literal, NamedTuple, Optional, TextIO, TypedDict, Union
+from typing import Any, Iterable, Iterator, Literal, Optional, TextIO, TypedDict, Union
 from zoneinfo import ZoneInfo
 
 import msgpack
@@ -29,6 +29,7 @@ import yaml.scanner
 
 from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.filters import FilterBase
+from webchanges.handler import Snapshot
 from webchanges.jobs import JobBase, ShellJob
 from webchanges.reporters import ReporterBase
 from webchanges.util import edit_file, file_ownership_checks
@@ -903,6 +904,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 '\n   '.join(
                     ['Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):']
                     + [f'• {job}' for job in conflicting_jobs]
+                    + ['']
                     + job_files_for_error()
                 )
             ) from None
@@ -946,22 +948,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             )
 
 
-class Snapshot(NamedTuple):
-    """Type for Snapshot tuple.
-
-    * 0: data: str
-    * 1: timestamp: float
-    * 2: tries: int
-    * 3: etag: str
-    """
-
-    data: str
-    timestamp: float
-    tries: int
-    etag: str
-
-
-class CacheStorage(BaseFileStorage, ABC):
+class SsdbStorage(BaseFileStorage, ABC):
     """Base class for snapshots storage."""
 
     @abstractmethod
@@ -977,7 +964,7 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
         pass
 
     @abstractmethod
@@ -985,7 +972,7 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
-    def save(self, *args: Any, guid: str, data: str, timestamp: float, tries: int, etag: str, **kwargs: Any) -> None:
+    def save(self, *args: Any, guid: str, snapshot: Snapshot, **kwargs: Any) -> None:
         pass
 
     @abstractmethod
@@ -993,7 +980,7 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
-    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
+    def delete_latest(self, guid: str, delete_entries: int = 1, **kwargs: Any) -> int:
         """For the given 'guid', delete only the latest 'delete_entries' entries and keep all other (older) ones.
 
         :param guid: The guid.
@@ -1023,22 +1010,29 @@ class CacheStorage(BaseFileStorage, ABC):
     def rollback(self, timestamp: float) -> Optional[int]:
         pass
 
-    def backup(self) -> Iterator[tuple[str, str, float, int, str]]:
+    def backup(self) -> Iterator[tuple[str, Union[str, bytes], float, int, str, str]]:
         """Return the most recent entry for each 'guid'.
 
-        :returns: An generator of tuples, each consisting of (guid, data, timestamp, tries, etag)
+        :returns: A generator of tuples, each consisting of (guid, data, timestamp, tries, etag, mime_type)
         """
         for guid in self.get_guids():
             snapshot = self.load(guid)
             yield guid, *snapshot
 
-    def restore(self, entries: Iterable[tuple[str, str, float, int, str]]) -> None:
+    def restore(self, entries: Iterable[tuple[str, Union[str, bytes], float, int, str, str]]) -> None:
         """Save multiple entries into the database.
 
-        :param entries: An iterator of tuples WHERE each consists of (guid, data, timestamp, tries, etag)
+        :param entries: An iterator of tuples WHERE each consists of (guid, data, timestamp, tries, etag, mime_type)
         """
-        for guid, data, timestamp, tries, etag in entries:
-            self.save(guid=guid, data=data, timestamp=timestamp, tries=tries, etag=etag, temporary=False)
+        for guid, data, timestamp, tries, etag, mime_type in entries:
+            new_snapshot = Snapshot(
+                data=data,
+                timestamp=timestamp,
+                tries=tries,
+                etag=etag,
+                mime_type=mime_type,
+            )
+            self.save(guid=guid, snapshot=new_snapshot, temporary=False)
 
     def gc(self, known_guids: Iterable[str], keep_entries: int = 1) -> None:
         """Garbage collect the database: delete all guids not included in known_guids and keep only last n snapshot for
@@ -1050,9 +1044,9 @@ class CacheStorage(BaseFileStorage, ABC):
         for guid in set(self.get_guids()) - set(known_guids):
             print(f'Deleting job {guid} (no longer being tracked)')
             self.delete(guid)
-        self.clean_cache(known_guids, keep_entries)
+        self.clean_ssdb(known_guids, keep_entries)
 
-    def clean_cache(self, known_guids: Iterable[str], keep_entries: int = 1) -> None:
+    def clean_ssdb(self, known_guids: Iterable[str], keep_entries: int = 1) -> None:
         """Convenience function to clean the cache.
 
         If self.clean_all is present, runs clean_all(). Otherwise, runs clean() on all known_guids, one at a time.
@@ -1101,7 +1095,7 @@ class CacheStorage(BaseFileStorage, ABC):
         pass
 
 
-class CacheDirStorage(CacheStorage):
+class SsdbDirStorage(SsdbStorage):
     """Class for snapshots stored as individual textual files in a directory 'dirname'."""
 
     def __init__(self, dirname: Union[str, Path]) -> None:
@@ -1122,7 +1116,7 @@ class CacheDirStorage(CacheStorage):
     def load(self, guid: str) -> Snapshot:
         filename = self._get_filename(guid)
         if not filename.is_file():
-            return Snapshot('', 0, 0, '')
+            return Snapshot('', 0, 0, '', '')
 
         try:
             data = filename.read_text()
@@ -1132,44 +1126,35 @@ class CacheDirStorage(CacheStorage):
 
         timestamp = filename.stat().st_mtime
 
-        return Snapshot(data, timestamp, 0, '')
+        return Snapshot(data, timestamp, 0, '', '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
         if count is not None and count < 1:
             return {}
         else:
-            data, timestamp, tries, etag = self.load(guid)
+            data, timestamp, tries, etag, mime_type = self.load(guid)
             return {data: timestamp} if data and timestamp else {}
 
     def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
         else:
-            data, timestamp, tries, etag = self.load(guid)
-            return [Snapshot(data, timestamp, tries, etag)] if data and timestamp else []
+            data, timestamp, tries, etag, mime_type = self.load(guid)
+            return [Snapshot(data, timestamp, tries, etag, mime_type)] if data and timestamp else []
 
-    def save(
-        self,
-        *args: Any,
-        guid: str,
-        data: str,
-        timestamp: float,
-        tries: int,
-        etag: Optional[str],
-        **kwargs: Any,
-    ) -> None:
-        # ETag is ignored
+    def save(self, *args: Any, guid: str, snapshot: Snapshot, **kwargs: Any) -> None:
+        # ETag and mime_type are ignored
         filename = self._get_filename(guid)
         with filename.open('w+') as fp:
-            fp.write(data)
-        os.utime(filename, times=(datetime.now().timestamp(), timestamp))
+            fp.write(str(snapshot.data))
+        os.utime(filename, times=(datetime.now().timestamp(), snapshot.timestamp))
 
     def delete(self, guid: str) -> None:
         filename = self._get_filename(guid)
         filename.unlink(missing_ok=True)
         return
 
-    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
+    def delete_latest(self, guid: str, delete_entries: int = 1, **kwargs: Any) -> int:
         """For the given 'guid', delete the latest entry and keep all other (older) ones.
 
         :param guid: The guid.
@@ -1213,7 +1198,7 @@ class CacheDirStorage(CacheStorage):
                 file.unlink()
 
 
-class CacheSQLite3Storage(CacheStorage):
+class SsdbSQLite3Storage(SsdbStorage):
     """
     Handles storage of the snapshot as a SQLite database in the 'filename' file using Python's built-in sqlite3 module
     and the msgpack package.
@@ -1383,11 +1368,11 @@ class CacheSQLite3Storage(CacheStorage):
         if row:
             msgpack_data, timestamp = row
             r = msgpack.unpackb(msgpack_data)
-            return Snapshot(r['d'], timestamp, r['t'], r['e'])
+            return Snapshot(r['d'], timestamp, r['t'], r['e'], r.get('m', ''))
 
-        return Snapshot('', 0, 0, '')
+        return Snapshot('', 0, 0, '', '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
         """Return max 'count' (None = all) records of data and timestamp of **successful** runs for a 'guid'.
 
         :param guid: The guid.
@@ -1442,7 +1427,7 @@ class CacheSQLite3Storage(CacheStorage):
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
-                history.append(Snapshot(r['d'], timestamp, r['t'], r['e']))
+                history.append(Snapshot(r['d'], timestamp, r['t'], r['e'], r.get('m', '')))
                 if count is not None and len(history) >= count:
                     break
         return history
@@ -1451,10 +1436,7 @@ class CacheSQLite3Storage(CacheStorage):
         self,
         *args: Any,
         guid: str,
-        data: str,
-        timestamp: float,
-        tries: int,
-        etag: Optional[str],
+        snapshot: Snapshot,
         temporary: Optional[bool] = True,
         **kwargs: Any,
     ) -> None:
@@ -1473,19 +1455,21 @@ class CacheSQLite3Storage(CacheStorage):
         :param etag: The ETag (could be empty string).
         :param temporary: If true, saved to temporary database (default).
         """
+
         c = {
-            'd': data,
-            't': tries,
-            'e': etag,
+            'd': snapshot.data,
+            't': snapshot.tries,
+            'e': snapshot.etag,
+            'm': snapshot.mime_type,
         }
         msgpack_data = msgpack.packb(c)
         if temporary:
             with self.temp_lock:
-                self._temp_execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
+                self._temp_execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, snapshot.timestamp, msgpack_data))
                 # we do not commit to temporary as it's being used as write-only (we commit at the end)
         else:
             with self.lock:
-                self._execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, timestamp, msgpack_data))
+                self._execute('INSERT INTO webchanges VALUES (?, ?, ?)', (guid, snapshot.timestamp, msgpack_data))
                 self.db.commit()
 
     def delete(self, guid: str) -> None:
@@ -1497,27 +1481,48 @@ class CacheSQLite3Storage(CacheStorage):
             self._execute('DELETE FROM webchanges WHERE uuid = ?', (guid,))
             self.db.commit()
 
-    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
+    def delete_latest(
+        self,
+        guid: str,
+        delete_entries: int = 1,
+        temporary: Optional[bool] = False,
+        **kwargs: Any,
+    ) -> int:
         """For the given 'guid', delete the latest 'delete_entries' number of entries and keep all other (older) ones.
 
         :param guid: The guid.
         :param delete_entries: The number of most recent entries to delete.
+        :param temporary: If False, deleted from permanent database (default).
 
         :returns: Number of records deleted.
         """
-        with self.lock:
-            self._execute(
-                'DELETE FROM webchanges '
-                'WHERE ROWID IN ( '
-                '    SELECT ROWID FROM webchanges '
-                '    WHERE uuid = ? '
-                '    ORDER BY timestamp DESC '
-                '    LIMIT ? '
-                ')',
-                (guid, delete_entries),
-            )
-            num_del: int = self._execute('SELECT changes()').fetchone()[0]
-            self.db.commit()
+        if temporary:
+            with self.temp_lock:
+                self._temp_execute(
+                    'DELETE FROM webchanges '
+                    'WHERE ROWID IN ( '
+                    '    SELECT ROWID FROM webchanges '
+                    '    WHERE uuid = ? '
+                    '    ORDER BY timestamp DESC '
+                    '    LIMIT ? '
+                    ')',
+                    (guid, delete_entries),
+                )
+                num_del: int = self._execute('SELECT changes()').fetchone()[0]
+        else:
+            with self.lock:
+                self._execute(
+                    'DELETE FROM webchanges '
+                    'WHERE ROWID IN ( '
+                    '    SELECT ROWID FROM webchanges '
+                    '    WHERE uuid = ? '
+                    '    ORDER BY timestamp DESC '
+                    '    LIMIT ? '
+                    ')',
+                    (guid, delete_entries),
+                )
+                num_del = self._execute('SELECT changes()').fetchone()[0]
+                self.db.commit()
         return num_del
 
     def delete_all(self) -> int:
@@ -1674,9 +1679,9 @@ class CacheSQLite3Storage(CacheStorage):
             ' installed for the conversion.'
         )
 
-        from webchanges.storage_minidb import CacheMiniDBStorage
+        from webchanges.storage_minidb import SsdbMiniDBStorage
 
-        legacy_db = CacheMiniDBStorage(minidb_filename)
+        legacy_db = SsdbMiniDBStorage(minidb_filename)
         self.restore(legacy_db.backup())
         legacy_db.close()
         print(f'Database upgrade finished; the following backup file can be safely deleted: {minidb_filename}\n')
@@ -1690,7 +1695,7 @@ class CacheSQLite3Storage(CacheStorage):
             self.db.commit()
 
 
-class CacheRedisStorage(CacheStorage):
+class SsdbRedisStorage(SsdbStorage):
     """Class for storing snapshots using redis."""
 
     def __init__(self, filename: Union[str, Path]) -> None:
@@ -1722,11 +1727,11 @@ class CacheRedisStorage(CacheStorage):
 
         if data:
             r = msgpack.unpackb(data)
-            return Snapshot(r['data'], r['timestamp'], r['tries'], r['etag'])
+            return Snapshot(r['data'], r['timestamp'], r['tries'], r['etag'], r['mime_type'])
 
-        return Snapshot('', 0, 0, '')
+        return Snapshot('', 0, 0, '', '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[str, float]:
+    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
         if count is not None and count < 1:
             return {}
 
@@ -1752,33 +1757,25 @@ class CacheRedisStorage(CacheStorage):
             r = self.db.lindex(key, i)
             c = msgpack.unpackb(r)
             if c['tries'] == 0 or c['tries'] is None:
-                history.append(Snapshot(c['data'], c['timestamp'], c['tries'], c['etag']))
+                history.append(Snapshot(c['data'], c['timestamp'], c['tries'], c['etag'], c.get('mime_type')))
                 if count is not None and len(history) >= count:
                     break
         return history
 
-    def save(
-        self,
-        *args: Any,
-        guid: str,
-        data: str,
-        timestamp: float,
-        tries: int,
-        etag: Optional[str],
-        **kwargs: Any,
-    ) -> None:
+    def save(self, *args: Any, guid: str, snapshot: Snapshot, **kwargs: Any) -> None:
         r = {
-            'data': data,
-            'timestamp': timestamp,
-            'tries': tries,
-            'etag': etag,
+            'data': snapshot.data,
+            'timestamp': snapshot.timestamp,
+            'tries': snapshot.tries,
+            'etag': snapshot.etag,
+            'mime_type': snapshot.mime_type,
         }
         self.db.lpush(self._make_key(guid), msgpack.packb(r))
 
     def delete(self, guid: str) -> None:
         self.db.delete(self._make_key(guid))
 
-    def delete_latest(self, guid: str, delete_entries: int = 1) -> int:
+    def delete_latest(self, guid: str, delete_entries: int = 1, **kwargs: Any) -> int:
         """For the given 'guid', delete the latest 'delete_entries' entry and keep all other (older) ones.
 
         :param guid: The guid.

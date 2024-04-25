@@ -106,6 +106,13 @@ how diffs from job 1 look like in HTML if running on a machine with a web browse
    webchanges --test-differ 1 --test-reporter browser
 
 
+Optionally, you can specify the maximum number of comparisons (diffs) to run, instead of producing diffs for all
+the snapshots that have been saved::
+
+   webchanges --test-differ 1 2 --test-reporter browser  # run differ for job 1 a maximum of 2 times
+
+
+
 .. versionchanged:: 3.3
    Will now display all saved snapshots instead of only the latest 10.
 
@@ -114,6 +121,9 @@ how diffs from job 1 look like in HTML if running on a machine with a web browse
 
 .. versionchanged:: 3.9
    Can be used in combination with ``--test-reporter``.
+
+.. versionchanged:: 3.22
+   Added the maximum number of comparisons to perform (optional).
 
 
 .. _test-reporter:

@@ -18,17 +18,16 @@ from _pytest.logging import LogCaptureFixture
 from httpx import HTTPStatusError
 from requests import HTTPError
 
-from webchanges import __project_name__
 from webchanges.config import CommandConfig
 from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifiedError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import _Config, CacheSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import _Config, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
-cache_file = ':memory:'
-cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+ssdb_file = ':memory:'
+ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
 
 
 def is_connected() -> bool:
@@ -150,12 +149,11 @@ def new_command_config(config_file: Path, jobs_file: Path, hooks_file: Path) -> 
     """
     return CommandConfig(
         args=[],
-        project_name=__project_name__,
         config_path=here,
         config_file=config_file,
         jobs_def_file=jobs_file,
         hooks_file=hooks_file,
-        cache=cache_file,  # type: ignore[arg-type]
+        ssdb_file=ssdb_file,  # type: ignore[arg-type]
     )
 
 
@@ -191,8 +189,8 @@ def test_run_job(
     caplog: LogCaptureFixture,
 ) -> None:
     job = JobBase.unserialize(input_job)
-    with JobState(cache_storage, job) as job_state:
-        data, etag = job.retrieve(job_state)
+    with JobState(ssdb_storage, job) as job_state:
+        data, etag, mime_type = job.retrieve(job_state)
         if job.filter == [{'pdf2text': {}}]:
             assert isinstance(data, bytes)
         assert output in data
@@ -202,8 +200,8 @@ def test_run_job(
 @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))  # type: ignore[misc]
 def test_run_ftp_job() -> None:
     job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt', 'timeout': 2})
-    with JobState(cache_storage, job) as job_state:
-        data, etag = job.retrieve(job_state)
+    with JobState(ssdb_storage, job) as job_state:
+        data, etag, mime_type = job.retrieve(job_state)
         assert len(data) == 319
 
 
@@ -214,8 +212,8 @@ def test_run_ftp_job_needs_bytes() -> None:
         pytest.skip('Test website cannot be reached from GitHub Actions')
 
     job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
-    with JobState(cache_storage, job) as job_state:
-        data, etag = job.retrieve(job_state)
+    with JobState(ssdb_storage, job) as job_state:
+        data, etag, mime_type = job.retrieve(job_state)
         assert isinstance(data, bytes)
         assert len(data) == 1024
 
@@ -229,8 +227,8 @@ def test_run_ftp_job_needs_bytes() -> None:
 def test_check_etag(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
-        data, etag = job.retrieve(job_state)
+    with JobState(ssdb_storage, job) as job_state:
+        data, etag, mime_type = job.retrieve(job_state)
         assert etag
 
 
@@ -246,10 +244,10 @@ def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dic
         pytest.skip('Capturing of 304 cannot be implemented in Chrome')  # last tested with Chromium 89
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         if 'check__etag_304_etag' not in doctest_namespace:
             job.index_number = 1
-            data, etag = job.retrieve(job_state)
+            data, etag, mime_type = job.retrieve(job_state)
             doctest_namespace['check_etag_304_etag'] = etag
             doctest_namespace['check_etag_304_timestamp'] = job_state.old_timestamp
 
@@ -272,7 +270,7 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'http://localhost'
     job_data['timeout'] = 0.0001
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert job_state.exception and any(
             x in str(job_state.exception.args)
@@ -282,7 +280,7 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
 
     job_data['ignore_connection_errors'] = True
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert job_state.error_ignored is True
         # also check that it's using the correct HTTP client library
@@ -302,7 +300,7 @@ def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
     job_data['http_proxy'] = 'http://notworking:ever@localhost:8080'
     job_data['timeout'] = 0.0001
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         if job_state.exception and not isinstance(job_state.exception, BrowserResponseError):
             assert job_state.exception and any(
@@ -332,7 +330,7 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
     job_data['http_proxy'] = None
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         if isinstance(job_state.exception, (HTTPError, HTTPStatusError)):
             assert job_state.exception.args[0].lower() == (
@@ -355,7 +353,7 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
 
     job_data['ignore_http_error_codes'] = [418]
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert job_state.error_ignored is True
     job_data['ignore_http_error_codes'] = None
@@ -377,14 +375,14 @@ def test_stress_use_browser() -> None:
         setup_logger()
 
     urlwatch_config = new_command_config(config_file, jobs_file, hooks_file)
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
     urlwatcher.run_jobs()
 
 
 def test_shell_exception_and_with_defaults() -> None:
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert isinstance(job_state.exception, Exception)
         assert str(job_state.exception)
@@ -508,7 +506,7 @@ def test_browser_switches_not_str_or_list() -> None:
         'switches': {'dict key': ''},
     }
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert isinstance(job_state.exception, TypeError)
 
@@ -520,7 +518,7 @@ def test_browser_switches_not_str_or_list() -> None:
 #         'block_elements': {'dict key': ''},
 #     }
 #     job = JobBase.unserialize(job_data)
-#     with JobState(cache_storage, job) as job_state:
+#     with JobState(ssdb_storage, job) as job_state:
 #         job_state.process()
 #         assert isinstance(job_state.exception, TypeError)
 #
@@ -532,7 +530,7 @@ def test_browser_switches_not_str_or_list() -> None:
 #         'block_elements': ['fake element'],
 #     }
 #     job = JobBase.unserialize(job_data)
-#     with JobState(cache_storage, job) as job_state:
+#     with JobState(ssdb_storage, job) as job_state:
 #         job_state.process()
 #         assert isinstance(job_state.exception, ValueError)
 
@@ -540,7 +538,7 @@ def test_browser_switches_not_str_or_list() -> None:
 def test_shell_error() -> None:
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
-    with JobState(cache_storage, job) as job_state:
+    with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert isinstance(job_state.exception, subprocess.CalledProcessError)
 
@@ -552,7 +550,7 @@ def test_compared_versions() -> None:
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
     urlwatch_config = new_command_config(config_file, jobs_file, hooks_file)
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
 
     # compared_versions = 2
     urlwatcher.jobs[0].command = 'python3 -c "import random; print(random.randint(0, 1))"'
@@ -560,7 +558,7 @@ def test_compared_versions() -> None:
     results = set()
     for i in range(20):
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        ssdb_storage._copy_temp_to_permanent(delete=True)
         if urlwatcher.report.job_states[-1].new_data in results:
             assert urlwatcher.report.job_states[-1].verb == 'unchanged'
         else:
@@ -568,20 +566,20 @@ def test_compared_versions() -> None:
             assert urlwatcher.report.job_states[-1].verb in {'new', 'changed'}
 
     # compared_versions = 3  (may trigger fuzzy match search)
-    cache_storage.flushdb()
+    ssdb_storage.flushdb()
     urlwatcher.jobs[0].command = 'python3 -c "import random; print(random.randint(0, 2))"'
     urlwatcher.jobs[0].compared_versions = 3
     results = set()
     for i in range(20):
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        ssdb_storage._copy_temp_to_permanent(delete=True)
         if urlwatcher.report.job_states[-1].new_data in results:
             assert urlwatcher.report.job_states[-1].verb == 'unchanged'
         else:
             results.add(urlwatcher.report.job_states[-1].new_data)
             assert urlwatcher.report.job_states[-1].verb in {'new', 'changed'}
     print(0)
-    cache_storage.close()
+    ssdb_storage.close()
 
 
 def test_differ_name_not_str_dict_raises_valueerror() -> None:

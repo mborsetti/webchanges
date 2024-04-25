@@ -162,6 +162,7 @@ class JobBase(metaclass=TrackSubClasses):
     markdown_padded_tables: Optional[bool] = None
     max_tries: Optional[int] = None
     method: Optional[Literal['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']] = None
+    mime_type: Optional[str] = None
     monospace: Optional[bool] = None
     name: Optional[str] = None
     navigate: Optional[str] = None  # backwards compatibility (deprecated)
@@ -467,6 +468,15 @@ class JobBase(metaclass=TrackSubClasses):
 
         return job_with_defaults
 
+    def get_fips_guid(self) -> str:
+        # TODO:
+        """Calculate the GUID as a SHA256 hash of the location (URL or command).
+
+        :returns: the GUID.
+        """
+        location = self.get_location()
+        return hashlib.sha256(location.encode(), usedforsecurity=False).hexdigest()
+
     def get_guid(self) -> str:
         """Calculate the GUID, currently a simple SHA1 hash of the location (URL or command).
 
@@ -475,7 +485,7 @@ class JobBase(metaclass=TrackSubClasses):
         location = self.get_location()
         return hashlib.sha1(location.encode(), usedforsecurity=False).hexdigest()
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -580,12 +590,12 @@ class Job(JobBase):
 
     def retrieve(  # type: ignore[empty-body]
         self, job_state: JobState, headless: bool = True
-    ) -> tuple[Union[str, bytes], str]:
+    ) -> tuple[Union[str, bytes], str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
         :param headless: For browser-based jobs, whether headless mode should be used.
-        :returns: The data retrieved and the ETag.
+        :returns: The data retrieved, the ETag, and the mime_type.
         """
         pass
 
@@ -697,7 +707,7 @@ class UrlJob(UrlJobBase):
             Mapping[str, str], Mapping[bytes, bytes], Sequence[tuple[str, str]], Sequence[tuple[bytes, bytes]], None
         ],
         timeout: Union[int, float, None],
-    ) -> tuple[Union[str, bytes], str]:
+    ) -> tuple[Union[str, bytes], str, str]:
         """Retrieves the data and Etag using the HTTPX library.
 
         :return: The data retrieved and the ETag.
@@ -764,22 +774,26 @@ class UrlJob(UrlJobBase):
         if response.status_code == 304:
             raise NotModifiedError(response.status_code)
 
-        # Save ETag from response into job_state; is saved in cache and used in future requests in If-None-Match header
+        # Save ETag from response into job_state; is saved in database and used in future requests in If-None-Match
+        # header
+        # Also save the media-type (MIME type)
         etag = ''
+        mime_type = ''
         if not response.history:  # no redirects
             etag = response.headers.get('ETag', '')
+            mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
         if FilterBase.filter_chain_needs_bytes(self.filter):
-            return response.content, etag
+            return response.content, etag, mime_type
 
         if self.encoding:
             response.encoding = self.encoding
 
-        return response.text, etag
+        return response.text, etag, mime_type
 
     def _retrieve_requests(
         self, headers: Union[Mapping[str, str | bytes], None], timeout: Union[int, float, None]
-    ) -> tuple[Union[str, bytes], str]:
+    ) -> tuple[Union[str, bytes], str, str]:
         """Retrieves the data and Etag using the requests library.
 
         :return: The data retrieved and the ETag.
@@ -849,13 +863,17 @@ class UrlJob(UrlJobBase):
         if response.status_code == 304:
             raise NotModifiedError(response.status_code)
 
-        # Save ETag from response into job_state; is saved in cache and used in future requests in If-None-Match header
+        # Save ETag from response into job_state; is saved in database and used in future requests in If-None-Match
+        # header
+        # Also save the media-type (MIME type)
         etag = ''
+        mime_type = ''
         if not response.history:  # no redirects
             etag = response.headers.get('ETag', '')
+            mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
         if FilterBase.filter_chain_needs_bytes(self.filter):
-            return response.content, etag
+            return response.content, etag, mime_type
 
         if self.encoding:
             response.encoding = self.encoding
@@ -870,9 +888,9 @@ class UrlJob(UrlJobBase):
             )
             response.encoding = response.apparent_encoding
 
-        return response.text, etag
+        return response.text, etag, mime_type
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -893,9 +911,9 @@ class UrlJob(UrlJobBase):
                 filename = Path(str(urlparse(self.url).path))
 
             if FilterBase.filter_chain_needs_bytes(self.filter):
-                return filename.read_bytes(), ''
+                return filename.read_bytes(), '', 'application/octet-stream'
             else:
-                return filename.read_text(), ''
+                return filename.read_text(), '', 'text/plain'
 
         if urlparse(self.url).scheme == 'ftp':
             url = urlparse(self.url)
@@ -918,7 +936,7 @@ class UrlJob(UrlJobBase):
 
                     ftp.retrbinary(f'RETR {url.path}', callback_bytes)
 
-                    return data_bytes, ''
+                    return data_bytes, '', 'application/octet-stream'
                 else:
                     data_list: list[str] = []
 
@@ -928,7 +946,7 @@ class UrlJob(UrlJobBase):
 
                     ftp.retrlines(f'RETR {url.path}', callback)
 
-                    return '\n'.join(data_list), ''
+                    return '\n'.join(data_list), '', 'text/plain'
 
         headers = self.get_headers(job_state)
 
@@ -988,7 +1006,7 @@ class UrlJob(UrlJobBase):
                         'requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
                     )
                     logger.error('See https://github.com/psf/requests/issues/6443')
-            data, etag = self._retrieve_requests(headers=headers, timeout=timeout)
+            data, etag, mime_type = self._retrieve_requests(headers=headers, timeout=timeout)
         elif not self.http_client or self.http_client == 'httpx':
             if isinstance(httpx, str):
                 raise ImportError(
@@ -1003,7 +1021,7 @@ class UrlJob(UrlJobBase):
                     "and thus are not affected by the server's weak DH key"
                 )
                 httpx._config.DEFAULT_CIPHERS = 'DEFAULT@SECLEVEL=1'
-            data, etag = self._retrieve_httpx(headers=headers, timeout=timeout)
+            data, etag, mime_type = self._retrieve_httpx(headers=headers, timeout=timeout)
         else:
             raise ValueError(
                 f"Job {job_state.job.index_number}: http_client '{self.http_client}' is not supported; cannot run job "
@@ -1016,7 +1034,7 @@ class UrlJob(UrlJobBase):
             if title:
                 self.name = html.unescape(title.group(1))[:60]
 
-        return data, etag
+        return data, etag, mime_type
 
     # def add_custom_headers(self, headers: dict[str, Any]) -> None:
     #     """
@@ -1040,7 +1058,7 @@ class UrlJob(UrlJobBase):
         ):
             # Instead of a full traceback, just show the error
             return str(exception)
-        elif requests is not None and isinstance(exception, requests.exceptions.RequestException):
+        elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
             # Instead of a full traceback, just show the error
             return str(exception)
         return tb
@@ -1072,7 +1090,7 @@ class UrlJob(UrlJobBase):
                 elif isinstance(self.ignore_http_error_codes, list):
                     ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
                 return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
-        elif requests is not None and isinstance(exception, requests.exceptions.RequestException):
+        elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
             if self.ignore_connection_errors and isinstance(exception, requests.exceptions.ConnectionError):
                 return True
             if self.ignore_timeout_errors and isinstance(exception, requests.exceptions.Timeout):
@@ -1148,7 +1166,7 @@ class BrowserJob(UrlJobBase):
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.url = location
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -1227,7 +1245,7 @@ class BrowserJob(UrlJobBase):
             else:
                 proxy_split = None
             if proxy_split:
-                proxy = {  # type: ignore[misc] # for PyCharm
+                proxy = {
                     'server': (
                         f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
                         if proxy_split.port
@@ -1688,6 +1706,7 @@ class BrowserJob(UrlJobBase):
             # extract content
             content = page.content()
             etag = response.header_value('etag') or ''
+            mime_type = response.header_value('content-type') or ''
             virtual_memory = psutil.virtual_memory().available
             swap_memory = psutil.swap_memory().free
             used_mem = start_free_mem - (virtual_memory + swap_memory)
@@ -1704,7 +1723,7 @@ class BrowserJob(UrlJobBase):
                     self.name = html.unescape(title.group(1))[:60]
 
             context.close()
-            return content, etag
+            return content, etag, mime_type
 
     def ignore_error(self, exception: Exception) -> Union[bool, str]:
         """Determine whether the error of the job should be ignored.
@@ -1842,12 +1861,12 @@ class ShellJob(Job):
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.command = location
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
-        """Runs job to retrieve the data, and returns data and ETag (which is blank).
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
+        """Runs job to retrieve the data, and returns data, ETag (which is blank) and mime_type (also blank).
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
         :param headless: For browser-based jobs, whether headless mode should be used.
-        :returns: The data retrieved and the ETag.
+        :returns: The data retrieved and the ETag and mime_type.
         :raises subprocess.CalledProcessError: Subclass of SubprocessError, raised when a process returns a non-zero
            exit status.
         :raises subprocess.TimeoutExpired: Subclass of SubprocessError, raised when a timeout expires while waiting for
@@ -1864,6 +1883,7 @@ class ShellJob(Job):
                     text=(not needs_bytes),
                 ).stdout,
                 '',
+                'application/octet-stream' if needs_bytes else 'text/plain',
             )
         except subprocess.CalledProcessError as e:
             logger.error(f'Job {self.index_number}: Command failed with returncode {e.returncode}')

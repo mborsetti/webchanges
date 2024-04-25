@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import time
 import traceback
@@ -22,22 +23,26 @@ from webchanges.reporters import ReporterBase
 if TYPE_CHECKING:
     from webchanges.jobs import JobBase
     from webchanges.main import Urlwatch
-    from webchanges.storage import _Config, CacheStorage
+    from webchanges.storage import _Config, SsdbStorage
 
 logger = logging.getLogger(__name__)
 
 
-class SnapshotShort(NamedTuple):
-    """Type for value of snapshot dict object.
+class Snapshot(NamedTuple):
+    """Type for Snapshot named tuple.
 
-    * 0: timestamp: float
-    * 1: tries: int
-    * 2: etag: str
+    * 0: data: str | bytes
+    * 1: timestamp: float
+    * 2: tries: int
+    * 3: etag: str
+    * 4: mime_type: mime_type
     """
 
+    data: Union[str, bytes]
     timestamp: float
     tries: int
     etag: str
+    mime_type: str
 
 
 class JobState(ContextManager):
@@ -47,26 +52,35 @@ class JobState(ContextManager):
     error_ignored: Union[bool, str]
     exception: Optional[Exception] = None
     generated_diff: dict[Literal['text', 'markdown', 'html'], str]
-    history_dic_snapshots: dict[str, SnapshotShort] = {}
-    new_data: str
+    history_dic_snapshots: dict[Union[str, bytes], Snapshot] = {}
+    new_data: Union[str, bytes]
     new_etag: str
+    new_mime_type: str
     new_timestamp: float
-    old_data: str = ''
+    old_snapshot = Snapshot(
+        data='',
+        timestamp=1605147837.511478,  # initialized to the first release of webchanges!
+        tries=0,
+        etag='',
+        mime_type='text/plain',
+    )
+    old_data: Union[str, bytes] = ''
     old_etag: str = ''
+    old_mime_type: str = 'text/plain'
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
     traceback: str
     tries: int = 0  # if >1, an error; value is the consecutive number of runs leading to an error
     unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
     verb: Literal['new', 'changed', 'changed,no_report', 'unchanged', 'error']
 
-    def __init__(self, cache_storage: CacheStorage, job: JobBase) -> None:
+    def __init__(self, snapshots_db: SsdbStorage, job: JobBase) -> None:
         """
         Initializes the class
 
-        :param cache_storage: The CacheStorage object with the snapshot database methods.
+        :param snapshots_db: The SsdbStorage object with the snapshot database methods.
         :param job: A JobBase object with the job information.
         """
-        self.cache_storage = cache_storage
+        self.snapshots_db = snapshots_db
         self.job = job
 
         self.generated_diff = {}
@@ -119,11 +133,18 @@ class JobState(ContextManager):
     def load(self) -> None:
         """Loads form the database the last snapshot(s) for the job."""
         guid = self.job.get_guid()
-        self.old_data, self.old_timestamp, self.tries, self.old_etag = self.cache_storage.load(guid)
+        self.old_snapshot = self.snapshots_db.load(guid)
+        # TODO: remove these
+        (
+            self.old_data,
+            self.old_timestamp,
+            self.tries,
+            self.old_etag,
+            self.old_mime_type,
+        ) = self.old_snapshot
         if self.job.compared_versions and self.job.compared_versions > 1:
             self.history_dic_snapshots = {
-                s.data: SnapshotShort(s.timestamp, s.tries, s.etag)
-                for s in self.cache_storage.get_history_snapshots(guid, self.job.compared_versions)
+                s.data: s for s in self.snapshots_db.get_history_snapshots(guid, self.job.compared_versions)
             }
 
     def save(self, use_old_data: bool = False) -> None:
@@ -135,14 +156,21 @@ class JobState(ContextManager):
         if use_old_data:
             self.new_data = self.old_data
             self.new_etag = self.old_etag
+            self.new_mime_type = self.old_mime_type
 
-        self.cache_storage.save(
-            guid=self.job.get_guid(),
+        new_snapshot = Snapshot(
             data=self.new_data,
             timestamp=self.new_timestamp,
             tries=self.tries,
             etag=self.new_etag,
+            mime_type=self.new_mime_type,
         )
+        self.snapshots_db.save(guid=self.job.get_guid(), snapshot=new_snapshot)
+        logger.info(f'Job {self.job.index_number}: Saved new data to database')
+
+    def delete_latest(self, temporary: bool = True) -> None:
+        """Removes the last instance in the snapshot database."""
+        self.snapshots_db.delete_latest(guid=self.job.get_guid(), temporary=temporary)
 
     def process(self, headless: bool = True) -> JobState:
         """Processes the job: loads it (i.e. runs it) and handles Exceptions (errors).
@@ -162,20 +190,29 @@ class JobState(ContextManager):
                 self.load()
 
                 self.new_timestamp = time.time()
-                data, self.new_etag = self.job.retrieve(self, headless)
-                logger.debug(f'Job {self.job.index_number}: Retrieved data {dict(data=data, new_etag=self.new_etag)}')
+                data, self.new_etag, mime_type = self.job.retrieve(self, headless)
+                logger.debug(
+                    f'Job {self.job.index_number}: Retrieved data '
+                    f'{dict(data=data, etag=self.new_etag, mime_type=mime_type)}'
+                )
 
                 # Apply automatic filters first
-                filtered_data = FilterBase.auto_process(self, data)
+                filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
 
                 # Apply any specified filters
                 for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filter, self.job.index_number):
-                    filtered_data = FilterBase.process(filter_kind, subfilter, self, filtered_data)
+                    filtered_data, mime_type = FilterBase.process(
+                        filter_kind, subfilter, self, filtered_data, mime_type
+                    )
 
-                self.new_data = str(filtered_data)
+                self.new_data = filtered_data
+                self.new_mime_type = mime_type
 
             except Exception as e:
                 # Job has a chance to format and ignore its error
+                # if os.getenv('PYCHARM_HOSTED'):
+                #     raise
+                self.new_timestamp = time.time()
                 self.exception = e
                 self.traceback = self.job.format_error(e, traceback.format_exc())
                 self.error_ignored = self.job.ignore_error(e)
@@ -187,6 +224,8 @@ class JobState(ContextManager):
                     )
         except Exception as e:
             # Job failed its chance to handle error
+            if os.getenv('PYCHARM_HOSTED'):
+                raise
             self.exception = e
             self.traceback = self.job.format_error(e, traceback.format_exc())
             self.error_ignored = False
@@ -225,8 +264,11 @@ class JobState(ContextManager):
         _generated_diff = self.unfiltered_diff[report_kind]
         if _generated_diff:
             # Apply any specified diff_filters
+            _mime_type = 'text/plain'
             for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.diff_filter, self.job.index_number):
-                _generated_diff = FilterBase.process(filter_kind, subfilter, self, _generated_diff)
+                _generated_diff, _mime_type = FilterBase.process(  # type: ignore[assignment]
+                    filter_kind, subfilter, self, _generated_diff, _mime_type
+                )
         self.generated_diff[report_kind] = _generated_diff
 
         return self.generated_diff[report_kind]

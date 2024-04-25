@@ -1,5 +1,5 @@
 usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
-                  [--cache FILE] [--list-jobs] [--errors [REPORTER]]
+                  [--database FILE] [--list-jobs] [--errors [REPORTER]]
                   [--test [JOB]] [--no-headless] [--test-differ JOB [JOB ...]]
                   [--dump-history JOB] [--max-workers WORKERS]
                   [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
@@ -35,8 +35,9 @@ override file defaults:
                         matching a glob pattern
   --config FILE         read configuration from FILE
   --hooks FILE          use FILE as hooks.py module to import
-  --cache FILE          use FILE as cache (snapshots database); FILE can be a
-                        redis URI
+  --database FILE, --cache FILE
+                        use FILE as snapshots database; FILE can be a redis
+                        URI
 
 job management:
   --list-jobs           list jobs and their index number

@@ -20,12 +20,11 @@ from webchanges import __docs_url__, __project_name__, __version__
 class BaseConfig:
     """Base configuration class."""
 
-    project_name: str
     config_path: Path
     config_file: Path
     jobs_def_file: Path
     hooks_file: Path
-    cache: Path
+    ssdb_file: Path
     jobs_files: list[Path] = field(default_factory=list)
 
 
@@ -57,7 +56,7 @@ class CommandConfig(BaseConfig):
     rollback_database: Optional[int]
     smtp_login: bool
     telegram_chats: bool
-    test_differ: Optional[str]
+    test_differ: Optional[list[str]]
     test_job: Union[bool, Optional[str]]
     test_reporter: Optional[str]
     verbose: Optional[int]
@@ -66,24 +65,22 @@ class CommandConfig(BaseConfig):
     def __init__(
         self,
         args: list[str],
-        project_name: str,
         config_path: Path,
         config_file: Path,
         jobs_def_file: Path,
         hooks_file: Path,
-        cache: Path,
+        ssdb_file: Path,
     ) -> None:
         """Command line arguments configuration; the arguments are stored as class attributes.
 
-        :param project_name: The name of the project.
         :param config_path: The path of the configuration directory.
         :param config_file: The path of the configuration file.
         :param jobs_def_file: The glob of the jobs file(s).
         :param hooks_file: The path of the Python hooks file.
-        :param cache: The path of the database file (or directory if using the textfiles database-engine) where
+        :param ssdb_file: The path of the database file (or directory if using the textfiles database-engine) where
            snapshots are stored.
         """
-        super().__init__(project_name, config_path, config_file, jobs_def_file, hooks_file, cache)
+        super().__init__(config_path, config_file, jobs_def_file, hooks_file, ssdb_file)
         self.jobs_files = [jobs_def_file]
         self.parse_args(args)
 
@@ -149,11 +146,13 @@ class CommandConfig(BaseConfig):
             dest='hooks_file',
         )
         group.add_argument(
+            '--database',
             '--cache',
-            default=self.cache,
+            default=self.ssdb_file,
             type=Path,
-            help='use FILE as cache (snapshots database); FILE can be a redis URI',
+            help='use FILE as snapshots database; FILE can be a redis URI',
             metavar='FILE',
+            dest='ssdb_file',
         )
 
         group = parser.add_argument_group('job management')

@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
 from webchanges.handler import JobState
@@ -19,9 +19,9 @@ class CustomLoginJob(UrlJob):
     username: str
     password: str
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
         ...  # custom code here
-        return f'Would log in to {self.url} with {self.username} and {self.password}\n', ''
+        return f'Would log in to {self.url} with {self.username} and {self.password}\n', '', ''
 
 
 class CaseFilter(FilterBase):
@@ -33,11 +33,14 @@ class CaseFilter(FilterBase):
 
     __default_subfilter__ = 'upper'
 
-    def filter(self, data: str, subfilter: Optional[dict[str, Any]]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+
         if not subfilter or subfilter.get('upper'):
-            return data.upper()
+            return data.upper(), mime_type
         elif subfilter.get('lower'):
-            return data.lower()
+            return data.lower(), mime_type
         else:
             raise ValueError(f'Unknown case subfilter {subfilter}')
 
@@ -51,10 +54,15 @@ class IndentFilter(FilterBase):
 
     __default_subfilter__ = 'indent'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if isinstance(data, bytes):
+            data = data.decode()
+
         indent = int(subfilter.get('indent', 8))
 
-        return '\n'.join((' ' * indent) + line for line in data.splitlines())
+        return '\n'.join((' ' * indent) + line for line in data.splitlines()), mime_type
 
 
 class CustomMatchUrlFilter(AutoMatchFilter):
@@ -63,8 +71,13 @@ class CustomMatchUrlFilter(AutoMatchFilter):
     MATCH = {'url': 'https://example.org/'}
 
     # An auto-match filter does not have any subfilters
-    def filter(self, data: str, subfilter: Optional[dict[str, Any]]) -> str:  # type: ignore[override]
-        return data.replace('foo', 'bar')
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
+
+        return data.replace('foo', 'bar'), mime_type
 
 
 class CustomRegexMatchUrlFilter(RegexMatchFilter):
@@ -72,8 +85,12 @@ class CustomRegexMatchUrlFilter(RegexMatchFilter):
     MATCH = {'url': re.compile('https://example.org/.*')}
 
     # An auto-match filter does not have any subfilters
-    def filter(self, data: str, subfilter: Optional[dict[str, Any]]) -> str:  # type: ignore[override]
-        return data.replace('foo', 'bar')
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
+        return data.replace('foo', 'bar'), mime_type
 
 
 class CustomTextFileReporter(TextReporter):

@@ -9,10 +9,11 @@ from __future__ import annotations
 import logging
 from typing import Optional, Union
 
+from webchanges import __project_name__
 from webchanges.config import CommandConfig
 from webchanges.handler import Report
 from webchanges.jobs import JobBase
-from webchanges.storage import CacheStorage, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import SsdbStorage, YamlConfigStorage, YamlJobsStorage
 from webchanges.util import get_new_version_number
 from webchanges.worker import run_jobs
 
@@ -26,21 +27,21 @@ class Urlwatch:
         self,
         urlwatch_config: CommandConfig,
         config_storage: YamlConfigStorage,
-        cache_storage: CacheStorage,
+        ssdb_storage: SsdbStorage,
         jobs_storage: YamlJobsStorage,
     ) -> None:
         """
 
         :param urlwatch_config: The CommandConfig object containing the program run information.
         :param config_storage: The YamlConfigStorage object containing the configuration information.
-        :param cache_storage: The CacheStorage object containing snapshot database information
+        :param ssdb_storage: The CacheStorage object containing snapshot database information
         :param jobs_storage: The YamlJobsStorage object containing information about the jobs.
         """
 
         self.urlwatch_config = urlwatch_config
 
         self.config_storage = config_storage
-        self.cache_storage = cache_storage
+        self.ssdb_storage = ssdb_storage
         self.jobs_storage = jobs_storage
 
         self.report = Report(self)
@@ -66,7 +67,7 @@ class Urlwatch:
                 self.config_storage.write_default_config(self.urlwatch_config.config_file)
                 print(
                     f'A default config has been written to {self.urlwatch_config.config_file}.'
-                    f'Use "{self.urlwatch_config.project_name} --edit-config" to customize it.'
+                    f'Use "{__project_name__} --edit-config" to customize it.'
                 )
 
     def load_jobs(self) -> None:
@@ -100,4 +101,4 @@ class Urlwatch:
     def close(self) -> None:
         """Finalizer. Create reports ands close snapshots database."""
         self.report.finish(jobs_file=self.jobs_storage.filename)
-        self.cache_storage.close()
+        self.ssdb_storage.close()

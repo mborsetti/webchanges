@@ -47,27 +47,32 @@ def python_version_warning() -> None:
 
 
 def migrate_from_legacy(
-    legacy_package: str, config_file: Path, jobs_file: Path, hooks_file: Path, cache_file: Path
+    legacy_package: str,
+    config_file: Optional[Path] = None,
+    jobs_file: Optional[Path] = None,
+    hooks_file: Optional[Path] = None,
+    ssdb_file: Optional[Path] = None,
 ) -> None:
     """Check for existence of legacy files for configuration, jobs and Python hooks and migrate them (i.e. make a copy
     to new folder and/or name). Original files are not deleted.
 
     :param legacy_package: The name of the legacy package to migrate (e.g. urlwatch).
-    :param config_file: The Path to the configuration file.
-    :param jobs_file: The Path to the jobs file.
-    :param hooks_file: The Path to the hooks file.
-    :param cache_file: The Path to the snapshot database file.
+    :param config_file: The new Path to the configuration file.
+    :param jobs_file: The new Path to the jobs file.
+    :param hooks_file: The new Path to the hooks file.
+    :param ssdb_file: The new Path to the snapshot database file.
     """
-    lg_project_path = Path.home().joinpath(f'.{legacy_package}')
-    lg_config_file = lg_project_path.joinpath(f'{legacy_package}.yaml')
-    lg_urls_file = lg_project_path.joinpath('urls.yaml')
-    lg_hooks_file = lg_project_path.joinpath('hooks.py')
-    lg_cache_path = platformdirs.user_cache_path(legacy_package)
-    lg_cache_file = lg_cache_path.joinpath('cache.db')
+    legacy_project_path = Path.home().joinpath(f'.{legacy_package}')
+    leagacy_config_file = legacy_project_path.joinpath(f'{legacy_package}.yaml')
+    legacy_urls_file = legacy_project_path.joinpath('urls.yaml')
+    legacy_hooks_file = legacy_project_path.joinpath('hooks.py')
+    legacy_cache_path = platformdirs.user_cache_path(legacy_package)
+    legacy_cache_file = legacy_cache_path.joinpath('cache.db')
     for old_file, new_file in zip(
-        (lg_config_file, lg_urls_file, lg_hooks_file, lg_cache_file), (config_file, jobs_file, hooks_file, cache_file)
+        (leagacy_config_file, legacy_urls_file, legacy_hooks_file, legacy_cache_file),
+        (config_file, jobs_file, hooks_file, ssdb_file),
     ):
-        if old_file.is_file() and not new_file.is_file():
+        if new_file and old_file.is_file() and not new_file.is_file():
             new_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(old_file, new_file)
             logger.warning(f"Copied {legacy_package} '{old_file}' file to {__project_name__} '{new_file}'.")
@@ -298,30 +303,34 @@ def main() -> None:  # pragma: no cover
     if os.name != 'nt':
         config_path = platformdirs.user_config_path(__project_name__)  # typically ~/.config/{__project_name__}
     else:
-        config_path = Path.home().joinpath('Documents').joinpath(__project_name__)
+        config_path = platformdirs.user_documents_path().joinpath(__project_name__)
 
-    # Path where the database is located; typically ~/.cache/{__project_name__}
-    # or %LOCALAPPDATA%\{__project_name__}\{__project_name__}\Cache
-    cache_path = platformdirs.user_cache_path(__project_name__)
+    # Path where the snapshot database is located; typically ~/.local/share/{__project_name__} or
+    # $XDG_DATA_HOME/{__project_name__} # in linux, ~/Library/Application Support/webchanges in macOS  and
+    # or %LOCALAPPDATA%\{__project_name__}\{__project_name__} in Windows
+    data_path = platformdirs.user_data_path(__project_name__, __project_name__.capitalize())
 
-    # Default config, jobs, hooks and cache (database) files
+    # Default config, jobs, hooks and ssdb (database) files
     default_config_file = config_path.joinpath('config.yaml')
     default_jobs_file = config_path.joinpath('jobs.yaml')
     default_hooks_file = config_path.joinpath('hooks.py')
-    default_cache_file = cache_path.joinpath('cache.db')
+    default_ssdb_file = data_path.joinpath('snapshots.db')
 
-    # Check for and if found migrate legacy (urlwatch 2.28) files
-    migrate_from_legacy('urlwatch', default_config_file, default_jobs_file, default_hooks_file, default_cache_file)
+    # Check for and if found migrate snapshot database file from version <= 3.21, which was called cache.db and located
+    # in user_cache_path
+    migrate_from_legacy('webchanges', ssdb_file=default_ssdb_file)
+
+    # Check for and if found migrate legacy (urlwatch) files
+    migrate_from_legacy('urlwatch', default_config_file, default_jobs_file, default_hooks_file, default_ssdb_file)
 
     # Parse command line arguments
     command_config = CommandConfig(
         sys.argv[1:],
-        __project_name__,
         config_path,
         default_config_file,
         default_jobs_file,
         default_hooks_file,
-        default_cache_file,
+        default_ssdb_file,
     )
 
     # Set up the logger to verbose if needed
@@ -334,10 +343,10 @@ def main() -> None:  # pragma: no cover
     from webchanges.command import UrlwatchCommand
     from webchanges.main import Urlwatch
     from webchanges.storage import (
-        CacheDirStorage,
-        CacheRedisStorage,
-        CacheSQLite3Storage,
-        CacheStorage,
+        SsdbDirStorage,
+        SsdbRedisStorage,
+        SsdbSQLite3Storage,
+        SsdbStorage,
         YamlConfigStorage,
         YamlJobsStorage,
     )
@@ -365,30 +374,29 @@ def main() -> None:  # pragma: no cover
     )  # "or 'sqlite3'" is not needed except for a mypy bug; same for the "or 4" below
     max_snapshots = command_config.max_snapshots or config_storage.config.get('database', {}).get('max_snapshots') or 4
     if database_engine == 'sqlite3':
-        cache_storage: CacheStorage = CacheSQLite3Storage(command_config.cache, max_snapshots)  # storage.py
-    elif any(str(command_config.cache).startswith(prefix) for prefix in {'redis://', 'rediss://'}):
-        cache_storage = CacheRedisStorage(command_config.cache)  # storage.py
+        ssdb_storage: SsdbStorage = SsdbSQLite3Storage(command_config.ssdb_file, max_snapshots)  # storage.py
+    elif any(str(command_config.ssdb_file).startswith(prefix) for prefix in {'redis://', 'rediss://'}):
+        ssdb_storage = SsdbRedisStorage(command_config.ssdb_file)  # storage.py
     elif database_engine.startswith('redis'):
-        cache_storage = CacheRedisStorage(database_engine)
+        ssdb_storage = SsdbRedisStorage(database_engine)
     elif database_engine == 'textfiles':
-        cache_storage = CacheDirStorage(command_config.cache)  # storage.py
+        ssdb_storage = SsdbDirStorage(command_config.ssdb_file)  # storage.py
     elif database_engine == 'minidb':
-        from webchanges.storage_minidb import (
-            CacheMiniDBStorage,  # legacy code imported only if needed (requires minidb)
-        )
+        # legacy code imported only if needed (requires minidb, which is not a dependency)
+        from webchanges.storage_minidb import SsdbMiniDBStorage
 
-        cache_storage = CacheMiniDBStorage(command_config.cache)  # storage.py
+        ssdb_storage = SsdbMiniDBStorage(command_config.ssdb_file)  # storage.py
     else:
         raise NotImplementedError(f'Database engine {database_engine} not implemented')
 
     # Setup jobs file API
     jobs_storage = YamlJobsStorage(command_config.jobs_files)  # storage.py
 
-    # Setup 'urlwatch'
-    urlwatcher = Urlwatch(command_config, config_storage, cache_storage, jobs_storage)  # main.py
+    # Setup 'webchanges'
+    urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)  # command.py
 
-    # Run 'urlwatch', starting with processing command line arguments
+    # Run 'webchanges', starting with processing command line arguments
     urlwatch_command.run()
 
     # Remove Playwright debug mode if there

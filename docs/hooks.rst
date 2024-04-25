@@ -41,7 +41,7 @@ Example ``hooks.py`` file:
 
    import re
    from pathlib import Path
-   from typing import Any, Literal
+   from typing import Any, Literal, Union
 
    from webchanges.differs import DifferBase
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
@@ -53,14 +53,14 @@ Example ``hooks.py`` file:
    class CustomLoginJob(UrlJob):
        """Custom login for my webpage.
 
-       Add `kind: hooks_custom_login` to the job to retrieve data using this class instead of the built-in ones.
+       Add ``kind: hooks_custom_login`` to the job to retrieve data using this class instead of the built-in ones.
        """
 
        __kind__ = 'hooks_custom_login'
        __required__ = ('username', 'password')  # These are added to the ones from the super classes.
 
-       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str]:
-           """:returns: The data retrieved and the ETag."""
+       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
+           """:returns: The data retrieved, the ETag, and the mime_type (Content-Type)."""
            ...  # custom code here to actually do the login.
            return super().retrieve(job_state)  # uses the existing code to then browse and capture data
 
@@ -68,16 +68,23 @@ Example ``hooks.py`` file:
    class CustomBrowserJob(UrlJobBase):
        """Custom browser job.
 
-       Add `kind: hooks_custom_browser` to the job to retrieve data using this class instead of the built-in ones.
+       Add ``kind: hooks_custom_browser`` to the job to retrieve data using this class instead of the built-in ones.
        """
 
        __kind__ = 'hooks_custom_browser'
        __is_browser__ = True  # This is required for execution in the correct parallel processing queue.
 
-       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str]:
-           """:returns: The data retrieved and the ETag."""
+       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
+           """
+           :returns: The data retrieved, the ETag, and the mime_type (Content-Type).
+           """
+
            ...  # custom code here to launch browser and capture data.
-           return f'Data captured after browsing to {self.url}\n', 'The Etag (if any) or empty string'
+           return (
+               f'Data captured after browsing to {self.url}\n',
+               'The Etag (if any) or empty string',
+               'The Content-Type (if any) or empty string',
+           )
 
 
    class CaseFilter(FilterBase):
@@ -85,10 +92,12 @@ Example ``hooks.py`` file:
 
        Needs to be selected manually, i.e. add `- hooks_case:` (or e.g. `- hooks_case: lower`) to the list of filters in
        the job's `filter:` directive. E.g.:
-       #
-       # url: example.com/hooks/case
-       # filter:
-       #   - hooks_case: lower
+
+       .. code-block:: yaml
+
+          url: example.com/hooks/len
+          filter:
+            - hooks_case: lower
 
        """
 
@@ -102,25 +111,31 @@ Example ``hooks.py`` file:
        __default_subfilter__ = 'upper'
 
        @staticmethod
-       def filter(data: str, subfilter: dict[str, Any] | None = None) -> str:
+       def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
+           """:returns: The data after being filtered and its mime_type."""
 
            if not subfilter or subfilter.get('upper'):
-               return data.upper()
+               return data.upper(), mime_type
            elif subfilter.get('lower'):
-               return data.lower()
+               return data.lower(), mime_type
            else:
                raise ValueError(f'Unknown case subfilter {subfilter}')
 
 
    class IndentFilter(FilterBase):
-       """Custom filter for indenting."""
+       """Custom filter for indenting.
 
-       # Needs to be selected manually, i.e. add ``- hooks_indent:`` (or e.g. ``- hooks_indent: 4``) to the list of
-       # filters in the job's ``filter:`` directive. E.g.:
-       #
-       # url: example.com/hooks/indent
-       # filter:
-       #   - hooks_indent: 4
+       Needs to be selected manually, i.e. add ``- hooks_indent:`` (or e.g. ``- hooks_indent: 4``) to the list of
+       filters in the job's ``filter:`` directive. E.g.:
+
+
+       .. code-block:: yaml
+
+          url: example.com/hooks/indent
+          filter:
+            - hooks_indent: 4
+
+       """
 
        __kind__ = 'hooks_indent'
 
@@ -131,11 +146,12 @@ Example ``hooks.py`` file:
        __default_subfilter__ = 'indent'
 
        @staticmethod
-       def filter(data: str, subfilter: dict[str, Any] | None = None) -> str:
+       def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
+           """:returns: The data after being filtered and its mime_type."""
 
            indent = int(subfilter.get('indent', 8))
 
-           return '\n'.join((' ' * indent) + line for line in data.splitlines())
+           return '\n'.join((' ' * indent) + line for line in data.splitlines()), mime_type
 
 
    class CustomMatchUrlFilter(AutoMatchFilter):
@@ -144,8 +160,9 @@ Example ``hooks.py`` file:
        MATCH = {'url': 'https://example.org/'}
 
        @staticmethod
-       def filter(data: str, subfilter: dict[str, Any] | None = None) -> str:
-           return data.replace('foo', 'bar')
+       def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
+           """:returns: The data after being filtered and its mime_type."""
+           return data.replace('foo', 'bar'), mime_type
 
 
    class CustomRegexMatchUrlFilter(RegexMatchFilter):
@@ -154,17 +171,22 @@ Example ``hooks.py`` file:
        MATCH = {'url': re.compile(r'https://example.org/.*')}
 
        @staticmethod
-       def filter(data: str, subfilter: dict[str, Any] | None = None) -> str:
-           return data.replace('foo', 'bar')
+       def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
+           """:returns: The data after being filtered and its mime_type."""
+           return data.replace('foo', 'bar'), mime_type
 
 
    class LenDiffer(DifferBase):
-       """Custom differ to show difference in length of the data."""
+       """Custom differ to show difference in length of the data.
 
-       # Needs to be selected manually, i.e. add the directive ``differ: hooks_differ`` the job. E.g.:
-       #
-       # url: example.com/hooks/len
-       # differ: hooks_lendiffer
+       Needs to be selected manually, i.e. add the directive ``differ: hooks_differ`` the job. E.g.:
+
+       .. code-block:: yaml
+
+          url: example.com/hooks/len
+          differ: hooks_lendiffer
+
+       """
 
        __kind__ = 'hooks_lendiffer'
 
@@ -188,12 +210,18 @@ Example ``hooks.py`` file:
 
 
    class CustomTextFileReporter(TextReporter):
-       """Custom reporter that writes the text-only report to a file."""
+       """Custom reporter that writes the text-only report to a file. Insert the filename in config.py as a filename
+       key to the text reporter.
 
-       # Needs to enabled in the config.yaml file:
-       # report:
-       #   hooks_custom_file:
-       #     enabled: true
+       Needs to enabled in the config.yaml file:
+
+       .. code-block:: yaml
+
+          report:
+            hooks_save_text_report:
+              enabled: true
+
+       """
 
        __kind__ = 'hooks_save_text_report'
 
@@ -202,14 +230,38 @@ Example ``hooks.py`` file:
 
 
    class CustomHtmlFileReporter(HtmlReporter):
-       """Custom reporter that writes the HTML report to a file."""
+       """Custom reporter that writes the HTML report to a file. Insert the filename in config.py as a filename
+       key to the html reporter.
 
-       # Needs to enabled in the config.yaml file:
-       # report:
-       #   hooks_custom_html:
-       #     enabled: true
+       .. code-block:: yaml
+
+          report:
+            hooks_save_html_report:
+              enabled: true
+
+       """
 
        __kind__ = 'hooks_save_html_report'
 
        def submit(self) -> None:
            Path(self.config['filename']).write_text('\n'.join(super().submit()))
+
+
+.. versionchanged:: 3.22
+   The definition of the filter method has changed to the one below; ``mime_type`` is both received and returned to
+   enable future features (e.g. to automate filtering and/or diffing).
+
+.. code-block:: python
+
+   def filter(data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]) -> tuple[Union[str, bytes], str]:
+   """:returns: The data after being filtered and its mime_type."""
+
+
+.. versionchanged:: 3.22
+   The definition of the retrieve method has changed to the one below; ``mime_type`` is now returned to enable future
+   features (e.g. to automate with filtering and/or diffing).
+
+.. code-block:: python
+
+   def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
+   """:returns: The data retrieved, the ETag, and the mime_type (Content-Type)."""

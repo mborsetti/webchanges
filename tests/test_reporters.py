@@ -65,7 +65,7 @@ def build_test_report() -> Report:
         """
         job = JobBase.unserialize({'name': name, 'url': url})
 
-        # Can pass in None for cache_storage as we are not going to load or save the job state for testing; also no
+        # Can pass in None for ssdb_storage as we are not going to load or save the job state for testing; also no
         # need to use it as context manager, since no processing is called on the job
         job_state = JobState(None, job)  # type: ignore[arg-type]
 

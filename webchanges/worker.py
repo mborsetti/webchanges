@@ -87,7 +87,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         job_state: JobState
         for job_state in executor.map(
             lambda jobstate: jobstate.process(headless=not urlwatcher.urlwatch_config.no_headless),
-            (stack.enter_context(JobState(urlwatcher.cache_storage, job)) for job in jobs),
+            (stack.enter_context(JobState(urlwatcher.ssdb_storage, job)) for job in jobs),
         ):
             max_tries = 0 if not job_state.job.max_tries else job_state.job.max_tries
             # tries is incremented by JobState.process when an exception (including 304) is encountered.
@@ -138,16 +138,21 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         job_state.save()
                     urlwatcher.report.unchanged(job_state)
                 else:
-                    # No exact match to previous snapshot
+                    # No exact match to previous snapshot  # TODO: evaluate whether fuzzy matching still makes sense
                     if len(job_state.history_dic_snapshots) > 1:
-                        # Find the closest fuzzy matching old snapshot ("good enough") and replace to diff against it
+                        # Find the closest fuzzy matching saved snapshot ("good enough") and use it to diff against it
                         close_matches: list[str] = difflib.get_close_matches(
-                            job_state.new_data, job_state.history_dic_snapshots.keys(), n=1
+                            str(job_state.new_data), (str(k) for k in job_state.history_dic_snapshots.keys()), n=1
                         )
                         if close_matches:
+                            logger.warning(
+                                f'Job {job_state.job.index_number}: Did not find an existing run in the database, but '
+                                f'fuzzy matched it based on the contents of the data'
+                            )
                             job_state.old_data = close_matches[0]
                             job_state.old_timestamp = job_state.history_dic_snapshots[close_matches[0]].timestamp
                             job_state.old_etag = job_state.history_dic_snapshots[close_matches[0]].etag
+                            job_state.old_mime_type = job_state.history_dic_snapshots[close_matches[0]].mime_type
                     # It has different data so we save it
                     job_state.tries = 0
                     job_state.save()

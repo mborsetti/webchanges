@@ -133,7 +133,7 @@ class FilterBase(metaclass=TrackSubClasses):
         return '\n'.join(result)
 
     @classmethod
-    def auto_process(cls, state: JobState, data: Union[str, bytes]) -> Union[str, bytes]:
+    def auto_process(cls, state: JobState, data: Union[str, bytes], mime_type: str) -> tuple[Union[str, bytes], str]:
         """Processes all automatic filters (those with "MATCH" set) in JobState.Job over the data.
 
         :param state: The JobState object.
@@ -149,9 +149,9 @@ class FilterBase(metaclass=TrackSubClasses):
             filter_instance = filtercls(state)
             if filter_instance.match():
                 logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
-                data = filter_instance.filter(data, {})  # All filters take a subfilter
+                data, mime_type = filter_instance.filter(data, mime_type, {})  # All filters take a subfilter
 
-        return data
+        return data, mime_type
 
     @classmethod
     def normalize_filter_list(
@@ -246,21 +246,23 @@ class FilterBase(metaclass=TrackSubClasses):
                     yield filter_kind, subfilter
 
     @classmethod
-    def process(cls, filter_kind: str, subfilter: dict[str, Any], job_state: JobState, data: Union[str, bytes]) -> str:
+    def process(
+        cls, filter_kind: str, subfilter: dict[str, Any], job_state: JobState, data: Union[str, bytes], mime_type: str
+    ) -> tuple[Union[str, bytes], str]:
         """Process the filter.
 
         :param filter_kind: The name of the filter.
         :param subfilter: The subfilter information.
         :param job_state: The JobState object (containing the Job).
         :param data: The data upon which to apply the filter.
-        :returns: The data after the filter has been applied.
+        :returns: The data and MIME type of the data after the filter has been applied.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
         filtercls: Optional[type[FilterBase]] = cls.__subclasses__.get(filter_kind)  # type: ignore[assignment]
         if filtercls:
-            return filtercls(job_state).filter(data, subfilter)
+            return filtercls(job_state).filter(data, mime_type, subfilter)
         else:
-            return str(data)
+            return data, mime_type
 
     @classmethod
     def filter_chain_needs_bytes(cls, filter_name: Union[str, list[Union[str, dict[str, Any]]]]) -> bool:
@@ -294,12 +296,14 @@ class FilterBase(metaclass=TrackSubClasses):
         """
         return False
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         """Method used by the filter to process data.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
+        :returns: The data and MIME type of the data after the filter has been applied.
         """
         raise NotImplementedError()
 
@@ -335,12 +339,14 @@ class AutoMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:  # type: ignore[empty-body]
+    def filter(  # type: ignore[empty-body]
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
+        :returns: The data and MIME type of the data after the filter has been applied.
         """
         pass
 
@@ -370,12 +376,14 @@ class RegexMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:  # type: ignore[empty-body]
+    def filter(  # type: ignore[empty-body]
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
+        :returns: The data and MIME type of the data after the filter has been applied.
         """
         pass
 
@@ -393,12 +401,14 @@ class BeautifyFilter(FilterBase):
 
     __default_subfilter__ = 'indent'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
+        :returns: The data and MIME type of the data after the filter has been applied.
         """
         if isinstance(bs4, str):
             self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
@@ -434,7 +444,7 @@ class BeautifyFilter(FilterBase):
                 link['href'] = urljoin(self.job.url, link['href'])
 
         indent = subfilter.get('indent', 1)
-        return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent))  # type: ignore[call-arg]
+        return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent)), mime_type  # type: ignore[call-arg]
 
 
 class AbsoluteLinksFilter(FilterBase):
@@ -442,7 +452,9 @@ class AbsoluteLinksFilter(FilterBase):
 
     __kind__ = 'absolute_links'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         tree = etree.HTML(data)
         elem: etree._Element
         for elem in tree.xpath('//*[@action]'):  # type: ignore[assignment,union-attr]
@@ -453,7 +465,7 @@ class AbsoluteLinksFilter(FilterBase):
             elem.attrib['href'] = urljoin(self.job.url, elem.attrib['href'])  # type: ignore[assignment,type-var]
         for elem in tree.xpath('//*[@src]'):  # type: ignore[assignment,union-attr]
             elem.attrib['src'] = urljoin(self.job.url, elem.attrib['src'])  # type: ignore[assignment,type-var]
-        return etree.tostring(tree, encoding='unicode', method='html')
+        return etree.tostring(tree, encoding='unicode', method='html'), mime_type
 
 
 class Html2TextFilter(FilterBase):
@@ -471,7 +483,9 @@ class Html2TextFilter(FilterBase):
 
     __default_subfilter__ = 'method'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         """Filter (process) the data.
 
         Subfilter key can be ``method`` and any method-specific option to be passed to it.
@@ -489,7 +503,7 @@ class Html2TextFilter(FilterBase):
             * ``single_line_break = True``
             * ``wrap_links = False``
 
-        * ``bs4``: Use Beautiful Soup Python library to prettify the HTML.
+        * ``bs4``: Use Beautiful Soup Python library to extract plain text.
 
           * options:
 
@@ -506,10 +520,12 @@ class Html2TextFilter(FilterBase):
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
+        :returns: The data and MIME type of the data after the filter has been applied.
         """
 
         # extract method and options from subfilter, defaulting to method html2text
+        if not isinstance(data, str):
+            raise ValueError
         options = subfilter.copy()
         method = options.pop('method', 'html2text')
 
@@ -536,7 +552,7 @@ class Html2TextFilter(FilterBase):
                     self.job.markdown_padded_tables = v
 
             # html2text returns lines with spaces at the end even if they are ignored when rendered
-            return '\n'.join(line.rstrip() for line in parser.handle(data).splitlines())
+            return '\n'.join(line.rstrip() for line in parser.handle(data).splitlines()), 'text/markdown'
 
         elif method == 'bs4':
             if isinstance(bs4, str):
@@ -554,7 +570,7 @@ class Html2TextFilter(FilterBase):
                 )
             separator: str = options.pop('separator', '')
             strip: bool = options.pop('strip', False)
-            return soup.get_text(separator=separator, strip=strip)
+            return soup.get_text(separator=separator, strip=strip), 'text/plain'
 
         elif method in {'strip_tags', 're'}:  # re for backward compatibility
             if method == 're':
@@ -564,7 +580,7 @@ class Html2TextFilter(FilterBase):
                     DeprecationWarning,
                 )
             stripped_tags = html.unescape(re.sub(r'<[^>]*>', '', data))
-            return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''))
+            return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != '')), 'text/plain'
 
         elif method == 'lynx':
             raise NotImplementedError(
@@ -593,7 +609,11 @@ class Csv2TextFilter(FilterBase):
 
     __default_subfilter__ = 'format_message'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         has_header_config = subfilter.get('has_header')
 
         if has_header_config is None:
@@ -620,7 +640,7 @@ class Csv2TextFilter(FilterBase):
             else:
                 lines.append(message.format(*i))
 
-        return '\n'.join(lines)
+        return '\n'.join(lines), mime_type
 
 
 class PypdfFilter(FilterBase):
@@ -639,7 +659,9 @@ class PypdfFilter(FilterBase):
 
     __default_subfilter__ = 'password'
 
-    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         # data must be bytes
         if not isinstance(data, bytes):
             raise ValueError(
@@ -668,7 +690,7 @@ class PypdfFilter(FilterBase):
         for page in reader.pages:
             text.append(page.extract_text())
 
-        return '\n'.join(text)
+        return '\n'.join(text), mime_type
 
 
 class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
@@ -689,7 +711,9 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
 
     __default_subfilter__ = 'password'
 
-    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         # data must be bytes
         if not isinstance(data, bytes):
             raise ValueError(
@@ -700,13 +724,16 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
         if isinstance(pdftotext, str):
             self.raise_import_error('pdftotext', self.__kind__, pdftotext)
 
-        return '\n'.join(
-            pdftotext.PDF(
-                io.BytesIO(data),
-                password=subfilter.get('password', ''),
-                raw=subfilter.get('method', False),
-                physical=subfilter.get('physical', True),
+        return (
+            '\n'.join(
+                pdftotext.PDF(
+                    io.BytesIO(data),
+                    password=subfilter.get('password', ''),
+                    raw=subfilter.get('method', False),
+                    physical=subfilter.get('physical', True),
+                ),
             ),
+            'text/plain',
         )
 
 
@@ -717,7 +744,9 @@ class Ical2TextFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         if isinstance(vobject, str):
             self.raise_import_error('vobject', self.__kind__, vobject)
 
@@ -750,7 +779,10 @@ class Ical2TextFilter(FilterBase):
 
                 result.append(f'{date_str}: {event.summary.value}')
 
-        return '\n'.join(result)
+        return (
+            '\n'.join(result),
+            'text/plain',
+        )
 
 
 class FormatJsonFilter(FilterBase):
@@ -765,12 +797,16 @@ class FormatJsonFilter(FilterBase):
 
     __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         self.job.set_to_monospace()
         sort_keys = subfilter.get('sort_keys', False)
         indentation = int(subfilter.get('indentation', 4))
         parsed_json = jsonlib.loads(data)
-        return jsonlib.dumps(parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation)
+        if not mime_type.endswith('json'):
+            mime_type = 'application/json'
+        return jsonlib.dumps(parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation), mime_type
 
 
 class FormatXMLFilter(FilterBase):
@@ -786,9 +822,13 @@ class FormatXMLFilter(FilterBase):
     #
     # __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         parsed_xml = etree.XML(data)
-        return etree.tostring(parsed_xml, encoding='unicode', pretty_print=True)
+        if not mime_type.endswith('xml'):
+            mime_type = 'application/xml'
+        return etree.tostring(parsed_xml, encoding='unicode', pretty_print=True), mime_type
 
 
 class PrettyXMLFilter(FilterBase):
@@ -802,9 +842,13 @@ class PrettyXMLFilter(FilterBase):
 
     __default_subfilter__ = 'indentation'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         indentation = int(subfilter.get('indentation', 2))
-        return minidom.parseString(data).toprettyxml(indent=' ' * indentation)  # noqa: S318 use defusedxml. TODO
+        if not mime_type.endswith('xml'):
+            mime_type = 'application/xml'
+        return minidom.parseString(data).toprettyxml(indent=' ' * indentation), mime_type  # noqa: S318 use defusedxml.
 
 
 class KeepLinesContainingFilter(FilterBase):
@@ -821,12 +865,18 @@ class KeepLinesContainingFilter(FilterBase):
 
     def filter(  # type: ignore[override]
         self: Union['KeepLinesContainingFilter', 'GrepFilter'],
-        data: str,
+        data: Union[str, bytes],
+        mime_type: str,
         subfilter: dict[str, Any],
-    ) -> str:
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         if 'text' in subfilter:
             if isinstance(subfilter['text'], str):
-                return ''.join(line for line in data.splitlines(keepends=True) if subfilter['text'] in line).rstrip()
+                return (
+                    ''.join(line for line in data.splitlines(keepends=True) if subfilter['text'] in line).rstrip(),
+                    mime_type,
+                )
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
@@ -834,9 +884,12 @@ class KeepLinesContainingFilter(FilterBase):
                 )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
-                return ''.join(
-                    line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line)
-                ).rstrip()
+                return (
+                    ''.join(
+                        line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line)
+                    ).rstrip(),
+                    mime_type,
+                )
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
@@ -860,19 +913,21 @@ class GrepFilter(FilterBase):
 
     __default_subfilter__ = 're'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
+        :returns: The data and MIME type of the data after the filter has been applied.
         """
         warnings.warn(
             f"The 'grep' filter is deprecated; replace with 'keep_lines_containing' + 're' subfilter"
             f' ({self.job.get_indexed_location()})',
             DeprecationWarning,
         )
-        return KeepLinesContainingFilter.filter(self, data, subfilter)
+        return KeepLinesContainingFilter.filter(self, data, mime_type, subfilter)
 
 
 class DeleteLinesContainingFilter(FilterBase):
@@ -889,14 +944,18 @@ class DeleteLinesContainingFilter(FilterBase):
 
     def filter(  # type: ignore[override]
         self: Union['DeleteLinesContainingFilter', 'GrepIFilter'],
-        data: str,
+        data: Union[str, bytes],
+        mime_type: str,
         subfilter: dict[str, Any],
-    ) -> str:
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         if 'text' in subfilter:
             if isinstance(subfilter['text'], str):
-                return ''.join(
-                    line for line in data.splitlines(keepends=True) if subfilter['text'] not in line
-                ).rstrip()
+                return (
+                    ''.join(line for line in data.splitlines(keepends=True) if subfilter['text'] not in line).rstrip(),
+                    mime_type,
+                )
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
@@ -904,9 +963,12 @@ class DeleteLinesContainingFilter(FilterBase):
                 )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
-                return ''.join(
-                    line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line) is None
-                ).rstrip()
+                return (
+                    ''.join(
+                        line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line) is None
+                    ).rstrip(),
+                    mime_type,
+                )
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
@@ -930,13 +992,15 @@ class GrepIFilter(FilterBase):
 
     __default_subfilter__ = 're'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         warnings.warn(
             f"The 'grepi' filter is deprecated; replace with 'delete_lines_containing' + 're' subfilter"
             f' ({self.job.get_indexed_location()})',
             DeprecationWarning,
         )
-        return DeleteLinesContainingFilter.filter(self, data, subfilter)
+        return DeleteLinesContainingFilter.filter(self, data, mime_type, subfilter)
 
 
 class StripFilter(FilterBase):
@@ -952,36 +1016,40 @@ class StripFilter(FilterBase):
 
     __default_subfilter__ = 'chars'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         if subfilter.get('splitlines'):
             lines = data.splitlines()
 
             if 'side' in subfilter:
                 if subfilter['side'] == 'right':
-                    return '\n'.join([line.rstrip(subfilter.get('chars')) for line in lines])
+                    return '\n'.join([line.rstrip(subfilter.get('chars')) for line in lines]), mime_type
                 if subfilter['side'] == 'left':
-                    return '\n'.join([line.lstrip(subfilter.get('chars')) for line in lines])
+                    return '\n'.join([line.lstrip(subfilter.get('chars')) for line in lines]), mime_type
 
                 raise ValueError(
                     f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
                     f'({self.job.get_indexed_location()})'
                 )
 
-            return '\n'.join([line.strip(subfilter.get('chars')) for line in lines])
+            return '\n'.join([line.strip(subfilter.get('chars')) for line in lines]), mime_type
 
         else:
             if 'side' in subfilter:
                 if subfilter['side'] == 'right':
-                    return data.rstrip(subfilter.get('chars'))
+                    return data.rstrip(subfilter.get('chars')), mime_type
                 if subfilter['side'] == 'left':
-                    return data.lstrip(subfilter.get('chars'))
+                    return data.lstrip(subfilter.get('chars')), mime_type
 
                 raise ValueError(
                     f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
                     f'({self.job.get_indexed_location()})'
                 )
 
-            return data.strip(subfilter.get('chars'))
+            return data.strip(subfilter.get('chars')), mime_type
 
 
 class StripLinesFilter(FilterBase):
@@ -991,13 +1059,17 @@ class StripLinesFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         warnings.warn(
             f"The 'strip_each_line' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: "
             f"true' ({self.job.get_indexed_location()})",
             DeprecationWarning,
         )
-        return '\n'.join([line.strip() for line in data.splitlines()])
+        if not isinstance(data, str):
+            raise ValueError
+        return '\n'.join([line.strip() for line in data.splitlines()]), mime_type
 
 
 class FilterBy(Enum):
@@ -1061,7 +1133,11 @@ class ElementByIdFilter(FilterBase):
 
     __default_subfilter__ = 'id'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         if 'id' not in subfilter:
             raise ValueError(
                 f"The 'element-by-id' filter needs an id for filtering. ({self.job.get_indexed_location()})"
@@ -1069,7 +1145,7 @@ class ElementByIdFilter(FilterBase):
 
         element_by_id = ElementsBy(FilterBy.ATTRIBUTE, 'id', subfilter['id'])
         element_by_id.feed(data)
-        return element_by_id.get_html()
+        return element_by_id.get_html(), mime_type
 
 
 class ElementByClassFilter(FilterBase):
@@ -1083,7 +1159,11 @@ class ElementByClassFilter(FilterBase):
 
     __default_subfilter__ = 'class'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         if 'class' not in subfilter:
             raise ValueError(
                 f"The 'element-by-class' filter needs a class for filtering. ({self.job.get_indexed_location()})"
@@ -1091,7 +1171,7 @@ class ElementByClassFilter(FilterBase):
 
         element_by_class = ElementsBy(FilterBy.ATTRIBUTE, 'class', subfilter['class'])
         element_by_class.feed(data)
-        return element_by_class.get_html()
+        return element_by_class.get_html(), mime_type
 
 
 class ElementByStyleFilter(FilterBase):
@@ -1105,7 +1185,11 @@ class ElementByStyleFilter(FilterBase):
 
     __default_subfilter__ = 'style'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         if 'style' not in subfilter:
             raise ValueError(
                 f"The 'element-by-style' filter needs a style for filtering. ({self.job.get_indexed_location()})"
@@ -1113,7 +1197,7 @@ class ElementByStyleFilter(FilterBase):
 
         element_by_style = ElementsBy(FilterBy.ATTRIBUTE, 'style', subfilter['style'])
         element_by_style.feed(data)
-        return element_by_style.get_html()
+        return element_by_style.get_html(), mime_type
 
 
 class ElementByTagFilter(FilterBase):
@@ -1127,7 +1211,11 @@ class ElementByTagFilter(FilterBase):
 
     __default_subfilter__ = 'tag'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         if 'tag' not in subfilter:
             raise ValueError(
                 f"The 'element-by-tag' filter needs a tag for filtering. ({self.job.get_indexed_location()})"
@@ -1135,7 +1223,7 @@ class ElementByTagFilter(FilterBase):
 
         element_by_tag = ElementsBy(FilterBy.TAG, subfilter['tag'])
         element_by_tag.feed(data)
-        return element_by_tag.get_html()
+        return element_by_tag.get_html(), mime_type
 
 
 class Sha1SumFilter(FilterBase):
@@ -1145,10 +1233,27 @@ class Sha1SumFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         if isinstance(data, str):
             data = data.encode(errors='ignore')
-        return hashlib.sha1(data, usedforsecurity=False).hexdigest()
+        return hashlib.sha1(data, usedforsecurity=False).hexdigest(), 'text/plain'
+
+
+class Sha256SumFilter(FilterBase):
+    """Calculate the SHA-256 checksum of the content."""
+
+    __kind__ = 'sha256sum'
+
+    __no_subfilter__ = True
+
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if isinstance(data, str):
+            data = data.encode(errors='ignore')
+        return hashlib.sha256(data, usedforsecurity=False).hexdigest(), 'text/plain'
 
 
 class HexDumpFilter(FilterBase):
@@ -1158,14 +1263,19 @@ class HexDumpFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         if isinstance(data, str):
             data = data.encode(errors='ignore')
         arr = bytearray(data)
         blocks = [arr[i * 16 : (i + 1) * 16] for i in range(int((len(arr) + (16 - 1)) / 16))]
-        return '\n'.join(
-            f"{' '.join(f'{c:02x}' for c in block):49}{''.join((chr(c) if (31 < c < 127) else '.') for c in block)}"
-            for block in blocks
+        return (
+            '\n'.join(
+                f"{' '.join(f'{c:02x}' for c in block):49}{''.join((chr(c) if (31 < c < 127) else '.') for c in block)}"
+                for block in blocks
+            ),
+            'text/plain',
         )
 
 
@@ -1376,10 +1486,14 @@ class CSSFilter(FilterBase):
     skip: int
     maxitems: int
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         lxml_parser = LxmlParser('css', subfilter, 'selector', self.job)
         lxml_parser.feed(data)
-        return lxml_parser.get_filtered_data(self.job.index_number)
+        return lxml_parser.get_filtered_data(self.job.index_number), mime_type
 
 
 class XPathFilter(FilterBase):
@@ -1401,10 +1515,14 @@ class XPathFilter(FilterBase):
     skip: int
     maxitems: int
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         lxml_parser = LxmlParser('xpath', subfilter, 'path', self.job)
         lxml_parser.feed(data)
-        return lxml_parser.get_filtered_data(self.job.index_number)
+        return lxml_parser.get_filtered_data(self.job.index_number), mime_type
 
 
 class ReSubFilter(FilterBase):
@@ -1419,12 +1537,14 @@ class ReSubFilter(FilterBase):
 
     __default_subfilter__ = 'pattern'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         if 'pattern' not in subfilter:
             raise ValueError(f"The '{self.__kind__}' filter needs a pattern. ({self.job.get_indexed_location()})")
 
         # Default: Replace with empty string if no "repl" value is set
-        return re.sub(subfilter['pattern'], subfilter.get('repl', ''), data)
+        return re.sub(subfilter['pattern'], subfilter.get('repl', ''), data), mime_type
 
 
 class RegexFindall(FilterBase):
@@ -1439,13 +1559,20 @@ class RegexFindall(FilterBase):
 
     __default_subfilter__ = 'pattern'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         if 'pattern' not in subfilter:
             raise ValueError(f"The '{self.__kind__}' filter needs a pattern. ({self.job.get_indexed_location()})")
 
         # Default: Replace with full match if no "repl" value is set
-        return '\n'.join(
-            [match.expand(subfilter.get('repl', r'\g<0>')) for match in re.finditer(subfilter['pattern'], data)]
+        return (
+            '\n'.join(
+                [match.expand(subfilter.get('repl', r'\g<0>')) for match in re.finditer(subfilter['pattern'], data)]
+            ),
+            mime_type,
         )
 
 
@@ -1461,16 +1588,20 @@ class SortFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         """Filter (process) the data.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The filtered (processed) data.
+        :returns: The data and MIME type of the data after the filter has been applied.
         """
+        if not isinstance(data, str):
+            raise ValueError
         reverse = isinstance(subfilter, dict) and subfilter.get('reverse', False) is True
         separator = subfilter.get('separator', '\n')
-        return separator.join(sorted(data.split(separator), key=str.casefold, reverse=reverse))
+        return separator.join(sorted(data.split(separator), key=str.casefold, reverse=reverse)), mime_type
 
 
 class RemoveRepeatedFilter(FilterBase):
@@ -1486,7 +1617,11 @@ class RemoveRepeatedFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         separator = subfilter.get('separator', '\n')
         ignore_case = subfilter.get('ignore_case', False)
         consecutive = subfilter.get('adjacent', True)
@@ -1508,7 +1643,7 @@ class RemoveRepeatedFilter(FilterBase):
                     past_lines.append(line.strip().lower())
                     uniq_lines.append(line)
 
-        return separator.join(uniq_lines)
+        return separator.join(uniq_lines), mime_type
 
 
 class RemoveDuplicateLinesFilter(FilterBase):
@@ -1522,7 +1657,11 @@ class RemoveDuplicateLinesFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not isinstance(data, str):
+            raise ValueError
         separator = subfilter.get('separator', '\n')
         data_lines = data.split(separator)
 
@@ -1533,7 +1672,7 @@ class RemoveDuplicateLinesFilter(FilterBase):
                     yield line
                     seen.add(line)
 
-        return separator.join(get_unique_lines(data_lines))
+        return separator.join(get_unique_lines(data_lines)), mime_type
 
 
 class ReverseFilter(FilterBase):
@@ -1547,9 +1686,11 @@ class ReverseFilter(FilterBase):
 
     __default_subfilter__ = 'separator'
 
-    def filter(self, data: str, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         separator = subfilter.get('separator', '\n')
-        return separator.join(reversed(data.split(separator)))
+        return separator.join(reversed(data.split(separator))), mime_type
 
 
 def _pipe_filter(f_cls: FilterBase, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
@@ -1605,8 +1746,12 @@ class ExecuteFilter(FilterBase):
 
     __default_subfilter__ = 'command'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        return _pipe_filter(self, data, subfilter)
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not mime_type.startswith('text'):
+            mime_type = 'text/plain'
+        return _pipe_filter(self, data, subfilter), mime_type
 
 
 class ShellPipeFilter(FilterBase):
@@ -1620,8 +1765,12 @@ class ShellPipeFilter(FilterBase):
 
     __default_subfilter__ = 'command'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
-        return _pipe_filter(self, data, subfilter)
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        if not mime_type.startswith('text'):
+            mime_type = 'text/plain'
+        return _pipe_filter(self, data, subfilter), mime_type
 
 
 class OCRFilter(FilterBase):  # pragma: has-pytesseract
@@ -1635,7 +1784,9 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
         'timeout': 'Timeout (in seconds) for OCR (default 10 seconds)',
     }
 
-    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         if not isinstance(data, bytes):
             raise ValueError(
                 f"The '{self.__kind__}' filter needs bytes input (is it the first filter?). "
@@ -1651,7 +1802,10 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
         if isinstance(pytesseract, str):
             self.raise_import_error('pytesseract', self.__kind__, pytesseract)
 
-        return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip()
+        return (
+            pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip(),
+            'text/plain',
+        )
 
 
 class JQFilter(FilterBase):  # pragma: has-jq
@@ -1667,7 +1821,9 @@ class JQFilter(FilterBase):  # pragma: has-jq
 
     __default_subfilter__ = 'query'
 
-    def filter(self, data: Union[str, bytes], subfilter: dict[str, Any]) -> str:
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
         if 'query' not in subfilter:
             raise ValueError(f"The 'jq' filter needs a query. ({self.job.get_indexed_location()})")
         try:
@@ -1678,7 +1834,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
         if isinstance(jq, str):
             self.raise_import_error('jq', self.__kind__, jq)
 
-        return jq.text(subfilter['query'], jsondata)
+        return jq.text(subfilter['query'], jsondata), 'text/plain'
         # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59
         # however it aborts execution(!) during testing
         # return '\n'.join(json.dumps(v, ensure_ascii=False) for v in (jq.compile(subfilter['query'], jsondata)))
@@ -1690,16 +1846,16 @@ class Ascii85(FilterBase):
     Ascii85 encoding is much more efficient than Base64.
     """
 
-    # contributed by robgmills https://github.com/thp/urlwatch/pull/626
-
     __kind__ = 'ascii85'
 
     __no_subfilter__ = True
 
     __uses_bytes__ = True
 
-    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        return base64.a85decode(data).decode()
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        return base64.a85decode(data).decode(), mime_type
 
 
 class Base64(FilterBase):
@@ -1708,13 +1864,13 @@ class Base64(FilterBase):
     Base64 encoding causes an overhead of 33–37% relative to the size of the original binary data.
     """
 
-    # contributed by robgmills https://github.com/thp/urlwatch/pull/626
-
     __kind__ = 'base64'
 
     __no_subfilter__ = True
 
     __uses_bytes__ = True
 
-    def filter(self, data: bytes, subfilter: dict[str, Any]) -> str:  # type: ignore[override]
-        return base64.b64decode(data).decode()
+    def filter(
+        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
+    ) -> tuple[Union[str, bytes], str]:
+        return base64.b64decode(data).decode(), mime_type

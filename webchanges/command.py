@@ -26,7 +26,7 @@ from zoneinfo import ZoneInfo
 from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.differs import DifferBase
 from webchanges.filters import FilterBase
-from webchanges.handler import JobState, Report, SnapshotShort
+from webchanges.handler import JobState, Report
 from webchanges.jobs import BrowserJob, JobBase, NotModifiedError, UrlJob
 from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
 from webchanges.reporters import ReporterBase, xmpp_have_password, xmpp_set_password
@@ -444,27 +444,33 @@ class UrlwatchCommand:
         # Add defaults, as if when run
         job = job.with_defaults(self.urlwatcher.config_storage.config)
 
-        with JobState(self.urlwatcher.cache_storage, job) as job_state:
+        with JobState(self.urlwatcher.ssdb_storage, job) as job_state:
             job_state.process(headless=not self.urlwatch_config.no_headless)
             duration = time.perf_counter() - start
             if job_state.exception is not None:
                 raise job_state.exception from job_state.exception
-            print(job_state.job.pretty_name())
-            print('-' * len(job_state.job.pretty_name()))
+            output = [
+                job_state.job.pretty_name(),
+                ('-' * len(job_state.job.pretty_name())),
+            ]
             if job_state.job.note:
-                print(job_state.job.note)
-            print()
-            print(job_state.new_data)
-            print()
-            print('--')
-            print(f'Job tested in {dur_text(duration)} with {__project_name__} {__version__}.')
-
+                output.append(job_state.job.note)
+            output.extend(
+                [
+                    '',
+                    str(job_state.new_data),
+                    '',
+                    '--',
+                    f'Job tested in {dur_text(duration)} with {__project_name__} {__version__}.',
+                ]
+            )
+            print('\n'.join(output))
         return
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
-    def test_differ(self, arg_test_differ: Union[str, list[str]]) -> int:
+    def test_differ(self, arg_test_differ: list[str]) -> int:
         """
         Runs diffs for a job on all the saved snapshots and outputs the result to stdout or whatever reporter is
         selected with --test-reporter.
@@ -474,19 +480,22 @@ class UrlwatchCommand:
         """
         report = Report(self.urlwatcher)
         self.urlwatch_config.jobs_files = [Path('--test-differ')]  # for report footer
-        if isinstance(arg_test_differ, list):
+        if len(arg_test_differ) == 1:
+            job_id = arg_test_differ[0]
+            max_diffs = None
+        elif len(arg_test_differ) == 2:
             job_id, max_diffs_str = arg_test_differ
             max_diffs = int(max_diffs_str)
         else:
-            job_id = arg_test_differ
-            max_diffs = None
+            raise ValueError('--test-differ takes a maximum of two arguments')
+
         job = self._find_job_with_defaults(job_id)
 
         # TODO: The below is a hack; must find whether data is markdown programmatically (e.g. save it in database)
         if job.filter:
             job.is_markdown = any('html2text' in filter_type for filter_type in job.filter)
 
-        history_data = self.urlwatcher.cache_storage.get_history_snapshots(job.get_guid())
+        history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.get_guid())
 
         num_snapshots = len(history_data)
         if num_snapshots == 0:
@@ -501,7 +510,7 @@ class UrlwatchCommand:
 
         max_diffs = max_diffs or num_snapshots - 1
         for i in range(max_diffs):
-            with JobState(self.urlwatcher.cache_storage, job) as job_state:
+            with JobState(self.urlwatcher.ssdb_storage, job) as job_state:
                 job_state.new_data = history_data[i].data
                 job_state.new_timestamp = history_data[i].timestamp
                 job_state.new_etag = history_data[i].etag
@@ -510,12 +519,9 @@ class UrlwatchCommand:
                     job_state.old_timestamp = history_data[i + 1].timestamp
                     job_state.old_etag = history_data[i + 1].etag
                 else:
-                    history_dic_snapshots = {
-                        s.data: SnapshotShort(s.timestamp, s.tries, s.etag)
-                        for s in history_data[i + 1 : i + 1 + job.compared_versions]
-                    }
+                    history_dic_snapshots = {s.data: s for s in history_data[i + 1 : i + 1 + job.compared_versions]}
                     close_matches: list[str] = difflib.get_close_matches(
-                        job_state.new_data, history_dic_snapshots.keys(), n=1
+                        str(job_state.new_data), history_dic_snapshots.keys(), n=1  # type: ignore[arg-type]
                     )
                     if close_matches:
                         job_state.old_data = close_matches[0]
@@ -544,8 +550,15 @@ class UrlwatchCommand:
         return 0
 
     def dump_history(self, job_id: str) -> int:
+        """
+        Displays the historical data stored in the snapshot database for a job.
+
+        :param job_id: The Job ID.
+        :return: An argument to be used in sys.exit.
+        """
+
         job = self._find_job_with_defaults(job_id)
-        history_data = self.urlwatcher.cache_storage.get_history_snapshots(job.get_guid())
+        history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.get_guid())
 
         print(f'History for job {job.get_indexed_location()}:')
         print(f'(ID: {job.get_guid()})')
@@ -553,13 +566,14 @@ class UrlwatchCommand:
         if history_data:
             print('=' * 50)
         for i, snapshot in enumerate(history_data):
-            etag = f'; ETag: {snapshot[3]}' if snapshot[3] else ''
-            tries = f'; error run (number {snapshot[2]})' if snapshot[2] else ''
-            total_failed += snapshot[2] > 0
+            mime_type = f'; {snapshot.mime_type}' if snapshot.mime_type else ''
+            etag = f'; ETag: {snapshot.etag}' if snapshot.etag else ''
+            tries = f'; error run (number {snapshot.tries})' if snapshot.tries else ''
+            total_failed += snapshot.tries > 0
             tz = self.urlwatcher.report.config['report']['tz']
             tzinfo = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
-            dt = datetime.fromtimestamp(snapshot[1], tzinfo)
-            header = f'{i + 1}) {email.utils.format_datetime(dt)}{etag}{tries}'
+            dt = datetime.fromtimestamp(snapshot.timestamp, tzinfo)
+            header = f'{i + 1}) {email.utils.format_datetime(dt)}{mime_type}{etag}{tries}'
             sep_len = max(50, len(header))
             print(header)
             print('-' * sep_len)
@@ -596,7 +610,7 @@ class UrlwatchCommand:
 
                 for job_state in executor.map(
                     lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
-                    (stack.enter_context(JobState(self.urlwatcher.cache_storage, job)) for job in jobs),
+                    (stack.enter_context(JobState(self.urlwatcher.ssdb_storage, job)) for job in jobs),
                 ):
                     if job_state.exception is None or isinstance(job_state.exception, NotModifiedError):
                         if (
@@ -674,7 +688,7 @@ class UrlwatchCommand:
     def delete_snapshot(self, job_id: Union[str, int]) -> int:
         job = self._find_job_with_defaults(job_id)
 
-        deleted = self.urlwatcher.cache_storage.delete_latest(job.get_guid())
+        deleted = self.urlwatcher.ssdb_storage.delete_latest(job.get_guid())
         if deleted:
             print(f'Deleted last snapshot of {job.get_indexed_location()}')
             return 0
@@ -725,11 +739,11 @@ class UrlwatchCommand:
                     old_loc = job.get_location()
                     print(f'Moving location of "{old_loc}" to "{new_loc}"')
                     old_guid = job.get_guid()
-                    if old_guid not in self.urlwatcher.cache_storage.get_guids():
+                    if old_guid not in self.urlwatcher.ssdb_storage.get_guids():
                         print(f'No snapshots found for "{old_loc}"')
                         return 1
                     job.set_base_location(new_loc)
-                    num_searched = self.urlwatcher.cache_storage.move(old_guid, job.get_guid())
+                    num_searched = self.urlwatcher.ssdb_storage.move(old_guid, job.get_guid())
                     if num_searched:
                         print(f'Searched through {num_searched:,} snapshots and moved "{old_loc}" to "{new_loc}"')
                 else:
@@ -813,7 +827,7 @@ class UrlwatchCommand:
             """Builds a pseudo-job for the reporter to run on."""
             job = JobBase.unserialize({'name': job_name, 'url': url})
 
-            # Can pass in None for cache_storage, as we are not going to load or save the job state for
+            # Can pass in None for ssdb_storage, as we are not going to load or save the job state for
             # testing; also no need to use it as context manager, since no processing is called on the job
             job_state = JobState(None, job)  # type: ignore[arg-type]
 
@@ -1061,23 +1075,23 @@ class UrlwatchCommand:
             self._exit(self.edit_hooks())
 
         if self.urlwatch_config.gc_database:
-            self.urlwatcher.cache_storage.gc(
+            self.urlwatcher.ssdb_storage.gc(
                 [job.get_guid() for job in self.urlwatcher.jobs], self.urlwatch_config.gc_database
             )
-            self.urlwatcher.cache_storage.close()
+            self.urlwatcher.ssdb_storage.close()
             self._exit(0)
 
         if self.urlwatch_config.clean_database:
-            self.urlwatcher.cache_storage.clean_cache(
+            self.urlwatcher.ssdb_storage.clean_ssdb(
                 [job.get_guid() for job in self.urlwatcher.jobs], self.urlwatch_config.clean_database
             )
-            self.urlwatcher.cache_storage.close()
+            self.urlwatcher.ssdb_storage.close()
             self._exit(0)
 
         if self.urlwatch_config.rollback_database:
             tz = self.urlwatcher.report.config['report']['tz']
-            self.urlwatcher.cache_storage.rollback_cache(self.urlwatch_config.rollback_database, tz)
-            self.urlwatcher.cache_storage.close()
+            self.urlwatcher.ssdb_storage.rollback_cache(self.urlwatch_config.rollback_database, tz)
+            self.urlwatcher.ssdb_storage.close()
             self._exit(0)
 
         if self.urlwatch_config.delete_snapshot:

@@ -116,9 +116,9 @@ def test_url(job: JobBase) -> None:
     data = d['input']
     # noinspection PyTypeChecker
     with JobState(None, job) as job_state:  # type: ignore[arg-type]
-        data = FilterBase.auto_process(job_state, data)
+        data, mime_type = FilterBase.auto_process(job_state, data, '')
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
-            data = FilterBase.process(filter_kind, subfilter, job_state, data)
+            data, mime_type = FilterBase.process(filter_kind, subfilter, job_state, data, '')
 
         expected_output_data = d['output']
         assert data == expected_output_data

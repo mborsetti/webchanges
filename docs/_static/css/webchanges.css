@@ -6,7 +6,7 @@ See https://docs.readthedocs.io/en/stable/guides/adding-custom-css.html#overridi
 /* This line is theme specific - it includes the base theme CSS */
 /*@import '../alabaster.css';  /* for Alabaster */
 @import 'theme.css';       /* for the Read the Docs theme */
-
+@import url('https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap');
 .strike {
   text-decoration: line-through;
 }

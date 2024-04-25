@@ -22,7 +22,7 @@ import pytest
 from webchanges.differs import CommandDiffer, DifferBase, UnifiedDiffer
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase, ShellJob
-from webchanges.storage import CacheSQLite3Storage
+from webchanges.storage import SsdbSQLite3Storage
 
 py_latest_only = cast(
     Callable[[Callable], Callable],
@@ -111,9 +111,9 @@ def generate_random_string(length: int = 39) -> str:
 @pytest.fixture()  # type: ignore[misc]
 def job_state() -> JobState:
     """Get a JobState object for testing."""
-    cache_file = ':memory:'
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
-    job_state = JobState(cache_storage, ShellJob(command=''))
+    ssdb_file = ':memory:'
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    job_state = JobState(ssdb_storage, ShellJob(command=''))
     job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
     job_state.new_timestamp = 1605147837.511478
     return job_state
@@ -456,8 +456,8 @@ def test_command_change(job_state: JobState) -> None:
         command = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
     job_state.job.differ = {'command': command}  # test with no differ name
     expected = [
-        'Old: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        'New: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
     ]
     job_state.job.is_markdown = True
     diff = job_state.get_diff(tz='Etc/UTC')
@@ -470,8 +470,8 @@ def test_command_change(job_state: JobState) -> None:
     # redo as html
     expected = [
         # f'Using differ &quot;{{&#x27;command&#x27;: &#x27;{html.escape(command)}&#x27;}}&quot;',
-        'Old: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        'New: Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
     ]
     diff = job_state.get_diff(report_kind='html')
     assert diff.splitlines()[1:3] == expected
@@ -489,9 +489,12 @@ def test_command_error(job_state: JobState) -> None:
     else:
         command = 'bash -c " echo \'This is a custom diff\'; exit 2" #'
     job_state.job.differ = {'command': command}  # test with no differ name
-    with pytest.raises(RuntimeError) as pytest_wrapped_e:
-        job_state.get_diff()
-        assert str(pytest_wrapped_e.value) == (
+    job_state.get_diff()
+    assert isinstance(job_state.exception, RuntimeError)
+    if os.name == 'nt':
+        assert str(job_state.exception) == (f"Job 0: External differ '{{'command': '{command}'}}' returned '' ()")
+    else:
+        assert str(job_state.exception) == (
             f"Job 0: External differ '{{'command': '{command}'}}' returned 'dir: cannot access "
             "'/x': No such file or directory' ()"
         )
@@ -502,10 +505,10 @@ def test_command_bad_command(job_state: JobState) -> None:
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     job_state.job.differ = {'name': 'command', 'command': 'dfgfdgsdfg'}
-    with pytest.raises(FileNotFoundError) as pytest_wrapped_e:
-        job_state.get_diff()
+    job_state.get_diff()
+    assert isinstance(job_state.exception, FileNotFoundError)
     if os.name == 'nt':
-        assert str(pytest_wrapped_e.value) == '[WinError 2] The system cannot find the file specified'
+        assert str(job_state.exception) == '[WinError 2] The system cannot find the file specified'
 
 
 def test_command_command_error(job_state: JobState) -> None:
@@ -513,10 +516,10 @@ def test_command_command_error(job_state: JobState) -> None:
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     job_state.job.differ = {'name': 'command', 'command': 'dir /x'}
-    with pytest.raises((RuntimeError, FileNotFoundError)) as pytest_wrapped_e:
-        job_state.get_diff()
+    job_state.get_diff()
+    assert isinstance(job_state.exception, (RuntimeError, FileNotFoundError))
     if os.name == 'nt':
-        assert str(pytest_wrapped_e.value) == (
+        assert str(job_state.exception) == (
             "Job 0: External differ '{'command': 'dir /x'}' returned 'dir: cannot access "
             "'/x': No such file or directory' ()"
         )
@@ -560,10 +563,10 @@ def test_deepdiff_json(job_state: JobState) -> None:
     job_state.job.differ = {'name': 'deepdiff', 'data_type': 'json'}
     expected = [
         'Differ: deepdiff for json',
-        'Old Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        'New Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '------------------------------------',
-        'Value of [\'test\'] changed from "1" to "2".',
+        '• Value of [\'test\'] changed from "1" to "2".',
     ]
     diff = job_state.get_diff(tz='Etc/UTC')
     assert diff.splitlines() == expected
@@ -572,10 +575,10 @@ def test_deepdiff_json(job_state: JobState) -> None:
     expected = [
         '<span style="font-family:monospace;white-space:pre-wrap;">',
         'Differ: deepdiff for json',
-        '<span style="color:darkred;">Old Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
-        '<span style="color:darkgreen;">New Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+        '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+        '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
         '------------------------------------',
-        "Value of ['test'] changed from <span "
+        "• Value of ['test'] changed from <span "
         'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">"1"</span> '
         'to <span style="background-color:#d1ffd1;color:#082b08;">"2"</span></span>',
     ]
@@ -609,10 +612,10 @@ def test_deepdiff_xml(job_state: JobState) -> None:
     job_state.job.differ = {'name': 'deepdiff', 'data_type': 'xml'}
     expected = [
         'Differ: deepdiff for xml',
-        'Old Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        'New Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '------------------------------------',
-        'Value of [\'test\'] changed from "1" to "2".',
+        '• Value of [\'test\'] changed from "1" to "2".',
     ]
     diff = job_state.get_diff(tz='Etc/UTC')
     assert diff.splitlines() == expected
@@ -631,10 +634,10 @@ def test_image_url(job_state: JobState) -> None:
     expected = '\n'.join(
         [
             'Differ: image for url<br>',
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">Old</span> '
-            f'Thu, 12 Nov 2020 02:23:57 +0000 (UTC) (<a href="{job_state.old_data}">Old image</a>)<br>',
-            '<span style="background-color:#d1ffd1;color:#082b08;">New</span> Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
-            f'(<a href="{job_state.new_data}">New image</a>)<br>',
+            '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
+            f'(<a href="{job_state.old_data}">Old image</a>)</span><br>',
+            '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
+            f'(<a href="{job_state.new_data}">New image</a>)</span><br>',
             '------------------------------------<br>',
             '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
             '<img src="data:image/gif;base64,',
@@ -671,10 +674,10 @@ def test_image_filenames(job_state: JobState) -> None:
     expected = '\n'.join(
         [
             'Differ: image for filename<br>',
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">Old</span> '
-            f'Thu, 12 Nov 2020 02:23:57 +0000 (UTC) (<a href="file://{job_state.old_data}">Old image</a>)<br>',
-            '<span style="background-color:#d1ffd1;color:#082b08;">New</span> Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
-            f'(<a href="file://{job_state.new_data}">New image</a>)<br>',
+            '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
+            f'(<a href="file://{job_state.old_data}">Old image</a>)</span><br>',
+            '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
+            f'(<a href="file://{job_state.new_data}">New image</a>)</span><br>',
             '------------------------------------<br>',
             '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
             '<img src="data:image/png;base64,',
@@ -712,10 +715,8 @@ def test_image_ascii85(job_state: JobState) -> None:
     expected = '\n'.join(
         [
             'Differ: image for ascii85<br>',
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">Old</span> '
-            'Thu, 12 Nov 2020 02:23:57 +0000 (UTC)<br>',
-            '<span style="background-color:#d1ffd1;color:#082b08;">New</span> Thu, 12 Nov 2020 02:23:57 +0000 '
-            '(UTC)<br>',
+            '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
+            '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
             '------------------------------------<br>',
             '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
             '<img src="data:image/png;base64,',
@@ -760,10 +761,8 @@ def test_image_base64_and_resize(job_state: JobState) -> None:
     expected = '\n'.join(
         [
             'Differ: image for base64<br>',
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">Old</span> '
-            'Thu, 12 Nov 2020 02:23:57 +0000 (UTC)<br>',
-            '<span style="background-color:#d1ffd1;color:#082b08;">New</span> Thu, 12 Nov 2020 02:23:57 +0000 '
-            '(UTC)<br>',
+            '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
+            '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
             '------------------------------------<br>',
             '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
             '<img src="data:image/png;base64,',
@@ -855,11 +854,15 @@ def test_ai_google_no_key(job_state: JobState) -> None:
     try:
         os.environ['GOOGLE_AI_API_KEY'] = ''
         job_state.job.differ = {'name': 'ai_google'}
-        with pytest.raises(ValueError) as pytest_wrapped_e:
-            job_state.get_diff()
-        assert str(pytest_wrapped_e.value) == (
-            'Job 0: Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length 0 ()'
+        diff = job_state.get_diff()
+        expected = (
+            '## ERROR in summarizing the changes using ai_google:\n'
+            'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length 0.\n'
+            '\n'
+            'Differ unified with directive(s) None encountered an error:\n'
+            '\n'
         )
+        assert diff[: len(expected)] == expected
     finally:
         if existing_key:
             os.environ['GOOGLE_AI_API_KEY'] = existing_key
@@ -886,7 +889,7 @@ def test_ai_google_bad_api_key(job_state: JobState) -> None:
             '-a',
             '+b',
             '------------',
-            'Summary generated by Google Generative AI (differ directives: model=gemini-1.5-pro-latest)',
+            'Summary generated by Google Generative AI (differ directive(s): model=gemini-1.5-pro-latest)',
         ]
         diff = job_state.get_diff(tz='Etc/UTC')
         assert diff.splitlines() == expected
@@ -902,7 +905,7 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
     try:
         job_state.old_data = 'aaaaaaaaaa\nb\nc\nd\nnew\ne\nf\ng\nhhhhhhhhhh\n'
         job_state.new_data = 'aaaaaaaaaa\nb\nc\nd\nold\ne\nf\ng\nhhhhhhhhhh\n'
-        job_state.job.differ = {'name': 'ai_google', 'model': 'gemini-pro', 'timeout': 1e-9, 'token_limit': 22}
+        job_state.job.differ = {'name': 'ai_google', 'model': 'gemini-pro', 'timeout': 1e-9, 'token_limit': 33}
         subdiffers = job_state.job.differ.copy()
         subdiffers.pop('name')
         expected = [
@@ -919,8 +922,8 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
             ' f',
             ' g',
             '------------',
-            'Summary generated by Google Generative AI (differ directives: model=gemini-pro, timeout=1e-09, '
-            'token_limit=22)',
+            'Summary generated by Google Generative AI (differ directive(s): model=gemini-pro, timeout=1e-09, '
+            'token_limit=33)',
         ]
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
         diff = job_state.get_diff(tz='Etc/UTC')
@@ -939,7 +942,7 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
             print(f'{diff=}')
             raise
         expected_in_logs = (
-            'Model prompt with full diff is too long: (28 est. tokens exceeds limit of 22 tokens); recomputing with '
+            'Model prompt with full diff is too long: (38 est. tokens exceeds limit of 33 tokens); recomputing with '
             'default contextlines'
         )
         assert expected_in_logs in caplog.text
@@ -959,7 +962,7 @@ def test_ai_google_unified_diff_too_long(job_state: JobState, caplog: pytest.Log
         subdiffers = job_state.job.differ.copy()
         subdiffers.pop('name')
         expected = [
-            'AI summary unavailable (model prompt with unified diff is too long: 15 est. tokens exceeds maximum of 1)',
+            'AI summary unavailable (model prompt with unified diff is too long: 26 est. tokens exceeds maximum of 1)',
             '',
             '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
             '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
@@ -967,13 +970,13 @@ def test_ai_google_unified_diff_too_long(job_state: JobState, caplog: pytest.Log
             '-a',
             '+b',
             '------------',
-            'Summary generated by Google Generative AI (differ directives: model=gemini-pro, token_limit=1)',
+            'Summary generated by Google Generative AI (differ directive(s): model=gemini-pro, token_limit=1)',
         ]
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
         diff = job_state.get_diff(tz='Etc/UTC')
         assert diff.splitlines() == expected
         expected_in_logs = (
-            'Model prompt with full diff is too long: (15 est. tokens exceeds limit of 1 tokens); recomputing with '
+            'Model prompt with full diff is too long: (26 est. tokens exceeds limit of 1 tokens); recomputing with '
             'default contextlines'
         )
         assert expected_in_logs in caplog.text

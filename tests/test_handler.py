@@ -7,30 +7,33 @@ import os
 import tempfile
 import warnings
 from pathlib import Path
+from typing import Callable, cast
 
 import pytest
 
-from webchanges import __project_name__ as project_name
 from webchanges.config import CommandConfig
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import CacheSQLite3Storage, DEFAULT_CONFIG, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import DEFAULT_CONFIG, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 from webchanges.util import import_module_from_source
 
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
 
 if minidb_is_installed:
-    from webchanges.storage_minidb import CacheMiniDBStorage
+    from webchanges.storage_minidb import SsdbMiniDBStorage
 
-minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
+minidb_required = cast(
+    Callable[[Callable], Callable],
+    pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed"),
+)
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
 
 config_file = data_path.joinpath('config.yaml')
-cache_file = ':memory:'
+ssdb_file = ':memory:'
 hooks_file = Path('')
-cache_storage: CacheSQLite3Storage
+ssdb_storage: SsdbSQLite3Storage
 
 
 def cleanup(request: pytest.FixtureRequest) -> None:
@@ -38,7 +41,7 @@ def cleanup(request: pytest.FixtureRequest) -> None:
 
     def finalizer() -> None:
         """Cleanup once we are finished."""
-        cache_storage.delete_all()
+        ssdb_storage.delete_all()
 
     request.addfinalizer(finalizer)
 
@@ -98,10 +101,16 @@ def test_duplicates_in_jobs_yaml() -> None:
     if jobs_file.is_file():
         with pytest.raises(ValueError) as pytest_wrapped_e:
             YamlJobsStorage([jobs_file]).load_secure()
-        assert str(pytest_wrapped_e.value).startswith(
-            'Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):'
-            '\n   • https://dupe_1\n   • https://dupe_2\n   in jobs file '
+        expected = '\n'.join(
+            [
+                'Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):',
+                '   • https://dupe_1',
+                '   • https://dupe_2',
+                '   ',
+                '   in jobs file ',
+            ]
         )
+        assert str(pytest_wrapped_e.value)[: len(expected)] == expected
     else:
         warnings.warn(f'{jobs_file} not found', UserWarning)
 
@@ -111,18 +120,17 @@ def test_disabled_job() -> None:
 
     urlwatch_config = CommandConfig(
         [],
-        project_name,
         here,
         config_file,
         jobs_file,
         hooks_file,
-        cache_file,  # type: ignore[arg-type]
+        ssdb_file,  # type: ignore[arg-type]
     )
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
-    cache_storage.delete_all()
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage.delete_all()
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
     urlwatcher.report.job_states = []
     try:
         urlwatcher.run_jobs()
@@ -130,7 +138,7 @@ def test_disabled_job() -> None:
         assert len(urlwatcher.report.job_states) == 1
         assert urlwatcher.report.job_states[0].new_data == 'enabled job\n'
     finally:
-        cache_storage.delete_all()
+        ssdb_storage.delete_all()
 
 
 def test_load_hooks_py() -> None:
@@ -146,21 +154,20 @@ def test_run_watcher_sqlite3() -> None:
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     try:
         urlwatch_config = CommandConfig(
             [],
-            project_name,
             here,
             config_file,
             jobs_file,
             hooks_file,
-            cache_file,  # type: ignore[arg-type]
+            ssdb_file,  # type: ignore[arg-type]
         )
-        urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+        urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:
-        cache_storage.delete_all()
+        ssdb_storage.delete_all()
 
 
 @minidb_required  # type: ignore[misc]
@@ -169,95 +176,93 @@ def test_run_watcher_minidb() -> None:
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
-    cache_storage = CacheMiniDBStorage(cache_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbMiniDBStorage(ssdb_file)  # type: ignore[arg-type]
     try:
         urlwatch_config = CommandConfig(
             [],
-            project_name,
             here,
             config_file,
             jobs_file,
             hooks_file,
-            cache_file,  # type: ignore[arg-type]
+            ssdb_file,  # type: ignore[arg-type]
         )
-        urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+        urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:
-        cache_storage.close()
+        ssdb_storage.close()
 
 
-def prepare_retry_test_sqlite3() -> tuple[Urlwatch, CacheSQLite3Storage]:
+def prepare_retry_test_sqlite3() -> tuple[Urlwatch, SsdbSQLite3Storage]:
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
 
     config_storage = YamlConfigStorage(config_file)
-    cache_storage = CacheSQLite3Storage(cache_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     jobs_storage = YamlJobsStorage([jobs_file])
 
     urlwatch_config = CommandConfig(
         [],
-        project_name,
         here,
         config_file,
         jobs_file,
         hooks_file,
-        cache_file,  # type: ignore[arg-type]
+        ssdb_file,  # type: ignore[arg-type]
     )
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
 
-    return urlwatcher, cache_storage
+    return urlwatcher, ssdb_storage
 
 
 def test_number_of_tries_in_cache_is_increased_sqlite3() -> None:
-    urlwatcher, cache_storage = prepare_retry_test_sqlite3()
+    urlwatcher, ssdb_storage = prepare_retry_test_sqlite3()
     try:
         guid = urlwatcher.jobs[0].get_guid()
-        old_data, timestamp, tries, etag = cache_storage.load(guid)
+        snapshot = ssdb_storage.load(guid)
 
-        assert tries == 0
+        assert snapshot.tries == 0
 
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        ssdb_storage._copy_temp_to_permanent(delete=True)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        ssdb_storage._copy_temp_to_permanent(delete=True)
 
-        old_data, timestamp, tries, etag = cache_storage.load(guid)
+        snapshot = ssdb_storage.load(guid)
 
-        assert tries == 2
+        assert snapshot.tries == 2
         assert urlwatcher.report.job_states[-1].verb == 'error'
     finally:
-        cache_storage.delete_all()
+        ssdb_storage.delete_all()
 
 
 def test_report_error_when_out_of_tries_sqlite3() -> None:
-    urlwatcher, cache_storage = prepare_retry_test_sqlite3()
+    urlwatcher, ssdb_storage = prepare_retry_test_sqlite3()
     try:
         guid = urlwatcher.jobs[0].get_guid()
-        old_data, timestamp, tries, etag = cache_storage.load(guid)
-        assert tries == 0
+        snapshot = ssdb_storage.load(guid)
+        assert snapshot.tries == 0
 
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        ssdb_storage._copy_temp_to_permanent(delete=True)
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        ssdb_storage._copy_temp_to_permanent(delete=True)
 
         report = urlwatcher.report
         assert report.job_states[-1].verb == 'error'
     finally:
-        cache_storage.delete_all()
+        ssdb_storage.delete_all()
 
 
 def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
-    urlwatcher, cache_storage = prepare_retry_test_sqlite3()
+    urlwatcher, ssdb_storage = prepare_retry_test_sqlite3()
     try:
         guid = urlwatcher.jobs[0].get_guid()
-        old_data, timestamp, tries, etag = cache_storage.load(guid)
-        assert tries == 0
+        snapshot = ssdb_storage.load(guid)
+        assert snapshot.tries == 0
 
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        ssdb_storage._copy_temp_to_permanent(delete=True)
 
-        old_data, timestamp, tries, etag = cache_storage.load(guid)
-        assert tries == 1
+        snapshot = ssdb_storage.load(guid)
+        assert snapshot.tries == 1
 
         # use an uri that definitely exists
         job = urlwatcher.jobs[0]
@@ -265,62 +270,61 @@ def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
         guid = job.get_guid()
 
         urlwatcher.run_jobs()
-        cache_storage._copy_temp_to_permanent(delete=True)
+        ssdb_storage._copy_temp_to_permanent(delete=True)
 
-        old_data, timestamp, tries, etag = cache_storage.load(guid)
-        assert tries == 0
+        snapshot = ssdb_storage.load(guid)
+        assert snapshot.tries == 0
     finally:
-        cache_storage.delete_all()
+        ssdb_storage.delete_all()
 
 
 @minidb_required  # type: ignore[misc]
-def prepare_retry_test_minidb() -> tuple[Urlwatch, CacheMiniDBStorage]:
+def prepare_retry_test_minidb() -> tuple[Urlwatch, SsdbMiniDBStorage]:
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
     config_storage = YamlConfigStorage(config_file)
-    cache_storage = CacheMiniDBStorage(cache_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbMiniDBStorage(ssdb_file)  # type: ignore[arg-type]
     jobs_storage = YamlJobsStorage([jobs_file])
 
     urlwatch_config = CommandConfig(
         [],
-        project_name,
         here,
         config_file,
         jobs_file,
         hooks_file,
-        cache_file,  # type: ignore[arg-type]
+        ssdb_file,  # type: ignore[arg-type]
     )
-    urlwatcher = Urlwatch(urlwatch_config, config_storage, cache_storage, jobs_storage)
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
 
-    return urlwatcher, cache_storage
+    return urlwatcher, ssdb_storage
 
 
 @minidb_required  # type: ignore[misc]
 def test_number_of_tries_in_cache_is_increased_minidb() -> None:
-    urlwatcher, cache_storage = prepare_retry_test_minidb()
+    urlwatcher, ssdb_storage = prepare_retry_test_minidb()
     try:
         job = urlwatcher.jobs[0]
-        old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
-        assert tries == 0
+        snapshot = ssdb_storage.load(job.get_guid())
+        assert snapshot.tries == 0
 
         urlwatcher.run_jobs()
         urlwatcher.run_jobs()
 
         job = urlwatcher.jobs[0]
-        old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
+        snapshot = ssdb_storage.load(job.get_guid())
 
-        assert tries == 2
+        assert snapshot.tries == 2
         assert urlwatcher.report.job_states[-1].verb == 'error'
     finally:
-        cache_storage.close()
+        ssdb_storage.close()
 
 
 @minidb_required  # type: ignore[misc]
 def test_report_error_when_out_of_tries_minidb() -> None:
-    urlwatcher, cache_storage = prepare_retry_test_minidb()
+    urlwatcher, ssdb_storage = prepare_retry_test_minidb()
     try:
         job = urlwatcher.jobs[0]
-        old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
-        assert tries == 0
+        snapshot = ssdb_storage.load(job.get_guid())
+        assert snapshot.tries == 0
 
         urlwatcher.run_jobs()
         urlwatcher.run_jobs()
@@ -328,22 +332,22 @@ def test_report_error_when_out_of_tries_minidb() -> None:
         report = urlwatcher.report
         assert report.job_states[-1].verb == 'error'
     finally:
-        cache_storage.close()
+        ssdb_storage.close()
 
 
 @minidb_required  # type: ignore[misc]
 def test_reset_tries_to_zero_when_successful_minidb() -> None:
-    urlwatcher, cache_storage = prepare_retry_test_minidb()
+    urlwatcher, ssdb_storage = prepare_retry_test_minidb()
     try:
         job = urlwatcher.jobs[0]
-        old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
-        assert tries == 0
+        snapshot = ssdb_storage.load(job.get_guid())
+        assert snapshot.tries == 0
 
         urlwatcher.run_jobs()
 
         job = urlwatcher.jobs[0]
-        old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
-        assert tries == 1
+        snapshot = ssdb_storage.load(job.get_guid())
+        assert snapshot.tries == 1
 
         # use an url that definitely exists
         job = urlwatcher.jobs[0]
@@ -352,7 +356,7 @@ def test_reset_tries_to_zero_when_successful_minidb() -> None:
         urlwatcher.run_jobs()
 
         job = urlwatcher.jobs[0]
-        old_data, timestamp, tries, etag = cache_storage.load(job.get_guid())
-        assert tries == 0
+        snapshot = ssdb_storage.load(job.get_guid())
+        assert snapshot.tries == 0
     finally:
-        cache_storage.close()
+        ssdb_storage.close()

@@ -3,11 +3,11 @@
 # Ensure you use a Unicode character (e.g. ™ / &trade) in your example (both input and output) to test that too!
 url: https://example.org/case
 filter:
-  - case:
+  - hooks_case:
 ---
 url: https://example.org/indent
 filter:
-  - indent:
+  - hooks_indent:
 ---
 url: https://example.org/
 ---
