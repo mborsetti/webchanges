@@ -360,7 +360,7 @@ class UnifiedDiffer(DifferBase):
             diff_text = _unfiltered_diff['text']
         else:
             empty_return: dict[Literal['text', 'markdown', 'html'], str] = {'text': '', 'markdown': '', 'html': ''}
-            contextlines = directives.get('context_lines') or self.job.contextlines
+            contextlines = directives.get('context_lines', self.job.contextlines)
             if contextlines is None:
                 if self.job.additions_only or self.job.deletions_only:
                     contextlines = 0
@@ -565,7 +565,7 @@ class CommandDiffer(DifferBase):
                     f'Using differ "{directives}"',
                     f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}',
                     f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}',
-                    '-' * 36,
+                    '—' * 37,
                 ]
             )
             diff = proc.stdout
@@ -819,7 +819,7 @@ class DeepdiffDiffer(DifferBase):
                 f'Differ: {self.__kind__} for {data_type}\n'
                 f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>\n'
                 f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>\n'
-                + '-' * 36
+                + '—' * 37
                 + '\n'
                 + diff_text[:-1]
                 + '</span>'
@@ -829,7 +829,7 @@ class DeepdiffDiffer(DifferBase):
             text_diff = (
                 f'Differ: {self.__kind__} for {data_type}\n'
                 f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\n'
-                f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\n' + '-' * 36 + '\n' + diff_text
+                f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\n' + '—' * 37 + '\n' + diff_text
             )
             return {'text': text_diff, 'markdown': text_diff}
 
@@ -1010,14 +1010,12 @@ class ImageDiffer(DifferBase):
         # Prepare HTML output
         new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
         old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
-        span_added = f'<span style="{self.css_added_style}">'
-        # span_deltd = f'<span style="{self.css_deltd_style}">'
         htm = [
-            f'Differ: {self.__kind__} for {data_type}',
+            f'<span style="font-family:monospace">Differ: {self.__kind__} for {data_type}',
             f'<span style="color:darkred;">--- @ {old_timestamp}{old_data}</span>',
             f'<span style="color:darkgreen;">+++ @ {new_timestamp}{new_data}' f'</span>',
-            '-' * 36,
-            f'{span_added}New:</span>',
+            ('—' * 37 + '</span>'),
+            'New image:',
             f'<img src="data:image/{new_image.format.lower()};base64,{encoded_new}">',
             'Differences from old (in yellow):',
             f'<img src="data:image/{old_image.format.lower()};base64,{encoded_diff}">',
@@ -1042,7 +1040,7 @@ class AIGoogleDiffer(DifferBase):
     __kind__ = 'ai_google'
 
     __supported_directives__ = {
-        'model': 'model name from https://ai.google.dev/models/gemini (default: gemini-1.5-pro-latest)',
+        'model': 'model name from https://ai.google.dev/models/gemini (default: gemini-1.5-flash-latest)',
         'prompt': 'a custom prompt - {unified_diff}, {old_data} and {new_data} will be replaced; ask for markdown',
         'prompt_ud_context_lines': 'the number of context lines for {unified_diff} (default: 9999)',
         'timeout': 'the number of seconds before timing out the API call (default: 300)',
@@ -1087,6 +1085,7 @@ class AIGoogleDiffer(DifferBase):
 
             api_version = '1beta'
             _models_token_limits = {  # from https://ai.google.dev/models/gemini
+                'gemini-1.5-flash-latest': 1048576,
                 'gemini-1.5-pro-latest': 1048576,
                 'gemini-pro': 30720,
                 'gemini-1.0-pro-latest': 30720,
@@ -1095,7 +1094,7 @@ class AIGoogleDiffer(DifferBase):
             }
 
             if 'model' not in directives:
-                directives['model'] = 'gemini-1.5-pro-latest'  # also for footer
+                directives['model'] = 'gemini-1.5-flash-latest'  # also for footer
             model = directives['model']
             token_limit = directives.get('token_limit')
             if not token_limit:
@@ -1251,4 +1250,190 @@ class AIGoogleDiffer(DifferBase):
                 + '-----<br>'
                 + f'<i><small>{footer}</small></i>'
             ),
+        }
+
+
+class WdiffDiffer(DifferBase):
+    __kind__ = 'wdiff'
+
+    __supported_directives__: dict[str, str] = {
+        'context_lines': 'the number of context lines (default: 3)',
+        'range_info': 'include range information lines (default: true)',
+    }
+
+    def differ(
+        self,
+        directives: dict[str, Any],
+        report_kind: Literal['text', 'markdown', 'html'],
+        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
+        tz: Optional[str] = None,
+    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+        warnings.warn(
+            f'Job {self.job.index_number}: Differ {self.__kind__} is WORK IN PROGRESS and has KNOWN bugs which '
+            "are being worked on. DO NOT USE AS THE RESULTS WON'T BE CORRECT.",
+            RuntimeWarning,
+        )
+        if not isinstance(self.state.old_data, str):
+            raise ValueError
+        if not isinstance(self.state.new_data, str):
+            raise ValueError
+
+        # Split the texts into words tokenizing newline
+        if self.job.is_markdown:
+            # Don't split spaces in link text, tokenize space as </s>
+            old_data = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', self.state.old_data)
+            words1 = old_data.replace('\n', ' <\\n> ').split(' ')
+            new_data = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', self.state.new_data)
+            words2 = new_data.replace('\n', ' <\\n> ').split(' ')
+        else:
+            words1 = self.state.old_data.replace('\n', ' <\\n> ').split(' ')
+            words2 = self.state.new_data.replace('\n', ' <\\n> ').split(' ')
+
+        # Create a Differ object
+        import difflib
+
+        d = difflib.Differ()
+
+        # Generate a difference list
+        diff = list(d.compare(words1, words2))
+
+        add_html = '<span style="background-color:#d1ffd1;color:#082b08;">'
+        rem_html = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
+
+        head_text = (
+            'Differ: wdiff\n'
+            f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m\n'
+            f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m\n' + '—' * 37 + '\n'
+        )
+        head_html = '<br>\n'.join(
+            [
+                '<span style="font-family:monospace;">Differ: wdiff',
+                f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
+                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>',
+                '—' * 37 + '</span>',
+                '',
+            ]
+        )
+        # Process the diff output to make it more wdiff-like
+        result = []
+        result_html = []
+        prev_word_text = ''
+        prev_word_html = ''
+        next_text = ''
+        next_html = ''
+        add = False
+        rem = False
+        for word_text in diff:
+            if len(word_text) < 3:
+                continue
+            if word_text[0] == '?':
+                continue
+            word_html = word_text
+            pre_text = [next_text] if next_text else []
+            pre_html = [next_html] if next_html else []
+            next_text = ''
+            next_html = ''
+
+            if word_text[0] == '+' and not add:  # Beginning of additions
+                if rem:
+                    prev_word_html += '</span>'
+                    rem = False
+                if word_text[2:] == '<\\n>':
+                    next_text = '\033[92m'
+                    next_html = add_html
+                else:
+                    pre_text.append('\033[92m')
+                    pre_html.append(add_html)
+                add = True
+            elif word_text[0] == '-' and not rem:  # Beginning of deletions
+                if add:
+                    prev_word_html += '</span>'
+                    add = False
+                if word_text[2:] == '<\\n>':
+                    next_text = '\033[91m'
+                    next_html = rem_html
+                else:
+                    pre_text.append('\033[91m')
+                    pre_html.append(rem_html)
+                rem = True
+            elif word_text[0] == ' ' and (add or rem):  # Unchanged word
+                if prev_word_text == '<\\n>':
+                    prev_word_text = '\033[0m<\\n>'
+                    prev_word_html = '</span><\\n>'
+                else:
+                    prev_word_text += '\033[0m'
+                    prev_word_html += '</span>'
+                add = False
+                rem = False
+            elif word_text[2:] == '<\\n>':  # New line
+                if add:
+                    word_html = f'  </span><\\n> {add_html}'
+                elif rem:
+                    word_html = f'  </span><\\n> {rem_html}'
+
+            result.append(prev_word_text)
+            result_html.append(prev_word_html)
+            pre_text.append(word_text[2:])
+            pre_html.append(word_html[2:])
+            prev_word_text = ''.join(pre_text)
+            prev_word_html = ''.join(pre_html)
+        result.append(prev_word_text)
+        result_html.append(prev_word_html)
+        if add or rem:
+            result[-1] += '\033[0m'
+            result_html[-1] += '</span>'
+
+        # rebuild the text from words, replacing the newline token
+        diff_text = ' '.join(result[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
+        diff_html = ' '.join(result_html[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
+
+        # build contextlines
+        contextlines = directives.get('context_lines', self.job.contextlines)
+        # contextlines = 999
+        if contextlines is None:
+            contextlines = 3
+        range_info = directives.get('range_info', True)
+        if contextlines < len(diff_text.splitlines()):
+            lines_with_changes = []
+            for i, line in enumerate(diff_text.splitlines()):
+                if '\033[9' in line:
+                    lines_with_changes.append(i)
+            if contextlines:
+                lines_to_keep: set[int] = set()
+                for i in lines_with_changes:
+                    lines_to_keep.update(r for r in range(i - contextlines, i + contextlines + 1))
+            else:
+                lines_to_keep = set(lines_with_changes)
+            new_diff_text = []
+            new_diff_html = []
+            last_line = 0
+            skip = False
+            for i, (line_text, line_html) in enumerate(zip(diff_text.splitlines(), diff_html.splitlines())):
+                if i in lines_to_keep:
+                    if range_info and skip:
+                        new_diff_text.append(f'@@ {last_line}...{i + 1} @@')
+                        new_diff_html.append(f'@@ {last_line}...{i + 1} @@')
+                        skip = False
+                    new_diff_text.append(line_text)
+                    new_diff_html.append(line_html)
+                    last_line = i + 1
+                else:
+                    skip = True
+            diff_text = '\n'.join(new_diff_text)
+            diff_html = '\n'.join(new_diff_html)
+
+        if self.job.is_markdown:
+            diff_text = diff_text.replace('</s>', ' ')
+            diff_html = diff_html.replace('</s>', ' ')
+            diff_html = mark_to_html(diff_html, self.job.markdown_padded_tables).replace('<p>', '').replace('</p>', '')
+
+        if self.job.monospace:
+            diff_html = f'<span style="font-family:monospace;white-space:pre-wrap">{diff_html}</span>'
+        else:
+            diff_html = diff_html.replace('\n', '<br>\n')
+
+        return {
+            'text': head_text + diff_text,
+            'markdown': head_text + diff_text,
+            'html': head_html + diff_html,
         }

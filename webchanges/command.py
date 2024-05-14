@@ -514,10 +514,12 @@ class UrlwatchCommand:
                 job_state.new_data = history_data[i].data
                 job_state.new_timestamp = history_data[i].timestamp
                 job_state.new_etag = history_data[i].etag
+                job_state.new_mime_type = history_data[i].mime_type
                 if not job.compared_versions or job.compared_versions == 1:
                     job_state.old_data = history_data[i + 1].data
                     job_state.old_timestamp = history_data[i + 1].timestamp
                     job_state.old_etag = history_data[i + 1].etag
+                    job_state.old_mime_type = history_data[i + 1].mime_type
                 else:
                     history_dic_snapshots = {s.data: s for s in history_data[i + 1 : i + 1 + job.compared_versions]}
                     close_matches: list[str] = difflib.get_close_matches(
@@ -527,6 +529,7 @@ class UrlwatchCommand:
                         job_state.old_data = close_matches[0]
                         job_state.old_timestamp = history_dic_snapshots[close_matches[0]].timestamp
                         job_state.old_etag = history_dic_snapshots[close_matches[0]].etag
+                        job_state.old_mime_type = history_dic_snapshots[close_matches[0]].mime_type
 
                 # TODO: setting of job_state.job.is_markdown = True when it had been set by a filter.
                 # Ideally it should be saved as an attribute when saving "data".
@@ -538,6 +541,7 @@ class UrlwatchCommand:
                         f'No change (snapshots {-i:2} AND {-(i + 1):2}) with '
                         f"'compared_versions: {job.compared_versions}'"
                     )
+                    job_state.verb = 'changed,no_report'
                 else:
                     label = f'Filtered diff (snapshots {-i:2} and {-(i + 1):2})'
                 errorlevel = self.check_test_reporter(job_state, label=label, report=report)

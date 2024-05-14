@@ -342,7 +342,7 @@ class HtmlReporter(ReporterBase):
             '    color-scheme: light dark;\n'
             '    supported-color-schemes: light dark;\n'
             '  }\n'
-            '</style>'
+            '</style>\n'
             '<body style="font-family: Roboto, Arial, Helvetica, sans-serif; font-size: 13px;">\n'
         )
 

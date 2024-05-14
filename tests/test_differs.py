@@ -561,7 +561,7 @@ def test_deepdiff_json(job_state: JobState) -> None:
         'Differ: deepdiff for json',
         '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        '------------------------------------',
+        '—————————————————————————————————————',
         '• Value of [\'test\'] changed from "1" to "2".',
     ]
     diff = job_state.get_diff(tz='Etc/UTC')
@@ -573,7 +573,7 @@ def test_deepdiff_json(job_state: JobState) -> None:
         'Differ: deepdiff for json',
         '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
         '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
-        '------------------------------------',
+        '—————————————————————————————————————',
         "• Value of ['test'] changed from <span "
         'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">"1"</span> '
         'to <span style="background-color:#d1ffd1;color:#082b08;">"2"</span></span>',
@@ -610,7 +610,7 @@ def test_deepdiff_xml(job_state: JobState) -> None:
         'Differ: deepdiff for xml',
         '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        '------------------------------------',
+        '—————————————————————————————————————',
         '• Value of [\'test\'] changed from "1" to "2".',
     ]
     diff = job_state.get_diff(tz='Etc/UTC')
@@ -627,15 +627,15 @@ def test_image_url(job_state: JobState) -> None:
     job_state.old_data = 'https://aviationweather.gov/data/products/progs/F006_wpc_prog.gif'
     job_state.new_data = 'https://aviationweather.gov/data/products/progs/F012_wpc_prog.gif'
     job_state.job.differ = {'name': 'image', 'data_type': 'url', 'mse_threshold': 5}
-    expected = '\n'.join(
+    expected = '<br>\n'.join(
         [
-            'Differ: image for url<br>',
+            '<span style="font-family:monospace">Differ: image for url',
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
-            f'(<a href="{job_state.old_data}">Old image</a>)</span><br>',
+            f'(<a href="{job_state.old_data}">Old image</a>)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
-            f'(<a href="{job_state.new_data}">New image</a>)</span><br>',
-            '------------------------------------<br>',
-            '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
+            f'(<a href="{job_state.new_data}">New image</a>)</span>',
+            '—————————————————————————————————————</span>',
+            'New image:',
             '<img src="data:image/gif;base64,',
         ]
     )
@@ -667,15 +667,15 @@ def test_image_filenames(job_state: JobState) -> None:
     job_state.old_data = str(old_file)
     job_state.new_data = str(new_file)
     job_state.job.differ = {'name': 'image', 'data_type': 'filename'}
-    expected = '\n'.join(
+    expected = '<br>\n'.join(
         [
-            'Differ: image for filename<br>',
+            '<span style="font-family:monospace">Differ: image for filename',
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
-            f'(<a href="file://{job_state.old_data}">Old image</a>)</span><br>',
+            f'(<a href="file://{job_state.old_data}">Old image</a>)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
-            f'(<a href="file://{job_state.new_data}">New image</a>)</span><br>',
-            '------------------------------------<br>',
-            '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
+            f'(<a href="file://{job_state.new_data}">New image</a>)</span>',
+            '—————————————————————————————————————</span>',
+            'New image:',
             '<img src="data:image/png;base64,',
         ]
     )
@@ -694,6 +694,9 @@ def test_image_filenames(job_state: JobState) -> None:
     #     time.sleep(1)
     #     os.remove(f.name)
     assert diff[: len(expected)] == expected
+    # from webchanges.mailer import Mailer
+    #
+    # email = Mailer().msg('', '', '', '', diff)
 
 
 @py_latest_only
@@ -708,13 +711,13 @@ def test_image_ascii85(job_state: JobState) -> None:
     job_state.old_data = base64.a85encode(old_file.read_bytes()).decode()
     job_state.new_data = base64.a85encode(new_file.read_bytes()).decode()
     job_state.job.differ = {'name': 'image', 'data_type': 'ascii85'}
-    expected = '\n'.join(
+    expected = '<br>\n'.join(
         [
-            'Differ: image for ascii85<br>',
-            '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
-            '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
-            '------------------------------------<br>',
-            '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
+            '<span style="font-family:monospace">Differ: image for ascii85',
+            '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+            '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+            '—————————————————————————————————————</span>',
+            'New image:',
             '<img src="data:image/png;base64,',
         ]
     )
@@ -754,13 +757,13 @@ def test_image_base64_and_resize(job_state: JobState) -> None:
     new_img.save(output_stream, format=img_format)
     job_state.new_data = base64.b64encode(output_stream.getvalue()).decode()
     job_state.job.differ = {'name': 'image', 'data_type': 'base64'}
-    expected = '\n'.join(
+    expected = '<br>\n'.join(
         [
-            'Differ: image for base64<br>',
-            '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
-            '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
-            '------------------------------------<br>',
-            '<span style="background-color:#d1ffd1;color:#082b08;">New:</span><br>',
+            '<span style="font-family:monospace">Differ: image for base64',
+            '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+            '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+            '—————————————————————————————————————</span>',
+            'New image:',
             '<img src="data:image/png;base64,',
         ]
     )
@@ -1022,3 +1025,14 @@ def test_ai_google_timeout_no_unified_diff(job_state: JobState, caplog: pytest.L
         if existing_key:
             os.environ['GOOGLE_AI_API_KEY'] = existing_key
         logging.getLogger('webchanges.differs').setLevel(level=logging.WARNING)
+
+
+def test_worddiff(job_state: JobState, caplog: pytest.LogCaptureFixture) -> None:
+    job_state.job.differ = {'name': 'wdiff'}
+    for job_state.old_data, job_state.new_data, expected in (
+        ('a', 'b', ['\x1b[91ma \x1b[92mb\x1b[0m']),
+        # ('a', '', ['x1b[91ma\x1b[0m']),
+        # ('', 'b', ['\x1b[92mb\x1b[0m']),
+    ):
+        diff = job_state.get_diff()
+        assert diff.splitlines()[4:] == expected

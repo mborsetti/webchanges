@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+import base64
 import getpass
 import logging
+import re
 import smtplib
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 from dataclasses import dataclass
@@ -14,7 +16,7 @@ from email.message import EmailMessage
 from email.utils import formatdate
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Union
+from typing import Dict, List, Optional, Union
 
 try:
     import keyring
@@ -47,6 +49,33 @@ class Mailer:
         :param text_body: The body in text format
         :param html_body: The body in html format (optional)
         """
+
+        def extract_inline_images(html_body: str) -> tuple[str, Dict[str, bytes]]:
+            """Extract inline images from the email.
+
+            :param html_body: The HTML with inline images.
+
+            :return: The HTML with src tags and a dictionary of cid and file.
+            """
+            cid_dict: Dict[str, bytes] = {}
+            cid_counter = 1
+
+            def replace_img(match: re.Match) -> str:
+                """Function to replace the matched img tags with src="cid:<...>"> and to add the cid and the image to
+                the cid_dict object.
+                """
+                nonlocal cid_counter
+                image_format, image_data_b64 = match.groups()
+                image_data = base64.b64decode(image_data_b64)
+                image_cid = f'image{cid_counter}_{image_format.split(";")[0]}'
+                cid_dict[image_cid] = image_data
+                new_img_tag = f'<img src="cid:{image_cid}">'
+                cid_counter += 1
+                return new_img_tag
+
+            edited_html = re.sub(r'<img src="data:image/(.+?);base64,(.+?)"', replace_img, html_body)
+            return edited_html, cid_dict
+
         msg = EmailMessage(policy=policy.SMTPUTF8)
         msg['From'] = from_email
         msg['To'] = to_email
@@ -54,8 +83,21 @@ class Mailer:
         msg['Date'] = formatdate(localtime=True)
         msg.set_content(text_body, subtype='plain')
         if html_body is not None:
-            msg.add_alternative(html_body, subtype='html')
-
+            if ';base64,' not in html_body:
+                msg.add_alternative(html_body, subtype='html')
+            else:
+                html_body, cid_dict = extract_inline_images(html_body)
+                msg.add_alternative(html_body, subtype='html')
+                payloads: List[EmailMessage] = msg.get_payload()[1]  # type: ignore[assignment,index]
+                for image_cid, image_data in cid_dict.items():
+                    payloads[1].add_related(
+                        image_data,
+                        maintype='image',
+                        subtype=image_cid.split('_')[-1],
+                        disposition='inline',
+                        filename=image_cid,
+                        cid=f'<{image_cid}>',
+                    )
         return msg
 
 

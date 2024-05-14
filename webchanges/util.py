@@ -396,7 +396,7 @@ def mark_to_html(
     if 'tables' in markdowner_extras:
         html_out = html_out.replace('<table>', '<table border="1" cellspacing="0">')
     # remove <p> tags wrapping
-    html_out, sub = re.subn(r'^<p>|</p>$', '', html_out)
+    html_out, sub = re.subn(r'^<p>|</p>$', '', html_out)  # remove paragraph tags
     if sub:
         return pre + html_out + post
     html_out = re.sub(r'<(/?)h\d>', r'<\g<1>strong>', html_out)  # replace heading tags with <strong>

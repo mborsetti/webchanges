@@ -5,7 +5,7 @@ Configuration
 =============
 The global configuration for :program:`webchanges` contains basic settings for the generic behavior of
 :program:`webchanges`, including its :ref:`reports <reports>` and :ref:`reporters <reporters>`. It is written in **YAML
-format**, is called ``config.yaml``, and is located in the in the following directory:
+format**, is called ``config.yaml``, and is located in the following directory:
 
 * Linux: ``~/.config/webchanges``
 * MacOS: ``~/Library/Preferences/webchanges``
@@ -120,6 +120,8 @@ Reporters are implemented in a hierarchy, and configuration settings of a report
    Setting the ``email`` reporter's ``html`` option to ``true`` will cause it to inherit from the ``html``
    configuration.
 
+
+
 .. _job_defaults:
 
 Job Defaults
@@ -143,7 +145,7 @@ config file. The following example will set default headers for all ``url`` jobs
          Sec-Fetch-User: ?1
          Sec-GCP: 1
          Upgrade-Insecure-Requests: 1
-         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
 
 The above config file sets all ``url`` jobs without the ``browser`` directive to use the specified headers.
 
@@ -155,19 +157,18 @@ The possible sub-directives to ``job_defaults`` are:
 * ``browser``: Applies only to jobs with the directives ``url`` and ``use_browser: true``;
 * ``command``: Applies only to jobs with the directive ``command``.
 
-See :ref:`jobs <jobs>` about the different job kinds and directives that can be set.
+See :ref:`jobs <jobs>` for an explanation of the different job kinds and their directives.
 
-Duplicate handling
-******************
-If a directive is specified both in ``all`` and either in ``url``, ``browser`` or ``command``, the one in ``all``
-will be overridden, with the contents of ``headers`` being handled as if they were separate directives before being
-overridden.
+Handling of duplicate directives
+````````````````````````````````
+Any directive specified in either ``url``, ``browser`` or ``command`` will override the same directive specified in
+``all``.  In case of the ``headers`` directive, the overriding is done on a header-by-header basis.
 
 
 
 Database configuration
 ----------------------
-If you want to change some settings for all your jobs, edit the ``database`` section in your config file:
+The ``database`` section in your config file contains information on how snapshots are stored from run to run:
 
 .. code-block:: yaml
 
@@ -175,72 +176,75 @@ If you want to change some settings for all your jobs, edit the ``database`` sec
      engine: sqlite3
      max_snapshots: 4
 
-
 .. _database_engine:
 
-Default database engine
--------------------------
+Database engine
+```````````````
 ``engine``
 
-You can select one of the engines from this list; the default engine can also be changed on an individual run with the
-``--cache-engine`` command line argument.
+You can select one of the database engines as specified below; this can be overridden with the ``--cache-engine``
+command line argument.
 
-Default (``sqlite3``)
-*********************
-In version 3.2 we migrated the internal database system to one that relies on the built-in ``sqlite3`` engine. This
-is more efficient due to indexing, creates smaller files due to data compression with `msgpack <https://msgpack
-.org/index.html>`__, and provides additional functionality such as no data corruption in case of an execution error.
+``sqlite3``
+:::::::::::
+The default database engine, uses the ``sqlite3`` database built into Python with data compression provided by
+`msgpack <https://msgpack.org/index.html>`__. It is the most advanced solution due its speed due to indexing, small
+data files, and no data corruption or snapshot storage in case of an execution error.
 
-This has also allowed us to remove the requirement for the ``minidb`` Python package. Migration of the latest snapshots
-from the legacy (minidb) database is done automatically and the old file is preserved for manual deletion.
+The migration to this engine in version 3.2 allowed us to remove the requirement for the ``minidb`` Python package.
 
-Text files (``textfiles``)
-**************************
-To have the latest snapshot of each job saved as a separate text file instead of as a record in a database, use
-``textfiles``.
+``textfiles``
+:::::::::::::
+Saves the latest snapshot of each job as its own individual text file. Only one snapshot can be saved, and both the
+ETag (allowing the speeding up of web data retrieval) and MIME type (enabling some diffing and reporting automation)
+will be lost.
 
-Legacy (``mindib``)
-*******************
-This will use a database that is backwards compatible with version 3.1 and with :program:`urlwatch` 2. The ``minidib``
-Python package must be installed for this to work.
-
-Redis (``redis://...`` or ``rediss://...``)
-*******************************************
+``redis://...`` or ``rediss://...``
+:::::::::::::::::::::::::::::::::::
 To use Redis as a database (cache) backend, specify a redis URI:
+
+``mindib``
+::::::::::
+The deprecated legacy database engine, it is backwards compatible with :program:`urlwatch`. Requires that
+the ``minidib`` Python package is installed; MIME types are not stored, is not indexed, data is not compressed, and
+the database file will grow indefinitely.
 
 .. code-block:: yaml
 
    database:
      engine: redis://localhost:6379/
 
-For this to work, optional dependencies need to be installed; please see :ref:`here <dependencies>`
+To use Redis, optional dependencies need to be installed; please see :ref:`here <dependencies>`
 
-There is no migration path from an existing database: the Redis database will be empty the first time it is used.
-
+.. note:: Switching from Legacy (``mindib``) to Default (``sqlite3``) will cause an automatic data migration as long
+   as the ``minidb`` Python package is installed; the old file database file is preserved for manual deletion. There is
+   no migration path between any other databases types; for example, switching to Redis will create a new empty
+   database at the first run.
 
 
 .. _database_max_snapshots:
 
-Maximum number of snapshots to save
-***********************************
 ``max_snapshots``
+`````````````````
+Maximum number of snapshots to save
 
 Each time you run :program:`webchanges`, it captures the data downloaded from the URL (or the output of the command
 specified), applies filters, and if it finds a change it saves the resulting snapshot to a database for future
-comparison. By default¹ only the last 4 changed snapshots are kept, but this number can be modified either in the
-configuration file or, for an individual run, with the with the ``--max-snapshots`` command line argument.
+comparison. By default, only the last 4 changed snapshots are kept, but this number can be modified either in the
+configuration file or with the ``--max-snapshots`` command line argument.
 
-If set to 0, all changed snapshots are retained (the database will grow unbounded).
+If set to 0, all changed snapshots are retained (the database will grow indefinitely).
 
-.. tip:: Changes (diffs) between saved snapshots can be redisplayed with the ``--test-differ`` command line argument (see
-   :ref:`here <test-differ>`).
+.. note:: Only applicable to the ``sqlite3`` (default) database engine. When using ``redis`` or ``minidb``  database
+   engines all snapshots will be kept (the database will grow indefinitely), while when using the ``textfiles``
+   database engine only the last snapshot is kept.
 
-¹ Note that when using ``redis`` or ``minidb`` database engines all snapshots will be kept, while when using the
-``textfiles`` database engine only the last snapshot is kept.
+.. tip:: Changes (diffs) between saved snapshots can be redisplayed with the ``--test-differ`` command line argument
+   (see :ref:`here <test-differ>`).
 
 
 .. versionadded:: 3.11
-   for default ``sqlite3`` database engine only.
+   For default ``sqlite3`` database engine only.
 
 
 
@@ -253,8 +257,8 @@ line argument.
 
 
 
-Keys starting with underline are ignored
-----------------------------------------
-Keys that start with underline are ignored and can be used for remarks.
+Remarks
+-------
+YAML files do not allow for remarks; however, keys that start with underline are ignored and can be used for remarks.
 
 .. versionadded:: 3.11

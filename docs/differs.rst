@@ -420,9 +420,10 @@ This differ is currently in BETA and the directives may change in the future.
   requires the package ``numpy`` to be installed (default: 2.5).
 
 .. note:: If you pass a ``url`` or ``filename`` to the differ, it will detect changes only if the url or
-  filename changes, not if the image behind the url/filename does. To detect changes in an image when the url or
-  filename doesn't change, build a job that captures the image itself encoded in Ascii85 (preferably, see the
-  :ref:`ascii85` filter or Base64 and set ``data_type`` accordingly.
+  filename changes, not if the image behind the url/filename does; no change will be reported if the url or filename
+  changes but the image doesn't. To detect changes in an image when the url or filename doesn't change, build a job
+  that captures the image itself encoded in Ascii85 (preferably, see the :ref:`ascii85` filter) or Base64 and set
+  ``data_type`` accordingly.
 
 Required packages
 `````````````````

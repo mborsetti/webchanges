@@ -1,53 +1,19 @@
 ⚠ Breaking Changes
 ------------------
-* Developers integrating custom Python code (``hooks.py``) should refer to the "Internals" section below for important
-  changes.
-
-Changed
--------
-* Snapshot database
-
-  - Moved the snapshot database from the "user_cache" directory (typically not backed up) to the "user_data" directory.
-    The new paths are (typically):
-
-    - Linux: ``~/.local/share/webchanges`` or ``$XDG_DATA_HOME/webchanges``
-    - macOS: ``~/Library/Application Support/webchanges``
-    - Windows: ``%LOCALAPPDATA%\webchanges\webchanges``
-
-  - Renamed the file from ``cache.db`` to ``snapshots.db`` to more clearly denote its contents.
-  - Introduced a new command line option ``--database`` to specify the filename for the snapshot database, replacing
-    the previous ``--cache`` option (which is deprecated but still supported).
-  - Many thanks to `Markus Weimar <https://github.com/Markus00000>`__ for pointing this problem out in issue `#75
-    <https://github.com/mborsetti/webchanges/issues/75>`__.
-
-* Modified the command line argument ``--test-differ`` to accept a second parameter, specifying the maximum number of
-  diffs to generate.
-* Updated the command line argument ``--dump-history`` to display the ``mime_type`` attribute when present.
-* Enhanced differs functionality:
-
-  - Standardized headers for ``deepdiff`` and ``imagediff`` to align more closely with those of ``unified``.
-  - Improved the ``google_ai`` differ:
-
-    - Enhanced error handling: now, the differ will continue operation and report errors rather than failing outright
-      when Google API errors occur.
-    - Improved the default prompt to ``Analyze this unified diff and create a summary listing only the
-      changes:\n\n{unified_diff}`` for improved results.
+* The ``ai-google`` (BETA) differ now defaults to using the new ``gemini-1.5-flash`` model (see documentation `here
+  <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-flash-expandable>`__), as it still supports
+  1M tokens, "excels at summarization" (per `here <https://blog
+  .google/technology/ai/google-gemini-update-flash-ai-assistant-io-2024/#gemini-model-updates:~:text=1
+  .5%20flash%20excels%20at%20summarization%2C>`__), allows for a higher number of requests per minute (in the
+  free version, 15 vs. 2 of ``gemini-1.5-pro``), is faster, and, if you're paying for it, cheaper. To continue to
+  use ``gemini-1.5-pro``, which may produce more "complex" results, specify it in the job's ``differ`` directive.
 
 Fixed
 -----
-* Fixed an AttributeError Exception when the fallback HTTP client package ``requests`` is not installed, as reported
-  by `yubiuser <https://github.com/yubiuser>`__ in `issue #76 <https://github.com/mborsetti/webchanges/issues/76>`__.
-* Addressed a ValueError in the ``--test-differ`` command, a regression reported by `Markus Weimar
-  <https://github.com/Markus00000>`__ in `issue #79 <https://github.com/mborsetti/webchanges/issues/79>`__.
-* To prevent overlooking changes, webchanges now refrains from saving a new snapshot if a differ operation fails
-  with an Exception.
+* Fixed header of ``deepdiff`` and ``image`` (BETA) differs to be more consistent with the default ``unified`` differ.
+* Fixed the way images are handled in the email reporter so that they now display correctly in clients such as Gmail.
 
 Internals
 ---------
-* New ``mime_type`` attribute: we are now capturing and storing the data type (as a MIME type) alongside data in the
-  snapshot database to facilitate future automation of filtering, diffing, and reporting. Developers using custom
-  Python code will need to update their filter and retrieval methods in classes inheriting from FilterBase and
-  JobBase, respectively, to accommodate the ``mime_type`` attribute. Detailed updates are available in the `hooks
-  documentation <https://webchanges.readthedocs.io/en/stable/hooks.html#:~:text=Changed%20in%20version%203.22>`__.
-* Updated terminology: References to ``cache`` in object names have been replaced with ``ssdb`` (snapshot database).
-* Int
+* Command line argument ``--test-differs`` now processes the new ``mime_type`` attribute correctly (``mime_type`` is
+  an internal work in progress attribute to facilitate future automation of filtering, diffing, and reporting).
