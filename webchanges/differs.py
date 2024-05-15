@@ -1040,7 +1040,7 @@ class AIGoogleDiffer(DifferBase):
     __kind__ = 'ai_google'
 
     __supported_directives__ = {
-        'model': 'model name from https://ai.google.dev/models/gemini (default: gemini-1.5-flash-latest)',
+        'model': 'model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-1.5-flash)',
         'prompt': 'a custom prompt - {unified_diff}, {old_data} and {new_data} will be replaced; ask for markdown',
         'prompt_ud_context_lines': 'the number of context lines for {unified_diff} (default: 9999)',
         'timeout': 'the number of seconds before timing out the API call (default: 300)',
@@ -1084,28 +1084,28 @@ class AIGoogleDiffer(DifferBase):
                 )
 
             api_version = '1beta'
-            _models_token_limits = {  # from https://ai.google.dev/models/gemini
-                'gemini-1.5-flash-latest': 1048576,
-                'gemini-1.5-pro-latest': 1048576,
-                'gemini-pro': 30720,
-                'gemini-1.0-pro-latest': 30720,
-                'gemini-pro-latest': 30720,
-                'gemini-1.0-pro-001': 30720,
+            _models_token_limits = {  # from https://ai.google.dev/gemini-api/docs/models/gemini
+                'gemini-1.5': 1048576,
+                '  gemini-1.0': 30720,
+                'gemini-pro': 30720,  # legacy
             }
 
             if 'model' not in directives:
-                directives['model'] = 'gemini-1.5-flash-latest'  # also for footer
+                directives['model'] = 'gemini-1.5-flash'  # also for footer
             model = directives['model']
             token_limit = directives.get('token_limit')
             if not token_limit:
-                if model not in _models_token_limits:
+                for _model, _token_limit in _models_token_limits.items():
+                    if model.startswith(_model):
+                        token_limit = _token_limit
+                        break
+                if not token_limit:
                     logger.error(
                         f"Job {self.job.index_number}: Differ '{self.__kind__}' does not know `model: {model}` "
-                        f"(supported: {', '.join(sorted(list(_models_token_limits.keys())))}) "
+                        f"(supported models starting with: {', '.join(sorted(list(_models_token_limits.keys())))}) "
                         f'({self.job.get_location()})'
                     )
                     return f'## ERROR in summarizing the changes using {self.__kind__}:\n' f'Unknown model {model}.\n'
-                token_limit = _models_token_limits[model]
 
             if '{unified_diff}' in prompt:
                 context_lines = directives.get('prompt_ud_context_lines', 9999)

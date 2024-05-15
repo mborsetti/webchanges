@@ -1,4 +1,4 @@
-⚠ Breaking Changes
+Changed
 ------------------
 * The ``ai-google`` (BETA) differ now defaults to using the new ``gemini-1.5-flash`` model (see documentation `here
   <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-flash-expandable>`__), as it still supports

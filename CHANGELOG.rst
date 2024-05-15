@@ -33,12 +33,12 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.23.0rc0
+Version 3.23.0
 ===================
-Unreleased
+2024-05-15
 
 
-⚠ Breaking Changes
+Changed
 ------------------
 * The ``ai-google`` (BETA) differ now defaults to using the new ``gemini-1.5-flash`` model (see documentation `here
   <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-flash-expandable>`__), as it still supports
