@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import textwrap
 
 # import os
@@ -84,6 +85,17 @@ class CommandConfig(BaseConfig):
         self.jobs_files = [jobs_def_file]
         self.parse_args(args)
 
+    class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
+        def __init__(self, prog: str) -> None:
+            """Initialize the help formatter.
+
+            :param prog: The program name.
+            """
+            if os.getenv('WEBCHANGES_BUILD_CLI_HELP.RST'):  # called by pre-commit
+                super().__init__(prog, width=104)
+            else:
+                super().__init__(prog)
+
     def parse_args(self, cmdline_args: list[str]) -> argparse.ArgumentParser:
         """Set up the Python arguments parser and stores the arguments in the class's variables.
 
@@ -97,7 +109,7 @@ class CommandConfig(BaseConfig):
             prog=__project_name__,
             description=description,
             epilog=f'Full documentation is at {__docs_url__}\n',
-            formatter_class=argparse.RawDescriptionHelpFormatter,
+            formatter_class=self.CustomHelpFormatter,
         )
         parser.add_argument(
             'joblist',

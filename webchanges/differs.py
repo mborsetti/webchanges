@@ -1086,7 +1086,7 @@ class AIGoogleDiffer(DifferBase):
             api_version = '1beta'
             _models_token_limits = {  # from https://ai.google.dev/gemini-api/docs/models/gemini
                 'gemini-1.5': 1048576,
-                '  gemini-1.0': 30720,
+                'gemini-1.0': 30720,
                 'gemini-pro': 30720,  # legacy
             }
 
@@ -1222,7 +1222,8 @@ class AIGoogleDiffer(DifferBase):
 
         prompt = directives.get(
             'prompt',
-            'Analyze this unified diff and create a summary listing only the changes:\n\n{unified_diff}',
+            'Describe the differences between the two versions of text as shown in this unified diff, highlighting the '
+            'most significant modifications:\n\n{unified_diff}',
         )
         summary = get_ai_summary(prompt)
         if not summary:

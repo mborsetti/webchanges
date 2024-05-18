@@ -196,6 +196,8 @@ repos:
         entry: webchanges
         language: python
         pass_filenames: false
+        env:
+          WEBCHANGES_BUILD_CLI_HELP.RST: true
         args: [--help, '>', 'docs\cli_help.txt']
 # Not running tox-ini-fmt as it removes all remarks
 #      - id: tox-ini-fmt  # https://github.com/tox-dev/tox-ini-fmt
