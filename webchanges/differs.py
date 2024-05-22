@@ -1040,7 +1040,9 @@ class AIGoogleDiffer(DifferBase):
     __kind__ = 'ai_google'
 
     __supported_directives__ = {
-        'model': 'model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-1.5-flash)',
+        'model': (
+            'model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-1.5-flash-latest)'
+        ),
         'prompt': 'a custom prompt - {unified_diff}, {old_data} and {new_data} will be replaced; ask for markdown',
         'prompt_ud_context_lines': 'the number of context lines for {unified_diff} (default: 9999)',
         'timeout': 'the number of seconds before timing out the API call (default: 300)',
@@ -1091,7 +1093,7 @@ class AIGoogleDiffer(DifferBase):
             }
 
             if 'model' not in directives:
-                directives['model'] = 'gemini-1.5-flash'  # also for footer
+                directives['model'] = 'gemini-1.5-flash-latest'  # also for footer
             model = directives['model']
             token_limit = directives.get('token_limit')
             if not token_limit:
@@ -1222,9 +1224,9 @@ class AIGoogleDiffer(DifferBase):
 
         prompt = directives.get(
             'prompt',
-            'Describe the differences between the two versions of text as shown in this unified diff, highlighting the '
-            'most significant modifications:\n\n{unified_diff}',
-        )
+            'Identify and summarize the changes between the old and new documents:\n\n<old>\n{old_data}\n</old>\n\n'
+            '<new>\n{new_data}\n</new>',
+        ).replace('\\n', '\n')
         summary = get_ai_summary(prompt)
         if not summary:
             self.state.verb = 'changed,no_report'

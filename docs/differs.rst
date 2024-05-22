@@ -196,14 +196,13 @@ words, but to do a full comparison we need up to a half of this for the old text
 .. note:: These models are only available in 38 languages and in over 200 regions; see `here
    <https://ai.google.dev/gemini-api/docs/available-regions>`__.
 
-By default, we use the latest stable version of the `Gemini 1.5 Flash
-<https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-flash-expandable>`__ model (``gemini-1.5-flash``)
+By default, we use the latest version of the `Gemini 1.5 Flash
+<https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-flash-expandable>`__ model (``gemini-1.5-flash-latest``)
 (in `preview <https://cloud.google.com/products?hl=en#product-launch-stages>`__) as it's faster than Pro, allows
 more concurrency, and if you are on a paid plan, is cheaper. You can use the ``model`` directive to specify another
-`model <https://ai.google.dev/models/gemini>`__, such as the latest (instead of stable) Flash
-(``gemini-1.5-flash-latest``), the more powerful `Gemini 1.5 Pro
-<https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro-expandable>`__ (``gemini-1.5-pro`` or
-``gemini-1.5-pro-latest``), or the older Gemini 1.0 Pro (``gemini-1.0-pro``).
+`model <https://ai.google.dev/models/gemini>`__, such as the more powerful `Gemini 1.5 Pro
+<https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro-expandable>`__ (``gemini-1.5-pro-latest``) or the
+older Gemini 1.0 Pro (``gemini-1.0-pro-latest``).
 
 To improve speed and reduce the number of tokens, by default we generate a separate, complete, unified diff which we
 feed to the Generative AI model to summarize. See below for a custom prompt that instead feeds both the old data and
@@ -245,12 +244,9 @@ Using the default ``prompt``, a summary is prefaced to the unified diff:
    </embed>
 
 
-The default prompt asks the model to ``Describe the differences between the two versions of text as shown in this
-unified diff, highlighting the most significant modifications:\n\n{unified_diff}``. Depending on your use case and
-data, you may want to try a different ``prompt``. For example:
-
-To explicitly ask for an analysis and a summary, making it clear that you want more than just a basic list of
-changes:
+The default prompt asks the Generative AI model make the comparison (see below for default prompt). However, to save
+tokens and time (and potentially $), you might want the model to only summarize differences found in a unified diff
+we prepare by using a prompt similar to the one here:
 
 .. code-block to column ~103 only; beyond has horizontal scroll bar
    1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
@@ -260,31 +256,8 @@ changes:
    differ:
      name: ai_google
      prompt: >-
-       Analyze the following unified diff and provide a summary of the changes between the two versions of
-       the text:\n\n{unified_diff}
-
-To focus on identifying the most important changes and providing context for their significance:
-
-.. code-block:: yaml
-
-   differ:
-     name: ai_google
-     prompt: >-
-       Identify and explain the key changes made between the two versions of the text as represented by
-       this unified diff:\n\n{unified_diff}
-
-To have the Generative AI model make the comparison (instead of providing a summary of a unified diff); requires more
-tokens and time (and potentially $), but may work better in certain cases:
-
-.. code-block:: yaml
-
-   differ:
-     name: ai_google
-     prompt: >-
-       Describe the differences between the two versions of text, highlighting the most significant
-       modifications:\n\n<old>\n{old_data}\n</old>\n\n<new>\n{new_data}\n</new>
-     model: gemini-1.5-pro-latest
-
+       Describe the differences between the two versions of text as shown in this unified diff,
+       highlighting the most significant modifications:\n\n{unified_diff}
 
 More information about writing input prompts for these models can be found `here
 <https://ai.google.dev/gemini-api/docs/prompting-intro>`__.  You may also ask the model itself to suggest prompts
@@ -304,8 +277,9 @@ This differ is currently in BETA and these directives MAY change in the future.
 
 * ``model`` (str): A `model code <https://ai.google.dev/models/gemini>`__ (default: ``gemini-1.5-flash``).
 * ``prompt`` (str): The prompt sent to the model; the strings ``{unified_diff}``, ``{old_data}`` and ``{new_data}`` will
-  be replaced by the respective content (default: ``Describe the differences between the two versions of text as shown
-  in this unified diff, highlighting the most significant modifications:\n\n{unified_diff}``).
+  be replaced by the respective content (default: ``Identify and summarize the changes between the old and new
+  documents:\n\n<old>\n{old_data}\n</old>\n\n<new>\n{new_data}\n</new>``). Any ``\n`` in the prompt will be replaced
+  by a newline.
 * ``prompt_ud_context_lines`` (int): Number of context lines in the unified diff sent to the model if
   ``{unified_diff}`` is present in the ``prompt`` (default: 999). If the resulting model prompt becomes approximately
   too big for the model to handle, the unified diff will be recalculated with the default number of context lines (3).

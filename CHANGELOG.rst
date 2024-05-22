@@ -33,10 +33,21 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.23.1
+===================
+2024-05-22
+
+Changed
+------------------
+* Updated the ``ai-google`` differ (BETA)'s default model to  ``gemini-1.5-flash-latest`` due to changes in Google AP
+  and its default prompt to ``Identify and summarize the changes between the old and new
+  documents:\n\n<old>\n{old_data}\n</old>\n\n`` due to the old prompt not generating the expected output.  Updated
+  the documentation.
+
+
 Version 3.23.0
 ===================
 2024-05-15
-
 
 Changed
 ------------------

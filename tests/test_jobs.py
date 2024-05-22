@@ -131,7 +131,7 @@ TEST_JOBS = [
         'test echo command',
     ),
 ]
-TEST_ALL_URL_JOBS = [
+TEST_ALL_URL_JOBS: list[dict[str, str | bool]] = [
     {},
     {'use_browser': True},
 ]

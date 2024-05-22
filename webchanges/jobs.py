@@ -1393,9 +1393,9 @@ class BrowserJob(UrlJobBase):
             page = context.new_page()
             # the below to bypass detection; from https://intoli.com/blog/not-possible-to-block-chrome-headless/
             page.add_init_script(
-                "Object.defineProperty(navigator, 'webdriver', {get: () => false,});"
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined });"
                 'window.chrome = {runtime: {},};'  # This is abbreviated: entire content is huge!!
-                "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5],});"
+                "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5] });"
             )
 
             url = self.url
