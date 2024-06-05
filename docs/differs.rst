@@ -19,19 +19,20 @@ At the moment, the following differs are available:
 
   - :ref:`unified <unified_diff>`: (default) Compares data line-by-line, showing changed lines in a "unified format";
   - :ref:`command <command_diff>`: Executes an outside command that acts as a differ (e.g. wdiff);
-  - :ref:`deepdiff <deepdiff_diff>`: Compares structured data (JSON or XML) element-by-element.
+  - :ref:`deepdiff <deepdiff_diff>`: Compares structured data (JSON or XML) element-by-element;
   - :ref:`table <table_diff>`: A Python version of the :ref:`unified <unified_diff>` differ where the changes are
     displayed as an HTML table;
+  - :ref:`wdiff <wdiff_diff>`: Compares data word-by-word, highlighting changed words and maintaining line breaks.
 
 In addition, the following BETA differs are available:
 
-  - :ref:`ai_google <ai_google_diff>`: Detects and summarizes changes using Generative AI (free API key required).
+  - :ref:`ai_google <ai_google_diff>`: Detects and summarizes changes using Generative AI (free API key required);
   - :ref:`image <image_diff>`: Detects changes in an image and displays them as overlay over a grayscale version of the
     old image.
 
 
-A differ is specified using the job directive ``differ``. To select a differ with its default directive values,
-assign the name of the differ as the value:
+A differ is specified using the job directive ``differ``. To select a differ with its default directive values, simply
+use the name of the differ as the directive's value:
 
 .. code-block:: yaml
 
@@ -58,23 +59,30 @@ Otherwise, the ``differ`` directive is a dictionary, and the ``name`` key contai
 
 unified
 -------
-The default differ used when the ``differ`` job directive is not specified (except, for backward compatibility, when
-in the configration file the ``html`` report has the deprecated ``diff`` key set to ``table``).
+This is the default differ used when the ``differ`` job directive is not specified (except, for backward compatibility,
+when in the configration file the ``html`` report has the deprecated ``diff`` key set to ``table``).
 
-It does a line-by-line comparison, and reports lines that have been added (:additions:`+`), deleted (:deletions:`-`),
-or changed. Changed lines are displayed twice: once marked as "deleted" (:deletions:`-`) representing the old
-content, and once as "added" (:additions:`+`) representing the new content. Results are displayed in the `unified
-format <https://en.wikipedia.org/wiki/Diff#Unified_format>`__ (the "*unified diff*").
+It does a line-by-line comparison of the data  and reports lines that have been added (:additions:`+`), deleted
+(:deletions:`-`), or changed. Changed lines are displayed twice: once marked as "deleted" (:deletions:`-`)
+representing the old content, and once as "added" (:additions:`+`) representing the new content. Results are
+displayed in the `unified format <https://en.wikipedia.org/wiki/Diff#Unified_format>`__ (the "*unified diff*").
 
 For HTML reports, :program:`webchanges` colorizes the unified diff for easier legibility.
 
-Examples:
+Examples
+````````
+Using default settings:
 
 .. code-block:: yaml
 
    url: https://example.net/unified.html
    differ: unified  # this can also be omitted as it's the default
 
+
+Range information lines
+:::::::::::::::::::::::
+
+Range information lines (those starting with ``@@``) can be suppressed using ``range_info: false``:
 
 .. code-block:: yaml
 
@@ -85,10 +93,13 @@ Examples:
 
 .. _contextlines:
 
+Context lines
+:::::::::::::
+
 The ``context_lines`` directive causes a unified diff to have a set number of context lines that might be different from
 Python's default of 3 (or 0 if the job contains ``additions_only: true`` or ``deletions_only: true``).
 
-Example:
+Example using 5 context lines:
 
 .. code-block:: yaml
 
@@ -99,28 +110,31 @@ Example:
 
 Output:
 
-.. code-block::
+.. raw:: html
 
-   ---------------------------------------------------------------------------
-   CHANGED: https://example.com/#lots_of_contextlines
-   ---------------------------------------------------------------------------
-   --- @   Sat, 01 Oct 2020 00:00:00 +0000
-   ... @   Sat, 01 Oct 2020 01:00:00 +0000
-   @@ -1,15 +1,15 @@
-    This is line 10
-    This is line 11
-    This is line 12
-    This is line 13
-    This is line 14
-   -This is line 15
-   +This is line fifteen
-    This is line 16
-    This is line 17
-    This is line 18
-    This is line 19
-    This is line 20
+  <embed>
+  <div class="output-box-mono">---------------------------------------------------------------------------
+  CHANGED: https://example.com/#lots_of_contextlines
+  ---------------------------------------------------------------------------
+  --- @   Sat, 01 Oct 2020 00:00:00 +0000
+  ... @   Sat, 01 Oct 2020 01:00:00 +0000
+  @@ -1,15 +1,15 @@
+   This is line 10
+   This is line 11
+   This is line 12
+   This is line 13
+   This is line 14
+  -This is line 15
+  +This is line fifteen
+   This is line 16
+   This is line 17
+   This is line 18
+   This is line 19
+   This is line 20
+  </div>
+  <embed>
 
-Example (using the default, i.e. 3):
+The same example using the default number of context lines, i.e. 3:
 
 .. code-block:: yaml
 
@@ -128,9 +142,10 @@ Example (using the default, i.e. 3):
 
 Output:
 
-.. code-block::
+.. raw:: html
 
-   ---------------------------------------------------------------------------
+   <embed>
+   <div class="output-box-mono">---------------------------------------------------------------------------
    CHANGED: https://example.com/#default_contextlines
    ---------------------------------------------------------------------------
    --- @   Sat, 01 Oct 2020 00:00:00 +0000
@@ -144,7 +159,8 @@ Output:
     This is line 16
     This is line 17
     This is line 18
-
+   </div>
+   <embed>
 
 Optional directives
 ```````````````````
@@ -153,12 +169,8 @@ Optional directives
   true).
 
 .. versionchanged:: 3.21
-   Became a standalone differ.
-   Added the ``range_info`` directive.
-   Added the ``context_line`` directive, which replaces the job directive ``contextlines``.
-
-.. versionadded:: 3.0
-   ``contextlines`` (as a job directive)
+   Became a standalone differ. Added the ``range_info`` and ``context_line`` directives, the latter replacing the
+   job directive ``contextlines`` (added in version 3.0).
 
 .. _ai_google_diff:
 
@@ -166,35 +178,31 @@ Optional directives
 ai_google
 ---------
 .. versionadded:: 3.21
-   Added as BETA
+   as BETA.
 
-This differ is currently in BETA and the name and/or directives MAY change in the future, mostly because of the rapid
-advances in the technology and the prospect of integrating more generative AI models. Feedback welcomed `here
-<https://github.com/mborsetti/webchanges/discussions>`__.
+.. note:: This differ is currently in BETA and the name and/or directives MAY change in the future, mostly because of
+   the rapid advances in the technology and the prospect of integrating more generative AI models. Feedback welcomed
+   `here <https://github.com/mborsetti/webchanges/discussions>`__.
 
 Prefaces a unified diff with a textual summary of changes generated by any of Google's `Gemini Generative AI
 models <https://ai.google.dev/gemini-api/docs/models/gemini>`__ called via an API call. This can be free of charge
-for most developers (free tier is not available in EEA (including EU), UK and CH).
+for most developers.
+
+Gemini 1.5 models are the first widely available models with a context window of 1 million tokens (or more), which
+allow to analyze changes in long documents (of 350,000 words, or about 700 pages single-spaced) such as terms and
+conditions, privacy policies, etc. that other models can't handle. For clarity, these models can handle over 700,000
+words, but to do a full comparison we need a half of this for the old text and the other half for the changed text.
 
 .. important:: Requires a system environment variable ``GOOGLE_AI_API_KEY`` containing the Google Cloud AI Studio
    API Key, which you obtain `here <https://aistudio.google.com/app/apikey>`__ and which itself requires a `Google
    Cloud <https://cloud.google.com/>`__ account.
 
-.. warning:: Please note that from 30 May 2024 the use of Gemini 1.5 models via a
-   project that has billing enabled will be billed `pay-as-you-go pricing <https://ai.google.dev/pricing>`__.
-   To avoid surprises, we recommend that at a minimum you set up a `budget
-   <https://console.cloud.google.com/billing/01457C-2ABCC1-8A6144/budgets>`__ with threshold notification enabled or,
-   (unless you are in the EEA (including EU), UK or CH) you opt for the **free of charge plan** by creating an API key
+.. warning:: Gemini 1.5 models are free only on the **free of charge plan**,  which you obtain by creating an API key
    from a Google Cloud project with `billing disabled
-   <https://cloud.google.com/billing/docs/how-to/modify-project#disable_billing_for_a_project>`__.
-
-Gemini 1.5 models are the first widely available models with a context window of 1 million tokens, which allow
-to analyze changes in long documents (up to 350,000 words, or about 700 pages single-spaced) such as terms and
-conditions, privacy policies, etc. that other models can't handle. For clarity, these models can handle up to 700,000
-words, but to do a full comparison we need up to a half of this for the old text and the rest for the new text.
-
-.. note:: These models are only available in 38 languages and in over 200 regions; see `here
-   <https://ai.google.dev/gemini-api/docs/available-regions>`__.
+   <https://cloud.google.com/billing/docs/how-to/modify-project#disable_billing_for_a_project>`__. Most jobs should
+   work within free plan; if not, we highly recommend that you set up a `budget
+   <https://console.cloud.google.com/billing/01457C-2ABCC1-8A6144/budgets>`__ with threshold notification enabled to
+   avoid any expensive surprises!
 
 By default, we use the latest version of the `Gemini 1.5 Flash
 <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-flash-expandable>`__ model (``gemini-1.5-flash-latest``)
@@ -204,49 +212,20 @@ more concurrency, and if you are on a paid plan, is cheaper. You can use the ``m
 <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro-expandable>`__ (``gemini-1.5-pro-latest``) or the
 older Gemini 1.0 Pro (``gemini-1.0-pro-latest``).
 
-To improve speed and reduce the number of tokens, by default we generate a separate, complete, unified diff which we
-feed to the Generative AI model to summarize. See below for a custom prompt that instead feeds both the old data and
-the new data to the model asking it to make the comparison.
+.. note:: These models work with `38 languages
+   <https://ai.google.dev/gemini-api/docs/models/gemini#available-languages>`__ and are available in over `200 regions
+   <https://ai.google.dev/gemini-api/docs/available-regions>`__.
+
+.. To improve speed and reduce the number of tokens, by default we generate a separate, complete, unified diff which we
+   feed to the Generative AI model to summarize. See below for a custom prompt that instead feeds both the old data and
+   the new data to the model asking it to make the comparison.
 
 .. warning:: Generative AI can "hallucinate" (make things up), so **always** double-check the AI-generated summary with
    the accompanying unified diff.
 
-Examples
-````````
-Using the default ``prompt``, a summary is prefaced to the unified diff:
-
-.. raw:: html
-
-   <embed>
-     <div style="padding:12px;margin-bottom:24px;font-family:Roboto,sans-serif;font-size:13px;
-     border:1px solid#e1e4e5;background:white;">
-     <strong>Summary of Changes:</strong><br><br>
-     The provided unified diff shows a single line change:<br><br>
-     <ul style="line-height:1.2em">
-     <li><strong>Line 1:</strong> The timestamp was updated from
-     <span style="font-family:monospace;white-space:pre-wrap">Sat Apr 6 10:46:13 UTC 2024</span> to
-     <span style="font-family:monospace;white-space:pre-wrap">Sat Apr 6 10:55:04 UTC 2024</span>. </li>
-     </ul>
-     <table style="border-collapse:collapse">
-     <tr><td style="font-family:monospace;color:darkred">--- @ Sat, 06 Apr 2024 10:46:13 +0000</td></tr>
-     <tr><td style="font-family:monospace;color:darkgreen">+++ @ Sat, 06 Apr 2024 10:55:04 +0000</td></tr>
-     <tr><td style="background-color:#fbfbfb">@@ -1 +1 @@</td></tr>
-     <tr style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">
-       <td>Sat Apr 6 10:46:13 UTC 2024</td>
-     </tr>
-     <tr style="background-color:#d1ffd1;color:#082b08"><td>Sat Apr 6 10:55:04 UTC 2024</td></tr>
-     </table>
-     <i><small>
-     ---<br>
-     Summary generated by Google Generative AI (differ directive(s): model=gemini-1.5-flash)
-     </small></i>
-     </div>
-   </embed>
-
-
 The default prompt asks the Generative AI model make the comparison (see below for default prompt). However, to save
-tokens and time (and potentially $), you might want the model to only summarize differences found in a unified diff
-we prepare by using a prompt similar to the one here:
+tokens and time (and potentially $), you might want the model to only summarize the differences from a unified diff
+by using a prompt similar to the one here:
 
 .. code-block to column ~103 only; beyond has horizontal scroll bar
    1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
@@ -256,13 +235,43 @@ we prepare by using a prompt similar to the one here:
    differ:
      name: ai_google
      prompt: >-
-       Describe the differences between the two versions of text as shown in this unified diff,
+       Describe the differences between the two versions of text as summarized in this unified diff,
        highlighting the most significant modifications:\n\n{unified_diff}
 
 More information about writing input prompts for these models can be found `here
-<https://ai.google.dev/gemini-api/docs/prompting-intro>`__.  You may also ask the model itself to suggest prompts
-that are appropriate to your use case.
+<https://ai.google.dev/gemini-api/docs/prompting-intro>`__. You may also ask the model itself (in `AI Studio
+<https://aistudio.google.com/>`__) to suggest prompts that are appropriate to your use case.
 
+Example
+```````
+Using the default ``prompt``, a summary is prefaced to a unified diff:
+
+.. raw:: html
+
+   <embed>
+     <div class="output-box">
+     <strong>Summary of Changes:</strong><br><br>
+     The provided unified diff shows a single line change:<br><br>
+     <ul style="line-height:1.2em">
+     <li><strong>Line 1:</strong> The timestamp was updated from
+     <span style="font-family:monospace;white-space:pre-wrap">Sat Oct 1 00:00:00 UTC 2020</span> to
+     <span style="font-family:monospace;white-space:pre-wrap">Sat Oct 1 01:00:00 UTC 2020</span>. </li>
+     </ul>
+     <table style="border-collapse:collapse">
+     <tr><td style="font-family:monospace;color:darkred">--- @ Sat, 01 Oct 2020 00:00:00 +0000</td></tr>
+     <tr><td style="font-family:monospace;color:darkgreen">+++ @ Sat, 01 Oct 2020 01:00:00 +0000</td></tr>
+     <tr><td style="background-color:#fbfbfb">@@ -1 +1 @@</td></tr>
+     <tr style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">
+       <td>Sat Oct 1 00:00:00 UTC 2020</td>
+     </tr>
+     <tr style="background-color:#d1ffd1;color:#082b08"><td>Sat Oct 1 01:00:00 UTC 2020</td></tr>
+     </table>
+     <i><small>
+     ---<br>
+     Summary generated by Google Generative AI (differ directive(s): model=gemini-1.5-flash)
+     </small></i>
+     </div>
+   </embed>
 
 Mandatory environment variable
 ``````````````````````````````
@@ -277,11 +286,12 @@ This differ is currently in BETA and these directives MAY change in the future.
 
 * ``model`` (str): A `model code <https://ai.google.dev/models/gemini>`__ (default: ``gemini-1.5-flash``).
 * ``prompt`` (str): The prompt sent to the model; the strings ``{unified_diff}``, ``{old_data}`` and ``{new_data}`` will
-  be replaced by the respective content (default: ``Identify and summarize the changes between the old and new
-  documents:\n\n<old>\n{old_data}\n</old>\n\n<new>\n{new_data}\n</new>``). Any ``\n`` in the prompt will be replaced
-  by a newline.
-* ``prompt_ud_context_lines`` (int): Number of context lines in the unified diff sent to the model if
-  ``{unified_diff}`` is present in the ``prompt`` (default: 999). If the resulting model prompt becomes approximately
+  be replaced by the respective content; Any ``\n`` in the prompt will be replaced by a newline (default: ``Identify
+  and summarize the changes between the old and new
+  documents:\n\n<old>\n{old_data}\n</old>\n\n<new>\n{new_data}\n</new>``).
+* ``system_instructions``: Optional tone and style instructions for the model (default: ``Respond in Markdown``).
+* ``prompt_ud_context_lines`` (int): if ``{unified_diff}`` is present in the ``prompt``, the number of context lines in
+  the unified diff sent to the model (default: 999). If the resulting model prompt becomes approximately
   too big for the model to handle, the unified diff will be recalculated with the default number of context lines (3).
   Note that this unified diff is a different one than the diff included in the report itself.
 * ``timeout`` (float): The number of seconds before timing out the API call (default: 300).
@@ -297,8 +307,7 @@ This differ is currently in BETA and these directives MAY change in the future.
 * ``unified`` (dict): directives passed to :ref:`unified differ <unified_diff>`, which prepares the unified diff
   attached to this report.
 
-Directives for the underlying :ref:`unified differ <unified_diff>` can be passed in as key called ```unified``, as
-follows:
+Directives for the underlying :ref:`unified differ <unified_diff>` can be passed in as key ``unified``, as follows:
 
 .. code-block:: yaml
 
@@ -312,10 +321,11 @@ follows:
 
 
 .. note:: You can learn about Temperature, TopK and TopP parameters `here
-   <https://ai.google.dev/docs/concepts#model-parameters>`__. In general, temperature increases creativity and
-   diversity in phrasing variety, while top-p and top-k influences variety of individual words with low values leading
-   to potentially repetitive summaries. The only way to get these "right" is through experimentation with actual
-   data, as the results are highly dependent on it and subjective to your personal preferences.
+   <https://ai.google.dev/gemini-api/docs/models/generative-models#model-parameters>`__. In general, temperature
+   increases creativity and diversity in phrasing variety, while top-p and top-k influences variety of individual
+   words with low values leading to potentially repetitive summaries. The only way to get these "right" is through
+   experimentation with actual data, as the results are highly dependent on it and subjective to your personal
+   preferences.
 
 .. tip:: You can do "dry-runs" of this (or any) differ on an existing job by editing the differ in the job file and
    running e.g. ``webchanges --test-differ 1 --test-reporter browser``. Don't forget to revert your job file if you
@@ -331,20 +341,22 @@ Call an external differ (e.g. wdiff). The old data and new data are written to a
 two files are appended to the command. The external program will have to exit with a status of 0 if no differences
 were found, a status of 1 if any differences were found, or any other status for any error.
 
-If ``wdiff`` is used, its output will be colorized when displayed on stdout (typically a screen) and for HTML reports.
+If ``wdiff`` is called, its output will be colorized when displayed on stdout (typically a screen) and for HTML
+reports. However, we recommend you use the built-in :ref:`wdiff_diff` differ instead.
 
 For increased legibility, the differ directive ``name`` is not required (``command`` is sufficient).
 
-Example:
+Example
+```````
 
 .. code-block:: yaml
 
    url: https://example.net/command.html
    differ:
-     command: wdiff
+     command: python mycustomscript.py
 
-Please see :ref:`important note <important_note_for_command_jobs>` for the file security settings required to run jobs
-with this differ in Linux.
+.. note:: See :ref:`this note <important_note_for_command_jobs>` for the file security settings required to
+   run jobs with this differ in Linux.
 
 .. versionchanged:: 3.21
    Was previously a job sub-directive by the name of ``diff_tool``.
@@ -359,7 +371,8 @@ Inspects structured data (JSON or XML) on an element by element basis and report
 customized report based on deepdiff's library `DeepDiff
 <https://zepworks.com/deepdiff/current/diff.html#module-deepdiff.diff>`__ module.
 
-Examples:
+Examples
+````````
 
 .. code-block:: yaml
 
@@ -375,19 +388,17 @@ Examples:
      data_type: xml
      ignore_order: true
 
-Example diff:
+Output:
 
 .. raw:: html
 
    <embed>
-   <div style="padding:12px;margin-bottom:24px;font-family:Roboto,sans-serif;font-size:13px;
-   border:1px solid#e1e4e5;background:white;"><span style="font-family:monospace;white-space:pre-wrap;font-size:13px;">Differ: deepdiff for json
-   <span style="color:darkred">Old Sat, 13 Apr 2024 21:19:36 +0800</span>
-   <span style="color:darkgreen">New Sun, 14 Apr 2024 21:24:14 +0800</span>
-   ------------------------------------
+   <div class="output-box-mono">Differ: deepdiff for json
+   <span style="color:darkred">Old 01 Oct 2020 00:00:00 +0000</span>
+   <span style="color:darkgreen">New 01 Oct 2020 01:00:00 +0000</span>
+   —————————————————————————————————————
    • Type of [&#39;Items&#39;][0][&#39;<wbr>CurrentInventory&#39;] changed from int to NoneType and value changed from <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">&quot;1&quot;</span> to <span style="background-color:#d1ffd1;color:#082b08">None</span>.
    • Type of [&#39;Items&#39;][0][&#39;<wbr>Description&#39;] changed from str to NoneType and value changed from <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">&quot;Gadget&quot;</span> to <span style="background-color:#d1ffd1;color:#082b08">None</span>.
-   </span>
    </div>
    </embed>
 
@@ -416,15 +427,17 @@ follows:
 image
 -----
 .. versionadded:: 3.21
-   Added as BETA
+   As BETA.
 
-This differ is currently in BETA, mostly because it's unclear what more needs to be changed or parametrized in order
-to make the differ work with a vast variety of images. Feedback welcomed `here
-<https://github.com/mborsetti/webchanges/discussions>`__.
+.. note:: This differ is currently in BETA, mostly because it's unclear what more needs to be developed, changed or
+   parametrized in order to make the differ work with the vast variety of images. Feedback welcomed `here
+   <https://github.com/mborsetti/webchanges/discussions>`__.
 
 Highlights changes in an image by overlaying them in yellow on a greyscale version of the original image. Only works
 with HTML reports.
 
+Example
+```````
 .. code-block:: yaml
 
    url: https://example.net/image.html
@@ -434,7 +447,7 @@ with HTML reports.
 
 Optional directives
 ```````````````````
-This differ is currently in BETA and the directives may change in the future.
+This differ is currently in BETA and these directives may change in the future.
 
 * ``data_type`` (``url``, ``filename``, ``ascii85`` or ``base64``): The type of data to process: a link to the image,
   the path to the file containing the image, or the image itself encoded as `Ascii85
@@ -469,7 +482,17 @@ table
 -----
 Similar to :ref:`unified <unified_diff>`, it performs a line-by-line comparison and reports lines that have been added,
 deleted, or changed, but the HTML table format produced by Python's `difflib.HtmlDiff
-<https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__. Example output:
+<https://docs.python.org/3/library/difflib.html#difflib.HtmlDiff>`__.
+
+Example
+```````
+.. code-block:: yaml
+
+   url: https://example.net/table.html
+   differ: table
+
+
+Output:
 
 .. raw:: html
 
@@ -480,8 +503,7 @@ deleted, or changed, but the HTML table format produced by Python's `difflib.Htm
         .diff_sub { color: red; background-color: lightred; }
         .diff_chg { color: orange; background-color: lightyellow; }
      </style>
-     <!-- Created in Python 3.12 -->
-     <div style="padding:12px;margin-bottom:24px;font-family:Roboto,sans-serif;font-size:13px;
+     <div class="output-box">
      border:1px solid#e1e4e5;background:white;">
      <table class="diff" id="difflib_chg_to0__top" cellspacing="0" cellpadding="0" rules="groups" >
        <colgroup></colgroup> <colgroup></colgroup> <colgroup></colgroup>
@@ -527,6 +549,8 @@ deleted, or changed, but the HTML table format produced by Python's `difflib.Htm
 For backwards compatibility, this is the default differ for an ``html`` reporter with the configuration setting
 ``diff`` (deprecated) set to ``html``.
 
+Example:
+
 .. code-block:: yaml
 
    url: https://example.net/table.html
@@ -539,3 +563,48 @@ Optional directives
 .. versionchanged:: 3.21
    Became a standalone differ (previously only accessible through configuration file settings).
    Added the ``tabsize`` directive.
+
+
+.. _wdiff_diff:
+
+wdiff
+-----
+.. versionadded:: 3.24
+
+Performs a word-by-word comparison highlighting words that have been added (:additions:`added`) or deleted
+(:deletions:`deleted`). Changed words are displayed twice: once marked as "deleted" (:deletions:`deleted`)
+representing the old word(s), and the new word(s) as "added" (:additions:`added`). Line breaks are maintained.
+
+It is similar to `GNU's Wdiff <https://www.gnu.org/software/wdiff/>`__, but requires no external dependency.
+
+Example
+```````
+
+.. code-block:: yaml
+
+   command: The time now is %time% UTC  # Windows
+   differ: wdiff
+
+Output:
+
+.. raw:: html
+
+   <embed>
+     <div class="output-box">
+     <span style="font-family:monospace">Differ: wdiff<br>
+     <span style="color:darkred">--- @ Sat, 01 Oct 2020 00:00:00 +0000</span><br>
+     <span style="color:darkgreen">+++ @ Sat, 01 Oct 2020 01:00:00 +0000</span><br>
+     —————————————————————————————————————</span><br>
+     The time now is <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">
+     00:00:00.00</span>
+     <span style="background-color:#d1ffd1;color:#082b08">01:00:00.00</span> UTC</span>
+     <hr style="margin-top:0.5em;margin-bottom:0.5em">
+     <span style="font-style:italic">Checked 1 source in 0.1 seconds with <a href="https://pypi.org/project/webchanges/" target="_blank">webchanges</a>.</span>
+     </div>
+   </embed>
+
+Optional directives
+```````````````````
+* ``context_lines``: The number of context lines on each side of changes to provide surrounding content to
+  better understand the changes (default: 3).
+* ``range_info``: Include unified-diff-line range information lines (default: true).

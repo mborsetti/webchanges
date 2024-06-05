@@ -369,7 +369,7 @@ class HtmlReporter(ReporterBase):
                 yield '<hr>'
 
         # HTML footer
-        yield '<div style="font-style:italic">'
+        yield '<span style="font-style:italic">'
         if self.report.config['footnote']:
             yield f"{self.report.config['footnote']}\n"
         if cfg['footer']:
@@ -389,7 +389,7 @@ class HtmlReporter(ReporterBase):
                 f'<b>New release version {self.report.new_release_future.result()} is available; we recommend '
                 f'updating.</b>'
             )
-        yield '</div>\n</body>\n</html>\n'
+        yield '</span>\n</body>\n</html>\n'
 
     @staticmethod
     def _format_content(

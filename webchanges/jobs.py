@@ -132,15 +132,15 @@ class JobBase(metaclass=TrackSubClasses):
     compared_versions: Optional[int] = None
     contextlines: Optional[int] = None
     cookies: Optional[dict[str, str]] = None
-    data: Union[str, dict[str, str]] = None  # type: ignore[assignment]
+    data: Optional[Union[str, list, dict]] = None
     data_as_json: Optional[bool] = None
     deletions_only: Optional[bool] = None
     differ: Optional[dict[str, Any]] = None  # added in 3.21
-    diff_filter: Union[str, list[Union[str, dict[str, Any]]]] = None  # type: ignore[assignment]
+    diff_filter: Optional[Union[str, list[Union[str, dict[str, Any]]]]] = None
     diff_tool: Optional[str] = None  # deprecated in 3.21
     enabled: Optional[bool] = None
     encoding: Optional[str] = None
-    filter: Union[str, list[Union[str, dict[str, Any]]]] = None  # type: ignore[assignment]
+    filter: Optional[Union[str, list[Union[str, dict[str, Any]]]]] = None
     headers: Optional[Union[dict, CaseInsensitiveDict]] = None
     http_client: Optional[Literal['httpx', 'requests']] = None
     http_proxy: Optional[str] = None
@@ -958,15 +958,15 @@ class UrlJob(UrlJobBase):
                     headers['Content-Type'] = 'application/json'
                 else:
                     headers['Content-Type'] = 'application/x-www-form-urlencoded'
-            if isinstance(self.data, dict):
+            if isinstance(self.data, (dict, list)):
                 if self.data_as_json:
                     self.data = jsonlib.dumps(self.data, ensure_ascii=False)
                 else:
                     self.data = urlencode(self.data)
             elif not isinstance(self.data, str):
                 raise TypeError(
-                    f"Job {job_state.job.index_number}: Directive 'data' needs to be a string or a dictionary; found a "
-                    f'{type(self.data).__name__} ( {self.get_indexed_location()} ).'
+                    f"Job {job_state.job.index_number}: Directive 'data' needs to be a string, dictionary or list; "
+                    f'found a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
                 )
 
         else:
@@ -1444,7 +1444,7 @@ class BrowserJob(UrlJobBase):
                         headers['Content-Type'] = 'application/json'
                     else:
                         headers['Content-Type'] = 'application/x-www-form-urlencoded'
-                if isinstance(self.data, dict):
+                if isinstance(self.data, (dict, list)):
                     if self.data_as_json:
                         data = jsonlib.dumps(self.data, ensure_ascii=False)
                     else:
@@ -1453,8 +1453,8 @@ class BrowserJob(UrlJobBase):
                     data = quote(self.data)
                 else:
                     raise ValueError(
-                        f"Job {job_state.job.index_number}: Directive 'data' requires a dictionary or a string; found "
-                        f'a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
+                        f"Job {job_state.job.index_number}: Directive 'data' needs to be a string, dictionary or list; "
+                        f'found a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
                     )
 
             if self.method and self.method != 'GET':

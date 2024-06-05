@@ -156,7 +156,7 @@ class FilterBase(metaclass=TrackSubClasses):
     @classmethod
     def normalize_filter_list(
         cls,
-        filter_spec: Union[str, list[Union[str, dict[str, Any]]]],
+        filter_spec: Union[str, list[Union[str, dict[str, Any]]], None],
         job_index_number: Optional[int] = None,
     ) -> Iterator[tuple[str, dict[str, Any]]]:
         """Generates a list of filters that has been checked for its validity.
@@ -195,7 +195,7 @@ class FilterBase(metaclass=TrackSubClasses):
     @classmethod
     def _internal_normalize_filter_list(
         cls,
-        filter_spec: Union[str, list[Union[str, dict[str, Any]]]],
+        filter_spec: Union[str, list[Union[str, dict[str, Any]]], None],
         job_index_number: Optional[int] = None,
     ) -> Iterator[tuple[str, dict[str, Any]]]:
         """Generates a list of filters with its default subfilter if not supplied.
@@ -265,7 +265,7 @@ class FilterBase(metaclass=TrackSubClasses):
             return data, mime_type
 
     @classmethod
-    def filter_chain_needs_bytes(cls, filter_name: Union[str, list[Union[str, dict[str, Any]]]]) -> bool:
+    def filter_chain_needs_bytes(cls, filter_name: Union[str, list[Union[str, dict[str, Any]]], None]) -> bool:
         """Checks whether the first filter requires data in bytes (not Unicode).
 
         :param filter_name: The filter.

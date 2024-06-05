@@ -560,12 +560,16 @@ class CommandDiffer(DifferBase):
             if proc.returncode == 0:
                 self.state.verb = 'changed,no_report'
                 return {'text': '', 'markdown': '', 'html': ''}
+
+            old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
+            sep = '—' * (len(old_timestamp) + 6)
+            new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
             head = '\n'.join(
                 [
                     f'Using differ "{directives}"',
-                    f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}',
-                    f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}',
-                    '—' * 37,
+                    f'--- @ {old_timestamp}',
+                    f'+++ @ {new_timestamp}',
+                    f'{sep}',
                 ]
             )
             diff = proc.stdout
@@ -813,13 +817,16 @@ class DeepdiffDiffer(DifferBase):
 
         self.job.set_to_monospace()
 
+        old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
+        new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
+        sep = '—' * (len(old_timestamp) + 6)
         if report_kind == 'html':
             html_diff = (
                 f'<span style="font-family:monospace;white-space:pre-wrap;">\n'
                 f'Differ: {self.__kind__} for {data_type}\n'
-                f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>\n'
-                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>\n'
-                + '—' * 37
+                f'<span style="color:darkred;">--- @ {old_timestamp}</span>\n'
+                f'<span style="color:darkgreen;">+++ @ {new_timestamp}</span>\n'
+                + sep
                 + '\n'
                 + diff_text[:-1]
                 + '</span>'
@@ -828,8 +835,8 @@ class DeepdiffDiffer(DifferBase):
         else:
             text_diff = (
                 f'Differ: {self.__kind__} for {data_type}\n'
-                f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\n'
-                f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\n' + '—' * 37 + '\n' + diff_text
+                f'--- @ {old_timestamp}\n'
+                f'+++ @ {new_timestamp}\n' + sep + '\n' + diff_text
             )
             return {'text': text_diff, 'markdown': text_diff}
 
@@ -1010,11 +1017,12 @@ class ImageDiffer(DifferBase):
         # Prepare HTML output
         new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
         old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
+        sep = '—' * (len(old_timestamp) + 6)
         htm = [
             f'<span style="font-family:monospace">Differ: {self.__kind__} for {data_type}',
             f'<span style="color:darkred;">--- @ {old_timestamp}{old_data}</span>',
             f'<span style="color:darkgreen;">+++ @ {new_timestamp}{new_data}' f'</span>',
-            ('—' * 37 + '</span>'),
+            f'{sep}</span>',
             'New image:',
             f'<img src="data:image/{new_image.format.lower()};base64,{encoded_new}">',
             'Differences from old (in yellow):',
@@ -1044,6 +1052,7 @@ class AIGoogleDiffer(DifferBase):
             'model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-1.5-flash-latest)'
         ),
         'prompt': 'a custom prompt - {unified_diff}, {old_data} and {new_data} will be replaced; ask for markdown',
+        'system_instructions': 'Optional tone and style instructions for the model (default: Respond in Markdown)',
         'prompt_ud_context_lines': 'the number of context lines for {unified_diff} (default: 9999)',
         'timeout': 'the number of seconds before timing out the API call (default: 300)',
         'max_output_tokens': "the maximum number of tokens returned by the model (default: None, i.e. model's default)",
@@ -1071,7 +1080,7 @@ class AIGoogleDiffer(DifferBase):
             RuntimeWarning,
         )
 
-        def get_ai_summary(prompt: str) -> str:
+        def get_ai_summary(prompt: str, system_instructions: str) -> str:
             """Generate AI summary from unified diff, or an error message"""
             GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
             if len(GOOGLE_AI_API_KEY) != 39:
@@ -1128,14 +1137,14 @@ class AIGoogleDiffer(DifferBase):
             else:
                 unified_diff = ''
 
-            def _send_to_model(model_prompt: str) -> str:
+            def _send_to_model(model_prompt: str, system_instructions: str) -> str:
                 """Creates the summary request to the model"""
                 max_output_tokens = directives.get('max_output_tokens')
                 temperature = directives.get('temperature', 0.0)
                 top_p = directives.get('top_p')
                 top_k = directives.get('top_k')
                 data = {
-                    'system_instruction': {'parts': [{'text': 'Respond in Markdown'}]},
+                    'system_instruction': {'parts': [{'text': system_instructions}]},
                     'contents': [{'parts': [{'text': model_prompt}]}],
                     'generation_config': {
                         'max_output_tokens': max_output_tokens,
@@ -1182,12 +1191,16 @@ class AIGoogleDiffer(DifferBase):
 
                 return summary
 
+            # check if data is different (for testing)
+            if '{old_data}' in prompt and '{new_data}' in prompt and self.state.old_data == self.state.new_data:
+                return ''
+
             model_prompt = prompt.format(
                 unified_diff=unified_diff, old_data=self.state.old_data, new_data=self.state.new_data
             )
 
             if len(model_prompt) / 4 < token_limit:
-                summary = _send_to_model(model_prompt)
+                summary = _send_to_model(model_prompt, system_instructions)
             elif '{unified_diff}' in prompt:
                 logger.info(
                     f'Job {self.job.index_number}: Model prompt with full diff is too long: '
@@ -1208,7 +1221,7 @@ class AIGoogleDiffer(DifferBase):
                     unified_diff=unified_diff, old_data=self.state.old_data, new_data=self.state.new_data
                 )
                 if len(model_prompt) / 4 < token_limit:
-                    summary = _send_to_model(model_prompt)
+                    summary = _send_to_model(model_prompt, system_instructions)
                 else:
                     summary = (
                         f'AI summary unavailable (model prompt with unified diff is too long: '
@@ -1219,19 +1232,23 @@ class AIGoogleDiffer(DifferBase):
                     f'The model prompt may be too long: {len(model_prompt) / 4:,.0f} est. tokens exceeds '
                     f'limit of {token_limit:,.0f} tokens'
                 )
-                summary = _send_to_model(model_prompt)
+                summary = _send_to_model(model_prompt, system_instructions)
             return summary
 
         prompt = directives.get(
             'prompt',
-            'Identify and summarize the changes between the old and new documents:\n\n<old>\n{old_data}\n</old>\n\n'
-            '<new>\n{new_data}\n</new>',
+            'Identify the changes between the old document (enclosed by an <old> tag) and the new document ('
+            'enclosed by a <new> tag) and output a summary of such changes:\n\n<old>\n{old_data}\n</old>\n\n<new>\n'
+            '{new_data}\n</new>',
         ).replace('\\n', '\n')
-        summary = get_ai_summary(prompt)
+        system_instructions = directives.get('system_instructions', 'Respond in Markdown')
+        summary = get_ai_summary(prompt, system_instructions)
         if not summary:
             self.state.verb = 'changed,no_report'
             return {'text': '', 'markdown': '', 'html': ''}
-        directives_text = ', '.join(f'{key}={value}' for key, value in directives.items()) or 'None'
+        directives_text = (
+            ', '.join(f"{key}={str(value).replace('\n', '\\n')}" for key, value in directives.items()) or 'None'
+        )
         footer = f'Summary generated by Google Generative AI (differ directive(s): {directives_text})'
         temp_unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
         for rep_kind in ['text', 'html']:  # markdown is same as text
@@ -1303,22 +1320,23 @@ class WdiffDiffer(DifferBase):
         add_html = '<span style="background-color:#d1ffd1;color:#082b08;">'
         rem_html = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
 
+        old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
+        new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
+        sep = '—' * (len(old_timestamp) + 6)
         head_text = (
-            'Differ: wdiff\n'
-            f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m\n'
-            f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m\n' + '—' * 37 + '\n'
+            'Differ: wdiff\n' f'\033[91m--- @ {old_timestamp}\033[0m\n' f'\033[92m+++ @ {new_timestamp}\033[0m\n{sep}\n'
         )
         head_html = '<br>\n'.join(
             [
                 '<span style="font-family:monospace;">Differ: wdiff',
-                f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
-                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>',
-                '—' * 37 + '</span>',
+                f'<span style="color:darkred;">--- @ {old_timestamp}</span>',
+                f'<span style="color:darkgreen;">+++ @ {new_timestamp}</span>',
+                f'{sep}</span>',
                 '',
             ]
         )
         # Process the diff output to make it more wdiff-like
-        result = []
+        result_text = []
         result_html = []
         prev_word_text = ''
         prev_word_html = ''
@@ -1326,11 +1344,8 @@ class WdiffDiffer(DifferBase):
         next_html = ''
         add = False
         rem = False
-        for word_text in diff:
-            if len(word_text) < 3:
-                continue
-            if word_text[0] == '?':
-                continue
+
+        for word_text in diff + ['  ']:
             word_html = word_text
             pre_text = [next_text] if next_text else []
             pre_html = [next_html] if next_html else []
@@ -1370,24 +1385,26 @@ class WdiffDiffer(DifferBase):
                 rem = False
             elif word_text[2:] == '<\\n>':  # New line
                 if add:
-                    word_html = f'  </span><\\n> {add_html}'
+                    word_text = '  \033[0m<\\n>'
+                    word_html = '  </span><\\n>'
+                    add = False
                 elif rem:
-                    word_html = f'  </span><\\n> {rem_html}'
+                    word_text = '  \033[0m<\\n>'
+                    word_html = '  </span><\\n>'
+                    rem = False
 
-            result.append(prev_word_text)
+            result_text.append(prev_word_text)
             result_html.append(prev_word_html)
             pre_text.append(word_text[2:])
             pre_html.append(word_html[2:])
             prev_word_text = ''.join(pre_text)
             prev_word_html = ''.join(pre_html)
-        result.append(prev_word_text)
-        result_html.append(prev_word_html)
         if add or rem:
-            result[-1] += '\033[0m'
+            result_text[-1] += '\033[0m'
             result_html[-1] += '</span>'
 
         # rebuild the text from words, replacing the newline token
-        diff_text = ' '.join(result[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
+        diff_text = ' '.join(result_text[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
         diff_html = ' '.join(result_html[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
 
         # build contextlines

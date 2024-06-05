@@ -1153,7 +1153,30 @@ By default, the full match will be included in the output.
    can be specified as inline flags and therefore can be used with :program:`webchanges`.
 
 You can use the entire range of Python's `regular expression (regex) syntax
-<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__, and you can ask your favorite Generative AI
+chatbot for help. Some examples:
+
+To extract the first line:
+
+.. code-block:: yaml
+
+   url: https://example.com/regex-firstline.html
+   command: python -c "[print(f'line {n}') for n in range(1, 3)]"
+   filter:
+     - re.findall: '^.*'
+
+
+To extract the last line, we use the inline `MULTILINE <https://docs.python.org/3/library/re.html#re.MULTILINE>`__
+flag (``(?m)``) and look for a line (``^.*$)``) that is not followed (`negative lookahead assertion
+<https://docs.python.org/3/library/re.html#re.MULTILINE:~:text=negative%20lookahead%20assertion>`__) by a newline
+plus additional text (``(?!\n.+)``):
+
+.. code-block:: yaml
+
+   url: https://example.com/regex-lastline.html
+   command: python -c "[print(f'line {n}') for n in range(0, 3)]"
+   filter:
+     - re.findall: '(?m)(^.*$)(?!\n.+)'
 
 Optional sub-directives
 ```````````````````````

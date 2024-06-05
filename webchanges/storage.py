@@ -838,11 +838,11 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 job = JobBase.unserialize(job_data, filenames)
                 # TODO: implement 100% validation and remove it from jobs.py
                 # TODO: try using pydantic to do this.
-                if not isinstance(job.data, (NoneType, str, dict)):
+                if not isinstance(job.data, (NoneType, str, dict, list)):
                     raise ValueError(
                         '\n   '.join(
                             [
-                                f"The 'data' key needs to contain a string or a dictionary; found a"
+                                f"The 'data' key needs to contain a string, a dictionary or a list; found a"
                                 f' {type(job.data).__name__} ',
                                 f'in {job.get_indexed_location()}',
                             ]

@@ -723,6 +723,20 @@ https://example.com/regex-findall.html:
     123
     456
     789
+https://example.com/regex-firstline.html:
+  input: |-
+    1
+    2
+    3
+  output: |-
+    1
+https://example.com/regex-lastline.html:
+  input: |-
+    1
+    2
+    3
+  output: |-
+    3
 https://example.net/shellpipe-grep.txt:
   input: |-
     <h1>Welcome to our price watching page!</h1>

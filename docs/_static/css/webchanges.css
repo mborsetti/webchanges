@@ -6,7 +6,7 @@ See https://docs.readthedocs.io/en/stable/guides/adding-custom-css.html#overridi
 /* This line is theme specific - it includes the base theme CSS */
 /*@import '../alabaster.css';  /* for Alabaster */
 @import 'theme.css';       /* for the Read the Docs theme */
-@import url('https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 .strike {
   text-decoration: line-through;
 }
@@ -21,4 +21,22 @@ See https://docs.readthedocs.io/en/stable/guides/adding-custom-css.html#overridi
   background-color: #fff0f0;
   color: #9c1c1c;
   text-decoration: line-through;
+}
+.output-box {
+  margin-bottom: 12px;
+  padding: 12px;
+  font-family: Roboto, sans-serif;
+  font-size: 13px;
+  background-color: white;
+  border: 1px solid #e1e4e5;
+}
+.output-box-mono {
+  margin-bottom: 12px;
+  padding: 12px;
+  font-family: monospace;
+  line-height:1.5em;
+  font-size: 13px;
+  white-space: pre-wrap;
+  background-color: white;
+  border: 1px solid #e1e4e5;
 }

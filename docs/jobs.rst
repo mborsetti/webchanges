@@ -835,7 +835,7 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
       sudo chmod go-w . *.yaml
 
    * ``sudo`` may or may not be required.
-   * Replace ``$USER`` with the username that runs :program:`webchanges` if different than the use you're logged in when
+   * Replace ``$USER`` with the username that runs :program:`webchanges` if different than the one you're logged in when
      making the above changes, similarly with ``$(id -g -n)`` for the group.
 
 Internally, this type of job has the attribute ``kind: command``.
