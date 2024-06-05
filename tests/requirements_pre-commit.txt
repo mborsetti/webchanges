@@ -13,6 +13,7 @@ pre-commit
 tox-ini-fmt
 types-backports
 types-docutils
+types-python-dateutil
 types-PyYAML
 types-redis
 types-requests

@@ -18,7 +18,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timezone  # py311 use UTC instead of timezone.utc
+from datetime import datetime, timezone, tzinfo  # py311 use UTC instead of timezone.utc
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Literal, Optional, TextIO, TypedDict, Union
 from zoneinfo import ZoneInfo
@@ -43,6 +43,11 @@ try:
     import redis
 except ImportError as e:  # pragma: no cover
     redis = e.msg  # type: ignore[assignment]
+
+try:
+    from dateutil import parser as dateutil_parser  # type: ignore[import-untyped]
+except ImportError:  # pragma: no cover
+    dateutil_parser = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -1065,15 +1070,26 @@ class SsdbStorage(BaseFileStorage, ABC):
                 if count:
                     print(f'Deleted {count} old snapshots of {guid}')
 
-    def rollback_cache(self, timestamp: float, tz: Optional[str] = None) -> None:
+    @staticmethod
+    def _convert_to_datetime(timespec: str, tz: Union[ZoneInfo, tzinfo, None]) -> datetime:
+        try:
+            timestamp = float(timespec)
+            return datetime.fromtimestamp(timestamp, tz)
+        except ValueError:
+            if dateutil_parser is not None:
+                return dateutil_parser.parse(timespec)
+            else:
+                return datetime.fromisoformat(timespec)
+
+    def rollback_cache(self, timespec: str, tz_str: Optional[str] = None) -> None:
         """Issues a warning, calls rollback() and prints out the result.
 
-        :param timestamp: The timestamp
+        :param timestamp: A timespec that if numeric is interpreted as a Unix timestamp otherwise it's passed to
+          dateutil.parser (if datetime is installed) or datetime.fromisoformat to be converted into a date.
         :param tz: The IANA tz name to use for the prompts and confirmation dialogs.
         """
-
-        tzinfo = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
-        dt = datetime.fromtimestamp(timestamp, tzinfo)
+        tz = ZoneInfo(tz_str) if tz_str else datetime.now().astimezone().tzinfo  # from machine
+        dt = self._convert_to_datetime(timespec, tz)
         timestamp_date = email.utils.format_datetime(dt)
         print(f'Rolling back database to {timestamp_date}')
         if sys.__stdin__.isatty():
@@ -1083,7 +1099,7 @@ class SsdbStorage(BaseFileStorage, ABC):
             if not resp.upper().startswith('Y'):
                 print('Quitting rollback. No snapshots have been deleted.')
                 sys.exit(1)
-        count = self.rollback(timestamp)
+        count = self.rollback(dt.timestamp())
         if count:
             print(f'Deleted {count} snapshots taken after {timestamp_date}')
         else:

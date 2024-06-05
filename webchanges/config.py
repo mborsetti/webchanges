@@ -54,7 +54,7 @@ class CommandConfig(BaseConfig):
     max_snapshots: int
     max_workers: Optional[int]
     no_headless: bool
-    rollback_database: Optional[int]
+    rollback_database: Optional[str]
     smtp_login: bool
     telegram_chats: bool
     test_differ: Optional[list[str]]
@@ -282,7 +282,7 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--rollback-database',
             '--rollback-cache',
-            type=int,
+            type=str,
             help='delete changed snapshots added since TIMESTAMP (backup the database before using!)',
             metavar='TIMESTAMP',
         )

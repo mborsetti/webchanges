@@ -8,9 +8,9 @@ coverage-conditional-plugin
 cssbeautifier
 deepdiff
 docutils
-flake8
-flake8-bandit
-flake8-quotes
+# flake8
+# flake8-bandit
+# flake8-quotes
 h2
 html5lib
 httpx
