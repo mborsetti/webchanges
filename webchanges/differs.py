@@ -560,16 +560,11 @@ class CommandDiffer(DifferBase):
             if proc.returncode == 0:
                 self.state.verb = 'changed,no_report'
                 return {'text': '', 'markdown': '', 'html': ''}
-
-            old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
-            sep = '—' * (len(old_timestamp) + 6)
-            new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
             head = '\n'.join(
                 [
                     f'Using differ "{directives}"',
-                    f'--- @ {old_timestamp}',
-                    f'+++ @ {new_timestamp}',
-                    f'{sep}',
+                    f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}',
+                    f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}',
                 ]
             )
             diff = proc.stdout
@@ -816,18 +811,12 @@ class DeepdiffDiffer(DifferBase):
             return {'text': '', 'markdown': '', 'html': ''}
 
         self.job.set_to_monospace()
-
-        old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
-        new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
-        sep = '—' * (len(old_timestamp) + 6)
         if report_kind == 'html':
             html_diff = (
                 f'<span style="font-family:monospace;white-space:pre-wrap;">\n'
                 f'Differ: {self.__kind__} for {data_type}\n'
-                f'<span style="color:darkred;">--- @ {old_timestamp}</span>\n'
-                f'<span style="color:darkgreen;">+++ @ {new_timestamp}</span>\n'
-                + sep
-                + '\n'
+                f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>\n'
+                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>\n'
                 + diff_text[:-1]
                 + '</span>'
             )
@@ -835,8 +824,9 @@ class DeepdiffDiffer(DifferBase):
         else:
             text_diff = (
                 f'Differ: {self.__kind__} for {data_type}\n'
-                f'--- @ {old_timestamp}\n'
-                f'+++ @ {new_timestamp}\n' + sep + '\n' + diff_text
+                f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\n'
+                f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\n'
+                f'{diff_text}'
             )
             return {'text': text_diff, 'markdown': text_diff}
 
@@ -1015,14 +1005,11 @@ class ImageDiffer(DifferBase):
         encoded_new = b64encode(output_stream.getvalue()).decode()
 
         # Prepare HTML output
-        new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
-        old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
-        sep = '—' * (len(old_timestamp) + 6)
         htm = [
             f'<span style="font-family:monospace">Differ: {self.__kind__} for {data_type}',
-            f'<span style="color:darkred;">--- @ {old_timestamp}{old_data}</span>',
-            f'<span style="color:darkgreen;">+++ @ {new_timestamp}{new_data}' f'</span>',
-            f'{sep}</span>',
+            f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}{old_data}</span>',
+            f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}{new_data}'
+            f'</span>',
             'New image:',
             f'<img src="data:image/{new_image.format.lower()};base64,{encoded_new}">',
             'Differences from old (in yellow):',
@@ -1322,18 +1309,15 @@ class WdiffDiffer(DifferBase):
         add_html = '<span style="background-color:#d1ffd1;color:#082b08;">'
         rem_html = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
 
-        old_timestamp = self.make_timestamp(self.state.old_timestamp, tz)
-        new_timestamp = self.make_timestamp(self.state.new_timestamp, tz)
-        sep = '—' * (len(old_timestamp) + 6)
         head_text = (
-            'Differ: wdiff\n' f'\033[91m--- @ {old_timestamp}\033[0m\n' f'\033[92m+++ @ {new_timestamp}\033[0m\n{sep}\n'
+            f'Differ: wdiff\n\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m\n'
+            f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m\n'
         )
         head_html = '<br>\n'.join(
             [
                 '<span style="font-family:monospace;">Differ: wdiff',
-                f'<span style="color:darkred;">--- @ {old_timestamp}</span>',
-                f'<span style="color:darkgreen;">+++ @ {new_timestamp}</span>',
-                f'{sep}</span>',
+                f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
+                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>',
                 '',
             ]
         )

@@ -396,7 +396,6 @@ Output:
    <div class="output-box-mono">Differ: deepdiff for json
    <span style="color:darkred">Old 01 Oct 2020 00:00:00 +0000</span>
    <span style="color:darkgreen">New 01 Oct 2020 01:00:00 +0000</span>
-   —————————————————————————————————————
    • Type of [&#39;Items&#39;][0][&#39;<wbr>CurrentInventory&#39;] changed from int to NoneType and value changed from <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">&quot;1&quot;</span> to <span style="background-color:#d1ffd1;color:#082b08">None</span>.
    • Type of [&#39;Items&#39;][0][&#39;<wbr>Description&#39;] changed from str to NoneType and value changed from <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">&quot;Gadget&quot;</span> to <span style="background-color:#d1ffd1;color:#082b08">None</span>.
    </div>
@@ -594,7 +593,6 @@ Output:
      <span style="font-family:monospace">Differ: wdiff<br>
      <span style="color:darkred">--- @ Sat, 01 Oct 2020 00:00:00 +0000</span><br>
      <span style="color:darkgreen">+++ @ Sat, 01 Oct 2020 01:00:00 +0000</span><br>
-     —————————————————————————————————————</span><br>
      The time now is <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through">
      00:00:00.00</span>
      <span style="background-color:#d1ffd1;color:#082b08">01:00:00.00</span> UTC</span>

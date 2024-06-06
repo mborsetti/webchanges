@@ -561,7 +561,6 @@ def test_deepdiff_json(job_state: JobState) -> None:
         'Differ: deepdiff for json',
         '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        '———————————————————————————————————————————',
         '• Value of [\'test\'] changed from "1" to "2".',
     ]
     diff = job_state.get_diff(tz='Etc/UTC')
@@ -573,7 +572,6 @@ def test_deepdiff_json(job_state: JobState) -> None:
         'Differ: deepdiff for json',
         '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
         '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
-        '———————————————————————————————————————————',
         "• Value of ['test'] changed from <span "
         'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">"1"</span> '
         'to <span style="background-color:#d1ffd1;color:#082b08;">"2"</span></span>',
@@ -610,7 +608,6 @@ def test_deepdiff_xml(job_state: JobState) -> None:
         'Differ: deepdiff for xml',
         '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        '———————————————————————————————————————————',
         '• Value of [\'test\'] changed from "1" to "2".',
     ]
     diff = job_state.get_diff(tz='Etc/UTC')
@@ -634,7 +631,6 @@ def test_image_url(job_state: JobState) -> None:
             f'(<a href="{job_state.old_data}">Old image</a>)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
             f'(<a href="{job_state.new_data}">New image</a>)</span>',
-            '———————————————————————————————————————————</span>',
             'New image:',
             '<img src="data:image/gif;base64,',
         ]
@@ -674,7 +670,6 @@ def test_image_filenames(job_state: JobState) -> None:
             f'(<a href="file://{job_state.old_data}">Old image</a>)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
             f'(<a href="file://{job_state.new_data}">New image</a>)</span>',
-            '———————————————————————————————————————————</span>',
             'New image:',
             '<img src="data:image/png;base64,',
         ]
@@ -716,7 +711,6 @@ def test_image_ascii85(job_state: JobState) -> None:
             '<span style="font-family:monospace">Differ: image for ascii85',
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
-            '———————————————————————————————————————————</span>',
             'New image:',
             '<img src="data:image/png;base64,',
         ]
@@ -762,7 +756,6 @@ def test_image_base64_and_resize(job_state: JobState) -> None:
             '<span style="font-family:monospace">Differ: image for base64',
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
-            '———————————————————————————————————————————</span>',
             'New image:',
             '<img src="data:image/png;base64,',
         ]
@@ -1087,6 +1080,6 @@ def test_worddiff(old_data: str, new_data: str, expected_text: str, expected_htm
     job_state.old_data = old_data
     job_state.new_data = new_data
     diff = job_state.get_diff()
-    assert diff.splitlines()[4:] == expected_text
+    assert diff.splitlines()[3:] == expected_text
     diff = job_state.get_diff(report_kind='html')
-    assert diff.splitlines()[4:] == expected_html
+    assert diff.splitlines()[3:] == expected_html
