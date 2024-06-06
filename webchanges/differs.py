@@ -578,7 +578,7 @@ class CommandDiffer(DifferBase):
                     if any(x in line for x in {'{+', '+}', '[-', '-]'}):
                         keeplines.append(line)
                 diff = ''.join(keeplines)
-            diff = head + diff
+            diff = f'{head}\n{diff}'
             out_diff.update(
                 {
                     'text': diff,
