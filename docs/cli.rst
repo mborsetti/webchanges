@@ -195,10 +195,15 @@ This feature does not work with database engines ``textfiles`` and ``minidb``.
 Rollback the database
 ---------------------
 You can rollback the snapshots database to an earlier time by running :program:`webchanges` with the
-``--rollback-database`` command line argument followed by a `Unix timestamp <https://en.wikipedia
-.org/wiki/Unix_time>`__ indicating the point in time you want to go back to. Useful when you missed notifications or
-they got lost: rollback the database to the time of the last good report, then run :program:`webchanges` again to get
-a new report with the differences since that time.
+``--rollback-database`` command line argument followed by either an `ISO-8601 <https://en.wikipedia
+.org/wiki/ISO_8601>`__ formatted date or a `Unix timestamp <https://en.wikipedia.org/wiki/Unix_time>`__ indicating the
+point in time you want to go back to. If you have the Python library `dateutil
+<https://github.com/dateutil/dateutil>`__ installed in the system (not a dependency of :program:`webchanges`), then
+you can use any string recognized by ``dateutil.parser``, including date only, time only, date and time, etc.
+See examples `here <https://dateutil.readthedocs.io/en/stable/examples.html#parse-examples>`__.
+
+Useful when you missed notifications or they got lost: rollback the database to the time of the last good report,
+then run :program:`webchanges` again to get a new report with the differences since that time.
 
 You can find multiple sites that calculate Unix time for you, such as `www.unixtimestamp.com
 <https://www.unixtimestamp.com/>`__
@@ -214,6 +219,8 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 .. versionchanged:: 3.11
    Renamed from ``--rollback-cache``.
 
+.. versionchanged:: 3.24
+   Recognizes ISO-8601 formats and defaults to using ``dateutil.parser`` if found installed.
 
 .. _compact-database:
 

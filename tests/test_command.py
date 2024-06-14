@@ -882,16 +882,33 @@ def test_clean_database(capsys: CaptureFixture[str]) -> None:
 
 
 def test_rollback_database(capsys: CaptureFixture[str], monkeypatch: MonkeyPatch) -> None:
-    setattr(command_config, 'rollback_database', True)
     # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
     monkeypatch.setattr('builtins.input', lambda _: 'y')
+
     urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    setattr(command_config, 'rollback_database', '1')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'rollback_database', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert 'No snapshots found after' in message
+
+    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    setattr(command_config, 'rollback_database', '10am')
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command_common.handle_actions()
+    setattr(command_config, 'rollback_database', False)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert 'No snapshots found after' in message
+
+    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    setattr(command_config, 'rollback_database', 'Thisisjunk')
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        urlwatch_command_common.handle_actions()
+    setattr(command_config, 'rollback_database', False)
+    assert pytest_wrapped_e.value.args[0] == 'Unknown string format: %s'
 
 
 def test_check_telegram_chats(capsys: CaptureFixture[str]) -> None:

@@ -33,6 +33,20 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.24.1
+===================
+2024-06-14
+
+Added
+-------------------
+* Command line argument ``--rollback-database`` now accepts dates in ISO-8601 format in addition to Unix timestamps.
+  If the library dateutil (not a dependency of **webchanges**) is found installed, then it will also accept any
+  string recognized by ``dateutil.parser`` such as date only, time only, date and time, etc. (suggested
+  by `Markus Weimar <https://github.com/Markus00000>`__ in issue `#78
+  <https://github.com/mborsetti/webchanges/issues/78>`__).
+* ``ai-google`` differ (BETA) now supports calls to the Gemini 1.5 Pro with 2M tokens model (early access required).
+
+
 Version 3.24.0
 ===================
 2024-06-06

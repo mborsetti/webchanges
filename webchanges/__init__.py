@@ -22,7 +22,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.24.0'
+__version__ = '3.24.1rc0'
 __description__ = (
     'Check web (or command output) for changes since last run and notify.\n'
     '\n'

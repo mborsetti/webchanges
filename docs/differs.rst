@@ -212,6 +212,9 @@ more concurrency, and if you are on a paid plan, is cheaper. You can use the ``m
 <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro-expandable>`__ (``gemini-1.5-pro-latest``) or the
 older Gemini 1.0 Pro (``gemini-1.0-pro-latest``).
 
+If you have been enabled early access to Gemini 1.5 Pro with 2M tokens, you can use it by setting the ``model``
+directive to ``gemini-1.5-pro-2m-latest`` (make sure that the API key you're using is also enabled).
+
 .. note:: These models work with `38 languages
    <https://ai.google.dev/gemini-api/docs/models/gemini#available-languages>`__ and are available in over `200 regions
    <https://ai.google.dev/gemini-api/docs/available-regions>`__.

@@ -1071,6 +1071,38 @@ WDIFF_TEST_DATA = [
             '<span style="background-color:#d1ffd1;color:#082b08;">b</span>'
         ],
     ),
+    (
+        'This is very old text\nThis is medium old text\n',
+        'This is new text\nThis is newish text\n',
+        [
+            'This is \x1b[92mnew \x1b[91mvery old\x1b[0m text ',
+            'This is \x1b[92mnewish \x1b[91mmedium old\x1b[0m text ',
+        ],
+        [
+            'This is <span style="background-color:#d1ffd1;color:#082b08;">new</span> '
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
+            'very old</span> text <br>',
+            'This is <span style="background-color:#d1ffd1;color:#082b08;">newish</span> '
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">medium old</span> '
+            'text <br>',
+        ],
+    ),
+    (
+        '[link](https://www.a.com)\n',
+        '[link](https://www.b.com)\n',
+        [
+            '\x1b[91m[link](https://www.a.com)                    ^',
+            ' \x1b[92m[link](https://www.b.com)                    ^',
+            '\x1b[0m ',
+        ],
+        [
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
+            '[link](https://www.a.com)                    ^<br>',
+            '</span> <span style="background-color:#d1ffd1;color:#082b08;">[link](https://www.b.com)'
+            '                    ^<br>',
+            '</span> <br>',
+        ],
+    ),
 ]
 
 

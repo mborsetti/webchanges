@@ -6,6 +6,7 @@ chump
 coverage
 coverage-conditional-plugin
 cssbeautifier
+dateutil
 deepdiff
 docutils
 flake8

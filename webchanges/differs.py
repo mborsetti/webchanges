@@ -1081,13 +1081,12 @@ class AIGoogleDiffer(DifferBase):
                     f'{len(GOOGLE_AI_API_KEY)}.\n'
                 )
 
-            api_version = '1beta'
             _models_token_limits = {  # from https://ai.google.dev/gemini-api/docs/models/gemini
+                'gemini-1.5-pro-2m': 2097152,
                 'gemini-1.5': 1048576,
                 'gemini-1.0': 30720,
                 'gemini-pro': 30720,  # legacy
             }
-
             if 'model' not in directives:
                 directives['model'] = 'gemini-1.5-flash-latest'  # also for footer
             model = directives['model']
@@ -1126,6 +1125,7 @@ class AIGoogleDiffer(DifferBase):
 
             def _send_to_model(model_prompt: str, system_instructions: str) -> str:
                 """Creates the summary request to the model"""
+                api_version = '1beta'
                 max_output_tokens = directives.get('max_output_tokens')
                 temperature = directives.get('temperature', 0.0)
                 top_p = directives.get('top_p')

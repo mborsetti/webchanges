@@ -1,17 +1,8 @@
 Added
 -------------------
-* New ``wdiff`` differ to perform word-by-word comparisons. Replaces the dependency on an outside executable and
-  allows for much better formatting and integration.
-* New ``system_instructions`` directive added to the ``ai-google`` differ (BETA).
-* Added to the documentation examples on how to use the ``re.findall`` filter to extract only the first or last line
-  (suggested by `Marcos Alano <https://github.com/malano>`__ in issue `#81
-  <https://github.com/mborsetti/webchanges/issues/81>`__).
-
-Changed
-------------------
-* Updated the documentation for the ``ai-google`` differ (BETA), mostly to reflect billing changes by Google, which is
-  still free for most.
-
-Fixed
-------------------
-* Fixed a data type check in preventing ``URL`` jobs' ``data`` (for POSTs etc.) to be a list.
+* Command line argument ``--rollback-database`` now accepts dates in ISO-8601 format in addition to Unix timestamps.
+  If the library dateutil (not a dependency of **webchanges**) is found installed, then it will also accept any
+  string recognized by ``dateutil.parser`` such as date only, time only, date and time, etc. (Suggested
+  by `Markus Weimar <https://github.com/Markus00000>`__ in issue `#78
+  <https://github.com/mborsetti/webchanges/issues/78>`__).
+* ``ai-google`` differ (BETA) now supports calls to the Gemini 1.5 Pro with 2M tokens model (early access required).
