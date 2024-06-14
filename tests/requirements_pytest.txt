@@ -6,7 +6,6 @@ chump
 coverage
 coverage-conditional-plugin
 cssbeautifier
-dateutil
 deepdiff
 docutils
 flake8
@@ -30,6 +29,7 @@ pypdf[crypto]
 pytest
 pytest-asyncio
 pytest-cov
+python-dateutil
 pytz  # bug in aioxmpp
 redis
 requests
