@@ -11,3 +11,6 @@
 - [ ] Simplify main legacy Urlwatcher class
 - [ ] Resolve TODOs
   - [ ] Can/should defusedxml be used?
+- [ ] Python 3.10
+  - [ ] Structural Pattern Matching (match ... case)
+  - [ ] New Type Union Operator (|)

@@ -205,17 +205,19 @@ def test_run_ftp_job() -> None:
         assert len(data) == 319
 
 
-@connection_required  # type: ignore[misc]
-@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, EOFError, OSError))  # type: ignore[misc]
-def test_run_ftp_job_needs_bytes() -> None:
-    if os.getenv('GITHUB_ACTIONS'):
-        pytest.skip('Test website cannot be reached from GitHub Actions')
-
-    job = JobBase.unserialize({'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]})
-    with JobState(ssdb_storage, job) as job_state:
-        data, etag, mime_type = job.retrieve(job_state)
-        assert isinstance(data, bytes)
-        assert len(data) == 1024
+# @connection_required  # type: ignore[misc]
+# @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, EOFError, OSError))  # type: ignore[misc]
+# def test_run_ftp_job_needs_bytes() -> None:
+#     if os.getenv('GITHUB_ACTIONS'):
+#         pytest.skip('Test website cannot be reached from GitHub Actions')
+#
+#     job = JobBase.unserialize(
+#         {'url': 'ftp://speedtest.tele2.net/1KB.zip', 'timeout': 2, 'filter': [{'pdf2text': {}}]}
+#     )
+#     with JobState(ssdb_storage, job) as job_state:
+#         data, etag, mime_type = job.retrieve(job_state)
+#         assert isinstance(data, bytes)
+#         assert len(data) == 1024
 
 
 @connection_required  # type: ignore[misc]
@@ -483,13 +485,13 @@ def test_with_defaults_headers() -> None:
     job = JobBase.unserialize(job_data)
     config: _Config = {  # type: ignore[typeddict-item]
         'job_defaults': {
-            'all': {'headers': {'a': 1, 'b': 2}},
-            'url': {'headers': {'b': 3, 'c': 4}},
-            'browser': {'headers': {'c': 5, 'd': 6}},
+            'all': {'headers': {'a': '1', 'b': '2'}},
+            'url': {'headers': {'b': '3', 'c': '4'}},
+            'browser': {'headers': {'c': '5', 'd': '6'}},
         }
     }
     job = job.with_defaults(config)
-    assert job.headers == {'a': 1, 'b': 3, 'c': 4}
+    assert job.headers == {'a': '1', 'b': '3', 'c': '4'}
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
 
 

@@ -115,6 +115,8 @@ def test_filter_doc_jobs(job: JobBase) -> None:
         data: Union[bytes, str] = here.joinpath('data').joinpath(d['filename']).read_bytes()
     else:
         data = d['input']
+    expected_output_data = d['output']
+
     # noinspection PyTypeChecker
     with JobState(None, job) as job_state:  # type: ignore[arg-type]
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
@@ -128,9 +130,9 @@ def test_filter_doc_jobs(job: JobBase) -> None:
             ) and not html5lib_is_installed:
                 pytest.skip(f"Skipping {job.url} since 'html5lib' package is not installed")
             if filter_kind == 'ascii85':
-                data = b'@/'
+                data = b'\xc9\x89\xa3'
             elif filter_kind == 'base64':
-                data = b'YQ=='
+                data = b'i\xb7\x1d'
             elif filter_kind == 'ical2text' and not vobject_is_installed:
                 pytest.skip(f"Skipping {job.url} since 'vobject' package is not installed")
             elif filter_kind == 'ocr' and not pytesseract_is_installed:
@@ -141,11 +143,11 @@ def test_filter_doc_jobs(job: JobBase) -> None:
                 pytest.skip(f"Skipping {job.url} since 'pdftotext' package is not installed")
             elif filter_kind == 'beautify' and not cssbeautifier_is_installed:
                 pytest.skip(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
+
             data, mime_type = FilterBase.process(filter_kind, subfilter, job_state, data, '')
             if filter_kind in {'pdf2text', 'shellpipe'}:  # fix for macOS or OS-specific end of line
                 data = data.rstrip()
 
-        expected_output_data = d['output']
         if job.url == 'https://example.com/html2text.html':
             # see https://github.com/Alir3z4/html2text/pull/339
             assert data in {

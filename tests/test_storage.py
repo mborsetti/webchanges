@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+from _pytest.capture import CaptureFixture
 
 from webchanges import __docs_url__
 from webchanges.config import CommandConfig
@@ -677,7 +678,7 @@ def test_clean_and_history_data(database_engine: SsdbStorage) -> None:
         assert len(history) == 0
 
 
-def test_migrate_urlwatch_legacy_db(tmp_path: Path) -> None:
+def test_migrate_urlwatch_legacy_db(tmp_path: Path, capsys: CaptureFixture[str]) -> None:
     orig_ssdb_file = data_path.joinpath('cache-urlwatch_legacy.db')
     temp_ssdb_file = tmp_path.joinpath(f'cache-urlwatch_legacy-temp_{sys.version_info.minor}.db')
     shutil.copyfile(orig_ssdb_file, temp_ssdb_file)
@@ -693,10 +694,18 @@ def test_migrate_urlwatch_legacy_db(tmp_path: Path) -> None:
             minidb_temp_ssdb_file = temp_ssdb_file.with_stem(temp_ssdb_file.stem + '_minidb')
             minidb_temp_ssdb_file.unlink()
     else:
-        with pytest.raises(ImportError) as pytest_wrapped_e:
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
             SsdbSQLite3Storage(temp_ssdb_file)
-        assert str(pytest_wrapped_e.value) == (
-            "Python package 'minidb' is not installed; cannot upgrade the legacy 'minidb' database"
+        assert pytest_wrapped_e.value.code == 1
+        message = capsys.readouterr().out
+        assert message.splitlines() == (
+            [
+                'You have an old snapshot database format that needs to be converted to a current one.',
+                "Please install the Python package 'minidb' for this one-time conversion and rerun webchanges.",
+                'Use e.g. `pip install -U minidb`.',
+                '',
+                "After the conversion, you can uninstall 'minidb' with e.g. `pip uninstall minidb`.",
+            ]
         )
 
 

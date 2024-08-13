@@ -120,7 +120,7 @@ def teardown_logger(verbose: Optional[int] = None) -> None:
             os.environ.pop('DEBUG', None)
 
 
-def locate_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = None) -> list[Path]:
+def _expand_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = None) -> list[Path]:
     """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
 
     :param filename: The filename.
@@ -134,6 +134,8 @@ def locate_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = N
     # if ext is given, iterate both on raw filename and the filename with ext if different
     if ext and filename.suffix != ext:
         search_filenames.append(filename.with_suffix(ext))
+        # also iterate on file pre-pended with 'jobs-'
+        search_filenames.append(filename.with_stem(f'jobs-{filename.stem}').with_suffix(ext))
 
     # try as given
     for file in search_filenames:
@@ -150,6 +152,14 @@ def locate_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = N
 
     # no matches found
     return [filename]
+
+
+def locate_jobs_files(filenames: list[Path], default_path: Path, ext: Optional[str] = None) -> list[Path]:
+    job_files = set()
+    for filename in filenames:
+        for file in _expand_jobs_files(filename, default_path, ext):
+            job_files.add(file)
+    return list(job_files)
 
 
 def locate_storage_file(filename: Path, default_path: Path, ext: Optional[str] = None) -> Path:
@@ -353,7 +363,7 @@ def main() -> None:  # pragma: no cover
 
     # Locate config, job and hooks files
     command_config.config_file = locate_storage_file(command_config.config_file, command_config.config_path, '.yaml')
-    command_config.jobs_files = locate_jobs_files(command_config.jobs_def_file, command_config.config_path, '.yaml')
+    command_config.jobs_files = locate_jobs_files(command_config.jobs_files, command_config.config_path, '.yaml')
     command_config.hooks_file = locate_storage_file(command_config.hooks_file, command_config.config_path, '.py')
 
     # Check for first run

@@ -32,7 +32,7 @@ try:
     from deepdiff import DeepDiff
     from deepdiff.model import DiffLevel
 except ImportError as e:  # pragma: no cover
-    DeepDiff = e.msg  # type: ignore[no-redef]
+    DeepDiff = str(e)  # type: ignore[no-redef]
 
 try:
     import httpx
@@ -47,12 +47,12 @@ if httpx is not None:
 try:
     import numpy as np
 except ImportError as e:  # pragma: no cover
-    np = e.msg  # type: ignore[assignment]
+    np = str(e)  # type: ignore[assignment]
 
 try:
     from PIL import Image, ImageChops, ImageEnhance, ImageStat
 except ImportError as e:  # pragma: no cover
-    Image = e.msg  # type: ignore[no-redef]
+    Image = str(e)  # type: ignore[assignment]
 
 # https://stackoverflow.com/questions/712791
 try:
@@ -63,7 +63,7 @@ except ImportError:  # pragma: no cover
 try:
     import xmltodict
 except ImportError as e:  # pragma: no cover
-    xmltodict = e.msg  # type: ignore[no-redef]
+    xmltodict = str(e)  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -301,7 +301,7 @@ class UnifiedDiffer(DifferBase):
         :param diff: the unified diff
         """
 
-        def process_line(line: str, line_num: int, monospace_style: str) -> str:
+        def process_line(line: str, line_num: int, is_markdown: bool, monospace_style: str) -> str:
             """
             Processes each line for HTML output, handling special cases and styles.
 
@@ -331,7 +331,7 @@ class UnifiedDiffer(DifferBase):
             style = f' style="{style}"' if style else ''
 
             if line_num > 1 and line[0] != '@':  # don't apply to headers or range information
-                if self.job.is_markdown or line[0] == '/':  # our informational header
+                if is_markdown or line[0] == '/':  # our informational header
                     line = mark_to_html(line[1:], self.job.markdown_padded_tables)
                 else:
                     line = linkify(line[1:])
@@ -343,9 +343,10 @@ class UnifiedDiffer(DifferBase):
             else ' style="border-collapse:collapse;"'
         )
         yield f'<table{table_style}>'
+        is_markdown = self.state.is_markdown()
         monospace_style = 'font-family:monospace;' if self.job.monospace else ''
         for i, line in enumerate(diff.splitlines()):
-            yield process_line(line, i, monospace_style)
+            yield process_line(line, i, is_markdown, monospace_style)
         yield '</table>'
 
     def differ(
@@ -527,7 +528,7 @@ class CommandDiffer(DifferBase):
         else:
             old_data = self.state.old_data
             new_data = self.state.new_data
-            if self.job.is_markdown:
+            if self.state.is_markdown():
                 # protect the link anchor from being split (won't work)
                 markdown_links_re = re.compile(r'\[(.*?)][(](.*?)[)]')
                 old_data = markdown_links_re.sub(
@@ -568,7 +569,7 @@ class CommandDiffer(DifferBase):
                 ]
             )
             diff = proc.stdout
-            if self.job.is_markdown:
+            if self.state.is_markdown():
                 # undo the protection of the link anchor from being split
                 diff = markdown_links_re.sub(lambda x: f'[{urllib.parse.unquote(x.group(1))}]({x.group(2)})', diff)
             if command.startswith('wdiff') and self.job.contextlines == 0:
@@ -603,7 +604,7 @@ class CommandDiffer(DifferBase):
         :returns: The colorized HTML output.
         """
         html_diff = html.escape(diff)
-        if self.job.is_markdown:
+        if self.state.is_markdown():
             # detect and fix multiline additions or deletions
             is_add = False
             is_del = False
@@ -739,15 +740,23 @@ class DeepdiffDiffer(DifferBase):
                 val_t1 = (
                     f'"{ddiff.t1}"'
                     if type_t1 in {'str', 'int', 'float'}
-                    else (jsonlib.dumps(ddiff.t1, ensure_ascii=False, indent=2) if type_t1 == 'dict' else str(ddiff.t1))
+                    else (
+                        jsonlib.dumps(ddiff.t1, ensure_ascii=False, indent=2)
+                        if type_t1 in {'dict', 'list'}
+                        else str(ddiff.t1)
+                    )
                 )
                 val_t2 = (
                     f'"{ddiff.t2}"'
                     if type_t2 in {'str', 'int', 'float'}
-                    else (jsonlib.dumps(ddiff.t2, ensure_ascii=False, indent=2) if type_t2 == 'dict' else str(ddiff.t2))
+                    else (
+                        jsonlib.dumps(ddiff.t2, ensure_ascii=False, indent=2)
+                        if type_t2 in {'dict', 'list'}
+                        else str(ddiff.t2)
+                    )
                 )
 
-                diff_path = ddiff.path(root='')
+                diff_path = ddiff.path()
                 return '• ' + PRETTY_FORM_TEXTS.get(ddiff.report_type, '').format(
                     diff_path=diff_path,
                     type_t1=type_t1,
@@ -776,11 +785,12 @@ class DeepdiffDiffer(DifferBase):
             except jsonlib.JSONDecodeError as e:
                 self.state.exception = e
                 self.state.traceback = self.job.format_error(e, traceback.format_exc())
-                logger.error(f'{self.job.index_number}: Invalid JSON data: {e.msg} ({self.job.get_location()})')
+                logger.error(f'Job {self.job.index_number}: New data is invalid JSON: {e} ({self.job.get_location()})')
+                logger.info(f'Job {self.job.index_number}: {self.state.new_data!r}')
                 return {
-                    'text': f'Differ {self.__kind__} ERROR: New data is invalid JSON\n{e.msg}',
-                    'markdown': f'Differ {self.__kind__} **ERROR: New data is invalid JSON**\n{e.msg}',
-                    'html': f'Differ {self.__kind__} <b>ERROR: New data is invalid JSON</b>\n{e.msg}',
+                    'text': f'Differ {self.__kind__} ERROR: New data is invalid JSON\n{e}',
+                    'markdown': f'Differ {self.__kind__} **ERROR: New data is invalid JSON**\n{e}',
+                    'html': f'Differ {self.__kind__} <b>ERROR: New data is invalid JSON</b>\n{e}',
                 }
         elif data_type == 'xml':
             if isinstance(xmltodict, str):  # pragma: no cover
@@ -813,17 +823,17 @@ class DeepdiffDiffer(DifferBase):
         self.job.set_to_monospace()
         if report_kind == 'html':
             html_diff = (
-                f'<span style="font-family:monospace;white-space:pre-wrap;">\n'
-                f'Differ: {self.__kind__} for {data_type}\n'
+                f'<span style="font-family:monospace;white-space:pre-wrap;">'
+                # f'Differ: {self.__kind__} for {data_type}\n'
                 f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>\n'
                 f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>\n'
-                + diff_text[:-1]
+                + diff_text[:-1].replace('][', ']<wbr>[')
                 + '</span>'
             )
             return {'html': html_diff}
         else:
             text_diff = (
-                f'Differ: {self.__kind__} for {data_type}\n'
+                # f'Differ: {self.__kind__} for {data_type}\n'
                 f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\n'
                 f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\n'
                 f'{diff_text}'
@@ -865,29 +875,29 @@ class ImageDiffer(DifferBase):
         if isinstance(httpx, str):  # pragma: no cover
             self.raise_import_error('httpx', httpx)
 
-        def load_image_from_web(url: str) -> Image:
+        def load_image_from_web(url: str) -> Image.Image:
             """Fetches the image from an url."""
             logging.debug(f'Retrieving image from {url}')
             with httpx.stream('GET', url, timeout=10) as response:
                 response.raise_for_status()
                 return Image.open(BytesIO(b''.join(response.iter_bytes())))
 
-        def load_image_from_file(filename: str) -> Image:
+        def load_image_from_file(filename: str) -> Image.Image:
             """Load an image from a file."""
             logging.debug(f'Reading image from {filename}')
             return Image.open(filename)
 
-        def load_image_from_base64(base_64: str) -> Image:
+        def load_image_from_base64(base_64: str) -> Image.Image:
             """Load an image from an encoded bytes object."""
             logging.debug('Retrieving image from a base64 string')
             return Image.open(BytesIO(base64.b64decode(base_64)))
 
-        def load_image_from_ascii85(ascii85: str) -> Image:
+        def load_image_from_ascii85(ascii85: str) -> Image.Image:
             """Load an image from an encoded bytes object."""
             logging.debug('Retrieving image from an ascii85 string')
             return Image.open(BytesIO(base64.a85decode(ascii85)))
 
-        def compute_diff_image(img1: Image, img2: Image) -> tuple[Image, Optional[np.float64]]:
+        def compute_diff_image(img1: Image.Image, img2: Image.Image) -> tuple[Image.Image, Optional[np.float64]]:
             """Compute the difference between two images."""
             # Compute the absolute value of the pixel-by-pixel difference between the two images.
             diff_image = ImageChops.difference(img1, img2)
@@ -968,13 +978,13 @@ class ImageDiffer(DifferBase):
             if new_image.size > old_image.size:
                 logging.debug(f'Job {self.job.index_number}: Shrinking the new image')
                 img_format = new_image.format
-                new_image = new_image.resize(old_image.size, Image.LANCZOS)
+                new_image = new_image.resize(old_image.size, Image.Resampling.LANCZOS)
                 new_image.format = img_format
 
             else:
                 logging.debug(f'Job {self.job.index_number}: Shrinking the old image')
                 img_format = old_image.format
-                old_image = old_image.resize(new_image.size, Image.LANCZOS)
+                old_image = old_image.resize(new_image.size, Image.Resampling.LANCZOS)
                 old_image.format = img_format
 
         if old_image == new_image:
@@ -1006,16 +1016,27 @@ class ImageDiffer(DifferBase):
 
         # Prepare HTML output
         htm = [
-            f'<span style="font-family:monospace">Differ: {self.__kind__} for {data_type}',
+            f'<span style="font-family:monospace">'
+            # f'Differ: {self.__kind__} for {data_type}',
             f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}{old_data}</span>',
             f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}{new_data}'
             f'</span>',
             'New image:',
-            f'<img src="data:image/{new_image.format.lower()};base64,{encoded_new}">',
-            'Differences from old (in yellow):',
-            f'<img src="data:image/{old_image.format.lower()};base64,{encoded_diff}">',
-            '',
         ]
+        if data_type == 'url':
+            htm.append(f'<img src="{self.state.old_data}" style="max-width: 100%; display: block;">')
+        else:
+            htm.append(
+                f'<img src="data:image/{(new_image.format or '').lower()};base64,{encoded_new}" '
+                f'style="max-width: 100%; display: block;">'
+            )
+        htm.extend(
+            [
+                'Differences from old (in yellow):',
+                f'<img src="data:image/{(old_image.format or '').lower()};base64,{encoded_diff}" ',
+                'style="max-width: 100%; display: block;">' '',
+            ]
+        )
 
         return {
             'text': 'The image has changed; please see an HTML report for the visualization.',
@@ -1076,16 +1097,17 @@ class AIGoogleDiffer(DifferBase):
                     f'incorrect length {len(GOOGLE_AI_API_KEY)} ({self.job.get_location()})'
                 )
                 return (
-                    f'## ERROR in summarizing the changes using {self.__kind__}:\n'
+                    f'## ERROR in summarizing changes using {self.__kind__}:\n'
                     f'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length '
                     f'{len(GOOGLE_AI_API_KEY)}.\n'
                 )
 
             _models_token_limits = {  # from https://ai.google.dev/gemini-api/docs/models/gemini
                 'gemini-1.5-pro-2m': 2097152,
-                'gemini-1.5': 1048576,
+                'gemini-1.5': 2097152,
                 'gemini-1.0': 30720,
-                'gemini-pro': 30720,  # legacy
+                'gemini-pro': 30720,  # legacy naming
+                'gemma-2': 8192,
             }
             if 'model' not in directives:
                 directives['model'] = 'gemini-1.5-flash-latest'  # also for footer
@@ -1102,7 +1124,7 @@ class AIGoogleDiffer(DifferBase):
                         f"(supported models starting with: {', '.join(sorted(list(_models_token_limits.keys())))}) "
                         f'({self.job.get_location()})'
                     )
-                    return f'## ERROR in summarizing the changes using {self.__kind__}:\n' f'Unknown model {model}.\n'
+                    return f'## ERROR in summarizing changes using {self.__kind__}:\n' f'Unknown model {model}.\n'
 
             if '{unified_diff}' in prompt:
                 context_lines = directives.get('prompt_ud_context_lines', 9999)
@@ -1172,7 +1194,7 @@ class AIGoogleDiffer(DifferBase):
 
                 except httpx.HTTPError as e:
                     summary = (
-                        f'AI summary unavailable: HTTP client error: {e.args[0]} when requesting data from '
+                        f'AI summary unavailable: HTTP client error: {e} when requesting data from '
                         f'{e.request.url.host}'
                     )
 
@@ -1288,7 +1310,7 @@ class WdiffDiffer(DifferBase):
             raise ValueError
 
         # Split the texts into words tokenizing newline
-        if self.job.is_markdown:
+        if self.state.is_markdown():
             # Don't split spaces in link text, tokenize space as </s>
             old_data = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', self.state.old_data)
             words1 = old_data.replace('\n', ' <\\n> ').split(' ')
@@ -1310,14 +1332,17 @@ class WdiffDiffer(DifferBase):
         rem_html = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
 
         head_text = (
-            f'Differ: wdiff\n\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m\n'
+            # f'Differ: wdiff\n'
+            f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m\n'
             f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m\n'
         )
         head_html = '<br>\n'.join(
             [
-                '<span style="font-family:monospace;">Differ: wdiff',
+                '<span style="font-family:monospace;">'
+                # 'Differ: wdiff',
                 f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
-                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>',
+                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>'
+                f'</span>',
                 '',
             ]
         )
@@ -1332,6 +1357,8 @@ class WdiffDiffer(DifferBase):
         rem = False
 
         for word_text in diff + ['  ']:
+            if word_text[0] == '?':  # additional context line
+                continue
             word_html = word_text
             pre_text = [next_text] if next_text else []
             pre_html = [next_html] if next_html else []
@@ -1414,21 +1441,26 @@ class WdiffDiffer(DifferBase):
             new_diff_html = []
             last_line = 0
             skip = False
+            i = 0
             for i, (line_text, line_html) in enumerate(zip(diff_text.splitlines(), diff_html.splitlines())):
                 if i in lines_to_keep:
                     if range_info and skip:
-                        new_diff_text.append(f'@@ {last_line}...{i + 1} @@')
-                        new_diff_html.append(f'@@ {last_line}...{i + 1} @@')
+                        new_diff_text.append(f'@@ {last_line + 1}...{i} @@')
+                        new_diff_html.append(f'@@ {last_line + 1}...{i} @@')
                         skip = False
                     new_diff_text.append(line_text)
                     new_diff_html.append(line_html)
                     last_line = i + 1
                 else:
                     skip = True
+            if (i + 1) != last_line:
+                if range_info and skip:
+                    new_diff_text.append(f'@@ {last_line + 1}...{i + 1} @@')
+                    new_diff_html.append(f'@@ {last_line + 1}...{i + 1} @@')
             diff_text = '\n'.join(new_diff_text)
             diff_html = '\n'.join(new_diff_html)
 
-        if self.job.is_markdown:
+        if self.state.is_markdown():
             diff_text = diff_text.replace('</s>', ' ')
             diff_html = diff_html.replace('</s>', ' ')
             diff_html = mark_to_html(diff_html, self.job.markdown_padded_tables).replace('<p>', '').replace('</p>', '')

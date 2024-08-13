@@ -310,7 +310,7 @@ def test_list_jobs_verbose(capsys: CaptureFixture[str]) -> None:
     urlwatcher.urlwatch_config.verbose = urlwatch_config_verbose
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message.startswith('  1: <command ')
+    assert message.startswith('List of jobs:\n  1: <command ')
     assert 'index_number=1' in message
     assert "name='Sample webchanges job; used by test_command.py'" in message
     assert "command='echo test'" in message
@@ -330,6 +330,7 @@ def test_list_jobs_not_verbose(capsys: CaptureFixture[str]) -> None:
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message.splitlines() == [
+        'List of jobs:',
         '  1: Sample webchanges job; used by test_command.py (echo test)',
         'Jobs files concatenated:',
         f'   • {command_config.jobs_files[0]}',
@@ -350,6 +351,7 @@ def test_list_jobs_no_filename(capsys: CaptureFixture[str]) -> None:
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message.splitlines() == [
+        'List of jobs:',
         '  1: Sample webchanges job; used by test_command.py (echo test)',
         '',
     ]
@@ -364,18 +366,18 @@ def test__find_job() -> None:
 
 def test__find_job_zero() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        urlwatch_command_common._find_job(0)
+        urlwatch_command_common._find_job('0')
     message = str(pytest_wrapped_e.value)
     assert message == 'Job index 0 out of range.'
 
 
 def test__find_job_negative() -> None:
-    assert urlwatch_command_common._find_job(-1) is urlwatcher.jobs[0]
+    assert urlwatch_command_common._find_job('-1') is urlwatcher.jobs[0]
 
 
 def test__find_job_index_error() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
-        urlwatch_command_common._find_job(100)
+        urlwatch_command_common._find_job('100')
     message = str(pytest_wrapped_e.value)
     assert message == 'Job index 100 out of range (found 1 jobs).'
 
@@ -426,7 +428,8 @@ def test_test_job_all(capsys: CaptureFixture[str]) -> None:
     ]
 
     # with multiple files
-    command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml'), tmp_path.joinpath('jobs-echo_test.yaml')]
+    shutil.copyfile(tmp_path.joinpath('jobs-echo_test.yaml'), tmp_path.joinpath('jobs-echo_test2.yaml'))
+    command_config.jobs_files = [tmp_path.joinpath('jobs-echo_test.yaml'), tmp_path.joinpath('jobs-echo_test2.yaml')]
     setattr(command_config, 'test_job', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command_common.handle_actions()
@@ -437,8 +440,8 @@ def test_test_job_all(capsys: CaptureFixture[str]) -> None:
     assert message.splitlines() == [
         f'No syntax errors in config file {urlwatcher.urlwatch_config.config_file},',
         'jobs files',
-        f'   • {urlwatch_command_common.urlwatch_config.jobs_files[0]}',
         f'   • {urlwatch_command_common.urlwatch_config.jobs_files[0]},',
+        f"   • {tmp_path.joinpath('jobs-echo_test2.yaml')},",
         f'and hooks file {urlwatch_command_common.urlwatch_config.hooks_file}.',
     ]
 
@@ -868,14 +871,20 @@ def test_clean_database(capsys: CaptureFixture[str]) -> None:
 
     # clean database with RETAIN_LIMIT=2
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', 2)
-    urlwatcher2.ssdb_storage.clean_ssdb([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
+    urlwatcher2.ssdb_storage.clean_ssdb(
+        [job.get_guid() for job in urlwatcher2.jobs],
+        command_config2.clean_database,  # type: ignore[arg-type]
+    )
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', None)
     guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
     assert len(ssdb_storage2.get_history_snapshots(guid)) == 2
 
     # clean database without specifying RETAIN_LIMIT
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', True)
-    urlwatcher2.ssdb_storage.clean_ssdb([job.get_guid() for job in urlwatcher2.jobs], command_config2.clean_database)
+    urlwatcher2.ssdb_storage.clean_ssdb(
+        [job.get_guid() for job in urlwatcher2.jobs],
+        command_config2.clean_database,  # type: ignore[arg-type]
+    )
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', None)
     guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
     assert len(ssdb_storage2.get_history_snapshots(guid)) == 1
@@ -1107,7 +1116,7 @@ def test_print_new_version(capsys: CaptureFixture[str]) -> None:
 
 
 def test_locate_jobs_files() -> None:
-    file = locate_jobs_files(Path('test'), Path('nowhere'), '.noext')
+    file = locate_jobs_files([Path('test')], Path('nowhere'), '.noext')
     assert file == [PurePath('test')]
 
 

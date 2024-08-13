@@ -63,6 +63,8 @@ Example ``hooks.py`` file:
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
            """:returns: The data retrieved, the ETag, and the mime_type (e.g. HTTP Content-Type)."""
            ...  # custom code here to actually do the login.
+           additional_headers = {'x-special': 'test'}
+           self.headers.update(additional_headers)  # self.headers will always be an httpx.Headers object
            return super().retrieve(job_state)  # uses the existing code to then browse and capture data
 
 

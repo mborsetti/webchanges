@@ -1,11 +1,11 @@
 usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
-                  [--database FILE] [--list-jobs] [--errors [REPORTER]]
-                  [--test [JOB]] [--no-headless] [--test-differ JOB [JOB ...]]
-                  [--dump-history JOB] [--max-workers WORKERS]
-                  [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
-                  [--xmpp-login] [--footnote FOOTNOTE] [--edit]
-                  [--edit-config] [--edit-hooks]
-                  [--gc-database [RETAIN_LIMIT]]
+                  [--database FILE] [--list-jobs [REGEX]]
+                  [--errors [REPORTER]] [--test [JOB]] [--no-headless]
+                  [--test-differ JOB [JOB ...]] [--dump-history JOB]
+                  [--max-workers WORKERS] [--test-reporter REPORTER]
+                  [--smtp-login] [--telegram-chats] [--xmpp-login]
+                  [--footnote FOOTNOTE] [--edit] [--edit-config]
+                  [--edit-hooks] [--gc-database [RETAIN_LIMIT]]
                   [--clean-database [RETAIN_LIMIT]]
                   [--rollback-database TIMESTAMP] [--delete-snapshot JOB]
                   [--change-location JOB NEW_LOCATION] [--check-new]
@@ -20,9 +20,8 @@ run. If any are found, it summarizes (including with Gen AI) what changed
 services. Can check the output of local commands as well.
 
 positional arguments:
-  JOB(S)                JOB(S) to run (if one, index as per --list or
-                        URL/command, if multiple, by index) (default: run all
-                        jobs)
+  JOB(S)                JOB(S) to run (index number(s) as per --list; if one
+                        also URL/command) (default: run all jobs)
 
 options:
   -h, --help            show this help message and exit
@@ -40,7 +39,8 @@ override file defaults:
                         URI
 
 job management:
-  --list-jobs           list jobs and their index number
+  --list-jobs [REGEX]   list jobs and their index number (optional: only those
+                        who match REGEX)
   --errors [REPORTER]   test run all jobs and list those with errors or no
                         data captured; optionally send output to REPORTER
   --test [JOB], --test-filter [JOB]

@@ -23,19 +23,7 @@ directive. The ``method`` will be automatically changed to ``POST`` and, if no `
 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header is supplied, it will be set to
 ``application/x-www-form-urlencoded``.
 
-.. code-block:: yaml
-
-   url: https://example.com/
-   data:
-       Element1: Data
-       Element2: OtherData
-
-For a string (e.g. JSON-encoded data, if supported by the server):
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   data: '{"Element1": "Data", "Element2": "OtherData"}'
+See examples :ref:`here <data>`.
 
 
 .. _json_dict:

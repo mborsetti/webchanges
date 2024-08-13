@@ -15,14 +15,69 @@ Command line arguments
 
 Select subset of jobs
 ---------------------
-Add job number(s) (a ``joblist``) to the command line to run a subset of jobs; for example, ``webchanges 2 3 9`` will
-only run jobs #2, #3, and #9, and ``webchanges -1`` will only run the last job. Find the index numbering of your jobs by
-running ``webchanges --list``. API is experimental and may change in the near future.
+Add job index number(s) (a ``joblist``) to the command line to run a subset of jobs; for example, ``webchanges 2 3 9``
+will only run jobs #2, #3, and #9, and ``webchanges -1`` will only run the last job. Find the index numbering of your
+jobs by running ``webchanges --list``. API is experimental and may change in the near future.
 
 .. versionadded:: 3.6
 
 .. versionchanged:: 3.8
    Accepts negative indices.
+
+
+.. _jobs:
+
+Custom job file specification
+-----------------------------
+
+By default, the job file is named ``jobs.yaml`` and is located in the following directory:
+
+* Linux: ``~/.config/webchanges``
+* macOS: ``~/Library/Preferences/webchanges``
+* Windows: ``%USERPROFILE%\Documents\webchanges`` (the webchanges folder within your Documents folder)
+
+Use the ``--jobs`` command line argument to specify a file with a different name or location or a `glob pattern
+<https://en.wikipedia.org/wiki/Glob_(programming)>`__ for multiple files (the contents of matching files will be
+combined)
+
+- If you specify a file name without a directory, **webchanges** searches:
+  1. The current directory
+  2. The default directory (if not found in the current directory)
+
+- If you specify a file name without a suffix and the file is not found, **webchanges** will attempt to add a ``.yaml``
+  suffix.
+
+  Example: ``--jobs test`` is equivalent to ``--jobs test.yaml`` unless a file named ``test`` exists.
+
+Multiple job files
+^^^^^^^^^^^^^^^^^^
+
+To specify multiple job files or glob patterns, repeat the ``--jobs`` argument:
+
+``webchanges --jobs file1.yaml --jobs file2.yaml --jobs *.yaml``
+
+The contents of all specified files will be combined.
+
+
+.. versionchanged:: 3.25
+   Added ability to repeat the argument multiple times.
+
+
+.. _list:
+
+List jobs and their index number
+--------------------------------
+You can list all the jobs in a jobs file by using the command line argument ``--list``. You can filter this list by
+following this argument with a `Python regular expression
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__. For example ``--list blue`` will list only
+jobs that have the word 'blue' in their listing name (but not 'BLUE'), while ``--list (?i)blue`` will do the same but
+in a `case-insensitive manner <https://docs.python.org/3/library/re.html#re.I>`__.
+
+.. versionchanged:: 3.25
+   Added ability to filter list using a RegEx.
+
+
+.. _error:
 
 Show errors and no-data jobs
 ----------------------------
@@ -151,43 +206,32 @@ You can use the command line argument ``--footnote`` to add a footnote to the re
 .. versionadded:: 3.13
 
 
-.. _change-location:
+.. _clean-database:
 
-Updating a URL and keeping past history
----------------------------------------
-Job history is stored based on the value of the ``url`` or ``command`` parameter, so updating a job's URL in the
-configuration file ``urls.yaml`` will create a new job with no history. Retain history by using
-``--change-location``, before modifying the jobs file (i.e. while the job is still listed with the old URL or command):
+Compact the database
+--------------------
+You can compact the snapshots database by running :program:`webchanges` with either the ``--gc-database`` ('garbage
+collect') or ``--clean-database`` command line argument.
 
-.. code-block:: bash
+Running with ``--gc-database`` will purge all snapshots of jobs that are no longer in the jobs file **and**, for those
+in the jobs file, older changed snapshots other than the most recent one for each job. It will also rebuild (and
+therefore defragment) the database using SQLite's `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__
+command. You can indicate a RETAIN_LIMIT for the number of older changed snapshots to retain (default: 1, the
+latest).
 
-    webchanges --change-location https://example.org#old https://example.org#new
-    # or
-    webchanges --change-location old_command new_command
+.. tip:: If you use multiple jobs files, use ``--gc-database`` in conjunction with a glob ``--jobs`` command, e.g.
+   ``webchanges --jobs "jobs*.yaml" --gc-database``. To ensure that the glob is correct, run e.g. ``webchanges --jobs
+   "jobs*.yaml" --list``.
 
-.. versionadded:: 3.13
+Running with ``--clean-database`` will remove all older snapshots keeping the most recent RETAIN_LIMIT ones for
+each job (whether it is still present in the jobs file or not) and rebuild (and therefore defragment) the database
+using SQLite's `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ command.
 
+.. versionchanged:: 3.11
+   Renamed from ``--gc-cache`` and ``--clean-cache``.
 
-.. _delete-snapshot:
-
-Delete the latest saved snapshot
---------------------------------
-You can delete the latest saved snapshot of a job by running :program:`webchanges` with the ``--delete-snapshot``
-command line argument followed by the job index number (from ``--list``) or its URL/command. This is extremely
-useful when a website is redesigned and your filters behave in unexpected ways (for example, by capturing nothing):
-
-* Update your filters to once again capture the content you're monitoring, testing the job by running
-  :program:`webchanges` with the ``--test`` command line argument (see :ref:`here <test>`);
-* Delete the latest job's snapshot using ``--delete-snapshot``;
-* Run :program:`webchanges` again; this time the diff report will contain useful information on whether any content has
-  changed.
-
-This feature does not work with database engines ``textfiles`` and ``minidb``.
-
-.. versionadded:: 3.5
-
-.. versionchanged:: 3.8
-   Also works with ``redis`` database engine.
+.. versionchanged:: 3.13
+   Added RETAIN_LIMIT.
 
 
 .. _rollback-database:
@@ -222,32 +266,44 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 .. versionchanged:: 3.24
    Recognizes ISO-8601 formats and defaults to using ``dateutil.parser`` if found installed.
 
-.. _compact-database:
 
-Compact the database
---------------------
-You can compact the snapshots database by running :program:`webchanges` with either the ``--gc-database`` ('garbage
-collect') or ``--clean-database`` command line argument.
+.. _delete-snapshot:
 
-Running with ``--gc-database`` will purge all snapshots of jobs that are no longer in the jobs file **and**, for those
-in the jobs file, older changed snapshots other than the most recent one for each job. It will also rebuild (and
-therefore defragment) the database using SQLite's `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__
-command. You can indicate a RETAIN_LIMIT for the number of older changed snapshots to retain (default: 1, the
-latest).
+Delete the latest saved snapshot
+--------------------------------
+You can delete the latest saved snapshot of a job by running :program:`webchanges` with the ``--delete-snapshot``
+command line argument followed by the job index number (from ``--list``) or its URL/command. This is extremely
+useful when a website is redesigned and your filters behave in unexpected ways (for example, by capturing nothing):
 
-.. tip:: If you use multiple jobs files, use ``--gc-database`` in conjunction with a glob ``--jobs`` command, e.g.
-   ``webchanges --jobs "jobs*.yaml" --gc-database``. To ensure that the glob is correct, run e.g. ``webchanges --jobs
-   "jobs*.yaml" --list``.
+* Update your filters to once again capture the content you're monitoring, testing the job by running
+  :program:`webchanges` with the ``--test`` command line argument (see :ref:`here <test>`);
+* Delete the latest job's snapshot using ``--delete-snapshot``;
+* Run :program:`webchanges` again; this time the diff report will contain useful information on whether any content has
+  changed.
 
-Running with ``--clean-database`` will remove all older snapshots keeping the most recent RETAIN_LIMIT ones for
-each job (whether it is still present in the jobs file or not) and rebuild (and therefore defragment) the database
-using SQLite's `VACUUM <https://www.sqlite.org/lang_vacuum.html#how_vacuum_works>`__ command.
+This feature does not work with database engines ``textfiles`` and ``minidb``.
 
-.. versionchanged:: 3.11
-   Renamed from ``--gc-cache`` and ``--clean-cache``.
+.. versionadded:: 3.5
 
-.. versionchanged:: 3.13
-   Added RETAIN_LIMIT.
+.. versionchanged:: 3.8
+   Also works with ``redis`` database engine.
+
+
+.. _change-location:
+
+Updating a URL and keeping past history
+---------------------------------------
+Job history is stored based on the value of the ``url`` or ``command`` parameter, so updating a job's URL in the
+configuration file ``urls.yaml`` will create a new job with no history. Retain history by using
+``--change-location``, before modifying the jobs file (i.e. while the job is still listed with the old URL or command):
+
+.. code-block:: bash
+
+    webchanges --change-location https://example.org#old https://example.org#new
+    # or
+    webchanges --change-location old_command new_command
+
+.. versionadded:: 3.13
 
 
 .. _database-engine:

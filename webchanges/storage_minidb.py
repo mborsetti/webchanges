@@ -27,7 +27,7 @@ except ImportError as e:  # pragma: no cover
         class Model:
             pass
 
-    minidb_error = e.msg
+    minidb_error = str(e)
 
 
 class SsdbMiniDBStorage(SsdbStorage):

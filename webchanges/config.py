@@ -33,10 +33,10 @@ class CommandConfig(BaseConfig):
     """Command line arguments configuration; the arguments are stored as class attributes."""
 
     add: Optional[str]
-    change_location: tuple[Union[int, str], str]
+    change_location: Optional[tuple[Union[int, str], str]]
     check_new: bool
-    clean_database: int
-    database_engine: str
+    clean_database: Optional[int]
+    database_engine: Optional[str]
     delete: Optional[str]
     delete_snapshot: Optional[str]
     detailed_versions: bool
@@ -44,21 +44,22 @@ class CommandConfig(BaseConfig):
     edit: bool
     edit_config: bool
     edit_hooks: bool
-    errors: str
+    errors: Optional[str]
     features: bool
     footnote: Optional[str]
-    gc_database: int
+    gc_database: Optional[int]
     install_chrome: bool
     joblist: list[str]
-    list_jobs: bool
-    max_snapshots: int
+    jobs_files: list[Path]
+    list_jobs: Optional[Union[bool, str]]
+    max_snapshots: Optional[int]
     max_workers: Optional[int]
     no_headless: bool
     rollback_database: Optional[str]
     smtp_login: bool
     telegram_chats: bool
     test_differ: Optional[list[str]]
-    test_job: Union[bool, Optional[str]]
+    test_job: Optional[Union[bool, str]]
     test_reporter: Optional[str]
     verbose: Optional[int]
     xmpp_login: bool
@@ -82,8 +83,8 @@ class CommandConfig(BaseConfig):
            snapshots are stored.
         """
         super().__init__(config_path, config_file, jobs_def_file, hooks_file, ssdb_file)
-        self.jobs_files = [jobs_def_file]
         self.parse_args(args)
+        self.jobs_files = self.jobs_files or [jobs_def_file]
 
     class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
         def __init__(self, prog: str) -> None:
@@ -114,10 +115,7 @@ class CommandConfig(BaseConfig):
         parser.add_argument(
             'joblist',
             nargs='*',
-            help=(
-                'JOB(S) to run (if one, index as per --list or URL/command, if multiple, by index) (default: run all '
-                'jobs)'
-            ),
+            help=('JOB(S) to run (index number(s) as per --list; if one also URL/command) (default: run all jobs)'),
             metavar='JOB(S)',
         )
         parser.add_argument(
@@ -135,11 +133,12 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--jobs',
             '--urls',
-            default=self.jobs_def_file,
+            action='append',
+            # default=[self.jobs_def_file],
             type=Path,
             help='read job list (URLs/commands) from FILE or files matching a glob pattern',
             metavar='FILE',
-            dest='jobs_def_file',
+            dest='jobs_files',
         )
         group.add_argument(
             '--config',
@@ -170,8 +169,11 @@ class CommandConfig(BaseConfig):
         group = parser.add_argument_group('job management')
         group.add_argument(
             '--list-jobs',
-            action='store_true',
-            help='list jobs and their index number',
+            nargs='?',
+            const=True,
+            help='list jobs and their index number (optional: only those who match REGEX)',
+            metavar='REGEX',
+            dest='list_jobs',
         )
         group.add_argument(
             '--errors',

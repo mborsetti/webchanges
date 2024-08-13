@@ -55,7 +55,7 @@ At the moment, the following filters are available:
 
   - :ref:`beautify`: Beautify HTML.
 
-* To fix HTMLs links from relative to absolute:
+* To fix HTML links from relative to absolute:
 
   - :ref:`absolute_links`: fix HTML relative links.
 
@@ -168,23 +168,23 @@ images in combination with the :ref:`image_diff` differ.
 .. versionadded:: 3.21
 
 
-..
-   .. _base64:
 
-   base64
-   ------
-   Encodes binary data (e.g. image data) to text using `RFC 4648 <https://datatracker.ietf.org/doc/html/rfc4648.html>`__
-   `Base64 <https://en.wikipedia.org/wiki/Base64>`__. This filter can be useful to monitor images in combination with
-   the :ref:`image_diff` differ.  Also see :ref:`ascii85`, which is more efficient.
+.. _base64:
 
-   .. code-block:: yaml
+base64
+------
+Encodes binary data (e.g. image data) to text using `RFC 4648 <https://datatracker.ietf.org/doc/html/rfc4648.html>`__
+`Base64 <https://en.wikipedia.org/wiki/Base64>`__. This filter can be useful to monitor images in combination with
+the :ref:`image_diff` differ.  Also see :ref:`ascii85`, which is more efficient.
 
-      url: https://example.net/favicon.ico
-      filter:
-        - base64
+.. code-block:: yaml
+
+   url: https://example.net/favicon.ico
+   filter:
+     - base64
 
 
-   .. versionadded:: 3.16
+.. versionadded:: 3.16
 
 
 
@@ -1267,16 +1267,6 @@ By default, it acts over adjacent lines. Three lines consisting of ``dog`` - ``d
    filter:
      - remove_repeated
 
-Prepend it with :ref:`sort` to capture globally unique lines, e.g. to turn ``dog`` - ``cat`` - ``dog`` to ``cat`` -
-``dog``:
-
-.. code:: yaml
-
-   url: https://example.com/remove-repeated-sorted.txt
-   filter:
-     - sort
-     - remove_repeated
-
 This behavior can be changed by using an optional ``separator`` string argument. Also, ``ignore_case`` will tell it to
 ignore differences in case and of leading and/or trailing whitespace when comparing. For example, the below will turn
 mixed-case items separated by a pipe (``|``) ``a|b|B |c`` into ``a|b|c``:
@@ -1288,6 +1278,16 @@ mixed-case items separated by a pipe (``|``) ``a|b|B |c`` into ``a|b|c``:
      - remove_repeated:
          separator: '|'
          ignore_case: true
+
+Prepend it with :ref:`sort` to capture globally unique lines, e.g. to turn ``dog`` - ``cat`` - ``dog`` to ``cat`` -
+``dog``:
+
+.. code:: yaml
+
+   url: https://example.com/remove-repeated-sorted.txt
+   filter:
+     - sort
+     - remove_repeated
 
 Finally, setting the ``adjacent`` sub-directive to false will cause all duplicates to be removed, even if not
 adjacent. For example, the below will turn items separated by a pipe (``|``) ``a|b|a|c`` into ``a|b|c``:

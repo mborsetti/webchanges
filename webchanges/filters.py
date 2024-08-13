@@ -45,47 +45,47 @@ if TYPE_CHECKING:
 try:
     import bs4
 except ImportError as e:  # pragma: has-bs4
-    bs4 = e.msg  # type: ignore[assignment]
+    bs4 = str(e)  # type: ignore[assignment]
 
 try:
     import cssbeautifier
 except ImportError as e:  # pragma: no cover
-    cssbeautifier = e.msg  # type: ignore[assignment]
+    cssbeautifier = str(e)  # type: ignore[assignment]
 
 try:
     import jq
 except ImportError as e:  # pragma: has-jq
-    jq = e.msg
+    jq = str(e)
 
 try:
     import jsbeautifier
 except ImportError as e:  # pragma: no cover
-    jsbeautifier = e.msg  # type: ignore[assignment]
+    jsbeautifier = str(e)  # type: ignore[assignment]
 
 try:
     from pypdf import PdfReader
 except ImportError as e:  # pragma: no cover
-    PdfReader = e.msg  # type: ignore[assignment,misc]
+    PdfReader = str(e)  # type: ignore[assignment,misc]
 
 try:
     import pdftotext
 except ImportError as e:  # pragma: has-pdftotext
-    pdftotext = e.msg  # type: ignore[assignment]
+    pdftotext = str(e)  # type: ignore[assignment]
 
 try:
     from PIL import Image
 except ImportError as e:  # pragma: no cover
-    Image = e.msg  # type: ignore[assignment]
+    Image = str(e)  # type: ignore[assignment]
 
 try:
     import pytesseract
 except ImportError as e:  # pragma: has-pytesseract
-    pytesseract = e.msg  # type: ignore[assignment]
+    pytesseract = str(e)  # type: ignore[assignment]
 
 try:
     import vobject
 except ImportError as e:  # pragma: no cover
-    vobject = e.msg  # type: ignore[assignment]
+    vobject = str(e)  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -536,8 +536,6 @@ class Html2TextFilter(FilterBase):
                     f"filter's default ({self.job.get_indexed_location()})",
                     DeprecationWarning,
                 )
-            self.job.is_markdown = True
-
             parser = html2text.HTML2Text()
             parser.unicode_snob = True
             parser.body_width = 0
@@ -640,7 +638,7 @@ class Csv2TextFilter(FilterBase):
             else:
                 lines.append(message.format(*i))
 
-        return '\n'.join(lines), mime_type
+        return '\n'.join(lines), 'text/plain'
 
 
 class PypdfFilter(FilterBase):
@@ -690,7 +688,7 @@ class PypdfFilter(FilterBase):
         for page in reader.pages:
             text.append(page.extract_text())
 
-        return '\n'.join(text), mime_type
+        return '\n'.join(text), 'text/plain'
 
 
 class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
@@ -779,10 +777,7 @@ class Ical2TextFilter(FilterBase):
 
                 result.append(f'{date_str}: {event.summary.value}')
 
-        return (
-            '\n'.join(result),
-            'text/plain',
-        )
+        return '\n'.join(result), 'text/plain'
 
 
 class FormatJsonFilter(FilterBase):
@@ -1413,7 +1408,7 @@ class LxmlParser:
         except ValueError as e:
             args = (
                 f"Filter '{self.filter_kind}' encountered the following error when parsing the data. Check that "
-                f"'method: {self.method}' is the correct one.\n    {type(e).__name__}: {e.args[0]}"
+                f"'method: {self.method}' is the correct one.\n    {type(e).__name__}: {e}"
             )
             raise RuntimeError(args) from None
         if root is None:
@@ -1438,7 +1433,7 @@ class LxmlParser:
                     else None
                 )
         except (etree.ParserError, etree.XMLSchemaError, etree.XPathError) as e:
-            raise ValueError(f'Job {job_index_number} {type(e).__name__}: {e.args[0]} {self.expression}') from e
+            raise ValueError(f'Job {job_index_number} {type(e).__name__}: {e} {self.expression}') from e
         if excluded_elems is not None:
             for el in excluded_elems:
                 self._remove_element(el)
@@ -1855,7 +1850,8 @@ class Ascii85(FilterBase):
     def filter(
         self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
     ) -> tuple[Union[str, bytes], str]:
-        return base64.a85decode(data).decode(), mime_type
+        data_to_encode = data.encode() if isinstance(data, str) else data
+        return base64.a85encode(data_to_encode).decode(), 'text/plain'
 
 
 class Base64(FilterBase):
@@ -1873,4 +1869,5 @@ class Base64(FilterBase):
     def filter(
         self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
     ) -> tuple[Union[str, bytes], str]:
-        return base64.b64decode(data).decode(), mime_type
+        data_to_encode = data.encode() if isinstance(data, str) else data
+        return base64.b64encode(data_to_encode).decode(), 'text/plain'

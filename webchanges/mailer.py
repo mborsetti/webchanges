@@ -16,12 +16,12 @@ from email.message import EmailMessage
 from email.utils import formatdate
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
 try:
     import keyring
 except ImportError as e:  # pragma: no cover
-    keyring = e.msg  # type: ignore[assignment]
+    keyring = str(e)  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class Mailer:
                 cid_counter += 1
                 return new_img_tag
 
-            edited_html = re.sub(r'<img src="data:image/(.+?);base64,(.+?)"', replace_img, html_body)
+            edited_html = re.sub(r'src="data:image/(.+?);base64,(.+?)"', replace_img, html_body)
             return edited_html, cid_dict
 
         msg = EmailMessage(policy=policy.SMTPUTF8)
@@ -88,9 +88,9 @@ class Mailer:
             else:
                 html_body, cid_dict = extract_inline_images(html_body)
                 msg.add_alternative(html_body, subtype='html')
-                payloads: List[EmailMessage] = msg.get_payload()[1]  # type: ignore[assignment,index]
+                payloads: EmailMessage = msg.get_payload()[1]  # type: ignore[assignment,index]
                 for image_cid, image_data in cid_dict.items():
-                    payloads[1].add_related(
+                    payloads.add_related(
                         image_data,
                         maintype='image',
                         subtype=image_cid.split('_')[-1],

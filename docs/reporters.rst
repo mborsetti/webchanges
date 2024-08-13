@@ -36,6 +36,7 @@ At the moment, the following reporters are available:
 * :ref:`browser`: Launch the default web browser.
 * :ref:`discord`: Send to Discord channel.
 * :ref:`email`: Send via email (SMTP or sendmail).
+* :ref:`gotify`: Send to a Gotify server.
 * :ref:`ifttt`: Send via IFTTT.
 * :ref:`mailgun`: Send via email using the Mailgun service.
 * :ref:`matrix`: Send to a room using the Matrix protocol.
@@ -340,6 +341,34 @@ If using a Keychain to store the password, you also need to:
 
 .. versionchanged:: 3.10
    Can specify multiple "to" email addresses.
+
+
+
+.. _gotify:
+
+Gotify
+------
+Sends a :ref:`markdown report <markdown>` to `Gotify <https://gotify.net/>`__, a free and open source simple
+server for sending and receiving messages in real-time through WebSockets.
+
+To push notifications to a gotify server you need an application token. You can create one as follows:
+
+  #. Log into your gotify server's Web-UI.
+  #. Navigate to the "APPS" tab.
+  #. Click on the "CREATE APPLICATION" button.
+  #. Fill out the fields and press "CREATE".
+  #. Click on the eye icon of the newly created entry and copy the token.
+
+Here is a sample configuration:
+
+.. code-block:: yaml
+
+   gotify:
+     enabled: true
+     priority: 4
+     server_url: http://127.0.0.1:8090
+     subject: [webchanges] {count} changes{jobs_files}: {jobs}
+     token: Aa1yyikLFjEm35A
 
 
 

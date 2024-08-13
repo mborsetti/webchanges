@@ -326,12 +326,40 @@ directive ``data_as_json: true`` is also present, in which case it will be seria
 When this directive is specified:
 
 * If no ``method`` directive is specified, it is set to ``POST``.
+* If the ``method`` directive is set to ``GET`` or ``HEAD``, the data is interpreted to contain the query parameters.
 * If no `Content-type
   <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` is specified, such header is
   set to ``application/x-www-form-urlencoded`` unless the ``data_as_json: true`` directive is present, in which case
   it is set to ``application/json``.
 
-See example :ref:`here <post>`.
+Examples:
+
+For a POST, specifying a dictionary:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   data:
+       Element1: Data
+       Element2: OtherData
+
+For a POST, specifying a dictionary to be JSON-encoded:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   data:
+       Element1: Data
+       Element2: OtherData
+   data_as_json: true
+
+For a PUT request method with a string :
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   method: PUT
+   data: 'Special format data {"Element1": "Data", "Element2": "OtherData"}'
 
 .. versionchanged:: 3.8
    Works for all ``url`` jobs, including those with ``use_browser: true``.
@@ -344,8 +372,8 @@ See example :ref:`here <post>`.
 
 data_as_json
 ^^^^^^^^^^^^
-The data in ``data`` is to be sent in `JSON <https://en.wikipedia.org/wiki/JSON>`__ format (true/false). Defaults to
-false.
+Specified that the data in ``data`` is to be sent in `JSON <https://en.wikipedia.org/wiki/JSON>`__ format (true/false).
+Defaults to false.
 
 If true, the ``data`` will be serialized into JSON before being sent, and if no `Content-type
 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` is specified, such header is
@@ -542,6 +570,26 @@ Returns:
 
 
 .. versionadded:: 3.2.7
+
+
+
+.. _params:
+
+params
+^^^^^^
+For parameter of a GET or HEAD request.
+
+Example (equivalent to the URL https://example.com/?Element1=Data&Element2=OtherData):
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   params:
+       Element1: Data
+       Element2: OtherData
+
+.. versionadded:: 3.25
+
 
 
 .. _retries:

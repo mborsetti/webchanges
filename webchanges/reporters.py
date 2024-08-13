@@ -60,6 +60,7 @@ if TYPE_CHECKING:
         _ConfigReportBrowser,
         _ConfigReportDiscord,
         _ConfigReportEmail,
+        _ConfigReportGotify,
         _ConfigReportIfttt,
         _ConfigReportMailgun,
         _ConfigReportMatrix,
@@ -93,33 +94,33 @@ if TYPE_CHECKING:
 try:
     import aioxmpp
 except ImportError as e:  # pragma: no cover
-    aioxmpp = e.msg  # type: ignore[assignment]
+    aioxmpp = str(e)  # type: ignore[assignment]
 
 try:
     import chump
 except ImportError as e:  # pragma: no cover
-    chump = e.msg  # type: ignore[assignment]
+    chump = str(e)  # type: ignore[assignment]
 
 try:
     import keyring
 except ImportError as e:  # pragma: no cover
-    keyring = e.msg  # type: ignore[assignment]
+    keyring = str(e)  # type: ignore[assignment]
 
 try:
     import matrix_client.api
 except ImportError as e:  # pragma: no cover
-    matrix_client = e.msg  # type: ignore[assignment]
+    matrix_client = str(e)  # type: ignore[assignment]
 
 try:
     from pushbullet import Pushbullet
 except ImportError as e:  # pragma: no cover
-    Pushbullet = e.msg  # type: ignore[assignment]
+    Pushbullet = str(e)  # type: ignore[assignment]
 
 if os.name == 'nt':
     try:
         from colorama import AnsiToWin32
     except ImportError as e:  # pragma: no cover
-        AnsiToWin32 = e.msg  # type: ignore[assignment,misc]
+        AnsiToWin32 = str(e)  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +153,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         self.job_states = job_states
         self.duration = duration
         self.jobs_files = jobs_files
+        self.tz = self.report.config['report']['tz']
         if jobs_files and (len(jobs_files) > 1 or jobs_files[0].stem != 'jobs'):
             self.footer_job_file = f" ({', '.join(f.stem for f in jobs_files)})"
         else:
@@ -322,9 +324,10 @@ class HtmlReporter(ReporterBase):
         :returns: The content of the report.
         """
         cfg = self.get_base_config(self.report)
-        tz = self.report.config['report']['tz']
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        if not filtered_job_states:
+            return
         title = self.subject_with_args(filtered_job_states, self.report.config['report']['html']['title'])
 
         yield (
@@ -348,7 +351,7 @@ class HtmlReporter(ReporterBase):
 
         for job_state in filtered_job_states:
             differ = job_state.job.differ or {'name': cfg['diff']}
-            content = self._format_content(job_state, differ, tz)
+            content = self._format_content(job_state, differ)
             if content is not None:
                 if hasattr(job_state.job, 'url'):
                     yield (
@@ -391,17 +394,11 @@ class HtmlReporter(ReporterBase):
             )
         yield '</span>\n</body>\n</html>\n'
 
-    @staticmethod
-    def _format_content(
-        job_state: JobState,
-        differ: dict[str, Any],
-        tz: Optional[str],
-    ) -> Optional[str]:
+    def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> Optional[str]:
         """Returns the HTML for a job; called by _parts. Calls _diff_to_html.
 
         :param job_state: The JobState object with the job information.
         :param differ: The type of differ to use.
-        :param tz: The timezone to use for the report (IANA time zone name).
         :returns: HTML for a single job.
         """
         if job_state.verb == 'error':
@@ -413,7 +410,7 @@ class HtmlReporter(ReporterBase):
         if job_state.old_data in {None, job_state.new_data}:
             return '...'
 
-        return job_state.get_diff('html', differ=differ, tz=tz)
+        return job_state.get_diff('html', differ=differ, tz=self.tz)
 
 
 class TextReporter(ReporterBase):
@@ -427,13 +424,16 @@ class TextReporter(ReporterBase):
         :returns: The content of the plain text report.
         """
         cfg = self.get_base_config(self.report)
-        tz = self.report.config['report']['tz']
         line_length = cfg['line_length']
         show_details = cfg['details']
         show_footer = cfg['footer']
 
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        if not filtered_job_states:
+            return
+
         if cfg['minimal']:
-            for job_state in self.report.get_filtered_job_states(self.job_states):
+            for job_state in filtered_job_states:
                 pretty_name = job_state.job.pretty_name()
                 location = job_state.job.get_location()
                 if pretty_name != location:
@@ -445,8 +445,8 @@ class TextReporter(ReporterBase):
 
         summary = []
         details = []
-        for job_state in self.report.get_filtered_job_states(self.job_states):
-            summary_part, details_part = self._format_output(job_state, line_length, tz)
+        for job_state in filtered_job_states:
+            summary_part, details_part = self._format_output(job_state, line_length)
             summary.extend(summary_part)
             details.extend(details_part)
 
@@ -483,8 +483,7 @@ class TextReporter(ReporterBase):
                     f'updating.'
                 )
 
-    @staticmethod
-    def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[Union[str, bytes]]:
+    def _format_content(self, job_state: JobState) -> Optional[Union[str, bytes]]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -494,9 +493,9 @@ class TextReporter(ReporterBase):
         if job_state.old_data in {None, job_state.new_data}:
             return None
 
-        return job_state.get_diff('text', tz=tz)
+        return job_state.get_diff('text', tz=self.tz)
 
-    def _format_output(self, job_state: JobState, line_length: int, tz: Optional[str]) -> tuple[list[str], list[str]]:
+    def _format_output(self, job_state: JobState, line_length: int) -> tuple[list[str], list[str]]:
         summary_part: list[str] = []
         details_part: list[Optional[str]] = []
 
@@ -509,7 +508,7 @@ class TextReporter(ReporterBase):
             location = f'{pretty_name} ({location})'
         pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
         summary = ': '.join((job_state.verb.upper(), location))
-        content = self._format_content(job_state, tz)
+        content = self._format_content(job_state)
 
         summary_part.append(pretty_summary)
 
@@ -544,12 +543,15 @@ class MarkdownReporter(ReporterBase):
         :returns: The content of the Markdown report.
         """
         cfg = self.get_base_config(self.report)
-        tz = self.report.config['report']['tz']
         show_details = cfg['details']
         show_footer = cfg['footer']
 
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        if not filtered_job_states:
+            return
+
         if cfg['minimal']:
-            for job_state in self.report.get_filtered_job_states(self.job_states):
+            for job_state in filtered_job_states:
                 pretty_name = job_state.job.pretty_name()
                 location = job_state.job.get_location()
                 if pretty_name != location:
@@ -561,8 +563,8 @@ class MarkdownReporter(ReporterBase):
 
         summary: list[str] = []
         details: list[tuple[str, str]] = []
-        for job_state in self.report.get_filtered_job_states(self.job_states):
-            summary_part, details_part = self._format_output(job_state, tz)
+        for job_state in filtered_job_states:
+            summary_part, details_part = self._format_output(job_state)
             summary.extend(summary_part)
             details.extend(details_part)
 
@@ -730,8 +732,7 @@ class MarkdownReporter(ReporterBase):
 
             return True, f'{trim_message}{s}'
 
-    @staticmethod
-    def _format_content(job_state: JobState, tz: Optional[str]) -> Optional[str]:
+    def _format_content(self, job_state: JobState) -> Optional[str]:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -741,9 +742,9 @@ class MarkdownReporter(ReporterBase):
         if job_state.old_data in {None, job_state.new_data}:
             return None
 
-        return job_state.get_diff('markdown', tz=tz)
+        return job_state.get_diff('markdown', tz=self.tz)
 
-    def _format_output(self, job_state: JobState, tz: Optional[str]) -> tuple[list[str], list[tuple[str, str]]]:
+    def _format_output(self, job_state: JobState) -> tuple[list[str], list[tuple[str, str]]]:
         summary_part: list[str] = []
         details_part: list[tuple[str, str]] = []
 
@@ -757,7 +758,7 @@ class MarkdownReporter(ReporterBase):
 
         pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
         summary = ': '.join((job_state.verb.upper(), location))
-        content = self._format_content(job_state, tz)
+        content = self._format_content(job_state)
 
         if job_state.verb == 'changed,no_report':
             return [], []
@@ -1633,3 +1634,39 @@ class ShellReporter(WebhookReporter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         warn("'shell' reporter is deprecated; use 'run_command' instead", DeprecationWarning)
         super().__init__(*args, **kwargs)
+
+
+class GotifyReporter(MarkdownReporter):
+    """Send a message to a gotify server (https://gotify.net/)"""
+
+    MAX_LENGTH = 16 * 1024
+
+    __kind__ = 'gotify'
+
+    config: _ConfigReportGotify
+
+    def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> None:  # type: ignore[override]
+        body_markdown = '\n'.join(super().submit(self.MAX_LENGTH))
+        if not body_markdown:
+            logger.debug('Not sending message to gotify server (no changes)')
+            return
+
+        server_url = self.config['server_url']
+        url = f'{server_url}/message'
+
+        token = self.config['token']
+        headers = {'Authorization': f'Bearer {token}'}
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        # 'subject' used in the config file, but the API uses what might be called the subject as the 'title'
+        title = self.subject_with_args(filtered_job_states)
+        data = {
+            'extras': {
+                'client::display': {
+                    'contentType': 'text/markdown',
+                },
+            },
+            'message': body_markdown,
+            'priority': self.config['priority'],
+            'title': title,
+        }
+        self.post_client(url, headers=headers, json=data)

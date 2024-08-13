@@ -1,12 +1,9 @@
 """A few utilities used elsewhere."""
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
-
 from __future__ import annotations
 
 import getpass
-
-# import html
 import importlib.machinery
 import importlib.util
 import logging

@@ -558,23 +558,61 @@ def test_deepdiff_json(job_state: JobState) -> None:
     job_state.new_data = '{"test": 2}'
     job_state.job.differ = {'name': 'deepdiff', 'data_type': 'json'}
     expected = [
-        'Differ: deepdiff for json',
         '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        '• Value of [\'test\'] changed from "1" to "2".',
+        '• Value of root[\'test\'] changed from "1" to "2".',
     ]
     diff = job_state.get_diff(tz='Etc/UTC')
     assert diff.splitlines() == expected
 
     # retest as html
     expected = [
-        '<span style="font-family:monospace;white-space:pre-wrap;">',
-        'Differ: deepdiff for json',
+        '<span style="font-family:monospace;white-space:pre-wrap;">'
         '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
         '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
-        "• Value of ['test'] changed from <span "
+        "• Value of root['test'] changed from <span "
         'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">"1"</span> '
         'to <span style="background-color:#d1ffd1;color:#082b08;">"2"</span></span>',
+    ]
+    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    assert diff.splitlines() == expected
+
+
+def test_deepdiff_json_list(job_state: JobState) -> None:
+    """Test deepdiff json differ when the new data is a list."""
+    job_state.old_data = ''
+    job_state.new_data = '[{"test": 2, "second_test": 3}, "morestuff", 323]'
+    job_state.job.differ = {'name': 'deepdiff', 'data_type': 'json'}
+    expected = [
+        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '• Type of root changed from str to list and value changed from "" to [',
+        '  {',
+        '    "test": 2,',
+        '    "second_test": 3',
+        '  },',
+        '  "morestuff",',
+        '  323',
+        '].',
+    ]
+    diff = job_state.get_diff(tz='Etc/UTC')
+    assert diff.splitlines() == expected
+
+    # retest as html
+    expected = [
+        '<span style="font-family:monospace;white-space:pre-wrap;">'
+        '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+        '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+        '• Type of root changed from str to list and value changed from <span '
+        'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">""</span> '
+        'to <span style="background-color:#d1ffd1;color:#082b08;">[',
+        '  {',
+        '    "test": 2,',
+        '    "second_test": 3',
+        '  },',
+        '  "morestuff",',
+        '  323',
+        ']</span></span>',
     ]
     diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
     assert diff.splitlines() == expected
@@ -594,7 +632,10 @@ def test_deepdiff_json_bad_data(job_state: JobState) -> None:
     job_state.old_data = '{"test": 1'
     job_state.new_data = '{"test": 2'
     job_state.job.differ = {'name': 'deepdiff', 'data_type': 'json'}
-    expected = ['Differ deepdiff ERROR: New data is invalid JSON', "Expecting ',' delimiter"]
+    expected = [
+        'Differ deepdiff ERROR: New data is invalid JSON',
+        "Expecting ',' delimiter: line 1 column 11 (char 10)",
+    ]
     diff = job_state.get_diff()
     assert diff.splitlines() == expected
 
@@ -605,10 +646,9 @@ def test_deepdiff_xml(job_state: JobState) -> None:
     job_state.new_data = '<test>2</test>'
     job_state.job.differ = {'name': 'deepdiff', 'data_type': 'xml'}
     expected = [
-        'Differ: deepdiff for xml',
         '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        '• Value of [\'test\'] changed from "1" to "2".',
+        '• Value of root[\'test\'] changed from "1" to "2".',
     ]
     diff = job_state.get_diff(tz='Etc/UTC')
     assert diff.splitlines() == expected
@@ -626,12 +666,14 @@ def test_image_url(job_state: JobState) -> None:
     job_state.job.differ = {'name': 'image', 'data_type': 'url', 'mse_threshold': 5}
     expected = '<br>\n'.join(
         [
-            '<span style="font-family:monospace">Differ: image for url',
+            '<span style="font-family:monospace">'
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
             f'(<a href="{job_state.old_data}">Old image</a>)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
             f'(<a href="{job_state.new_data}">New image</a>)</span>',
             'New image:',
+            f'<img src="{job_state.old_data}" style="max-width: 100%; display: block;">',
+            'Differences from old (in yellow):',
             '<img src="data:image/gif;base64,',
         ]
     )
@@ -665,7 +707,7 @@ def test_image_filenames(job_state: JobState) -> None:
     job_state.job.differ = {'name': 'image', 'data_type': 'filename'}
     expected = '<br>\n'.join(
         [
-            '<span style="font-family:monospace">Differ: image for filename',
+            '<span style="font-family:monospace">'
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
             f'(<a href="file://{job_state.old_data}">Old image</a>)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
@@ -708,7 +750,7 @@ def test_image_ascii85(job_state: JobState) -> None:
     job_state.job.differ = {'name': 'image', 'data_type': 'ascii85'}
     expected = '<br>\n'.join(
         [
-            '<span style="font-family:monospace">Differ: image for ascii85',
+            '<span style="font-family:monospace">'
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
             'New image:',
@@ -746,14 +788,14 @@ def test_image_base64_and_resize(job_state: JobState) -> None:
     # blow up the second image to trigger resizing
     new_img = Image.open(new_file)
     img_format = new_img.format
-    new_img = new_img.resize((new_img.width * 2, new_img.height * 2), Image.NEAREST)
+    new_img = new_img.resize((new_img.width * 2, new_img.height * 2), Image.Resampling.NEAREST)
     output_stream = BytesIO()
     new_img.save(output_stream, format=img_format)
     job_state.new_data = base64.b64encode(output_stream.getvalue()).decode()
     job_state.job.differ = {'name': 'image', 'data_type': 'base64'}
     expected = '<br>\n'.join(
         [
-            '<span style="font-family:monospace">Differ: image for base64',
+            '<span style="font-family:monospace">'
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
             'New image:',
@@ -789,7 +831,7 @@ def test_image_resize(job_state: JobState) -> None:
     # blow up the old image to trigger resizing
     old_img = Image.open(img_file)
     img_format = old_img.format
-    old_img = old_img.resize((old_img.width + 1, old_img.height), Image.NEAREST)
+    old_img = old_img.resize((old_img.width + 1, old_img.height), Image.Resampling.NEAREST)
     output_stream = BytesIO()
     old_img.save(output_stream, format=img_format)
     job_state.old_data = base64.b64encode(output_stream.getvalue()).decode()
@@ -848,7 +890,7 @@ def test_ai_google_no_key(job_state: JobState) -> None:
         job_state.job.differ = {'name': 'ai_google'}
         diff = job_state.get_diff()
         expected = (
-            '## ERROR in summarizing the changes using ai_google:\n'
+            '## ERROR in summarizing changes using ai_google:\n'
             'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length 0.\n'
             '\n'
             '\n'
@@ -1084,23 +1126,21 @@ WDIFF_TEST_DATA = [
             'very old</span> text <br>',
             'This is <span style="background-color:#d1ffd1;color:#082b08;">newish</span> '
             '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">medium old</span> '
-            'text <br>',
+            'text ',
         ],
     ),
     (
         '[link](https://www.a.com)\n',
         '[link](https://www.b.com)\n',
+        ['\x1b[91m[link](https://www.a.com) \x1b[92m[link](https://www.b.com)\x1b[0m '],
         [
-            '\x1b[91m[link](https://www.a.com)                    ^',
-            ' \x1b[92m[link](https://www.b.com)                    ^',
-            '\x1b[0m ',
-        ],
-        [
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
-            '[link](https://www.a.com)                    ^<br>',
-            '</span> <span style="background-color:#d1ffd1;color:#082b08;">[link](https://www.b.com)'
-            '                    ^<br>',
-            '</span> <br>',
+            '<span '
+            'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><a '
+            'style="font-family:inherit" rel="noopener" target="_blank" '
+            'href="https://www.a.com">link</a></span> <span '
+            'style="background-color:#d1ffd1;color:#082b08;"><a '
+            'style="font-family:inherit" rel="noopener" target="_blank" '
+            'href="https://www.b.com">link</a></span> '
         ],
     ),
 ]
@@ -1111,7 +1151,8 @@ def test_worddiff(old_data: str, new_data: str, expected_text: str, expected_htm
     job_state.job.differ = {'name': 'wdiff'}
     job_state.old_data = old_data
     job_state.new_data = new_data
+    job_state.new_mime_type = 'text/markdown'
     diff = job_state.get_diff()
-    assert diff.splitlines()[3:] == expected_text
+    assert diff.splitlines()[2:] == expected_text
     diff = job_state.get_diff(report_kind='html')
-    assert diff.splitlines()[3:] == expected_html
+    assert diff.splitlines()[2:] == expected_html

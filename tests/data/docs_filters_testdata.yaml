@@ -296,10 +296,10 @@ https://example.com/html2text_strip_tags.html:
   output: "  Date#Sales™\n  Monday, 3 February 202010,000\n  Tu, 3 Mar20,000"
 https://example.net/favicon_85.ico:
   input: # in code, since it's binary
-  output: a
+  output: abcb
 https://example.net/favicon.ico:
   input: # in code, since it's binary
-  output: a
+  output: abcd
 https://example.net/beautify.html:
   input: |
     <!DOCTYPE html>
@@ -665,7 +665,7 @@ https://example.net/execute.html:
     The data is 'TEST'
     The job location is 'https://example.net/execute.html'
     The job name is 'Test execute filter'
-    The job number is '22'
+    The job number is '23'
     The job JSON is '{"filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 58, "name": "Test execute filter", "url": "https://example.net/execute.html"}'
 https://example.net/shellpipe.html:
   input: |

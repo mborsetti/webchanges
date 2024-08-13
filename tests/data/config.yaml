@@ -2,9 +2,9 @@ display:
   new: true
   error: true
   unchanged: false
-  empty-diff: true
+  empty-diff: false
 report:
-  tz:
+  tz: null
   text:
     line_length: 75
     details: true
@@ -49,6 +49,12 @@ report:
       insecure_password: ''
     sendmail:
       path: sendmail
+  gotify:
+    enabled: false
+    priority: 0
+    server_url: ''
+    title: ''
+    token: ''
   ifttt:
     enabled: false
     key: ''

@@ -11,6 +11,7 @@ import importlib.metadata
 import logging
 import os
 import platform
+import re
 import shutil
 import sqlite3
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
@@ -21,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, TYPE_CHECKING, Union
+from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
 from webchanges import __docs_url__, __project_name__, __version__
@@ -345,22 +347,29 @@ class UrlwatchCommand:
                     pass
         return 0
 
-    def list_jobs(self) -> None:
+    def list_jobs(self, regex: Union[bool, str]) -> None:
         """
         Lists the job and their respective _index_number.
 
         :return: None.
         """
+        if isinstance(regex, str):
+            print(f"List of jobs matching the RegEx '{regex}':")
+        else:
+            print('List of jobs:')
         for job in self.urlwatcher.jobs:
             if self.urlwatch_config.verbose:
-                print(f'{job.index_number:3}: {job!r}')
+                job_desc = f'{job.index_number:3}: {job!r}'
             else:
                 pretty_name = job.pretty_name()
                 location = job.get_location()
                 if pretty_name != location:
-                    print(f'{job.index_number:3}: {pretty_name} ({location})')
+                    job_desc = f'{job.index_number:3}: {pretty_name} ({location})'
                 else:
-                    print(f'{job.index_number:3}: {pretty_name}')
+                    job_desc = f'{job.index_number:3}: {pretty_name}'
+            if isinstance(regex, bool) or re.findall(regex, job_desc):
+                print(job_desc)
+
         if len(self.urlwatch_config.jobs_files) > 1:
             jobs_files = ['Jobs files concatenated:'] + [f'• {file}' for file in self.urlwatch_config.jobs_files]
         elif len(self.urlwatch_config.jobs_files) == 1:
@@ -377,13 +386,17 @@ class UrlwatchCommand:
         :return: The matching JobBase.
         :raises IndexError: If job is not found.
         """
-        try:
-            index = int(query)
-        except ValueError:
+        if isinstance(query, int):
+            index = query
+        else:
             try:
-                return next((job for job in self.urlwatcher.jobs if job.get_location() == query))
-            except StopIteration as e:
-                raise ValueError(f"Job {query} does not match any job's url/user_visible_url or command.") from e
+                index = int(query)
+            except ValueError:
+                query = unquote_plus(query)
+                try:
+                    return next((job for job in self.urlwatcher.jobs if unquote_plus(job.get_location()) == query))
+                except StopIteration:
+                    raise ValueError(f"Job {query} does not match any job's url/user_visible_url or command.") from None
 
         if index == 0:
             raise ValueError(f'Job index {index} out of range.')
@@ -422,15 +435,15 @@ class UrlwatchCommand:
             message = [f'No syntax errors in config file {self.urlwatch_config.config_file}']
             conj = ',\n' if 'hooks' in sys.modules else '\nand '
             if len(self.urlwatch_config.jobs_files) == 1:
-                message.append(f'{conj}jobs file {self.urlwatch_config.jobs_files[0]}')
+                message.append(f'{conj}jobs file {self.urlwatch_config.jobs_files[0]},')
             else:
                 message.append(
                     '\n   '.join(
-                        [f'{conj}jobs files'] + [f'• {file}' for file in sorted(self.urlwatch_config.jobs_files)]
+                        [f'{conj}jobs files'] + [f'• {file},' for file in sorted(self.urlwatch_config.jobs_files)]
                     )
                 )
             if 'hooks' in sys.modules:
-                message.append(f",\nand hooks file {sys.modules['hooks'].__file__}")
+                message.append(f"\nand hooks file {sys.modules['hooks'].__file__}")
             print(f"{''.join(message)}.")
             return
 
@@ -491,10 +504,6 @@ class UrlwatchCommand:
 
         job = self._find_job_with_defaults(job_id)
 
-        # TODO: The below is a hack; must find whether data is markdown programmatically (e.g. save it in database)
-        if job.filter:
-            job.is_markdown = any('html2text' in filter_type for filter_type in job.filter)
-
         history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.get_guid())
 
         num_snapshots = len(history_data)
@@ -531,8 +540,6 @@ class UrlwatchCommand:
                         job_state.old_etag = history_dic_snapshots[close_matches[0]].etag
                         job_state.old_mime_type = history_dic_snapshots[close_matches[0]].mime_type
 
-                # TODO: setting of job_state.job.is_markdown = True when it had been set by a filter.
-                # Ideally it should be saved as an attribute when saving "data".
                 if self.urlwatch_config.test_reporter is None:
                     self.urlwatch_config.test_reporter = 'stdout'  # default
                 report.job_states = []  # required
@@ -647,7 +654,7 @@ class UrlwatchCommand:
             jobs_files = [f'in jobs file {self.urlwatch_config.jobs_files[0]}:']
         else:
             jobs_files = ['in the concatenation of the jobs files'] + [
-                f'• {file}' for file in self.urlwatch_config.jobs_files
+                f'• {file},' for file in self.urlwatch_config.jobs_files
             ]
         header = '\n   '.join(['Jobs with errors or returning no data (after unmodified filters, if any)'] + jobs_files)
 
@@ -1038,7 +1045,7 @@ class UrlwatchCommand:
     def handle_actions(self) -> None:
         """Handles the actions for command line arguments and exits."""
         if self.urlwatch_config.list_jobs:
-            self.list_jobs()
+            self.list_jobs(self.urlwatch_config.list_jobs)
             self._exit(0)
 
         if self.urlwatch_config.errors:

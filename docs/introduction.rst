@@ -105,11 +105,14 @@ are listed and explained :ref:`here <jobs>`.
 Once :program:`webchanges` has collected the raw output, you may transform it to increase its utility. You use the
 ``filter`` directive to activate one or more :ref:`filters <filters>` to:
 
-* Select HTML or (XML) elements: ``css``, ``xpath``, ``element-by-class``, ``element-by-id``, ``element-by-style``,
+* Select HTML (or XML) elements: ``css``, ``xpath``, ``element-by-class``, ``element-by-id``, ``element-by-style``,
   ``element-by-tag``;
-* Extract text from HTML: ``html2text``;
+* Extract text from HTML (or XML): ``html2text``;
 * Make HTML more readable: ``beautify``;
-* Extract text from PDF: ``pdf2text``;
+* Fix HTML links from relative to absolute: ``absolute_links``;
+* Make CSV files more readable: ``csv2text``;
+* Extract text from PDF: ``pypdf`` or ``pdf2text``;
+* Save images: ``ascii85``;
 * Extract text from images: ``ocr``;
 * Extract ASCII text from JSON: ``jq``;
 * Make JSON more readable: ``format-json``;
@@ -117,8 +120,8 @@ Once :program:`webchanges` has collected the raw output, you may transform it to
 * Make iCal more readable: ``ical2text``;
 * Make binary readable: ``hexdump``;
 * Just detect if anything changed: ``sha1sum``;
-* Filter and/or edit text: ``keep_lines_containing``, ``delete_lines_containing``, ``re.sub``, ``strip``, ``sort``,
-  ``remove_repeated`` and ``reverse``;
+* Filter and/or edit text: ``keep_lines_containing``, ``delete_lines_containing``, ``re.sub``, ``re.findall``,
+  ``strip``, ``sort``, ``remove_repeated`` and ``reverse``;
 * Run any custom script or program: ``execute``.
 
 If all you want to do is monitoring the displayed text and links of a website, this job will do it:
@@ -188,9 +191,11 @@ Reports are explained :ref:`here <reports>`.
 Finally, the report(s) is (are) *reported* using a reporter, by default displaying it on the ``stdout`` console, but you
 can add (or change to) one or more reporters to:
 
-* Display it on the default web browser: ``browser``;
+* (Default) Display it on stdout (the text console): ``stdout``;
+* Display it on the default **web browser**: ``browser``;
 * Send it to a **Discord** channel: ``discord``;
 * Send it via **email** (SMTP or sendmail): ``email``;
+* Send it to a **Gotify** server: ``gotify``;
 * Send it via **IFTTT**: ``ifttt``;
 * Send it via email using the external **Mailgun** program: ``mailgun``;
 * Send it to a room using the **Matrix** protocol: ``matrix``;
@@ -198,7 +203,6 @@ can add (or change to) one or more reporters to:
 * Send it via **pushbullet**.com: ``pushbullet``;
 * Send it via **pushover**.net: ``pushover``;
 * Run a command on the local system to take care of the notification: ``run_command``;
-* Display it on stdout (the text console): ``stdout``;
 * Send it via **Telegram**: ``telegram``;
 * Send it to a **Slack** or **Mattermost** channel using the service's webhook: ``webhook``;
 * Send it as a message using the Extensible Messaging and Presence Protocol (**XMPP**): ``xmpp``.

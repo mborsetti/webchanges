@@ -177,7 +177,7 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
                         }
                     )
                 )
-    elif reporter in {'pushover', 'pushbullet', 'telegram', 'mailgun', 'ifttt', 'prowl'}:
+    elif reporter in {'ifttt', 'mailgun', 'prowl', 'pushbullet', 'pushover', 'telegram'}:
         with pytest.raises(RuntimeError) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
         assert reporter in str(pytest_wrapped_e.value).lower()
@@ -187,7 +187,11 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
         with pytest.raises(MatrixError) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
         assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
-    elif reporter in {'webhook', 'discord'}:
+    elif reporter in {
+        'discord',
+        'gotify',
+        'webhook',
+    }:
         with pytest.raises(UnsupportedProtocol) as pytest_wrapped_e:
             test_report.finish_one(reporter, check_enabled=False)
         err_msg = str(pytest_wrapped_e.value)

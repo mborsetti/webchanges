@@ -55,7 +55,7 @@ class JobState(ContextManager):
     history_dic_snapshots: dict[Union[str, bytes], Snapshot] = {}
     new_data: Union[str, bytes]
     new_etag: str
-    new_mime_type: str
+    new_mime_type: str = ''
     new_timestamp: float
     old_snapshot = Snapshot(
         data='',
@@ -273,6 +273,10 @@ class JobState(ContextManager):
 
         return self.generated_diff[report_kind]
 
+    def is_markdown(self) -> bool:
+        """Returns whether the new data is in markdown."""
+        return self.new_mime_type == 'text/markdown' or bool(self.job.is_markdown)
+
 
 class Report:
     """The base class for reporting."""
@@ -372,7 +376,7 @@ class Report:
             ):
                 if (
                     job_state.verb == 'changed'
-                    and not self.config['display'].get('empty-diff', True)
+                    and not self.config['display']['empty-diff']
                     and job_state.get_diff() == ''
                 ):
                     continue

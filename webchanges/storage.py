@@ -35,6 +35,11 @@ from webchanges.reporters import ReporterBase
 from webchanges.util import edit_file, file_ownership_checks
 
 try:
+    from httpx import Headers
+except ImportError:  # pragma: no cover
+    from webchanges._vendored.headers import Headers  # type: ignore[assignment]
+
+try:
     from types import NoneType
 except ImportError:  # pragma: no cover # Python 3.9
     NoneType = type(None)  # type: ignore[misc,assignment]
@@ -42,7 +47,7 @@ except ImportError:  # pragma: no cover # Python 3.9
 try:
     import redis
 except ImportError as e:  # pragma: no cover
-    redis = e.msg  # type: ignore[assignment]
+    redis = str(e)  # type: ignore[assignment]
 
 try:
     from dateutil import parser as dateutil_parser  # type: ignore[import-untyped]
@@ -140,6 +145,16 @@ _ConfigReportEmail = TypedDict(
         'method': Literal['sendmail', 'smtp'],
         'smtp': _ConfigReportEmailSmtp,
         'sendmail': _ConfigReportEmailSendmail,
+    },
+)
+_ConfigReportGotify = TypedDict(
+    '_ConfigReportGotify',
+    {
+        'enabled': bool,
+        'priority': int,
+        'server_url': str,
+        'title': str,
+        'token': str,
     },
 )
 _ConfigReportIfttt = TypedDict(
@@ -247,6 +262,7 @@ _ConfigReport = TypedDict(
         'browser': _ConfigReportBrowser,
         'discord': _ConfigReportDiscord,
         'email': _ConfigReportEmail,
+        'gotify': _ConfigReportGotify,
         'ifttt': _ConfigReportIfttt,
         'mailgun': _ConfigReportMailgun,
         'matrix': _ConfigReportMatrix,
@@ -293,7 +309,7 @@ DEFAULT_CONFIG: _Config = {
         'new': True,
         'error': True,
         'unchanged': False,
-        'empty-diff': True,
+        'empty-diff': False,
     },
     'report': {
         'tz': None,  # the timezone as a IANA time zone name, e.g. 'America/Los_Angeles', or null for machine's
@@ -351,6 +367,13 @@ DEFAULT_CONFIG: _Config = {
             'sendmail': {
                 'path': 'sendmail',
             },
+        },
+        'gotify': {  # uses markdown
+            'enabled': False,
+            'priority': 0,
+            'server_url': '',
+            'title': '',
+            'token': '',
         },
         'ifttt': {  # uses text
             'enabled': False,
@@ -429,6 +452,17 @@ DEFAULT_CONFIG: _Config = {
     },
     'footnote': None,
 }
+
+
+# Custom YAML constructor for !include
+def yaml_include(loader: yaml.SafeLoader, node: yaml.Node) -> list[Any]:
+    file_path = Path(loader.name).parent.joinpath(node.value)
+    with file_path.open('r') as f:
+        return list(yaml.safe_load_all(f))
+
+
+# Add the custom constructor to the YAML loader
+yaml.add_constructor('!include', yaml_include, Loader=yaml.SafeLoader)
 
 
 @dataclass
@@ -768,7 +802,28 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     f'See documentation at {__docs_url__}en/stable/configuration.html'
                 )
                 config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
+
+            # format headers
+            for job_defaults_type in {'all', 'url', 'browser'}:
+                if 'headers' in config['job_defaults'][job_defaults_type]:  # type: ignore[literal-required]
+                    config['job_defaults'][job_defaults_type]['headers'] = Headers(  # type: ignore[literal-required]
+                        {
+                            k: str(v)
+                            for k, v in config['job_defaults'][job_defaults_type][  # type: ignore[literal-required]
+                                'headers'
+                            ].items()
+                        },
+                        encoding='utf-8',
+                    )
+                if 'cookies' in config['job_defaults'][job_defaults_type]:  # type: ignore[literal-required]
+                    config['job_defaults'][job_defaults_type]['cookies'] = {  # type: ignore[literal-required]
+                        k: str(v)
+                        for k, v in config['job_defaults'][job_defaults_type][  # type: ignore[literal-required]
+                            'cookies'
+                        ].items()
+                    }
             logger.info(f'Loaded configuration from {self.filename}')
+
         else:
             logger.info(f'No directives found in the configuration file {self.filename}; using default directives.')
             config = DEFAULT_CONFIG
@@ -819,7 +874,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             :return: A list of line containing the names of the job files.
             """
             if len(filenames) > 1:
-                jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
+                jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file},' for file in filenames]
             elif len(filenames) == 1:
                 jobs_files = [f'in jobs file {filenames[0]}.']
             else:
@@ -838,8 +893,6 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                         )
                     )
                 job_data['index_number'] = i + 1
-                if job_data.get('kind') == 'shell':
-                    job_data['kind'] = 'command'
                 job = JobBase.unserialize(job_data, filenames)
                 # TODO: implement 100% validation and remove it from jobs.py
                 # TODO: try using pydantic to do this.
@@ -864,11 +917,22 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                             + job_files_for_error()
                         )
                     )
-                if not isinstance(job.headers, (NoneType, dict)):
+                if not isinstance(job.headers, (NoneType, dict, Headers)):
                     raise ValueError(
                         '\n   '.join(
                             [
                                 f"The 'headers' key needs to contain a dictionary; found a "
+                                f'{type(job.headers).__name__} ',
+                                f'in {job.get_indexed_location()})',
+                            ]
+                            + job_files_for_error()
+                        )
+                    )
+                if not isinstance(job.cookies, (NoneType, dict)):
+                    raise ValueError(
+                        '\n   '.join(
+                            [
+                                f"The 'cookies' key needs to contain a dictionary; found a "
                                 f'{type(job.headers).__name__} ',
                                 f'in {job.get_indexed_location()})',
                             ]
@@ -1092,7 +1156,7 @@ class SsdbStorage(BaseFileStorage, ABC):
         dt = self._convert_to_datetime(timespec, tz)
         timestamp_date = email.utils.format_datetime(dt)
         print(f'Rolling back database to {timestamp_date}')
-        if sys.__stdin__.isatty():
+        if sys.__stdin__ and sys.__stdin__.isatty():
             print('WARNING: All snapshots after this date will be deleted! This operation cannot be undone;')
             print('         We suggest you make a backup of the database file before proceeding.')
             resp = input("         Please enter 'Y' to proceed: ")
@@ -1227,7 +1291,8 @@ class SsdbSQLite3Storage(SsdbStorage):
 
     * guid: unique hash of the "location", i.e. the URL/command; indexed
     * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
-    * msgpack_data: a msgpack blob containing 'data', 'tries' and 'etag' in a dict of keys 'd', 't' and 'e'
+    * msgpack_data: a msgpack blob containing 'data', 'tries', 'etag' and 'mime_type' in a dict of keys 'd', 't',
+    'e' and 'm'
     """
 
     def __init__(self, filename: Path, max_snapshots: int = 4) -> None:
@@ -1261,14 +1326,22 @@ class SsdbSQLite3Storage(SsdbStorage):
 
         if tables == ('CacheEntry',):
             logger.info("Found legacy 'minidb' database to convert")
+
             # Found a minidb legacy database; close it, rename it for migration and create new sqlite3 one
             import importlib.util
 
             if importlib.util.find_spec('minidb') is None:
-                raise ImportError(
-                    "Python package 'minidb' is not installed; cannot upgrade the legacy 'minidb' database"
+                print('You have an old snapshot database format that needs to be converted to a current one.')
+                print(
+                    f"Please install the Python package 'minidb' for this one-time conversion and rerun "
+                    f'{__project_name__}.'
                 )
+                print('Use e.g. `pip install -U minidb`.')
+                print()
+                print("After the conversion, you can uninstall 'minidb' with e.g. `pip uninstall minidb`.")
+                sys.exit(1)
 
+            print('Performing one-time conversion from old snapshot database format.')
             self.db.close()
             minidb_filename = filename.with_stem(filename.stem + '_minidb')
             self.filename.replace(minidb_filename)

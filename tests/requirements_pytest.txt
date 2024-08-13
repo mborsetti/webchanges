@@ -29,7 +29,7 @@ pypdf[crypto]
 pytest
 pytest-asyncio
 pytest-cov
-python-dateutil
+python-dateutil; python_version == '3.12'
 pytz  # bug in aioxmpp
 redis
 requests

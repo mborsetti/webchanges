@@ -48,10 +48,14 @@ except ImportError:  # pragma: no cover
     httpx = None  # type: ignore[assignment]
 
 if httpx is not None:
+    from httpx import Headers
+
     try:
         import h2
     except ImportError:  # pragma: no cover
         h2 = None  # type: ignore[assignment]
+else:
+    from webchanges._vendored.headers import Headers
 
 try:
     import requests
@@ -59,13 +63,8 @@ try:
     import urllib3
     import urllib3.exceptions
 except ImportError as e:  # pragma: no cover
-    requests = e.msg  # type: ignore[assignment]
-    urllib3 = e.msg  # type: ignore[assignment]
-
-try:
-    from requests.structures import CaseInsensitiveDict
-except ImportError:  # pragma: no cover
-    from webchanges._vendored.case_insensitive_dict import CaseInsensitiveDict  # type: ignore[assignment]
+    requests = str(e)  # type: ignore[assignment]
+    urllib3 = str(e)  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +126,7 @@ class JobBase(metaclass=TrackSubClasses):
     # __optional__ in derived classes
     _delay: Optional[float] = None
     additions_only: Optional[bool] = None
-    block_elements: list[str] = []
+    block_elements: Optional[list[str]] = None
     chromium_revision: Optional[Union[dict[str, int], dict[str, str], str, int]] = None  # deprecated
     compared_versions: Optional[int] = None
     contextlines: Optional[int] = None
@@ -141,7 +140,7 @@ class JobBase(metaclass=TrackSubClasses):
     enabled: Optional[bool] = None
     encoding: Optional[str] = None
     filter: Optional[Union[str, list[Union[str, dict[str, Any]]]]] = None
-    headers: Optional[Union[dict, CaseInsensitiveDict]] = None
+    headers = Headers(encoding='utf-8')
     http_client: Optional[Literal['httpx', 'requests']] = None
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
@@ -169,6 +168,7 @@ class JobBase(metaclass=TrackSubClasses):
     no_conditional_request: Optional[bool] = None
     no_redirects: Optional[bool] = None
     note: Optional[str] = None
+    params: Optional[Union[str, list, dict]] = None
     referer: Optional[str] = None  # Playwright
     retries: Optional[int] = None
     ssl_no_verify: Optional[bool] = None
@@ -265,6 +265,10 @@ class JobBase(metaclass=TrackSubClasses):
         # Backwards compatibility with 'navigate' directive (deprecated)
         if filenames is None:
             filenames = []
+
+        if data.get('kind') == 'shell':
+            data['kind'] = 'command'
+
         if data.get('navigate') and not data.get('use_browser'):
             warnings.warn(
                 f"Error in jobs file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: "
@@ -332,15 +336,21 @@ class JobBase(metaclass=TrackSubClasses):
                 if k not in job_subclass.__required__:
                     data.pop(k, None)
 
-        return job_subclass.from_dict(data, filenames)
+        job = job_subclass.from_dict(data, filenames)
+
+        # Format headers and cookies (and turn values into strings to avoid httpx Exception):
+        job.headers = Headers({k: str(v) for k, v in (job.headers or {}).items()}, encoding='utf-8')
+        job.cookies = {k: str(v) for k, v in job.cookies.items()} if job.cookies is not None else None
+        return job
 
     def to_dict(self) -> dict:
-        """Return all defined Job object directives (required and optional) as a serializable dict.
+        """Return all definte (not None) Job object directives, required and optional, as a serializable dict,
+        converting Headers object (which are not JSON serializable) to dicts.
 
         :returns: A dict with all job directives as keys, ignoring those that are extras.
         """
         return {
-            k: dict(getattr(self, k)) if isinstance(getattr(self, k), CaseInsensitiveDict) else getattr(self, k)
+            k: dict(getattr(self, k)) if isinstance(getattr(self, k), Headers) else getattr(self, k)
             for keys in {self.__required__, self.__optional__}
             for k in keys
             if getattr(self, k) is not None
@@ -357,7 +367,7 @@ class JobBase(metaclass=TrackSubClasses):
         for k in data.keys():
             if k not in cls.__required__ + cls.__optional__:
                 if len(filenames) > 1:
-                    jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file}' for file in filenames]
+                    jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file},' for file in filenames]
                 elif len(filenames) == 1:
                     jobs_files = [f'in jobs file {filenames[0]}:']
                 else:
@@ -382,7 +392,7 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return f"<{self.__kind__} {' '.join(f'{k}={v!r}' for k, v in list(self.to_dict().items()))}"
 
-    def _dict_deep_merge(self, source: Union[dict, CaseInsensitiveDict], destination: dict) -> dict:
+    def _dict_deep_merge(self, source: Union[dict, Headers], destination: dict) -> dict:
         """Deep merges source dict into destination dict.
 
         :param source: The source dict.
@@ -391,7 +401,7 @@ class JobBase(metaclass=TrackSubClasses):
         """
         # https://stackoverflow.com/a/20666342
         for key, value in source.items():
-            if isinstance(value, (dict, CaseInsensitiveDict)):
+            if isinstance(value, (dict, Headers)):
                 # get node or create one
                 node = destination.setdefault(key, {})
                 self._dict_deep_merge(value, node)
@@ -412,9 +422,7 @@ class JobBase(metaclass=TrackSubClasses):
                 if key in self.__optional__:
                     if getattr(self, key) is None:  # for speed
                         setattr(self, key, value)
-                    elif isinstance(defaults[key], (dict, CaseInsensitiveDict)) and isinstance(
-                        getattr(self, key), (dict, CaseInsensitiveDict)
-                    ):
+                    elif isinstance(defaults[key], (dict, Headers)) and isinstance(getattr(self, key), (dict, Headers)):
                         for subkey, subvalue in defaults[key].items():
                             if hasattr(self, key) and subkey not in getattr(self, key):
                                 getattr(self, key)[subkey] = subvalue
@@ -430,16 +438,9 @@ class JobBase(metaclass=TrackSubClasses):
         :returns: A JobBase object.
         """
         job_with_defaults = copy.deepcopy(self)
-        if job_with_defaults.headers:
-            job_with_defaults.headers = CaseInsensitiveDict(job_with_defaults.headers)
+
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
-            if 'headers' in cfg.get('all', {}):
-                cfg['all']['headers'] = CaseInsensitiveDict(cfg['all']['headers'])
-            if 'headers' in cfg.get('url', {}):
-                cfg['url']['headers'] = CaseInsensitiveDict(cfg['url']['headers'])
-            if 'headers' in cfg.get('browser', {}):
-                cfg['browser']['headers'] = CaseInsensitiveDict(cfg['browser']['headers'])
             job_with_defaults._set_defaults(cfg.get(self.__kind__))  # type: ignore[arg-type]
             # all is done afterward, so that more specific defaults are not overwritten
             job_with_defaults._set_defaults(cfg.get('all'))
@@ -615,8 +616,8 @@ class UrlJobBase(Job):
     )
 
     def get_headers(
-        self, job_state: JobState, string: bool = False, user_agent: Optional[str] = __user_agent__
-    ) -> CaseInsensitiveDict:
+        self, job_state: JobState, user_agent: Optional[str] = __user_agent__, include_cookies: bool = True
+    ) -> Headers:
         """Get headers and modify them to add cookies and conditional request.
 
         :param job_state: The job state.
@@ -627,18 +628,17 @@ class UrlJobBase(Job):
         """
 
         if self.headers:
-            headers = CaseInsensitiveDict({k: str(v) for k, v in self.headers.items()})
+            headers = self.headers.copy()
         else:
-            headers = CaseInsensitiveDict()
+            headers = Headers(encoding='utf-8')
         if 'User-Agent' not in headers and user_agent:
             headers['User-Agent'] = user_agent
-        if self.cookies:
+        if include_cookies and self.cookies:
             if not isinstance(self.cookies, dict):
                 raise TypeError(
                     f"Job {self.index_number}: Directive 'cookies' needs to be a dictionary; "
                     f"found a '{type(self.cookies).__name__}' ( {self.get_indexed_location()} ).'"
                 )
-            self.cookies = {k: str(v) for k, v in self.cookies.items()}
             if 'Cookie' in headers:
                 warnings.warn(
                     f"Job {self.index_number}: Found both a header 'Cookie' and a directive 'cookies'; "
@@ -661,10 +661,7 @@ class UrlJobBase(Job):
                     headers['If-None-Match'] = job_state.old_etag
                 if job_state.old_timestamp is not None:
                     headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
-        if string:
-            return CaseInsensitiveDict({k: str(v) for k, v in headers.items()})
-        else:
-            return headers
+        return headers
 
 
 class UrlJob(UrlJobBase):
@@ -685,6 +682,7 @@ class UrlJob(UrlJobBase):
         'ignore_dh_key_too_small',
         'method',
         'no_redirects',
+        'params',
         'retries',
         'ssl_no_verify',
         'timeout',
@@ -723,6 +721,10 @@ class UrlJob(UrlJobBase):
             )
         proxies: Union[str, None] = None
         scheme = urlsplit(self.url).scheme
+        if scheme not in {'http', 'https'}:
+            raise ValueError(
+                f'Job {self.index_number}: URL should start with https:// or http:// (check for typos): {self.url}'
+            )
         if getattr(self, scheme + '_proxy'):
             proxies = getattr(self, scheme + '_proxy')
         elif os.getenv((scheme + '_proxy').upper()):
@@ -731,6 +733,7 @@ class UrlJob(UrlJobBase):
 
         client = httpx.Client(
             headers=headers,
+            cookies=self.cookies,
             verify=(not self.ssl_no_verify),
             http2=http2,
             proxies=proxies,
@@ -741,6 +744,7 @@ class UrlJob(UrlJobBase):
             method=self.method,  # type: ignore[arg-type]
             url=self.url,
             data=self.data,  # type: ignore[arg-type]
+            params=self.params,
         )
 
         if 400 <= response.status_code < 600:
@@ -816,8 +820,10 @@ class UrlJob(UrlJobBase):
         response = requests.request(  # type: ignore[attr-defined]
             method=self.method,  # type: ignore[arg-type]
             url=self.url,
+            params=self.params,
             data=self.data,
             headers=headers,
+            cookies=self.cookies,
             timeout=timeout,
             allow_redirects=(not self.no_redirects),
             proxies=proxies,
@@ -948,7 +954,7 @@ class UrlJob(UrlJobBase):
 
                     return '\n'.join(data_list), '', 'text/plain'
 
-        headers = self.get_headers(job_state)
+        headers = self.get_headers(job_state, include_cookies=False)
 
         if self.data is not None:
             if self.method is None:
@@ -988,6 +994,7 @@ class UrlJob(UrlJobBase):
 
         logger.info(f'Job {self.index_number}: Sending {self.method} request to {self.url}')
         logger.debug(f'Job {self.index_number}: Headers: {headers}')
+        logger.debug(f'Job {self.index_number}: Cookies: {self.cookies}')
 
         if self.http_client == 'requests' or not httpx:
             job_state._http_client_used = 'requests'
@@ -1137,6 +1144,7 @@ class BrowserJob(UrlJobBase):
         'initialization_url',  # Playwright
         'method',
         'navigate',
+        'params',
         'switches',
         'timeout',
         'user_data_dir',
@@ -1232,7 +1240,7 @@ class BrowserJob(UrlJobBase):
                     DeprecationWarning,
                 )
 
-        headers = self.get_headers(job_state, string=True, user_agent=None)
+        headers = self.get_headers(job_state, user_agent=None)
 
         proxy: Optional[ProxySettings] = None
         if self.http_proxy or os.getenv('HTTP_PROXY') or self.https_proxy or os.getenv('HTTPS_PROXY'):
@@ -1326,7 +1334,7 @@ class BrowserJob(UrlJobBase):
                 )
 
             else:
-                user_agent = headers.pop('User-Agent', None)
+                user_agent = headers.pop('User-Agent', '')
 
                 context = p.chromium.launch_persistent_context(
                     user_data_dir=self.user_data_dir,
@@ -1406,7 +1414,7 @@ class BrowserJob(UrlJobBase):
                         self.initialization_url,
                     )
                 except PlaywrightError as e:
-                    logger.info(f'Job {self.index_number}: Website initialization page returned error {e.args[0]}')
+                    logger.info(f'Job {self.index_number}: Website initialization page returned error {e}')
                     context.close()
                     raise e
 
@@ -1421,14 +1429,14 @@ class BrowserJob(UrlJobBase):
                         logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
                         page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)  # type: ignore[arg-type]
                 updated_url = page.url
-                params = dict(parse_qsl(urlparse(updated_url).params))
+                init_url_params = dict(parse_qsl(urlparse(updated_url).params))
                 try:
-                    new_url = url.format(**params)
+                    new_url = url.format(**init_url_params)
                 except KeyError as e:
                     context.close()
                     raise ValueError(
                         f"Job {job_state.job.index_number}: Directive 'initialization_url' did not find key"
-                        f" {e.args[0]} to substitute in 'url'."
+                        f" {e} to substitute in 'url'."
                     )
                 if new_url != url:
                     url = new_url
@@ -1456,6 +1464,18 @@ class BrowserJob(UrlJobBase):
                         f"Job {job_state.job.index_number}: Directive 'data' needs to be a string, dictionary or list; "
                         f'found a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
                     )
+
+            if self.params is not None:
+                if isinstance(self.params, (dict, list)):
+                    params = urlencode(self.params)
+                elif isinstance(self.params, str):
+                    params = quote(self.params)
+                else:
+                    raise ValueError(
+                        f"Job {job_state.job.index_number}: Directive 'params' needs to be a string, dictionary or "
+                        f'list; found a {type(self.params).__name__} ( {self.get_indexed_location()} ).'
+                    )
+                self.url += f'?{params}'
 
             if self.method and self.method != 'GET':
 
@@ -1502,7 +1522,7 @@ class BrowserJob(UrlJobBase):
 
                 def handle_elements(route: Route) -> None:
                     """Handler function to block elements (a pyee.EventEmitter callback)."""
-                    if route.request.resource_type in self.block_elements:
+                    if route.request.resource_type in self.block_elements:  # type: ignore[operator]
                         logger.debug(
                             f'Job {self.index_number}: Intercepted retrieval of resource_type '
                             f"'{route.request.resource_type}' and aborting"
@@ -1655,7 +1675,7 @@ class BrowserJob(UrlJobBase):
                             )
 
             except PlaywrightError as e:
-                logger.info(f'Job {self.index_number}: Browser returned error {e.args[0]}\n({url})')
+                logger.info(f'Job {self.index_number}: Browser returned error {e}\n({url})')
                 if logger.root.level <= 20:  # logging.INFO
                     try:
                         screenshot_filename = tempfile.NamedTemporaryFile(
