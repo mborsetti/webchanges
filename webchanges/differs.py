@@ -1027,7 +1027,7 @@ class ImageDiffer(DifferBase):
             htm.append(f'<img src="{self.state.old_data}" style="max-width: 100%; display: block;">')
         else:
             htm.append(
-                f'<img src="data:image/{(new_image.format or '').lower()};base64,{encoded_new}" '
+                f'<img src="data:image/{(new_image.format or "").lower()};base64,{encoded_new}" '
                 f'style="max-width: 100%; display: block;">'
             )
         htm.extend(
