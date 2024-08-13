@@ -1033,8 +1033,8 @@ class ImageDiffer(DifferBase):
         htm.extend(
             [
                 'Differences from old (in yellow):',
-                f'<img src="data:image/{(old_image.format or '').lower()};base64,{encoded_diff}" ',
-                'style="max-width: 100%; display: block;">' '',
+                f'<img src="data:image/{(old_image.format or "").lower()};base64,{encoded_diff}" ',
+                'style="max-width: 100%; display: block;">',
             ]
         )
 
