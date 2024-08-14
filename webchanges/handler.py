@@ -13,6 +13,7 @@ from concurrent.futures import Future
 from pathlib import Path
 from types import TracebackType
 from typing import Any, ContextManager, Iterator, Literal, NamedTuple, Optional, TYPE_CHECKING, Union
+from zoneinfo import ZoneInfo
 
 from webchanges.differs import DifferBase
 from webchanges.filters import FilterBase
@@ -244,7 +245,7 @@ class JobState(ContextManager):
         self,
         report_kind: Literal['text', 'markdown', 'html'] = 'text',
         differ: Optional[dict[str, Any]] = None,
-        tz: Optional[str] = None,
+        tz: Optional[ZoneInfo] = None,
     ) -> str:
         """Generates the job's diff and applies diff_filters to it (if any). Memoized.
 
@@ -291,6 +292,11 @@ class Report:
         :param urlwatch: The Urlwatch object with the program configuration information.
         """
         self.config: _Config = urlwatch.config_storage.config
+        self.tz = (
+            ZoneInfo(self.config['report']['tz'])
+            if 'report' in self.config and self.config['report']['tz'] is not None
+            else None
+        )
 
     def _result(
         self,
@@ -377,7 +383,7 @@ class Report:
                 if (
                     job_state.verb == 'changed'
                     and not self.config['display']['empty-diff']
-                    and job_state.get_diff() == ''
+                    and job_state.get_diff(tz=self.tz) == ''
                 ):
                     continue
 

@@ -7,7 +7,7 @@ Added
   <https://docs.python.org/3/library/re.html#re.I>`__.
 * New URL job directive ``params`` for specifying URL parameters (query strings), e.g. as a dictionary.
 * New ``gotify`` reporter (upstream contribution: `link <https://github.com/thp/urlwatch/pull/823/files>`__).
-* Improved instructions for first-time users with legacy database requires conversion.
+* Improved messaging when a legacy database that requires conversion is found at startup.
 
 Changed
 -------------------
@@ -24,6 +24,7 @@ Fixed
 * ``deepdiff`` differ now reports individual elements when the data added or removed is a list.
 * Improved URL matching for jobs by normalizing %xx escapes and plus signs (e.g. ``https://www.example.org/El Niño``
   will now match ``https://www.example.org/El+Ni%C3%B1o`` and vice versa).
+* Improved URL linkifier to accurately extract URLs with multiple parameters from text.
 
 Internals
 -------------------

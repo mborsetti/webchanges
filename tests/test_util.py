@@ -70,12 +70,12 @@ def test_linkify() -> None:
         == '<a href="https://www.test.com" rel="nofollow">www.test.com</a>'
     )
     assert (
-        linkify('www.5678901234567890123.com/&amp;', shorten=True)
-        == '<a href="https://www.5678901234567890123.com/">www.5678901234567890123.com/</a>&amp;'
+        linkify('www.5678901234567890123.com/weather')
+        == '<a href="https://www.5678901234567890123.com/weather">www.5678901234567890123.com/weather</a>'
     )
     assert (
-        linkify('www.56789012345678901234567.com/&amp;&copy;', shorten=True)
-        == '<a href="https://www.56789012345678901234567.com/">www.56789012345678901234567.com/</a>&amp;&copy;'
+        linkify('www.test.com?param1=true&param2=false')
+        == '<a href="https://www.test.com?param1=true&param2=false">www.test.com?param1=true&param2=false</a>'
     )
 
 

@@ -16,6 +16,7 @@ import sys
 from io import BytesIO
 from pathlib import Path
 from typing import Callable, cast
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -46,6 +47,7 @@ py_no_github = cast(
 #     ),
 # )
 
+test_tz = ZoneInfo('Etc/UTC')
 
 DIFF_TO_HTML_TEST_DATA = [
     ('+Added line', '<td style="background-color:#d1ffd1;color:#082b08;">Added line</td>'),
@@ -157,7 +159,7 @@ def test_process_no_valid_differ_returns_empty(job_state: JobState) -> None:
 
 
 def test_make_timestamp() -> None:
-    ts = DifferBase.make_timestamp(1605147837.511478, 'Etc/UTC')
+    ts = DifferBase.make_timestamp(1605147837.511478, test_tz)
     assert ts == 'Thu, 12 Nov 2020 02:23:57 +0000 (UTC)'
 
     ts = DifferBase.make_timestamp(0)
@@ -184,7 +186,7 @@ def test_unified(job_state: JobState) -> None:
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
     expected = ['@@ -1 +1 @@', '-a', '+b']
-    diff = job_state.get_diff(tz='Etc/UTC')
+    diff = job_state.get_diff(tz=test_tz)
     assert diff.splitlines()[2:] == expected
 
     # redo as markdown
@@ -221,7 +223,7 @@ def test_unified_additions_only(job_state: JobState) -> None:
     job_state.new_data = 'b\n'
     job_state.job.additions_only = True
     expected = ['/**Comparison type: Additions only**', '+b']
-    diff = job_state.get_diff(tz='Etc/UTC')
+    diff = job_state.get_diff(tz=test_tz)
     assert diff.splitlines()[2:] == expected
 
     # redo as html, to use diff_text = _unfiltered_diff['text']
@@ -404,7 +406,7 @@ def test_table_diff_normal(job_state: JobState) -> None:
         '        </tbody>',
         '    </table>',
     ]
-    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
     assert diff.splitlines() == expected
 
     # redo for text
@@ -428,7 +430,7 @@ def test_command_no_change(job_state: JobState) -> None:
     job_state.new_data = 'a\n'
     job_state.job.differ = {'name': 'command', 'command': 'echo'}  # test with differ name
     job_state.job.is_markdown = True
-    diff = job_state.get_diff(tz='Etc/UTC')
+    diff = job_state.get_diff(tz=test_tz)
     assert not diff
     assert 'changed,no_report' == job_state.verb
 
@@ -460,7 +462,7 @@ def test_command_change(job_state: JobState) -> None:
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
     ]
     job_state.job.is_markdown = True
-    diff = job_state.get_diff(tz='Etc/UTC')
+    diff = job_state.get_diff(tz=test_tz)
     assert diff.splitlines()[1:3] == expected
 
     # redo as markdown
@@ -562,7 +564,7 @@ def test_deepdiff_json(job_state: JobState) -> None:
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '• Value of root[\'test\'] changed from "1" to "2".',
     ]
-    diff = job_state.get_diff(tz='Etc/UTC')
+    diff = job_state.get_diff(tz=test_tz)
     assert diff.splitlines() == expected
 
     # retest as html
@@ -574,7 +576,7 @@ def test_deepdiff_json(job_state: JobState) -> None:
         'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">"1"</span> '
         'to <span style="background-color:#d1ffd1;color:#082b08;">"2"</span></span>',
     ]
-    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
     assert diff.splitlines() == expected
 
 
@@ -595,7 +597,7 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
         '  323',
         '].',
     ]
-    diff = job_state.get_diff(tz='Etc/UTC')
+    diff = job_state.get_diff(tz=test_tz)
     assert diff.splitlines() == expected
 
     # retest as html
@@ -614,7 +616,7 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
         '  323',
         ']</span></span>',
     ]
-    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
     assert diff.splitlines() == expected
 
 
@@ -650,7 +652,7 @@ def test_deepdiff_xml(job_state: JobState) -> None:
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '• Value of root[\'test\'] changed from "1" to "2".',
     ]
-    diff = job_state.get_diff(tz='Etc/UTC')
+    diff = job_state.get_diff(tz=test_tz)
     assert diff.splitlines() == expected
 
 
@@ -677,7 +679,7 @@ def test_image_url(job_state: JobState) -> None:
             '<img src="data:image/gif;base64,',
         ]
     )
-    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
     # if not os.getenv('GITHUB_ACTIONS'):
     #     # we are doing interactive debugging and want to display the result
     #     import tempfile
@@ -716,7 +718,7 @@ def test_image_filenames(job_state: JobState) -> None:
             '<img src="data:image/png;base64,',
         ]
     )
-    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
     # if not os.getenv('GITHUB_ACTIONS'):
     #     # we are doing interactive debugging and want to display the result
     #     import os
@@ -757,7 +759,7 @@ def test_image_ascii85(job_state: JobState) -> None:
             '<img src="data:image/png;base64,',
         ]
     )
-    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
     # if not os.getenv('GITHUB_ACTIONS'):
     #     # we are doing interactive debugging and want to display the result
     #     import tempfile
@@ -802,7 +804,7 @@ def test_image_base64_and_resize(job_state: JobState) -> None:
             '<img src="data:image/png;base64,',
         ]
     )
-    diff = job_state.get_diff(report_kind='html', tz='Etc/UTC')
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
     # if not os.getenv('GITHUB_ACTIONS'):
     #     # we are doing interactive debugging and want to display the result
     #     import tempfile
@@ -926,7 +928,7 @@ def test_ai_google_bad_api_key(job_state: JobState) -> None:
             '------------',
             'Summary generated by Google Generative AI (differ directive(s): model=gemini-1.5-flash-latest)',
         ]
-        diff = job_state.get_diff(tz='Etc/UTC')
+        diff = job_state.get_diff(tz=test_tz)
         assert diff.splitlines() == expected
     finally:
         if existing_key:
@@ -972,7 +974,7 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
             f'prompt={prompt_text}, timeout=1e-09, token_limit=53)',
         ]
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
-        diff = job_state.get_diff(tz='Etc/UTC')
+        diff = job_state.get_diff(tz=test_tz)
         assert diff.splitlines()[1:] == expected
         expected_in_first_line = {
             'AI summary unavailable: HTTP client error: The read operation timed out when requesting data from '
@@ -1031,7 +1033,7 @@ def test_ai_google_unified_diff_too_long(job_state: JobState, caplog: pytest.Log
             f'prompt={prompt_text}, token_limit=1)',
         ]
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
-        diff = job_state.get_diff(tz='Etc/UTC')
+        diff = job_state.get_diff(tz=test_tz)
         assert diff.splitlines() == expected
         expected_in_logs = (
             'Model prompt with full diff is too long: (44 est. tokens exceeds limit of 1 tokens); recomputing with '

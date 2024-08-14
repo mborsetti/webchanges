@@ -211,10 +211,28 @@ def linkify(
     :parameter permitted_protocols: Protocols which should be linkified, e.g. linkify(text,
         permitted_protocols=('http', 'ftp', 'mailto')); it is very unsafe to include protocols such as javascript.
     """
-    _URL_RE = re.compile(
-        r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|
-    &amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|
-    &quot;)*\)))+)"""
+    # _URL_RE = re.compile(  # original re
+    #     r'\b('
+    #     r'(?:([\w-]+):(/{1,3})|www[.])'
+    #     r'(?:('
+    #     r'?:(?:[^\s&()]|&amp;|&quot;)*(?:[^!"#$%&'
+    #     r"'()*+,.:;<=>?@\[\]^`{|}~\s])"
+    #     r")"
+    #     r'|(?:\((?:[^\s&()]|&amp;|&quot;)*\))'
+    #     r')+'
+    #     r')'
+    # )  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible.
+
+    _URL_RE = re.compile(  # modified to catch all URL parameters
+        r'\b('
+        r'(?:([\w-]+):(/{1,3})|www[.])'
+        r'(?:('
+        r'?:(?:[^\s()])*(?:[^!"#$%&'
+        r"'()*+,.:;<=>?@\[\]^`{|}~\s])"
+        r')'
+        r'|(?:\((?:[^\s()])*\))'
+        r')+'
+        r')'
     )  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible.
 
     if extra_params and not callable(extra_params):
@@ -232,6 +250,7 @@ def linkify(
 
         href: str = m.group(1)
         if not proto:
+            proto = 'https'
             href = f'https://{href}'  # no proto specified, use https
 
         if callable(extra_params):

@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Iterator, List, Optional, TYPE_CHECKING, Union
 from warnings import warn
+from zoneinfo import ZoneInfo
 
 from markdown2 import Markdown
 
@@ -153,7 +154,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         self.job_states = job_states
         self.duration = duration
         self.jobs_files = jobs_files
-        self.tz = self.report.config['report']['tz']
+        self.tz = ZoneInfo(self.report.config['report']['tz']) if self.report.config['report']['tz'] else None
         if jobs_files and (len(jobs_files) > 1 or jobs_files[0].stem != 'jobs'):
             self.footer_job_file = f" ({', '.join(f.stem for f in jobs_files)})"
         else:

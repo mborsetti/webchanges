@@ -316,10 +316,9 @@ Directives for the underlying :ref:`unified differ <unified_diff>` can be passed
    command: date
    differ:
      name: ai_google
-     name: unified
+     unified:
        context_lines: 5
        range_info: false
-
 
 
 .. note:: You can learn about Temperature, TopK and TopP parameters `here

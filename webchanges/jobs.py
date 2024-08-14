@@ -621,7 +621,6 @@ class UrlJobBase(Job):
         """Get headers and modify them to add cookies and conditional request.
 
         :param job_state: The job state.
-        :param string: Flag to indicate that values need to be strings (for Playwright).
         :param user_agent: The user agent string.
 
         :returns: The headers.

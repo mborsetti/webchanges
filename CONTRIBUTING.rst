@@ -17,8 +17,8 @@ If you can contribute with a `pull request
 -requests/about-pull-requests>`__, please do so. If not, open an issue `here
 <https://github.com/mborsetti/webchanges/issues>`__ and someone will look into it.
 
-Please make your contributions to the `unrealeased <https://github.com/mborsetti/webchanges/tree/unreleased>`__ branch
-and make sure that write a test for it (no decrase in coverage).
+Please make your contributions to the `unreleased <https://github.com/mborsetti/webchanges/tree/unreleased>`__ branch
+and make sure to write a test for it (no decrease in coverage).
 
 Documentation
 -------------
