@@ -26,7 +26,7 @@ here = Path(__file__).parent
 data_path = here.joinpath('data')
 docs_path = here.parent.joinpath('docs')
 
-if sys.version_info < (3, 13):
+if sys.version_info < (3, 12):
     pytest.skip('hooks.py is written for Python 3.13', allow_module_level=True)
 
 

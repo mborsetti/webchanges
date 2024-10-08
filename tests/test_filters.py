@@ -22,7 +22,10 @@ from webchanges.util import mark_to_html
 logger = logging.getLogger(__name__)
 
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
-skip_mac_issue = pytest.mark.skipif(sys.platform == 'darwin' and sys.version_info == (3, 13))
+# skip_mac_issue = pytest.mark.skipif(
+#     sys.platform == 'darwin' and sys.version_info == (3, 12),
+#     reason='Crashing',
+# )
 
 TESTDATA = [
     # New dict-style filter definition to test normalization/mapping but nothing more

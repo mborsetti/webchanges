@@ -28,7 +28,7 @@ from webchanges.storage import SsdbSQLite3Storage
 py_latest_only = cast(
     Callable[[Callable], Callable],
     pytest.mark.skipif(
-        sys.version_info < (3, 13),
+        sys.version_info < (3, 12),
         reason='Time consuming; testing latest version only',
     ),
 )
