@@ -33,7 +33,8 @@ override file defaults:
                         read job list (URLs/commands) from FILE or files
                         matching a glob pattern
   --config FILE         read configuration from FILE
-  --hooks FILE          use FILE as hooks.py module to import
+  --hooks FILE          use FILE or files matching a glob pattern as hooks.py
+                        module to import
   --database FILE, --cache FILE
                         use FILE as snapshots database; FILE can be a redis
                         URI

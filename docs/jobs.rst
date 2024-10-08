@@ -252,11 +252,29 @@ headers
 ^^^^^^^
 Headers to send along with the request (a dict).
 
+The headers found in a job are merged case-insensitively with the default ones (including those found in ``config
+.yaml``).  In case of conflicts, the header in the job will replace the default one.
+
 See examples :ref:`here <default_headers>`.
 
-Note that with ``browser: true`` the `Referer
-<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header will be replaced by the
-contents of the :ref:`referer <referer>` directive if specified.
+Jobs without ``browser: true``
+******************************
+The default headers are:
+
+.. code-block:: yaml
+
+   accept: '*/*'
+   accept-encoding:  # depends on libraries installed; at a minimum 'gzip, deflate'
+   connection: 'keep-alive'
+   user-agent: # set by the HTTP client, e.g. 'python-httpx/0.27.0'
+
+Jobs with ``browser: true``
+***************************
+The default headers are set by the browser.
+
+Note that if the :ref:`referer <referer>` directive if specified, its contents will replace the content of the `Referer
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header.
+
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
@@ -274,7 +292,7 @@ earlier version than the newer HTTP/2 network protocol. Use ``http_client: reque
 library used by default in releases prior to 3.16 (but it only supports up to HTTP/1.1 protocol).
 
 Required packages
-`````````````````
+*****************
 To use ``http_client: requests``, unless the ``requests`` library is already installed in the system, you need to
 first install :ref:`additional Python packages <optional_packages>` as follows:
 
@@ -874,7 +892,8 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
 
 .. important:: On Linux and macOS systems, due to security reasons, a ``command`` job or a job with a ``command`` differ
    will not run unless **both** the jobs file **and** the directory it is located in are **owned** and **writeable** by
-   **only** the user who is running the job (and not by its group or by other users). To set this up:
+   **only** the user who is running the job (and not by its group or by other users) or by the root user. To set this
+   up:
 
    .. code-block:: bash
 
@@ -920,7 +939,7 @@ See :ref:`here <additions_only>`.
 
 deletions_only
 --------------
-Filter the unified diff output to keep only deleted lines (no value required).
+Filter the unified diff output to keep only deletion lines (no value required).
 
 See :ref:`here <deletions_only>`.
 

@@ -14,7 +14,7 @@ Having it into a standalone module allows running the program without requiring 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from webchanges.handler import Snapshot
 from webchanges.storage import SsdbStorage
@@ -38,7 +38,7 @@ class SsdbMiniDBStorage(SsdbStorage):
         tries = int
         etag = str
 
-    def __init__(self, filename: Union[str, Path]) -> None:
+    def __init__(self, filename: str | Path) -> None:
         super().__init__(filename)
 
         if isinstance(minidb, type):
@@ -68,8 +68,8 @@ class SsdbMiniDBStorage(SsdbStorage):
 
         return Snapshot('', 0, 0, '', '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
-        history: dict[Union[str, bytes], float] = {}
+    def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
+        history: dict[str | bytes, float] = {}
         if count is not None and count < 1:
             return history
         for data, timestamp in self.CacheEntry.query(
@@ -85,7 +85,7 @@ class SsdbMiniDBStorage(SsdbStorage):
                     break
         return history
 
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
         history: list[Snapshot] = []

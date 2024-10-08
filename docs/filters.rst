@@ -1393,7 +1393,7 @@ Example:
 
 .. important:: On Linux and macOS systems, due to security reasons the ``shellpipe`` filter will not run unless **both**
    the jobs file **and** the directory it is located in are **owned** and **writeable** by **only** the user who is
-   running the job (and not by its group or by other users). To set this up:
+   running the job (and not by its group or by other users) or by the root user. To set this up:
 
    .. code-block:: bash
 

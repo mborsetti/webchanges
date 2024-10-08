@@ -21,7 +21,7 @@ to the result from the diff:
 
    url: https://example.com
    diff_filter:
-   - delete_lines_containing: "@@"
+     - delete_lines_containing: "@@"
 
 
 .. _additions_only:

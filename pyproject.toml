@@ -19,7 +19,7 @@ description = """\
     Gen AI summaries (BETA).\
     """
 readme = { file = 'README.rst', content-type = 'text/x-rst' }
-requires-python = '>=3.9'
+requires-python = '>=3.10'
 license = {file = 'LICENSE'}
 authors = [
     {name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com'},
@@ -33,6 +33,7 @@ classifiers = [
     'Topic :: Internet',
     'Topic :: Internet :: WWW/HTTP',
     'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
+    'Topic :: System :: Monitoring',
     'Topic :: Utilities',
     'Development Status :: 5 - Production/Stable',
     'License :: OSI Approved :: MIT License',
@@ -40,16 +41,18 @@ classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
     'Programming Language :: Python :: Implementation :: CPython',
     'Operating System :: OS Independent',
-    'Natural Language :: English',
+    'Environment :: Console',
     'Intended Audience :: End Users/Desktop',
     'Intended Audience :: System Administrators',
     'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'Typing :: Typed',
 ]
 
 [project.urls]
@@ -90,8 +93,9 @@ xmpp = ['aioxmpp']
 redis = ['redis']
 requests = ['requests']
 safe_password = ['keyring']
+zstd = ['zstandard']
 all = [
-    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff_xml,imagediff,matrix,pushbullet,pushover,xmpp,redis,requests,safe_password]'
+    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff_xml,imagediff,matrix,pushbullet,pushover,xmpp,redis,requests,safe_password,zstd]'
 ]
 
 
@@ -155,7 +159,7 @@ color_output = true
 [tool.black]
 # What's in here overrides the command-line options shown by running $ black --help.
 line_length = 120
-target_version = ['py39']
+target_version = ['py310']
 skip_string_normalization = true
 extend_exclude = '/(\.idea|\.pytest_cache|\__pycache__|\venv.*|\webchanges.egg-info)/'
 color = true
@@ -305,11 +309,12 @@ exclude_lines = [
 log_auto_indent = true
 # Enable log display during test run (aka "live logging" https://docs.pytest.org/en/stable/logging.html#live-logs)
 log_cli = true
-minversion = '7.4.0'
+minversion = '8.3.3'
 testpaths = ['tests']
 
 # the below is for pytest-asyncio (required due to Playwright)
 asyncio_mode = 'auto'
+asyncio_default_fixture_loop_scope = 'function'
 
 # Adds pytest-cov functionality (see https://pytest-cov.readthedocs.io/en/latest/config.html)
 # Note: --cov moved to .github/workflows/ci-cd.yaml and tox.ini due to interference with PyCharm breakpoints (see

@@ -323,6 +323,27 @@ products on a set of shots). The best way to do this is to use some template lan
 :program:`webchanges` and let it generate the ``urls.yaml`` file from that template.
 
 
+
+.. _zstd:
+
+zstd (Zstandard) compression support
+------------------------------------
+`Zstandard <https://datatracker.ietf.org/doc/html/rfc8878>`__ is a compression algorithm created by Meta's Facebook with
+better compression than brotli, gzip and deflate (see `benchmarks <https://facebook.github.io/zstd/#benchmarks>`__).
+It is used by all of Meta's sites (Facebook, Instagram, etc.) and other sites. zstd is automatically supported by URL
+jobs with ``use_browser: true``; to enable it for jobs without ``use_browser: true`` (re)install :program:`webchanges`
+with the ``zstd`` option::
+
+.. code-block:: bash
+
+   pip install --update webchanges[zstd]
+
+Both the default HTTP client ``httpx`` and the legacy HTTP client ``requests`` will automatically support zstd when
+they detect that this package is installed. The HTTP client automatically creates the ``Accept-Encoding`` header for
+your request (unless this header is specified in the job), which lists all compression protocols that the client
+supports. If the ``zstd`` library is installed, zstd will be automatically added to this list of supported protocols.
+
+
 .. _use_browser_block_elements:
 
 .. role:: strike

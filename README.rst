@@ -42,7 +42,7 @@ Install **webchanges** |pypi_version| |format| |status| |security| with:
 
 Running in Docker
 =================
-**webchanges** can be run in a `Docker <https://www.docker.com/>`__ container. Please see `here
+**webchanges** can be run in a `Docker <https://www.docker.com/>`__ container; please see `here
 <https://github.com/yubiuser/webchanges-docker>`__ for one such implementation.
 
 
@@ -83,14 +83,14 @@ execution, just run:
 
    webchanges
 
-**webchanges** does not include a scheduler. We recommend using a system scheduler to automatically run **webchanges**
+**webchanges** does not include a scheduler. We recommend using a system scheduler to automatically run it
 periodically:
 
 - On Linux or macOS, you can use cron (if you have never used cron before, see
   `here <https://www.computerhope.com/unix/ucrontab.htm>`__); `crontab.guru <https://crontab.guru>`__ will build a
-  schedule expression for you.
+  schedule expression for you;
 - On macOS, you can use `launchd <https://developer.apple
-  .com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/ScheduledJobs.html>`__
+  .com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/ScheduledJobs.html>`__;
 - On Windows, you can use the built-in `Windows Task Scheduler
   <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.
 
@@ -132,28 +132,28 @@ easily upgrade to **webchanges** from the current version of **urlwatch** using 
 (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__) and benefit from many improvements,
 including:
 
-* Summary of changes in plain text using Generative AI, useful for long, boring, legal documents;
+* Summary of changes in plain text using Generative AI, useful for long documents (e.g. legal);
 * Depicting changes to an image;
 * Element-by-element changes of JSON or XML data;
-* Much better `documentation <https://webchanges.readthedocs.io/>`__;
-* Many improvements to HTML reports, including:
+* Much better `documentation <https://webchanges.readthedocs.io/>`__, easing implementation;
+* Much clearer to HTML reports, which include:
 
   * Links that are `clickable <https://pypi.org/project/webchanges/>`__!
   * Retaining of original formatting such as **bolding / headers**, *italics*, :underline:`underlining`, list bullets
     (•) and indentation;
-  * :additions:`Added` and :deletions:`deleted` lines clearly highlighted by color and strikethrough, and long lines
-    that wrap around;
+  * Lines that are :additions:`added` and :deletions:`deleted` are clearly highlighted by color and strikethrough,
+    and long lines wrap around;
   * Correct rendering by email clients who override stylesheets (e.g. Gmail);
   * Other legibility improvements;
 
 * New filters such as `additions_only <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__,
   which makes it easier to track content that was added without the distractions of the content that was deleted;
-* New command line arguments such as ``--errors`` to catch jobs that no longer work;
+* New command line arguments, such as ``--errors`` (to catch jobs that no longer work);
 * More reliability and stability, including a ~30 percentage point increase in testing coverage;
 * Many other additions, refinements and fixes (see `detailed information
   <https://webchanges.readthedocs.io/en/stable/migration.html#upgrade-details>`__).
 
-Examples:
+Example enhancements to HTML reporting:
 
 .. image:: https://raw.githubusercontent.com/mborsetti/webchanges/main/docs/html_diff_filters_example_1.png
     :width: 504

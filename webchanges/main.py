@@ -7,7 +7,6 @@ For the entry point, see main() in the cli module."""
 from __future__ import annotations
 
 import logging
-from typing import Optional, Union
 
 from webchanges import __project_name__
 from webchanges.config import CommandConfig
@@ -47,7 +46,7 @@ class Urlwatch:
         self.report = Report(self)
         self.jobs: list[JobBase] = []
 
-        self._latest_release: Optional[Union[str, bool]] = None
+        self._latest_release: str | bool | None = None
 
         self.check_directories()
 
@@ -83,7 +82,7 @@ class Urlwatch:
 
         self.jobs = jobs
 
-    def get_new_release_version(self, timeout: Optional[float] = None) -> Union[str, bool]:
+    def get_new_release_version(self, timeout: float | None = None) -> str | bool:
         """Check PyPi to see if we're running the latest version. Memoized.
 
         :returns: Empty string if no higher version is available, otherwise the new version number.

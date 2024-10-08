@@ -175,13 +175,14 @@ Below are some job configurations that have helped to solve typical issues.
 Setting default headers
 ^^^^^^^^^^^^^^^^^^^^^^^
 Many websites expect to receive headers that look like they came from a browser, and will fail if they don't. It is
-possible to set default headers for HTTP requests by entering them in ``config.yaml`` under ``job_defaults``. If a
-``headers`` key is also found in a job, for that job the headers will be merged (case-insensitively) one by one with
-any conflict resolved in favor of the header specified in the job.
+possible to set default headers for HTTP requests by entering them in ``config.yaml`` under ``job_defaults``. If
+``headers`` are also specified in a job, for that job the default headers will be merged (case-insensitively) and the
+header(s) specified in the job will replace any default settings.
 
-Below are headers extracted from Google Chrome 120.0.6099.225 running in incognito mode in the YAML format of the
-default for the ``config.yaml`` file  (note that the header "Accept-Encoding" is set by the ref:`Python HTTP client
-library <http_client>` based on the encoding protocols it supports):
+Below are headers extracted from Google Chrome 128 running in incognito mode on Windows in US English, in YAML format
+useful for the ``config.yaml`` file. Note that the header "Accept-Encoding" is not included as it is set by the
+ref:`Python HTTP client library <http_client>` based on what is supported by your system and the compression libraries
+installed (e.g. see :ref:`here <zstd>` for support of zstd compression).
 
 .. code-block:: yaml
 
@@ -191,7 +192,8 @@ library <http_client>` based on the encoding protocols it supports):
          Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
          Accept-Language: en-US,en;q=0.9
          DNT: 1
-         Sec-CH-UA: '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"'
+         Priority: u=0, i
+         Sec-CH-UA: '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"'
          Sec-CH-UA-Mobile: ?0
          Sec-CH-UA-Platform: '"Windows"'
          Sec-Fetch-Dest: document
@@ -199,7 +201,7 @@ library <http_client>` based on the encoding protocols it supports):
          Sec-Fetch-Site: none
          Sec-Fetch-User: ?1
          Upgrade-Insecure-Requests: 1
-         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; 64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; 64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36
 
 
 .. _example_cookies:
@@ -301,3 +303,20 @@ For example, for email set these in the configuration file (``webchanges --edit-
      email:
        html: false
        # ...
+
+
+.. _errno_8:
+
+Avoiding ``[Errno 8] nodename nor servname provided, or not known``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+On MacOS, if the DNS resolver is slow, jobs may start returning ``[Errno 8] nodename nor servname provided, or not
+known`` errors.
+
+If this is the case, you can either slow down the concurrency of jobs by running webchanges with a low value for
+``--max-workers``, or, even better, try to fix the upstream DNS resolver issue.  For example, if you're only using the
+public internet, you may want to try changing the default DNS servers to e.g. [Cloudflare]
+(https://developers.cloudflare.com/1.1.1.1/ip-addresses/) and/or [Google]
+(https://developers.google.com/speed/public-dns/docs/using) servers, following [Apple's instructions]
+(https://support.apple.com/en-asia/guide/mac-help/mh14127/mac) or one of the many tutorials on the internet. You can
+mix these servers for additional resiliency, e.g. use ``8.8.8.8``, ``1.1.1.1``, ``2001:4860:4860::8888`` and
+``2606:4700:4700::1111``.

@@ -144,80 +144,78 @@ def test_smtp_password() -> None:
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)  # type: ignore[misc]
 def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
     test_report = build_test_report()
-    if reporter == 'email':
-        if NoKeyringError is not None:
-            with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
-                test_report.finish_one(reporter, check_enabled=False)
-        else:
-            with pytest.raises(ValueError) as pytest_wrapped_e:
-                test_report.finish_one(reporter, check_enabled=False)
-        assert sum(
-            list(
-                x in str(pytest_wrapped_e.value)
-                for x in {
-                    'No password available in keyring for localhost ',
-                    'No password available for localhost ',
-                    'No recommended backend was available.',
-                }
-            )
-        )
-    elif reporter == 'xmpp':
-        if not aioxmpp_is_installed:
-            pytest.skip(f"Skipping {reporter} since 'aioxmpp' package is not installed")
-        else:
+    match reporter:
+        case 'email':
             if NoKeyringError is not None:
                 with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
                     test_report.finish_one(reporter, check_enabled=False)
-                assert sum(
-                    list(
-                        x in str(pytest_wrapped_e.value)
-                        for x in {
-                            'No password available in keyring for ',
-                            'No recommended backend was available.',
-                        }
-                    )
+            else:
+                with pytest.raises(ValueError) as pytest_wrapped_e:
+                    test_report.finish_one(reporter, check_enabled=False)
+            assert sum(
+                list(
+                    x in str(pytest_wrapped_e.value)
+                    for x in {
+                        'No password available in keyring for localhost ',
+                        'No password available for localhost ',
+                        'No recommended backend was available.',
+                    }
                 )
-    elif reporter in {'ifttt', 'mailgun', 'prowl', 'pushbullet', 'pushover', 'telegram'}:
-        with pytest.raises(RuntimeError) as pytest_wrapped_e:
+            )
+        case 'xmpp':
+            if not aioxmpp_is_installed:
+                pytest.skip(f"Skipping {reporter} since 'aioxmpp' package is not installed")
+            else:
+                if NoKeyringError is not None:
+                    with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
+                        test_report.finish_one(reporter, check_enabled=False)
+                    assert sum(
+                        list(
+                            x in str(pytest_wrapped_e.value)
+                            for x in {
+                                'No password available in keyring for ',
+                                'No recommended backend was available.',
+                            }
+                        )
+                    )
+        case 'ifttt' | 'mailgun' | 'prowl' | 'pushbullet' | 'pushover' | 'telegram':
+            with pytest.raises(RuntimeError) as pytest_wrapped_e:
+                test_report.finish_one(reporter, check_enabled=False)
+            assert reporter in str(pytest_wrapped_e.value).lower()
+        case 'matrix':
+            if not matrix_client_is_installed:
+                pytest.skip(f"Skipping {reporter} since 'matrix' package is not installed")
+            with pytest.raises(MatrixError) as pytest_wrapped_e:
+                test_report.finish_one(reporter, check_enabled=False)
+            assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
+        case 'discord' | 'gotify' | 'webhook':
+            with pytest.raises(UnsupportedProtocol) as pytest_wrapped_e:
+                test_report.finish_one(reporter, check_enabled=False)
+            err_msg = str(pytest_wrapped_e.value)
+            assert (
+                err_msg == "Request URL is missing an 'http://' or 'https://' protocol."
+                or err_msg == "Invalid URL '': No scheme supplied. Perhaps you meant https://?"
+            )
+        case 'run_command':
+            if os.getenv('GITHUB_ACTIONS'):
+                pytest.skip('Test triggers exit code 141 in GitHub Actions')
+            with pytest.raises(ValueError) as pytest_wrapped_e:
+                test_report.finish_one(reporter, check_enabled=False)
+            assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
+            if os.name == 'nt':
+                test_report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
+            else:
+                test_report.config['report']['run_command']['command'] = 'echo TEST'
             test_report.finish_one(reporter, check_enabled=False)
-        assert reporter in str(pytest_wrapped_e.value).lower()
-    elif reporter == 'matrix':
-        if not matrix_client_is_installed:
-            pytest.skip(f"Skipping {reporter} since 'matrix' package is not installed")
-        with pytest.raises(MatrixError) as pytest_wrapped_e:
-            test_report.finish_one(reporter, check_enabled=False)
-        assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
-    elif reporter in {
-        'discord',
-        'gotify',
-        'webhook',
-    }:
-        with pytest.raises(UnsupportedProtocol) as pytest_wrapped_e:
-            test_report.finish_one(reporter, check_enabled=False)
-        err_msg = str(pytest_wrapped_e.value)
-        assert (
-            err_msg == "Request URL is missing an 'http://' or 'https://' protocol."
-            or err_msg == "Invalid URL '': No scheme supplied. Perhaps you meant https://?"
-        )
-    elif reporter == 'run_command':
-        if os.getenv('GITHUB_ACTIONS'):
-            pytest.skip('Test triggers exit code 141 in GitHub Actions')
-        with pytest.raises(ValueError) as pytest_wrapped_e:
-            test_report.finish_one(reporter, check_enabled=False)
-        assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
-        if os.name == 'nt':
-            test_report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
-        else:
-            test_report.config['report']['run_command']['command'] = 'echo TEST'
-        test_report.finish_one(reporter, check_enabled=False)
-        assert capsys.readouterr().out == 'TEST\n'
-    elif reporter != 'browser':
-        test_report.config['footnote'] = 'Footnote'
-        test_report.finish_one(reporter, check_enabled=False)
-    elif 'PYCHARM_HOSTED' in os.environ:  # browser
-        test_report.config['report']['html']['separate'] = True
-        test_report.config['footnote'] = 'Footnote'
-        test_report.finish_one(reporter, check_enabled=False)
+            assert capsys.readouterr().out == 'TEST\n'
+        case _:
+            if reporter != 'browser':
+                test_report.config['footnote'] = 'Footnote'
+                test_report.finish_one(reporter, check_enabled=False)
+            elif 'PYCHARM_HOSTED' in os.environ:  # browser
+                test_report.config['report']['html']['separate'] = True
+                test_report.config['footnote'] = 'Footnote'
+                test_report.finish_one(reporter, check_enabled=False)
 
 
 def test_mailer_send() -> None:

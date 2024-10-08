@@ -28,8 +28,8 @@ from webchanges.storage import SsdbSQLite3Storage
 py_latest_only = cast(
     Callable[[Callable], Callable],
     pytest.mark.skipif(
-        sys.version_info < (3, 12),
-        reason='Time ' 'consuming; testing latest version only',
+        sys.version_info < (3, 13),
+        reason='Time consuming; testing latest version only',
     ),
 )
 py_no_github = cast(
@@ -364,7 +364,7 @@ def test_unified_diff_to_html_no_link_text(job_state: JobState) -> None:
 
 def test_unified_diff_to_html_url_no_link(job_state: JobState) -> None:
     # must add to fake headers to get what we want:
-    inpt = '-fake head 1\n+fake head 2\n https://test.htm'
+    inpt = '-fake head 1\n+fake head 2\n [](https://test.htm)'
     job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'differ': {'name': 'unified'}})
     job_state.job = job
     result = ''.join(list(UnifiedDiffer(job_state).unified_diff_to_html(inpt)))
@@ -673,6 +673,7 @@ def test_image_url(job_state: JobState) -> None:
             f'(<a href="{job_state.old_data}">Old image</a>)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
             f'(<a href="{job_state.new_data}">New image</a>)</span>',
+            '</span>',
             'New image:',
             f'<img src="{job_state.old_data}" style="max-width: 100%; display: block;">',
             'Differences from old (in yellow):',
@@ -714,6 +715,7 @@ def test_image_filenames(job_state: JobState) -> None:
             f'(<a href="file://{job_state.old_data}">Old image</a>)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC) '
             f'(<a href="file://{job_state.new_data}">New image</a>)</span>',
+            '</span>',
             'New image:',
             '<img src="data:image/png;base64,',
         ]
@@ -755,6 +757,7 @@ def test_image_ascii85(job_state: JobState) -> None:
             '<span style="font-family:monospace">'
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+            '</span>',
             'New image:',
             '<img src="data:image/png;base64,',
         ]
@@ -800,6 +803,7 @@ def test_image_base64_and_resize(job_state: JobState) -> None:
             '<span style="font-family:monospace">'
             '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
             '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+            '</span>',
             'New image:',
             '<img src="data:image/png;base64,',
         ]
@@ -1057,7 +1061,9 @@ def test_ai_google_timeout_no_unified_diff(job_state: JobState, caplog: pytest.L
         job_state.job.differ = {
             'name': 'ai_google',
             'model': 'gemini-pro',
-            'prompt': ('Identify and summarize the changes:\n\n<old>\n{old_data}\n</old>\n\n<new>\n{new_data}\n</new>'),
+            'prompt': (
+                'Identify and summarize the changes:\n\n<old>\n{old_text}\n</old>\n\n<new>\n{' 'new_text}\n</new>'
+            ),
             'timeout': 1e-9,
             'temperature': 1,
             'top_k': 1,

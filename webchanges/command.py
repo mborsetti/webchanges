@@ -21,7 +21,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, TYPE_CHECKING, Union
+from typing import Iterable, Iterator, TYPE_CHECKING
 from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
@@ -90,7 +90,7 @@ class UrlwatchCommand:
         self.urlwatch_config = urlwatcher.urlwatch_config
 
     @staticmethod
-    def _exit(arg: Union[str, int, None]) -> None:
+    def _exit(arg: str | int | None) -> None:
         logger.info(f'Exiting with exit code {arg}')
         sys.exit(arg)
 
@@ -119,44 +119,44 @@ class UrlwatchCommand:
         :returns: 0 if edit is successful, 1 otherwise.
         """
         # Similar code to BaseTextualFileStorage.edit()
-        logger.debug(f'Edit file {self.urlwatch_config.hooks_file}')
-        # Python 3.9: hooks_edit = self.urlwatch_config.hooks.with_stem(self.urlwatch_config.hooks.stem + '_edit')
-        hooks_edit = self.urlwatch_config.hooks_file.parent.joinpath(
-            self.urlwatch_config.hooks_file.stem + '_edit' + ''.join(self.urlwatch_config.hooks_file.suffixes)
-        )
-        if self.urlwatch_config.hooks_file.exists():
-            shutil.copy(self.urlwatch_config.hooks_file, hooks_edit)
-        # elif self.urlwatch_config.hooks_py_example is not None and os.path.exists(
-        #         self.urlwatch_config.hooks_py_example):
-        #     shutil.copy(self.urlwatch_config.hooks_py_example, hooks_edit, follow_symlinks=False)
+        for hooks_file in self.urlwatch_config.hooks_files:
+            logger.debug(f'Edit file {hooks_file}')
+            # Python 3.9: hooks_edit = self.urlwatch_config.hooks.with_stem(self.urlwatch_config.hooks.stem + '_edit')
+            hooks_edit = hooks_file.parent.joinpath(hooks_file.stem + '_edit' + ''.join(hooks_file.suffixes))
+            if hooks_file.exists():
+                shutil.copy(hooks_file, hooks_edit)
+            # elif self.urlwatch_config.hooks_py_example is not None and os.path.exists(
+            #         self.urlwatch_config.hooks_py_example):
+            #     shutil.copy(self.urlwatch_config.hooks_py_example, hooks_edit, follow_symlinks=False)
 
-        while True:
-            try:
-                edit_file(hooks_edit)
-                import_module_from_source('hooks', hooks_edit)
-                break  # stop if no exception on parser
-            except SystemExit:
-                raise
-            except Exception as e:
-                print('Parsing failed:')
-                print('======')
-                print(e)
-                print('======')
-                print('')
-                print(f'The file {self.urlwatch_config.hooks_file} was NOT updated.')
-                user_input = input('Do you want to retry the same edit? (Y/n)')
-                if not user_input or user_input.lower()[0] == 'y':
-                    continue
-                hooks_edit.unlink()
-                print('No changes have been saved.')
-                return 1
+            while True:
+                try:
+                    edit_file(hooks_edit)
+                    import_module_from_source('hooks', hooks_edit)
+                    break  # stop if no exception on parser
+                except SystemExit:
+                    raise
+                except Exception as e:
+                    print('Parsing failed:')
+                    print('======')
+                    print(e)
+                    print('======')
+                    print('')
+                    print(f'The file {hooks_file} was NOT updated.')
+                    user_input = input('Do you want to retry the same edit? (Y/n)')
+                    if not user_input or user_input.lower()[0] == 'y':
+                        continue
+                    hooks_edit.unlink()
+                    print('No changes have been saved.')
+                    return 1
 
-        if self.urlwatch_config.hooks_file.is_symlink():
-            self.urlwatch_config.hooks_file.write_text(hooks_edit.read_text())
-        else:
-            hooks_edit.replace(self.urlwatch_config.hooks_file)
-        hooks_edit.unlink(missing_ok=True)
-        print(f'Saved edits in {self.urlwatch_config.hooks_file}')
+            if hooks_file.is_symlink():
+                hooks_file.write_text(hooks_edit.read_text())
+            else:
+                hooks_edit.replace(hooks_file)
+            hooks_edit.unlink(missing_ok=True)
+            print(f'Saved edits in {hooks_file}')
+
         return 0
 
     @staticmethod
@@ -263,6 +263,8 @@ class UrlwatchCommand:
                 f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} "
                 f"({100 - psutil.disk_usage('/').percent:.1f}%)"
             )
+            executor = ThreadPoolExecutor()
+            print(f'• --max-threads default: {executor._max_workers}')
 
         print()
         print('Installed PyPi dependencies:')
@@ -347,7 +349,7 @@ class UrlwatchCommand:
                     pass
         return 0
 
-    def list_jobs(self, regex: Union[bool, str]) -> None:
+    def list_jobs(self, regex: bool | str) -> None:
         """
         Lists the job and their respective _index_number.
 
@@ -378,7 +380,7 @@ class UrlwatchCommand:
             jobs_files = []
         print('\n   '.join(jobs_files))
 
-    def _find_job(self, query: Union[str, int]) -> JobBase:
+    def _find_job(self, query: str | int) -> JobBase:
         """Finds the job based on a query, which is matched to the job index (also negative) or a job location
         (i.e. the url/user_visible_url or command).
 
@@ -408,7 +410,7 @@ class UrlwatchCommand:
         except IndexError as e:
             raise ValueError(f'Job index {index} out of range (found {len(self.urlwatcher.jobs)} jobs).') from e
 
-    def _find_job_with_defaults(self, query: Union[str, int]) -> JobBase:
+    def _find_job_with_defaults(self, query: str | int) -> JobBase:
         """
         Returns the job with defaults based on job_id, which could match an index or match a location
         (url/user_visible_url or command). Accepts negative numbers.
@@ -420,7 +422,7 @@ class UrlwatchCommand:
         job = self._find_job(query)
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
-    def test_job(self, job_id: Union[bool, str, int]) -> None:
+    def test_job(self, job_id: bool | str | int) -> None:
         """
         Tests the running of a single job outputting the filtered text to stdout. If job_id is True, don't run any
         jobs as it's a test of loading config, jobs and hook files for syntax.
@@ -696,7 +698,7 @@ class UrlwatchCommand:
 
         return 0
 
-    def delete_snapshot(self, job_id: Union[str, int]) -> int:
+    def delete_snapshot(self, job_id: str | int) -> int:
         job = self._find_job_with_defaults(job_id)
 
         deleted = self.urlwatcher.ssdb_storage.delete_latest(job.get_guid())
@@ -781,7 +783,7 @@ class UrlwatchCommand:
             self._exit(1)
 
         if httpx:
-            get_client = httpx.Client(http2=h2 is not None).get
+            get_client = httpx.Client(http2=h2 is not None).get  # noqa: S113 Call to httpx without timeout
         else:
             get_client = requests.get  # type: ignore[assignment]
 
@@ -818,9 +820,9 @@ class UrlwatchCommand:
 
     def check_test_reporter(
         self,
-        job_state: Optional[JobState] = None,
+        job_state: JobState | None = None,
         label: str = 'test',  # type: ignore[assignment]
-        report: Optional[Report] = None,
+        report: Report | None = None,
     ) -> int:
         """
         Tests a reporter by creating pseudo-jobs of new, changed, unchanged, and error outcomes ('verb').

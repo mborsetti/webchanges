@@ -25,7 +25,7 @@ jobs by running ``webchanges --list``. API is experimental and may change in the
    Accepts negative indices.
 
 
-.. _jobs:
+.. _cli_jobs:
 
 Custom job file specification
 -----------------------------

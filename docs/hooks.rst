@@ -21,7 +21,7 @@ for filtering JSON dictionaries.
 
 .. important:: On Linux and macOS systems, due to security reasons the hooks module will not be imported unless **both**
    the hooks file **and** the directory it is located in are **owned** and **writeable** by **only** the user who is
-   running the job (and not by its group or by other users). To set this up:
+   running the job (and not by its group or by other users) or by the root user. To set this up:
 
    .. code-block:: bash
 
@@ -41,7 +41,7 @@ Example ``hooks.py`` file:
 
    import re
    from pathlib import Path
-   from typing import Any, Literal, Union
+   from typing import Any, Literal
 
    from webchanges.differs import DifferBase
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
@@ -116,8 +116,8 @@ Example ``hooks.py`` file:
 
        @staticmethod
        def filter(
-           data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-       ) -> tuple[Union[str, bytes], str]:
+           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[str | bytes, str]:
            """:returns: The filtered data and its MIME type."""
 
            if not subfilter or subfilter.get('upper'):
@@ -153,8 +153,8 @@ Example ``hooks.py`` file:
 
        @staticmethod
        def filter(
-           data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-       ) -> tuple[Union[str, bytes], str]:
+           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[str | bytes, str]:
            """:returns: The filtered data and its MIME type."""
 
            indent = int(subfilter.get('indent', 8))
@@ -171,8 +171,8 @@ Example ``hooks.py`` file:
 
        @staticmethod
        def filter(
-           data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-       ) -> tuple[Union[str, bytes], str]:
+           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[str | bytes, str]:
            """:returns: The filtered data and its MIME type."""
            return data.replace('foo', 'bar'), mime_type
 
@@ -186,8 +186,8 @@ Example ``hooks.py`` file:
 
        @staticmethod
        def filter(
-           data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-       ) -> tuple[Union[str, bytes], str]:
+           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[str | bytes, str]:
            """:returns: The filtered data and its MIME type."""
            return data.replace('foo', 'bar'), mime_type
 
@@ -270,8 +270,8 @@ Example ``hooks.py`` file:
    .. code-block:: python
 
       def filter(
-          data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-      ) -> tuple[Union[str, bytes], str]:
+          data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+      ) -> tuple[str | bytes, str]:
       """:returns: The filtered data and its MIME type."""
       ...
 

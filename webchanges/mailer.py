@@ -16,7 +16,6 @@ from email.message import EmailMessage
 from email.utils import formatdate
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, Optional, Union
 
 try:
     import keyring
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 class Mailer:
     """Mailer class."""
 
-    def send(self, msg: Union[EmailMessage]) -> None:
+    def send(self, msg: EmailMessage) -> None:
         """Send a message.
 
         :param msg: The message to be sent.
@@ -38,9 +37,7 @@ class Mailer:
         raise NotImplementedError
 
     @staticmethod
-    def msg(
-        from_email: str, to_email: str, subject: str, text_body: str, html_body: Optional[str] = None
-    ) -> EmailMessage:
+    def msg(from_email: str, to_email: str, subject: str, text_body: str, html_body: str | None = None) -> EmailMessage:
         """Create an Email object for a message.
 
         :param from_email: The 'From' email address
@@ -50,14 +47,14 @@ class Mailer:
         :param html_body: The body in html format (optional)
         """
 
-        def extract_inline_images(html_body: str) -> tuple[str, Dict[str, bytes]]:
+        def extract_inline_images(html_body: str) -> tuple[str, dict[str, bytes]]:
             """Extract inline images from the email.
 
             :param html_body: The HTML with inline images.
 
             :return: The HTML with src tags and a dictionary of cid and file.
             """
-            cid_dict: Dict[str, bytes] = {}
+            cid_dict: dict[str, bytes] = {}
             cid_counter = 1
 
             def replace_img(match: re.Match) -> str:
@@ -69,7 +66,7 @@ class Mailer:
                 image_data = base64.b64decode(image_data_b64)
                 image_cid = f'image{cid_counter}_{image_format.split(";")[0]}'
                 cid_dict[image_cid] = image_data
-                new_img_tag = f'<img src="cid:{image_cid}">'
+                new_img_tag = f'src="cid:{image_cid}"'
                 cid_counter += 1
                 return new_img_tag
 
@@ -118,9 +115,9 @@ class SMTPMailer(Mailer):
     smtp_port: int
     tls: bool
     auth: bool
-    insecure_password: Optional[str] = None
+    insecure_password: str | None = None
 
-    def send(self, msg: Optional[EmailMessage]) -> None:
+    def send(self, msg: EmailMessage | None) -> None:
         """Send a message via the SMTP server.
 
         :param msg: The message to be sent. Optional in order to allow server login testing.
@@ -153,9 +150,9 @@ class SMTPMailer(Mailer):
 class SendmailMailer(Mailer):
     """The Mailer class to use sendmail executable."""
 
-    sendmail_path: Union[str, Path]
+    sendmail_path: str | Path
 
-    def send(self, msg: Union[EmailMessage]) -> None:
+    def send(self, msg: EmailMessage) -> None:
         """Send a message via the sendmail executable.
 
         :param msg: The message to be sent.

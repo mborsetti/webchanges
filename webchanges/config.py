@@ -11,7 +11,6 @@ import textwrap
 # import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Union
 
 from webchanges import __doc__ as doc
 from webchanges import __docs_url__, __project_name__, __version__
@@ -24,44 +23,46 @@ class BaseConfig:
     config_path: Path
     config_file: Path
     jobs_def_file: Path
-    hooks_file: Path
+    hooks_def_file: Path
     ssdb_file: Path
     jobs_files: list[Path] = field(default_factory=list)
+    hooks_files: list[Path] = field(default_factory=list)
 
 
 class CommandConfig(BaseConfig):
     """Command line arguments configuration; the arguments are stored as class attributes."""
 
-    add: Optional[str]
-    change_location: Optional[tuple[Union[int, str], str]]
+    add: str | None
+    change_location: tuple[int | str, str] | None
     check_new: bool
-    clean_database: Optional[int]
-    database_engine: Optional[str]
-    delete: Optional[str]
-    delete_snapshot: Optional[str]
+    clean_database: int | None
+    database_engine: str | None
+    delete: str | None
+    delete_snapshot: str | None
     detailed_versions: bool
-    dump_history: Optional[str]
+    dump_history: str | None
     edit: bool
     edit_config: bool
     edit_hooks: bool
-    errors: Optional[str]
+    errors: str | None
     features: bool
-    footnote: Optional[str]
-    gc_database: Optional[int]
+    footnote: str | None
+    gc_database: int | None
+    hooks_files: list[Path]
     install_chrome: bool
     joblist: list[str]
     jobs_files: list[Path]
-    list_jobs: Optional[Union[bool, str]]
-    max_snapshots: Optional[int]
-    max_workers: Optional[int]
+    list_jobs: bool | str | None
+    max_snapshots: int | None
+    max_workers: int | None
     no_headless: bool
-    rollback_database: Optional[str]
+    rollback_database: str | None
     smtp_login: bool
     telegram_chats: bool
-    test_differ: Optional[list[str]]
-    test_job: Optional[Union[bool, str]]
-    test_reporter: Optional[str]
-    verbose: Optional[int]
+    test_differ: list[str] | None
+    test_job: bool | str | None
+    test_reporter: str | None
+    verbose: int | None
     xmpp_login: bool
 
     def __init__(
@@ -70,7 +71,7 @@ class CommandConfig(BaseConfig):
         config_path: Path,
         config_file: Path,
         jobs_def_file: Path,
-        hooks_file: Path,
+        hooks_def_file: Path,
         ssdb_file: Path,
     ) -> None:
         """Command line arguments configuration; the arguments are stored as class attributes.
@@ -78,13 +79,14 @@ class CommandConfig(BaseConfig):
         :param config_path: The path of the configuration directory.
         :param config_file: The path of the configuration file.
         :param jobs_def_file: The glob of the jobs file(s).
-        :param hooks_file: The path of the Python hooks file.
+        :param hooks_def_file: The path of the Python hooks file.
         :param ssdb_file: The path of the database file (or directory if using the textfiles database-engine) where
            snapshots are stored.
         """
-        super().__init__(config_path, config_file, jobs_def_file, hooks_file, ssdb_file)
+        super().__init__(config_path, config_file, jobs_def_file, hooks_def_file, ssdb_file)
         self.parse_args(args)
         self.jobs_files = self.jobs_files or [jobs_def_file]
+        self.hooks_files = self.hooks_files or [hooks_def_file]
 
     class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
         def __init__(self, prog: str) -> None:
@@ -150,11 +152,12 @@ class CommandConfig(BaseConfig):
         )
         group.add_argument(
             '--hooks',
-            default=self.hooks_file,
+            action='append',
+            # default=self.hooks_file,
             type=Path,
-            help='use FILE as hooks.py module to import',
+            help='use FILE or files matching a glob pattern as hooks.py module to import',
             metavar='FILE',
-            dest='hooks_file',
+            dest='hooks_files',
         )
         group.add_argument(
             '--database',

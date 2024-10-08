@@ -19,17 +19,16 @@ jsbeautifier
 keyring
 matrix-client
 minidb
-numpy; python_version == '3.12'
-Pillow; python_version == '3.12'
+numpy; python_version == '3.13'
+Pillow; python_version == '3.13'
 playwright
 psutil
 pushbullet.py
 Pygments
 pypdf[crypto]
 pytest
-pytest-asyncio
-pytest-cov
-python-dateutil; python_version == '3.12'
+pytest-playwright
+python-dateutil; python_version == '3.13'
 pytz  # bug in aioxmpp
 redis
 requests

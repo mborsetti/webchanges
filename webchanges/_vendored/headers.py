@@ -16,22 +16,16 @@ from typing import (
     Iterable,
     Iterator,
     KeysView,
-    List,
     Mapping,
     MutableMapping,
     Sequence,
-    Tuple,
-    Union,
+    TypeAlias,
     ValuesView,
 )
 
-HeaderTypes = Union[
-    'Headers',
-    Mapping[str, str],
-    Mapping[bytes, bytes],
-    Sequence[Tuple[str, str]],
-    Sequence[Tuple[bytes, bytes]],
-]
+HeaderTypes: TypeAlias = (
+    'Headers' | Mapping[str, str] | Mapping[bytes, bytes] | Sequence[tuple[str, str]] | Sequence[tuple[bytes, bytes]]
+)
 
 
 def normalize_header_key(
@@ -90,7 +84,7 @@ class Headers(MutableMapping[str, str]):
         encoding: str | None = None,
     ) -> None:
         if headers is None:
-            self._list: List[Tuple[bytes, bytes, bytes]] = []
+            self._list: list[tuple[bytes, bytes, bytes]] = []
         elif isinstance(headers, Headers):
             self._list = list(headers._list)
         elif isinstance(headers, Mapping):

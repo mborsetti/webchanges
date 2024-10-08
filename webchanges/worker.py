@@ -12,7 +12,7 @@ import random
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
-from typing import Iterable, Optional, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING
 
 from webchanges.command import UrlwatchCommand
 from webchanges.handler import JobState
@@ -68,7 +68,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     def job_runner(
         stack: ExitStack,
         jobs: Iterable[JobBase],
-        max_workers: Optional[int] = None,
+        max_workers: int | None = None,
     ) -> None:
         """
         Runs the jobs in parallel.

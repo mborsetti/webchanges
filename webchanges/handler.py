@@ -12,7 +12,7 @@ import traceback
 from concurrent.futures import Future
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Iterator, Literal, NamedTuple, Optional, TYPE_CHECKING, Union
+from typing import Any, ContextManager, Iterator, Literal, NamedTuple, TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 from webchanges.differs import DifferBase
@@ -39,7 +39,7 @@ class Snapshot(NamedTuple):
     * 4: mime_type: mime_type
     """
 
-    data: Union[str, bytes]
+    data: str | bytes
     timestamp: float
     tries: int
     etag: str
@@ -49,12 +49,12 @@ class Snapshot(NamedTuple):
 class JobState(ContextManager):
     """The JobState class, which contains run information about a job."""
 
-    _http_client_used: Optional[str] = None
-    error_ignored: Union[bool, str]
-    exception: Optional[Exception] = None
+    _http_client_used: str | None = None
+    error_ignored: bool | str
+    exception: Exception | None = None
     generated_diff: dict[Literal['text', 'markdown', 'html'], str]
-    history_dic_snapshots: dict[Union[str, bytes], Snapshot] = {}
-    new_data: Union[str, bytes]
+    history_dic_snapshots: dict[str | bytes, Snapshot] = {}
+    new_data: str | bytes
     new_etag: str
     new_mime_type: str = ''
     new_timestamp: float
@@ -65,7 +65,7 @@ class JobState(ContextManager):
         etag='',
         mime_type='text/plain',
     )
-    old_data: Union[str, bytes] = ''
+    old_data: str | bytes = ''
     old_etag: str = ''
     old_mime_type: str = 'text/plain'
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
@@ -105,10 +105,10 @@ class JobState(ContextManager):
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        tb: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool | None:
         """Context manager invoked on exit from the body of a with statement to make it possible to factor out standard
         uses of try/finally statements. Calls the main_thread_exit() method of the Job.
 
@@ -126,7 +126,7 @@ class JobState(ContextManager):
             raise OSError(exc_value)
         return None
 
-    def added_data(self) -> dict[str, Optional[Union[bool, str, Exception, float]]]:
+    def added_data(self) -> dict[str, bool | str | Exception | float | None]:
         """Returns a dict with the data added in the processing of the job."""
         attrs = ('error_ignored', 'exception', 'new_data', 'new_etag', 'new_timestamp')
         return {attr: getattr(self, attr) for attr in attrs if hasattr(self, attr)}
@@ -244,8 +244,8 @@ class JobState(ContextManager):
     def get_diff(
         self,
         report_kind: Literal['text', 'markdown', 'html'] = 'text',
-        differ: Optional[dict[str, Any]] = None,
-        tz: Optional[ZoneInfo] = None,
+        differ: dict[str, Any] | None = None,
+        tz: ZoneInfo | None = None,
     ) -> str:
         """Generates the job's diff and applies diff_filters to it (if any). Memoized.
 
@@ -283,7 +283,7 @@ class Report:
     """The base class for reporting."""
 
     job_states: list[JobState] = []
-    new_release_future: Optional[Future[Union[str, bool]]] = None
+    new_release_future: Future[str | bool] | None = None
     start: float = time.perf_counter()
 
     def __init__(self, urlwatch: Urlwatch) -> None:
@@ -389,7 +389,7 @@ class Report:
 
                 yield job_state
 
-    def finish(self, jobs_file: Optional[list[Path]] = None) -> None:
+    def finish(self, jobs_file: list[Path] | None = None) -> None:
         """Finish job run: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_all`.
 
@@ -400,9 +400,7 @@ class Report:
 
         ReporterBase.submit_all(self, self.job_states, duration, jobs_file)
 
-    def finish_one(
-        self, name: str, jobs_file: Optional[list[Path]] = None, check_enabled: Optional[bool] = True
-    ) -> None:
+    def finish_one(self, name: str, jobs_file: list[Path] | None = None, check_enabled: bool | None = True) -> None:
         """Finish job run of one: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_one`.  Used in testing.
 

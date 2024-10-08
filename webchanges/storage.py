@@ -20,7 +20,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone, tzinfo  # py311 use UTC instead of timezone.utc
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Literal, Optional, TextIO, TypedDict, Union
+from typing import Any, Iterable, Iterator, Literal, TextIO, TypedDict
 from zoneinfo import ZoneInfo
 
 import msgpack
@@ -114,7 +114,7 @@ _ConfigReportDiscord = TypedDict(
         'embed': bool,
         'subject': str,
         'colored': bool,
-        'max_message_length': Optional[int],
+        'max_message_length': int | None,
     },
 )
 _ConfigReportEmailSmtp = TypedDict(
@@ -131,7 +131,7 @@ _ConfigReportEmailSmtp = TypedDict(
 _ConfigReportEmailSendmail = TypedDict(
     '_ConfigReportEmailSendmail',
     {
-        'path': Union[str, Path],
+        'path': str | Path,
     },
 )
 _ConfigReportEmail = TypedDict(
@@ -209,7 +209,7 @@ _ConfigReportPushover = TypedDict(
     {
         'enabled': bool,
         'app': str,
-        'device': Optional[str],
+        'device': str | None,
         'sound': str,
         'user': str,
         'priority': str,
@@ -227,7 +227,7 @@ _ConfigReportTelegram = TypedDict(
     {
         'enabled': bool,
         'bot_token': str,
-        'chat_id': Union[str, int, list[Union[str, int]]],
+        'chat_id': str | int | list[str | int],
         'silent': bool,
     },
 )
@@ -237,8 +237,8 @@ _ConfigReportWebhook = TypedDict(
         'enabled': bool,
         'markdown': bool,
         'webhook_url': str,
-        'rich_text': Optional[bool],
-        'max_message_length': Optional[int],
+        'rich_text': bool | None,
+        'max_message_length': int | None,
     },
 )
 _ConfigReportXmpp = TypedDict(
@@ -247,14 +247,14 @@ _ConfigReportXmpp = TypedDict(
         'enabled': bool,
         'sender': str,
         'recipient': str,
-        'insecure_password': Optional[str],
+        'insecure_password': str | None,
     },
 )
 
 _ConfigReport = TypedDict(
     '_ConfigReport',
     {
-        'tz': Optional[str],
+        'tz': str | None,
         'text': _ConfigReportText,
         'html': _ConfigReportHtml,
         'markdown': _ConfigReportMarkdown,
@@ -289,7 +289,7 @@ _ConfigJobDefaults = TypedDict(
 _ConfigDatabase = TypedDict(
     '_ConfigDatabase',
     {
-        'engine': Union[Literal['sqlite3', 'redis', 'minidb', 'textfiles'], str],
+        'engine': Literal['sqlite3', 'redis', 'minidb', 'textfiles'] | str,
         'max_snapshots': int,
     },
 )
@@ -300,7 +300,7 @@ _Config = TypedDict(
         'report': _ConfigReport,
         'job_defaults': _ConfigJobDefaults,
         'database': _ConfigDatabase,
-        'footnote': Optional[str],
+        'footnote': str | None,
     },
 )
 
@@ -473,7 +473,7 @@ class BaseStorage(ABC):
 class BaseFileStorage(BaseStorage, ABC):
     """Base class for file storage."""
 
-    def __init__(self, filename: Union[str, Path]) -> None:
+    def __init__(self, filename: str | Path) -> None:
         """
 
         :param filename: The filename or directory name to storage.
@@ -487,7 +487,7 @@ class BaseFileStorage(BaseStorage, ABC):
 class BaseTextualFileStorage(BaseFileStorage, ABC):
     """Base class for textual files."""
 
-    def __init__(self, filename: Union[str, Path]) -> None:
+    def __init__(self, filename: str | Path) -> None:
         """
 
         :param filename: The filename or directory name to storage.
@@ -1033,11 +1033,11 @@ class SsdbStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
+    def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         pass
 
     @abstractmethod
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
         pass
 
     @abstractmethod
@@ -1076,10 +1076,10 @@ class SsdbStorage(BaseFileStorage, ABC):
         pass
 
     @abstractmethod
-    def rollback(self, timestamp: float) -> Optional[int]:
+    def rollback(self, timestamp: float) -> int | None:
         pass
 
-    def backup(self) -> Iterator[tuple[str, Union[str, bytes], float, int, str, str]]:
+    def backup(self) -> Iterator[tuple[str, str | bytes, float, int, str, str]]:
         """Return the most recent entry for each 'guid'.
 
         :returns: A generator of tuples, each consisting of (guid, data, timestamp, tries, etag, mime_type)
@@ -1088,7 +1088,7 @@ class SsdbStorage(BaseFileStorage, ABC):
             snapshot = self.load(guid)
             yield guid, *snapshot
 
-    def restore(self, entries: Iterable[tuple[str, Union[str, bytes], float, int, str, str]]) -> None:
+    def restore(self, entries: Iterable[tuple[str, str | bytes, float, int, str, str]]) -> None:
         """Save multiple entries into the database.
 
         :param entries: An iterator of tuples WHERE each consists of (guid, data, timestamp, tries, etag, mime_type)
@@ -1135,7 +1135,7 @@ class SsdbStorage(BaseFileStorage, ABC):
                     print(f'Deleted {count} old snapshots of {guid}')
 
     @staticmethod
-    def _convert_to_datetime(timespec: str, tz: Union[ZoneInfo, tzinfo, None]) -> datetime:
+    def _convert_to_datetime(timespec: str, tz: ZoneInfo | tzinfo | None) -> datetime:
         try:
             timestamp = float(timespec)
             return datetime.fromtimestamp(timestamp, tz)
@@ -1145,7 +1145,7 @@ class SsdbStorage(BaseFileStorage, ABC):
             else:
                 return datetime.fromisoformat(timespec)
 
-    def rollback_cache(self, timespec: str, tz_str: Optional[str] = None) -> None:
+    def rollback_cache(self, timespec: str, tz_str: str | None = None) -> None:
         """Issues a warning, calls rollback() and prints out the result.
 
         :param timestamp: A timespec that if numeric is interpreted as a Unix timestamp otherwise it's passed to
@@ -1178,7 +1178,7 @@ class SsdbStorage(BaseFileStorage, ABC):
 class SsdbDirStorage(SsdbStorage):
     """Class for snapshots stored as individual textual files in a directory 'dirname'."""
 
-    def __init__(self, dirname: Union[str, Path]) -> None:
+    def __init__(self, dirname: str | Path) -> None:
         super().__init__(dirname)
         self.filename.mkdir(parents=True, exist_ok=True)  # using the attr filename because it is a Path (confusing!)
         logger.info(f'Using directory {self.filename} to store snapshot data as individual text files')
@@ -1208,14 +1208,14 @@ class SsdbDirStorage(SsdbStorage):
 
         return Snapshot(data, timestamp, 0, '', '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
+    def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         if count is not None and count < 1:
             return {}
         else:
             data, timestamp, tries, etag, mime_type = self.load(guid)
             return {data: timestamp} if data and timestamp else {}
 
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
         else:
@@ -1293,6 +1293,7 @@ class SsdbSQLite3Storage(SsdbStorage):
     * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
     * msgpack_data: a msgpack blob containing 'data', 'tries', 'etag' and 'mime_type' in a dict of keys 'd', 't',
     'e' and 'm'
+
     """
 
     def __init__(self, filename: Path, max_snapshots: int = 4) -> None:
@@ -1361,7 +1362,7 @@ class SsdbSQLite3Storage(SsdbStorage):
         self._temp_execute('CREATE TABLE webchanges (uuid TEXT, timestamp REAL, msgpack_data BLOB)')
         self.temp_db.commit()
 
-    def _execute(self, sql: str, args: Optional[tuple] = None) -> sqlite3.Cursor:
+    def _execute(self, sql: str, args: tuple | None = None) -> sqlite3.Cursor:
         """Execute SQL command on main database"""
         if args is None:
             logger.debug(f"Executing (perm) '{sql}'")
@@ -1370,7 +1371,7 @@ class SsdbSQLite3Storage(SsdbStorage):
             logger.debug(f"Executing (perm) '{sql}' with {args}")
             return self.cur.execute(sql, args)
 
-    def _temp_execute(self, sql: str, args: Optional[tuple] = None) -> sqlite3.Cursor:
+    def _temp_execute(self, sql: str, args: tuple | None = None) -> sqlite3.Cursor:
         """Execute SQL command on temp database."""
         if args is None:
             logger.debug(f"Executing (temp) '{sql}'")
@@ -1461,7 +1462,7 @@ class SsdbSQLite3Storage(SsdbStorage):
 
         return Snapshot('', 0, 0, '', '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
+    def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         """Return max 'count' (None = all) records of data and timestamp of **successful** runs for a 'guid'.
 
         :param guid: The guid.
@@ -1491,7 +1492,7 @@ class SsdbSQLite3Storage(SsdbStorage):
                             break
         return history
 
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
         """Return max 'count' (None = all) entries of all data (including from error runs) saved for a 'guid'.
 
         :param guid: The guid.
@@ -1526,7 +1527,7 @@ class SsdbSQLite3Storage(SsdbStorage):
         *args: Any,
         guid: str,
         snapshot: Snapshot,
-        temporary: Optional[bool] = True,
+        temporary: bool | None = True,
         **kwargs: Any,
     ) -> None:
         """Save the data from a job.
@@ -1574,7 +1575,7 @@ class SsdbSQLite3Storage(SsdbStorage):
         self,
         guid: str,
         delete_entries: int = 1,
-        temporary: Optional[bool] = False,
+        temporary: bool | None = False,
         **kwargs: Any,
     ) -> int:
         """For the given 'guid', delete the latest 'delete_entries' number of entries and keep all other (older) ones.
@@ -1756,7 +1757,7 @@ class SsdbSQLite3Storage(SsdbStorage):
             self.db.commit()
         return num_del
 
-    def migrate_from_minidb(self, minidb_filename: Union[str, Path]) -> None:
+    def migrate_from_minidb(self, minidb_filename: str | Path) -> None:
         """Migrate the data of a legacy minidb database to the current database.
 
         :param minidb_filename: The filename of the legacy minidb database.
@@ -1787,7 +1788,7 @@ class SsdbSQLite3Storage(SsdbStorage):
 class SsdbRedisStorage(SsdbStorage):
     """Class for storing snapshots using redis."""
 
-    def __init__(self, filename: Union[str, Path]) -> None:
+    def __init__(self, filename: str | Path) -> None:
         super().__init__(filename)
 
         if isinstance(redis, str):
@@ -1820,7 +1821,7 @@ class SsdbRedisStorage(SsdbStorage):
 
         return Snapshot('', 0, 0, '', '')
 
-    def get_history_data(self, guid: str, count: Optional[int] = None) -> dict[Union[str, bytes], float]:
+    def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         if count is not None and count < 1:
             return {}
 
@@ -1836,7 +1837,7 @@ class SsdbRedisStorage(SsdbStorage):
                         break
         return history
 
-    def get_history_snapshots(self, guid: str, count: Optional[int] = None) -> list[Snapshot]:
+    def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
 

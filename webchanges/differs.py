@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import difflib
 import html
+import json
 import logging
 import math
 import os
@@ -21,7 +22,7 @@ from base64 import b64encode
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Iterator, Literal, Optional, TYPE_CHECKING, Union
+from typing import Any, Iterator, Literal, TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import html2text
@@ -113,8 +114,8 @@ class DifferBase(metaclass=TrackSubClasses):
     @classmethod
     def normalize_differ(
         cls,
-        differ_spec: Optional[dict[str, Any]],
-        job_index_number: Optional[int] = None,
+        differ_spec: dict[str, Any] | None,
+        job_index_number: int | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """Checks the differ_spec for its validity and applies default values.
 
@@ -156,8 +157,8 @@ class DifferBase(metaclass=TrackSubClasses):
         directives: dict[str, Any],
         job_state: JobState,
         report_kind: Literal['text', 'markdown', 'html'] = 'text',
-        tz: Optional[ZoneInfo] = None,
-        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
+        tz: ZoneInfo | None = None,
+        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         """Process the differ.
 
@@ -171,7 +172,7 @@ class DifferBase(metaclass=TrackSubClasses):
         :returns: The output of the differ or an error message with traceback if it fails.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying differ {differ_kind}, directives {directives}')
-        differcls: Optional[type[DifferBase]] = cls.__subclasses__.get(differ_kind)  # type: ignore[assignment]
+        differcls: type[DifferBase] | None = cls.__subclasses__.get(differ_kind)  # type: ignore[assignment]
         if differcls:
             try:
                 return differcls(job_state).differ(directives, report_kind, _unfiltered_diff, tz)
@@ -210,8 +211,8 @@ class DifferBase(metaclass=TrackSubClasses):
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
-        tz: Optional[ZoneInfo] = None,
+        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         """Create a diff from the data. Since this function could be called by different reporters of multiple report
         types ('text', 'markdown', 'html'), the differ outputs a dict with data for the report_kind it generated so
@@ -231,7 +232,7 @@ class DifferBase(metaclass=TrackSubClasses):
     @staticmethod
     def make_timestamp(
         timestamp: float,
-        tz: Optional[ZoneInfo] = None,
+        tz: ZoneInfo | None = None,
     ) -> str:
         """Creates a datetime string in RFC 5322 (email) format with the time zone name (if available) in the
         Comments and Folding White Space (CFWS) section.
@@ -288,6 +289,8 @@ class UnifiedDiffer(DifferBase):
     __supported_directives__ = {
         'context_lines': 'the number of context lines (default: 3)',
         'range_info': 'include range information lines (default: true)',
+        'additions_only': 'keep only addition lines (default: false)',
+        'deletions_only': 'keep only deletion lines (default: false)',
     }
 
     def unified_diff_to_html(self, diff: str) -> Iterator[str]:
@@ -349,9 +352,11 @@ class UnifiedDiffer(DifferBase):
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
-        tz: Optional[ZoneInfo] = None,
+        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
+        additions_only = directives.get('additions_only') or self.job.additions_only
+        deletions_only = directives.get('deletions_only') or self.job.deletions_only
         out_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
         if report_kind == 'html' and _unfiltered_diff is not None and 'text' in _unfiltered_diff:
             diff_text = _unfiltered_diff['text']
@@ -359,7 +364,7 @@ class UnifiedDiffer(DifferBase):
             empty_return: dict[Literal['text', 'markdown', 'html'], str] = {'text': '', 'markdown': '', 'html': ''}
             contextlines = directives.get('context_lines', self.job.contextlines)
             if contextlines is None:
-                if self.job.additions_only or self.job.deletions_only:
+                if additions_only or deletions_only:
                     contextlines = 0
                 else:
                     contextlines = 3
@@ -382,7 +387,7 @@ class UnifiedDiffer(DifferBase):
             diff[0] = diff[0].replace('\t', ' ')
             diff[1] = diff[1].replace('\t', ' ')
 
-            if self.job.additions_only:
+            if additions_only:
                 if len(self.state.old_data) and len(self.state.new_data) / len(self.state.old_data) <= 0.25:
                     diff = (
                         diff[:2]
@@ -403,7 +408,7 @@ class UnifiedDiffer(DifferBase):
                         self.state.verb = 'changed,no_report'
                         return empty_return
                     diff = [head, diff[0], '/**Comparison type: Additions only**'] + diff[1:]
-            elif self.job.deletions_only:
+            elif deletions_only:
                 head = '--- @' + diff[1][3:]
                 diff = [line for line in diff if line.startswith('-') or line.startswith('@')]
                 diff = [
@@ -419,9 +424,7 @@ class UnifiedDiffer(DifferBase):
 
             # remove range info lines if needed
             if directives.get('range_info') is False or (
-                directives.get('range_info') is None
-                and self.job.additions_only
-                and (len(diff) < 4 or diff[3][0] != '/')
+                directives.get('range_info') is None and additions_only and (len(diff) < 4 or diff[3][0] != '/')
             ):
                 diff = [line for line in diff if not line.startswith('@@ ')]
 
@@ -453,8 +456,8 @@ class TableDiffer(DifferBase):
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
-        tz: Optional[ZoneInfo] = None,
+        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         out_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
         if report_kind in {'text', 'markdown'} and _unfiltered_diff is not None and 'html' in _unfiltered_diff:
@@ -509,8 +512,8 @@ class CommandDiffer(DifferBase):
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
-        tz: Optional[ZoneInfo] = None,
+        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         out_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
         command = directives['command']
@@ -664,8 +667,8 @@ class DeepdiffDiffer(DifferBase):
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
-        tz: Optional[ZoneInfo] = None,
+        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         if isinstance(DeepDiff, str):  # pragma: no cover
             self.raise_import_error('deepdiff', DeepDiff)
@@ -857,8 +860,8 @@ class ImageDiffer(DifferBase):
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
-        tz: Optional[ZoneInfo] = None,
+        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         warnings.warn(
             f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
@@ -893,7 +896,7 @@ class ImageDiffer(DifferBase):
             logging.debug('Retrieving image from an ascii85 string')
             return Image.open(BytesIO(base64.a85decode(ascii85)))
 
-        def compute_diff_image(img1: Image.Image, img2: Image.Image) -> tuple[Image.Image, Optional[np.float64]]:
+        def compute_diff_image(img1: Image.Image, img2: Image.Image) -> tuple[Image.Image, np.float64]:
             """Compute the difference between two images."""
             # Compute the absolute value of the pixel-by-pixel difference between the two images.
             diff_image = ImageChops.difference(img1, img2)
@@ -1016,7 +1019,8 @@ class ImageDiffer(DifferBase):
             # f'Differ: {self.__kind__} for {data_type}',
             f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}{old_data}</span>',
             f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}{new_data}'
-            f'</span>',
+            '</span>',
+            '</span>',
             'New image:',
         ]
         if data_type == 'url':
@@ -1024,12 +1028,12 @@ class ImageDiffer(DifferBase):
         else:
             htm.append(
                 f'<img src="data:image/{(new_image.format or "").lower()};base64,{encoded_new}" '
-                f'style="max-width: 100%; display: block;">'
+                'style="max-width: 100%; display: block;">'
             )
         htm.extend(
             [
                 'Differences from old (in yellow):',
-                f'<img src="data:image/{(old_image.format or "").lower()};base64,{encoded_diff}" ',
+                f'<img src="data:image/{(old_image.format or "").lower()};base64,{encoded_diff}" '
                 'style="max-width: 100%; display: block;">',
             ]
         )
@@ -1055,8 +1059,12 @@ class AIGoogleDiffer(DifferBase):
         'model': (
             'model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-1.5-flash-latest)'
         ),
-        'prompt': 'a custom prompt - {unified_diff}, {old_data} and {new_data} will be replaced; ask for markdown',
-        'system_instructions': 'Optional tone and style instructions for the model (default: Respond in Markdown)',
+        'task': 'summarize_new to summarize anything added (including as a result of a change)',
+        'system_instructions': (
+            'Optional tone and style instructions for the model (default: see documentation at'
+            'https://webchanges.readthedocs.io/en/stable/differs.html#ai-google-diff)'
+        ),
+        'prompt': 'a custom prompt - {unified_diff}, {unified_diff_new}, {old_text} and {new_text} will be replaced',
         'prompt_ud_context_lines': 'the number of context lines for {unified_diff} (default: 9999)',
         'timeout': 'the number of seconds before timing out the API call (default: 300)',
         'max_output_tokens': "the maximum number of tokens returned by the model (default: None, i.e. model's default)",
@@ -1074,7 +1082,7 @@ class AIGoogleDiffer(DifferBase):
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
         _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
-        tz: Union[ZoneInfo, None] = None,
+        tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         logger.info(f'Job {self.job.index_number}: Running the {self.__kind__} differ from hooks.py')
         warnings.warn(
@@ -1099,8 +1107,8 @@ class AIGoogleDiffer(DifferBase):
                 )
 
             _models_token_limits = {  # from https://ai.google.dev/gemini-api/docs/models/gemini
-                'gemini-1.5-pro-2m': 2097152,
-                'gemini-1.5': 2097152,
+                'gemini-1.5-pro': 2097152,
+                'gemini-1.5-flash': 1048576,
                 'gemini-1.0': 30720,
                 'gemini-pro': 30720,  # legacy naming
                 'gemma-2': 8192,
@@ -1122,8 +1130,9 @@ class AIGoogleDiffer(DifferBase):
                     )
                     return f'## ERROR in summarizing changes using {self.__kind__}:\n' f'Unknown model {model}.\n'
 
-            if '{unified_diff}' in prompt:
-                context_lines = directives.get('prompt_ud_context_lines', 9999)
+            if '{unified_diff' in prompt:  # matches unified_diff or unified_diff_new
+                default_context_lines = 9999 if '{unified_diff}' in prompt else 0  # none if only unified_diff_new
+                context_lines = directives.get('prompt_ud_context_lines', default_context_lines)
                 unified_diff = '\n'.join(
                     difflib.unified_diff(
                         str(self.state.old_data).splitlines(),
@@ -1140,6 +1149,15 @@ class AIGoogleDiffer(DifferBase):
                     return ''
             else:
                 unified_diff = ''
+
+            if '{unified_diff_new}' in prompt:
+                unified_diff_new_lines = []
+                for line in unified_diff.splitlines():
+                    if line.startswith('+'):
+                        unified_diff_new_lines.append(line[1:])
+                unified_diff_new = '\n'.join(unified_diff_new_lines)
+            else:
+                unified_diff_new = ''
 
             def _send_to_model(model_prompt: str, system_instructions: str) -> str:
                 """Creates the summary request to the model"""
@@ -1161,7 +1179,7 @@ class AIGoogleDiffer(DifferBase):
                 logger.info(f'Job {self.job.index_number}: Making summary request to Google model {model}')
                 try:
                     timeout = directives.get('timeout', 300)
-                    r = httpx.Client(http2=True).post(
+                    r = httpx.Client(http2=True).post(  # noqa: S113 Call to httpx without timeout
                         f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
                         f'key={GOOGLE_AI_API_KEY}',
                         json=data,
@@ -1174,7 +1192,13 @@ class AIGoogleDiffer(DifferBase):
                         logger.info(
                             f"Job {self.job.index_number}: AI generation finished by {candidate['finishReason']}"
                         )
-                        summary = candidate['content']['parts'][0]['text']
+                        if 'content' in candidate:
+                            summary = candidate['content']['parts'][0]['text'].rstrip()
+                        else:
+                            summary = (
+                                f'AI summary unavailable: Model did not return any candidate output:\n'
+                                f'{json.dumps(result, ensure_ascii=True, indent=2)}'
+                            )
                     elif r.status_code == 400:
                         summary = (
                             f'AI summary unavailable: Received error from {r.url.host}: '
@@ -1196,12 +1220,15 @@ class AIGoogleDiffer(DifferBase):
 
                 return summary
 
-            # check if data is different (for testing)
-            if '{old_data}' in prompt and '{new_data}' in prompt and self.state.old_data == self.state.new_data:
+            # check if data is different (same data is sent during testing)
+            if '{old_text}' in prompt and '{new_text}' in prompt and self.state.old_data == self.state.new_data:
                 return ''
 
             model_prompt = prompt.format(
-                unified_diff=unified_diff, old_data=self.state.old_data, new_data=self.state.new_data
+                unified_diff=unified_diff,
+                unified_diff_new=unified_diff_new,
+                old_text=self.state.old_data,
+                new_text=self.state.new_data,
             )
 
             if len(model_prompt) / 4 < token_limit:
@@ -1223,7 +1250,10 @@ class AIGoogleDiffer(DifferBase):
                     )
                 )
                 model_prompt = prompt.format(
-                    unified_diff=unified_diff, old_data=self.state.old_data, new_data=self.state.new_data
+                    unified_diff=unified_diff,
+                    unified_diff_new=unified_diff_new,
+                    old_text=self.state.old_data,
+                    new_text=self.state.new_data,
                 )
                 if len(model_prompt) / 4 < token_limit:
                     summary = _send_to_model(model_prompt, system_instructions)
@@ -1240,13 +1270,38 @@ class AIGoogleDiffer(DifferBase):
                 summary = _send_to_model(model_prompt, system_instructions)
             return summary
 
-        prompt = directives.get(
-            'prompt',
-            'Identify the changes between the old document (enclosed by an <old> tag) and the new document ('
-            'enclosed by a <new> tag) and output a summary of such changes:\n\n<old>\n{old_data}\n</old>\n\n<new>\n'
-            '{new_data}\n</new>',
-        ).replace('\\n', '\n')
-        system_instructions = directives.get('system_instructions', 'Respond in Markdown')
+        if directives.get('task') == 'summarize_new':
+            default_system_instructions = (
+                'You are a skilled journalist. You will be provided a text. Provide a summary of this text in a clear '
+                'and concise manner.\n Format your output in Markdown, using headings, bullet points, and other '
+                'Markdown elements when they are helpful in creating a well-structured and easily readable summary.'
+            )
+            default_prompt = '{unified_diff_new}'
+        else:
+            default_system_instructions = (
+                'You are a skilled journalist. You will be provided with two versions of a text, encased within '
+                'specific tags. The old version of the text will be enclosed within <old_version> and </old_version> '
+                'tags, and the new version will be enclosed within <new_version> and </new_version> tags.\n'
+                'Please:\n'
+                # '* Compare the old and new versions of the text to identify areas where the meaning differ
+                # 'significantly. Focus specifically on meaningful changes (including additions or removals) rather than
+                # 'just surface-level changes in wording or sentence structure.\n'
+                # '* Identify and summarize all the differences, and do so in a clear and concise manner, explaining
+                # 'how the meaning has shifted or evolved in the new version compared to the old version.\n'
+                '* Compare the old and new versions of the text to identify areas where the meaning differs, including '
+                'additions or removals.\n'
+                '* Provide a summary of all the differences, and do so in a clear and concise manner, explaining how '
+                'the meaning has shifted or evolved in the new version compared to the old version.\n'
+                '* Ignore any content where the meaning remains essentially the same, even if the wording has been '
+                'altered. Your output should focus exclusively on changes in the intended message or interpretation.\n'
+                '* Only reference information in the provided texts in your response.\n'
+                'You are writing the summary for someone who is already familiar with the content of the text.\n'
+                'Format your output in Markdown, using headings, bullet points, and other Markdown elements when they '
+                'are helpful in creating a well-structured and easily readable summary.'
+            )
+            default_prompt = '<old_version>\n{old_text}\n</old_version>\n\n<new_version>\n{new_text}\n</new_version>'
+        system_instructions = directives.get('system_instructions', default_system_instructions)
+        prompt = directives.get('prompt', default_prompt).replace('\\n', '\n')
         summary = get_ai_summary(prompt, system_instructions)
         if not summary:
             self.state.verb = 'changed,no_report'
@@ -1270,12 +1325,15 @@ class AIGoogleDiffer(DifferBase):
         return {
             'text': summary + '\n\n' + unified_report['text'] + '\n------------\n' + footer,
             'markdown': summary + '\n\n' + unified_report['markdown'] + '\n* * *\n' + footer,
-            'html': (
-                mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>')
-                + '<br>'
-                + unified_report['html']
-                + '-----<br>'
-                + f'<i><small>{footer}</small></i>'
+            'html': '\n'.join(
+                [
+                    mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
+                    '<br>',
+                    '<br>',
+                    unified_report['html'],
+                    '-----<br>',
+                    f'<i><small>{footer}</small></i>',
+                ]
             ),
         }
 
@@ -1292,8 +1350,8 @@ class WdiffDiffer(DifferBase):
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: Optional[dict[Literal['text', 'markdown', 'html'], str]] = None,
-        tz: Optional[ZoneInfo] = None,
+        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         warnings.warn(
             f'Job {self.job.index_number}: Differ {self.__kind__} is WORK IN PROGRESS and has KNOWN bugs which '

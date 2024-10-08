@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
 from webchanges.handler import JobState
@@ -19,7 +19,7 @@ class CustomLoginJob(UrlJob):
     username: str
     password: str
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
         ...  # custom code here
         return f'Would log in to {self.url} with {self.username} and {self.password}\n', '', ''
 
@@ -33,9 +33,7 @@ class CaseFilter(FilterBase):
 
     __default_subfilter__ = 'upper'
 
-    def filter(
-        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-    ) -> tuple[Union[str, bytes], str]:
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
 
         if not subfilter or subfilter.get('upper'):
             return data.upper(), mime_type
@@ -54,9 +52,7 @@ class IndentFilter(FilterBase):
 
     __default_subfilter__ = 'indent'
 
-    def filter(
-        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-    ) -> tuple[Union[str, bytes], str]:
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         if isinstance(data, bytes):
             data = data.decode()
 
@@ -71,9 +67,7 @@ class CustomMatchUrlFilter(AutoMatchFilter):
     MATCH = {'url': 'https://example.org/'}
 
     # An auto-match filter does not have any subfilters
-    def filter(
-        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-    ) -> tuple[Union[str, bytes], str]:
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         if not isinstance(data, str):
             raise ValueError
 
@@ -85,9 +79,7 @@ class CustomRegexMatchUrlFilter(RegexMatchFilter):
     MATCH = {'url': re.compile('https://example.org/.*')}
 
     # An auto-match filter does not have any subfilters
-    def filter(
-        self, data: Union[str, bytes], mime_type: str, subfilter: dict[str, Any]
-    ) -> tuple[Union[str, bytes], str]:
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         if not isinstance(data, str):
             raise ValueError
         return data.replace('foo', 'bar'), mime_type

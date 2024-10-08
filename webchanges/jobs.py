@@ -20,7 +20,7 @@ import warnings
 from ftplib import FTP  # noqa: S402 A FTP-related module is being imported. FTP is considered insecure.
 from http.client import responses as response_names
 from pathlib import Path
-from typing import Any, Literal, Mapping, Optional, Sequence, TYPE_CHECKING, Union
+from typing import Any, Literal, Mapping, Sequence, TYPE_CHECKING
 from urllib.parse import parse_qsl, quote, SplitResult, SplitResultBytes, urlencode, urlparse, urlsplit
 
 import html2text
@@ -85,7 +85,7 @@ class BrowserResponseError(Exception):
     """Raised by 'url' jobs with 'use_browser: true' (i.e. using Playwright) when an HTTP error response status code is
     received."""
 
-    def __init__(self, args: tuple[Any, ...], status_code: Optional[int]) -> None:
+    def __init__(self, args: tuple[Any, ...], status_code: int | None) -> None:
         """
 
         :param args: Tuple with the underlying error args, typically a string with the error text.
@@ -121,70 +121,70 @@ class JobBase(metaclass=TrackSubClasses):
     # __required__ in derived classes
     url: str = ''
     command: str = ''
-    use_browser: Optional[bool] = False
+    use_browser: bool | None = False
 
     # __optional__ in derived classes
-    _delay: Optional[float] = None
-    additions_only: Optional[bool] = None
-    block_elements: Optional[list[str]] = None
-    chromium_revision: Optional[Union[dict[str, int], dict[str, str], str, int]] = None  # deprecated
-    compared_versions: Optional[int] = None
-    contextlines: Optional[int] = None
-    cookies: Optional[dict[str, str]] = None
-    data: Optional[Union[str, list, dict]] = None
-    data_as_json: Optional[bool] = None
-    deletions_only: Optional[bool] = None
-    differ: Optional[dict[str, Any]] = None  # added in 3.21
-    diff_filter: Optional[Union[str, list[Union[str, dict[str, Any]]]]] = None
-    diff_tool: Optional[str] = None  # deprecated in 3.21
-    enabled: Optional[bool] = None
-    encoding: Optional[str] = None
-    filter: Optional[Union[str, list[Union[str, dict[str, Any]]]]] = None
+    _delay: float | None = None
+    additions_only: bool | None = None
+    block_elements: list[str] | None = None
+    chromium_revision: dict[str, int] | dict[str, str] | str | int | None = None  # deprecated
+    compared_versions: int | None = None
+    contextlines: int | None = None
+    cookies: dict[str, str] | None = None
+    data: str | list | dict | None = None
+    data_as_json: bool | None = None
+    deletions_only: bool | None = None
+    differ: dict[str, Any] | None = None  # added in 3.21
+    diff_filter: str | list[str | dict[str, Any]] | None = None
+    diff_tool: str | None = None  # deprecated in 3.21
+    enabled: bool | None = None
+    encoding: str | None = None
+    filter: str | list[str | dict[str, Any]] | None = None
     headers = Headers(encoding='utf-8')
-    http_client: Optional[Literal['httpx', 'requests']] = None
-    http_proxy: Optional[str] = None
-    https_proxy: Optional[str] = None
-    ignore_cached: Optional[bool] = None
-    ignore_connection_errors: Optional[bool] = None
-    ignore_default_args: Optional[Union[bool, str, list[str]]] = None
-    ignore_dh_key_too_small: Optional[bool] = None
-    ignore_http_error_codes: Optional[bool] = None
-    ignore_https_errors: Optional[bool] = None
-    ignore_timeout_errors: Optional[bool] = None
-    ignore_too_many_redirects: Optional[bool] = None
-    init_script: Optional[str] = None  # Playwright
-    initialization_js: Optional[str] = None  # Playwright
-    initialization_url: Optional[str] = None  # Playwright
-    is_markdown: Optional[bool] = None
-    kind: Optional[str] = None  # hooks.py
-    loop: Optional[asyncio.AbstractEventLoop] = None
-    markdown_padded_tables: Optional[bool] = None
-    max_tries: Optional[int] = None
-    method: Optional[Literal['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']] = None
-    mime_type: Optional[str] = None
-    monospace: Optional[bool] = None
-    name: Optional[str] = None
-    navigate: Optional[str] = None  # backwards compatibility (deprecated)
-    no_conditional_request: Optional[bool] = None
-    no_redirects: Optional[bool] = None
-    note: Optional[str] = None
-    params: Optional[Union[str, list, dict]] = None
-    referer: Optional[str] = None  # Playwright
-    retries: Optional[int] = None
-    ssl_no_verify: Optional[bool] = None
-    stderr: Optional[str] = None  # urlwatch backwards compatibility for ShellJob (not used)
-    switches: Optional[list[str]] = None
-    timeout: Optional[Union[int, float]] = None
-    tz: Optional[str] = None  # added by with_defaults, taken from reporter configuration
-    user_data_dir: Optional[str] = None
-    user_visible_url: Optional[str] = None
-    wait_for: Optional[Union[int, str]] = None  # pyppeteer backwards compatibility (deprecated)
-    wait_for_function: Optional[Union[str, dict[str, Any]]] = None  # Playwright
-    wait_for_navigation: Optional[Union[str, tuple[str, ...]]] = None
-    wait_for_selector: Optional[Union[str, dict[str, Any]]] = None  # Playwright
-    wait_for_timeout: Optional[Union[int, float]] = None  # Playwright
-    wait_for_url: Optional[Union[str, dict[str, Any]]] = None  # Playwright
-    wait_until: Optional[Literal['commit', 'domcontentloaded', 'load', 'networkidle']] = None
+    http_client: Literal['httpx', 'requests'] | None = None
+    http_proxy: str | None = None
+    https_proxy: str | None = None
+    ignore_cached: bool | None = None
+    ignore_connection_errors: bool | None = None
+    ignore_default_args: bool | str | list[str] | None = None
+    ignore_dh_key_too_small: bool | None = None
+    ignore_http_error_codes: bool | None = None
+    ignore_https_errors: bool | None = None
+    ignore_timeout_errors: bool | None = None
+    ignore_too_many_redirects: bool | None = None
+    init_script: str | None = None  # Playwright
+    initialization_js: str | None = None  # Playwright
+    initialization_url: str | None = None  # Playwright
+    is_markdown: bool | None = None
+    kind: str | None = None  # hooks.py
+    loop: asyncio.AbstractEventLoop | None = None
+    markdown_padded_tables: bool | None = None
+    max_tries: int | None = None
+    method: Literal['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] | None = None
+    mime_type: str | None = None
+    monospace: bool | None = None
+    name: str | None = None
+    navigate: str | None = None  # backwards compatibility (deprecated)
+    no_conditional_request: bool | None = None
+    no_redirects: bool | None = None
+    note: str | None = None
+    params: str | list | dict | None = None
+    referer: str | None = None  # Playwright
+    retries: int | None = None
+    ssl_no_verify: bool | None = None
+    stderr: str | None = None  # urlwatch backwards compatibility for ShellJob (not used)
+    switches: list[str] | None = None
+    timeout: int | float | None = None
+    tz: str | None = None  # added by with_defaults, taken from reporter configuration
+    user_data_dir: str | None = None
+    user_visible_url: str | None = None
+    wait_for: int | str | None = None  # pyppeteer backwards compatibility (deprecated)
+    wait_for_function: str | dict[str, Any] | None = None  # Playwright
+    wait_for_navigation: str | tuple[str, ...] | None = None
+    wait_for_selector: str | dict[str, Any] | None = None  # Playwright
+    wait_for_timeout: int | float | None = None  # Playwright
+    wait_for_url: str | dict[str, Any] | None = None  # Playwright
+    wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None
 
     def __init__(self, **kwargs: Any) -> None:
         # Fail if any required keys are not provided
@@ -256,7 +256,7 @@ class JobBase(metaclass=TrackSubClasses):
         return d
 
     @classmethod
-    def unserialize(cls, data: dict, filenames: Optional[list[Path]] = None) -> 'JobBase':
+    def unserialize(cls, data: dict, filenames: list[Path] | None = None) -> 'JobBase':
         """Unserialize a dict with job data (e.g. from the YAML jobs file) into a JobBase type object.
 
         :param data: The dict with job data (e.g. from the YAML jobs file).
@@ -392,7 +392,7 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return f"<{self.__kind__} {' '.join(f'{k}={v!r}' for k, v in list(self.to_dict().items()))}"
 
-    def _dict_deep_merge(self, source: Union[dict, Headers], destination: dict) -> dict:
+    def _dict_deep_merge(self, source: dict | Headers, destination: dict) -> dict:
         """Deep merges source dict into destination dict.
 
         :param source: The source dict.
@@ -410,7 +410,7 @@ class JobBase(metaclass=TrackSubClasses):
 
         return destination
 
-    def _set_defaults(self, defaults: Optional[dict[str, Any]]) -> None:
+    def _set_defaults(self, defaults: dict[str, Any] | None) -> None:
         """Merge default attributes (e.g. from configuration) into those of the Job object.
 
         :param defaults: The default Job parameters.
@@ -486,7 +486,7 @@ class JobBase(metaclass=TrackSubClasses):
         location = self.get_location()
         return hashlib.sha1(location.encode(), usedforsecurity=False).hexdigest()
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -517,7 +517,7 @@ class JobBase(metaclass=TrackSubClasses):
             error_string += f'\nDetailed error (returned by OS):\n{exception}'
         return error_string
 
-    def ignore_error(self, exception: Exception) -> Union[bool, str]:
+    def ignore_error(self, exception: Exception) -> bool | str:
         """Determine whether the error of the job should be ignored.
 
         :param exception: The exception.
@@ -591,7 +591,7 @@ class Job(JobBase):
 
     def retrieve(  # type: ignore[empty-body]
         self, job_state: JobState, headless: bool = True
-    ) -> tuple[Union[str, bytes], str, str]:
+    ) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -616,7 +616,7 @@ class UrlJobBase(Job):
     )
 
     def get_headers(
-        self, job_state: JobState, user_agent: Optional[str] = __user_agent__, include_cookies: bool = True
+        self, job_state: JobState, user_agent: str | None = __user_agent__, include_cookies: bool = True
     ) -> Headers:
         """Get headers and modify them to add cookies and conditional request.
 
@@ -700,11 +700,11 @@ class UrlJob(UrlJobBase):
 
     def _retrieve_httpx(
         self,
-        headers: Union[
-            Mapping[str, str], Mapping[bytes, bytes], Sequence[tuple[str, str]], Sequence[tuple[bytes, bytes]], None
-        ],
-        timeout: Union[int, float, None],
-    ) -> tuple[Union[str, bytes], str, str]:
+        headers: (
+            Mapping[str, str] | Mapping[bytes, bytes] | Sequence[tuple[str, str]] | Sequence[tuple[bytes, bytes]] | None
+        ),
+        timeout: int | float | None,
+    ) -> tuple[str | bytes, str, str]:
         """Retrieves the data and Etag using the HTTPX library.
 
         :return: The data retrieved and the ETag.
@@ -718,24 +718,24 @@ class UrlJob(UrlJobBase):
                 f'Job {self.index_number}: Using the HTTPX HTTP client library (HTTP/2 support is not available since '
                 f'h2 is not installed)'
             )
-        proxies: Union[str, None] = None
+        proxy: str | None = None
         scheme = urlsplit(self.url).scheme
         if scheme not in {'http', 'https'}:
             raise ValueError(
                 f'Job {self.index_number}: URL should start with https:// or http:// (check for typos): {self.url}'
             )
         if getattr(self, scheme + '_proxy'):
-            proxies = getattr(self, scheme + '_proxy')
+            proxy = getattr(self, scheme + '_proxy')
         elif os.getenv((scheme + '_proxy').upper()):
-            proxies = os.getenv((scheme + '_proxy').upper())
-        logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
+            proxy = os.getenv((scheme + '_proxy').upper())
+        logger.debug(f'Job {self.index_number}: Proxies: {proxy}')
 
         client = httpx.Client(
             headers=headers,
             cookies=self.cookies,
             verify=(not self.ssl_no_verify),
             http2=http2,
-            proxies=proxies,
+            proxy=proxy,
             timeout=timeout,
             follow_redirects=(not self.no_redirects),
         )
@@ -795,8 +795,8 @@ class UrlJob(UrlJobBase):
         return response.text, etag, mime_type
 
     def _retrieve_requests(
-        self, headers: Union[Mapping[str, str | bytes], None], timeout: Union[int, float, None]
-    ) -> tuple[Union[str, bytes], str, str]:
+        self, headers: Mapping[str, str | bytes] | None, timeout: int | float | None
+    ) -> tuple[str | bytes, str, str]:
         """Retrieves the data and Etag using the requests library.
 
         :return: The data retrieved and the ETag.
@@ -895,7 +895,7 @@ class UrlJob(UrlJobBase):
 
         return response.text, etag, mime_type
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -984,7 +984,7 @@ class UrlJob(UrlJobBase):
         # cookiejar (called by requests) expects strings or bytes-like objects; PyYAML will try to guess int etc.
         if self.timeout is None:
             # default timeout
-            timeout: Optional[Union[int, float]] = 60.0
+            timeout: int | float | None = 60.0
         elif self.timeout == 0:
             # never timeout
             timeout = None
@@ -1156,7 +1156,7 @@ class BrowserJob(UrlJobBase):
         'wait_until',
     )
 
-    _playwright: Optional[Any] = None
+    _playwright: Any = None
     _playwright_browsers: dict = {}
 
     proxy_username: str = ''
@@ -1173,7 +1173,7 @@ class BrowserJob(UrlJobBase):
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.url = location
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -1241,10 +1241,10 @@ class BrowserJob(UrlJobBase):
 
         headers = self.get_headers(job_state, user_agent=None)
 
-        proxy: Optional[ProxySettings] = None
+        proxy: ProxySettings | None = None
         if self.http_proxy or os.getenv('HTTP_PROXY') or self.https_proxy or os.getenv('HTTPS_PROXY'):
             if urlsplit(self.url).scheme == 'http':
-                proxy_split: Optional[Union[SplitResult, SplitResultBytes]] = urlsplit(
+                proxy_split: SplitResult | SplitResultBytes | None = urlsplit(
                     self.http_proxy or os.getenv('HTTP_PROXY')
                 )
             elif urlsplit(self.url).scheme == 'https':
@@ -1270,7 +1270,7 @@ class BrowserJob(UrlJobBase):
                     f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list; found a "
                     f'{type(self.switches).__name__} ( {self.get_indexed_location()} ).'
                 )
-            args: Optional[list[str]] = [f"--{switch.lstrip('--')}" for switch in self.switches]
+            args: list[str] | None = [f"--{switch.lstrip('--')}" for switch in self.switches]
         else:
             args = None
 
@@ -1744,7 +1744,7 @@ class BrowserJob(UrlJobBase):
             context.close()
             return content, etag, mime_type
 
-    def ignore_error(self, exception: Exception) -> Union[bool, str]:
+    def ignore_error(self, exception: Exception) -> bool | str:
         """Determine whether the error of the job should be ignored.
 
         :param exception: The exception.
@@ -1880,7 +1880,7 @@ class ShellJob(Job):
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.command = location
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[Union[str, bytes], str, str]:
+    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data, ETag (which is blank) and mime_type (also blank).
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.

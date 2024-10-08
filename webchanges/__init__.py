@@ -12,7 +12,7 @@ supported services. Can check the output of local commands as well.
 
 from __future__ import annotations
 
-__min_python_version__ = (3, 9)  # minimum version of Python required to run; supported until 5 October 2023
+__min_python_version__ = (3, 10)  # minimum version of Python required to run; supported until fall 2025
 
 
 __project_name__ = __package__
@@ -22,7 +22,7 @@ __project_name__ = __package__
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.25.0'
+__version__ = '3.26.0rc0'
 __description__ = (
     'Check web (or command output) for changes since last run and notify.\n'
     '\n'
@@ -36,10 +36,8 @@ __code_url__ = f'https://github.com/mborsetti/{__project_name__}/'
 __docs_url__ = f'https://{__project_name__}.readthedocs.io/'
 __user_agent__ = f'{__project_name__}/{__version__} (+{__url__})'
 
-from typing import Union
 
-
-def init_data() -> dict[str, Union[str, tuple]]:
+def init_data() -> dict[str, str | tuple]:
     """Returns dict of globals (used in testing).
 
     :returns: dict of globals()

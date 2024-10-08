@@ -16,7 +16,6 @@ import time
 from abc import ABC
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import pytest
 from _pytest.capture import CaptureFixture
@@ -76,7 +75,7 @@ def test_all_database_engines() -> None:
 
 
 def prepare_storage_test(
-    ssdb_storage: SsdbStorage, config_args: Optional[dict] = None, jobs_file: Optional[Path] = None
+    ssdb_storage: SsdbStorage, config_args: dict | None = None, jobs_file: Path | None = None
 ) -> tuple[Urlwatch, SsdbStorage, CommandConfig]:
     """Set up storage."""
     ssdb_file = ssdb_storage.filename

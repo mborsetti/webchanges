@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import pytest
 import yaml
@@ -22,7 +22,7 @@ from webchanges.util import mark_to_html
 logger = logging.getLogger(__name__)
 
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
-skip_mac_issue = pytest.mark.skipif(sys.platform == 'darwin' and sys.version_info == (3, 12))
+skip_mac_issue = pytest.mark.skipif(sys.platform == 'darwin' and sys.version_info == (3, 13))
 
 TESTDATA = [
     # New dict-style filter definition to test normalization/mapping but nothing more
@@ -49,7 +49,7 @@ TESTDATA = [
 
 @pytest.mark.parametrize('in_spec, out_spec', TESTDATA, ids=(str(d[0]) for d in TESTDATA))  # type: ignore[misc]
 def test_normalize_filter_list(
-    in_spec: Union[str, list[Union[str, dict[str, Any]]]],
+    in_spec: str | list[str | dict[str, Any]],
     out_spec: list[tuple[str, dict[str, Any]]],
 ) -> None:
     assert list(FilterBase.normalize_filter_list(in_spec)) == out_spec
@@ -193,7 +193,7 @@ def test_filter_requires_bytes() -> None:
 
 
 def test_deprecated_filters() -> None:
-    def _warning_message(warning: Union[Warning | str]) -> str:
+    def _warning_message(warning: Warning | str) -> str:
         if isinstance(warning, Warning):
             return warning.args[0]
         else:

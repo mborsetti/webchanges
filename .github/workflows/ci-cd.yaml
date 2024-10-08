@@ -64,7 +64,7 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.12', '3.11', '3.10', '3.9']
+        python-version: ['3.13', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [ubuntu-latest]
 
@@ -160,15 +160,9 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.12', '3.11', '3.10', '3.9']
+        python-version: ['3.13', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [macos-latest]
-        # Python 3.9 is not on macos-latest (macos-14-arm64) but only on macos-13
-        # https://github.com/actions/setup-python/issues/696#issuecomment-1637587760
-        exclude:
-          - { python-version: '3.9', os: 'macos-latest' }
-        include:
-          - { python-version: '3.9', os: 'macos-13' }
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg

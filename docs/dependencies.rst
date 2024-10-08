@@ -94,6 +94,11 @@ square brackets, like this::
 | ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`__                       |
 | keyring storage         |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
+| ``zstd`` zstandard      | * `zstandard <https://github.com/indygreg/python-zstandard>`__          |
+| compression URL jobs    |                                                                         |
++-------------------------+-------------------------------------------------------------------------+
+| :underline:`Everything`                                                                           |
++-------------------------+-------------------------------------------------------------------------+
 | ``all``                 | * All the optional packages listed above                                |
 |                         | * Note: you will also have to **separately install** OS-specific        |
 |                         |   dependencies [#f4]_ [#f5]_                                            |

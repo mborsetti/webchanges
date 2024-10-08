@@ -10,7 +10,7 @@ import socket
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 from pathlib import Path
-from typing import Any, Callable, cast, Union
+from typing import Any, Callable, cast
 
 import pytest
 import yaml
@@ -46,9 +46,13 @@ def is_connected() -> bool:
 connection_required = cast(
     Callable[[Callable], Callable], pytest.mark.skipif(not is_connected(), reason='no Internet connection')
 )
+
 py_latest_only = cast(
     Callable[[Callable], Callable],
-    pytest.mark.skipif(sys.version_info < (3, 12), reason='Time ' 'consuming; testing latest version only'),
+    pytest.mark.skipif(
+        sys.version_info < (3, 13),
+        reason='Time consuming; testing latest version only',
+    ),
 )
 
 TEST_JOBS = [
@@ -152,7 +156,7 @@ def new_command_config(config_file: Path, jobs_file: Path, hooks_file: Path) -> 
         config_path=here,
         config_file=config_file,
         jobs_def_file=jobs_file,
-        hooks_file=hooks_file,
+        hooks_def_file=hooks_file,
         ssdb_file=ssdb_file,  # type: ignore[arg-type]
     )
 
@@ -184,7 +188,7 @@ def test__dict_deep__merge() -> None:
     ids=(f'{type(JobBase.unserialize(v[0])).__name__}: {v[1]}' for v in TEST_JOBS),  # type: ignore[arg-type]
 )
 def test_run_job(
-    input_job: dict[str, Union[str, dict[str, str], bool, int]],
+    input_job: dict[str, str | dict[str, str] | bool | int],
     output: str,
     caplog: LogCaptureFixture,
 ) -> None:

@@ -5,7 +5,7 @@ Extension to Sphinx that generates a hierarchical list of classes using the cont
 from __future__ import annotations
 
 import importlib
-from typing import Iterator, List, TypeVar
+from typing import Iterator, TypeVar
 
 from docutils.nodes import literal_block
 from docutils.parsers.rst import Directive
@@ -35,8 +35,8 @@ def build_tree(klass: type, level: int) -> Iterator[str]:
 class InheritanceAsciiTree(Directive):
     required_arguments = 1
 
-    def run(self) -> List[literal_block]:
-        rootparts: List[str] = self.arguments.pop().split('.')
+    def run(self) -> list[literal_block]:
+        rootparts: list[str] = self.arguments.pop().split('.')
         rootname = rootparts.pop()
         rootmodulename = '.'.join(rootparts)
 

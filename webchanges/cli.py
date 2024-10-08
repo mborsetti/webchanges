@@ -17,7 +17,6 @@ import subprocess  # noqa: S404 Consider possible security implications associat
 import sys
 import warnings
 from pathlib import Path, PurePath
-from typing import Optional, Union
 
 import platformdirs
 
@@ -48,10 +47,10 @@ def python_version_warning() -> None:
 
 def migrate_from_legacy(
     legacy_package: str,
-    config_file: Optional[Path] = None,
-    jobs_file: Optional[Path] = None,
-    hooks_file: Optional[Path] = None,
-    ssdb_file: Optional[Path] = None,
+    config_file: Path | None = None,
+    jobs_file: Path | None = None,
+    hooks_file: Path | None = None,
+    ssdb_file: Path | None = None,
 ) -> None:
     """Check for existence of legacy files for configuration, jobs and Python hooks and migrate them (i.e. make a copy
     to new folder and/or name). Original files are not deleted.
@@ -79,7 +78,7 @@ def migrate_from_legacy(
             logger.warning(f"You can safely delete '{old_file}'.")
 
 
-def setup_logger(verbose: Optional[int] = None) -> None:
+def setup_logger(verbose: int | None = None) -> None:
     """Set up the logger.
 
     :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
@@ -109,7 +108,7 @@ def setup_logger(verbose: Optional[int] = None) -> None:
     logger.info(f'System: {platform.platform()}')
 
 
-def teardown_logger(verbose: Optional[int] = None) -> None:
+def teardown_logger(verbose: int | None = None) -> None:
     """Clean up logging.
 
     :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
@@ -120,7 +119,7 @@ def teardown_logger(verbose: Optional[int] = None) -> None:
             os.environ.pop('DEBUG', None)
 
 
-def _expand_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = None) -> list[Path]:
+def _expand_glob_files(filename: Path, default_path: Path, ext: str | None = None) -> list[Path]:
     """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
 
     :param filename: The filename.
@@ -154,15 +153,15 @@ def _expand_jobs_files(filename: Path, default_path: Path, ext: Optional[str] = 
     return [filename]
 
 
-def locate_jobs_files(filenames: list[Path], default_path: Path, ext: Optional[str] = None) -> list[Path]:
+def locate_glob_files(filenames: list[Path], default_path: Path, ext: str | None = None) -> list[Path]:
     job_files = set()
     for filename in filenames:
-        for file in _expand_jobs_files(filename, default_path, ext):
+        for file in _expand_glob_files(filename, default_path, ext):
             job_files.add(file)
     return list(job_files)
 
 
-def locate_storage_file(filename: Path, default_path: Path, ext: Optional[str] = None) -> Path:
+def locate_storage_file(filename: Path, default_path: Path, ext: str | None = None) -> Path:
     """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
 
     :param filename: The filename.
@@ -190,6 +189,21 @@ def locate_storage_file(filename: Path, default_path: Path, ext: Optional[str] =
 
     # no matches found
     return filename
+
+
+def locate_storage_files(filename_list: list[Path], default_path: Path, ext: str | None = None) -> set[Path]:
+    """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
+
+    :param filename_list: The list of filenames.
+    :param default_path: The default directory.
+    :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
+
+    :returns: The list filenames, either originals or ones with path where found and/or extension.
+    """
+    filenames = set()
+    for filename in filename_list:
+        filenames.add(locate_storage_file(filename, default_path, ext))
+    return filenames
 
 
 def first_run(command_config: CommandConfig) -> None:
@@ -242,7 +256,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
     """Handles CLI actions that do not require all classes etc. to be initialized (and command.py loaded). For speed
     purposes."""
 
-    def _exit(arg: Union[str, int, None]) -> None:
+    def _exit(arg: str | int | None) -> None:
         logger.info(f'Exiting with exit code {arg}')
         sys.exit(arg)
 
@@ -363,8 +377,8 @@ def main() -> None:  # pragma: no cover
 
     # Locate config, job and hooks files
     command_config.config_file = locate_storage_file(command_config.config_file, command_config.config_path, '.yaml')
-    command_config.jobs_files = locate_jobs_files(command_config.jobs_files, command_config.config_path, '.yaml')
-    command_config.hooks_file = locate_storage_file(command_config.hooks_file, command_config.config_path, '.py')
+    command_config.jobs_files = locate_glob_files(command_config.jobs_files, command_config.config_path, '.yaml')
+    command_config.hooks_files = locate_glob_files(command_config.hooks_files, command_config.config_path, '.py')
 
     # Check for first run
     if command_config.config_file == default_config_file and not Path(command_config.config_file).is_file():
@@ -374,8 +388,9 @@ def main() -> None:  # pragma: no cover
     config_storage = YamlConfigStorage(command_config.config_file)  # storage.py
 
     # load config (which for syntax checking requires hooks to be loaded too)
-    if command_config.hooks_file:
-        load_hooks(command_config.hooks_file)
+    if command_config.hooks_files:
+        for hooks_file in command_config.hooks_files:
+            load_hooks(hooks_file)
     config_storage.load()
 
     # Setup database API

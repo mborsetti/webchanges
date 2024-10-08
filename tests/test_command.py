@@ -22,7 +22,7 @@ from webchanges import __copyright__, __min_python_version__, __project_name__, 
 from webchanges.cli import (
     first_run,
     handle_unitialized_actions,
-    locate_jobs_files,
+    locate_glob_files,
     locate_storage_file,
     migrate_from_legacy,
     python_version_warning,
@@ -69,7 +69,10 @@ if visual:
 
 py_latest_only = cast(
     Callable[[Callable], Callable],
-    pytest.mark.skipif(sys.version_info < (3, 12), reason='Time ' 'consuming; testing latest version only'),
+    pytest.mark.skipif(
+        sys.version_info < (3, 13),
+        reason='Time consuming; testing latest version only',
+    ),
 )
 
 
@@ -79,7 +82,7 @@ def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_fil
         config_path=config_path,
         config_file=config_file,
         jobs_def_file=jobs_file,
-        hooks_file=hooks_file,
+        hooks_def_file=hooks_file,
         ssdb_file=ssdb_file,  # type: ignore[arg-type]
     )
 
@@ -94,7 +97,7 @@ def urlwatch_command() -> UrlwatchCommand:
             config_path=config_path,
             config_file=config_file,
             jobs_def_file=jobs_file,
-            hooks_file=hooks_file,
+            hooks_def_file=hooks_file,
             ssdb_file=':memory:',  # type: ignore[arg-type]
         ),
         config_storage=config_storage,
@@ -253,7 +256,7 @@ def test_edit_hooks(capsys: CaptureFixture[str]) -> None:
     setattr(command_config, 'edit_hooks', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == f'Saved edits in {urlwatch_command_common.urlwatch_config.hooks_file}\n'
+    assert message == f'Saved edits in {urlwatch_command_common.urlwatch_config.hooks_def_file}\n'
 
 
 def test_edit_hooks_fail(capsys: CaptureFixture[str]) -> None:
@@ -413,7 +416,7 @@ def test_test_job(capsys: CaptureFixture[str]) -> None:
 
 
 def test_test_job_all(capsys: CaptureFixture[str]) -> None:
-    urlwatch_command_common.urlwatch_config.hooks_file = hooks_file
+    urlwatch_command_common.urlwatch_config.hooks_files = [hooks_file]
     import_module_from_source('hooks', hooks_file)
     setattr(command_config, 'test_job', True)
     with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -424,7 +427,7 @@ def test_test_job_all(capsys: CaptureFixture[str]) -> None:
     assert message.splitlines() == [
         f'No syntax errors in config file {urlwatch_command_common.urlwatch_config.config_file},',
         f'jobs file ' f'{urlwatch_command_common.urlwatch_config.jobs_files[0]},',
-        f'and hooks file {urlwatch_command_common.urlwatch_config.hooks_file}.',
+        f'and hooks file {urlwatch_command_common.urlwatch_config.hooks_files[0]}.',
     ]
 
     # with multiple files
@@ -442,7 +445,7 @@ def test_test_job_all(capsys: CaptureFixture[str]) -> None:
         'jobs files',
         f'   • {urlwatch_command_common.urlwatch_config.jobs_files[0]},',
         f"   • {tmp_path.joinpath('jobs-echo_test2.yaml')},",
-        f'and hooks file {urlwatch_command_common.urlwatch_config.hooks_file}.',
+        f'and hooks file {urlwatch_command_common.urlwatch_config.hooks_files[0]}.',
     ]
 
 
@@ -1116,7 +1119,7 @@ def test_print_new_version(capsys: CaptureFixture[str]) -> None:
 
 
 def test_locate_jobs_files() -> None:
-    file = locate_jobs_files([Path('test')], Path('nowhere'), '.noext')
+    file = locate_glob_files([Path('test')], Path('nowhere'), '.noext')
     assert file == [PurePath('test')]
 
 

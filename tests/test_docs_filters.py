@@ -6,7 +6,6 @@ from __future__ import annotations
 import importlib.util
 from collections import defaultdict
 from pathlib import Path
-from typing import Union
 
 import docutils.frontend
 import docutils.nodes
@@ -112,7 +111,7 @@ def test_filter_doc_jobs(job: JobBase) -> None:
     # installations beyond pip)
     d = testdata[job.url]
     if 'filename' in d:
-        data: Union[bytes, str] = here.joinpath('data').joinpath(d['filename']).read_bytes()
+        data: bytes | str = here.joinpath('data').joinpath(d['filename']).read_bytes()
     else:
         data = d['input']
     expected_output_data = d['output']

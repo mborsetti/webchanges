@@ -218,7 +218,7 @@ from __future__ import annotations
 
 import itertools
 import re
-from typing import Any, Callable, NamedTuple, Optional, SupportsInt, Union
+from typing import Any, Callable, NamedTuple, SupportsInt
 
 # `from webchanges._structures import Infinity, InfinityType, NegativeInfinity, NegativeInfinityType`
 # replaced with the contents of the file
@@ -285,13 +285,10 @@ NegativeInfinity = NegativeInfinityType()
 # the following is the rest of the content of
 # https://github.com/pypa/packaging/blob/main/src/packaging/version.py
 
-LocalType = tuple[Union[int, str], ...]
+LocalType = tuple[int | str, ...]
 
-CmpPrePostDevType = Union[InfinityType, NegativeInfinityType, tuple[str, int]]
-CmpLocalType = Union[
-    NegativeInfinityType,
-    tuple[Union[tuple[int, str], tuple[NegativeInfinityType, Union[int, str]]], ...],
-]
+CmpPrePostDevType = InfinityType | NegativeInfinityType | tuple[str, int]
+CmpLocalType = NegativeInfinityType | tuple[tuple[int, str] | tuple[NegativeInfinityType, int | str], ...]
 CmpKey = tuple[
     int,
     tuple[int, ...],
@@ -306,10 +303,10 @@ VersionComparisonMethod = Callable[[CmpKey, CmpKey], bool]
 class _Version(NamedTuple):
     epoch: int
     release: tuple[int, ...]
-    dev: Optional[tuple[str, int]]
-    pre: Optional[tuple[str, int]]
-    post: Optional[tuple[str, int]]
-    local: Optional[LocalType]
+    dev: tuple[str, int] | None
+    pre: tuple[str, int] | None
+    post: tuple[str, int] | None
+    local: LocalType | None
 
 
 def parse(version: str) -> 'Version':
@@ -550,7 +547,7 @@ class Version(_BaseVersion):
         return self._version.release
 
     @property
-    def pre(self) -> Optional[tuple[str, int]]:
+    def pre(self) -> tuple[str, int] | None:
         """The pre-release segment of the version.
 
         >>> print(Version("1.2.3").pre)
@@ -565,7 +562,7 @@ class Version(_BaseVersion):
         return self._version.pre
 
     @property
-    def post(self) -> Optional[int]:
+    def post(self) -> int | None:
         """The post-release number of the version.
 
         >>> print(Version("1.2.3").post)
@@ -576,7 +573,7 @@ class Version(_BaseVersion):
         return self._version.post[1] if self._version.post else None
 
     @property
-    def dev(self) -> Optional[int]:
+    def dev(self) -> int | None:
         """The development number of the version.
 
         >>> print(Version("1.2.3").dev)
@@ -587,7 +584,7 @@ class Version(_BaseVersion):
         return self._version.dev[1] if self._version.dev else None
 
     @property
-    def local(self) -> Optional[str]:
+    def local(self) -> str | None:
         """The local version segment of the version.
 
         >>> print(Version("1.2.3").local)
@@ -708,9 +705,7 @@ class Version(_BaseVersion):
         return self.release[2] if len(self.release) >= 3 else 0
 
 
-def _parse_letter_version(
-    letter: Optional[str], number: Union[str, bytes, SupportsInt, None]
-) -> Optional[tuple[str, int]]:
+def _parse_letter_version(letter: str | None, number: str | bytes | SupportsInt | None) -> tuple[str, int] | None:
     if letter:
         # We consider there to be an implicit 0 in a pre-release if there is not a numeral associated with it.
         if number is None:
@@ -744,7 +739,7 @@ def _parse_letter_version(
 _local_version_separators = re.compile(r'[\._-]')
 
 
-def _parse_local_version(local: Optional[str]) -> Optional[LocalType]:
+def _parse_local_version(local: str | None) -> LocalType | None:
     """
     Takes a string like abc.1.twelve and turns it into ("abc", 1, "twelve").
     """
@@ -758,10 +753,10 @@ def _parse_local_version(local: Optional[str]) -> Optional[LocalType]:
 def _cmpkey(
     epoch: int,
     release: tuple[int, ...],
-    pre: Optional[tuple[str, int]],
-    post: Optional[tuple[str, int]],
-    dev: Optional[tuple[str, int]],
-    local: Optional[LocalType],
+    pre: tuple[str, int] | None,
+    post: tuple[str, int] | None,
+    dev: tuple[str, int] | None,
+    local: LocalType | None,
 ) -> CmpKey:
     # When we compare a release version, we want to compare it with all of the trailing zeros removed. So we'll use a
     # reverse the list, drop all the now leading zeros until we come to something non zero, then take the rest

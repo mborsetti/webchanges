@@ -1,32 +1,37 @@
 Added
 -------------------
-* Multiple job files or glob patterns can now be specified by repeating the ``--jobs`` argument.
-* Job list filtering using `Python regular expression
-  <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__. Example: ``webchanges --list blue`` lists
-  jobs with 'blue' in their name (case-sensitive, so not 'Blue'), while ``webchanges --list (?i)blue`` is
-  `case-insensitive <https://docs.python.org/3/library/re.html#re.I>`__.
-* New URL job directive ``params`` for specifying URL parameters (query strings), e.g. as a dictionary.
-* New ``gotify`` reporter (upstream contribution: `link <https://github.com/thp/urlwatch/pull/823/files>`__).
-* Improved messaging at startup when a legacy database that requires conversion is found.
+* Support for Python 3.13.
+* The ``--hooks`` command line argument now accepts glob patterns.
+* Multiple hook files or glob patterns can now be specified by repeating the ``--hooks`` argument.
+* ``--detailed-versions`` will now show the default value for ``--max-threads`` on the system it's running.
+* Optional support of ``zstd`` compression in URL jobs without ``browser: true`` (requires ``pip install -U
+  webchanges[zstd]``).
+* Addition to the ``ai_google`` differ (BETA):
+
+  - New ``task`` subdirective ``summarize_new``. When used, the report will contain an AI-generated summary of the
+    new text found. This is useful, for example, when monitoring a page to which new content, such as the text of
+    press releases, is periodically added;
+  - New ``unified_diff_new`` filed for the ``prompt`` directive.
 
 Changed
 -------------------
-* Updated ``ai_google`` differ to reflect Gemini 1.5 Pro's 2M token context window.
+* The security requirement that a file containing ``command`` jobs or ``shellpipe`` filters, or any hook file, be
+  owned and writeable only by the user currently running the program has been relaxed to include ownership by the
+  root user.
+* Changes to the ``ai_google`` differ (BETA):
+
+  - ⚠ breaking change: ``old_data`` and ``new_data`` fields in the ``prompt`` directive have been renamed to
+    ``old_text`` and  ``new_text`` for clarity;
+  - Significantly improved the quality of the output by rewriting the default values for ``system_instructions`` and
+    ``prompt``.
+  - Improved and updated the documentation.
 
 Fixed
 -------------------
-* Corrected the automated handling in differs and reporters of data with a 'text/markdown' MIME type.
-* Multiple ``wdiff`` differ fixes and improvements:
-  - Fixed body font issues;
-  - Removed spurious ``^\n`` insertions;
-  - Corrected ``range_info`` lines;
-  - Added word break opportunities (``<wbr>``) in HTML output for better browser handling of long lines.
-* ``deepdiff`` differ now breaks a list into its individual elements.
-* Improved URL matching for jobs by normalizing %xx escapes and plus signs (e.g. ``https://www.example.org/El Niño``
-  will now match ``https://www.example.org/El+Ni%C3%B1o`` and vice versa).
-* Improved the text-to-HTML URL parser to accurately extract URLs with multiple parameters.
+* Improved handling of links with empty text in the Markdown to HTML converter.
+* Fixed ``image`` differ's HTML formatting.
 
-Internals
--------------------
-* Replaced ``requests.structures.CaseInsensitiveDict`` with ``httpx.Headers`` as the Class holding headers.
-* The ``Job.headers`` attribute is now initialized with an empty ``httpx.Headers`` object instead of None.
+Removed
+-------
+* Removed support for Python 3.9. A reminder that older Python versions are supported for 3 years after being
+  obsoleted by a new major release (i.e. about 4 years since their original release).

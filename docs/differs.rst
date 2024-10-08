@@ -286,12 +286,14 @@ This differ is currently in BETA and these directives MAY change in the future.
 .. model default is retrievable from
    https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest?key=$GOOGLE_AI_API_KEY
 
-* ``model`` (str): A `model code <https://ai.google.dev/models/gemini>`__ (default: ``gemini-1.5-flash``).
-* ``prompt`` (str): The prompt sent to the model; the strings ``{unified_diff}``, ``{old_data}`` and ``{new_data}`` will
-  be replaced by the respective content; Any ``\n`` in the prompt will be replaced by a newline (default: ``Identify the
-  changes between the old document (enclosed by an <old> tag) and the new document (enclosed by a <new> tag) and output
-  a summary of such changes:\n\n<old>\n{old_data}\n</old>\n\n<new>\n{new_data}\n</new>``).
-* ``system_instructions``: Optional tone and style instructions for the model (default: ``Respond in Markdown``).
+* ``model`` (str): A `model code <https://ai.google.dev/gemini-api/docs/models/gemini>`__ (default:
+  ``gemini-1.5-flash``).
+* ``task`` (str): Optionally ``summarize_new`` to provide summary of only the new text (i.e. the lines added per
+  unified diff).
+* ``system_instructions``: Optional tone and style instructions for the model (default: see below).
+* ``prompt`` (str): The prompt sent to the model; the strings ``{unified_diff}``, ``{unified_diff_new}``,
+  ``{old_text}`` and ``{new_text}`` will be replaced by the respective content; Any ``\n`` in the prompt will be
+  replaced by a newline (default: see below).
 * ``prompt_ud_context_lines`` (int): if ``{unified_diff}`` is present in the ``prompt``, the number of context lines in
   the unified diff sent to the model (default: 999). If the resulting model prompt becomes approximately
   too big for the model to handle, the unified diff will be recalculated with the default number of context lines (3).
@@ -331,6 +333,73 @@ Directives for the underlying :ref:`unified differ <unified_diff>` can be passed
 .. tip:: You can do "dry-runs" of this (or any) differ on an existing job by editing the differ in the job file and
    running e.g. ``webchanges --test-differ 1 --test-reporter browser``. Don't forget to revert your job file if you
    don't like the new outcome!
+
+Default system instructions and prompts:
+::::::::::::::::::::::::::::::::::::::::
+
+Special variables for prompt
+............................
+When present in the prompt text, the following will be replaced:
+
+* ``{old_text}``: Replaced with the old text.
+* ``{new_text}``: Replaced with the new (currently retrieved) text.
+* ``{unified_diff}``: Replaced with a unified_diff, with 999 context lines unless changed by
+  ``prompt_ud_context_lines`` (see above).
+* ``{unified_diff_new}`` Replaced with only the lines starting with ``+`` of the unified_diff, with the initial ``+``
+  stripped (e.g. roughly the new text)
+
+
+Default task
+............
+
+System instructions
+'''''''''''''''''''
+   You are a skilled journalist. You will be provided with two versions of a text, encased within specific tags. The old
+   version of the text will be enclosed within <old_version> and </old_version> tags, and the new version will be
+   enclosed within <new_version> and </new_version> tags.
+
+   Please:
+
+   * Compare the old and new versions of the text to identify areas where the meaning differs, including additions or
+     removals.
+   * Provide a summary of all the differences, and do so in a clear and concise manner, explaining how the meaning
+     has shifted or evolved in the new version compared to the old version.
+   * Ignore any changes where the meaning remains essentially the same, even if the wording has been altered. Your
+     output should focus exclusively on changes in the intended message or interpretation.
+   * Only reference information in the provided texts in your response.
+
+   You are writing the summary for someone who is already familiar with the content of the text.
+   Format your output in Markdown, using headings, bullet points, and other Markdown elements when they are helpful in
+   creating a well-structured and easily readable summary.
+
+Prompt
+''''''
+   <old_version>
+   {old_text}
+   </old_version>
+
+   <new_version>
+   {new_text}
+   </new_version>
+
+
+Task ``summarize_new``
+......................
+
+System instructions
+'''''''''''''''''''
+   You are a skilled journalist. You will be provided a text. Provide a summary of this text in a clear and concise
+   manner. Format your output in Markdown, using headings, bullet points, and other Markdown elements when they are
+   helpful in creating a well-structured and easily readable summary.
+
+Prompt
+''''''
+   {unified_diff_new}
+
+
+.. versionchanged:: 3.25
+   ``old_data`` and ``new_data`` fields in prompt renamed to ``old_text`` and ``new_text``.  Added ``task``
+   subdirective.
 
 
 
@@ -488,8 +557,8 @@ follows:
 
    pip install --upgrade webchanges[imagediff]
 
-In addition, you can only run it with a default configuration of :program:webchanges:, which installsthe
-``httpx`` HTTP Client library; ``requests`` is not supported.
+In addition, you can only run it with a default configuration of :program:webchanges:, which installs the
+``httpx`` HTTP client library; ``requests`` is not supported.
 
 
 

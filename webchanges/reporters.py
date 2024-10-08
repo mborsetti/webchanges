@@ -16,8 +16,9 @@ import shlex
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.s
 import sys
 import time
+from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Iterator, List, Optional, TYPE_CHECKING, Union
+from typing import Any, Callable, Iterable, Iterator, TYPE_CHECKING, TypeAlias
 from warnings import warn
 from zoneinfo import ZoneInfo
 
@@ -75,22 +76,22 @@ if TYPE_CHECKING:
         _ConfigReportXmpp,
     )
 
-    _ConfigReportersList = Union[
-        _ConfigReportBrowser,
-        _ConfigReportDiscord,
-        _ConfigReportEmail,
-        _ConfigReportIfttt,
-        _ConfigReportMailgun,
-        _ConfigReportMatrix,
-        _ConfigReportProwl,
-        _ConfigReportPushbullet,
-        _ConfigReportPushover,
-        _ConfigReportRunCommand,
-        _ConfigReportStdout,
-        _ConfigReportTelegram,
-        _ConfigReportWebhook,
-        _ConfigReportXmpp,
-    ]
+    _ConfigReportersList: TypeAlias = (
+        _ConfigReportBrowser
+        | _ConfigReportDiscord
+        | _ConfigReportEmail
+        | _ConfigReportIfttt
+        | _ConfigReportMailgun
+        | _ConfigReportMatrix
+        | _ConfigReportProwl
+        | _ConfigReportPushbullet
+        | _ConfigReportPushover
+        | _ConfigReportRunCommand
+        | _ConfigReportStdout
+        | _ConfigReportTelegram
+        | _ConfigReportWebhook
+        | _ConfigReportXmpp
+    )
 
 try:
     import aioxmpp
@@ -139,10 +140,9 @@ class ReporterBase(metaclass=TrackSubClasses):
         config: _ConfigReportersList,
         job_states: list[JobState],
         duration: float,
-        jobs_files: Optional[list[Path]] = None,
+        jobs_files: list[Path] | None = None,
     ) -> None:
         """
-
         :param report: The Report object containing information about the report.
         :param config: The configuration of the run (typically from config.yaml).
         :param job_states: The list of JobState objects containing the information about the jobs that were retrieved.
@@ -160,7 +160,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         else:
             self.footer_job_file = ''
         if httpx:
-            self.post_client = httpx.Client(http2=h2 is not None, follow_redirects=True).post
+            self.post_client = httpx.Client(http2=h2 is not None, follow_redirects=True).post  # noqa: S113 no timeout
         else:
             self.post_client = requests.post  # type: ignore[assignment]
 
@@ -185,7 +185,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         report_class: ReporterBase = cls.mro()[-3]  # type: ignore[assignment]
         return report.config['report'][report_class.__kind__]  # type: ignore[literal-required]
 
-    def subject_with_args(self, filtered_job_states: List[JobState], subject: str = '') -> str:
+    def subject_with_args(self, filtered_job_states: list[JobState], subject: str = '') -> str:
         if not subject:
             subject = self.config.get('subject', '')  # type: ignore[assignment]
         subject_args = {
@@ -219,8 +219,8 @@ class ReporterBase(metaclass=TrackSubClasses):
         report: Report,
         job_states: list[JobState],
         duration: float,
-        jobs_files: Optional[list[Path]] = None,
-        check_enabled: Optional[bool] = True,
+        jobs_files: list[Path] | None = None,
+        check_enabled: bool | None = True,
     ) -> None:
         """Run a single named report.
 
@@ -252,7 +252,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         report: Report,
         job_states: list[JobState],
         duration: float,
-        jobs_files: Optional[list[Path]] = None,
+        jobs_files: list[Path] | None = None,
     ) -> None:
         """Run all (enabled) reports.
 
@@ -395,7 +395,7 @@ class HtmlReporter(ReporterBase):
             )
         yield '</span>\n</body>\n</html>\n'
 
-    def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> Optional[str]:
+    def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
         """Returns the HTML for a job; called by _parts. Calls _diff_to_html.
 
         :param job_state: The JobState object with the job information.
@@ -484,7 +484,7 @@ class TextReporter(ReporterBase):
                     f'updating.'
                 )
 
-    def _format_content(self, job_state: JobState) -> Optional[Union[str, bytes]]:
+    def _format_content(self, job_state: JobState) -> str | bytes | None:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -498,7 +498,7 @@ class TextReporter(ReporterBase):
 
     def _format_output(self, job_state: JobState, line_length: int) -> tuple[list[str], list[str]]:
         summary_part: list[str] = []
-        details_part: list[Optional[str]] = []
+        details_part: list[str | None] = []
 
         if job_state.verb == 'changed,no_report':
             return [], []
@@ -535,7 +535,7 @@ class MarkdownReporter(ReporterBase):
 
     __kind__ = 'markdown'
 
-    def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> Iterator[str]:
+    def submit(self, max_length: int | None = None, **kwargs: Any) -> Iterator[str]:
         """Submit a job to generate the report in Markdown format.
         We use the CommonMark spec: https://spec.commonmark.org/
 
@@ -616,7 +616,7 @@ class MarkdownReporter(ReporterBase):
 
     @classmethod
     def _render(
-        cls, max_length: Optional[int], summary: list[str], details: list[tuple[str, str]], footer: str
+        cls, max_length: int | None, summary: list[str], details: list[tuple[str, str]], footer: str
     ) -> tuple[bool, list[str], list[tuple[str, str]], str]:
         """Render the report components, trimming them if the available length is insufficient.
 
@@ -699,7 +699,7 @@ class MarkdownReporter(ReporterBase):
                     return details_trimmed, summary, trimmed_details, footer
 
     @staticmethod
-    def _format_details_body(s: str, max_length: Optional[int] = None) -> tuple[bool, str]:
+    def _format_details_body(s: str, max_length: int | None = None) -> tuple[bool, str]:
         """Trim the details to fit the maximum length available; add a message when so done.
 
         :param s: The details text to fit into the maximum length.
@@ -733,7 +733,7 @@ class MarkdownReporter(ReporterBase):
 
             return True, f'{trim_message}{s}'
 
-    def _format_content(self, job_state: JobState) -> Optional[str]:
+    def _format_content(self, job_state: JobState) -> str | None:
         if job_state.verb == 'error':
             return job_state.traceback.strip()
 
@@ -824,21 +824,61 @@ class StdoutReporter(TextReporter):
             body = re.sub(r'\[-.*?-]', lambda x: self._red(x.group(0)), body, flags=re.DOTALL)
             separators = (*separators, '-' * 36)
 
-        for line in body.splitlines():
+        class LineType(Enum):
+            """Defines the differ line types"""
+
+            SEPARATOR = 1
+            ADDITION = 2
+            DELETION = 3
+            STATUS = 4
+            OTHER = 5
+
+        def get_line_type(line: str, separators: Iterable[str]) -> LineType:
+            """Classifies each line"""
             if line in separators:
-                print_color(line)
+                return LineType.SEPARATOR
             elif line.startswith('+'):
-                print_color(self._green(line))
+                return LineType.ADDITION
             elif line.startswith('-'):
-                print_color(self._red(line))
+                return LineType.DELETION
             elif any(line.startswith(prefix) for prefix in {'NEW: ', 'CHANGED: ', 'UNCHANGED: ', 'ERROR: '}):
-                first, second = line.split(' ', 1)
-                if line.startswith('ERROR: '):
-                    print_color(first, self._red(second))
-                else:
-                    print_color(first, self._blue(second))
+                return LineType.STATUS
             else:
-                print_color(line)
+                return LineType.OTHER
+
+        def print_status_line(line: str, print_color: Callable, red_color: Callable, blue_color: Callable) -> None:
+            """Prints a status line"""
+            first, second = line.split(' ', 1)
+            if line.startswith('ERROR: '):
+                print_color(first, red_color(second))
+            else:
+                print_color(first, blue_color(second))
+
+        def process_lines(
+            body: str,
+            separators: Iterable[str],
+            print_color: Callable,
+            green_color: Callable,
+            red_color: Callable,
+            blue_color: Callable,
+        ) -> None:
+            """Processes the lines"""
+            for line in body.splitlines():
+                line_type = get_line_type(line, separators)
+
+                match line_type:
+                    case LineType.SEPARATOR:
+                        print_color(line)
+                    case LineType.ADDITION:
+                        print_color(green_color(line))
+                    case LineType.DELETION:
+                        print_color(red_color(line))
+                    case LineType.STATUS:
+                        print_status_line(line, print_color, red_color, blue_color)
+                    case LineType.OTHER:
+                        print_color(line)
+
+        process_lines(body, separators, print_color, self._green, self._red, self._blue)
 
 
 class EMailReporter(TextReporter):
@@ -1000,7 +1040,7 @@ class MailgunReporter(TextReporter):
 
     config: _ConfigReportMailgun
 
-    def submit(self) -> Optional[str]:  # type: ignore[override]
+    def submit(self) -> str | None:  # type: ignore[override]
         region = self.config['region']
         domain = self.config['domain']
         api_key = self.config['api_key']
@@ -1078,7 +1118,7 @@ class TelegramReporter(MarkdownReporter):
             for chunk in chunks:
                 self.submit_to_telegram(bot_token, chat_id, chunk)
 
-    def submit_to_telegram(self, bot_token: str, chat_id: Union[int, str], text: str) -> Response:
+    def submit_to_telegram(self, bot_token: str, chat_id: int | str, text: str) -> Response:
         """Submit to Telegram."""
         logger.info(f"Sending telegram message to chat id: '{chat_id}'")
 
@@ -1107,7 +1147,7 @@ class TelegramReporter(MarkdownReporter):
         return result
 
     @staticmethod
-    def telegram_escape_markdown(text: str, version: int = 2, entity_type: Optional[str] = None) -> str:
+    def telegram_escape_markdown(text: str, version: int = 2, entity_type: str | None = None) -> str:
         """
         Helper function to escape telegram markup symbols. See https://core.telegram.org/bots/api#formatting-options
 
@@ -1225,7 +1265,7 @@ class DiscordReporter(TextReporter):
         if self.config['colored']:
             self.max_length -= 11
 
-    def submit(self) -> Optional[Response]:  # type: ignore[override]
+    def submit(self) -> Response | None:  # type: ignore[override]
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
@@ -1297,7 +1337,7 @@ class WebhookReporter(TextReporter):
         else:
             self.max_length = default_max_length
 
-    def submit(self) -> Optional[Response]:  # type: ignore[override]
+    def submit(self) -> Response | None:  # type: ignore[override]
         webhook_url = self.config['webhook_url']
 
         if self.config['markdown']:
@@ -1380,7 +1420,7 @@ class MatrixReporter(MarkdownReporter):
     config: _ConfigReportMatrix
     MAX_LENGTH = 16384
 
-    def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # type: ignore[override]
         if isinstance(matrix_client, str):
             self.raise_import_error('matrix_client', self.__kind__, matrix_client)
 
@@ -1471,7 +1511,7 @@ class BrowserReporter(HtmlReporter):
 
 
 class XMPP:
-    def __init__(self, sender: str, recipient: str, insecure_password: Optional[str] = None) -> None:
+    def __init__(self, sender: str, recipient: str, insecure_password: str | None = None) -> None:
         if isinstance(aioxmpp, str):
             raise ImportError(
                 f"Python package 'aioxmpp' cannot be imported; cannot use the 'xmpp' reporter.\n" f'{aioxmpp}'
@@ -1646,7 +1686,7 @@ class GotifyReporter(MarkdownReporter):
 
     config: _ConfigReportGotify
 
-    def submit(self, max_length: Optional[int] = None, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # type: ignore[override]
         body_markdown = '\n'.join(super().submit(self.MAX_LENGTH))
         if not body_markdown:
             logger.debug('Not sending message to gotify server (no changes)')
