@@ -1059,7 +1059,7 @@ class AIGoogleDiffer(DifferBase):
         'model': (
             'model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-1.5-flash-latest)'
         ),
-        'task': 'summarize_new to summarize anything added (including as a result of a change)',
+        'additions_only': 'summarizes only added lines (including as a result of a change)',
         'system_instructions': (
             'Optional tone and style instructions for the model (default: see documentation at'
             'https://webchanges.readthedocs.io/en/stable/differs.html#ai-google-diff)'
@@ -1270,7 +1270,7 @@ class AIGoogleDiffer(DifferBase):
                 summary = _send_to_model(model_prompt, system_instructions)
             return summary
 
-        if directives.get('task') == 'summarize_new':
+        if directives.get('additions_only') or self.job.additions_only:
             default_system_instructions = (
                 'You are a skilled journalist. You will be provided a text. Provide a summary of this text in a clear '
                 'and concise manner.\n Format your output in Markdown, using headings, bullet points, and other '

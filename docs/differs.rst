@@ -288,12 +288,11 @@ This differ is currently in BETA and these directives MAY change in the future.
 
 * ``model`` (str): A `model code <https://ai.google.dev/gemini-api/docs/models/gemini>`__ (default:
   ``gemini-1.5-flash``).
-* ``task`` (str): Optionally ``summarize_new`` to provide summary of only the new text (i.e. the lines added per
-  unified diff).
 * ``system_instructions``: Optional tone and style instructions for the model (default: see below).
 * ``prompt`` (str): The prompt sent to the model; the strings ``{unified_diff}``, ``{unified_diff_new}``,
   ``{old_text}`` and ``{new_text}`` will be replaced by the respective content; Any ``\n`` in the prompt will be
   replaced by a newline (default: see below).
+* ``additions_only`` (bool): provide a summary of only the new text (i.e. the lines added per unified diff).
 * ``prompt_ud_context_lines`` (int): if ``{unified_diff}`` is present in the ``prompt``, the number of context lines in
   the unified diff sent to the model (default: 999). If the resulting model prompt becomes approximately
   too big for the model to handle, the unified diff will be recalculated with the default number of context lines (3).
@@ -349,8 +348,8 @@ When present in the prompt text, the following will be replaced:
   stripped (e.g. roughly the new text)
 
 
-Default task
-............
+Default
+.......
 
 System instructions
 '''''''''''''''''''
@@ -383,8 +382,8 @@ Prompt
    </new_version>
 
 
-Task ``summarize_new``
-......................
+With ``additions_only``
+.......................
 
 System instructions
 '''''''''''''''''''
@@ -398,7 +397,7 @@ Prompt
 
 
 .. versionchanged:: 3.25
-   ``old_data`` and ``new_data`` fields in prompt renamed to ``old_text`` and ``new_text``.  Added ``task``
+   ``old_data`` and ``new_data`` fields in prompt renamed to ``old_text`` and ``new_text``.  Added ``additions_only``
    subdirective.
 
 

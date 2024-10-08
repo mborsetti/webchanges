@@ -1,37 +1,38 @@
 Added
--------------------
-* Support for Python 3.13.
-* The ``--hooks`` command line argument now accepts glob patterns.
-* Multiple hook files or glob patterns can now be specified by repeating the ``--hooks`` argument.
-* ``--detailed-versions`` will now show the default value for ``--max-threads`` on the system it's running.
-* Optional support of ``zstd`` compression in URL jobs without ``browser: true`` (requires ``pip install -U
-  webchanges[zstd]``).
-* Addition to the ``ai_google`` differ (BETA):
+-----
+* Python 3.13 Support: **webchanges** now supports Python 3.13, but complete testing is pending due to missing
+  installation packages ("wheels") for dependencies like ``lxml``.
+* Glob Pattern Support for Hooks Files: The ``--hooks`` command-line argument now accepts glob patterns for flexible
+  hook file selection.
+* Multiple Hook Specifications: Specify multiple hook files or glob patterns by repeating the ``--hooks`` argument.
+* Enhanced Version Information: ``--detailed-versions`` now displays the system's default value for
+  ``--max-threads``.
+* Optional ``zstd`` Compression: URL jobs without ``browser: true`` can now utilize ``zstd`` compression for
+  improved efficiency (requires ``pip install -U webchanges[zstd]``).
+* ``ai_google`` Differ Enhancements (BETA):
 
-  - New ``task`` subdirective ``summarize_new``. When used, the report will contain an AI-generated summary of the
-    new text found. This is useful, for example, when monitoring a page to which new content, such as the text of
-    press releases, is periodically added;
-  - New ``unified_diff_new`` filed for the ``prompt`` directive.
+  * New ``additions_only`` Subdirective: When set to true, generates AI-powered summaries of only the added text. This
+    is particularly helpful for monitoring pages with regularly added content (e.g., press releases).
+  * New ``unified_diff_new`` Field: Added to the ``prompt`` directive.
 
 Changed
--------------------
-* The security requirement that a file containing ``command`` jobs or ``shellpipe`` filters, or any hook file, be
-  owned and writeable only by the user currently running the program has been relaxed to include ownership by the
-  root user.
-* Changes to the ``ai_google`` differ (BETA):
+-------
+* Relaxed Security for Job and Hook Files: The ownership requirement for files containing ``command`` jobs,
+  ``shellpipe`` filters, or hook files has been expanded to include root ownership, in addition to the current user.
+* ``ai_google`` Differ Refinements (BETA):
 
-  - ⚠ breaking change: ``old_data`` and ``new_data`` fields in the ``prompt`` directive have been renamed to
-    ``old_text`` and  ``new_text`` for clarity;
-  - Significantly improved the quality of the output by rewriting the default values for ``system_instructions`` and
-    ``prompt``.
-  - Improved and updated the documentation.
+  *  Renamed Prompt Fields (⚠ BETA breaking change):  For clarity, ``old_data`` and ``new_data`` fields in the
+     ``prompt`` directive have been renamed to ``old_text`` and ``new_text``, respectively.
+  *  Improved Output Quality: Significantly enhanced output quality by revising the default values for
+     ``system_instructions`` and ``prompt``.
+  *  Updated Documentation: Improved and updated the documentation for the ``ai_google`` differ.
 
 Fixed
--------------------
-* Improved handling of links with empty text in the Markdown to HTML converter.
-* Fixed ``image`` differ's HTML formatting.
+-----
+* Markdown Handling: Improved handling of links with empty text in the Markdown to HTML converter.
+* ``image`` Differ Formatting: Fixed HTML formatting issues within the ``image`` differ.
 
 Removed
 -------
-* Removed support for Python 3.9. A reminder that older Python versions are supported for 3 years after being
-  obsoleted by a new major release (i.e. about 4 years since their original release).
+* Python 3.9 Support: Support for Python 3.9 has been dropped. As a reminder, older Python versions are supported for 3
+  years after being superseded by a new major release (approximately 4 years after their initial release).
