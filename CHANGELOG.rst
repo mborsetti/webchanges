@@ -39,7 +39,8 @@ Unreleased
 
 Added
 -------------------
-* Support for Python 3.13.
+* Code supports Python 3.13, but cannot be fully tested yet due to required dependencies (e.g. ``lxml``) lacking wheels
+  for installation.
 * The ``--hooks`` command line argument now accepts glob patterns.
 * Multiple hook files or glob patterns can now be specified by repeating the ``--hooks`` argument.
 * ``--detailed-versions`` will now show the default value for ``--max-threads`` on the system it's running.

@@ -27,6 +27,7 @@ pushbullet.py
 Pygments
 pypdf[crypto]
 pytest
+pytest-cov
 pytest-playwright
 python-dateutil; python_version == '3.12'
 pytz  # bug in aioxmpp
