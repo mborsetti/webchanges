@@ -589,7 +589,6 @@ Output:
         .diff_chg { color: orange; background-color: lightyellow; }
      </style>
      <div class="output-box">
-     border:1px solid#e1e4e5;background:white;">
      <table class="diff" id="difflib_chg_to0__top" cellspacing="0" cellpadding="0" rules="groups" >
        <colgroup></colgroup> <colgroup></colgroup> <colgroup></colgroup>
        <colgroup></colgroup> <colgroup></colgroup> <colgroup></colgroup>

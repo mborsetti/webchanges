@@ -5,6 +5,11 @@ REM Command file to generate Sphinx documentation in Windows
 setlocal EnableDelayedExpansion
 pushd %~dp0
 
+echo. updating cli_help.txt
+pushd ..
+python -m webchanges.cli --help > cli_help.txt
+popd
+
 if "%SPHINXBUILD%" == "" (
     set SPHINXBUILD=sphinx-build
 )

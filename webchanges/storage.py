@@ -1292,8 +1292,7 @@ class SsdbSQLite3Storage(SsdbStorage):
     * guid: unique hash of the "location", i.e. the URL/command; indexed
     * timestamp: the Unix timestamp of when then the snapshot was taken; indexed
     * msgpack_data: a msgpack blob containing 'data', 'tries', 'etag' and 'mime_type' in a dict of keys 'd', 't',
-    'e' and 'm'
-
+      'e' and 'm'
     """
 
     def __init__(self, filename: Path, max_snapshots: int = 4) -> None:

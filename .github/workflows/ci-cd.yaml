@@ -142,7 +142,7 @@ jobs:
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
+          python -m pytest -v --cov=./ --cov-report=term tests/
 
       - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
@@ -218,7 +218,7 @@ jobs:
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/
+          python -m pytest -v --cov=./ --cov-report=term tests/
 
       - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
@@ -307,8 +307,7 @@ jobs:
 #        # workaround for Windows fatal exception: access violation
 #        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
 #        run: >
-#          python -m pytest -v --cov=./ --cov-report=term --cov-report=xml --cov-config=.coveragerc tests/ -p
-#          no:faulthandler
+#          python -m pytest -v --cov=./ --cov-report=term tests/ -p no:faulthandler
 #
 #      - name: Upload coverage data to coveralls.io (parallel)
 #        run: coveralls --service=github
@@ -331,6 +330,8 @@ jobs:
 
   deploy:
     name: Deploy release
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
 #    needs: [test_ubuntu, test_macos, test_windows]
     needs: [test_ubuntu, test_macos]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
@@ -343,7 +344,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@main
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           cache: 'pip'
 
       # Install pip dependencies
@@ -357,20 +358,20 @@ jobs:
           python -m build
 
       # PyPI publish GitHub Action from https://github.com/pypa/gh-action-pypi-publish
-      - name: Publish package
+      - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_password }}
+#        with:
+#          user: __token__
+#          password: ${{ secrets.pypi_password }}
 
       - name: Create GitHub release
         id: create_release
         uses: actions/create-release@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
           body_path: RELEASE.rst
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}

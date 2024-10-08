@@ -1,7 +1,7 @@
 """Test the generation of various types of diffs.
 
 Run individually with
-> pytest -v --cov=./ --cov-report=term --cov-report=html --cov-config=.coveragerc tests/test_differs.py
+> pytest -v --cov=./ --cov-report=term tests/test_differs.py
 
 """
 
