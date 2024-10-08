@@ -63,8 +63,8 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-        # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.13rc3', '3.12', '3.11', '3.10']
+        # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+        python-version: ['3.13.0-rc.3', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [ubuntu-latest]
 
@@ -159,8 +159,8 @@ jobs:
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
     strategy:
       matrix:
-        # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.13rc3', '3.12', '3.11', '3.10']
+        # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+        python-version: ['3.13.0-rc.3', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [macos-latest]
 
