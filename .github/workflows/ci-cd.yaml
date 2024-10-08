@@ -64,7 +64,7 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.13', '3.12', '3.11', '3.10']
+        python-version: ['3.13rc3', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [ubuntu-latest]
 
@@ -160,7 +160,7 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://github.com/actions/python-versions/releases
-        python-version: ['3.13', '3.12', '3.11', '3.10']
+        python-version: ['3.13rc3', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [macos-latest]
 
