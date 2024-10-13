@@ -65,7 +65,7 @@ jobs:
       matrix:
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
         # RCs need to be specified fully, e.g. '3.13.0-rc.3'
-        python-version: ['3.12', '3.11', '3.10']
+        python-version: ['3.13', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [ubuntu-latest]
 
@@ -162,7 +162,7 @@ jobs:
       matrix:
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
         # RCs need to be specified fully, e.g. '3.13.0-rc.3'
-        python-version: ['3.12', '3.11', '3.10']
+        python-version: ['3.13', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [macos-latest]
 
