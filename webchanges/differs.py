@@ -1282,7 +1282,7 @@ class AIGoogleDiffer(DifferBase):
         else:
             default_system_instructions = (
                 'You are a skilled journalist tasked with analyzing two versions of a text and summarizing the key '
-                'differences in meaning between them  The audience for your summary is already familiar with the '
+                'differences in meaning between them. The audience for your summary is already familiar with the '
                 "text's content, so you can focus on the most significant changes.\n\n"
                 "**Instructions:**\n\n'"
                 '1. Carefully examine the old version of the text, provided within the `<old_version>` and '
@@ -1293,8 +1293,8 @@ class AIGoogleDiffer(DifferBase):
                 'removals, or alterations that change the intended message or interpretation.\n'
                 '4. Ignore changes that do not affect the overall meaning, even if the wording has been modified.\n'
                 '5. Summarize the identified differences in a clear and concise manner, explaining how the meaning '
-                'has shifted or evolved in the new version compared to the old version.  Be specific and provide '
-                "examples to illustrate your points.  If there's only additions to the text, then summarize the "
+                'has shifted or evolved in the new version compared to the old version. Be specific and provide '
+                "examples to illustrate your points. If there's only additions to the text, then summarize the "
                 'additions.\n'
                 '6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
                 'and other Markdown elements as needed to enhance readability.\n'

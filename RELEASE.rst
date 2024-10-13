@@ -1,7 +1,7 @@
 Added
 -----
-* Python 3.13 Support: **webchanges** now supports Python 3.13, but complete testing is pending due to missing
-  installation packages ("wheels") for dependencies like ``lxml``.
+* Python 3.13 Support: **webchanges** now supports Python 3.13, but complete testing is pending due to dependencies
+  such has ``lxml`` not having yet published installation packages ("wheels") for 3.13.
 * Glob Pattern Support for Hooks Files: The ``--hooks`` command-line argument now accepts glob patterns for flexible
   hook file selection.
 * Multiple Hook Specifications: Specify multiple hook files or glob patterns by repeating the ``--hooks`` argument.
@@ -25,7 +25,7 @@ Changed
      ``prompt`` directive have been renamed to ``old_text`` and ``new_text``, respectively.
   *  Improved Output Quality: Significantly enhanced output quality by revising the default values for
      ``system_instructions`` and ``prompt``.
-  *  Updated Documentation: Improved and updated the documentation for the ``ai_google`` differ.
+  *  Updated Documentation.
 
 Fixed
 -----
@@ -35,4 +35,4 @@ Fixed
 Removed
 -------
 * Python 3.9 Support: Support for Python 3.9 has been dropped. As a reminder, older Python versions are supported for 3
-  years after being superseded by a new major release (approximately 4 years after their initial release).
+  years after being superseded by a new major release (i.e. approximately 4 years after their initial release).

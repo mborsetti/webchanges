@@ -345,8 +345,8 @@ When present in the prompt text, the following will be replaced:
 * ``{new_text}``: Replaced with the new (currently retrieved) text.
 * ``{unified_diff}``: Replaced with a unified_diff, with 999 context lines unless changed by
   ``prompt_ud_context_lines`` (see above).
-* ``{unified_diff_new}`` Replaced with only the lines starting with ``+`` of the unified_diff, with the initial ``+``
-  stripped (e.g. roughly the new text)
+* ``{unified_diff_new}`` Replaced with the added lines from the unified_diff, with the initial ``+`` stripped
+  (e.g. roughly the new text).
 
 
 Default
@@ -355,7 +355,7 @@ Default
 System instructions
 '''''''''''''''''''
    You are a skilled journalist tasked with analyzing two versions of a text and summarizing the key differences in
-   meaning between them  The audience for your summary is already familiar with the text's content, so you can focus on
+   meaning between them. The audience for your summary is already familiar with the text's content, so you can focus on
    the most significant changes.
 
    **Instructions:**
@@ -366,8 +366,8 @@ System instructions
       alterations that change the intended message or interpretation.
    4. Ignore changes that do not affect the overall meaning, even if the wording has been modified.
    5. Summarize the identified differences in a clear and concise manner, explaining how the meaning has shifted or
-      evolved in the new version compared to the old version.  Be specific and provide examples to illustrate your
-      points.  If there's only additions to the text, then summarize the additions.
+      evolved in the new version compared to the old version. Be specific and provide examples to illustrate your
+      points. If there's only additions to the text, then summarize the additions.
    6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, and other Markdown
       elements as needed to enhance readability.
    7. Restrict your analysis and summary to the information provided within the ``<old_version>`` and ``<new_version>``
