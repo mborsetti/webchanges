@@ -1272,32 +1272,34 @@ class AIGoogleDiffer(DifferBase):
 
         if directives.get('additions_only') or self.job.additions_only:
             default_system_instructions = (
-                'You are a skilled journalist. You will be provided a text. Provide a summary of this text in a clear '
-                'and concise manner.\n Format your output in Markdown, using headings, bullet points, and other '
-                'Markdown elements when they are helpful in creating a well-structured and easily readable summary.'
+                'You are a skilled journalist. Your task is to summarize the provided text in a clear and concise '
+                'manner.  Restrict your analysis and summary *only* to the text provided. Do not introduce any '
+                'external information or assumptions.\n\n'
+                'Format your summary using Markdown. Use headings, bullet points, and other Markdown elements where '
+                'appropriate to create a well-structured and easily readable summary.'
             )
             default_prompt = '{unified_diff_new}'
         else:
             default_system_instructions = (
-                'You are a skilled journalist. You will be provided with two versions of a text, encased within '
-                'specific tags. The old version of the text will be enclosed within <old_version> and </old_version> '
-                'tags, and the new version will be enclosed within <new_version> and </new_version> tags.\n'
-                'Please:\n'
-                # '* Compare the old and new versions of the text to identify areas where the meaning differ
-                # 'significantly. Focus specifically on meaningful changes (including additions or removals) rather than
-                # 'just surface-level changes in wording or sentence structure.\n'
-                # '* Identify and summarize all the differences, and do so in a clear and concise manner, explaining
-                # 'how the meaning has shifted or evolved in the new version compared to the old version.\n'
-                '* Compare the old and new versions of the text to identify areas where the meaning differs, including '
-                'additions or removals.\n'
-                '* Provide a summary of all the differences, and do so in a clear and concise manner, explaining how '
-                'the meaning has shifted or evolved in the new version compared to the old version.\n'
-                '* Ignore any content where the meaning remains essentially the same, even if the wording has been '
-                'altered. Your output should focus exclusively on changes in the intended message or interpretation.\n'
-                '* Only reference information in the provided texts in your response.\n'
-                'You are writing the summary for someone who is already familiar with the content of the text.\n'
-                'Format your output in Markdown, using headings, bullet points, and other Markdown elements when they '
-                'are helpful in creating a well-structured and easily readable summary.'
+                'You are a skilled journalist tasked with analyzing two versions of a text and summarizing the key '
+                'differences in meaning between them  The audience for your summary is already familiar with the '
+                "text's content, so you can focus on the most significant changes.\n\n"
+                "**Instructions:**\n\n'"
+                '1. Carefully examine the old version of the text, provided within the `<old_version>` and '
+                '`</old_version>` tags.\n'
+                '2. Carefully examine the new version of the text, provided within the `<new_version>` and '
+                '`</new_version>` tags.\n'
+                '3. Compare the two versions, identifying areas where the meaning differs. This includes additions, '
+                'removals, or alterations that change the intended message or interpretation.\n'
+                '4. Ignore changes that do not affect the overall meaning, even if the wording has been modified.\n'
+                '5. Summarize the identified differences in a clear and concise manner, explaining how the meaning '
+                'has shifted or evolved in the new version compared to the old version.  Be specific and provide '
+                "examples to illustrate your points.  If there's only additions to the text, then summarize the "
+                'additions.\n'
+                '6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
+                'and other Markdown elements as needed to enhance readability.\n'
+                '7. Restrict your analysis and summary to the information provided within the `<old_version>` and '
+                '`<new_version> tags. Do not introduce external information or assumptions.\n'
             )
             default_prompt = '<old_version>\n{old_text}\n</old_version>\n\n<new_version>\n{new_text}\n</new_version>'
         system_instructions = directives.get('system_instructions', default_system_instructions)

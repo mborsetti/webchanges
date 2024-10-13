@@ -242,7 +242,8 @@ by using a prompt similar to the one here:
 
 More information about writing input prompts for these models can be found `here
 <https://ai.google.dev/gemini-api/docs/prompting-intro>`__. You may also ask the model itself (in `AI Studio
-<https://aistudio.google.com/>`__) to suggest prompts that are appropriate to your use case.
+<https://aistudio.google.com/>`__) to suggest prompts that are appropriate to your use case, or use the "Help me write"
+function in `AI Studio Prompts <https://console.cloud.google.com/vertex-ai/studio/freeform>`__.
 
 Example
 ```````
@@ -353,23 +354,24 @@ Default
 
 System instructions
 '''''''''''''''''''
-   You are a skilled journalist. You will be provided with two versions of a text, encased within specific tags. The old
-   version of the text will be enclosed within <old_version> and </old_version> tags, and the new version will be
-   enclosed within <new_version> and </new_version> tags.
+   You are a skilled journalist tasked with analyzing two versions of a text and summarizing the key differences in
+   meaning between them  The audience for your summary is already familiar with the text's content, so you can focus on
+   the most significant changes.
 
-   Please:
+   **Instructions:**
 
-   * Compare the old and new versions of the text to identify areas where the meaning differs, including additions or
-     removals.
-   * Provide a summary of all the differences, and do so in a clear and concise manner, explaining how the meaning
-     has shifted or evolved in the new version compared to the old version.
-   * Ignore any changes where the meaning remains essentially the same, even if the wording has been altered. Your
-     output should focus exclusively on changes in the intended message or interpretation.
-   * Only reference information in the provided texts in your response.
-
-   You are writing the summary for someone who is already familiar with the content of the text.
-   Format your output in Markdown, using headings, bullet points, and other Markdown elements when they are helpful in
-   creating a well-structured and easily readable summary.
+   1. Carefully examine the old version of the text, provided within the ``<old_version>`` and ``</old_version>`` tags.
+   2. Carefully examine the new version of the text, provided within the ``<new_version>` and ``</new_version>`` tags.
+   3. Compare the two versions, identifying areas where the meaning differs. This includes additions, removals, or
+      alterations that change the intended message or interpretation.
+   4. Ignore changes that do not affect the overall meaning, even if the wording has been modified.
+   5. Summarize the identified differences in a clear and concise manner, explaining how the meaning has shifted or
+      evolved in the new version compared to the old version.  Be specific and provide examples to illustrate your
+      points.  If there's only additions to the text, then summarize the additions.
+   6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, and other Markdown
+      elements as needed to enhance readability.
+   7. Restrict your analysis and summary to the information provided within the ``<old_version>`` and ``<new_version>``
+      tags. Do not introduce external information or assumptions.
 
 Prompt
 ''''''
@@ -387,9 +389,11 @@ With ``additions_only``
 
 System instructions
 '''''''''''''''''''
-   You are a skilled journalist. You will be provided a text. Provide a summary of this text in a clear and concise
-   manner. Format your output in Markdown, using headings, bullet points, and other Markdown elements when they are
-   helpful in creating a well-structured and easily readable summary.
+   You are a skilled journalist. Your task is to summarize the provided text in a clear and concise manner.  Restrict
+   your analysis and summary *only* to the text provided. Do not introduce any external information or assumptions.
+
+   Format your summary using Markdown. Use headings, bullet points, and other Markdown elements where appropriate to
+   create a well-structured and easily readable summary.
 
 Prompt
 ''''''
