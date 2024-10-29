@@ -68,10 +68,11 @@ jobs:
         python-version: ['3.13', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [ubuntu-latest]
+        disable-gil: [false]
         # 29-oct-24 lxml does not build for free-threaded (requires libxml2 and libxslt development packages
-        # include:
+        include:
           # Free-threaded from https://github.com/actions/setup-python/issues/771
-          # - { os: ubuntu-latest, python-version: '3.13-dev', disable-gil: true }
+          - { os: ubuntu-latest, python-version: '3.13', disable-gil: true }
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
     # If you are using GitHub-hosted runners, you must use an Ubuntu runner
@@ -103,7 +104,6 @@ jobs:
       # Build Python and packages per https://github.com/actions/setup-python
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@main
-        if: '${{ !matrix.disable-gil }}'
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -111,13 +111,6 @@ jobs:
             requirements.txt
             tests/requirements_pytest.txt
 
-      # from https://github.com/actions/setup-python/issues/771
-      - name: Set up Python ${{ matrix.python-version }} (free-threaded)
-        uses: deadsnakes/action@main
-        if: '${{ matrix.disable-gil }}'
-        with:
-          python-version: ${{ matrix.python-version }}
-          nogil: ${{ matrix.disable-gil }}
       - name: Set PYTHON_GIL
         if: '${{ matrix.disable-gil }}'
         run: |
