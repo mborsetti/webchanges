@@ -360,9 +360,12 @@ https://example.net/pypdf-test.pdf:
 https://example.net/pypdf-test-password.pdf:
   filename: pdf-test-password.pdf
   output: "A password-protected PDF Document that can be turned into plain text. "
-https://example.net/pypdf-test-keep-physical-layout.pdf:
+https://example.net/pypdf-test-layout.pdf:
   filename: pdf-test.pdf
-  output: "A PDF Document that can be turned into plain text. "
+  output: "A PDF         Document                 that can be turned into                              plain te         xt."
+https://example.net/pypdf-test-monospace.pdf:
+  filename: pdf-test.pdf
+  output: "A PDF         Document                 that can be turned into                              plain te         xt."
 https://example.net/pypdf-no-multiple-spaces.pdf:
   filename: pdf-test-multiple-spaces.pdf
   output: "This PDF document has lots of mult iple\nspaces."
@@ -372,7 +375,10 @@ https://example.net/pdf-test.pdf:
 https://example.net/pdf-test-password.pdf:
   filename: pdf-test-password.pdf
   output: "A password-protected PDF Document that can be turned into plain text."
-https://example.net/pdf-test-keep-physical-layout.pdf:
+https://example.net/pdf-test-no-physical-layout.pdf:
+  filename: pdf-test.pdf
+  output: "A PDF Document that can be turned into plain text."
+https://example.net/pdf-test-keep-monospace.pdf:
   filename: pdf-test.pdf
   output: "A PDF Document that can be turned into plain text."
 https://example.net/pdf-no-multiple-spaces.pdf:

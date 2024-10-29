@@ -14,10 +14,7 @@ build-backend = "setuptools.build_meta"
 # See https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
 dynamic = ['version', 'dependencies']
 name = 'webchanges'
-description = """\
-    Check web (or command output) for changes since last run and notify. Anonymously alerts you of web changes, with
-    Gen AI summaries (BETA).\
-    """
+description = 'Web Changes Delivered. AI-Summarized. Totally Anonymous.'
 readme = { file = 'README.rst', content-type = 'text/x-rst' }
 requires-python = '>=3.10'
 license = {file = 'LICENSE'}

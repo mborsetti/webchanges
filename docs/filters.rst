@@ -65,8 +65,8 @@ At the moment, the following filters are available:
 
 * To extract text from PDFs:
 
-  - :ref:`pypdf`: Convert PDF to plaintext.
-  - :ref:`pdf2text`: Convert PDF to plaintext (Poppler required as an external dependency).
+  - :ref:`pypdf`: Convert PDF to plaintext (recommended).
+  - :ref:`pdf2text`: Convert PDF to plaintext (Poppler required to be installed in the OS).
 
 * To save images:
 
@@ -939,6 +939,9 @@ This filter converts a PDF file to plaintext using the `pdftotext
 <https://github.com/jalan/pdftotext/blob/master/README.md#pdftotext>`__ Python library, itself based on the `Poppler
 <https://poppler.freedesktop.org/>`__ library.
 
+For most uses, we recommend using the filter :ref:`pypdf`, which achieves similar results without having to install
+OS-specific dependencies (Poppler).
+
 This filter *must* be the first filter in a chain of filters, since it consumes binary data.
 
 .. code-block:: yaml
@@ -961,16 +964,23 @@ spaces may change when a document is updated, so you may get reports containing 
 nothing but changes in the spacing between the columns; in this case try turning it off with the sub-directive
 ``physical: false``.
 
+.. code-block:: yaml
+
+   url: https://example.net/pdf-test-no-physical-layout.pdf
+   filter:
+     - pdf2text:
+         physical: false
+   monospace: true
+
 .. tip:: If your reports are in HTML format and the PDF is columnar in nature, try using the job directive
    ``monospace: true`` to improve readability (see :ref:`here <monospace>`).
 
-.. code-block:: yaml
+   .. code-block:: yaml
 
-   url: https://example.net/pdf-test-keep-physical-layout.pdf
-   filter:
-     - pdf2text:
-         physical: true
-   monospace: true
+      url: https://example.net/pdf-test-keep-monospace.pdf
+      filter:
+        - pdf2text:
+      monospace: true
 
 To the opposite, if you don't care about the layout, you might want to strip all additional spaces that might be added
 by this filter:
@@ -1054,21 +1064,30 @@ If the PDF file is password protected, you can specify its password:
      - pypdf:
          password: webchangessecret
 
-pypdf locates all text drawing commands, in the order they are provided in the content stream of the PDF, and extracts
-the text.
+The pypdf library locates all text drawing commands in the order they appear in the PDF's content stream, and then
+extracts the text. To extract text in a fixed width format that closely adheres to the rendered layout in the source
+PDF (experimental), use the sub-directive ``extraction_mode: layout``:
+
+.. code-block:: yaml
+
+   url: https://example.net/pypdf-test-layout.pdf
+   filter:
+     - pypdf:
+         extraction_mode: layout
+
 
 .. tip:: If your reports are in HTML format and the PDF is columnar in nature, try using the job directive
    ``monospace: true`` to improve readability (see :ref:`here <monospace>`).
 
-.. code-block:: yaml
+   .. code-block:: yaml
 
-   url: https://example.net/pypdf-test-keep-physical-layout.pdf
-   filter:
-     - pypdf:
-   monospace: true
+      url: https://example.net/pypdf-test-monospace.pdf
+      filter:
+        - pypdf:
+            extraction_mode: layout
+      monospace: true
 
-To the opposite, if you don't care about the layout, you might want to strip all additional spaces that might be added
-by this filter:
+If the layout is not a concern, you may want to remove any additional spaces that the filter might have introduced.
 
 .. code-block:: yaml
 
@@ -1082,11 +1101,25 @@ by this filter:
          splitlines: true
 
 
+extract text in a fixed width format that closely adheres to the rendered
+# layout in the source pdf
+
+.. note::
+
+   Users should be aware that updating the underlying pypdf library may trigger :program:`webchanges` to generate a new
+   report, even if the actual content of the PDFs has not changed. This is due to the potential formatting improvements
+   introduced by pypdf updates.
+
+
+
 Optional sub-directives
 ```````````````````````
 * ``password``: Password for a password-protected PDF file (dependency required; see below).
+* ``extraction_mode``: '"layout" for experimental layout mode functionality.
 
 .. versionadded:: 3.16
+.. versionmodified:: 3.27
+   ``extraction_mode`` sub-directive
 
 
 Required packages

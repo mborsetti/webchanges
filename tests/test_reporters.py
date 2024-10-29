@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
 import traceback
 from smtplib import SMTPAuthenticationError
 
 import pytest
-from _pytest.capture import CaptureFixture
 
 try:
     from httpx import UnsupportedProtocol
@@ -33,6 +33,8 @@ except ImportError:
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
 aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
+pushbullet_testing_broken = sys.version_info >= (3, 13)
+
 
 ALL_REPORTERS = [
     reporter for reporter, v in DEFAULT_CONFIG['report'].items() if reporter not in {'tz', 'html', 'text', 'markdown'}
@@ -142,7 +144,7 @@ def test_smtp_password() -> None:
 
 
 @pytest.mark.parametrize('reporter', ALL_REPORTERS)  # type: ignore[misc]
-def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
+def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
     test_report = build_test_report()
     match reporter:
         case 'email':
@@ -178,10 +180,15 @@ def test_reporters(reporter: str, capsys: CaptureFixture[str]) -> None:
                             }
                         )
                     )
-        case 'ifttt' | 'mailgun' | 'prowl' | 'pushbullet' | 'pushover' | 'telegram':
+        case 'ifttt' | 'mailgun' | 'prowl' | 'pushover' | 'telegram':
             with pytest.raises(RuntimeError) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)
             assert reporter in str(pytest_wrapped_e.value).lower()
+        case 'pushbullet':
+            if not pushbullet_testing_broken:
+                with pytest.raises(RuntimeError) as pytest_wrapped_e:
+                    test_report.finish_one(reporter, check_enabled=False)
+                assert reporter in str(pytest_wrapped_e.value).lower()
         case 'matrix':
             if not matrix_client_is_installed:
                 pytest.skip(f"Skipping {reporter} since 'matrix' package is not installed")

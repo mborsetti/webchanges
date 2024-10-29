@@ -50,7 +50,7 @@ connection_required = cast(
 py_latest_only = cast(
     Callable[[Callable], Callable],
     pytest.mark.skipif(
-        sys.version_info < (3, 12),
+        sys.version_info < (3, 13),
         reason='Time consuming; testing latest version only',
     ),
 )
@@ -376,7 +376,7 @@ def test_stress_use_browser() -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
 
     if not os.getenv('GITHUB_ACTIONS'):
-        from webchanges.cli import setup_logger
+        from src.webchanges.cli import setup_logger
 
         setup_logger()
 

@@ -65,9 +65,12 @@ jobs:
       matrix:
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
         # RCs need to be specified fully, e.g. '3.13.0-rc.3'
-        python-version: ['3.12', '3.11', '3.10']
+        python-version: ['3.13', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [ubuntu-latest]
+        include:
+          # Free-threaded
+          - { python-version: '3.13', disable-gil: true }
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
     # If you are using GitHub-hosted runners, you must use an Ubuntu runner
@@ -99,12 +102,25 @@ jobs:
       # Build Python and packages per https://github.com/actions/setup-python
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@main
+        if: '${{ !matrix.disable-gil }}'
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: |
             requirements.txt
             tests/requirements_pytest.txt
+
+      # from https://github.com/actions/setup-python/issues/771
+      - name: Set up Python ${{ matrix.python-version }} (free-threaded)
+        uses: deadsnakes/action@main
+        if: '${{ matrix.disable-gil }}'
+        with:
+          python-version: ${{ matrix.python-version }}
+          nogil: ${{ matrix.disable-gil }}
+      - name: Set PYTHON_GIL
+        if: '${{ matrix.disable-gil }}'
+        run: |
+          echo "PYTHON_GIL=0" >> $GITHUB_ENV
 
       - name: Upgrade pip etc.
         run: |
@@ -331,7 +347,8 @@ jobs:
   deploy:
     name: Deploy release
     permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+      contents: write  # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write  # IMPORTANT: this permission is mandatory for create GitHub release
 #    needs: [test_ubuntu, test_macos, test_windows]
     needs: [test_ubuntu, test_macos]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
@@ -365,13 +382,14 @@ jobs:
 #          password: ${{ secrets.pypi_password }}
 
       - name: Create GitHub release
-        id: create_release
-        uses: actions/create-release@main
+#        uses: actions/create-release@main
+        uses: softprops/action-gh-release@main
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
           body_path: RELEASE.rst
           draft: false
           prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}

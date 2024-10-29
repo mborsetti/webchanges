@@ -1,6 +1,6 @@
 # pip requirements for pytest (testing) (in addition to ./requirements.txt)
 # EXCLUDES requirements for testing 'ocr' and 'pdf2text' filters as they require OS-specific installs
-aioxmpp
+aioxmpp; python_version <= '3.12'  # does not install in 3.13 (broken)
 beautifulsoup4
 chump
 coverage
@@ -19,8 +19,8 @@ jsbeautifier
 keyring
 matrix-client
 minidb
-numpy; python_version == '3.12'
-Pillow; python_version == '3.12'
+numpy; python_version == '3.13'  # only test latest
+Pillow; python_version == '3.13'  # only test latest
 playwright
 psutil
 pushbullet.py
@@ -29,8 +29,8 @@ pypdf[crypto]
 pytest
 pytest-cov
 pytest-playwright
-python-dateutil; python_version == '3.12'
-pytz  # bug in aioxmpp
+python-dateutil; python_version == '3.13'  # only test latest
+pytz; python_version <= '3.12'  # bug in aioxmpp, which does not install in 3.13
 redis
 requests
 urllib3

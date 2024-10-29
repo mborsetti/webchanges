@@ -113,11 +113,6 @@ try:
 except ImportError as e:  # pragma: no cover
     matrix_client = str(e)  # type: ignore[assignment]
 
-try:
-    from pushbullet import Pushbullet
-except ImportError as e:  # pragma: no cover
-    Pushbullet = str(e)  # type: ignore[assignment]
-
 if os.name == 'nt':
     try:
         from colorama import AnsiToWin32
@@ -1023,13 +1018,22 @@ class PushbulletReport(WebServiceReporter):
 
     config: _ConfigReportPushbullet
 
-    def web_service_get(self) -> 'Pushbullet':
+    def web_service_get(self) -> Any:
+        # def web_service_get(self) -> Pushbullet:
+        # Moved here as loading breaks Pytest in Python 3.13 on Windows
+        # Is stuck in collecting due to File Windows fatal exception: access violation
+        try:
+            from pushbullet import Pushbullet
+        except ImportError as e:  # pragma: no cover
+            Pushbullet = str(e)  # type: ignore[assignment]
+
         if isinstance(Pushbullet, str):
             self.raise_import_error('pushbullet', self.__kind__, Pushbullet)
 
         return Pushbullet(self.config['api_key'])
 
-    def web_service_submit(self, service: 'Pushbullet', title: str, body: str) -> None:
+    def web_service_submit(self, service: Any, title: str, body: str) -> None:
+        # def web_service_submit(self, service: Pushbullet, title: str, body: str) -> None:
         service.push_note(title, body)
 
 

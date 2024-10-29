@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import difflib
 import html
+import io
 import json
 import logging
 import math
@@ -19,14 +20,16 @@ import traceback
 import urllib.parse
 import warnings
 from base64 import b64encode
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Iterator, Literal, TYPE_CHECKING
+from typing import Any, Iterator, Literal, TYPE_CHECKING, TypedDict
 from zoneinfo import ZoneInfo
 
 import html2text
 
+from webchanges.jobs import JobBase
 from webchanges.util import linkify, mark_to_html, TrackSubClasses
 
 try:
@@ -72,6 +75,23 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+AiGoogleDirectives = TypedDict(
+    'AiGoogleDirectives',
+    {
+        'model': str,
+        'additions_only': str,
+        'system_instructions': str,
+        'prompt': str,
+        'prompt_ud_context_lines': int,
+        'timeout': int,
+        'max_output_tokens': int | None,
+        'temperature': float | None,
+        'top_p': float | None,
+        'top_k': float | None,
+    },
+    total=False,
+)
 
 
 class DifferBase(metaclass=TrackSubClasses):
@@ -851,9 +871,10 @@ class ImageDiffer(DifferBase):
             "to an image file) (default: 'url')"
         ),
         'mse_threshold': (
-            'the minimum mean squared error (MSE) between two images to consider them changed if numpy in installed '
+            'the minimum mean squared error (MSE) between two images to consider them changed, if numpy in installed '
             '(default: 2.5)'
         ),
+        'ai_google': 'Generative AI summary of changes (BETA)',
     }
 
     def differ(
@@ -936,8 +957,146 @@ class ImageDiffer(DifferBase):
             diff_colored = diff_image.convert('RGB').convert('RGB', matrix=yellow_tint_matrix)
 
             final_img = ImageChops.add(back_image.convert('RGB'), diff_colored)
+            final_img.format = img2.format
 
             return final_img, mse_value
+
+        def ai_google(
+            old_image: Image.Image,
+            new_image: Image.Image,
+            directives: AiGoogleDirectives,
+        ) -> str:
+            """Summarize changes in image using Generative AI (ALPHA)."""
+            logger.info(f'Job {self.job.index_number}: Running ai_google for {self.__kind__} differ')
+            warnings.warn(
+                f'Job {self.job.index_number}: Using ai_google in differ {self.__kind__}, which is ALPHA, '
+                f'may have bugs, and may change in the future. Please report any problems or suggestions at '
+                f'https://github.com/mborsetti/webchanges/discussions.',
+                RuntimeWarning,
+            )
+
+            api_version = '1beta'
+            GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
+            if len(GOOGLE_AI_API_KEY) != 39:
+                logger.error(
+                    f'Job {self.job.index_number}: Environment variable GOOGLE_AI_API_KEY not found or is of the '
+                    f'incorrect length {len(GOOGLE_AI_API_KEY)} ({self.job.get_location()})'
+                )
+                return (
+                    f'## ERROR in summarizing changes using {self.__kind__}:\n'
+                    f'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length '
+                    f'{len(GOOGLE_AI_API_KEY)}.\n'
+                )
+            client = httpx.Client(http2=True, timeout=self.job.timeout)
+
+            def _load_image(img_data: tuple[str, Image.Image]) -> dict[str, dict[str, str] | Exception | str]:
+                img_name, image = img_data
+                # Convert image to bytes
+                img_byte_arr = io.BytesIO()
+                image.save(img_byte_arr, format=image.format)
+                image_data = img_byte_arr.getvalue()
+                mime_type = f'image/{image.format.lower()}'  # type: ignore[union-attr]
+
+                logger.info(
+                    f'Job {self.job.index_number}: Loading {img_name} ({image.format}) to Google AI '
+                    f'({len(image_data) / 1024:,.0f} kbytes)'
+                )
+
+                # Initial resumable upload request
+                headers = {
+                    'X-Goog-Upload-Protocol': 'resumable',
+                    'X-Goog-Upload-Command': 'start',
+                    'X-Goog-Upload-Header-Content-Length': str(len(image_data)),
+                    'X-Goog-Upload-Header-Content-Type': mime_type,
+                    'Content-Type': 'application/json',
+                }
+                data = {'file': {'display_name': 'TEXT'}}
+
+                try:
+                    response = client.post(
+                        f'https://generativelanguage.googleapis.com/upload/v{api_version}/files?'
+                        f'key={GOOGLE_AI_API_KEY}',
+                        headers=headers,
+                        json=data,
+                    )
+                except httpx.HTTPError as e:
+                    return {'error': e, 'img_name': img_name}
+                upload_url = response.headers['X-Goog-Upload-Url']
+
+                # Upload the image data
+                headers = {
+                    'Content-Length': str(len(image_data)),
+                    'X-Goog-Upload-Offset': '0',
+                    'X-Goog-Upload-Command': 'upload, finalize',
+                }
+                try:
+                    response = client.post(upload_url, headers=headers, content=image_data)
+                except httpx.HTTPError as e:
+                    return {'error': e, 'img_name': img_name}
+
+                # Extract file URI from response
+                file_info = response.json()
+                file_uri = file_info['file']['uri']
+                logger.info(f'Job {self.job.index_number}: {img_name.capitalize()} loaded to {file_uri}')
+
+                return {
+                    'file_data': {
+                        'mime_type': mime_type,
+                        'file_uri': file_uri,
+                    }
+                }
+
+            # Create a diff image
+            # diff_image = ImageChops.difference(old_image, new_image)
+            # diff_image.format = new_image.format
+
+            # upload to Google
+            additional_parts: list[dict[str, dict[str, str]]] = []
+            executor = ThreadPoolExecutor()
+            for additional_part in executor.map(
+                _load_image,
+                (
+                    ('old image', old_image),
+                    ('new image', new_image),
+                    # ('differences image', diff_image),
+                ),
+            ):
+                if 'error' not in additional_part:
+                    additional_parts.append(additional_part)  # type: ignore[arg-type]
+                else:
+                    logger.error(
+                        f'Job {self.job.index_number}: ai_google for {self.__kind__} HTTP Client error '
+                        f"{type(additional_part['error'])} when loading {additional_part['img_name']} to Google AI: "
+                        f"{additional_part['error']}"
+                    )
+                    return (
+                        f"HTTP Client error {type(additional_part['error'])} when loading "
+                        f"{additional_part['img_name']} to Google AI: {additional_part['error']}"
+                    )
+
+            system_instructions = (
+                'You are a skilled journalist tasked with summarizing the key differences between two versions '
+                'of the same image. The audience for your summary is already familiar with the image, so you can'
+                'focus on the most significant changes.'
+            )
+            model_prompt = (
+                '**Instructions:**\n\n'
+                f"1. Compare the new image {additional_parts[1]['file_data']['file_uri']} to the old image "
+                f"{additional_parts[0]['file_data']['file_uri']}, focusing only on major changes.\n"
+                '2. Summarize the meaning of the changes in a clear and concise manner. Be specific.\n'
+                '3. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, and '
+                'other Markdown elements as needed to enhance readability.\n'
+                '4. Restrict your analysis and summary to these two specific images. Do not introduce external '
+                'information or assumptions. Do not introduce knowledge from images you may have already seen.\n'
+            )
+            summary = AIGoogleDiffer._send_to_model(
+                self.job,
+                system_instructions,
+                model_prompt,
+                additional_parts=additional_parts,  # type: ignore[arg-type]
+                directives=directives,
+            )
+            return summary
 
         data_type = directives.get('data_type', 'url')
         mse_threshold = directives.get('mse_threshold', 2.5)
@@ -1005,13 +1164,18 @@ class ImageDiffer(DifferBase):
 
         # Convert the difference image to a base64 object
         output_stream = BytesIO()
-        diff_image.save(output_stream, format=new_image.format)
+        diff_image.save(output_stream, format=diff_image.format)
         encoded_diff = b64encode(output_stream.getvalue()).decode()
 
         # Convert the new image to a base64 object
         output_stream = BytesIO()
         new_image.save(output_stream, format=new_image.format)
         encoded_new = b64encode(output_stream.getvalue()).decode()
+
+        # prepare AI summary
+        summary = ''
+        if 'ai_google' in directives:
+            summary = ai_google(old_image, new_image, directives.get('ai_google', {}))
 
         # Prepare HTML output
         htm = [
@@ -1033,15 +1197,41 @@ class ImageDiffer(DifferBase):
         htm.extend(
             [
                 'Differences from old (in yellow):',
-                f'<img src="data:image/{(old_image.format or "").lower()};base64,{encoded_diff}" '
+                f'<img src="data:image/{(diff_image.format or "").lower()};base64,{encoded_diff}" '
                 'style="max-width: 100%; display: block;">',
             ]
         )
+        changed_text = 'The image has changed; please see an HTML report for the visualization.'
+        if not summary:
+            return {
+                'text': changed_text,
+                'markdown': changed_text,
+                'html': '<br>\n'.join(htm),
+            }
 
+        newline = '\n'  # For Python < 3.12 f-string {} compatibility
+        back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
+        directives_text = (
+            ', '.join(
+                f'{key}={str(value).replace(newline, back_n)}' for key, value in directives.get('ai_google', {}).items()
+            )
+            or 'None'
+        )
+        footer = f'Summary generated by Google Generative AI (ai_google directive(s): {directives_text})'
         return {
-            'text': 'The image has changed; please see an HTML report for the visualization.',
-            'markdown': 'The image has changed; please see an HTML report for the visualization.',
-            'html': '<br>\n'.join(htm),
+            'text': f'{summary}\n\n\nA visualization is available in HTML reports.\n------------\n{footer}',
+            'markdown': f'{summary}\n\n\nA visualization is available in HTML reports.\n* * *\n{footer}',
+            'html': '<br>\n'.join(
+                [
+                    mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
+                    '',
+                ]
+                + htm
+                + [
+                    '-----',
+                    f'<i><small>{footer}</small></i>',
+                ]
+            ),
         }
 
 
@@ -1071,15 +1261,96 @@ class AIGoogleDiffer(DifferBase):
         'temperature': "the model's Temperature parameter (default: 0.0)",
         'top_p': "the model's TopP parameter (default: None, i.e. model's default",
         'top_k': "the model's TopK parameter (default: None, i.e. model's default",
-        'token_limit': (
-            "the maximum number of tokens, if different from model's default (default: None, i.e. model's default)"
-        ),
     }
     __default_subdirective__ = 'model'
 
+    @staticmethod
+    def _send_to_model(
+        job: JobBase,
+        system_instructions: str,
+        model_prompt: str,
+        additional_parts: list[dict[str, str | dict[str, str]]] | None = None,
+        directives: AiGoogleDirectives | None = None,
+    ) -> str:
+        """Creates the summary request to the model"""
+        api_version = '1beta'
+        if directives is None:
+            directives = {}
+        if 'model' not in directives:
+            directives['model'] = 'gemini-1.5-pro'  # also for footer
+        model = directives.get('model')
+        timeout = directives.get('timeout', 300)
+        max_output_tokens = directives.get('max_output_tokens')
+        temperature = directives.get('temperature', 0.0)
+        top_p = directives.get('top_p')
+        top_k = directives.get('top_k')
+
+        GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
+        if len(GOOGLE_AI_API_KEY) != 39:
+            logger.error(
+                f'Job {job.index_number}: Environment variable GOOGLE_AI_API_KEY not found or is of the '
+                f'incorrect length {len(GOOGLE_AI_API_KEY)} ({job.get_location()})'
+            )
+            return (
+                f'## ERROR in summarizing changes using Google AI:\n'
+                f'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length '
+                f'{len(GOOGLE_AI_API_KEY)}.\n'
+            )
+
+        data: dict[str, Any] = {
+            'system_instruction': {'parts': [{'text': system_instructions}]},
+            'contents': [{'parts': [{'text': model_prompt}]}],
+            'generation_config': {
+                'max_output_tokens': max_output_tokens,
+                'temperature': temperature,
+                'top_p': top_p,
+                'top_k': top_k,
+            },
+        }
+        if additional_parts:
+            data['contents'][0]['parts'].extend(additional_parts)
+        logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
+        try:
+            r = httpx.Client(http2=True).post(  # noqa: S113 Call to httpx without timeout
+                f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
+                f'key={GOOGLE_AI_API_KEY}',
+                json=data,
+                headers={'Content-Type': 'application/json'},
+                timeout=timeout,
+            )
+            if r.is_success:
+                result = r.json()
+                candidate = result['candidates'][0]
+                logger.info(f"Job {job.index_number}: AI generation finished by {candidate['finishReason']}")
+                if 'content' in candidate:
+                    summary = candidate['content']['parts'][0]['text'].rstrip()
+                else:
+                    summary = (
+                        f'AI summary unavailable: Model did not return any candidate output:\n'
+                        f'{json.dumps(result, ensure_ascii=True, indent=2)}'
+                    )
+            elif r.status_code == 400:
+                summary = (
+                    f'AI summary unavailable: Received error from {r.url.host}: '
+                    f"{r.json().get('error', {}).get('message') or ''}"
+                )
+            else:
+                summary = (
+                    f'AI summary unavailable: Received error {r.status_code} {r.reason_phrase} from ' f'{r.url.host}'
+                )
+                if r.content:
+                    summary += f": {r.json().get('error', {}).get('message') or ''}"
+
+        except httpx.HTTPError as e:
+            summary = (
+                f'AI summary unavailable: HTTP client error: {e} when requesting data from ' f'{e.request.url.host}'
+            )
+
+        return summary
+
     def differ(
         self,
-        directives: dict[str, Any],
+        directives: AiGoogleDirectives,  # type: ignore[override]
         report_kind: Literal['text', 'markdown', 'html'],
         _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
         tz: ZoneInfo | None = None,
@@ -1106,29 +1377,8 @@ class AIGoogleDiffer(DifferBase):
                     f'{len(GOOGLE_AI_API_KEY)}.\n'
                 )
 
-            _models_token_limits = {  # from https://ai.google.dev/gemini-api/docs/models/gemini
-                'gemini-1.5-pro': 2097152,
-                'gemini-1.5-flash': 1048576,
-                'gemini-1.0': 30720,
-                'gemini-pro': 30720,  # legacy naming
-                'gemma-2': 8192,
-            }
             if 'model' not in directives:
                 directives['model'] = 'gemini-1.5-flash-latest'  # also for footer
-            model = directives['model']
-            token_limit = directives.get('token_limit')
-            if not token_limit:
-                for _model, _token_limit in _models_token_limits.items():
-                    if model.startswith(_model):
-                        token_limit = _token_limit
-                        break
-                if not token_limit:
-                    logger.error(
-                        f"Job {self.job.index_number}: Differ '{self.__kind__}' does not know `model: {model}` "
-                        f"(supported models starting with: {', '.join(sorted(list(_models_token_limits.keys())))}) "
-                        f'({self.job.get_location()})'
-                    )
-                    return f'## ERROR in summarizing changes using {self.__kind__}:\n' f'Unknown model {model}.\n'
 
             if '{unified_diff' in prompt:  # matches unified_diff or unified_diff_new
                 default_context_lines = 9999 if '{unified_diff}' in prompt else 0  # none if only unified_diff_new
@@ -1159,67 +1409,6 @@ class AIGoogleDiffer(DifferBase):
             else:
                 unified_diff_new = ''
 
-            def _send_to_model(model_prompt: str, system_instructions: str) -> str:
-                """Creates the summary request to the model"""
-                api_version = '1beta'
-                max_output_tokens = directives.get('max_output_tokens')
-                temperature = directives.get('temperature', 0.0)
-                top_p = directives.get('top_p')
-                top_k = directives.get('top_k')
-                data = {
-                    'system_instruction': {'parts': [{'text': system_instructions}]},
-                    'contents': [{'parts': [{'text': model_prompt}]}],
-                    'generation_config': {
-                        'max_output_tokens': max_output_tokens,
-                        'temperature': temperature,
-                        'top_p': top_p,
-                        'top_k': top_k,
-                    },
-                }
-                logger.info(f'Job {self.job.index_number}: Making summary request to Google model {model}')
-                try:
-                    timeout = directives.get('timeout', 300)
-                    r = httpx.Client(http2=True).post(  # noqa: S113 Call to httpx without timeout
-                        f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
-                        f'key={GOOGLE_AI_API_KEY}',
-                        json=data,
-                        headers={'Content-Type': 'application/json'},
-                        timeout=timeout,
-                    )
-                    if r.is_success:
-                        result = r.json()
-                        candidate = result['candidates'][0]
-                        logger.info(
-                            f"Job {self.job.index_number}: AI generation finished by {candidate['finishReason']}"
-                        )
-                        if 'content' in candidate:
-                            summary = candidate['content']['parts'][0]['text'].rstrip()
-                        else:
-                            summary = (
-                                f'AI summary unavailable: Model did not return any candidate output:\n'
-                                f'{json.dumps(result, ensure_ascii=True, indent=2)}'
-                            )
-                    elif r.status_code == 400:
-                        summary = (
-                            f'AI summary unavailable: Received error from {r.url.host}: '
-                            f"{r.json().get('error', {}).get('message') or ''}"
-                        )
-                    else:
-                        summary = (
-                            f'AI summary unavailable: Received error {r.status_code} {r.reason_phrase} from '
-                            f'{r.url.host}'
-                        )
-                        if r.content:
-                            summary += f": {r.json().get('error', {}).get('message') or ''}"
-
-                except httpx.HTTPError as e:
-                    summary = (
-                        f'AI summary unavailable: HTTP client error: {e} when requesting data from '
-                        f'{e.request.url.host}'
-                    )
-
-                return summary
-
             # check if data is different (same data is sent during testing)
             if '{old_text}' in prompt and '{new_text}' in prompt and self.state.old_data == self.state.new_data:
                 return ''
@@ -1231,43 +1420,13 @@ class AIGoogleDiffer(DifferBase):
                 new_text=self.state.new_data,
             )
 
-            if len(model_prompt) / 4 < token_limit:
-                summary = _send_to_model(model_prompt, system_instructions)
-            elif '{unified_diff}' in prompt:
-                logger.info(
-                    f'Job {self.job.index_number}: Model prompt with full diff is too long: '
-                    f'({len(model_prompt) / 4:,.0f} est. tokens exceeds limit of {token_limit:,.0f} tokens); '
-                    f'recomputing with default contextlines'
-                )
-                unified_diff = '\n'.join(
-                    difflib.unified_diff(
-                        str(self.state.old_data).splitlines(),
-                        str(self.state.new_data).splitlines(),
-                        # '@',
-                        # '@',
-                        # self.make_timestamp(self.state.old_timestamp, tz),
-                        # self.make_timestamp(self.state.new_timestamp, tz),
-                    )
-                )
-                model_prompt = prompt.format(
-                    unified_diff=unified_diff,
-                    unified_diff_new=unified_diff_new,
-                    old_text=self.state.old_data,
-                    new_text=self.state.new_data,
-                )
-                if len(model_prompt) / 4 < token_limit:
-                    summary = _send_to_model(model_prompt, system_instructions)
-                else:
-                    summary = (
-                        f'AI summary unavailable (model prompt with unified diff is too long: '
-                        f'{len(model_prompt) / 4:,.0f} est. tokens exceeds maximum of {token_limit:,.0f})'
-                    )
-            else:
-                logger.info(
-                    f'The model prompt may be too long: {len(model_prompt) / 4:,.0f} est. tokens exceeds '
-                    f'limit of {token_limit:,.0f} tokens'
-                )
-                summary = _send_to_model(model_prompt, system_instructions)
+            summary = self._send_to_model(
+                self.job,
+                system_instructions,
+                model_prompt,
+                directives=directives,
+            )
+
             return summary
 
         if directives.get('additions_only') or self.job.additions_only:
@@ -1308,8 +1467,8 @@ class AIGoogleDiffer(DifferBase):
         if not summary:
             self.state.verb = 'changed,no_report'
             return {'text': '', 'markdown': '', 'html': ''}
-        newline = '\n'  # For Python < 3.12 f-string compatibility
-        back_n = '\\n'  # For Python < 3.12 f-string compatibility
+        newline = '\n'  # For Python < 3.12 f-string {} compatibility
+        back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
         directives_text = (
             ', '.join(f'{key}={str(value).replace(newline, back_n)}' for key, value in directives.items()) or 'None'
         )
@@ -1325,8 +1484,8 @@ class AIGoogleDiffer(DifferBase):
                 temp_unfiltered_diff,
             )
         return {
-            'text': summary + '\n\n' + unified_report['text'] + '\n------------\n' + footer,
-            'markdown': summary + '\n\n' + unified_report['markdown'] + '\n* * *\n' + footer,
+            'text': f"{summary}\n\n{unified_report['text']}\n------------\n{footer}",
+            'markdown': f"{summary}\n\n{unified_report['markdown']}\n* * *\n{footer}",
             'html': '\n'.join(
                 [
                     mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),

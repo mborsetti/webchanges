@@ -1,11 +1,11 @@
-colorama; os_name == "nt"
+colorama; sys_platform == "win32"
 cssselect
 h2
 html2text
 httpx
-lxml
+lxml>=5.3.0  # prior versions don't build in 3.13
 markdown2
 msgpack
 platformdirs
 pyyaml
-tzdata; os_name == "nt"
+tzdata; sys_platform == "win32"

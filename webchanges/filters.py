@@ -19,7 +19,7 @@ import warnings
 from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
-from typing import Any, Iterator, TYPE_CHECKING
+from typing import Any, Iterator, Literal, TYPE_CHECKING
 from urllib.parse import urljoin
 from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent defusedxml package. TODO
 
@@ -646,6 +646,7 @@ class PypdfFilter(FilterBase):
 
     __supported_subfilters__ = {
         'password': 'PDF password for decryption',
+        'extraction_mode': '"layout" for experimental layout mode functionality',
     }
 
     __default_subfilter__ = 'password'
@@ -662,6 +663,7 @@ class PypdfFilter(FilterBase):
             self.raise_import_error('pypdf', self.__kind__, PdfReader)
 
         password = subfilter.get('password', None)
+        extraction_mode: Literal['plain', 'layout'] = subfilter.get('extraction_mode', 'plain')
 
         if password:
             try:
@@ -677,7 +679,7 @@ class PypdfFilter(FilterBase):
         reader = PdfReader(io.BytesIO(data), password=password)
         logger.info(f'Job {self.job.index_number}: Found {reader.pdf_header} file')
         for page in reader.pages:
-            text.append(page.extract_text())
+            text.append(page.extract_text(extraction_mode=extraction_mode))
 
         return '\n'.join(text), 'text/plain'
 

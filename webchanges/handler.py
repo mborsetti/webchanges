@@ -5,8 +5,8 @@
 from __future__ import annotations
 
 import logging
-import os
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import sys
 import time
 import traceback
 from concurrent.futures import Future
@@ -126,6 +126,14 @@ class JobState(ContextManager):
             raise OSError(exc_value)
         return None
 
+    @staticmethod
+    def debugger_attached() -> bool:
+        """Checks if the code is currently running within a debugger.
+
+        :returns: True if a debugger is attached, False otherwise.
+        """
+        return sys.gettrace() is not None
+
     def added_data(self) -> dict[str, bool | str | Exception | float | None]:
         """Returns a dict with the data added in the processing of the job."""
         attrs = ('error_ignored', 'exception', 'new_data', 'new_etag', 'new_timestamp')
@@ -211,8 +219,13 @@ class JobState(ContextManager):
 
             except Exception as e:
                 # Job has a chance to format and ignore its error
-                # if os.getenv('PYCHARM_HOSTED'):
-                #     raise
+                if self.job.https_proxy and e.args[0].startswith('[SSL:'):
+                    args_list = list(e.args)
+                    args_list[0] += f' (Check proxy {self.job.https_proxy})'
+                    e.args = tuple(args_list)
+                if self.debugger_attached():
+                    logger.info('Running in a debugger: raising the exception instead of processing it')
+                    raise
                 self.new_timestamp = time.time()
                 self.exception = e
                 self.traceback = self.job.format_error(e, traceback.format_exc())
@@ -225,7 +238,8 @@ class JobState(ContextManager):
                     )
         except Exception as e:
             # Job failed its chance to handle error
-            if os.getenv('PYCHARM_HOSTED'):
+            if self.debugger_attached():
+                logger.info('Running in a debugger: raising the exception instead of processing it')
                 raise
             self.exception = e
             self.traceback = self.job.format_error(e, traceback.format_exc())

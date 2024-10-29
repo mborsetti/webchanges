@@ -243,7 +243,7 @@ by using a prompt similar to the one here:
 More information about writing input prompts for these models can be found `here
 <https://ai.google.dev/gemini-api/docs/prompting-intro>`__. You may also ask the model itself (in `AI Studio
 <https://aistudio.google.com/>`__) to suggest prompts that are appropriate to your use case, or use the "Help me write"
-function in `AI Studio Prompts <https://console.cloud.google.com/vertex-ai/studio/freeform>`__.
+function in `AI Vertex Vertex Prompt <https://console.cloud.google.com/vertex-ai/studio/freeform>`__.
 
 Example
 ```````
@@ -307,7 +307,6 @@ This differ is currently in BETA and these directives MAY change in the future.
 * ``top_p`` (float between 0.0 and 1.0): The model's TopP parameter, or the cumulative probability cutoff for token
   selection; lower p means sampling from a smaller, more top-weighted nucleus and reduces diversity (see note below)
   (default: model-dependent, but typically 0.95 or 1.0, see Google documentation)
-* ``token_limit`` (int): An override of the maximum size of the model's context window (used for internal testing).
 * ``unified`` (dict): directives passed to :ref:`unified differ <unified_diff>`, which prepares the unified diff
   attached to this report.
 

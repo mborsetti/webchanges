@@ -824,6 +824,12 @@ scheduler), so you can save the password in the ``insecure_password`` directive 
 As the name says, storing the password as plaintext in the configuration is insecure and bad practice, yet for an
 account that only sends these reports this might be a low-risk way.
 
+.. warning::
+
+  The `aioxmpp <https://pypi.org/project/aioxmpp/>`__ library required by the ``xmpp`` reporter will not install in
+  Python 3.13 (at least on Windows), and the development of the `library <https://codeberg.org/jssfr/aioxmpp>`__ has
+  been halted.
+
 Required packages
 ~~~~~~~~~~~~~~~~~
 To run jobs with this reporter, you need to install :ref:`optional packages <optional_packages>`. Install them using:

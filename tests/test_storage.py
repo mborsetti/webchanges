@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from _pytest.capture import CaptureFixture
 
 from webchanges import __docs_url__
 from webchanges.config import CommandConfig
@@ -677,7 +676,7 @@ def test_clean_and_history_data(database_engine: SsdbStorage) -> None:
         assert len(history) == 0
 
 
-def test_migrate_urlwatch_legacy_db(tmp_path: Path, capsys: CaptureFixture[str]) -> None:
+def test_migrate_urlwatch_legacy_db(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     orig_ssdb_file = data_path.joinpath('cache-urlwatch_legacy.db')
     temp_ssdb_file = tmp_path.joinpath(f'cache-urlwatch_legacy-temp_{sys.version_info.minor}.db')
     shutil.copyfile(orig_ssdb_file, temp_ssdb_file)

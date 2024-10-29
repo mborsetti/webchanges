@@ -33,6 +33,26 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.27.0rc0
+==================
+Unreleased
+
+Added
+-----
+* New Sub-directive in ``pypdf`` Filter: Added ``extraction_mode`` sub-directive.
+* Python 3.13 Testing: **webchanges** now is tested on Python 3.13 before releasing. However, the `aioxmpp
+  <https://pypi.org/project/aioxmpp/>`__ library required by the ``xmpp`` reporter will not install in Python 3.13 (at
+  least on Windows), and the development of the `library <https://codeberg.org/jssfr/aioxmpp>`__ has been
+  halted.
+
+Internals
+---------
+* Added ``ai_google`` directive to the ``image`` differ to test Generative AI summarization of differences between two
+  images, but the results are still fairly bad and practically. This feature is in ALPHA and undocumented, and will
+  not be developed further until the models improve to produce useful summaries.
+
+
+
 Version 3.26.0
 ===================
 2024-10-13
@@ -40,7 +60,7 @@ Version 3.26.0
 Added
 -----
 * Python 3.13 Support: **webchanges** now supports Python 3.13, but complete testing is pending due to dependencies
-  such has ``lxml`` not having yet published installation packages ("wheels") for 3.13.
+  such as ``lxml`` not having yet published installation packages ("wheels") for 3.13.
 * Glob Pattern Support for Hooks Files: The ``--hooks`` command-line argument now accepts glob patterns for flexible
   hook file selection.
 * Multiple Hook Specifications: Specify multiple hook files or glob patterns by repeating the ``--hooks`` argument.
@@ -50,7 +70,7 @@ Added
   improved efficiency (requires ``pip install -U webchanges[zstd]``).
 * ``ai_google`` Differ Enhancements (BETA):
 
-  * New ``additions_only`` Subdirective: When set to true, generates AI-powered summaries of only the added text. This
+  * New ``additions_only`` Sub-directive: When set to true, generates AI-powered summaries of only the added text. This
     is particularly helpful for monitoring pages with regularly added content (e.g., press releases).
   * New ``unified_diff_new`` Field: Added to the ``prompt`` directive.
 
@@ -64,7 +84,7 @@ Changed
      ``prompt`` directive have been renamed to ``old_text`` and ``new_text``, respectively.
   *  Improved Output Quality: Significantly enhanced output quality by revising the default values for
      ``system_instructions`` and ``prompt``.
-  *  Updated Documentation.
+  *  Updated documentation.
 
 Fixed
 -----
