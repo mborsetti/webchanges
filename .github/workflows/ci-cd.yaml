@@ -154,12 +154,12 @@ jobs:
           pip install --upgrade pdftotext pytesseract
 
       - name: Install all other dependencies (gil)
-        if: ! matrix.disable-gil
+        if: "${{ !matrix.disable-gil }}"
         run: |
           pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
-      - name: Install all other dependencies (thread-free)
-        if: matrix.disable-gil
+      - name: Install all other dependencies (free-threaded)
+        if: "${{ matrix.disable-gil }}"
         run: |
           pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt lxml<=4.8.0-1build1
 
