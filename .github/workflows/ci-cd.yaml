@@ -159,7 +159,7 @@ jobs:
       - name: Install all other dependencies (free-threaded)
         if: "${{ matrix.disable-gil }}"
         run: |
-          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt lxml<=4.8.0-1build1
+          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt lxml<=4.8.0
 
 #      - name: Install all other dependencies (py12)
 #        if: matrix.python-version == '3.12'
