@@ -129,6 +129,14 @@ jobs:
         run: |
           pip install --upgrade pip setuptools wheel
 
+      - name: Install build dependencies for Python 3.13t for wheel-less lxml (Linux)
+        # https://lxml.de/installation.html#installation
+        if: matrix.disable-gil && matrix.python-version == '3.13' && runner.os == 'Linux'
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
+          CFLAGS="-O0" pip install lxml
+
 #      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
 #        # https://lxml.de/installation.html#installation
 #        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'Linux'
@@ -139,7 +147,7 @@ jobs:
 
       - name: Install pdf2text and ocr dependencies (Linux Python latest)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.12' && runner.os == 'Linux'
+        if: matrix.python-version == '3.13' && runner.os == 'Linux'
         # https://github.com/jalan/pdftotext#os-dependencies
         run: |
           sudo apt-get -y update
@@ -217,7 +225,7 @@ jobs:
 
       - name: Install pdf2text and ocr dependencies (Python latest)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.13'
         run: |
           brew install poppler tesseract
           pip install --upgrade pdftotext pytesseract
