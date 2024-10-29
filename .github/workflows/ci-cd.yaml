@@ -56,7 +56,7 @@ jobs:
 #      #   uses: pre-commit/action@v2.0.3
 
   test_ubuntu:
-    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
+    name: "Test ${{ matrix.python-version }} ${{ matrix.disable-gil && 'free-threaded' || '' }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
     # needs: [pre-commit]

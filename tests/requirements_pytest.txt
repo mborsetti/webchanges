@@ -1,6 +1,6 @@
 # pip requirements for pytest (testing) (in addition to ./requirements.txt)
 # EXCLUDES requirements for testing 'ocr' and 'pdf2text' filters as they require OS-specific installs
-aioxmpp; python_version <= '3.12'  # does not install in 3.13 (broken)
+# aioxmpp  # does not install in oct24 (orderedset dependency fails to build)
 beautifulsoup4
 chump
 coverage
@@ -30,7 +30,7 @@ pytest
 pytest-cov
 pytest-playwright
 python-dateutil; python_version == '3.13'  # only test latest
-pytz; python_version <= '3.12'  # bug in aioxmpp, which does not install in 3.13
+# pytz  # bug in aioxmpp, which does not install in oct24
 redis
 requests
 urllib3
