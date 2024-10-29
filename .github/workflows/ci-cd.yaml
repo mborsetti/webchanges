@@ -120,23 +120,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
           nogil: ${{ matrix.disable-gil }}
 
-      - name: Set PYTHON_GIL
-        if: '${{ matrix.disable-gil }}'
-        run: |
-          echo "PYTHON_GIL=0" >> $GITHUB_ENV
-
-      - name: Install build dependencies for Python 3.13t for wheel-less lxml (Linux)
-        # https://lxml.de/installation.html#installation
-        if: matrix.disable-gil && matrix.python-version == '3.13' && runner.os == 'Linux'
-        run: |
-          sudo apt-get -y update
-          sudo apt-get -y install libxml2-dev libxslt1-dev python3-dev
-          CFLAGS="-O0" pip install lxml
-
       - name: Upgrade pip etc.
         run: |
           pip install --upgrade pip setuptools wheel
 
+      - name: Install build dependencies for Python 3.13t for wheel-less lxml (Linux)
+        # https://lxml.de/installation.html#installation
+        if: matrix.disable-gil
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install python-lxml
+
+      - name: Set PYTHON_GIL
+        if: '${{ matrix.disable-gil }}'
+        run: |
+          echo "PYTHON_GIL=0" >> $GITHUB_ENV
 
 #      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
 #        # https://lxml.de/installation.html#installation
@@ -155,10 +153,15 @@ jobs:
           sudo apt-get -y install python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
           pip install --upgrade pdftotext pytesseract
 
-      - name: Install all other dependencies
-#        if: matrix.python-version < '3.12'
+      - name: Install all other dependencies (gil)
+        if: ! matrix.disable-gil
         run: |
           pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
+
+      - name: Install all other dependencies (thread-free)
+        if: matrix.disable-gil
+        run: |
+          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt lxml<=4.8.0-1build1
 
 #      - name: Install all other dependencies (py12)
 #        if: matrix.python-version == '3.12'
