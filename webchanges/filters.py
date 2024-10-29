@@ -27,6 +27,9 @@ from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent de
 import html2text
 import yaml
 
+from webchanges import __project_name__
+from webchanges.util import TrackSubClasses
+
 try:
     from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
     from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
@@ -34,9 +37,6 @@ except ImportError as e:
     from xml import etree
 
     CSSSelector = str(e)
-
-from webchanges import __project_name__
-from webchanges.util import TrackSubClasses
 
 # https://stackoverflow.com/questions/712791
 try:
