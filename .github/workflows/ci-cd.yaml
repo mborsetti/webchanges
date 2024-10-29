@@ -68,9 +68,9 @@ jobs:
         python-version: ['3.13', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [ubuntu-latest]
-        include:
-          # Free-threaded
-          - { python-version: '3.13', disable-gil: true }
+        # include:
+          # Free-threaded from https://github.com/actions/setup-python/issues/771
+          # - { os: ubuntu-latest, python-version: '3.13-dev', disable-gil: true }
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
     # If you are using GitHub-hosted runners, you must use an Ubuntu runner
