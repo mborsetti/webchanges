@@ -128,9 +128,9 @@ class JobState(ContextManager):
 
     @staticmethod
     def debugger_attached() -> bool:
-        """Checks if the code is currently running within a debugger.
+        """Checks if the code is currently running within an external debugger (e.g. IDE).
 
-        :returns: True if a debugger is attached, False otherwise.
+        :returns: True if an external debugger is attached, False otherwise.
         """
         return sys.breakpointhook.__module__ != 'sys'
 
