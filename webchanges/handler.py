@@ -132,7 +132,7 @@ class JobState(ContextManager):
 
         :returns: True if a debugger is attached, False otherwise.
         """
-        return sys.gettrace() is not None
+        return sys.breakpointhook.__module__ != 'sys'
 
     def added_data(self) -> dict[str, bool | str | Exception | float | None]:
         """Returns a dict with the data added in the processing of the job."""

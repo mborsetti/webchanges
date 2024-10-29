@@ -68,6 +68,7 @@ jobs:
         python-version: ['3.13', '3.12', '3.11', '3.10']
 #        python-version: ['3.12']
         os: [ubuntu-latest]
+        # 29-oct-24 lxml does not build for free-threaded (requires libxml2 and libxslt development packages
         # include:
           # Free-threaded from https://github.com/actions/setup-python/issues/771
           # - { os: ubuntu-latest, python-version: '3.13-dev', disable-gil: true }
