@@ -72,7 +72,7 @@ jobs:
         # 29-oct-24 lxml does not build for free-threaded (requires libxml2 and libxslt development packages
         include:
           # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
-          - { os: ubuntu-latest, python-version: '3.13-dev', disable-gil: true }
+          - { os: ubuntu-latest, python-version: '3.13', disable-gil: true }
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
     # If you are using GitHub-hosted runners, you must use an Ubuntu runner

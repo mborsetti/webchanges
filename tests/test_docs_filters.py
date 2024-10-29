@@ -4,6 +4,7 @@ data/doc_filter_testadata.yaml file."""
 from __future__ import annotations
 
 import importlib.util
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -119,6 +120,9 @@ def test_filter_doc_jobs(job: JobBase) -> None:
     # noinspection PyTypeChecker
     with JobState(None, job) as job_state:  # type: ignore[arg-type]
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
+            # skip due to bug
+            if job.url == 'https://example.net/pdf-no-multiple-spaces.pdf' and sys.version_info == (3, 12):
+                pytest.skip(f'Skipping {job.url} due to bug introduced in pypdf 5.1.0 28-oct-24')
             # skip if package is not installed
             if (
                 filter_kind == 'beautify' or filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
