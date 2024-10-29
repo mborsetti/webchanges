@@ -8,6 +8,7 @@ import base64
 import csv
 import hashlib
 import html
+import importlib.util
 import io
 import itertools
 import logging
@@ -25,8 +26,14 @@ from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent de
 
 import html2text
 import yaml
-from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
-from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
+
+try:
+    from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
+    from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
+except ImportError as e:
+    from xml import etree
+
+    CSSSelector = str(e)
 
 from webchanges import __project_name__
 from webchanges.util import TrackSubClasses
@@ -412,7 +419,8 @@ class BeautifyFilter(FilterBase):
         if isinstance(bs4, str):
             self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
 
-        soup = bs4.BeautifulSoup(data, features='lxml')
+        bs4_features = 'lxml' if importlib.util.find_spec('lxml') is not None else 'html'
+        soup = bs4.BeautifulSoup(data, features=bs4_features)
 
         if isinstance(jsbeautifier, str):
             logger.warning(
@@ -551,7 +559,8 @@ class Html2TextFilter(FilterBase):
             if isinstance(bs4, str):
                 self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
 
-            bs4_parser: str = options.pop('parser', 'lxml')
+            default_bs4_parser = 'lxml' if importlib.util.find_spec('lxml') is not None else 'html'
+            bs4_parser: str = options.pop('parser', default_bs4_parser)
             try:
                 soup = bs4.BeautifulSoup(data, bs4_parser)
             except bs4.FeatureNotFound:

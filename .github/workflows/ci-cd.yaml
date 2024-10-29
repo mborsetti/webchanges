@@ -145,9 +145,15 @@ jobs:
           sudo apt-get -y install python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
           pip install --upgrade pdftotext pytesseract
 
-      - name: Install all other dependencies
+      - name: Install all other dependencies (GIL)
+        if: "${{ !matrix.disable-gil }}"
         run: |
           pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
+
+      - name: Install all other dependencies (free-threaded)
+        if: "${{ matrix.disable-gil }}"
+        run: |
+          pip install --upgrade coveralls -r requirements-free-threaded.txt -r tests/requirements_pytest.txt
 
 #      - name: Install all other dependencies (py12)
 #        if: matrix.python-version == '3.12'
