@@ -56,7 +56,7 @@ jobs:
 #      #   uses: pre-commit/action@v2.0.3
 
   test_ubuntu:
-    name: "Test ${{ matrix.python-version }} ${{ matrix.disable-gil && 'free-threaded' || '' }} on ${{ matrix.os }}"
+    name: "Test ${{ matrix.python-version }}${{ matrix.disable-gil && 't' || '' }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
     # needs: [pre-commit]
@@ -125,17 +125,18 @@ jobs:
         run: |
           echo "PYTHON_GIL=0" >> $GITHUB_ENV
 
-      - name: Upgrade pip etc.
-        run: |
-          pip install --upgrade pip setuptools wheel
-
       - name: Install build dependencies for Python 3.13t for wheel-less lxml (Linux)
         # https://lxml.de/installation.html#installation
         if: matrix.disable-gil && matrix.python-version == '3.13' && runner.os == 'Linux'
         run: |
           sudo apt-get -y update
-          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
+          sudo apt-get -y install libxml2-dev libxslt1-dev python3-dev
           CFLAGS="-O0" pip install lxml
+
+      - name: Upgrade pip etc.
+        run: |
+          pip install --upgrade pip setuptools wheel
+
 
 #      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
 #        # https://lxml.de/installation.html#installation
