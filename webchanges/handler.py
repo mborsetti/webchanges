@@ -12,7 +12,7 @@ import traceback
 from concurrent.futures import Future
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Iterator, Literal, NamedTuple, TYPE_CHECKING
+from typing import Any, ContextManager, Iterator, Literal, NamedTuple, TYPE_CHECKING, TypedDict
 from zoneinfo import ZoneInfo
 
 from webchanges.differs import DifferBase
@@ -37,6 +37,7 @@ class Snapshot(NamedTuple):
     * 2: tries: int
     * 3: etag: str
     * 4: mime_type: mime_type
+    * 5: error: ErrorData
     """
 
     data: str | bytes
@@ -44,6 +45,19 @@ class Snapshot(NamedTuple):
     tries: int
     etag: str
     mime_type: str
+    error_data: ErrorData
+
+
+Verb = Literal[
+    'new',  # new job
+    'changed',  # valid data received, and it has changed
+    'changed,no_report',  # valid data received, and it has changed, but filtered diff yields no report
+    'unchanged',  # valid data received, no changes
+    'error_ended',  # valid data received, no changes from the last data received before an error
+    'error',  # error, prior state was different (either data or different error)
+    'repeated_error',  # error, same as before
+]
+ErrorData = TypedDict('ErrorData', {'type': str, 'message': str}, total=False)
 
 
 class JobState(ContextManager):
@@ -55,6 +69,7 @@ class JobState(ContextManager):
     generated_diff: dict[Literal['text', 'markdown', 'html'], str]
     history_dic_snapshots: dict[str | bytes, Snapshot] = {}
     new_data: str | bytes
+    new_error_data: ErrorData = {}
     new_etag: str
     new_mime_type: str = ''
     new_timestamp: float
@@ -64,15 +79,17 @@ class JobState(ContextManager):
         tries=0,
         etag='',
         mime_type='text/plain',
+        error_data={},
     )
     old_data: str | bytes = ''
+    old_error_data: ErrorData = {}
     old_etag: str = ''
     old_mime_type: str = 'text/plain'
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
     traceback: str
     tries: int = 0  # if >1, an error; value is the consecutive number of runs leading to an error
     unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
-    verb: Literal['new', 'changed', 'changed,no_report', 'unchanged', 'error']
+    verb: Verb
 
     def __init__(self, snapshots_db: SsdbStorage, job: JobBase) -> None:
         """
@@ -150,30 +167,37 @@ class JobState(ContextManager):
             self.tries,
             self.old_etag,
             self.old_mime_type,
+            self.old_error_data,
         ) = self.old_snapshot
         if self.job.compared_versions and self.job.compared_versions > 1:
             self.history_dic_snapshots = {
                 s.data: s for s in self.snapshots_db.get_history_snapshots(guid, self.job.compared_versions)
             }
 
-    def save(self, use_old_data: bool = False) -> None:
+    def save(self) -> None:
         """Saves new data retrieved by the job into the snapshot database.
 
         :param use_old_data: Whether old data (and ETag) should be used (e.g. due to error, leading to new data or
            data being an error message instead of the relevant data).
         """
-        if use_old_data:
-            self.new_data = self.old_data
-            self.new_etag = self.old_etag
-            self.new_mime_type = self.old_mime_type
-
-        new_snapshot = Snapshot(
-            data=self.new_data,
-            timestamp=self.new_timestamp,
-            tries=self.tries,
-            etag=self.new_etag,
-            mime_type=self.new_mime_type,
-        )
+        if self.new_error_data:  # have encountered an exception, so save the old data
+            new_snapshot = Snapshot(
+                data=self.old_data,
+                timestamp=self.new_timestamp,
+                tries=self.tries,
+                etag=self.old_etag,
+                mime_type=self.old_mime_type,
+                error_data=self.new_error_data,
+            )
+        else:
+            new_snapshot = Snapshot(
+                data=self.new_data,
+                timestamp=self.new_timestamp,
+                tries=self.tries,
+                etag=self.new_etag,
+                mime_type=self.new_mime_type,
+                error_data=self.new_error_data,
+            )
         self.snapshots_db.save(guid=self.job.get_guid(), snapshot=new_snapshot)
         logger.info(f'Job {self.job.index_number}: Saved new data to database')
 
@@ -191,6 +215,10 @@ class JobState(ContextManager):
 
         if self.exception:
             self.new_timestamp = time.time()
+            self.new_error_data = {
+                'type': type(self.exception).__name__,
+                'message': str(self.exception),
+            }
             logger.info(f'{self.job.get_indexed_location()} ended processing due to exception: {self.exception}')
             return self
 
@@ -232,6 +260,10 @@ class JobState(ContextManager):
                 self.error_ignored = self.job.ignore_error(e)
                 if not (self.error_ignored or isinstance(e, NotModifiedError)):
                     self.tries += 1
+                    self.new_error_data = {
+                        'type': type(self.exception).__name__,
+                        'message': str(self.exception),
+                    }
                     logger.info(
                         f'Job {self.job.index_number}: Job ended with error; incrementing cumulative error runs to '
                         f'{self.tries}'
@@ -246,6 +278,10 @@ class JobState(ContextManager):
             self.error_ignored = False
             if not isinstance(e, NotModifiedError):
                 self.tries += 1
+                self.new_error_data = {
+                    'type': type(self.exception).__name__,
+                    'message': str(self.exception),
+                }
                 logger.info(
                     f'Job {self.job.index_number}: Job ended with error (internal handling failed); incrementing '
                     f'cumulative error runs to {self.tries}'
@@ -314,13 +350,21 @@ class Report:
 
     def _result(
         self,
-        verb: Literal['new', 'changed', 'changed,no_report', 'unchanged', 'error'],
+        verb: Verb,
         job_state: JobState,
     ) -> None:
         """Logs error and appends the verb to the job_state.
 
-        :param verb: Description of the result of the job run. Can be one of 'new', 'changed', 'changed,no_report',
-        'unchanged', 'error', which have a meaning, or a custom message such as 'test'.
+        :param verb: Description of the result of the job run. Can be one of
+          • 'new': new job;
+          • 'changed': valid data received, and it has changed;
+          • 'changed,no_report': valid data received, and it has changed, but no report;
+          • 'unchanged': valid data received, no changes;
+          • 'error_ended': valid data received, no changes from the last data received before an error;
+          • 'error': error, prior state was different (either data or different error);
+          • 'repeated_error': error, same as before;
+        or a custom message such as  'test'.  Ultimately called by job_runner.
+
         :param job_state: The JobState object with the information of the job run.
         """
         if job_state.exception is not None and job_state.exception is not NotModifiedError:
@@ -360,6 +404,13 @@ class Report:
         """
         self._result('unchanged', job_state)
 
+    def unchanged_from_error(self, job_state: JobState) -> None:
+        """Sets the verb of the job in job_state to 'unchanged'. Called by :py:func:`run_jobs` and tests.
+
+        :param job_state: The JobState object with the information of the job run.
+        """
+        self._result('error_ended', job_state)
+
     def error(self, job_state: JobState) -> None:
         """Sets the verb of the job in job_state to 'error'. Called by :py:func:`run_jobs` and tests.
 
@@ -367,10 +418,17 @@ class Report:
         """
         self._result('error', job_state)
 
+    def error_same_error(self, job_state: JobState) -> None:
+        """Sets the verb of the job in job_state to 'error'. Called by :py:func:`run_jobs` and tests.
+
+        :param job_state: The JobState object with the information of the job run.
+        """
+        self._result('repeated_error', job_state)
+
     def custom(
         self,
         job_state: JobState,
-        label: Literal['new', 'changed', 'changed,no_report', 'unchanged', 'error'],
+        label: Verb,
     ) -> None:
         """Sets the verb of the job in job_state to a custom label. Called by
         :py:func:`UrlwatchCommand.check_test_reporter`.
@@ -386,21 +444,31 @@ class Report:
         :param job_states: The list of JobState objects with the information of the job runs.
         :returns: An iterable of JobState objects that have reportable changes per config['display'].
         """
-        for job_state in job_states:
-            if (
-                not any(
-                    job_state.verb == verb and not self.config['display'][verb]  # type: ignore[literal-required]
-                    for verb in {'unchanged', 'new', 'error'}
-                )
-                and job_state.verb != 'changed,no_report'
-            ):
-                if (
-                    job_state.verb == 'changed'
-                    and not self.config['display']['empty-diff']
-                    and job_state.get_diff(tz=self.tz) == ''
-                ):
-                    continue
 
+        def should_skip_job(self: Report, job_state: JobState) -> bool:
+            """Identify jobs to be skipped."""
+            # Skip states that are hidden by display config
+            config_verbs: set[Verb] = {'new', 'unchanged', 'error', 'repeated_error'}
+            if any(
+                job_state.verb == verb and not self.config['display'][verb]  # type: ignore[typeddict-item]
+                for verb in config_verbs
+            ):
+                return True
+            # Skip specific compound states
+            if job_state.verb in {'changed,no_report', 'repeated_error'}:
+                return True
+            # Skip empty diffs unless empty-diff is configured
+            if (
+                job_state.verb == 'changed'
+                and not self.config['display']['empty-diff']
+                and job_state.get_diff(tz=self.tz) == ''
+            ):
+                return True
+
+            return False
+
+        for job_state in job_states:
+            if not should_skip_job(self, job_state):
                 yield job_state
 
     def finish(self, jobs_file: list[Path] | None = None) -> None:

@@ -42,6 +42,24 @@ except ImportError:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 
+def lazy_import(fullname: str) -> ModuleType | None:
+    """Lazily imports a module. See https://stackoverflow.com/questions/42703908.
+
+    To identify loading time, run $ python -X importtime webchanges --help
+    """
+    try:
+        return sys.modules[fullname]
+    except KeyError:
+        spec = importlib.util.find_spec(fullname)
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            loader = importlib.util.LazyLoader(spec.loader)
+            # Make module with proper locking and get it inserted into sys.modules.
+            loader.exec_module(module)
+            return module
+    return None
+
+
 class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
 
@@ -106,7 +124,7 @@ def edit_file(filename: str | bytes | PathLike) -> None:
     if not editor:
         editor = os.environ.get('VISUAL')
     if not editor:
-        if os.name == 'nt':
+        if sys.platform == 'win32':
             editor = 'notepad.exe'
         else:
             print('Please set the path to the editor in the environment variable $EDITOR, e.g. "export EDITOR=nano"')
@@ -345,7 +363,7 @@ def file_ownership_checks(filename: Path) -> list[str]:
     :returns: List of errors encountered (if any).
     """
 
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         return []
 
     file_ownership_errors = []

@@ -56,7 +56,7 @@ shutil.copyfile(base_hooks_file, hooks_file)
 
 # Set up dummy editor
 editor = os.getenv('EDITOR')
-if os.name == 'nt':
+if sys.platform == 'win32':
     os.environ['EDITOR'] = 'rundll32'
 else:
     os.environ['EDITOR'] = 'true'
@@ -523,7 +523,7 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
     urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
     guid = urlwatcher.jobs[0].get_guid()
 
@@ -757,7 +757,7 @@ def test_delete_snapshot(capsys: pytest.CaptureFixture[str]) -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
     urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     setattr(command_config, 'delete_snapshot', True)
@@ -816,7 +816,7 @@ def test_gc_database(capsys: pytest.CaptureFixture[str]) -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
     urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
     guid = urlwatcher.jobs[0].get_guid()
 
@@ -839,7 +839,7 @@ def test_gc_database(capsys: pytest.CaptureFixture[str]) -> None:
     setattr(command_config, 'gc_database', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         assert message == f'Deleting job {guid} (no longer being tracked)\n'
     else:
         # TODO: for some reason, Linux message is ''.  Need to figure out why.
@@ -1170,6 +1170,7 @@ def test_job_states_verb_notimestamp_unchanged() -> None:
             tries=1,
             etag=snapshot.etag,
             mime_type=snapshot.mime_type,
+            error_data=snapshot.error_data,
         ),
     )
     ssdb_storage._copy_temp_to_permanent(delete=True)
@@ -1217,7 +1218,7 @@ def test_job_states_verb_notimestamp_changed() -> None:
 
     # modify database to no timestamp
     urlwatcher.ssdb_storage.delete(guid)
-    new_snapshot = Snapshot(snapshot.data, 0, snapshot.tries, snapshot.etag, snapshot.mime_type)
+    new_snapshot = Snapshot(snapshot.data, 0, snapshot.tries, snapshot.etag, snapshot.mime_type, snapshot.error_data)
     urlwatcher.ssdb_storage.save(guid=guid, snapshot=new_snapshot)
     ssdb_storage._copy_temp_to_permanent(delete=True)
     # run again
@@ -1227,7 +1228,7 @@ def test_job_states_verb_notimestamp_changed() -> None:
 
     # modify database to no timestamp and 1 try
     urlwatcher.ssdb_storage.delete(guid)
-    new_snapshot = Snapshot(snapshot.data, 0, 1, snapshot.etag, snapshot.mime_type)
+    new_snapshot = Snapshot(snapshot.data, 0, 1, snapshot.etag, snapshot.mime_type, {})
     urlwatcher.ssdb_storage.save(guid=guid, snapshot=new_snapshot)
     ssdb_storage._copy_temp_to_permanent(delete=True)
     # run again

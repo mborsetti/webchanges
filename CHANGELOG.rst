@@ -33,9 +33,30 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.27.0rc0
+Version 3.27.0b1
 ==================
 Unreleased
+
+⚠ Breaking Changes
+------------------
+* Error notifications for failed jobs will now only be sent when an error is first encountered. Additional
+  notifications for the same error will not be sent unless the error resolves or a different error occurs. To restore
+  the previous behavior of receiving repeated notifications for the same error, add or modify the ``repeated_error``
+  setting under the ``display`` key in your config file:
+
+  .. code-block:: yaml
+
+     display:
+       _note: this is a note
+       new: false
+       error: true
+       repeated_error: true  # defaults to false
+       unchanged: false
+       empty-diff: false
+
+
+  This enhancement was requested by `toxin-x <https://github.com/toxin-x>`__ in issue `#86
+  <https://github.com/mborsetti/webchanges/issues/86>`__.
 
 Added
 -----
@@ -43,9 +64,11 @@ Added
   <https://pypi.org/project/aioxmpp/>`__ library required by the ``xmpp`` reporter will not install in Python 3.13 (at
   least on Windows), and the development of the `library <https://codeberg.org/jssfr/aioxmpp>`__ has been
   halted.
-* Python 3.13t (free-threaded, GIL-free) remains unsupported due to lack of support by dependencies such
-  as ``lxml``.
+
+  - Python 3.13t (free-threaded, GIL-free) remains unsupported due to the lack of free-threaded wheels of dependencies
+    such as ``cryptography``, ``msgpack``, ``lxml``, and the optional ``jq``.
 * New Sub-directive in ``pypdf`` Filter: Added ``extraction_mode`` sub-directive.
+* Now storing error information in snapshot database.
 
 Internals
 ---------

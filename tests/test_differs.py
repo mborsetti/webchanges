@@ -42,7 +42,7 @@ py_no_github = cast(
 # py_nt_only = cast(
 #     Callable[[Callable], Callable],
 #     pytest.mark.skipif(
-#         os.name == 'nt',
+#         sys.platform == 'win32',
 #         reason='Not working on Linux',
 #     ),
 # )
@@ -452,7 +452,7 @@ def test_command_change(job_state: JobState) -> None:
     """
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         command = 'cmd /C exit 1 & rem'
     else:
         command = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
@@ -486,7 +486,7 @@ def test_command_error(job_state: JobState) -> None:
     """
     job_state.old_data = 'a\n'
     job_state.new_data = 'b\n'
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         command = 'cmd /C exit 2 & rem'
     else:
         command = 'bash -c " echo \'This is a custom diff\'; exit 2" #'
@@ -505,7 +505,7 @@ def test_command_bad_command(job_state: JobState) -> None:
     job_state.job.differ = {'name': 'command', 'command': 'dfgfdgsdfg'}
     job_state.get_diff()
     assert isinstance(job_state.exception, FileNotFoundError)
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         assert str(job_state.exception) == '[WinError 2] The system cannot find the file specified'
 
 
@@ -516,7 +516,7 @@ def test_command_command_error(job_state: JobState) -> None:
     job_state.job.differ = {'name': 'command', 'command': 'dir /x'}
     job_state.get_diff()
     assert isinstance(job_state.exception, (RuntimeError, FileNotFoundError))
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         assert str(job_state.exception) == (
             "Job 0: External differ '{'command': 'dir /x'}' returned 'dir: cannot access "
             "'/x': No such file or directory' ()"

@@ -376,7 +376,7 @@ def test_stress_use_browser() -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
 
     if not os.getenv('GITHUB_ACTIONS'):
-        from src.webchanges.cli import setup_logger
+        from webchanges.cli import setup_logger
 
         setup_logger()
 

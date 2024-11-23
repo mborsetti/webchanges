@@ -40,6 +40,7 @@ Example ``hooks.py`` file:
    """Example hooks file for webchanges (for Python >= 3.12)."""
 
    import re
+   import threading
    from pathlib import Path
    from typing import Any, Literal
 
@@ -48,6 +49,8 @@ Example ``hooks.py`` file:
    from webchanges.handler import JobState
    from webchanges.jobs import UrlJob, UrlJobBase
    from webchanges.reporters import HtmlReporter, TextReporter
+
+   hooks_custom_login_lock = threading.Lock()
 
 
    class CustomLoginJob(UrlJob):
@@ -62,7 +65,8 @@ Example ``hooks.py`` file:
 
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
            """:returns: The data retrieved, the ETag, and the mime_type (e.g. HTTP Content-Type)."""
-           ...  # custom code here to actually do the login.
+           with hooks_custom_login_lock:  # this site doesn't like parallel logins
+               ...  # custom code here to actually do the login.
            additional_headers = {'x-special': 'test'}
            self.headers.update(additional_headers)  # self.headers always an httpx.Headers object
            return super().retrieve(job_state)  # uses the existing code to then browse and capture data

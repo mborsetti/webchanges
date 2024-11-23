@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import difflib
 import gc
 import logging
 import os
@@ -12,6 +11,7 @@ import random
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
+from threading import Lock
 from typing import Iterable, TYPE_CHECKING
 
 from webchanges.command import UrlwatchCommand
@@ -29,6 +29,9 @@ if TYPE_CHECKING:
     from webchanges.main import Urlwatch
 
 logger = logging.getLogger(__name__)
+
+# creating a lock here to be available for importing in hooks.py
+lock = Lock()
 
 
 def run_jobs(urlwatcher: Urlwatch) -> None:
@@ -108,24 +111,29 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     )
                     if job_state.tries > 0:
                         job_state.tries = 0
-                        job_state.save(use_old_data=True)  # data is not returned by 304 therefore reuse old data
-                    urlwatcher.report.unchanged(job_state)
+                        job_state.save()
+                    if job_state.old_error_data:
+                        urlwatcher.report.unchanged_from_error(job_state)
+                    else:
+                        urlwatcher.report.unchanged(job_state)
                 elif job_state.tries < max_tries:
                     # We're not reporting the error yet because we haven't yet hit 'max_tries'
                     logger.debug(
                         f'Job {job_state.job.index_number}: Error suppressed as cumulative number of '
                         f'failures ({job_state.tries}) does not exceed max_tries={max_tries}'
                     )
-                    job_state.save(use_old_data=True)  # do not save error data but reuse old data
+                    job_state.save()
                 else:
                     # Reporting the error
                     logger.debug(
                         f'Job {job_state.job.index_number}: Flagged as error as max_tries={max_tries} has been '
                         f'met or exceeded ({job_state.tries}'
                     )
-                    job_state.save(use_old_data=True)  # do not save error data but reuse old data
-                    urlwatcher.report.error(job_state)
-
+                    job_state.save()
+                    if job_state.new_error_data == job_state.old_error_data:
+                        urlwatcher.report.error_same_error(job_state)
+                    else:
+                        urlwatcher.report.error(job_state)
             elif job_state.old_data or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
                 if (
@@ -136,24 +144,28 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save()
-                    urlwatcher.report.unchanged(job_state)
+                    if job_state.old_error_data:
+                        urlwatcher.report.unchanged_from_error(job_state)
+                    else:
+                        urlwatcher.report.unchanged(job_state)
                 else:
-                    # No exact match to previous snapshot  # TODO: evaluate whether fuzzy matching still makes sense
-                    if len(job_state.history_dic_snapshots) > 1:
-                        # Find the closest fuzzy matching saved snapshot ("good enough") and use it to diff against it
-                        close_matches: list[str] = difflib.get_close_matches(
-                            str(job_state.new_data), (str(k) for k in job_state.history_dic_snapshots.keys()), n=1
-                        )
-                        if close_matches:
-                            logger.warning(
-                                f'Job {job_state.job.index_number}: Did not find an existing run in the database, but '
-                                f'fuzzy matched it based on the contents of the data'
-                            )
-                            job_state.old_data = close_matches[0]
-                            job_state.old_timestamp = job_state.history_dic_snapshots[close_matches[0]].timestamp
-                            job_state.old_etag = job_state.history_dic_snapshots[close_matches[0]].etag
-                            job_state.old_mime_type = job_state.history_dic_snapshots[close_matches[0]].mime_type
-                    # It has different data so we save it
+                    # # No exact match to previous snapshot  [fuzzy matching, untested and no longer makes sense]
+                    # if len(job_state.history_dic_snapshots) > 1:
+                    #     # Find the closest fuzzy matching saved snapshot ("good enough") and use it to diff against it
+                    #     close_matches: list[str] = difflib.get_close_matches(
+                    #         str(job_state.new_data), (str(k) for k in job_state.history_dic_snapshots.keys()), n=1
+                    #     )
+                    #     if close_matches:
+                    #         logger.warning(
+                    #             f'Job {job_state.job.index_number}: Did not find an existing run in the database,
+                    #             f'but fuzzy matched it based on the contents of the data'
+                    #         )
+                    #         job_state.old_data = close_matches[0]
+                    #         job_state.old_timestamp = job_state.history_dic_snapshots[close_matches[0]].timestamp
+                    #         job_state.old_etag = job_state.history_dic_snapshots[close_matches[0]].etag
+                    #         job_state.old_mime_type = job_state.history_dic_snapshots[close_matches[0]].mime_type
+
+                    # It has different data, so we save it
                     job_state.tries = 0
                     job_state.save()
                     urlwatcher.report.changed(job_state)

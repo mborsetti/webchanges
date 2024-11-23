@@ -113,7 +113,7 @@ try:
 except ImportError as e:  # pragma: no cover
     matrix_client = str(e)  # type: ignore[assignment]
 
-if os.name == 'nt':
+if sys.platform == 'win32':
     try:
         from colorama import AnsiToWin32
     except ImportError as e:  # pragma: no cover
@@ -277,7 +277,7 @@ class ReporterBase(metaclass=TrackSubClasses):
             logger.warning('No reporters enabled.')
 
     def submit(self, **kwargs: Any) -> Iterator[str]:
-        """For the subclass, submit a job to generate the report.
+        """For the ReporterBase subclass, submit a job to generate the report.
 
         :returns: The content of the report.
         """
@@ -348,7 +348,7 @@ class HtmlReporter(ReporterBase):
         for job_state in filtered_job_states:
             differ = job_state.job.differ or {'name': cfg['diff']}
             content = self._format_content(job_state, differ)
-            if content is not None:
+            if content is not None and job_state.verb != 'changed,no_report':
                 if hasattr(job_state.job, 'url'):
                     yield (
                         f'<h3>{job_state.verb.title()}: <a href="{html.escape(job_state.job.get_location())}">'
@@ -391,19 +391,30 @@ class HtmlReporter(ReporterBase):
         yield '</span>\n</body>\n</html>\n'
 
     def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
-        """Returns the HTML for a job; called by _parts. Calls _diff_to_html.
+        """Returns the HTML of the report for a job; called by _parts.
 
         :param job_state: The JobState object with the job information.
         :param differ: The type of differ to use.
         :returns: HTML for a single job.
         """
         if job_state.verb == 'error':
-            return f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
+            htm = f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
+            if not self.report.config['display']['repeated_error']:
+                htm += (
+                    '<div style="color:maroon;"><i>Reminder: No further alerts until the error is resolved or changes.'
+                    '</i></div>'
+                )
+            return htm
 
         if job_state.verb == 'unchanged':
             return f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.old_data))}</pre>'
 
-        if job_state.old_data in {None, job_state.new_data}:
+        if job_state.verb == 'error_ended':
+            return (
+                f"<div style=\"color:green;\"><i>{job_state.old_error_data['type']} fixed; content unchanged.</i></div>"
+            )
+
+        if job_state.old_data is None or job_state.old_data == job_state.new_data:
             return '...'
 
         return job_state.get_diff('html', differ=differ, tz=self.tz)
@@ -479,24 +490,33 @@ class TextReporter(ReporterBase):
                     f'updating.'
                 )
 
-    def _format_content(self, job_state: JobState) -> str | bytes | None:
+    def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | bytes | None:
+        """Returns the text of the report for a job; called by _format_output.
+
+        :param job_state: The JobState object with the job information.
+        :param differ: The type of differ to use.
+        :returns: HTML for a single job.
+        """
         if job_state.verb == 'error':
-            return job_state.traceback.strip()
+            text = job_state.traceback.strip()
+            if not self.report.config['display']['repeated_error']:
+                text += 'Reminder: No further alerts until the error is resolved or changes.'
+            return text
 
         if job_state.verb == 'unchanged':
             return job_state.old_data
 
+        if job_state.verb == 'error_ended':
+            return f"{job_state.old_error_data['type']} fixed; content unchanged."
+
         if job_state.old_data in {None, job_state.new_data}:
             return None
 
-        return job_state.get_diff('text', tz=self.tz)
+        return job_state.get_diff('text', differ=differ, tz=self.tz)
 
     def _format_output(self, job_state: JobState, line_length: int) -> tuple[list[str], list[str]]:
         summary_part: list[str] = []
         details_part: list[str | None] = []
-
-        if job_state.verb == 'changed,no_report':
-            return [], []
 
         pretty_name = job_state.job.pretty_name()
         location = job_state.job.get_location()
@@ -504,16 +524,20 @@ class TextReporter(ReporterBase):
             location = f'{pretty_name} ({location})'
         pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
         summary = ': '.join((job_state.verb.upper(), location))
-        content = self._format_content(job_state)
+        differ = job_state.job.differ or {}
+        content = self._format_content(job_state, differ)
+        # self._format_content may update verb to 'changed,no_report'
+        if job_state.verb == 'changed,no_report':
+            return [], []
 
         summary_part.append(pretty_summary)
 
         sep = (line_length * '-') or None
-        details_part.extend([sep, summary, sep])
+        details_part.extend((sep, summary, sep))
         if hasattr(job_state.job, 'note'):
-            details_part.extend([job_state.job.note, ''])
+            details_part.extend((job_state.job.note, ''))
         if isinstance(content, str):
-            details_part.extend([content, sep])
+            details_part.extend((content, sep))
         details_part.extend(
             ['', '']
             if sep
@@ -728,17 +752,29 @@ class MarkdownReporter(ReporterBase):
 
             return True, f'{trim_message}{s}'
 
-    def _format_content(self, job_state: JobState) -> str | None:
+    def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
+        """Returns the Markdown of the report for a job; called by _format_output.
+
+        :param job_state: The JobState object with the job information.
+        :param differ: The type of differ to use.
+        :returns: HTML for a single job.
+        """
         if job_state.verb == 'error':
-            return job_state.traceback.strip()
+            mark = job_state.traceback.strip()
+            if not self.report.config['display']['repeated_error']:
+                mark += '_Reminder: No further alerts until the error is resolved or changes.._'
+            return mark
 
         if job_state.verb == 'unchanged':
             return str(job_state.old_data)
 
+        if job_state.verb == 'error_ended':
+            return f"_{job_state.old_error_data['type']} fixed; content unchanged._"
+
         if job_state.old_data in {None, job_state.new_data}:
             return None
 
-        return job_state.get_diff('markdown', tz=self.tz)
+        return job_state.get_diff('markdown', differ=differ, tz=self.tz)
 
     def _format_output(self, job_state: JobState) -> tuple[list[str], list[tuple[str, str]]]:
         summary_part: list[str] = []
@@ -754,18 +790,17 @@ class MarkdownReporter(ReporterBase):
 
         pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
         summary = ': '.join((job_state.verb.upper(), location))
-        content = self._format_content(job_state)
-
+        differ = job_state.job.differ or {}
+        content = self._format_content(job_state, differ)  # may update verb to 'changed,no_report'
         if job_state.verb == 'changed,no_report':
             return [], []
 
-        else:
-            summary_part.append(pretty_summary)
+        summary_part.append(pretty_summary)
 
-            if content is not None:
-                details_part.append((f'### {summary}', content))
+        if content is not None:
+            details_part.append((f'### {summary}', content))
 
-            return summary_part, details_part
+        return summary_part, details_part
 
 
 class StdoutReporter(TextReporter):
@@ -797,7 +832,7 @@ class StdoutReporter(TextReporter):
         return self._incolor(4, s)
 
     def _get_print(self) -> Callable:
-        if os.name == 'nt' and self._has_color and not isinstance(AnsiToWin32, str):
+        if sys.platform == 'win32' and self._has_color and not isinstance(AnsiToWin32, str):
             return functools.partial(print, file=AnsiToWin32(sys.stdout).stream)
         return print
 

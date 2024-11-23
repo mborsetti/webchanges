@@ -93,7 +93,7 @@ def prepare_storage_test(
     jobs_storage = YamlJobsStorage([jobs_file])
     urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)
 
-    if os.name == 'nt':
+    if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
 
     return urlwatcher, ssdb_storage, command_config
@@ -596,16 +596,16 @@ def test_restore_and_backup(database_engine: SsdbStorage) -> None:
 
     mime_type = 'text/plain' if isinstance(database_engine, (SsdbSQLite3Storage, SsdbRedisStorage)) else ''
 
-    ssdb_storage.restore([('myguid', 'mydata', 1618105974, 0, '', mime_type)])
+    ssdb_storage.restore((('myguid', 'mydata', 1618105974, 0, '', mime_type, {}),))
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
         ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
 
     entry = ssdb_storage.load('myguid')
-    assert entry == Snapshot('mydata', 1618105974, 0, '', mime_type)
+    assert entry == Snapshot('mydata', 1618105974, 0, '', mime_type, {})
 
     entries = ssdb_storage.backup()
     backup_entry = entries.__next__()
-    assert backup_entry == ('myguid', 'mydata', 1618105974, 0, '', mime_type)
+    assert backup_entry == ('myguid', 'mydata', 1618105974, 0, '', mime_type, {})
 
 
 @pytest.mark.parametrize(  # type: ignore[misc]
@@ -685,7 +685,7 @@ def test_migrate_urlwatch_legacy_db(tmp_path: Path, capsys: pytest.CaptureFixtur
         try:
             entries = ssdb_storage.backup()
             entry = entries.__next__()
-            assert entry == ('547d652722e59e8894741a6382d973a89c8a7557', ' 9:52:54.74\n', 1618105974, 0, None, '')
+            assert entry == ('547d652722e59e8894741a6382d973a89c8a7557', ' 9:52:54.74\n', 1618105974.0, 0, None, '', {})
         finally:
             ssdb_storage.close()
             temp_ssdb_file.unlink()
@@ -741,7 +741,15 @@ def test_abstractmethods() -> None:
     assert dummy_ssdb.get_history_data('guid') is None
     assert (
         dummy_ssdb.save(
-            guid='guid', snapshot=Snapshot(data='data', timestamp=0, tries=0, etag='etag', mime_type='text/plain')
+            guid='guid',
+            snapshot=Snapshot(
+                data='data',
+                timestamp=0,
+                tries=0,
+                etag='etag',
+                mime_type='text/plain',
+                error_data={},
+            ),
         )
         is None
     )

@@ -8,7 +8,6 @@ import base64
 import difflib
 import html
 import io
-import json
 import logging
 import math
 import os
@@ -89,6 +88,7 @@ AiGoogleDirectives = TypedDict(
         'temperature': float | None,
         'top_p': float | None,
         'top_k': float | None,
+        'tools': list[Any],
     },
     total=False,
 )
@@ -1249,18 +1249,20 @@ class AIGoogleDiffer(DifferBase):
         'model': (
             'model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-1.5-flash-latest)'
         ),
-        'additions_only': 'summarizes only added lines (including as a result of a change)',
         'system_instructions': (
             'Optional tone and style instructions for the model (default: see documentation at'
             'https://webchanges.readthedocs.io/en/stable/differs.html#ai-google-diff)'
         ),
         'prompt': 'a custom prompt - {unified_diff}, {unified_diff_new}, {old_text} and {new_text} will be replaced',
+        'additions_only': 'summarizes only added lines (including as a result of a change)',
         'prompt_ud_context_lines': 'the number of context lines for {unified_diff} (default: 9999)',
         'timeout': 'the number of seconds before timing out the API call (default: 300)',
         'max_output_tokens': "the maximum number of tokens returned by the model (default: None, i.e. model's default)",
         'temperature': "the model's Temperature parameter (default: 0.0)",
         'top_p': "the model's TopP parameter (default: None, i.e. model's default",
         'top_k': "the model's TopK parameter (default: None, i.e. model's default",
+        'tools': "data passed on to the API's 'tools' field (default: None)",
+        'unified': 'directives passed to the unified differ (default: None)',
     }
     __default_subdirective__ = 'model'
 
@@ -1309,6 +1311,8 @@ class AIGoogleDiffer(DifferBase):
         }
         if additional_parts:
             data['contents'][0]['parts'].extend(additional_parts)
+        if directives.get('tools'):
+            data['tools'] = directives['tools']
         logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
         try:
             r = httpx.Client(http2=True).post(  # noqa: S113 Call to httpx without timeout
@@ -1327,7 +1331,7 @@ class AIGoogleDiffer(DifferBase):
                 else:
                     summary = (
                         f'AI summary unavailable: Model did not return any candidate output:\n'
-                        f'{json.dumps(result, ensure_ascii=True, indent=2)}'
+                        f'{jsonlib.dumps(result, ensure_ascii=True, indent=2)}'
                     )
             elif r.status_code == 400:
                 summary = (

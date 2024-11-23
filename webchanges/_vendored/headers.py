@@ -208,9 +208,9 @@ class Headers(MutableMapping[str, str]):
         if not split_commas:
             return values
 
-        split_values = []
+        split_values: list[str] = []
         for value in values:
-            split_values.extend([item.strip() for item in value.split(',')])
+            split_values.extend((item.strip() for item in value.split(',')))
         return split_values
 
     def update(self, headers: HeaderTypes | None = None) -> None:  # type: ignore[override]

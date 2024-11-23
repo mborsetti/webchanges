@@ -209,7 +209,7 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
             with pytest.raises(ValueError) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)
             assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
-            if os.name == 'nt':
+            if sys.platform == 'win32':
                 test_report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
             else:
                 test_report.config['report']['run_command']['command'] = 'echo TEST'

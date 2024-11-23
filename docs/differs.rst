@@ -214,6 +214,11 @@ directive to specify another `model <https://ai.google.dev/models/gemini>`__, su
 Pro <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro-expandable>`__ with a context window of 2
 million tokens (``gemini-1.5-pro-latest``) or the older Gemini 1.0 Pro (``gemini-1.0-pro-latest``).
 
+The full list of production models available is `here <https://ai.google.dev/gemini-api/docs/models/gemini>`__, and
+additional experimental models (if any) are listed `here
+<https://ai.google.dev/gemini-api/docs/models/experimental-models>`__. You can manually evaluate responses side-by-side
+across the various models `here <https://aistudio.google.com/app/prompts/new_comparison>`__.
+
 .. note:: These models work with `38 languages
    <https://ai.google.dev/gemini-api/docs/models/gemini#available-languages>`__ and are available in over `200 regions
    <https://ai.google.dev/gemini-api/docs/available-regions>`__.
@@ -307,7 +312,9 @@ This differ is currently in BETA and these directives MAY change in the future.
 * ``top_p`` (float between 0.0 and 1.0): The model's TopP parameter, or the cumulative probability cutoff for token
   selection; lower p means sampling from a smaller, more top-weighted nucleus and reduces diversity (see note below)
   (default: model-dependent, but typically 0.95 or 1.0, see Google documentation)
-* ``unified`` (dict): directives passed to :ref:`unified differ <unified_diff>`, which prepares the unified diff
+* ``tools`` (list): Data passed on to the API's 'tool' field, for example to ground the response (see `here
+  <https://ai.google.dev/api/caching#Tool>`__.
+* ``unified`` (dict): Directives passed to :ref:`unified differ <unified_diff>`, which prepares the unified diff
   attached to this report.
 
 Directives for the underlying :ref:`unified differ <unified_diff>` can be passed in as key ``unified``, as follows:

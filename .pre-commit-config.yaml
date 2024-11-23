@@ -175,6 +175,7 @@ repos:
           - mypy
           - types-backports
           - types-docutils
+          - types-python-dateutil
           - types-PyYAML
           - types-redis
           - types-requests

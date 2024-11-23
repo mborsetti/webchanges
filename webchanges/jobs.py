@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import sys
 import tempfile
 import textwrap
 import time
@@ -113,8 +114,8 @@ class JobBase(metaclass=TrackSubClasses):
 
     __kind__: str = ''  # The kind name
     __is_browser__: bool = False  # Whether Playwright is being launched (run separately with less parallelism)
-    __required__: tuple[str, ...]  # List of required subdirectives
-    __optional__: tuple[str, ...]  # List of optional subdirectives
+    __required__: tuple[str, ...] = ()  # List of required subdirectives
+    __optional__: tuple[str, ...] = ()  # List of optional subdirectives
 
     index_number: int = 0  # added at job loading
 
@@ -910,7 +911,7 @@ class UrlJob(UrlJobBase):
         if urlparse(self.url).scheme == 'file':
             logger.info(f'Job {self.index_number}: Using local filesystem (file URI scheme)')
 
-            if os.name == 'nt':
+            if sys.platform == 'win32':
                 filename = Path(str(urlparse(self.url).path).lstrip('/'))
             else:
                 filename = Path(str(urlparse(self.url).path))

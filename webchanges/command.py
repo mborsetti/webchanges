@@ -425,7 +425,7 @@ class UrlwatchCommand:
     def test_job(self, job_id: bool | str | int) -> None:
         """
         Tests the running of a single job outputting the filtered text to stdout. If job_id is True, don't run any
-        jobs as it's a test of loading config, jobs and hook files for syntax.
+        jobs but load config, jobs and hook files to trigger any syntax errors.
 
         :param job_id: The job_id or True.
 
@@ -433,7 +433,7 @@ class UrlwatchCommand:
 
         :raises Exception: The Exception when raised by a job. loading of hooks files, etc.
         """
-        if job_id is True:
+        if job_id is True:  # Load to trigger any eventual syntax errors
             message = [f'No syntax errors in config file {self.urlwatch_config.config_file}']
             conj = ',\n' if 'hooks' in sys.modules else '\nand '
             if len(self.urlwatch_config.jobs_files) == 1:
@@ -590,7 +590,11 @@ class UrlwatchCommand:
             sep_len = max(50, len(header))
             print(header)
             print('-' * sep_len)
-            print(snapshot[0])
+            if snapshot.error_data:
+                print(f"{snapshot.error_data['type']}: {snapshot.error_data['message']}")
+                print()
+                print('Last good data:')
+            print(snapshot.data)
             print('=' * sep_len, '\n')
 
         print(

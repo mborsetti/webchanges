@@ -29,7 +29,7 @@ import yaml.scanner
 
 from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.filters import FilterBase
-from webchanges.handler import Snapshot
+from webchanges.handler import ErrorData, Snapshot
 from webchanges.jobs import JobBase, ShellJob
 from webchanges.reporters import ReporterBase
 from webchanges.util import edit_file, file_ownership_checks
@@ -61,6 +61,7 @@ _ConfigDisplay = TypedDict(
     {
         'new': bool,
         'error': bool,
+        'repeated_error': bool,
         'unchanged': bool,
         'empty-diff': bool,
     },
@@ -308,6 +309,7 @@ DEFAULT_CONFIG: _Config = {
     'display': {  # select whether the report include the categories below
         'new': True,
         'error': True,
+        'repeated_error': False,
         'unchanged': False,
         'empty-diff': False,
     },
@@ -843,7 +845,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 f' {__version__}.\n'
                 f'\n'
             )
-            yaml.safe_dump(self.config, fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            yaml.safe_dump(self.config, fp, allow_unicode=True, sort_keys=False)
 
     @classmethod
     def write_default_config(cls, filename: Path) -> None:
@@ -1012,9 +1014,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         print(f'Saving updated list to {self.filename[0]}')
 
         with self.filename[0].open('w') as fp:
-            yaml.safe_dump_all(
-                [job.serialize() for job in jobs], fp, default_flow_style=False, sort_keys=False, allow_unicode=True
-            )
+            yaml.safe_dump_all([job.serialize() for job in jobs], fp, allow_unicode=True, sort_keys=False)
 
 
 class SsdbStorage(BaseFileStorage, ABC):
@@ -1079,7 +1079,7 @@ class SsdbStorage(BaseFileStorage, ABC):
     def rollback(self, timestamp: float) -> int | None:
         pass
 
-    def backup(self) -> Iterator[tuple[str, str | bytes, float, int, str, str]]:
+    def backup(self) -> Iterator[tuple[str, str | bytes, float, int, str, str, ErrorData]]:
         """Return the most recent entry for each 'guid'.
 
         :returns: A generator of tuples, each consisting of (guid, data, timestamp, tries, etag, mime_type)
@@ -1088,18 +1088,14 @@ class SsdbStorage(BaseFileStorage, ABC):
             snapshot = self.load(guid)
             yield guid, *snapshot
 
-    def restore(self, entries: Iterable[tuple[str, str | bytes, float, int, str, str]]) -> None:
+    def restore(self, entries: Iterable[tuple[str, str | bytes, float, int, str, str, ErrorData]]) -> None:
         """Save multiple entries into the database.
 
         :param entries: An iterator of tuples WHERE each consists of (guid, data, timestamp, tries, etag, mime_type)
         """
-        for guid, data, timestamp, tries, etag, mime_type in entries:
+        for guid, data, timestamp, tries, etag, mime_type, error_data in entries:
             new_snapshot = Snapshot(
-                data=data,
-                timestamp=timestamp,
-                tries=tries,
-                etag=etag,
-                mime_type=mime_type,
+                data=data, timestamp=timestamp, tries=tries, etag=etag, mime_type=mime_type, error_data=error_data
             )
             self.save(guid=guid, snapshot=new_snapshot, temporary=False)
 
@@ -1196,7 +1192,7 @@ class SsdbDirStorage(SsdbStorage):
     def load(self, guid: str) -> Snapshot:
         filename = self._get_filename(guid)
         if not filename.is_file():
-            return Snapshot('', 0, 0, '', '')
+            return Snapshot('', 0, 0, '', '', {})
 
         try:
             data = filename.read_text()
@@ -1206,21 +1202,21 @@ class SsdbDirStorage(SsdbStorage):
 
         timestamp = filename.stat().st_mtime
 
-        return Snapshot(data, timestamp, 0, '', '')
+        return Snapshot(data, timestamp, 0, '', '', {})
 
     def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         if count is not None and count < 1:
             return {}
         else:
-            data, timestamp, tries, etag, mime_type = self.load(guid)
-            return {data: timestamp} if data and timestamp else {}
+            snapshot = self.load(guid)
+            return {snapshot.data: snapshot.timestamp} if snapshot.data and snapshot.timestamp else {}
 
     def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
         else:
-            data, timestamp, tries, etag, mime_type = self.load(guid)
-            return [Snapshot(data, timestamp, tries, etag, mime_type)] if data and timestamp else []
+            snapshot = self.load(guid)
+            return [snapshot] if snapshot.data and snapshot.timestamp else []
 
     def save(self, *args: Any, guid: str, snapshot: Snapshot, **kwargs: Any) -> None:
         # ETag and mime_type are ignored
@@ -1457,9 +1453,9 @@ class SsdbSQLite3Storage(SsdbStorage):
         if row:
             msgpack_data, timestamp = row
             r = msgpack.unpackb(msgpack_data)
-            return Snapshot(r['d'], timestamp, r['t'], r['e'], r.get('m', ''))
+            return Snapshot(r['d'], timestamp, r['t'], r['e'], r.get('m', ''), r.get('err', {}))
 
-        return Snapshot('', 0, 0, '', '')
+        return Snapshot('', 0, 0, '', '', {})
 
     def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         """Return max 'count' (None = all) records of data and timestamp of **successful** runs for a 'guid'.
@@ -1516,7 +1512,7 @@ class SsdbSQLite3Storage(SsdbStorage):
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
-                history.append(Snapshot(r['d'], timestamp, r['t'], r['e'], r.get('m', '')))
+                history.append(Snapshot(r['d'], timestamp, r['t'], r['e'], r.get('m', ''), r.get('err', {})))
                 if count is not None and len(history) >= count:
                     break
         return history
@@ -1550,6 +1546,7 @@ class SsdbSQLite3Storage(SsdbStorage):
             't': snapshot.tries,
             'e': snapshot.etag,
             'm': snapshot.mime_type,
+            'err': snapshot.error_data,
         }
         msgpack_data = msgpack.packb(c)
         if temporary:
@@ -1816,9 +1813,11 @@ class SsdbRedisStorage(SsdbStorage):
 
         if data:
             r = msgpack.unpackb(data)
-            return Snapshot(r['data'], r['timestamp'], r['tries'], r['etag'], r['mime_type'])
+            return Snapshot(
+                r['data'], r['timestamp'], r['tries'], r['etag'], r.get('mime_type', ''), r.get('err_data', {})
+            )
 
-        return Snapshot('', 0, 0, '', '')
+        return Snapshot('', 0, 0, '', '', {})
 
     def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         if count is not None and count < 1:
@@ -1846,7 +1845,16 @@ class SsdbRedisStorage(SsdbStorage):
             r = self.db.lindex(key, i)
             c = msgpack.unpackb(r)
             if c['tries'] == 0 or c['tries'] is None:
-                history.append(Snapshot(c['data'], c['timestamp'], c['tries'], c['etag'], c.get('mime_type')))
+                history.append(
+                    Snapshot(
+                        c['data'],
+                        c['timestamp'],
+                        c['tries'],
+                        c['etag'],
+                        c.get('mime_type', ''),
+                        c.get('error_data', {}),
+                    )
+                )
                 if count is not None and len(history) >= count:
                     break
         return history
@@ -1858,6 +1866,7 @@ class SsdbRedisStorage(SsdbStorage):
             'tries': snapshot.tries,
             'etag': snapshot.etag,
             'mime_type': snapshot.mime_type,
+            'error_data': snapshot.error_data,
         }
         self.db.lpush(self._make_key(guid), msgpack.packb(r))
 

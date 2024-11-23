@@ -228,7 +228,7 @@ def test_number_of_tries_in_cache_is_increased_sqlite3() -> None:
         snapshot = ssdb_storage.load(guid)
 
         assert snapshot.tries == 2
-        assert urlwatcher.report.job_states[-1].verb == 'error'
+        assert urlwatcher.report.job_states[-1].verb == 'repeated_error'
     finally:
         ssdb_storage.delete_all()
 
@@ -246,7 +246,7 @@ def test_report_error_when_out_of_tries_sqlite3() -> None:
         ssdb_storage._copy_temp_to_permanent(delete=True)
 
         report = urlwatcher.report
-        assert report.job_states[-1].verb == 'error'
+        assert report.job_states[-1].verb == 'repeated_error'
     finally:
         ssdb_storage.delete_all()
 

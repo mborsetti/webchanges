@@ -64,9 +64,9 @@ class SsdbMiniDBStorage(SsdbStorage):
             where=self.CacheEntry.c.guid == guid,
             limit=1,
         ):
-            return Snapshot(data, timestamp, tries, etag, '')
+            return Snapshot(data, timestamp, tries, etag, '', {})
 
-        return Snapshot('', 0, 0, '', '')
+        return Snapshot('', 0, 0, '', '', {})
 
     def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         history: dict[str | bytes, float] = {}
@@ -96,7 +96,7 @@ class SsdbMiniDBStorage(SsdbStorage):
             where=(self.CacheEntry.c.guid == guid)
             & ((self.CacheEntry.c.tries == 0) | (self.CacheEntry.c.tries is None)),
         ):
-            history.append(Snapshot(data, timestamp, 0, '', ''))
+            history.append(Snapshot(data, timestamp, 0, '', '', {}))
             if count is not None and len(history) >= count:
                 break
         return history
