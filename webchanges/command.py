@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-import contextlib
 import difflib
 import email.utils
+import gc
 import importlib.metadata
 import logging
 import os
@@ -19,6 +19,7 @@ import sys
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Iterator, TYPE_CHECKING
@@ -29,7 +30,7 @@ from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.differs import DifferBase
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState, Report
-from webchanges.jobs import BrowserJob, JobBase, NotModifiedError, UrlJob
+from webchanges.jobs import JobBase, NotModifiedError, UrlJob
 from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
 from webchanges.reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from webchanges.util import dur_text, edit_file, import_module_from_source
@@ -620,9 +621,20 @@ class UrlwatchCommand:
             stored data if the website reports no changes in the data since the last time it downloaded it -- see
             https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests).
             """
-            with contextlib.ExitStack() as stack:
-                max_workers = min(32, os.cpu_count() or 1) if any(isinstance(job, BrowserJob) for job in jobs) else None
-                logger.debug(f'Max_workers set to {max_workers}')
+
+            def job_runner(
+                stack: ExitStack,
+                jobs: Iterable[JobBase],
+                max_workers: int | None = None,
+            ) -> Iterator[str]:
+                """
+                Modified worker.job_runner that yields error text for jobs who fail with an exception or yield no data.
+
+                :param stack: The context manager.
+                :param jobs: The jobs to run.
+                :param max_workers: The number of maximum workers for ThreadPoolExecutor.
+                :return: error text for jobs who fail with an exception or yield no data.
+                """
                 executor = ThreadPoolExecutor(max_workers=max_workers)
 
                 for job_state in executor.map(
@@ -654,6 +666,39 @@ class UrlwatchCommand:
                             )
                         else:
                             yield f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})'
+
+            with ExitStack() as stack:
+                # This code is from worker.run_jobs, modified to yield from job_runner.
+                from webchanges.worker import get_virt_mem  # avoid circular imports
+
+                # run non-BrowserJob jobs first
+                jobs_to_run = [job for job in jobs if not job.__is_browser__]
+                if jobs_to_run:
+                    logger.debug(
+                        "Running jobs that do not require Chrome (without 'use_browser: true') in parallel with "
+                        "Python's default max_workers."
+                    )
+                    yield from job_runner(stack, jobs_to_run, self.urlwatch_config.max_workers)
+                else:
+                    logger.debug("Found no jobs that do not require Chrome (i.e. without 'use_browser: true').")
+
+                # run BrowserJob jobs after
+                jobs_to_run = [job for job in jobs if job.__is_browser__]
+                if jobs_to_run:
+                    gc.collect()
+                    virt_mem = get_virt_mem()
+                    if self.urlwatch_config.max_workers:
+                        max_workers = self.urlwatch_config.max_workers
+                    else:
+                        max_workers = max(int(virt_mem / 200e6), 1)
+                        max_workers = min(max_workers, os.cpu_count() or 1)
+                    logger.debug(
+                        f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with "
+                        f'{max_workers} max_workers.'
+                    )
+                    yield from job_runner(stack, jobs_to_run, max_workers)
+                else:
+                    logger.debug("Found no jobs that require Chrome (i.e. with 'use_browser: true').")
 
         start = time.perf_counter()
         if len(self.urlwatch_config.jobs_files) == 1:

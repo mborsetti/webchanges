@@ -175,31 +175,11 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 job_state.save()
                 urlwatcher.report.new(job_state)
 
-    def get_virt_mem() -> int:
-        """Return the amount of virtual memory available, i.e. the memory that can be given instantly to processes
-        without the system going into swap. Expressed in bytes."""
-        if isinstance(psutil, str):
-            raise ImportError(
-                "Error when loading package 'psutil'; cannot use 'use_browser: true'. Please install "
-                f"dependencies with 'pip install webchanges[use_browser]'.\n{psutil}"
-            ) from None
-        try:
-            virt_mem = psutil.virtual_memory().available
-            logger.debug(
-                f'Found {virt_mem / 1e6:,.0f} MB of available physical memory (plus '
-                f'{psutil.swap_memory().free / 1e6:,.0f} MB of swap).'
-            )
-        except psutil.Error as e:  # pragma: no cover
-            virt_mem = 0
-            logger.debug(f'Could not read memory information: {e}')
-
-        return virt_mem
-
     jobs = set(UrlwatchCommand(urlwatcher).jobs_from_joblist())
 
     jobs = insert_delay(jobs)
 
-    with ExitStack() as stack:
+    with ExitStack() as stack:  # This code is also present in command.list_error_jobs (change there too!)
         # run non-BrowserJob jobs first
         jobs_to_run = [job for job in jobs if not job.__is_browser__]
         if jobs_to_run:
@@ -228,3 +208,24 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             job_runner(stack, jobs_to_run, max_workers)
         else:
             logger.debug("Found no jobs that require Chrome (i.e. with 'use_browser: true').")
+
+
+def get_virt_mem() -> int:
+    """Return the amount of virtual memory available, i.e. the memory that can be given instantly to processes
+    without the system going into swap. Expressed in bytes."""
+    if isinstance(psutil, str):
+        raise ImportError(
+            "Error when loading package 'psutil'; cannot use 'use_browser: true'. Please install "
+            f"dependencies with 'pip install webchanges[use_browser]'.\n{psutil}"
+        ) from None
+    try:
+        virt_mem = psutil.virtual_memory().available
+        logger.debug(
+            f'Found {virt_mem / 1e6:,.0f} MB of available physical memory (plus '
+            f'{psutil.swap_memory().free / 1e6:,.0f} MB of swap).'
+        )
+    except psutil.Error as e:  # pragma: no cover
+        virt_mem = 0
+        logger.debug(f'Could not read memory information: {e}')
+
+    return virt_mem

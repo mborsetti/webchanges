@@ -78,7 +78,7 @@ def migrate_from_legacy(
             logger.warning(f"You can safely delete '{old_file}'.")
 
 
-def setup_logger(verbose: int | None = None) -> None:
+def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> None:
     """Set up the logger.
 
     :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
@@ -99,7 +99,16 @@ def setup_logger(verbose: int | None = None) -> None:
     if not verbose:
         sys.tracebacklimit = 0
 
-    logging.basicConfig(format='%(asctime)s %(module)s[%(thread)s] %(levelname)s: %(message)s', level=log_level)
+    if log_file:
+        handlers: tuple[logging.Handler, ...] | None = (logging.FileHandler(log_file),)
+    else:
+        handlers = None
+
+    logging.basicConfig(
+        format='%(asctime)s %(module)s[%(thread)s] %(levelname)s: %(message)s',
+        level=log_level,
+        handlers=handlers,
+    )
     logger.info(f'{__project_name__}: {__version__} {__copyright__}')
     logger.info(
         f'{platform.python_implementation()}: {platform.python_version()} '
@@ -358,7 +367,7 @@ def main() -> None:  # pragma: no cover
     )
 
     # Set up the logger to verbose if needed
-    setup_logger(command_config.verbose)
+    setup_logger(command_config.verbose, command_config.log_file)
 
     # For speed, run these here
     handle_unitialized_actions(command_config)

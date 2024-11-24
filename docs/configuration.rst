@@ -46,17 +46,21 @@ the configuration:
    display:
      new: true
      error: true
+     repeated_error: false
      unchanged: false
-     empty-diff: true
+     empty-diff: true  # deprecated
+
+If you set ``repeated_error`` to ``true``, :program:`webchanges` will send repeated notifications for the same error;
+otherwise notifications for failed jobs are sent once when an error is first encountered, and additional notifications
+will not be sent unless the error resolves or a different error occurs.
 
 If you set ``unchanged`` to ``true``, :program:`webchanges` will always report all pages that are checked but have not
 changed.
 
-While the ``empty-diff`` setting is included for backwards-compatibility, :program:`webchanges` uses the easier job
-directive :ref:`additions_only` to obtain similar results, which you should use. This deprecated setting controls
-what happens if a page is ``changed``, but due to e.g. a ``diff_filter`` the diff is reduced to the empty string. If set
-to ``true``, :program:`webchanges`: will report an (empty) change. If set to ``false``, the change will not be included
-in the report.
+``empty-diff`` is deprecated, and controls what happens if a page is ``changed`` but the notification is reduced to
+an empty string e.g. by a ``diff_filter``. If set to ``true``, :program:`webchanges`: will report an (empty) change.
+If set to ``false``, the change will not be included in the report.  Use the job directive :ref:`additions_only`
+instead for similar results.
 
 
 .. _reports-and-reporters:

@@ -213,7 +213,7 @@ class JobState(ContextManager):
         logger.info(f'{self.job.get_indexed_location()} started processing ({type(self.job).__name__})')
         logger.debug(f'Job {self.job.index_number}: {self.job}')
 
-        if self.exception:
+        if self.exception and not isinstance(self.exception, NotModifiedError):
             self.new_timestamp = time.time()
             self.new_error_data = {
                 'type': type(self.exception).__name__,
@@ -247,7 +247,7 @@ class JobState(ContextManager):
 
             except Exception as e:
                 # Job has a chance to format and ignore its error
-                if self.job.https_proxy and e.args[0].startswith('[SSL:'):
+                if self.job.https_proxy and str(e.args[0]).startswith('[SSL:'):
                     args_list = list(e.args)
                     args_list[0] += f' (Check proxy {self.job.https_proxy})'
                     e.args = tuple(args_list)

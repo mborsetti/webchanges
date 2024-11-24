@@ -125,7 +125,7 @@ This project is based on code from `urlwatch 2.21
 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020.
 
 You can easily upgrade to **webchanges** from the current version of **urlwatch** using the same job and
-configuration files (see `here <https://webchanges.readthedocs.io/en/stable/migration.html>`__) and benefit from many
+configuration files (see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__) and benefit from many
 improvements, including:
 
 * :underline:`AI-Powered Summaries`: Summary of changes in plain text using generative AI, useful for long documents

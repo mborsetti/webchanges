@@ -33,7 +33,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.27.0b1
+Version 3.27.0b2
 ==================
 Unreleased
 
@@ -69,6 +69,14 @@ Added
     such as ``cryptography``, ``msgpack``, ``lxml``, and the optional ``jq``.
 * New Sub-directive in ``pypdf`` Filter: Added ``extraction_mode`` sub-directive.
 * Now storing error information in snapshot database.
+* Added ``-l``/``--log-file`` command line argument to write log to a file. Suggested by `yubiuser
+  <https://github.com/yubiuser>`__ in `issue #88 <https://github.com/mborsetti/webchanges/issues/88>`__.
+
+Fixed
+-----
+* The command line argument ``--error`` was yielding different results than when actually running *webchanges*.
+  Reported by `yubiuser <https://github.com/yubiuser>`__ in `issue #88
+  <https://github.com/mborsetti/webchanges/issues/88>`__.
 
 Internals
 ---------

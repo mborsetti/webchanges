@@ -53,6 +53,7 @@ class CommandConfig(BaseConfig):
     joblist: list[str]
     jobs_files: list[Path]
     list_jobs: bool | str | None
+    log_file: Path
     max_snapshots: int | None
     max_workers: int | None
     no_headless: bool
@@ -129,6 +130,13 @@ class CommandConfig(BaseConfig):
         )
         parser.add_argument(
             '-v', '--verbose', action='count', help='show logging output; use -vv for maximum verbosity'
+        )
+        parser.add_argument(
+            '-l',
+            '--log-file',
+            type=Path,
+            help='send log to FILE',
+            metavar='FILE',
         )
 
         group = parser.add_argument_group('override file defaults')
