@@ -35,7 +35,7 @@ try:
     from deepdiff import DeepDiff
     from deepdiff.model import DiffLevel
 except ImportError as e:  # pragma: no cover
-    DeepDiff = str(e)  # type: ignore[no-redef]
+    DeepDiff = str(e)  # type: ignore[assignment,misc]
 
 try:
     import httpx
@@ -211,16 +211,16 @@ class DifferBase(metaclass=TrackSubClasses):
                 return {
                     'text': (
                         f'Differ {differ_kind} with directive(s) {directives_text} encountered an '
-                        f'error:\n\n{job_state.traceback.strip()}'
+                        f'error:\n\n{job_state.traceback}'
                     ),
                     'markdown': (
                         f'## Differ {differ_kind} with directive(s) {directives_text} '
-                        f'encountered an error:\n```\n{job_state.traceback.strip()}\n```\n'
+                        f'encountered an error:\n```\n{job_state.traceback}\n```\n'
                     ),
                     'html': (
                         f'<span style="color:red;font-weight:bold">Differ {differ_kind} with directive(s) '
                         f'{directives_text} encountered an error:<br>\n<br>\n'
-                        f'<span style="font-family:monospace;white-space:pre-wrap;">{job_state.traceback.strip()}'
+                        f'<span style="font-family:monospace;white-space:pre-wrap;">{job_state.traceback}'
                         f'</span></span>'
                     ),
                 }
@@ -775,7 +775,7 @@ class DeepdiffDiffer(DifferBase):
                     )
                 )
 
-                diff_path = ddiff.path()
+                diff_path = ddiff.path()  # type: ignore[no-untyped-call]
                 return '• ' + PRETTY_FORM_TEXTS.get(ddiff.report_type, '').format(
                     diff_path=diff_path,
                     type_t1=type_t1,
@@ -818,8 +818,8 @@ class DeepdiffDiffer(DifferBase):
             old_data = xmltodict.parse(self.state.old_data)
             new_data = xmltodict.parse(self.state.new_data)
 
-        ignore_order = directives.get('ignore_order')
-        ignore_string_case = directives.get('ignore_string_case')
+        ignore_order: bool = directives.get('ignore_order')  # type: ignore[assignment]
+        ignore_string_case: bool = directives.get('ignore_string_case')  # type: ignore[assignment]
         significant_digits = directives.get('significant_digits')
         ddiff = DeepDiff(
             old_data,
@@ -1327,7 +1327,7 @@ class AIGoogleDiffer(DifferBase):
                 candidate = result['candidates'][0]
                 logger.info(f"Job {job.index_number}: AI generation finished by {candidate['finishReason']}")
                 if 'content' in candidate:
-                    summary = candidate['content']['parts'][0]['text'].rstrip()
+                    summary: str = candidate['content']['parts'][0]['text'].rstrip()
                 else:
                     summary = (
                         f'AI summary unavailable: Model did not return any candidate output:\n'
@@ -1436,7 +1436,7 @@ class AIGoogleDiffer(DifferBase):
         if directives.get('additions_only') or self.job.additions_only:
             default_system_instructions = (
                 'You are a skilled journalist. Your task is to summarize the provided text in a clear and concise '
-                'manner.  Restrict your analysis and summary *only* to the text provided. Do not introduce any '
+                'manner. Restrict your analysis and summary *only* to the text provided. Do not introduce any '
                 'external information or assumptions.\n\n'
                 'Format your summary using Markdown. Use headings, bullet points, and other Markdown elements where '
                 'appropriate to create a well-structured and easily readable summary.'
@@ -1455,13 +1455,13 @@ class AIGoogleDiffer(DifferBase):
                 '3. Compare the two versions, identifying areas where the meaning differs. This includes additions, '
                 'removals, or alterations that change the intended message or interpretation.\n'
                 '4. Ignore changes that do not affect the overall meaning, even if the wording has been modified.\n'
-                '5. Summarize the identified differences in a clear and concise manner, explaining how the meaning '
-                'has shifted or evolved in the new version compared to the old version. Be specific and provide '
-                "examples to illustrate your points. If there's only additions to the text, then summarize the "
-                'additions.\n'
-                '6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
+                '5. Summarize the identified differences, except those ignored, in a clear and concise manner, '
+                'explaining how the meaning has shifted or evolved in the new version compared to the old version only '
+                'when necessary. Be specific and provide examples to illustrate your points when needed.\n'
+                '6. If ther are only additions to the text, then summarize the additions.\n'
+                '7. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
                 'and other Markdown elements as needed to enhance readability.\n'
-                '7. Restrict your analysis and summary to the information provided within the `<old_version>` and '
+                '8. Restrict your analysis and summary to the information provided within the `<old_version>` and '
                 '`<new_version> tags. Do not introduce external information or assumptions.\n'
             )
             default_prompt = '<old_version>\n{old_text}\n</old_version>\n\n<new_version>\n{new_text}\n</new_version>'

@@ -37,7 +37,7 @@ pushbullet_testing_broken = sys.version_info >= (3, 13)
 
 
 ALL_REPORTERS = [
-    reporter for reporter, v in DEFAULT_CONFIG['report'].items() if reporter not in {'tz', 'html', 'text', 'markdown'}
+    reporter for reporter in DEFAULT_CONFIG['report'] if reporter not in {'tz', 'html', 'text', 'markdown'}
 ]
 
 

@@ -132,7 +132,6 @@ class CommandConfig(BaseConfig):
             '-v', '--verbose', action='count', help='show logging output; use -vv for maximum verbosity'
         )
         parser.add_argument(
-            '-l',
             '--log-file',
             type=Path,
             help='send log to FILE',

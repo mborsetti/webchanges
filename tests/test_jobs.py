@@ -22,12 +22,23 @@ from webchanges.config import CommandConfig
 from webchanges.handler import JobState
 from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifiedError, ShellJob, UrlJob
 from webchanges.main import Urlwatch
-from webchanges.storage import _Config, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+
+# from webchanges.reporters import ReporterBase
+from webchanges.storage import _Config, DEFAULT_CONFIG, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
 ssdb_file = ':memory:'
 ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+
+
+class UrlwatchTest:
+    """A mock Urlwatch class for testing."""
+
+    class config_storage:
+        """A mock config_storage class for testing."""
+
+        config = DEFAULT_CONFIG
 
 
 def is_connected() -> bool:
@@ -68,7 +79,7 @@ TEST_JOBS = [
             },
             'ignore_cached': True,
             'ignore_connection_errors': False,
-            'ignore_dh_key_too_small': True,
+            'ignore_dh_key_too_small': False,  # as of Jan25 weak cyphers no longer supported
             'ignore_http_error_codes': 200,
             'ignore_timeout_errors': False,
             'ignore_too_many_redirects': False,
@@ -194,7 +205,7 @@ def test_run_job(
 ) -> None:
     job = JobBase.unserialize(input_job)
     with JobState(ssdb_storage, job) as job_state:
-        data, etag, mime_type = job.retrieve(job_state)
+        data, _, _ = job.retrieve(job_state)
         if job.filter == [{'pdf2text': {}}]:
             assert isinstance(data, bytes)
         assert output in data
@@ -205,7 +216,7 @@ def test_run_job(
 def test_run_ftp_job() -> None:
     job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt', 'timeout': 2})
     with JobState(ssdb_storage, job) as job_state:
-        data, etag, mime_type = job.retrieve(job_state)
+        data, _, mi_me_type = job.retrieve(job_state)
         assert len(data) == 319
 
 
@@ -234,7 +245,7 @@ def test_check_etag(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
     with JobState(ssdb_storage, job) as job_state:
-        data, etag, mime_type = job.retrieve(job_state)
+        _, etag, _ = job.retrieve(job_state)
         assert etag
 
 
@@ -253,7 +264,7 @@ def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dic
     with JobState(ssdb_storage, job) as job_state:
         if 'check__etag_304_etag' not in doctest_namespace:
             job.index_number = 1
-            data, etag, mime_type = job.retrieve(job_state)
+            _, etag, _ = job.retrieve(job_state)
             doctest_namespace['check_etag_304_etag'] = etag
             doctest_namespace['check_etag_304_timestamp'] = job_state.old_timestamp
 
@@ -562,7 +573,7 @@ def test_compared_versions() -> None:
     urlwatcher.jobs[0].command = 'python3 -c "import random; print(random.randint(0, 1))"'
     urlwatcher.jobs[0].compared_versions = 2
     results = set()
-    for i in range(20):
+    for _ in range(20):
         urlwatcher.run_jobs()
         ssdb_storage._copy_temp_to_permanent(delete=True)
         if urlwatcher.report.job_states[-1].new_data in results:
@@ -576,7 +587,7 @@ def test_compared_versions() -> None:
     urlwatcher.jobs[0].command = 'python3 -c "import random; print(random.randint(0, 2))"'
     urlwatcher.jobs[0].compared_versions = 3
     results = set()
-    for i in range(20):
+    for _ in range(20):
         urlwatcher.run_jobs()
         ssdb_storage._copy_temp_to_permanent(delete=True)
         if urlwatcher.report.job_states[-1].new_data in results:
@@ -597,3 +608,28 @@ def test_differ_name_not_str_dict_raises_valueerror() -> None:
         'differ:',
         '- 2',
     ]
+
+
+def test_suppress_repeated_errors(capsys: pytest.CaptureFixture) -> None:
+    pass
+    # jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
+    # config_file = data_path.joinpath('config.yaml')
+    # hooks_file = Path('')
+
+    # config_storage = YamlConfigStorage(config_file)
+    # config_storage.load()
+    # jobs_storage = YamlJobsStorage([jobs_file])
+    # urlwatch_config = new_command_config(config_file, jobs_file, hooks_file)
+    # urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
+    # urlwatcher.jobs[0].suppress_repeated_errors = True
+    # urlwatcher.run_jobs()
+    # urlwatcher.close()
+    # ssdb_storage._copy_temp_to_permanent(delete=True)
+    # history = ssdb_storage.get_history_snapshots(urlwatcher.jobs[0].get_guid())
+    # assert len(history) == 1
+    # urlwatcher.run_jobs()
+    # ssdb_storage._copy_temp_to_permanent()
+    # history = ssdb_storage.get_history_snapshots(urlwatcher.jobs[0].get_guid())
+    # print()
+    # assert len(history) == 2
+    # assert capsys.readouterr().out == 'TEST\n'

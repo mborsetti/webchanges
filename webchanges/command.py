@@ -451,7 +451,6 @@ class UrlwatchCommand:
             return
 
         job = self._find_job_with_defaults(job_id)
-        start = time.perf_counter()
 
         if isinstance(job, UrlJob):
             # Force re-retrieval of job, as we're testing filters
@@ -462,25 +461,18 @@ class UrlwatchCommand:
 
         with JobState(self.urlwatcher.ssdb_storage, job) as job_state:
             job_state.process(headless=not self.urlwatch_config.no_headless)
-            duration = time.perf_counter() - start
-            if job_state.exception is not None:
-                raise job_state.exception from job_state.exception
-            output = [
-                job_state.job.pretty_name(),
-                ('-' * len(job_state.job.pretty_name())),
-            ]
-            if job_state.job.note:
-                output.append(job_state.job.note)
-            output.extend(
-                [
-                    '',
-                    str(job_state.new_data),
-                    '',
-                    '--',
-                    f'Job tested in {dur_text(duration)} with {__project_name__} {__version__}.',
-                ]
+            # duration = time.perf_counter() - start
+            if self.urlwatch_config.test_reporter is None:
+                self.urlwatch_config.test_reporter = 'stdout'  # default
+            report = Report(self.urlwatcher)
+            report.job_states = []  # required
+            errorlevel = self.check_test_reporter(
+                job_state,
+                label='error' if job_state.exception else 'new',
+                report=report,
             )
-            print('\n'.join(output))
+            if errorlevel:
+                self._exit(errorlevel)
         return
 
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
@@ -870,7 +862,7 @@ class UrlwatchCommand:
     def check_test_reporter(
         self,
         job_state: JobState | None = None,
-        label: str = 'test',  # type: ignore[assignment]
+        label: str = 'test',
         report: Report | None = None,
     ) -> int:
         """
@@ -921,6 +913,7 @@ class UrlwatchCommand:
         ]
         if job_state:  # we want a full report
             cfg['enabled'] = True
+            self.urlwatcher.config_storage.config['display'][label] = True  # type: ignore[literal-required]
             self.urlwatcher.config_storage.config['report']['text']['details'] = True
             self.urlwatcher.config_storage.config['report']['text']['footer'] = True
             self.urlwatcher.config_storage.config['report']['text']['minimal'] = False

@@ -1,7 +1,6 @@
 display:
   new: true
   error: true
-  repeated_error: false
   unchanged: false
   empty-diff: false
 report:

@@ -81,9 +81,17 @@ def migrate_from_legacy(
 def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> None:
     """Set up the logger.
 
-    :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
+    :param verbose: the verbosity level (1 = INFO, 2 = ERROR, 3 = NOTSET).
     """
+    if log_file:
+        handlers: tuple[logging.Handler, ...] | None = (logging.FileHandler(log_file),)
+        if not verbose:
+            verbose = 1
+    else:
+        handlers = None
+
     log_level = None
+
     if verbose is not None:
         if verbose >= 3:
             log_level = 'NOTSET'
@@ -98,11 +106,6 @@ def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> No
 
     if not verbose:
         sys.tracebacklimit = 0
-
-    if log_file:
-        handlers: tuple[logging.Handler, ...] | None = (logging.FileHandler(log_file),)
-    else:
-        handlers = None
 
     logging.basicConfig(
         format='%(asctime)s %(module)s[%(thread)s] %(levelname)s: %(message)s',

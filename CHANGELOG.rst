@@ -33,56 +33,47 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.27.0b2
+Version 3.27.0b3
 ==================
 Unreleased
 
-⚠ Breaking Changes
-------------------
-* Error notifications for failed jobs will now only be sent when an error is first encountered. Additional
-  notifications for the same error will not be sent unless the error resolves or a different error occurs. To restore
-  the previous behavior of receiving repeated notifications for the same error, add or modify the ``repeated_error``
-  setting under the ``display`` key in your config file:
-
-  .. code-block:: yaml
-
-     display:
-       _note: this is a note
-       new: false
-       error: true
-       repeated_error: true  # defaults to false
-       unchanged: false
-       empty-diff: false
-
-
-  This enhancement was requested by `toxin-x <https://github.com/toxin-x>`__ in issue `#86
-  <https://github.com/mborsetti/webchanges/issues/86>`__.
-
 Added
 -----
-* Python 3.13: **webchanges** now is tested on Python 3.13 before releasing. However, the `aioxmpp
-  <https://pypi.org/project/aioxmpp/>`__ library required by the ``xmpp`` reporter will not install in Python 3.13 (at
-  least on Windows), and the development of the `library <https://codeberg.org/jssfr/aioxmpp>`__ has been
-  halted.
+* Job directive ``suppress_repeated_errors`` to notify an error condition only the first time it is encountered. No
+  more notifications will be sent unless the error resolves or a different error occurs. This enhancement was
+  requested by `toxin-x <https://github.com/toxin-x>`__ in issue `#86
+  <https://github.com/mborsetti/webchanges/issues/86>`__.
+* Python 3.13: **webchanges** is now tested on Python 3.13 before releasing. However, ``orderedset``, a dependency of
+  the `aioxmpp <https://pypi.org/project/aioxmpp/>`__ library required by the ``xmpp`` reporter will not install in
+  Python 3.13 (at least on Windows) and this reporter is therefore not included in the tests. It appears that the
+  development of this `library <https://codeberg.org/jssfr/aioxmpp>`__ has been halted.
 
-  - Python 3.13t (free-threaded, GIL-free) remains unsupported due to the lack of free-threaded wheels of dependencies
+  - Python 3.13t (free-threaded, GIL-free) remains unsupported due to the lack of free-threaded wheels for dependencies
     such as ``cryptography``, ``msgpack``, ``lxml``, and the optional ``jq``.
-* New Sub-directive in ``pypdf`` Filter: Added ``extraction_mode`` sub-directive.
+* New ``extraction_mode`` sub-directive in ``pypdf`` filter.
 * Now storing error information in snapshot database.
-* Added ``-l``/``--log-file`` command line argument to write log to a file. Suggested by `yubiuser
+* Added ``--log-file`` command line argument to write the log to a file. Suggested by `yubiuser
   <https://github.com/yubiuser>`__ in `issue #88 <https://github.com/mborsetti/webchanges/issues/88>`__.
 
 Fixed
 -----
-* The command line argument ``--error`` was yielding different results than when actually running *webchanges*.
+* Fixed command line argument ``--error`` to use the same exact logic as the one used when running *webchanges*.
   Reported by `yubiuser <https://github.com/yubiuser>`__ in `issue #88
   <https://github.com/mborsetti/webchanges/issues/88>`__.
+* Fixed incorrect reporting of job error when caused by an HTTP response status code that is not `IANA-registered
+  <https://docs.python.org/3/library/http.html#http-status-codes>`__.
+
+Changed
+-------
+* Command line ``--test`` can now be combined with ``--test-reporter`` to have the output sent to a different reporter.
+* Improved error reporting, including adding if a Job has a proxy and reporting error message in ``--test``.
+* Updated the default model instructions for the ``ai_google`` (BETA) differ to improve quality of summary.
 
 Internals
 ---------
-* Added ``ai_google`` directive to the ``image`` differ to test Generative AI summarization of differences between two
-  images, but the results are still fairly bad and practically. This feature is in ALPHA and undocumented, and will
-  not be developed further until the models improve to produce useful summaries.
+* Added ``ai_google`` directive to the ``image`` differ to test Generative AI summarization of changes between two
+  images, but in testing the results are unusable. This feature is in ALPHA and undocumented, and will not be
+  developed further until the models improve to the point where the summary becomes useful.
 
 
 

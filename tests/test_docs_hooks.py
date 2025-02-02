@@ -70,7 +70,7 @@ def load_hooks_from_doc() -> str:
 
 def load_hooks_testdata() -> dict[str, Any]:
     yaml_data = Path(data_path.joinpath('docs_hooks_testdata.yaml')).read_text()
-    return yaml.safe_load(yaml_data)
+    return yaml.safe_load(yaml_data)  # type: ignore[no-any-return]
 
 
 def load_hooks_jobs() -> list[JobBase]:

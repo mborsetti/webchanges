@@ -38,21 +38,17 @@ file:
 Display
 -------
 In addition to always reporting changes (which is the whole point of the program), :program:`webchanges` by default
-reports newly-added (``new``) pages and errors (``error``). You can change this behavior in the ``display`` section of
-the configuration:
+reports newly-added (``new``) pages and errors (``error``).
+
+You can change what is reported in the ``display`` section of the configuration:
 
 .. code:: yaml
 
    display:
      new: true
      error: true
-     repeated_error: false
      unchanged: false
      empty-diff: true  # deprecated
-
-If you set ``repeated_error`` to ``true``, :program:`webchanges` will send repeated notifications for the same error;
-otherwise notifications for failed jobs are sent once when an error is first encountered, and additional notifications
-will not be sent unless the error resolves or a different error occurs.
 
 If you set ``unchanged`` to ``true``, :program:`webchanges` will always report all pages that are checked but have not
 changed.

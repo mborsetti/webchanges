@@ -12,6 +12,7 @@ import html
 import logging
 import os
 import re
+import ssl
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 import tempfile
@@ -100,10 +101,11 @@ class BrowserResponseError(Exception):
         if self.status_code:
             return (
                 f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
-                f'{response_names[self.status_code]}' + (f' with content "{self.args[0]}"' if self.args[0] else '')
+                f"{response_names.get(self.status_code, '')}"
+                + (f' with content "{self.args[0]}"' if self.args[0] else '')
             )
         else:
-            return self.args[0]
+            return str(self.args[0])
 
 
 class JobBase(metaclass=TrackSubClasses):
@@ -174,6 +176,7 @@ class JobBase(metaclass=TrackSubClasses):
     retries: int | None = None
     ssl_no_verify: bool | None = None
     stderr: str | None = None  # urlwatch backwards compatibility for ShellJob (not used)
+    suppress_repeated_errors: bool | None = None
     switches: list[str] | None = None
     timeout: int | float | None = None
     tz: str | None = None  # added by with_defaults, taken from reporter configuration
@@ -308,7 +311,7 @@ class JobBase(metaclass=TrackSubClasses):
                 if all(data.get(required) for required in subclass.__required__)
             ]
             if len(matched_subclasses) == 1:
-                job_subclass = matched_subclasses[0]  # type: ignore[assignment]
+                job_subclass = matched_subclasses[0]
             elif len(matched_subclasses) > 1:
                 number_matched: dict[JobBase, int] = {}
                 for match in matched_subclasses:
@@ -449,9 +452,7 @@ class JobBase(metaclass=TrackSubClasses):
         # backwards-compatible
         if hasattr(job_with_defaults, 'diff_tool'):
             if isinstance(job_with_defaults.diff_tool, str):
-                job_with_defaults.differ = {
-                    'command': {'command': job_with_defaults.diff_tool}  # type: ignore[assignment]
-                }
+                job_with_defaults.differ = {'command': {'command': job_with_defaults.diff_tool}}
                 warnings.warn(
                     f"Job {job_with_defaults.index_number}: 'diff_tool' is a deprecated job directive. Please use"
                     f" differ '{{'command': {job_with_defaults.diff_tool}}}' instead.",
@@ -511,12 +512,7 @@ class JobBase(metaclass=TrackSubClasses):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
-        error_string = tb
-        if isinstance(exception, subprocess.CalledProcessError):
-            error_string += f'\nDetailed error (returned by subprocess):\n{exception.stderr}'
-        elif isinstance(exception, FileNotFoundError):
-            error_string += f'\nDetailed error (returned by OS):\n{exception}'
-        return error_string
+        return tb
 
     def ignore_error(self, exception: Exception) -> bool | str:
         """Determine whether the error of the job should be ignored.
@@ -563,6 +559,7 @@ class Job(JobBase):
         'name',
         'no_conditional_request',
         'note',
+        'suppress_repeated_errors',
         'user_visible_url',
     )
 
@@ -669,7 +666,7 @@ class UrlJob(UrlJobBase):
 
     __kind__ = 'url'
 
-    __optional__ = (
+    __optional__: tuple[str, ...] = (
         'cookies',
         'data',
         'data_as_json',
@@ -731,10 +728,20 @@ class UrlJob(UrlJobBase):
             proxy = os.getenv((scheme + '_proxy').upper())
         logger.debug(f'Job {self.index_number}: Proxies: {proxy}')
 
+        if self.ignore_dh_key_too_small:
+            logger.debug(
+                'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
+                "and thus are not affected by the server's weak DH key"
+            )
+            context: ssl.SSLContext | str | bool = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.set_ciphers('DEFAULT@SECLEVEL=1')  # type: ignore[union-attr]
+        else:
+            context = not self.ssl_no_verify
+
         client = httpx.Client(
             headers=headers,
             cookies=self.cookies,
-            verify=(not self.ssl_no_verify),
+            verify=context,
             http2=http2,
             proxy=proxy,
             timeout=timeout,
@@ -756,6 +763,7 @@ class UrlJob(UrlJobBase):
                 http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
             else:
                 http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
+            logger.error(f'httpx received {http_error_msg}')
 
             if response.status_code != 404:
                 try:
@@ -816,8 +824,23 @@ class UrlJob(UrlJobBase):
             # required to suppress warnings with 'ssl_no_verify: true'
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-        # noinspection PyTypeChecker
-        response = requests.request(  # type: ignore[attr-defined]
+        if self.ignore_dh_key_too_small:
+            # https://stackoverflow.com/questions/38015537
+            logger.debug(
+                'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
+                "and thus are not affected by the server's weak DH key"
+            )
+            try:
+                # only works with urllib3 <2.0
+                urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
+            except AttributeError:
+                logger.error(
+                    'Unable to ignore_dh_key_too_small due to bug in '
+                    'requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
+                )
+                logger.error('See https://github.com/psf/requests/issues/6443')
+
+        response = requests.request(
             method=self.method,  # type: ignore[arg-type]
             url=self.url,
             params=self.params,
@@ -864,7 +887,7 @@ class UrlJob(UrlJobBase):
                     error_message = parser.handle(html_text).strip()
                 http_error_msg += f'\n{error_message}'
 
-            raise requests.HTTPError(http_error_msg, response=response)  # type: ignore[attr-defined]
+            raise requests.HTTPError(http_error_msg, response=response)
 
         if response.status_code == 304:
             raise NotModifiedError(response.status_code)
@@ -930,7 +953,7 @@ class UrlJob(UrlJobBase):
                 str(url.hostname),
                 str(username),
                 str(password),
-                timeout=self.timeout,  # type: ignore[arg-type]
+                timeout=self.timeout,
             ) as ftp:
                 if FilterBase.filter_chain_needs_bytes(self.filter):
                     data_bytes = b''
@@ -998,21 +1021,6 @@ class UrlJob(UrlJobBase):
 
         if self.http_client == 'requests' or not httpx:
             job_state._http_client_used = 'requests'
-            if self.ignore_dh_key_too_small:
-                # https://stackoverflow.com/questions/38015537
-                logger.debug(
-                    'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
-                    "and thus are not affected by the server's weak DH key"
-                )
-                try:
-                    # only works with urllib3 <2.0
-                    urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
-                except AttributeError:
-                    logger.error(
-                        'Unable to ignore_dh_key_too_small due to bug in '
-                        'requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
-                    )
-                    logger.error('See https://github.com/psf/requests/issues/6443')
             data, etag, mime_type = self._retrieve_requests(headers=headers, timeout=timeout)
         elif not self.http_client or self.http_client == 'httpx':
             if isinstance(httpx, str):
@@ -1021,13 +1029,6 @@ class UrlJob(UrlJobBase):
                     f'run job ( {self.get_indexed_location()} )\n{httpx}'
                 )
             job_state._http_client_used = 'HTTPX'
-            if self.ignore_dh_key_too_small:
-                # https://stackoverflow.com/questions/68708522
-                logger.debug(
-                    'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
-                    "and thus are not affected by the server's weak DH key"
-                )
-                httpx._config.DEFAULT_CIPHERS = 'DEFAULT@SECLEVEL=1'
             data, etag, mime_type = self._retrieve_httpx(headers=headers, timeout=timeout)
         else:
             raise ValueError(
@@ -1060,14 +1061,43 @@ class UrlJob(UrlJobBase):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
-        if httpx and isinstance(
-            exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError)
+        if (
+            httpx
+            and isinstance(exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError))
+            or not isinstance(requests, str)
+            and isinstance(exception, requests.exceptions.RequestException)
         ):
             # Instead of a full traceback, just show the error
-            return str(exception)
-        elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
-            # Instead of a full traceback, just show the error
-            return str(exception)
+            exception_str = str(exception).strip()
+            print(f'{exception_str=} {exception.args=} {type(exception)=}')
+            if (self.https_proxy or self.http_proxy) and (
+                (httpx and isinstance(exception, httpx.TransportError))
+                or any(
+                    exception_str.startswith(error_string)
+                    for error_string in (
+                        '[SSL:',
+                        # https://mariadb.com/kb/en/operating-system-error-codes/
+                        '[Errno 103]',  # ECONNABORTED
+                        '[Errno 104]',  # ECONNRESET
+                        '[Errno 108]',  # ESHUTDOWN
+                        '[Errno 110]',  # ETIMEDOUT
+                        '[Errno 111]',  # ECONNREFUSED
+                        '[Errno 112]',  # EHOSTDOWN
+                        '[Errno 113]',  # EHOSTUNREACH
+                        # https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--9000-11999-
+                        '[WinError 10053]',  # WSAECONNABORTED
+                        '[WinError 10054]',  # WSAECONNRESET
+                        '[WinError 10060]',  # WSAETIMEDOUT
+                        '[WinError 10061]',  # WSAECONNREFUSED
+                        '[WinError 10062]',  # WSAELOOP
+                        '[WinError 10063]',  # WSAENAMETOOLONG
+                        '[WinError 10064]',  # WSAEHOSTDOWN
+                        '[WinError 10065]',  # WSAEHOSTUNREACH
+                    )
+                )
+            ):
+                exception_str += f'\n\n(Job has proxy {self.https_proxy or self.http_proxy})'
+            return exception_str
         return tb
 
     def ignore_error(self, exception: Exception) -> bool:
@@ -1308,13 +1338,13 @@ class BrowserJob(UrlJobBase):
             no_viewport = False if not self.switches else any('--window-size' in switch for switch in self.switches)
             if not self.user_data_dir:
                 browser = p.chromium.launch(
-                    executable_path=executable_path,  # type: ignore[arg-type]
-                    channel=channel,  # type: ignore[arg-type]
-                    args=args,  # type: ignore[arg-type]
-                    ignore_default_args=ignore_default_args,  # type: ignore[arg-type]
+                    executable_path=executable_path,
+                    channel=channel,
+                    args=args,
+                    ignore_default_args=ignore_default_args,
                     timeout=timeout,
                     headless=headless,
-                    proxy=proxy,  # type: ignore[arg-type]
+                    proxy=proxy,
                 )
                 browser_version = browser.version
                 user_agent = headers.pop(
@@ -1324,7 +1354,7 @@ class BrowserJob(UrlJobBase):
                 )
                 context = browser.new_context(
                     no_viewport=no_viewport,
-                    ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
+                    ignore_https_errors=self.ignore_https_errors,
                     user_agent=user_agent,  # will be detected if in headers
                     extra_http_headers=dict(headers),
                 )
@@ -1338,14 +1368,14 @@ class BrowserJob(UrlJobBase):
 
                 context = p.chromium.launch_persistent_context(
                     user_data_dir=self.user_data_dir,
-                    channel=channel,  # type: ignore[arg-type]
-                    executable_path=executable_path,  # type: ignore[arg-type]
-                    args=args,  # type: ignore[arg-type]
-                    ignore_default_args=ignore_default_args,  # type: ignore[arg-type]
+                    channel=channel,
+                    executable_path=executable_path,
+                    args=args,
+                    ignore_default_args=ignore_default_args,
                     headless=headless,
-                    proxy=proxy,  # type: ignore[arg-type]
+                    proxy=proxy,
                     no_viewport=no_viewport,
-                    ignore_https_errors=self.ignore_https_errors,  # type: ignore[arg-type]
+                    ignore_https_errors=self.ignore_https_errors,
                     extra_http_headers=dict(headers),
                     user_agent=user_agent,  # will be detected if in headers
                 )
@@ -1482,7 +1512,7 @@ class BrowserJob(UrlJobBase):
                 def handle_route(route: Route) -> None:
                     """Handler function to change the route (a pyee.EventEmitter callback)."""
                     logger.info(f'Job {self.index_number}: Intercepted route to change request method to {self.method}')
-                    route.continue_(method=str(self.method), post_data=data)  # type: ignore[arg-type]
+                    route.continue_(method=str(self.method), post_data=data)
 
                 page.route(url, handler=handle_route)
 
@@ -1608,8 +1638,8 @@ class BrowserJob(UrlJobBase):
             try:
                 response = page.goto(
                     url,
-                    wait_until=self.wait_until,  # type: ignore[arg-type]
-                    referer=self.referer,  # type: ignore[arg-type]
+                    wait_until=self.wait_until,
+                    referer=self.referer,
                 )
 
                 if not response:
@@ -1622,7 +1652,7 @@ class BrowserJob(UrlJobBase):
                         if isinstance(self.wait_for_url, str):
                             page.wait_for_url(
                                 self.wait_for_url,
-                                wait_until=self.wait_until,  # type: ignore[arg-type]
+                                wait_until=self.wait_until,
                                 timeout=timeout,
                             )
                         elif isinstance(self.wait_for_url, dict):
@@ -1704,7 +1734,7 @@ class BrowserJob(UrlJobBase):
                     except PlaywrightError:
                         Path(html_filename).unlink()
                 context.close()
-                raise BrowserResponseError(e.args, None)
+                raise BrowserResponseError(e.args, None) from None
 
             # if response.status and 400 <= response.status < 600:
             #     context.close()
@@ -1744,6 +1774,20 @@ class BrowserJob(UrlJobBase):
 
             context.close()
             return content, etag, mime_type
+
+    def format_error(self, exception: Exception, tb: str) -> str:
+        """Format the error of the job if one is encountered.
+
+        :param exception: The exception.
+        :param tb: The traceback.format_exc() string.
+        :returns: A string to display and/or use in reports.
+        """
+        exception_str = f'Browser error in {str(exception).strip()}'
+        print(f'{exception_str=}, {tb=}')
+        if (self.https_proxy or self.http_proxy) and 'net::ERR' in exception_str:
+            exception_str += f'\n\n(Job has proxy {self.https_proxy or self.http_proxy})'
+            return exception_str
+        return exception_str
 
     def ignore_error(self, exception: Exception) -> bool | str:
         """Determine whether the error of the job should be ignored.
@@ -1906,8 +1950,25 @@ class ShellJob(Job):
                 'application/octet-stream' if needs_bytes else 'text/plain',
             )
         except subprocess.CalledProcessError as e:
-            logger.error(f'Job {self.index_number}: Command failed with returncode {e.returncode}')
-            logger.error(f'Job {self.index_number}: Command: {e.cmd} ')
-            logger.error(f'Job {self.index_number}: Output : {e.output}')
-            logger.error(f'Job {self.index_number}: stderr : {e.stderr}')
-            raise e
+            logger.info(f'Job {self.index_number}: Command: {e.cmd} ')
+            logger.info(f'Job {self.index_number}: Failed with returncode {e.returncode}')
+            logger.info(f'Job {self.index_number}: stderr : {e.stderr}')
+            logger.info(f'Job {self.index_number}: stdout : {e.stdout}')
+            raise
+
+    def format_error(self, exception: Exception, tb: str) -> str:
+        """Format the error of the job if one is encountered.
+
+        :param exception: The exception.
+        :param tb: The traceback.format_exc() string.
+        :returns: A string to display and/or use in reports.
+        """
+        if isinstance(exception, subprocess.CalledProcessError):
+            # Instead of a full traceback, just show the HTTP error
+            return (
+                f'Error: Exit status {exception.returncode} returned from subprocess:\n'
+                f'{(exception.stderr or exception.stdout).strip()}'
+            )
+        elif isinstance(exception, FileNotFoundError):
+            return f'Error returned by OS: {str(exception).strip()}'
+        return tb

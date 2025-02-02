@@ -84,7 +84,7 @@ def load_filter_doc_jobs() -> list[JobBase]:
             jobs_by_guid[job.get_guid()].append(job)
 
     conflicting_jobs = []
-    for guid, guid_jobs in jobs_by_guid.items():
+    for guid_jobs in jobs_by_guid.values():
         if len(guid_jobs) != 1:
             conflicting_jobs.append(guid_jobs[0].get_location())
 
@@ -96,7 +96,7 @@ def load_filter_doc_jobs() -> list[JobBase]:
 
 def load_filter_testdata() -> dict[str, dict[str, str]]:
     yaml_data = Path(here.joinpath('data').joinpath('docs_filters_testdata.yaml')).read_text()
-    return yaml.safe_load(yaml_data)
+    return yaml.safe_load(yaml_data)  # type: ignore[no-any-return]
 
 
 FILTER_DOC_JOBS = load_filter_doc_jobs()

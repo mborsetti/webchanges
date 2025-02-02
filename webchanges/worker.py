@@ -11,7 +11,6 @@ import random
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
-from threading import Lock
 from typing import Iterable, TYPE_CHECKING
 
 from webchanges.command import UrlwatchCommand
@@ -29,9 +28,6 @@ if TYPE_CHECKING:
     from webchanges.main import Urlwatch
 
 logger = logging.getLogger(__name__)
-
-# creating a lock here to be available for importing in hooks.py
-lock = Lock()
 
 
 def run_jobs(urlwatcher: Urlwatch) -> None:
@@ -219,7 +215,7 @@ def get_virt_mem() -> int:
             f"dependencies with 'pip install webchanges[use_browser]'.\n{psutil}"
         ) from None
     try:
-        virt_mem = psutil.virtual_memory().available
+        virt_mem: int = psutil.virtual_memory().available
         logger.debug(
             f'Found {virt_mem / 1e6:,.0f} MB of available physical memory (plus '
             f'{psutil.swap_memory().free / 1e6:,.0f} MB of swap).'

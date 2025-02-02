@@ -198,7 +198,7 @@ def test_filter_requires_bytes() -> None:
 def test_deprecated_filters() -> None:
     def _warning_message(warning: Warning | str) -> str:
         if isinstance(warning, Warning):
-            return warning.args[0]
+            return warning.args[0]  # type: ignore[no-any-return]
         else:
             return warning
 

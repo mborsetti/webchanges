@@ -141,7 +141,7 @@ class SsdbMiniDBStorage(SsdbStorage):
             where_clause = self.CacheEntry.c.guid == guid
             for keep_id in keep_ids:
                 where_clause = where_clause & (self.CacheEntry.c.id != keep_id)
-            result = self.CacheEntry.delete_where(self.db, where_clause)
+            result: int = self.CacheEntry.delete_where(self.db, where_clause)
             self.db.commit()
             self.db.vacuum()
             return result

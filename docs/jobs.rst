@@ -1052,6 +1052,20 @@ filter extracts tabular text.
 .. versionchanged:: 3.20
    Default setting can be overridden by a filter or differ.
 
+
+.. suppress_repeated_errors:
+
+suppress_repeated_errors
+------------------------
+Mute continuous notifications of an error condition.
+
+If you set ``suppress_repeated_errors`` to ``true``, :program:`webchanges` will only send a notification for an error
+the first time it is encountered, and no more notifications will be sent unless the error resolves or a different error
+occurs.
+
+.. versionadded:: 3.27
+
+
 .. _name:
 
 name

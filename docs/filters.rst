@@ -66,7 +66,7 @@ At the moment, the following filters are available:
 * To extract text from PDFs:
 
   - :ref:`pypdf`: Convert PDF to plaintext (recommended).
-  - :ref:`pdf2text`: Convert PDF to plaintext (Poppler required to be installed in the OS).
+  - :ref:`pdf2text`: Convert PDF to plaintext (Poppler required to be manually installed in the OS).
 
 * To save images:
 
@@ -939,8 +939,8 @@ This filter converts a PDF file to plaintext using the `pdftotext
 <https://github.com/jalan/pdftotext/blob/master/README.md#pdftotext>`__ Python library, itself based on the `Poppler
 <https://poppler.freedesktop.org/>`__ library.
 
-For most uses, we recommend using the filter :ref:`pypdf`, which achieves similar results without having to install
-OS-specific dependencies (Poppler).
+For most uses, we recommend using the filter :ref:`pypdf`, which achieves similar results without having to separately
+install OS-specific dependencies (Poppler).
 
 This filter *must* be the first filter in a chain of filters, since it consumes binary data.
 

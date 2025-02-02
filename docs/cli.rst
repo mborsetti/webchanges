@@ -105,6 +105,10 @@ following:
 .. versionchanged:: 3.18
    Use conditional requests to improve speed.
 
+Please note that since no reporting is involved, ``--error`` runs faster than a regular run and this has been known to
+cause DNS errors (e.g. ``[Errno-3] Try again``) when using a slow resolver (see `here
+<https://github.com/mborsetti/webchanges/issues/88>`__).
+
 
 .. _test:
 
@@ -328,3 +332,13 @@ Maximum number of snapshots to save
 .. todo::
     This part of documentation needs your help!
     Please consider :ref:`contributing <contributing>` a pull request to update this.
+
+Log -v/--verbose output to file
+-------------------------------
+Use ``--log-file`` to send the log output from ``-v`` or ``-vv`` to a file:
+
+.. code-block:: bash
+
+    webchanges -vv -log-file webchanges.log
+
+.. versionadded:: 3.27

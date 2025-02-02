@@ -371,12 +371,13 @@ System instructions
    3. Compare the two versions, identifying areas where the meaning differs. This includes additions, removals, or
       alterations that change the intended message or interpretation.
    4. Ignore changes that do not affect the overall meaning, even if the wording has been modified.
-   5. Summarize the identified differences in a clear and concise manner, explaining how the meaning has shifted or
-      evolved in the new version compared to the old version. Be specific and provide examples to illustrate your
-      points. If there's only additions to the text, then summarize the additions.
-   6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, and other Markdown
+   5. Summarize the identified differences, excluding those ignores, in a clear and concise manner, explaining how the
+      meaning has shifted or evolved in the new version compared to the old version only when necessary. Be specific
+      and provide examples to illustrate your points when needed.
+   6. If there are only additions to the text, then summarize the additions.
+   7. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, and other Markdown
       elements as needed to enhance readability.
-   7. Restrict your analysis and summary to the information provided within the ``<old_version>`` and ``<new_version>``
+   8. Restrict your analysis and summary to the information provided within the ``<old_version>`` and ``<new_version>``
       tags. Do not introduce external information or assumptions.
 
 Prompt

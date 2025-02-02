@@ -18,7 +18,8 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timezone, tzinfo  # py311 use UTC instead of timezone.utc
+from datetime import datetime  # py311 use UTC instead of timezone.utc
+from datetime import timezone, tzinfo
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Literal, TextIO, TypedDict
 from zoneinfo import ZoneInfo
@@ -42,7 +43,7 @@ except ImportError:  # pragma: no cover
 try:
     from types import NoneType
 except ImportError:  # pragma: no cover # Python 3.9
-    NoneType = type(None)  # type: ignore[misc,assignment]
+    NoneType = type(None)  # type: ignore[assignment,misc]
 
 try:
     import redis
@@ -50,7 +51,7 @@ except ImportError as e:  # pragma: no cover
     redis = str(e)  # type: ignore[assignment]
 
 try:
-    from dateutil import parser as dateutil_parser  # type: ignore[import-untyped]
+    from dateutil import parser as dateutil_parser
 except ImportError:  # pragma: no cover
     dateutil_parser = None  # type: ignore[assignment]
 
@@ -61,7 +62,6 @@ _ConfigDisplay = TypedDict(
     {
         'new': bool,
         'error': bool,
-        'repeated_error': bool,
         'unchanged': bool,
         'empty-diff': bool,
     },
@@ -309,7 +309,6 @@ DEFAULT_CONFIG: _Config = {
     'display': {  # select whether the report include the categories below
         'new': True,
         'error': True,
-        'repeated_error': False,
         'unchanged': False,
         'empty-diff': False,
     },
@@ -585,7 +584,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
 
     filename: list[Path]  # type: ignore[assignment]
 
-    def __init__(self, filename: list[Path]) -> None:  # type: ignore[arg-type]
+    def __init__(self, filename: list[Path]) -> None:
         """
 
         :param filename: The filenames of the jobs file.
@@ -631,7 +630,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
             )
             jobs = [job for job in jobs if job not in removed_jobs]
 
-        logger.info(f'Loaded {len(jobs)} jobs from {self.filename}')
+        logger.info(f"Loaded {len(jobs)} jobs from {', '.join(str(file) for file in self.filename)}")
         return jobs
 
 
@@ -675,7 +674,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             for key, value in d1_.copy().items():
                 if ignore_underline_keys and key.startswith('_'):
                     d1_.pop(key, None)  # type: ignore[misc]
-                elif isinstance(value, dict) and isinstance(d2_.get(key), dict):  # type: ignore[misc]
+                elif isinstance(value, dict) and isinstance(d2_.get(key), dict):
                     _sub_dict_deep_difference(value, d2_[key])  # type: ignore[arg-type,literal-required]
                     if not len(value):
                         d1_.pop(key)  # type: ignore[misc]
@@ -1000,13 +999,13 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         :return: A list of JobBase objects.
         """
         if len(self.filename) == 1:
-            with self.filename[0].open() as fp:
-                return self._parse(fp, self.filename)
+            with self.filename[0].open() as f:
+                return self._parse(f, self.filename)
         else:
             fp = io.StringIO('\n---\n'.join(f.read_text(encoding='utf-8-sig') for f in self.filename if f.is_file()))
             return self._parse(fp, self.filename)
 
-    def save(self, jobs: Iterable[JobBase]) -> None:  # type: ignore[override]
+    def save(self, jobs: Iterable[JobBase]) -> None:
         """Save jobs to the job YAML file.
 
         :param jobs: An iterable of JobBase objects to be written.
@@ -1121,7 +1120,7 @@ class SsdbStorage(BaseFileStorage, ABC):
         :param keep_entries: Number of entries to keep after deletion.
         """
         if hasattr(self, 'clean_all'):
-            count = self.clean_all(keep_entries)  # type: ignore[attr-defined]
+            count = self.clean_all(keep_entries)
             if count:
                 print(f'Deleted {count} old snapshots')
         else:
@@ -1884,7 +1883,7 @@ class SsdbRedisStorage(SsdbStorage):
         if delete_entries != 1:
             raise NotImplementedError('Only deleting of the latest 1 entry is supported by this Redis code.')
 
-        if self.db.lpop(self._make_key(guid)) is None:  # type: ignore[no-untyped-call]
+        if self.db.lpop(self._make_key(guid)) is None:
             return 0
 
         return 1

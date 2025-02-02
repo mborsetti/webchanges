@@ -27,7 +27,7 @@ from markdown2 import Markdown
 from webchanges import __project_name__, __url__, __version__
 from webchanges.jobs import UrlJob
 from webchanges.mailer import Mailer, SendmailMailer, SMTPMailer
-from webchanges.util import chunk_string, dur_text, TrackSubClasses
+from webchanges.util import chunk_string, dur_text, mark_to_html, TrackSubClasses
 
 # https://stackoverflow.com/questions/712791
 try:
@@ -117,7 +117,7 @@ if sys.platform == 'win32':
     try:
         from colorama import AnsiToWin32
     except ImportError as e:  # pragma: no cover
-        AnsiToWin32 = str(e)  # type: ignore[assignment,misc]
+        AnsiToWin32 = str(e)  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -175,10 +175,11 @@ class ReporterBase(metaclass=TrackSubClasses):
         return othercls(self.report, config, self.job_states, self.duration, self.jobs_files)
 
     @classmethod
-    def get_base_config(cls, report: Report) -> dict:
+    def get_base_config(cls, report: Report) -> dict[str, Any]:
         """Gets the configuration of the base of the report (e.g. for stdout, it will be text)"""
         report_class: ReporterBase = cls.mro()[-3]  # type: ignore[assignment]
-        return report.config['report'][report_class.__kind__]  # type: ignore[literal-required]
+        base_config: dict[str, Any] = report.config['report'][report_class.__kind__]  # type: ignore[literal-required]
+        return base_config
 
     def subject_with_args(self, filtered_job_states: list[JobState], subject: str = '') -> str:
         if not subject:
@@ -397,9 +398,16 @@ class HtmlReporter(ReporterBase):
         :param differ: The type of differ to use.
         :returns: HTML for a single job.
         """
+
+        def markdown_to_html(text: str) -> str:
+            """Return an html representation of a markdown string."""
+            return '<br>\n'.join(
+                [mark_to_html(line, job_state.job.markdown_padded_tables) for line in text.splitlines()]
+            )
+
         if job_state.verb == 'error':
-            htm = f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback.strip())}</pre>'
-            if not self.report.config['display']['repeated_error']:
+            htm = f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback)}</pre>'
+            if job_state.job.suppress_repeated_errors:
                 htm += (
                     '<div style="color:maroon;"><i>Reminder: No further alerts until the error is resolved or changes.'
                     '</i></div>'
@@ -407,12 +415,25 @@ class HtmlReporter(ReporterBase):
             return htm
 
         if job_state.verb == 'unchanged':
-            return f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.old_data))}</pre>'
+            if job_state.is_markdown():
+                return markdown_to_html(str(job_state.old_data))
+            elif job_state.new_mime_type == 'text/html':
+                return str(job_state.old_data)
+            else:
+                return f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.old_data))}</pre>'
 
         if job_state.verb == 'error_ended':
             return (
                 f"<div style=\"color:green;\"><i>{job_state.old_error_data['type']} fixed; content unchanged.</i></div>"
             )
+
+        if job_state.verb == 'new':
+            if job_state.is_markdown():
+                return markdown_to_html(str(job_state.new_data))
+            elif job_state.new_mime_type == 'text/html':
+                return str(job_state.new_data)
+            else:
+                return f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.new_data))}</pre>'
 
         if job_state.old_data is None or job_state.old_data == job_state.new_data:
             return '...'
@@ -490,7 +511,7 @@ class TextReporter(ReporterBase):
                     f'updating.'
                 )
 
-    def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | bytes | None:
+    def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
         """Returns the text of the report for a job; called by _format_output.
 
         :param job_state: The JobState object with the job information.
@@ -498,16 +519,22 @@ class TextReporter(ReporterBase):
         :returns: HTML for a single job.
         """
         if job_state.verb == 'error':
-            text = job_state.traceback.strip()
-            if not self.report.config['display']['repeated_error']:
+            if isinstance(self, StdoutReporter):
+                text = self._red(job_state.traceback)
+            else:
+                text = job_state.traceback
+            if job_state.job.suppress_repeated_errors:
                 text += 'Reminder: No further alerts until the error is resolved or changes.'
             return text
 
         if job_state.verb == 'unchanged':
-            return job_state.old_data
+            return str(job_state.old_data)
 
         if job_state.verb == 'error_ended':
             return f"{job_state.old_error_data['type']} fixed; content unchanged."
+
+        if job_state.verb == 'new':
+            return str(job_state.new_data)
 
         if job_state.old_data in {None, job_state.new_data}:
             return None
@@ -538,13 +565,7 @@ class TextReporter(ReporterBase):
             details_part.extend((job_state.job.note, ''))
         if isinstance(content, str):
             details_part.extend((content, sep))
-        details_part.extend(
-            ['', '']
-            if sep
-            else [
-                '',
-            ]
-        )
+        details_part.extend(['', ''] if sep else [''])
 
         return summary_part, [part for part in details_part if part is not None]
 
@@ -760,9 +781,9 @@ class MarkdownReporter(ReporterBase):
         :returns: HTML for a single job.
         """
         if job_state.verb == 'error':
-            mark = job_state.traceback.strip()
-            if not self.report.config['display']['repeated_error']:
-                mark += '_Reminder: No further alerts until the error is resolved or changes.._'
+            mark = job_state.traceback
+            if job_state.job.suppress_repeated_errors:
+                mark += '_Reminder: No further alerts until the error is resolved or changes._'
             return mark
 
         if job_state.verb == 'unchanged':
@@ -770,6 +791,9 @@ class MarkdownReporter(ReporterBase):
 
         if job_state.verb == 'error_ended':
             return f"_{job_state.old_error_data['type']} fixed; content unchanged._"
+
+        if job_state.verb == 'unchanged':
+            return str(job_state.new_data)
 
         if job_state.old_data in {None, job_state.new_data}:
             return None

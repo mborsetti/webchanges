@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import logging
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
 import sys
 import time
 import traceback
@@ -67,7 +66,7 @@ class JobState(ContextManager):
     error_ignored: bool | str
     exception: Exception | None = None
     generated_diff: dict[Literal['text', 'markdown', 'html'], str]
-    history_dic_snapshots: dict[str | bytes, Snapshot] = {}
+    history_dic_snapshots: dict[str | bytes, Snapshot]
     new_data: str | bytes
     new_error_data: ErrorData = {}
     new_etag: str
@@ -88,7 +87,7 @@ class JobState(ContextManager):
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
     traceback: str
     tries: int = 0  # if >1, an error; value is the consecutive number of runs leading to an error
-    unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
+    unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str]
     verb: Verb
 
     def __init__(self, snapshots_db: SsdbStorage, job: JobBase) -> None:
@@ -103,6 +102,7 @@ class JobState(ContextManager):
 
         self.generated_diff = {}
         self.unfiltered_diff = {}
+        self.history_dic_snapshots = {}
 
     def __enter__(self) -> 'JobState':
         """Context manager invoked on entry to the body of a with statement to make it possible to factor out standard
@@ -137,10 +137,10 @@ class JobState(ContextManager):
         # except Exception:
         #     # We don't want exceptions from releasing resources to override job run results
         #     logger.warning(f'Job {self.index_number}: Exception while releasing resources for job', exc_info=True)
-        if isinstance(exc_value, subprocess.CalledProcessError):
-            raise subprocess.SubprocessError(exc_value.stderr)
-        elif isinstance(exc_value, FileNotFoundError):
-            raise OSError(exc_value)
+        # if isinstance(exc_value, subprocess.CalledProcessError):
+        #     raise subprocess.SubprocessError(exc_value.stderr)
+        # elif isinstance(exc_value, FileNotFoundError):
+        #     raise OSError(exc_value)
         return None
 
     @staticmethod
@@ -149,6 +149,7 @@ class JobState(ContextManager):
 
         :returns: True if an external debugger is attached, False otherwise.
         """
+        return False
         return sys.breakpointhook.__module__ != 'sys'
 
     def added_data(self) -> dict[str, bool | str | Exception | float | None]:
@@ -247,12 +248,8 @@ class JobState(ContextManager):
 
             except Exception as e:
                 # Job has a chance to format and ignore its error
-                if self.job.https_proxy and str(e.args[0]).startswith('[SSL:'):
-                    args_list = list(e.args)
-                    args_list[0] += f' (Check proxy {self.job.https_proxy})'
-                    e.args = tuple(args_list)
                 if self.debugger_attached():
-                    logger.info('Running in a debugger: raising the exception instead of processing it')
+                    logger.warning('Running in a debugger: raising the exception instead of processing it')
                     raise
                 self.new_timestamp = time.time()
                 self.exception = e
@@ -271,7 +268,7 @@ class JobState(ContextManager):
         except Exception as e:
             # Job failed its chance to handle error
             if self.debugger_attached():
-                logger.info('Running in a debugger: raising the exception instead of processing it')
+                logger.warning('Running in a debugger: raising the exception instead of processing it')
                 raise
             self.exception = e
             self.traceback = self.job.format_error(e, traceback.format_exc())
@@ -304,11 +301,10 @@ class JobState(ContextManager):
         :parameter tz: The IANA tz_info name of the timezone to use for diff in the job's report (e.g. 'Etc/UTC').
         :returns: The job's diff.
         """
-        # generated_diff must be initialized as None
-        if self.generated_diff is not {} and report_kind in self.generated_diff:
+        if report_kind in self.generated_diff:
             return self.generated_diff[report_kind]
 
-        if self.generated_diff is {} or report_kind not in self.unfiltered_diff:
+        if report_kind not in self.unfiltered_diff:
             differ_kind, subdiffer = DifferBase.normalize_differ(differ or self.job.differ, self.job.index_number)
             unfiltered_diff = DifferBase.process(differ_kind, subdiffer, self, report_kind, tz, self.unfiltered_diff)
             self.unfiltered_diff.update(unfiltered_diff)
@@ -448,14 +444,17 @@ class Report:
         def should_skip_job(self: Report, job_state: JobState) -> bool:
             """Identify jobs to be skipped."""
             # Skip states that are hidden by display config
-            config_verbs: set[Verb] = {'new', 'unchanged', 'error', 'repeated_error'}
+            config_verbs: set[Verb] = {'new', 'unchanged', 'error'}
             if any(
                 job_state.verb == verb and not self.config['display'][verb]  # type: ignore[typeddict-item]
                 for verb in config_verbs
             ):
                 return True
-            # Skip specific compound states
-            if job_state.verb in {'changed,no_report', 'repeated_error'}:
+            # Skip compound states
+            if job_state.verb == 'changed,no_report':
+                return True
+            # Skip repeated_error if suppress_repeated_errors directive in job
+            if job_state.verb == 'repeated_error' and job_state.job.suppress_repeated_errors:
                 return True
             # Skip empty diffs unless empty-diff is configured
             if (

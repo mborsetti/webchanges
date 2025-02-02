@@ -401,14 +401,18 @@ def test_test_job(capsys: pytest.CaptureFixture[str]) -> None:
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message.startswith(
-        'Sample webchanges job; used by test_command.py\n'
-        '----------------------------------------------\n'
+        '===========================================================================\n'
+        '01. NEW: Sample webchanges job; used by test_command.py\n'
+        '===========================================================================\n'
         '\n'
-        'test\n'
+        '---------------------------------------------------------------------------\n'
+        'NEW: Sample webchanges job; used by test_command.py (echo test)\n'
+        '---------------------------------------------------------------------------\n'
+        '\n'
         '\n'
         '\n'
         '--\n'
-        'Job tested in '
+        'Checked 1 source in '
     )
 
 
@@ -456,14 +460,18 @@ def test_test_job_with_test_reporter(capsys: pytest.CaptureFixture[str]) -> None
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert message.startswith(
-        'Sample webchanges job; used by test_command.py\n'
-        '----------------------------------------------\n'
+        '===========================================================================\n'
+        '01. NEW: Sample webchanges job; used by test_command.py\n'
+        '===========================================================================\n'
         '\n'
-        'test\n'
+        '---------------------------------------------------------------------------\n'
+        'NEW: Sample webchanges job; used by test_command.py (echo test)\n'
+        '---------------------------------------------------------------------------\n'
+        '\n'
         '\n'
         '\n'
         '--\n'
-        'Job tested in '
+        'Checked 1 source in '
     )
 
 
