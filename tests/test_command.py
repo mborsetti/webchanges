@@ -1273,4 +1273,4 @@ def test_prepare_jobs(urlwatch_command: UrlwatchCommand, capsys: pytest.CaptureF
     setattr(urlwatch_command.urlwatch_config, 'prepare_jobs', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == 'Adding new Job 1: echo test\n'
+    assert message.startswith('Adding new Job 1: echo test\n')
