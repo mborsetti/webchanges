@@ -164,7 +164,6 @@ images in combination with the :ref:`image_diff` differ.
    filter:
      - ascii85
 
-
 .. versionadded:: 3.21
 
 
@@ -182,7 +181,6 @@ the :ref:`image_diff` differ.  Also see :ref:`ascii85`, which is more efficient.
    url: https://example.net/favicon.ico
    filter:
      - base64
-
 
 .. versionadded:: 3.16
 
@@ -222,11 +220,11 @@ Optional sub-directives
 .. versionchanged:: 3.16
    Relative links are converted to absolute ones; use the ``absolute_links: false`` sub-directive to disable.
 
-.. versionadded:: 3.16
-   ``absolute_links`` sub-directive.
+.. versionchanged:: 3.16
+   Added ``absolute_links`` sub-directive.
 
-.. versionadded:: 3.9.2
-   ``indent`` sub-directive.
+.. versionchanged:: 3.9.2
+   Added ``indent`` sub-directive.
 
 Required packages
 `````````````````
@@ -601,7 +599,6 @@ Optional sub-directives
 * ``indentation`` (integer or string): Either the number of spaces or a string to be used to indent each level with; if
   ``0``, a negative number or ``""`` then no indentation (default: 4, i.e. 4 spaces).
 * ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false).
-
 
 .. versionadded:: 3.0.1
    ``sort_keys`` sub-directive.
@@ -1005,8 +1002,8 @@ Optional sub-directives
 * ``raw`` (true/false): If true, page text is output in the order it appears in the content stream (default: false).
   Only one of ``raw`` and ``physical`` can be set to true.
 
-.. versionadded:: 3.8.2
-   ``physical`` and ``raw`` sub-directives.
+.. versionchanged:: 3.8.2
+   Added ``physical`` and ``raw`` sub-directives.
 
 
 Required packages
@@ -1115,10 +1112,12 @@ extract text in a fixed width format that closely adheres to the rendered
 Optional sub-directives
 ```````````````````````
 * ``password``: Password for a password-protected PDF file (dependency required; see below).
-* ``extraction_mode``: '"layout" for experimental layout mode functionality.
+* ``extraction_mode``: set to ``layout`` for `experimental layout mode functionality
+  <https://pypdf.readthedocs.io/en/stable/user/extract-text.html>`__.
 
 .. versionadded:: 3.16
-.. versionmodified:: 3.27
+
+.. versionchanged:: 3.27
    ``extraction_mode`` sub-directive
 
 
@@ -1343,8 +1342,8 @@ Optional sub-directives
 
 .. versionadded:: 3.8
 
-.. versionadded:: 3.13
-   ``adjacent`` sub-directive.
+.. versionchanged:: 3.13
+   Added ``adjacent`` sub-directive.
 
 
 

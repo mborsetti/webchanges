@@ -478,6 +478,24 @@ class UrlwatchCommand:
         # We do not save the job state or job on purpose here, since we are possibly modifying the job
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
+    def prepare_jobs(self) -> None:
+        """
+        Runs jobs that have no history to populate the snapshot database when they're newly added.
+        """
+        new_jobs = []
+        for idx, job in enumerate(self.urlwatcher.jobs):
+            has_history = bool(self.urlwatcher.ssdb_storage.get_history_snapshots(job.get_guid()))
+            if not has_history:
+                print(f'Adding new {job.get_indexed_location()}')
+                new_jobs.append(idx + 1)
+        if not new_jobs:
+            print('Found no new jobs to run.')
+            return
+        self.urlwatcher.urlwatch_config.joblist = new_jobs
+        self.urlwatcher.run_jobs()
+        self.urlwatcher.close()
+        return
+
     def test_differ(self, arg_test_differ: list[str]) -> int:
         """
         Runs diffs for a job on all the saved snapshots and outputs the result to stdout or whatever reporter is
@@ -1097,6 +1115,10 @@ class UrlwatchCommand:
 
         if self.urlwatch_config.test_job:
             self.test_job(self.urlwatch_config.test_job)
+            self._exit(0)
+
+        if self.urlwatch_config.prepare_jobs:
+            self.prepare_jobs()
             self._exit(0)
 
         if self.urlwatch_config.test_differ:

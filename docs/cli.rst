@@ -117,17 +117,25 @@ Test run a job or check config and job files for errors
 You can test a job and its filter by using the command line argument ``--test`` followed by the job index number
 (from ``--list``) or its URL/command; :program:`webchanges` will display the filtered output. This allows to easily
 test changes in filters. Use a negative index number to select a job from the bottom of your job list (i.e. -1 is the
-last job, -2 is the second to last job, etc.). Combine ``--test`` with ``--verbose`` to get more information, for
-example the text returned from a website with a 4xx (client error) status code, or, if using ``use_browser: true``, a
-screenshot, a full page image, and the HTML contents at the moment of failure (see log for filenames):
+last job, -2 is the second to last job, etc.).
+
+Combine ``--test`` with ``--verbose`` to get more information, for example the text returned from a website with a 4xx
+(client error) status code, or, if using ``use_browser: true``, save to a temporary folder in case of failure a
+screenshot, a full page image, and the HTML contents of the page (see log for filenames):
 
 .. code-block:: bash
 
    webchanges --verbose --test 1
 
+The output of the test can be redirected to any reporter by combining it with --test-reporter:
+
+.. code-block:: bash
+
+   webchanges --verbose --test 1 --test-reporter browser
+
 Please note that ``max_tries`` will be ignored by ``--test``.
 
-To only check the config, job and hooks files for errors, use ``--test`` without a JOB:
+To only check the config, job and hooks files for errors, use ``--test`` without specifying a JOB:
 
 .. code-block:: bash
 
@@ -147,6 +155,9 @@ To only check the config, job and hooks files for errors, use ``--test`` without
 .. versionchanged:: 3.14
    Saves the screenshot, full page image and HTML contents when a ``url`` job with ``use_browser: true`` fails
    while running in verbose mode.
+
+.. versionchanged:: 3.27
+   Uses built-in repoters for output, and can be combined with ``--test-reporter``.
 
 
 .. _test-differ:
@@ -269,6 +280,16 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 
 .. versionchanged:: 3.24
    Recognizes ISO-8601 formats and defaults to using ``dateutil.parser`` if found installed.
+
+
+.. _prepare-jobs:
+
+Save snapshot for newly added job
+---------------------------------
+To run only newly added jobs to capture and save their initial snapshot, run with ``--prepare-jobs``.
+
+.. versionadded:: 3.27
+
 
 
 .. _delete-snapshot:

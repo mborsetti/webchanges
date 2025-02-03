@@ -11,6 +11,7 @@ import textwrap
 # import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Sequence
 
 from webchanges import __doc__ as doc
 from webchanges import __docs_url__, __project_name__, __version__
@@ -50,13 +51,14 @@ class CommandConfig(BaseConfig):
     gc_database: int | None
     hooks_files: list[Path]
     install_chrome: bool
-    joblist: list[str]
+    joblist: Sequence[str | int]
     jobs_files: list[Path]
     list_jobs: bool | str | None
     log_file: Path
     max_snapshots: int | None
     max_workers: int | None
     no_headless: bool
+    prepare_jobs: bool
     rollback_database: str | None
     smtp_login: bool
     telegram_chats: bool
@@ -302,6 +304,11 @@ class CommandConfig(BaseConfig):
             '--delete-snapshot',
             help='delete the last saved changed snapshot of JOB (index or URL/command)',
             metavar='JOB',
+        )
+        group.add_argument(
+            '--prepare-jobs',
+            action='store_true',
+            help='run only newly added jobs (without history)',
         )
         group.add_argument(
             '--change-location',

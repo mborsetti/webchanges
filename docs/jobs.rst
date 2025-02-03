@@ -71,6 +71,10 @@ present) as the job's name.
    name: This is a human-readable name/label of the job
    url: https://example.org/
 
+**Initializing newly added jobs**
+
+After adding new jobs, you can run :program:`webchanges` with ``--prepare-jobs`` to take and save a snapshot for
+these new jobs without running all your existing jobs.
 
 
 .. _url:

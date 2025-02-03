@@ -1261,3 +1261,16 @@ def test_list_error_jobs_with_error(urlwatch_command: UrlwatchCommand, capsys: p
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     assert '\n  1: Error "' in message
+
+
+def test_prepare_jobs(urlwatch_command: UrlwatchCommand, capsys: pytest.CaptureFixture[str]) -> None:
+    urlwatch_command.urlwatcher.jobs_storage = YamlJobsStorage([config_path.joinpath('jobs-echo_test.yaml')])
+    urlwatch_command.urlwatcher.load_jobs()
+    setattr(urlwatch_command.urlwatch_config, 'prepare_jobs', True)
+    urlwatch_command.urlwatcher.report.config['display']['new'] = False
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    setattr(urlwatch_command.urlwatch_config, 'prepare_jobs', False)
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert message == 'Adding new Job 1: echo test\n'
