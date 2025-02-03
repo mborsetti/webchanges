@@ -124,7 +124,7 @@ Reporters are implemented in a hierarchy, and configuration settings of a report
 
 .. _job_defaults:
 
-Job Defaults
+Job defaults
 ------------
 If you want to apply or change default settings for all your jobs, add them to the ``job_defaults`` section in your
 config file. The following example will set default headers for all ``url`` jobs without ``use_browser``:
@@ -132,22 +132,29 @@ config file. The following example will set default headers for all ``url`` jobs
 .. code-block:: yaml
 
    job_defaults:
-     _note: Default directives that are applied to jobs.
+     all:
+       _note: Default directives that are applied to all job kinds.
+       suppress_repeated_errors: true
      url:
-       _note: These are used for URL jobs without 'use_browser'.
+       _note: These are defaults for URL jobs without 'use_browser'.
        headers:
-         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
-         Accept-Language: en-US,en
+         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+         Accept-Language: en-US,en;q=0.9
          DNT: 1
+         Priority: u=0, i
+         Sec-CH-UA: '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"'
+         Sec-CH-UA-Mobile: ?0
+         Sec-CH-UA-Platform: '"Windows"'
          Sec-Fetch-Dest: document
          Sec-Fetch-Mode: navigate
          Sec-Fetch-Site: none
          Sec-Fetch-User: ?1
          Sec-GCP: 1
          Upgrade-Insecure-Requests: 1
-         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36
 
-The above config file sets all ``url`` jobs without the ``browser`` directive to use the specified headers.
+The above config file sets all jobs to use the suppress_repeated_errors option and ``url`` jobs without the ``browser``
+directive to use the specified headers.
 
 
 The possible sub-directives to ``job_defaults`` are:

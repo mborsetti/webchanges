@@ -1061,11 +1061,11 @@ filter extracts tabular text.
 
 suppress_repeated_errors
 ------------------------
-Mute continuous notifications of an error condition.
+Mute repeated notifications (once every run) of the same error condition (true/false). Defaults to false.
 
 If you set ``suppress_repeated_errors`` to ``true``, :program:`webchanges` will only send a notification for an error
-the first time it is encountered, and no more notifications will be sent unless the error resolves or a different error
-occurs.
+the first time it is encountered. No more error notifications will be sent unless for the same error, and you will
+be notified only if the error resolves or a different error occurs.
 
 .. versionadded:: 3.27
 

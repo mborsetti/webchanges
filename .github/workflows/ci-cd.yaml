@@ -390,7 +390,7 @@ jobs:
 
       - name: Create GitHub release
 #        uses: actions/create-release@main
-        uses: softprops/action-gh-release@main
+        uses: softprops/action-gh-release@master
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
