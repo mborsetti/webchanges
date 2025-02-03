@@ -33,13 +33,13 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.27.0rc0
+Version 3.27.0
 ==================
-Unreleased
+2025-02-03
 
 Added
 -----
-* Python 3.13: **webchanges** is now fuly tested on Python 3.13 before releasing. However, ``orderedset``, a dependency
+* Python 3.13: **webchanges** is now fully tested on Python 3.13 before releasing. However, ``orderedset``, a dependency
   of the `aioxmpp <https://pypi.org/project/aioxmpp/>`__ library required by the ``xmpp`` reporter will not install in
   Python 3.13 (at least on Windows) and this reporter is therefore not included in the tests. It appears that the
   development of this `library <https://codeberg.org/jssfr/aioxmpp>`__ has been halted.
@@ -67,7 +67,8 @@ Fixed
 Changed
 -------
 * Command line ``--test`` can now be combined with ``--test-reporter`` to have the output sent to a different reporter.
-* Improved error reporting, including adding if a job has a proxy and reporting error message in ``--test``.
+* Improved error reporting, including reporting error message in ``--test`` and adding proxy information if the error
+  is a network error and the job has a proxy and.
 * Updated the default model instructions for the ``ai_google`` (BETA) differ to improve quality of summary.
 
 Internals

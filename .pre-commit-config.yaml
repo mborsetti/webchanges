@@ -146,7 +146,7 @@ repos:
         types_or: [cython, pyi, python]
         args: [--filter-files]
       - id: flynt  # https://github.com/ikamensh/flynt
-        name: Convert % strings to f-strings (flynt)
+        name: convert % strings to f-strings (flynt)
         entry: flynt
         additional_dependencies: [flynt]
         language: python
@@ -154,13 +154,13 @@ repos:
         types: [python]
         args: [--fail-on-change]
       - id: black  # https://github.com/python/black
-        name: Uncompromising code formatting (black)
+        name: uncompromising code formatting (black)
         entry: black
         additional_dependencies: [black]
         language: python
         types: [python]
       - id: flake8
-        name: Check for errors, style [and over-complexity], security (flake8, bandit)
+        name: check for errors, style [and over-complexity], security (flake8, bandit)
         description: Code linter
         entry: flake8  # https://gitlab.com/pycqa/flake8
         additional_dependencies: [flake8, flake8-bandit, flake8-quotes]
@@ -169,7 +169,7 @@ repos:
         require_serial: true
         args: [--max-line-length, '120']
       - id: mypy  # https://github.com/python/mypy
-        name: Check Python static typing (mypy)
+        name: check Python static typing (mypy)
         entry: mypy
         additional_dependencies:
           - mypy
@@ -183,7 +183,7 @@ repos:
         language: python
         types: [python]
       - id: doc8  # https://github.com/pycqa/doc8
-        name: Check for style in rst documentation (doc8)
+        name: check for style in rst documentation (doc8)
         description: Documentation linter
         entry: doc8
         additional_dependencies: [doc8]

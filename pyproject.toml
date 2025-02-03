@@ -296,6 +296,8 @@ exclude_lines = [
     # Don't cover IDE code:
     'if TYPE_CHECKING:'
 ]
+# Exclude entire files if they have a custom # pragma: exclude file remark
+# exclude_also = '(?s)\A.*# pragma: exclude file.*\Z'
 # ignore_errors = true
 
 
