@@ -482,16 +482,16 @@ class UrlwatchCommand:
         """
         Runs jobs that have no history to populate the snapshot database when they're newly added.
         """
-        new_jobs = []
+        new_jobs = set()
         for idx, job in enumerate(self.urlwatcher.jobs):
             has_history = bool(self.urlwatcher.ssdb_storage.get_history_snapshots(job.get_guid()))
             if not has_history:
                 print(f'Adding new {job.get_indexed_location()}')
-                new_jobs.append(idx + 1)
-        if not new_jobs:
+                new_jobs.add(idx + 1)
+        if not new_jobs and not self.urlwatch_config.joblist:
             print('Found no new jobs to run.')
             return
-        self.urlwatcher.urlwatch_config.joblist = new_jobs
+        self.urlwatcher.urlwatch_config.joblist = set(self.urlwatcher.urlwatch_config.joblist).union(new_jobs)
         self.urlwatcher.run_jobs()
         self.urlwatcher.close()
         return

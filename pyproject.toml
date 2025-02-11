@@ -90,9 +90,8 @@ xmpp = ['aioxmpp']
 redis = ['redis']
 requests = ['requests']
 safe_password = ['keyring']
-zstd = ['zstandard']
 all = [
-    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff_xml,imagediff,matrix,pushbullet,pushover,xmpp,redis,requests,safe_password,zstd]'
+    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff_xml,imagediff,matrix,pushbullet,pushover,xmpp,redis,requests,safe_password]'
 ]
 
 

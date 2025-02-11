@@ -71,6 +71,7 @@ except ImportError as e:  # pragma: no cover
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from webchanges.handler import JobState
+    from webchanges.storage import _Config
 
 
 logger = logging.getLogger(__name__)
@@ -123,7 +124,7 @@ class DifferBase(metaclass=TrackSubClasses):
         """
         result: list[str] = []
         for sc in TrackSubClasses.sorted_by_kind(cls):
-            # default_subdirective = getattr(sc, '__default_subdirective__', None)
+            # default_directive = getattr(sc, '__default_directive__', None)
             result.extend((f'  * {sc.__kind__} - {sc.__doc__}',))
             if hasattr(sc, '__supported_directives__'):
                 for key, doc in sc.__supported_directives__.items():
@@ -136,30 +137,56 @@ class DifferBase(metaclass=TrackSubClasses):
         cls,
         differ_spec: dict[str, Any] | None,
         job_index_number: int | None = None,
+        config: _Config | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """Checks the differ_spec for its validity and applies default values.
 
         :param differ_spec: The differ as entered by the user; use "unified" if empty.
         :param job_index_number: The job index number.
-        :returns: A validated differ_kind, subdirectives (where subdirectives is a dict).
+        :returns: A validated differ_kind, directives tuple.
         """
+
+        def directives_with_defaults(
+            differ_spec: str, directives: dict[str, Any], config: _Config | None = None
+        ) -> dict[str, Any]:
+            """Obtain differ subdirectives that also contains defaults from the configuration.
+
+            :param differ_kind: The differ kind.
+            :param directives: The differ directives as stated in the job.
+            :returns: directives inclusive of configuration defaults.
+            """
+            if config is None:
+                logger.error('Cannot merge differ differdirectives with defaults as no config object was passed')
+                return directives
+            cfg = config.get('differ_defaults')
+            if isinstance(cfg, dict):
+                defaults: dict[str, Any] = cfg.get(differ_spec)  # type: ignore[assignment]
+                if defaults:
+                    for key, value in defaults.items():
+                        if key not in directives:
+                            directives[key] = value
+            return directives
+
         differ_spec = differ_spec or {'name': 'unified'}
-        subdirectives = differ_spec.copy()
-        differ_kind = subdirectives.pop('name', '')
+        directives = differ_spec.copy()
+        differ_kind = directives.pop('name', '')
         if not differ_kind:
-            if list(subdirectives.keys()) == ['command']:
+            if list(directives.keys()) == ['command']:
                 differ_kind = 'command'
             else:
                 raise ValueError(
                     f"Job {job_index_number}: Differ directive must have a 'name' sub-directive: {differ_spec}."
                 )
 
-        differcls = cls.__subclasses__.get(differ_kind, None)
+        differcls: DifferBase | None = cls.__subclasses__.get(differ_kind, None)  # type: ignore[assignment]
         if not differcls:
             raise ValueError(f'Job {job_index_number}: No differ named {differ_kind}.')
 
+        if directives:
+            directives = directives_with_defaults(differ_kind, directives, config)
+
         if hasattr(differcls, '__supported_directives__'):
-            provided_keys = set(subdirectives.keys())
+            provided_keys = set(directives.keys())
             allowed_keys = set(differcls.__supported_directives__.keys())
             unknown_keys = provided_keys.difference(allowed_keys)
             if unknown_keys and '<any>' not in allowed_keys:
@@ -168,7 +195,7 @@ class DifferBase(metaclass=TrackSubClasses):
                     f"{', '.join(unknown_keys)} (supported: {', '.join(sorted(allowed_keys))})."
                 )
 
-        return differ_kind, subdirectives
+        return differ_kind, directives
 
     @classmethod
     def process(
@@ -1264,7 +1291,7 @@ class AIGoogleDiffer(DifferBase):
         'tools': "data passed on to the API's 'tools' field (default: None)",
         'unified': 'directives passed to the unified differ (default: None)',
     }
-    __default_subdirective__ = 'model'
+    __default_directive__ = 'model'
 
     @staticmethod
     def _send_to_model(

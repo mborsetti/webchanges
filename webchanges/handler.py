@@ -238,7 +238,7 @@ class JobState(ContextManager):
                 filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
 
                 # Apply any specified filters
-                for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filter, self.job.index_number):
+                for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):
                     filtered_data, mime_type = FilterBase.process(
                         filter_kind, subfilter, self, filtered_data, mime_type
                     )
@@ -293,6 +293,7 @@ class JobState(ContextManager):
         report_kind: Literal['text', 'markdown', 'html'] = 'text',
         differ: dict[str, Any] | None = None,
         tz: ZoneInfo | None = None,
+        config: _Config | None = None,
     ) -> str:
         """Generates the job's diff and applies diff_filters to it (if any). Memoized.
 
@@ -305,14 +306,20 @@ class JobState(ContextManager):
             return self.generated_diff[report_kind]
 
         if report_kind not in self.unfiltered_diff:
-            differ_kind, subdiffer = DifferBase.normalize_differ(differ or self.job.differ, self.job.index_number)
+            differ_kind, subdiffer = DifferBase.normalize_differ(
+                differ or self.job.differ,
+                self.job.index_number,
+                config,
+            )
             unfiltered_diff = DifferBase.process(differ_kind, subdiffer, self, report_kind, tz, self.unfiltered_diff)
             self.unfiltered_diff.update(unfiltered_diff)
         _generated_diff = self.unfiltered_diff[report_kind]
         if _generated_diff:
             # Apply any specified diff_filters
             _mime_type = 'text/plain'
-            for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.diff_filter, self.job.index_number):
+            for filter_kind, subfilter in FilterBase.normalize_filter_list(
+                self.job.diff_filters, self.job.index_number
+            ):
                 _generated_diff, _mime_type = FilterBase.process(  # type: ignore[assignment]
                     filter_kind, subfilter, self, _generated_diff, _mime_type
                 )
@@ -460,7 +467,7 @@ class Report:
             if (
                 job_state.verb == 'changed'
                 and not self.config['display']['empty-diff']
-                and job_state.get_diff(tz=self.tz) == ''
+                and job_state.get_diff(tz=self.tz, config=self.config) == ''
             ):
                 return True
 

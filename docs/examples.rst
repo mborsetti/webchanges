@@ -91,7 +91,7 @@ replace ``USERNAME`` with the name of the user (which can be found by navigating
 
    name: USERNAME's Facebook posts
    url: https://m.facebook.com/USERNAME/pages/permalink/?view_type=tab_posts
-   filter:
+   filters:
      - xpath: //div[@data-ft='{"tn":"*s"}']
      - html2text: strip_tags
    additions_only: true
@@ -108,7 +108,7 @@ replace ``USERNAME`` with the name of the user (which can be found by navigating
 
    name: USERNAME's Facebook events
    url: https://m.facebook.com/USERNAME/pages/permalink/?view_type=tab_events
-   filter:
+   filters:
      - css:
          selector: div#objects_container
          exclude: 'div.x, #m_more_friends_who_like_this, img'
@@ -129,7 +129,7 @@ This is an example how to anonymously watch the GitHub "releases" page of a proj
 .. code-block:: yaml
 
    url: https://github.com/git/git/releases
-   filter:
+   filters:
      - xpath:
          path: //*[@class="Link--primary"]
          maxitems: 1
@@ -140,7 +140,7 @@ If you only want to monitor the latest release and not include pre-releases:
 .. code-block:: yaml
 
    url: https://github.com/Novik/ruTorrent/releases/latest
-   filter:
+   filters:
      - xpath: //*[@class="ml-1"]
      - html2text:
 
@@ -159,7 +159,7 @@ This is an example how to anonymously watch the GitLab "tags" page for a given p
 .. code-block:: yaml
 
    url: https://gitlab.com/gitlab-org/gitlab/-/tags
-   filter:
+   filters:
      - xpath: (//a[contains(@class,"item-title ref-name")])[1]
      - html2text:
 

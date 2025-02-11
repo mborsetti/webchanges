@@ -130,7 +130,6 @@ class JobBase(metaclass=TrackSubClasses):
     _delay: float | None = None
     additions_only: bool | None = None
     block_elements: list[str] | None = None
-    chromium_revision: dict[str, int] | dict[str, str] | str | int | None = None  # deprecated
     compared_versions: int | None = None
     contextlines: int | None = None
     cookies: dict[str, str] | None = None
@@ -138,15 +137,13 @@ class JobBase(metaclass=TrackSubClasses):
     data_as_json: bool | None = None
     deletions_only: bool | None = None
     differ: dict[str, Any] | None = None  # added in 3.21
-    diff_filter: str | list[str | dict[str, Any]] | None = None
+    diff_filters: str | list[str | dict[str, Any]] | None = None
     diff_tool: str | None = None  # deprecated in 3.21
     enabled: bool | None = None
     encoding: str | None = None
-    filter: str | list[str | dict[str, Any]] | None = None
+    filters: str | list[str | dict[str, Any]] | None = None
     headers = Headers(encoding='utf-8')
     http_client: Literal['httpx', 'requests'] | None = None
-    http_proxy: str | None = None
-    https_proxy: str | None = None
     ignore_cached: bool | None = None
     ignore_connection_errors: bool | None = None
     ignore_default_args: bool | str | list[str] | None = None
@@ -172,6 +169,7 @@ class JobBase(metaclass=TrackSubClasses):
     no_redirects: bool | None = None
     note: str | None = None
     params: str | list | dict | None = None
+    proxy: str | None = None
     referer: str | None = None  # Playwright
     retries: int | None = None
     ssl_no_verify: bool | None = None
@@ -191,6 +189,23 @@ class JobBase(metaclass=TrackSubClasses):
     wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None
 
     def __init__(self, **kwargs: Any) -> None:
+        # backward-compatibility
+        if 'filter' in kwargs:
+            logger.info(f"Job {kwargs.get('index_number')}: Replacing deprecated directive 'filter' with 'filters'")
+            kwargs['filters'] = kwargs.pop('filter')
+        if 'diff_filter' in kwargs:
+            logger.info(
+                f"Job {kwargs.get('index_number')}: Replacing deprecated directive 'diff_filter' with 'diff_filter'"
+            )
+            kwargs['diff_filters'] = kwargs.pop('diff_filter')
+        if 'https_proxy' in kwargs:
+            logger.info(f"Job {kwargs.get('index_number')}: Replacing deprecated directive 'https_proxy' with 'proxy'")
+            kwargs['proxy'] = kwargs.pop('https_proxy')
+            kwargs.pop('http_proxy', None)
+        elif 'http_proxy' in kwargs:
+            logger.info(f"Job {kwargs.get('index_number')}: Replacing deprecated directive 'http_proxy' with 'proxy'")
+            kwargs['proxy'] = kwargs.pop('http_proxy')
+
         # Fail if any required keys are not provided
         for k in self.__required__:
             if k not in kwargs:
@@ -348,7 +363,7 @@ class JobBase(metaclass=TrackSubClasses):
         return job
 
     def to_dict(self) -> dict:
-        """Return all definte (not None) Job object directives, required and optional, as a serializable dict,
+        """Return all defined (not None) Job object directives, required and optional, as a serializable dict,
         converting Headers object (which are not JSON serializable) to dicts.
 
         :returns: A dict with all job directives as keys, ignoring those that are extras.
@@ -369,7 +384,8 @@ class JobBase(metaclass=TrackSubClasses):
         :returns: A JobBase type object.
         """
         for k in data.keys():
-            if k not in cls.__required__ + cls.__optional__:
+            # backward-compatibility
+            if k not in cls.__required__ + cls.__optional__ + ('filter', 'diff_filter', 'http_client', 'http_proxy'):
                 if len(filenames) > 1:
                     jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file},' for file in filenames]
                 elif len(filenames) == 1:
@@ -535,6 +551,22 @@ class JobBase(metaclass=TrackSubClasses):
         if self.monospace is None:
             self.monospace = True
 
+    def get_proxy(self) -> str | None:
+        """Check that URL is http or https and return proxy value."""
+        scheme = urlsplit(self.url).scheme
+        if scheme not in {'http', 'https'}:
+            raise ValueError(
+                f'Job {self.index_number}: URL should start with https:// or http:// (check for typos): {self.url}'
+            )
+        proxy = self.proxy
+        if proxy is None:
+            if os.getenv((scheme + '_proxy').upper()):
+                proxy = os.getenv((scheme + '_proxy').upper())
+            logger.debug(
+                f"Job {self.index_number}: Setting proxy from environment variable {(scheme + '_proxy').upper()}"
+            )
+        return proxy
+
 
 class Job(JobBase):
     """Job class for jobs."""
@@ -546,10 +578,10 @@ class Job(JobBase):
         'contextlines',
         'deletions_only',
         'differ',
-        'diff_filter',
+        'diff_filters',
         'diff_tool',  # deprecated in 3.21
         'enabled',
-        'filter',
+        'filters',
         'index_number',
         'is_markdown',
         'kind',  # hooks.py
@@ -672,14 +704,12 @@ class UrlJob(UrlJobBase):
         'data_as_json',
         'encoding',
         'headers',
-        'http_client',
-        'http_proxy',
-        'https_proxy',
         'ignore_cached',
         'ignore_dh_key_too_small',
         'method',
         'no_redirects',
         'params',
+        'proxy',
         'retries',
         'ssl_no_verify',
         'timeout',
@@ -716,17 +746,10 @@ class UrlJob(UrlJobBase):
                 f'Job {self.index_number}: Using the HTTPX HTTP client library (HTTP/2 support is not available since '
                 f'h2 is not installed)'
             )
-        proxy: str | None = None
-        scheme = urlsplit(self.url).scheme
-        if scheme not in {'http', 'https'}:
-            raise ValueError(
-                f'Job {self.index_number}: URL should start with https:// or http:// (check for typos): {self.url}'
-            )
-        if getattr(self, scheme + '_proxy'):
-            proxy = getattr(self, scheme + '_proxy')
-        elif os.getenv((scheme + '_proxy').upper()):
-            proxy = os.getenv((scheme + '_proxy').upper())
-        logger.debug(f'Job {self.index_number}: Proxies: {proxy}')
+
+        proxy = self.get_proxy()
+        if proxy is not None:
+            logger.debug(f'Job {self.index_number}: Proxy: {proxy}')
 
         if self.ignore_dh_key_too_small:
             logger.debug(
@@ -795,7 +818,7 @@ class UrlJob(UrlJobBase):
             etag = response.headers.get('ETag', '')
             mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
-        if FilterBase.filter_chain_needs_bytes(self.filter):
+        if FilterBase.filter_chain_needs_bytes(self.filters):
             return response.content, etag, mime_type
 
         if self.encoding:
@@ -812,13 +835,13 @@ class UrlJob(UrlJobBase):
         :raises NotModifiedError: If an HTTP 304 response is received.
         """
         logger.info(f'Job {self.index_number}: Using the requests HTTP client library')
-        proxies = None
-        scheme = urlsplit(self.url).scheme
-        if getattr(self, scheme + '_proxy'):
-            proxies = {scheme: getattr(self, scheme + '_proxy')}
-        elif os.getenv((scheme + '_proxy').upper()):
-            proxies = {scheme: os.getenv((scheme + '_proxy').upper())}
-        logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
+        proxy_str = self.get_proxy()
+        if proxy_str is not None:
+            scheme = urlsplit(self.url).scheme
+            proxies = {scheme: proxy_str}
+            logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
+        else:
+            proxies = None
 
         if self.ssl_no_verify:
             # required to suppress warnings with 'ssl_no_verify: true'
@@ -901,7 +924,7 @@ class UrlJob(UrlJobBase):
             etag = response.headers.get('ETag', '')
             mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
-        if FilterBase.filter_chain_needs_bytes(self.filter):
+        if FilterBase.filter_chain_needs_bytes(self.filters):
             return response.content, etag, mime_type
 
         if self.encoding:
@@ -939,7 +962,7 @@ class UrlJob(UrlJobBase):
             else:
                 filename = Path(str(urlparse(self.url).path))
 
-            if FilterBase.filter_chain_needs_bytes(self.filter):
+            if FilterBase.filter_chain_needs_bytes(self.filters):
                 return filename.read_bytes(), '', 'application/octet-stream'
             else:
                 return filename.read_text(), '', 'text/plain'
@@ -955,7 +978,7 @@ class UrlJob(UrlJobBase):
                 str(password),
                 timeout=self.timeout,
             ) as ftp:
-                if FilterBase.filter_chain_needs_bytes(self.filter):
+                if FilterBase.filter_chain_needs_bytes(self.filters):
                     data_bytes = b''
 
                     def callback_bytes(dt: bytes) -> None:
@@ -1020,14 +1043,27 @@ class UrlJob(UrlJobBase):
         logger.debug(f'Job {self.index_number}: Cookies: {self.cookies}')
 
         if self.http_client == 'requests' or not httpx:
+            if isinstance(requests, str):
+                message = f'Job {job_state.job.index_number} cannot be run '
+                if self.http_client == 'requests':
+                    message += "with 'http_client: requests "
+                message += (
+                    f'( {self.get_indexed_location()} ):\n{requests}\n'
+                    f"Please install module using e.g. 'pip install --upgrade webchanges[requests]'."
+                )
+                raise ImportError(message)
             job_state._http_client_used = 'requests'
             data, etag, mime_type = self._retrieve_requests(headers=headers, timeout=timeout)
         elif not self.http_client or self.http_client == 'httpx':
             if isinstance(httpx, str):
-                raise ImportError(
-                    f"Job {job_state.job.index_number}: Python HTTP client package 'httpx' cannot be imported; cannot "
-                    f'run job ( {self.get_indexed_location()} )\n{httpx}'
+                message = f'Job {job_state.job.index_number} cannot be run '
+                if self.http_client == 'httpx':
+                    message += "with 'http_client: httpx "
+                message += (
+                    f'( {self.get_indexed_location()} ):\n{httpx}\n'
+                    f"Please install module using e.g. 'pip install --upgrade httpx[http2,zstd]'."
                 )
+                raise ImportError(message)
             job_state._http_client_used = 'HTTPX'
             data, etag, mime_type = self._retrieve_httpx(headers=headers, timeout=timeout)
         else:
@@ -1070,7 +1106,7 @@ class UrlJob(UrlJobBase):
             # Instead of a full traceback, just show the error
             exception_str = str(exception).strip()
             print(f'{exception_str=} {exception.args=} {type(exception)=}')
-            if (self.https_proxy or self.http_proxy) and (
+            if self.proxy and (
                 (httpx and isinstance(exception, httpx.TransportError))
                 or any(
                     exception_str.startswith(error_string)
@@ -1096,7 +1132,7 @@ class UrlJob(UrlJobBase):
                     )
                 )
             ):
-                exception_str += f'\n\n(Job has proxy {self.https_proxy or self.http_proxy})'
+                exception_str += f'\n\n(Job has proxy {self.proxy})'
             return exception_str
         return tb
 
@@ -1160,13 +1196,10 @@ class BrowserJob(UrlJobBase):
     __required__: tuple[str, ...] = ('use_browser',)
     __optional__: tuple[str, ...] = (
         'block_elements',
-        'chromium_revision',  # deprecated
         'cookies',
         'data',
         'data_as_json',
         'headers',
-        'http_proxy',
-        'https_proxy',
         'ignore_default_args',  # Playwright
         'ignore_https_errors',
         'init_script',  # Playwright,
@@ -1175,6 +1208,7 @@ class BrowserJob(UrlJobBase):
         'method',
         'navigate',
         'params',
+        'proxy',
         'switches',
         'timeout',
         'user_data_dir',
@@ -1225,7 +1259,7 @@ class BrowserJob(UrlJobBase):
         try:
             from playwright._repo_version import version as playwright_version
             from playwright.sync_api import Error as PlaywrightError
-            from playwright.sync_api import ProxySettings, Route, sync_playwright
+            from playwright.sync_api import Route, sync_playwright
         except ImportError:  # pragma: no cover
             raise ImportError(
                 f"Python package 'playwright' is not installed; cannot run jobs with the 'use_browser: true' "
@@ -1272,26 +1306,21 @@ class BrowserJob(UrlJobBase):
 
         headers = self.get_headers(job_state, user_agent=None)
 
-        proxy: ProxySettings | None = None
-        if self.http_proxy or os.getenv('HTTP_PROXY') or self.https_proxy or os.getenv('HTTPS_PROXY'):
-            if urlsplit(self.url).scheme == 'http':
-                proxy_split: SplitResult | SplitResultBytes | None = urlsplit(
-                    self.http_proxy or os.getenv('HTTP_PROXY')
-                )
-            elif urlsplit(self.url).scheme == 'https':
-                proxy_split = urlsplit(self.https_proxy or os.getenv('HTTPS_PROXY'))
-            else:
-                proxy_split = None
-            if proxy_split:
-                proxy = {
-                    'server': (
-                        f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
-                        if proxy_split.port
-                        else ''
-                    ),
-                    'username': str(proxy_split.username),
-                    'password': str(proxy_split.password),
-                }
+        proxy_str = self.get_proxy()
+        if proxy_str is not None:
+            proxy_split: SplitResult | SplitResultBytes = urlsplit(proxy_str)
+            proxy = {
+                'server': (
+                    f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
+                    if proxy_split.port
+                    else ''
+                ),
+                'username': str(proxy_split.username),
+                'password': str(proxy_split.password),
+            }
+            logger.debug(f'Job {self.index_number}: Proxy: {proxy}')
+        else:
+            proxy = None
 
         if self.switches:
             if isinstance(self.switches, str):
@@ -1784,8 +1813,8 @@ class BrowserJob(UrlJobBase):
         """
         exception_str = f'Browser error in {str(exception).strip()}'
         print(f'{exception_str=}, {tb=}')
-        if (self.https_proxy or self.http_proxy) and 'net::ERR' in exception_str:
-            exception_str += f'\n\n(Job has proxy {self.https_proxy or self.http_proxy})'
+        if self.proxy and 'net::ERR' in exception_str:
+            exception_str += f'\n\n(Job has proxy {self.proxy})'
             return exception_str
         return exception_str
 
@@ -1936,7 +1965,7 @@ class ShellJob(Job):
         :raises subprocess.TimeoutExpired: Subclass of SubprocessError, raised when a timeout expires while waiting for
            a child process.
         """
-        needs_bytes = FilterBase.filter_chain_needs_bytes(self.filter)
+        needs_bytes = FilterBase.filter_chain_needs_bytes(self.filters)
         try:
             return (
                 subprocess.run(

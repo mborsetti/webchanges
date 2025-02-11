@@ -108,7 +108,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save()
-                    if job_state.old_error_data:
+                    if job_state.old_error_data and job_state.job.suppress_repeated_errors:
                         urlwatcher.report.unchanged_from_error(job_state)
                     else:
                         urlwatcher.report.unchanged(job_state)
@@ -140,7 +140,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save()
-                    if job_state.old_error_data:
+                    if job_state.old_error_data and job_state.job.suppress_repeated_errors:
                         urlwatcher.report.unchanged_from_error(job_state)
                     else:
                         urlwatcher.report.unchanged(job_state)
@@ -195,7 +195,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             if urlwatcher.urlwatch_config.max_workers:
                 max_workers = urlwatcher.urlwatch_config.max_workers
             else:
-                max_workers = max(int(virt_mem / 200e6), 1)
+                max_workers = max(int(virt_mem / 400e6), 1)
                 max_workers = min(max_workers, os.cpu_count() or 1)
             logger.debug(
                 f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with {max_workers} "

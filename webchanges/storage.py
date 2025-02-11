@@ -287,6 +287,20 @@ _ConfigJobDefaults = TypedDict(
     },
     total=False,
 )
+_ConfigDifferDefaults = TypedDict(
+    '_ConfigDifferDefaults',
+    {
+        '_note': str,
+        'unified': dict[str, Any],
+        'ai_google': dict[str, Any],
+        'command': dict[str, Any],
+        'deepdiff': dict[str, Any],
+        'image': dict[str, Any],
+        'table': dict[str, Any],
+        'wdiff': dict[str, Any],
+    },
+    total=False,
+)
 _ConfigDatabase = TypedDict(
     '_ConfigDatabase',
     {
@@ -300,6 +314,7 @@ _Config = TypedDict(
         'display': _ConfigDisplay,
         'report': _ConfigReport,
         'job_defaults': _ConfigJobDefaults,
+        'differ_defaults': _ConfigDifferDefaults,
         'database': _ConfigDatabase,
         'footnote': str | None,
     },
@@ -446,6 +461,16 @@ DEFAULT_CONFIG: _Config = {
         'url': {'_note': "These are used for 'url' jobs without 'use_browser'."},
         'browser': {'_note': "These are used for 'url' jobs with 'use_browser: true'."},
         'command': {'_note': "These are used for 'command' jobs."},
+    },
+    'differ_defaults': {
+        '_note': 'Default directives that are applied to individual differs.',
+        'unified': {},
+        'ai_google': {},
+        'command': {},
+        'deepdiff': {},
+        'image': {},
+        'table': {},
+        'wdiff': {},
     },
     'database': {
         'engine': 'sqlite3',
@@ -609,7 +634,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
             if isinstance(job, ShellJob):
                 return True
 
-            for filter_kind, subfilter in FilterBase.normalize_filter_list(job.filter, job.index_number):
+            for filter_kind, _ in FilterBase.normalize_filter_list(job.filters, job.index_number):
                 if filter_kind == 'shellpipe':
                     return True
 
@@ -721,19 +746,13 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param config: The configuration.
         :raises ValueError: If the configuration has keys not in DEFAULT_CONFIG (bad keys, e.g. typos)
         """
-        for key in {'chromium_revision'}:
-            if key in config['job_defaults']['all'] or key in config['job_defaults']['browser']:
-                warnings.warn(
-                    f'Directive {key} found in the configuration file {self.filename} has been deprecated'
-                    f'with the use of Playright. Please delete it (webchanges --edit-config)',
-                    DeprecationWarning,
-                )
-
         config_for_extras = copy.deepcopy(config)
         if 'job_defaults' in config_for_extras:
             # Create missing 'job_defaults' keys from DEFAULT_CONFIG
             for key in DEFAULT_CONFIG['job_defaults']:
                 config_for_extras['job_defaults'][key] = None  # type: ignore[literal-required]
+            for key in DEFAULT_CONFIG['differ_defaults']:
+                config_for_extras['differ_defaults'][key] = None  # type: ignore[literal-required]
         if 'hooks' in sys.modules:
             # Remove extra keys in config used in hooks (they are not in DEFAULT_CONFIG)
             for _, obj in inspect.getmembers(
@@ -741,6 +760,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
             ):
                 if issubclass(obj, JobBase):
                     if obj.__kind__ not in DEFAULT_CONFIG['job_defaults'].keys():
+                        config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
+                    elif obj.__kind__ not in DEFAULT_CONFIG['job_defaults'].keys():
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
                 elif issubclass(obj, ReporterBase):
                     if obj.__kind__ not in DEFAULT_CONFIG['report'].keys():
@@ -908,11 +929,11 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                             + job_files_for_error()
                         )
                     )
-                if not isinstance(job.filter, (NoneType, list)):
+                if not isinstance(job.filters, (NoneType, list)):
                     raise ValueError(
                         '\n   '.join(
                             [
-                                f"The 'filter' key needs to contain a list; found a {type(job.filter).__name__} ",
+                                f"The 'filter' key needs to contain a list; found a {type(job.filters).__name__} ",
                                 f'in {job.get_indexed_location()}',
                             ]
                             + job_files_for_error()

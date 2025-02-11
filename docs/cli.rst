@@ -15,9 +15,9 @@ Command line arguments
 
 Select subset of jobs
 ---------------------
-Add job index number(s) (a ``joblist``) to the command line to run a subset of jobs; for example, ``webchanges 2 3 9``
+Add job index number(s) (a "joblist") to the command line to run a subset of jobs; for example, ``webchanges 2 3 9``
 will only run jobs #2, #3, and #9, and ``webchanges -1`` will only run the last job. Find the index numbering of your
-jobs by running ``webchanges --list``. API is experimental and may change in the near future.
+jobs by running ``webchanges --list``.
 
 .. versionadded:: 3.6
 
@@ -286,9 +286,17 @@ This feature does not work with database engines ``redis``, ``textfiles`` or ``m
 
 Save snapshot for newly added job
 ---------------------------------
-To run only newly added jobs to capture and save their initial snapshot, run with ``--prepare-jobs``.
+To run only newly added jobs to capture and save their initial snapshot, run with ``--prepare-jobs``. Can be combined
+with a "joblist" on the command line, in which case it will add these new jobs to the joblist provided.  The following
+will run jobs #10 and #12 plus any jobs that have never been run before (i.e. no starting snapshot has ever been
+captured)::
+
+   webchanges --prepare-jobs 10 12
 
 .. versionadded:: 3.27
+
+.. versionchanged:: 3.28
+   Added ability to combine with joblist.
 
 
 

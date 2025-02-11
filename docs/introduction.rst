@@ -140,9 +140,9 @@ only lines matching a specific regular expression with ``keep_lines_containing``
 
     name: Sample webchanges job definition
     url: https://example.com/
-    https_proxy: http://user:password@example.net:8080
+    proxy: http://user:password@example.net:8080
     max_tries: 2
-    filter:
+    filters:
       - xpath: //section[@role="main"]
       - html2text:
           method: html2text

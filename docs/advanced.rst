@@ -39,7 +39,7 @@ like the one below:
 
    url: https://example.com/api_data.json
    user_visible_url: https://example.com
-   filter:
+   filters:
      - execute: "python3 -c \"import sys, json; print(json.load(sys.stdin)['data'])\""
 
 Escaping of the Python is a bit complex due to being inside a double quoted shell string inside a double quoted YAML
@@ -50,7 +50,7 @@ seemingly complex escaping and also informs the downstream html reporter that th
 
    url: https://example.com/api_data.json
    user_visible_url: https://example.com
-   filter:
+   filters:
      - execute: "python3 -c \"import sys, json; d = json.load(sys.stdin); [print(f\\\"[{v['Title']}]\\n({v['DownloadUrl']})\\\") for v in d['value']]\""
    is_markdown: true
 
@@ -60,7 +60,7 @@ Alternatively, you could run a script like this
 
    url: https://example.com/api_data.json
    user_visible_url: https://example.com
-   filter:
+   filters:
      - execute: python3 ~/.config/webchanges/parse.py
    is_markdown: true
 
@@ -92,7 +92,7 @@ etc.
 
 .. code-block:: yaml
 
-   filter:
+   filters:
      - xpath: //div[contains(@class, 'contentWrap-')]
      - html2text
 
@@ -101,7 +101,7 @@ e.g. Beautiful Soup and call it:
 
 .. code-block:: yaml
 
-   filter:
+   filters:
      - execute: python3 ~/.config/webchanges/content_wrap.py
      - html2text
 
@@ -139,11 +139,11 @@ this example:
 
    name: A .onion website (unencrypted http)
    url: http://www.example.onion
-   http_proxy: socks5h://localhost:9050
+   proxy: socks5h://localhost:9050
    ---
    name: Another .onion website
    url: https://www.example2.onion
-   https_proxy: socks5h://localhost:9050
+   proxy: socks5h://localhost:9050
 
 Note the "h" in ``socks5h//``, which tells the underlying urllib3 library to resolve the hostname using the SOCKS5
 server (see `here <https://github.com/urllib3/urllib3/issues/1035>`__).
@@ -180,9 +180,9 @@ can even have a "normal" filter attached to only watch links (the ``css: a`` par
 .. code-block:: yaml
 
    url: https://example.org/downloadlist.html
-   filter:
+   filters:
      - css: a
-   diff_filter:
+   diff_filters:
      - execute: /usr/local/bin/process_new_links.sh
 
 If running on Linux/macOS, please read about file permission restrictions in the filter's explanation

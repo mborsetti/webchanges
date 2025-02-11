@@ -585,7 +585,7 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
 
         # test diff (unified) with diff_filter, tz, and contextlines
         setattr(command_config, 'test_differ', [1])
-        urlwatcher.jobs[0].diff_filter = [{'strip': ''}]
+        urlwatcher.jobs[0].diff_filters = [{'strip': ''}]
         urlwatcher.config_storage.config['report']['tz'] = 'Etc/GMT+12'
         urlwatcher.jobs[0].contextlines = 2
         with pytest.raises(SystemExit) as pytest_wrapped_e:

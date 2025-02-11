@@ -118,7 +118,7 @@ def test_filter_doc_jobs(job: JobBase) -> None:
 
     # noinspection PyTypeChecker
     with JobState(None, job) as job_state:  # type: ignore[arg-type]
-        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filter):
+        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filters):
             if (
                 filter_kind == 'beautify' or filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
             ) and not bs4_is_installed:

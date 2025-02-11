@@ -116,6 +116,15 @@ job_defaults:
     _note: "These are used for 'url' jobs with 'use_browser: true'."
   command:
     _note: "These are used for 'command' jobs."
+differ_defaults: 
+  _note: Default directives that are applied to individual differs.
+  unified: {}
+  ai_google: {}
+  command: {}
+  deepdiff: {}
+  image: {}
+  table: {}
+  wdiff: {}
 database:
   engine: sqlite3
   max_snapshots: 4

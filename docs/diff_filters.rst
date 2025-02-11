@@ -20,7 +20,7 @@ to the result from the diff:
 .. code-block:: yaml
 
    url: https://example.com
-   diff_filter:
+   diff_filters:
      - delete_lines_containing: "@@"
 
 

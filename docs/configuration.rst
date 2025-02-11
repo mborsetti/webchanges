@@ -156,7 +156,6 @@ config file. The following example will set default headers for all ``url`` jobs
 The above config file sets all jobs to use the suppress_repeated_errors option and ``url`` jobs without the ``browser``
 directive to use the specified headers.
 
-
 The possible sub-directives to ``job_defaults`` are:
 
 * ``all``: Applies to all your jobs, including those in hooks.py;
@@ -171,6 +170,28 @@ Handling of duplicate directives
 Any directive specified in either ``url``, ``browser`` or ``command`` will override the same directive specified in
 ``all``.  In case of the ``headers`` directive, the overriding is done on a header-by-header basis.
 
+
+.. _differ_defaults:
+
+Differ defaults
+---------------
+If you want to apply or change default settings for a differ, add them to the ``differ_defaults`` section in your
+config file. The following example will set the default model name to ``gemini-2.0-flash`` for the ``ai_google`` differ:
+
+.. code-block:: yaml
+
+   differ_defaults:
+     _note: Default directives that are applied to individual differs.
+     unified': {}
+     ai_google':
+       model: gemini-2.0-flash
+     command': {}
+     deepdiff': {}
+     image': {}
+     table': {}
+     wdiff': {}
+
+See :ref:`differs <differs>` for an explanation of the different differs and their directives.
 
 
 Database configuration

@@ -11,7 +11,7 @@ import textwrap
 # import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Sequence
+from typing import Collection
 
 from webchanges import __doc__ as doc
 from webchanges import __docs_url__, __project_name__, __version__
@@ -51,7 +51,7 @@ class CommandConfig(BaseConfig):
     gc_database: int | None
     hooks_files: list[Path]
     install_chrome: bool
-    joblist: Sequence[str | int]
+    joblist: Collection[str | int]
     jobs_files: list[Path]
     list_jobs: bool | str | None
     log_file: Path

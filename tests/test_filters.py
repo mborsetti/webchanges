@@ -204,7 +204,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
-        data, mime_type = filtercls(job_state).filter(  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter(  # type: ignore[misc]
             '<div>a</div>',
             'text/plain',
             {'method': 'pyhtml2text'},
@@ -218,9 +218,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
-        data, mime_type = filtercls(job_state).filter(  # type: ignore[misc]
-            '<div>a</div>', 'text/plain', {'method': 're'}
-        )
+        data, _ = filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 're'})  # type: ignore[misc]
     assert data == 'a'
     assert len(w) == 1
     expected = "Filter html2text's method 're' is deprecated: replace with 'strip_tags' (Job 0: "
@@ -228,7 +226,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('grep')
     with pytest.warns(DeprecationWarning) as w:
-        data, mime_type = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # type: ignore[misc]
     assert data == 'b'
     assert len(w) == 1
     expected = "The 'grep' filter is deprecated; replace with 'keep_lines_containing' + 're' subfilter (Job 0: "
@@ -237,7 +235,7 @@ def test_deprecated_filters() -> None:
     filtercls = FilterBase.__subclasses__.get('grepi')
     with pytest.warns(DeprecationWarning) as w:
         # noinspection PyTypeChecker
-        data, mime_type = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # type: ignore[misc]
     assert data == 'a'
     assert len(w) == 1
     expected = "The 'grepi' filter is deprecated; replace with 'delete_lines_containing' + 're' subfilter (Job 0: "
@@ -245,7 +243,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('striplines')
     with pytest.warns(DeprecationWarning) as w:
-        data, mime_type = filtercls(job_state).filter('a  \nb', 'text/plain', {})  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter('a  \nb', 'text/plain', {})  # type: ignore[misc]
     assert data == 'a\nb'
     assert len(w) == 1
     expected = (

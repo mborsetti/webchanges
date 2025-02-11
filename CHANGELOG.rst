@@ -33,6 +33,46 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.28.0rc0
+==================
+2025-02-11
+
+Added
+-----
+* Added support for setting default differ directives in config.yaml. This is particularly useful for the ``ai_google``
+  differ to specify a default GenAI model.
+* Added automatic installation of the `zstandard <https://github.com/indygreg/python-zstandard>`__ library to support
+  zstd (`RFC 8878 <https://datatracker.ietf.org/doc/html/rfc8878>`__) compression in ``url`` jobs using the default
+  HTTPX HTTP client.
+
+Changed
+-------
+* Renamed job directives ``filter`` and ``diff_filter`` to ``filters`` and ``diff_filters`` (plural nouns) to better
+  reflect their list nature. The singular forms remain backward-compatible.
+* Consolidated HTTP proxy configuration into a single ``proxy`` directive, replacing the separate ``http_proxy`` and
+  ``https_proxy`` directives while maintaining backward compatibility.
+* Improved maximum parallel executions of ``use_browser: true`` to ensuring each Chrome instance has at least 400 MB
+  of available memory (or the maximum available, if lower).
+
+Fixed
+-----
+* Fixed handling of "Error Ended" reports to only send them with ``suppress_repeated_errors: true``.
+* Fixed error message when using job directive ``http_client: requests`` without the `requests
+  <https://pypi.org/project/requests/>`__ library installed. Thanks `yubiuser <https://github.com/yubiuser>`__ for
+  reporting this in `issue #90 <https://github.com/mborsetti/webchanges/issues/90>`__.
+* Improved and standardized lthe ogic and documentation for the use of environment variables ``HTTPS_PROXY`` and
+  ``HTTP_PROXY`` in proxy settings.
+* Modified ``--prepare-jobs`` command line argument to append never run jobs to command line jobs (``joblist``), if
+  present, rather than replacing them.
+
+Internals
+---------
+* Replaced JobBase attributes ``http_proxy`` and ``https_proxy`` with a unified ``proxy`` attribute.
+* Updated JobBase attributes from singular ``filter`` and ``diff_filter`` to plural ``filters`` and ``diff_filters``.
+* Removed unused JobBase attribute ``chromium_revision`` (deprecated since Pypetteer removal on 2022-05-02).
+
+
+
 Version 3.27.0
 ==================
 2025-02-03
@@ -825,7 +865,7 @@ Fixed
 
 Version 3.10
 ===================
-20220502
+2022-05-02
 
 ⚠ Breaking changes
 ------------------
@@ -1090,7 +1130,7 @@ Documentation
 
 Internals
 ---------
-* Support for Python 3.10 (except for ``url`` jobs with ``use_browser`` using pyppeteer since it does not yet support
+* Support for Python 3.10 (except for ``url`` jobs with ``use_browser`` using Pyppeteer since it does not yet support
   it; use Playwright instead).
 * Improved speed of detection and handling of lines starting with spaces during conversion of Markdown to HTML.
 * Logging (``--verbose``) now shows thread IDs to help with debugging.

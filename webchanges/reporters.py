@@ -466,7 +466,7 @@ class TextReporter(ReporterBase):
                 location = job_state.job.get_location()
                 if pretty_name != location:
                     location = f'{pretty_name} ({location})'
-                yield ': '.join((job_state.verb.upper(), location))
+                yield ': '.join((job_state.verb.replace('_', ' ').upper(), location))
                 if hasattr(job_state.job, 'note') and job_state.job.note:
                     yield job_state.job.note
             return
@@ -549,8 +549,8 @@ class TextReporter(ReporterBase):
         location = job_state.job.get_location()
         if pretty_name != location:
             location = f'{pretty_name} ({location})'
-        pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
-        summary = ': '.join((job_state.verb.upper(), location))
+        pretty_summary = ': '.join((job_state.verb.replace('_', ' ').upper(), pretty_name))
+        summary = ': '.join((job_state.verb.replace('_', ' ').upper(), location))
         differ = job_state.job.differ or {}
         content = self._format_content(job_state, differ)
         # self._format_content may update verb to 'changed,no_report'
@@ -597,7 +597,7 @@ class MarkdownReporter(ReporterBase):
                 location = job_state.job.get_location()
                 if pretty_name != location:
                     location = f'{pretty_name} ({location})'
-                yield f"* {': '.join((job_state.verb.upper(), location))}"
+                yield f"* {': '.join((job_state.verb.replace('_', ' ').upper(), location))}"
                 if hasattr(job_state.job, 'note') and job_state.job.note:
                     yield job_state.job.note
             return
@@ -812,8 +812,8 @@ class MarkdownReporter(ReporterBase):
             else:
                 location = f'{pretty_name} ({location})'
 
-        pretty_summary = ': '.join((job_state.verb.upper(), pretty_name))
-        summary = ': '.join((job_state.verb.upper(), location))
+        pretty_summary = ': '.join((job_state.verb.replace('_', ' ').upper(), pretty_name))
+        summary = ': '.join((job_state.verb.replace('_', ' ').upper(), location))
         differ = job_state.job.differ or {}
         content = self._format_content(job_state, differ)  # may update verb to 'changed,no_report'
         if job_state.verb == 'changed,no_report':

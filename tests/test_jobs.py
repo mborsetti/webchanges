@@ -1,5 +1,4 @@
-"""Test running of jobs.
-"""
+"""Test running of jobs."""
 
 from __future__ import annotations
 
@@ -90,6 +89,20 @@ TEST_JOBS = [
             'user_visible_url': 'https://www.google.com/',
         },
         'Google',
+    ),
+    (
+        {
+            'url': 'https://www.cloudflare.com/cdn-cgi/trace',
+            'note': 'Cloudflare with requests',
+            'headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/118.0.0.0 Safari/537.36'
+            },
+            'http_client': 'requests',
+            'filter': [{'keep_lines_containing': 'h='}],
+            'timeout': 0,
+        },
+        'h=www.cloudflare.com',
     ),
     (
         {
@@ -206,7 +219,7 @@ def test_run_job(
     job = JobBase.unserialize(input_job)
     with JobState(ssdb_storage, job) as job_state:
         data, _, _ = job.retrieve(job_state)
-        if job.filter == [{'pdf2text': {}}]:
+        if job.filters == [{'pdf2text': {}}]:
             assert isinstance(data, bytes)
         assert output in data
 
@@ -340,8 +353,8 @@ def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
     ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
 )
 def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any]) -> None:
-    if job_data.get('use_browser'):
-        pytest.skip('Cannot debug due to Playwrigth/Windows bug')  # TODO Remove this and fix
+    # if job_data.get('use_browser'):
+    #     pytest.skip('Cannot debug due to a Playwright or Windows bug')
 
     job_data['url'] = 'https://www.google.com/teapot'
     job_data['http_proxy'] = None
@@ -349,7 +362,7 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
     job = JobBase.unserialize(job_data)
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
-        if isinstance(job_state.exception, (HTTPError, HTTPStatusError)):
+        if isinstance(job_state.exception, (HTTPStatusError, HTTPError)):
             assert job_state.exception.args[0].lower() == (
                 "418 client error: i'm a teapot for url: https://www.google.com/teapot\n[](https://www.google.com/)\n"
                 '**418.** i’m a teapot.\nthe requested entity body is short and stout. tip me over and pour me out.'

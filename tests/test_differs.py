@@ -986,13 +986,10 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
             'generativelanguage.googleapis.com',
             'AI summary unavailable: HTTP client error: timed out when requesting data from '
             'generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: _ssl.c:983: The handshake operation timed out when requesting '
-            'data from generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: _ssl.c:1001: The handshake operation timed out when '
-            'requesting data from generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: _ssl.c:1003: The handshake operation timed out when requesting '
-            'data from generativelanguage.googleapis.com',
+            'AI summary unavailable: HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
+            'data from generativelanguage.googleapis.com',  # line number may change based on ssl engine version
         }  # not sure why error flips flops
+        print(f'{diff.splitlines()[0]=}')
         try:
             assert any(diff.splitlines()[0] == exp_str for exp_str in expected_first_line) is True
         except AssertionError:
@@ -1028,12 +1025,8 @@ def test_ai_google_timeout_no_unified_diff(job_state: JobState, caplog: pytest.L
             'generativelanguage.googleapis.com',
             'AI summary unavailable: HTTP client error: timed out when requesting data from '
             'generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: _ssl.c:983: The handshake operation timed out when requesting '
-            'data from generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: _ssl.c:1001: The handshake operation timed out when '
-            'requesting data from generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: _ssl.c:1003: The handshake operation timed out when requesting '
-            'data from generativelanguage.googleapis.com',
+            'AI summary unavailable: HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
+            'data from generativelanguage.googleapis.com',  # line number may change based on ssl engine version
         }  # not sure why error flips flops
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
         diff = job_state.get_diff()

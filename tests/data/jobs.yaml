@@ -6,7 +6,7 @@ note: Used by handler_test.test_run_watcher() and handler_test.test_load_jobs_ya
 url: https://example.com/
 max_tries: 2
 timeout: 0.001
-filter:
+filters:
   - xpath: //section[@role="main"]
   - html2text:
       unicode_snob: true

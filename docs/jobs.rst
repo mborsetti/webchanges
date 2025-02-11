@@ -22,7 +22,7 @@ YAML :ref:`here <yaml_syntax>`.
 
 .. code-block:: yaml
 
-    filter:
+    filters:
       - html2text:           # a list item; notice 2 spaces before the '-'
           pad_tables: true   # a directory item; notice 6 spaces before the name
 
@@ -32,12 +32,12 @@ YAML :ref:`here <yaml_syntax>`.
 
 .. code-block:: yaml
 
-   filter:
+   filters:
      - re.sub: text  # This is correct
 
 .. code-block:: yaml
 
-   filter:
+   filters:
      - re.sub:text  # This is INCORRECT; space is required
 
 * Escaping special characters: Certain characters at the beginning of the line such as a ``-``, a ``:`` followed by a
@@ -297,8 +297,8 @@ library used by default in releases prior to 3.16 (but it only supports up to HT
 
 Required packages
 *****************
-To use ``http_client: requests``, unless the ``requests`` library is already installed in the system, you need to
-first install :ref:`additional Python packages <optional_packages>` as follows:
+To use ``http_client: requests``, you need to have the ``requests`` library installed on your system. If it's not
+installed, you can install this :ref:`additional Python package <optional_packages>` as follows:
 
 .. code-block:: bash
 
@@ -308,30 +308,22 @@ first install :ref:`additional Python packages <optional_packages>` as follows:
 .. versionadded:: 3.16
 
 
-.. _http_proxy:
+.. _proxy:
 
-http_proxy
-^^^^^^^^^^
+proxy
+^^^^^
 Proxy server to use for HTTP requests (a string). If unspecified or null/false, the system environment variable
-``HTTP_PROXY``, if defined, will be used. Can be one of ``https://``, ``http://`` or ``socks5://`` protocols.
+``HTTPS_PROXY`` or ``HTTP_PROXY`` (based on the url's scheme), if defined, will be used. Can be one of ``https://``,
+``http://`` or ``socks5://`` protocols.
 
 E.g. ``https://username:password@proxy.com:8080``.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
+.. versionchanged:: 3.28
+   Replaces two separate directives, ``http_proxy`` and ``https_proxy``.
 
-.. _https_proxy:
-
-https_proxy
-^^^^^^^^^^^
-Proxy server to use for HTTPS (i.e. secure) requests (a string). If unspecified or null/false, the system environment
-variable ``HTTPS_PROXY``, if defined, will be used. Can be one of ``https://``, ``http://`` or ``socks5://`` protocols.
-
-E.g. ``https://username:password@proxy.com:8080``.
-
-.. versionchanged:: 3.0
-   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
 .. _data:
@@ -575,7 +567,7 @@ Example:
 
    url: https://donneespubliques.meteofrance.fr/donnees_libres/bulletins/BCM/203001.pdf
    no_redirects: true
-   filter:
+   filters:
      - html2text:
 
 Returns:
@@ -627,7 +619,7 @@ error received when attempting to connect to a misconfigured server.
 
    url: https://www.example.com/
    retries: 1
-   filter:
+   filters:
      - html2text:
 
 
@@ -950,15 +942,18 @@ See :ref:`here <deletions_only>`.
 .. versionadded:: 3.0
 
 
-.. _diff_filter:
+.. _diff_filters_job_directive:
 
-diff_filter
------------
+diff_filters
+------------
 Filter(s) to be applied to the diff result (a list of dicts).
 
 See :ref:`here <diff_filters>`.
 
 Can be tested with ``--test-differ``.
+
+.. versionchanged:: 3.28
+   Renamed from ``diff_filter`` (singular).
 
 
 diff_tool (deprecated)
@@ -988,16 +983,18 @@ with:
    * Output from ``diff_tool: wdiff`` is colorized in html reports.
 
 
-.. _filter:
+.. _filters_job_directive:
 
-filter
-------
+filters
+-------
 Filter(s) to apply to the data retrieved (a list of dicts).
 
 See :ref:`here <filters>`.
 
 Can be tested with ``--test``.
 
+.. versionchanged:: 3.28
+   Renamed from ``filter`` (singular).
 
 .. _kind:
 

@@ -255,7 +255,7 @@ Relative to :program:`urlwatch` 2.28:
   * New ``contextlines`` directive to specify the number of context lines in a unified diff.
   * New ``no_redirects`` job directive (for ``url`` jobs) to disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection.
   * New directives for ``use_browser: true`` (i.e. using **Chrome**) jobs to allow more flexibility and control:
-    ``chromium_revision``, ``switches``, ``wait_until``, ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``,
+    ``switches``, ``wait_until``, ``ignore_https_errors``, ``wait_for_navigation``, ``wait_for``,
     ``user_data_dir``, ``block_elements``, ``cookies``, ``headers``, ``http_proxy``, ``https_proxy``, and ``timeout``.
   * New ``note`` job directive to ad a freetext note appearing in the report after the job header.
   * New sub-directives for the ``strip`` filter: ``chars``, ``side`` and ``splitlines``.

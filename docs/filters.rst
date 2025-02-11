@@ -138,7 +138,7 @@ attribute of the ``<object>`` tag, to absolute ones.
 .. code-block:: yaml
 
    url: https://example.net/absolute_links.html
-   filter:
+   filters:
      - absolute_links
 
 
@@ -161,7 +161,7 @@ images in combination with the :ref:`image_diff` differ.
 .. code-block:: yaml
 
    url: https://example.net/favicon_85.ico
-   filter:
+   filters:
      - ascii85
 
 .. versionadded:: 3.21
@@ -179,7 +179,7 @@ the :ref:`image_diff` differ.  Also see :ref:`ascii85`, which is more efficient.
 .. code-block:: yaml
 
    url: https://example.net/favicon.ico
-   filter:
+   filters:
      - base64
 
 .. versionadded:: 3.16
@@ -197,7 +197,7 @@ packages to reformat the HTML in a document to make it more readable (keeping it
 .. code-block:: yaml
 
    url: https://example.net/beautify.html
-   filter:
+   filters:
      - beautify: 1
 
 Optional sub-directives
@@ -211,7 +211,7 @@ Optional sub-directives
 .. code-block:: yaml
 
    url: https://example.net/beautify_absolute_links_false.html
-   filter:
+   filters:
      - beautify:
          absolute_links: false
          indent: 1
@@ -253,13 +253,13 @@ Examples: to filter only the ``<body>`` element of the HTML document, stripping 
 .. code-block:: yaml
 
    url: https://example.net/css.html
-   filter:
+   filters:
      - css: ul#groceries > li.unchecked
 
 .. code-block:: yaml
 
    url: https://example.net/xpath.html
-   filter:
+   filters:
      - xpath: /html/body/marquee
 
 .. tip:: If you are looking at a website using Google Chrome, you can find the XPath of an HTML node in DevTools
@@ -280,7 +280,7 @@ For example, to parse an RSS feed and filter only the titles and publication dat
 .. code-block:: yaml
 
    url: https://example.com/blog/css-index.rss
-   filter:
+   filters:
      - css:
          method: xml
          selector: 'item > title, item > pubDate'
@@ -289,7 +289,7 @@ For example, to parse an RSS feed and filter only the titles and publication dat
 .. code-block:: yaml
 
    url: https://example.com/blog/xpath-index.rss
-   filter:
+   filters:
      - xpath:
          method: xml
          path: '//item/title/text()|//item/pubDate/text()'
@@ -301,7 +301,7 @@ expression.
 .. code-block:: yaml
 
    url: https://example.org/feed/css-namespace.xml
-   filter:
+   filters:
      - css:
          method: xml
          selector: 'item > media|keywords'
@@ -312,7 +312,7 @@ expression.
 .. code-block:: yaml
 
    url: https://example.net/feed/xpath-namespace.xml
-   filter:
+   filters:
      - xpath:
          method: xml
          path: '//item/media:keywords/text()'
@@ -329,7 +329,7 @@ will not have any ``<a>`` tag in its results:
 .. code-block:: yaml
 
    url: https://example.org/css-exclude.html
-   filter:
+   filters:
      - css:
          selector: 'body'
          exclude: 'a'
@@ -348,7 +348,7 @@ the first, and return at most two elements), you can use this filter:
 .. code:: yaml
 
    url: https://example.net/css-skip-maxitems.html
-   filter:
+   filters:
      - css:
          selector: div.cpu
          skip: 1
@@ -374,7 +374,7 @@ The subfilter for ``css`` and ``xpath`` filters is ``sort``, and can be ``true``
 .. code:: yaml
 
    url: https://example.org/items-random-order.html
-   filter:
+   filters:
      - css:
          selector: span.item
          sort: true
@@ -411,7 +411,7 @@ we can make it more readable by using:
 .. code-block:: yaml
 
    url: https://example.org/data.csv
-   filter:
+   filters:
      - csv2text:
         format_message: Mr. or Ms. {name} works at {company}.  # note the lowercase in the replacement_fields
         has_header: true
@@ -452,7 +452,7 @@ Examples:
 
    name: "eliminate lines that contain 'xyz'"
    url: https://example.com/delete_lines_containing.txt
-   filter:
+   filters:
      - delete_lines_containing: 'xyz'
 
 
@@ -460,7 +460,7 @@ Examples:
 
    name: "eliminate lines that start with 'warning' irrespective of its case (e.g. Warning, Warning, warning, etc.)"
    url: https://example.com/delete_lines_containing_re.txt
-   filter:
+   filters:
      - delete_lines_containing:
          re: '(?i)^warning'
 
@@ -493,7 +493,7 @@ To extract only the ``<body>`` of a page:
 .. code-block:: yaml
 
    url: https://example.org/bodytag.html
-   filter:
+   filters:
      - element-by-tag: body
 
 
@@ -502,7 +502,7 @@ To extract ``<div id="something">.../<div>`` from a page:
 .. code-block:: yaml
 
    url: https://example.org/idtest.html
-   filter:
+   filters:
      - element-by-id: something
 
 Since you can chain filters, use this to extract an element within another element:
@@ -510,7 +510,7 @@ Since you can chain filters, use this to extract an element within another eleme
 .. code-block:: yaml
 
    url: https://example.org/idtest_2.html
-   filter:
+   filters:
      - element-by-id: outer_container
      - element-by-id: something_inside
 
@@ -519,7 +519,7 @@ To make the output human-friendly you can chain html2text on the result:
 .. code-block:: yaml
 
    url: https://example.net/id2text.html
-   filter:
+   filters:
      - element-by-id: something
      - html2text:
 
@@ -529,7 +529,7 @@ To extract ``<div style="something">.../<div>`` from a page:
 .. code-block:: yaml
 
    url: https://example.org/styletest.html
-   filter:
+   filters:
      - element-by-style: something
 
 
@@ -559,7 +559,7 @@ For example, we can execute a Python script:
 
    name: Test execute filter
    url: https://example.net/execute.html
-   filter:
+   filters:
      # For multiline YAML, quote the string and unindent its continuation. A space is added at the end
      # of each line. Pay attention to escaping!
      - execute: "python -c \"import os, sys;
@@ -619,7 +619,7 @@ etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.
 
    name: "reformat XML using lxml's etree.tostring"
    url: https://example.com/format_xml.xml
-   filter:
+   filters:
      - format-xml:
 
 .. versionadded:: 3.0
@@ -636,7 +636,7 @@ This filter displays the contents both in binary and ASCII using the hex dump fo
 
    name: Display binary and ASCII test
    command: cat testfile
-   filter:
+   filters:
      - hexdump:
 
 
@@ -675,7 +675,7 @@ Example configuration:
 .. code-block:: yaml
 
     url: https://example.com/html2text.html
-    filter:
+    filters:
       - xpath: '//section[@role="main"]'
       - html2text:
           pad_tables: true
@@ -704,7 +704,7 @@ but may not yield the prettiest of results.
 .. code-block:: yaml
 
     url: https://example.com/html2text_strip_tags.html
-    filter:
+    filters:
       - html2text: strip_tags
 
 
@@ -717,7 +717,7 @@ This filter method extracts visible text from HTML using the `Beautiful Soup
 .. code-block:: yaml
 
     url: https://example.com/html2text_bs4.html
-    filter:
+    filters:
       - xpath: '//section[@role="main"]'
       - html2text:
           method: bs4
@@ -732,7 +732,7 @@ Beautiful Soup supports multiple parsers as documented `here
 .. code-block:: yaml
 
     url: https://example.com/html2text_bs4_html5lib.html
-    filter:
+    filters:
       - xpath: '//section[@role="main"]'
       - html2text:
           method: bs4
@@ -746,7 +746,7 @@ This filter can be used to extract text from XML by using the ``xml`` parser as 
 .. code-block:: yaml
 
     url: https://example.com/html2text_bs4_xml
-    filter:
+    filters:
       - html2text:
           method: bs4
           parser: xml
@@ -798,7 +798,7 @@ This filter reads an iCalendar document and converts it to easy-to read text.
 
    name: "Make iCal file readable"
    url: https://example.com/cal.ics
-   filter:
+   filters:
      - ical2text:
 
 Required packages
@@ -827,7 +827,7 @@ see :ref:`below <filtering_json>` for a cross-platform and Unicode-friendly way 
 .. code-block:: yaml
 
    url: https://example.net/jq-ascii.json
-   filter:
+   filters:
       - jq: '.[].title'
 
 Supports aggregations, selections, and the built-in operators like ``length``.
@@ -867,7 +867,7 @@ Examples:
 
    name: "convert HTML to text, strip whitespace, and only keep lines that have the sequence ``a,b:`` in them"
    url: https://example.com/keep_lines_containing.html
-   filter:
+   filters:
      - html2text:
      - keep_lines_containing: 'a,b:'
 
@@ -875,7 +875,7 @@ Examples:
 
    name: "keep only lines that contain 'error' irrespective of its case (e.g. Error, ERROR, error, etc.)"
    url: https://example.com/keep_lines_containing_re.txt
-   filter:
+   filters:
      - keep_lines_containing:
          re: '(?i)error'
 
@@ -905,7 +905,7 @@ This filter *must* be the first filter in a chain of filters, since it consumes 
 .. code-block:: yaml
 
    url: https://example.net/ocr-test.png
-   filter:
+   filters:
      - ocr:
          timeout: 5
          language: eng
@@ -944,7 +944,7 @@ This filter *must* be the first filter in a chain of filters, since it consumes 
 .. code-block:: yaml
 
    url: https://example.net/pdf-test.pdf
-   filter:
+   filters:
      - pdf2text
 
 If the PDF file is password protected, you can specify its password:
@@ -952,7 +952,7 @@ If the PDF file is password protected, you can specify its password:
 .. code-block:: yaml
 
    url: https://example.net/pdf-test-password.pdf
-   filter:
+   filters:
      - pdf2text:
          password: webchangessecret
 
@@ -964,7 +964,7 @@ nothing but changes in the spacing between the columns; in this case try turning
 .. code-block:: yaml
 
    url: https://example.net/pdf-test-no-physical-layout.pdf
-   filter:
+   filters:
      - pdf2text:
          physical: false
    monospace: true
@@ -975,7 +975,7 @@ nothing but changes in the spacing between the columns; in this case try turning
    .. code-block:: yaml
 
       url: https://example.net/pdf-test-keep-monospace.pdf
-      filter:
+      filters:
         - pdf2text:
       monospace: true
 
@@ -985,7 +985,7 @@ by this filter:
 .. code-block:: yaml
 
    url: https://example.net/pdf-no-multiple-spaces.pdf
-   filter:
+   filters:
      - pdf2text:
      - re.sub:
          pattern: ' +'
@@ -1031,7 +1031,7 @@ This filter deserializes an XML object and pretty-prints it. It uses Python's xm
 
    name: "reformat XML using Python's xml.dom.minidom toprettyxml function"
    url: https://example.com/pretty_xml.xml
-   filter:
+   filters:
      - pretty-xml:
 
 .. versionadded:: 3.3
@@ -1049,7 +1049,7 @@ This filter *must* be the first filter in a chain of filters, since it consumes 
 .. code-block:: yaml
 
    url: https://example.net/pypdf-test.pdf
-   filter:
+   filters:
      - pypdf
 
 If the PDF file is password protected, you can specify its password:
@@ -1057,7 +1057,7 @@ If the PDF file is password protected, you can specify its password:
 .. code-block:: yaml
 
    url: https://example.net/pypdf-test-password.pdf
-   filter:
+   filters:
      - pypdf:
          password: webchangessecret
 
@@ -1068,7 +1068,7 @@ PDF (experimental), use the sub-directive ``extraction_mode: layout``:
 .. code-block:: yaml
 
    url: https://example.net/pypdf-test-layout.pdf
-   filter:
+   filters:
      - pypdf:
          extraction_mode: layout
 
@@ -1079,7 +1079,7 @@ PDF (experimental), use the sub-directive ``extraction_mode: layout``:
    .. code-block:: yaml
 
       url: https://example.net/pypdf-test-monospace.pdf
-      filter:
+      filters:
         - pypdf:
             extraction_mode: layout
       monospace: true
@@ -1089,7 +1089,7 @@ If the layout is not a concern, you may want to remove any additional spaces tha
 .. code-block:: yaml
 
    url: https://example.net/pypdf-no-multiple-spaces.pdf
-   filter:
+   filters:
      - pypdf:
      - re.sub:
          pattern: ' +'
@@ -1171,7 +1171,7 @@ By default, the full match will be included in the output.
 .. code-block:: yaml
 
    url: https://example.com/regex-findall.html
-   filter:
+   filters:
        - re.findall: '<span class="price">.*</span>'
        - re.findall:
            pattern: 'Price: \$([0-9]+)'
@@ -1194,7 +1194,7 @@ To extract the first line:
 
    url: https://example.com/regex-firstline.html
    command: python -c "[print(f'line {n}') for n in range(1, 3)]"
-   filter:
+   filters:
      - re.findall: '^.*'
 
 
@@ -1207,7 +1207,7 @@ plus additional text (``(?!\n.+)``):
 
    url: https://example.com/regex-lastline.html
    command: python -c "[print(f'line {n}') for n in range(0, 3)]"
-   filter:
+   filters:
      - re.findall: '(?m)(^.*$)(?!\n.+)'
 
 Optional sub-directives
@@ -1249,7 +1249,7 @@ The following example applies the filter 3 times:
 
    name: "Strip href and change a few tags"
    url: https://example.com/re_sub.html
-   filter:
+   filters:
      - re.sub: '\s*href="[^"]*"'
      - re.sub:
          pattern: '<h1>'
@@ -1268,7 +1268,7 @@ never changes):
 
    name: "Replace a changing number in a sentence with an X"
    url: https://example.com/re_sub_group.html
-   filter:
+   filters:
      - html2text:
      - re.sub:
          pattern: '(Page generated in )([0-9.])*( milliseconds.)'
@@ -1296,7 +1296,7 @@ By default, it acts over adjacent lines. Three lines consisting of ``dog`` - ``d
 .. code:: yaml
 
    url: https://example.com/remove-repeated.txt
-   filter:
+   filters:
      - remove_repeated
 
 This behavior can be changed by using an optional ``separator`` string argument. Also, ``ignore_case`` will tell it to
@@ -1306,7 +1306,7 @@ mixed-case items separated by a pipe (``|``) ``a|b|B |c`` into ``a|b|c``:
 .. code:: yaml
 
    url: https://example.net/remove-repeated-separator.txt
-   filter:
+   filters:
      - remove_repeated:
          separator: '|'
          ignore_case: true
@@ -1317,7 +1317,7 @@ Prepend it with :ref:`sort` to capture globally unique lines, e.g. to turn ``dog
 .. code:: yaml
 
    url: https://example.com/remove-repeated-sorted.txt
-   filter:
+   filters:
      - sort
      - remove_repeated
 
@@ -1327,7 +1327,7 @@ adjacent. For example, the below will turn items separated by a pipe (``|``) ``a
 .. code:: yaml
 
    url: https://example.net/remove-repeated-non-adjacent.txt
-   filter:
+   filters:
      - remove_repeated:
          separator: '|'
          adjacent: false
@@ -1357,7 +1357,7 @@ This filter reverses the order of items (lines) without sorting:
 .. code:: yaml
 
    url: https://example.com/reverse-lines.txt
-   filter:
+   filters:
      - reverse
 
 This behavior can be changed by using an optional ``separator`` string argument (e.g. items separated by a pipe (``|``)
@@ -1366,7 +1366,7 @@ symbol, as in ``1|4|2|3``, which would be reversed to ``3|2|4|1``):
 .. code:: yaml
 
    url: https://example.net/reverse-separator.txt
-   filter:
+   filters:
      - reverse: '|'
 
 Alternatively, the filter can be specified more verbose with a dict. In this example ``"\n\n"`` is used to separate
@@ -1375,7 +1375,7 @@ paragraphs (items that are separated by an empty line):
 .. code:: yaml
 
    url: https://example.org/reverse-paragraphs.txt
-   filter:
+   filters:
      - reverse:
          separator: "\n\n"
 
@@ -1398,7 +1398,7 @@ any detail and avoiding saving large snapshots of data.
 
    name: "Calculate SHA-1 hash"
    url: https://example.com/sha.html
-   filter:
+   filters:
      - sha1sum:
 
 
@@ -1420,7 +1420,7 @@ Example:
 .. code-block:: yaml
 
    url: https://example.net/shellpipe.html
-   filter:
+   filters:
      - shellpipe: echo TEST
 
 .. important:: On Linux and macOS systems, due to security reasons the ``shellpipe`` filter will not run unless **both**
@@ -1456,7 +1456,7 @@ only on changes in the sequence.
 
    name: "Sorting lines test"
    url: https://example.net/sorting.txt
-   filter:
+   filters:
      - sort
 
 The sort filter takes an optional ``separator`` parameter that defines the item separator (by default sorting is
@@ -1465,7 +1465,7 @@ line-based), for example to sort text paragraphs (text separated by an empty lin
 .. code:: yaml
 
    url: https://example.org/paragraphs.txt
-   filter:
+   filters:
      - sort:
          separator: "\n\n"
 
@@ -1475,7 +1475,7 @@ separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1`
 .. code:: yaml
 
    url: https://example.org/sort-reverse-percent.txt
-   filter:
+   filters:
      - sort:
          separator: '%'
          reverse: true
@@ -1498,7 +1498,7 @@ includes the characters space, tab, linefeed, return, formfeed, and vertical tab
 
    name: "Strip leading and trailing whitespace from the block of data"
    url: https://example.com/strip.html
-   filter:
+   filters:
      - strip:
 
 
@@ -1506,7 +1506,7 @@ includes the characters space, tab, linefeed, return, formfeed, and vertical tab
 
    name: "Strip trailing commas or periods from all lines"
    url: https://example.com/strip_by_line.html
-   filter:
+   filters:
      - strip:
          chars: ',.'
          side: right
@@ -1517,7 +1517,7 @@ includes the characters space, tab, linefeed, return, formfeed, and vertical tab
 
    name: "Strip beginning spaces, tabs, etc. from all lines"
    url: https://example.com/strip_leading_spaces.txt
-   filter:
+   filters:
      - strip:
          side: left
          splitlines: true
@@ -1527,7 +1527,7 @@ includes the characters space, tab, linefeed, return, formfeed, and vertical tab
 
    name: "Strip spaces, tabs etc. from both ends of all lines"
    url: https://example.com/strip_each_line.html
-   filter:
+   filters:
      - strip:
          splitlines: true
 
