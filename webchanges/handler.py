@@ -370,7 +370,7 @@ class Report:
 
         :param job_state: The JobState object with the information of the job run.
         """
-        if job_state.exception is not None and job_state.exception is not NotModifiedError:
+        if job_state.exception is not None and not isinstance(job_state.exception, NotModifiedError):
             logger.info(
                 f'Job {job_state.job.index_number}: Got exception while processing job {job_state.job}',
                 exc_info=job_state.exception,

@@ -750,8 +750,12 @@ class YamlConfigStorage(BaseYamlFileStorage):
         if 'job_defaults' in config_for_extras:
             # Create missing 'job_defaults' keys from DEFAULT_CONFIG
             for key in DEFAULT_CONFIG['job_defaults']:
+                if 'job_defaults' not in config_for_extras:
+                    config_for_extras['job_defaults'] = {}
                 config_for_extras['job_defaults'][key] = None  # type: ignore[literal-required]
             for key in DEFAULT_CONFIG['differ_defaults']:
+                if 'differ_defaults' not in config_for_extras:
+                    config_for_extras['differ_defaults'] = {}
                 config_for_extras['differ_defaults'][key] = None  # type: ignore[literal-required]
         if 'hooks' in sys.modules:
             # Remove extra keys in config used in hooks (they are not in DEFAULT_CONFIG)

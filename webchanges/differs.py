@@ -1273,9 +1273,7 @@ class AIGoogleDiffer(DifferBase):
     __kind__ = 'ai_google'
 
     __supported_directives__ = {
-        'model': (
-            'model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-1.5-flash-latest)'
-        ),
+        'model': ('model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-2.0-flash)'),
         'system_instructions': (
             'Optional tone and style instructions for the model (default: see documentation at'
             'https://webchanges.readthedocs.io/en/stable/differs.html#ai-google-diff)'
@@ -1306,7 +1304,7 @@ class AIGoogleDiffer(DifferBase):
         if directives is None:
             directives = {}
         if 'model' not in directives:
-            directives['model'] = 'gemini-1.5-pro'  # also for footer
+            directives['model'] = 'gemini-2.0-flash'  # also for footer
         model = directives.get('model')
         timeout = directives.get('timeout', 300)
         max_output_tokens = directives.get('max_output_tokens')
