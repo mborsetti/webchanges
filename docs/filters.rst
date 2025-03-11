@@ -350,7 +350,7 @@ Alternatively, you can chain the :ref:`sort <sort>` filter.
 
 Optional directives
 ```````````````````
-* ``selector``: the css selector  [can be entered as the value of the ``xpath`` or ``css`` directive].
+* ``selector`` (default): the CSS selector.
 * ``method``: Either of ``html`` (default) or ``xml``.
 * ``namespaces``: Mapping of XML namespaces for matching (default: None).
 * ``exclude``: css selector for elements to remove from the final result (default: None).
@@ -1632,7 +1632,7 @@ Alternatively, you can chain the :ref:`sort <sort>` filter.
 
 Optional directives
 ```````````````````
-* ``path``: the XPath expression [can be entered as the value of the ``xpath`` or ``css`` directive].
+* ``path`` (default): the XPath expression.
 * ``method``: Either of ``html`` (default) or ``xml``.
 * ``namespaces``: Mapping of XML namespaces for matching (default: None).
 * ``exclude``: XPath expression for elements to remove from the final result (default: None).

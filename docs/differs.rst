@@ -206,20 +206,19 @@ half for the changed text.
    avoid any expensive surprises!
 
 By default, we specify the latest version of the `Gemini 2.0 Flash
-<https://ai.google.dev/gemini-api/docs/models/gemini#gemini-2.0-flash>`__ model (``gemini-2.0-flash``)
-(in `preview <https://cloud.google.com/products?hl=en#product-launch-stages>`__) as it's faster than Pro, allows
-more concurrency, and if you are on a paid plan, is cheaper; however, note that it has a context window of 1 million
-tokens (max document size of approx 350,000 words, or about 700 pages single-spaced). You can use the ``model``
-directive to specify another `model <https://ai.google.dev/models/gemini>`__, such as the more powerful `Gemini 1.5
-Pro <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro>`__ with a context window of 2
-million tokens (``model: gemini-1.5-pro-latest``).
+<https://ai.google.dev/gemini-api/docs/models/gemini#gemini-2.0-flash>`__ model (``gemini-2.0-flash``) as it's faster
+than Pro, allows more concurrency, and if you are on a paid plan, is cheaper; however, note that it has a context window
+of 1 million tokens (max document size of approx 350,000 words, or about 700 pages single-spaced). For larger
+applications you can use the ``model`` directive to specify another `model <https://ai.google.dev/models/gemini>`__,
+such as the more powerful `Gemini 1.5 Pro <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro>`__ with
+a context window of 2 million tokens (``model: gemini-1.5-pro-latest``).
 
 The full list of production models available is `here <https://ai.google.dev/gemini-api/docs/models/gemini>`__, and
 additional experimental models (if any) are listed `here
 <https://ai.google.dev/gemini-api/docs/models/experimental-models>`__. You can manually evaluate responses side-by-side
-across the various models `here <https://aistudio.google.com/app/prompts/new_comparison>`__.
+across the various models using the tools `here <https://aistudio.google.com/app/prompts/new_comparison>`__.
 
-You can set a different default model in the :ref:`configuration <configuration>` file as follows:
+You can also set the default model in the :ref:`configuration <configuration>` file as follows:
 
 .. code-block:: yaml
 
