@@ -40,8 +40,8 @@ At the moment, the following filters are available:
 
 * To select HTML (or XML) elements:
 
-  - :ref:`css <css-and-xpath>`: Filter XML/HTML using CSS selectors.
-  - :ref:`xpath <css-and-xpath>`: Filter XML/HTML using XPath expressions.
+  - :ref:`css <css>`: Filter XML/HTML using CSS selectors.
+  - :ref:`xpath <xpath>`: Filter XML/HTML using XPath expressions.
   - :ref:`element-by-class <element-by-…>`: Get all HTML elements matching a class.
   - :ref:`element-by-id <element-by-…>`: Get all HTML elements matching an id.
   - :ref:`element-by-style <element-by-…>`: Get all HTML elements matching a style.
@@ -237,16 +237,14 @@ follows:
 
 
 
-.. _css-and-xpath:
+.. _css:
 
-css and xpath
--------------
+css
+---
 The ``css`` filter extracts HTML or XML content based on a `CSS selector <https://www.w3.org/TR/selectors/>`__. It uses
 the `cssselect <https://pypi.org/project/cssselect/>`__ Python package, which has limitations and extensions as
-explained in its `documentation <https://cssselect.readthedocs.io/en/latest/#supported-selectors>`__.
-
-The ``xpath`` filter extracts HTML or XML content based on a `XPath <https://www.w3.org/TR/xpath>`__ version
-1.0 expression.
+explained in its `documentation <https://cssselect.readthedocs.io/en/latest/#supported-selectors>`__. This filter works
+very similarly to, and its sub-directives are almost identical to, those of the :ref:`xpath <xpath>` filter.
 
 Examples: to filter only the ``<body>`` element of the HTML document, stripping out everything else:
 
@@ -256,26 +254,17 @@ Examples: to filter only the ``<body>`` element of the HTML document, stripping 
    filters:
      - css: ul#groceries > li.unchecked
 
-.. code-block:: yaml
 
-   url: https://example.net/xpath.html
-   filters:
-     - xpath: /html/body/marquee
+.. tip:: If you are looking at a website using Google Chrome, you can find the css of an HTML node in DevTools
+   (Ctrl+Shift+I) by right clicking on the element and selecting 'Copy -> Copy selector'. You can learn more about
+   Chrome DevTools `here <https://developer.chrome.com/docs/devtools/>`__.
 
-.. tip:: If you are looking at a website using Google Chrome, you can find the XPath of an HTML node in DevTools
-   (Ctrl+Shift+I) by right clicking on the element and selecting 'Copy -> Copy XPath', or its css by selecting 'Copy
-   -> Copy selector'. You can learn more about Chrome DevTools `here <https://developer.chrome.com/docs/devtools/>`__.
-
-See Microsoft’s `XPath Examples
-<https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ms256086(v=vs.100)>`__ page for
-additional information on XPath.
-
-Using CSS and XPath filters with XML
-````````````````````````````````````
-By default, CSS and XPath filters are set up for HTML documents, but they also work on XML documents by declaring the
+Using the ``css`` filter with XML
+`````````````````````````````````
+By default, the ``css`` filter is set up to handle HTML documents, but they also work on XML documents by declaring the
 sub-directive ``method: xml``.
 
-For example, to parse an RSS feed and filter only the titles and publication dates, use:
+For example, to parse an RSS feed for the titles and publication dates, use:
 
 .. code-block:: yaml
 
@@ -286,17 +275,8 @@ For example, to parse an RSS feed and filter only the titles and publication dat
          selector: 'item > title, item > pubDate'
      - html2text: strip_tags
 
-.. code-block:: yaml
-
-   url: https://example.com/blog/xpath-index.rss
-   filters:
-     - xpath:
-         method: xml
-         path: '//item/title/text()|//item/pubDate/text()'
-
 To match an element in an `XML namespace <https://www.w3.org/TR/xml-names/>`__, use a namespace prefix before the tag
-name. Use a ``|`` to separate the namespace prefix and the tag name in a CSS selector, and use a ``:`` in an XPath
-expression.
+name. Use a ``:`` to separate the namespace prefix and the tag name in an XPath expression.
 
 .. code-block:: yaml
 
@@ -309,20 +289,8 @@ expression.
            media: http://search.yahoo.com/mrss/
      - html2text:
 
-.. code-block:: yaml
-
-   url: https://example.net/feed/xpath-namespace.xml
-   filters:
-     - xpath:
-         method: xml
-         path: '//item/media:keywords/text()'
-         namespaces:
-           media: http://search.yahoo.com/mrss/
-
-Alternatively, use the XPath expression ``//*[name()='<tag_name>']`` to bypass the namespace entirely.
-
-Using CSS and XPath filters to exclude content
-``````````````````````````````````````````````
+Using the ``css`` filter to exclude content
+```````````````````````````````````````````
 Elements selected by the ``exclude`` sub-directive are removed from the final result. For example, the following job
 will not have any ``<a>`` tag in its results:
 
@@ -334,10 +302,9 @@ will not have any ``<a>`` tag in its results:
          selector: 'body'
          exclude: 'a'
 
-Limiting the returned items from a CSS Selector or XPath
-````````````````````````````````````````````````````````
-If you only want to return a subset of the items returned by a CSS selector or XPath filter, you can use two additional
-sub-directives:
+Limiting the returned items from a CSS selector
+```````````````````````````````````````````````
+If you only want to return a subset of the items returned by a CSS selector, you can use two additional sub-directives:
 
 * ``skip``: How many elements to skip from the beginning (default: 0).
 * ``maxitems``: How many elements to return at most (default: no limit).
@@ -360,8 +327,8 @@ If you get multiple results from one page, but you only expected one (e.g. becau
 desktop version in the same HTML document, and shows/hides one via CSS depending on the viewport size), you can use
 ``maxitems: 1`` to only return the first item.
 
-Fixing list reorderings with CSS Selector or XPath filters
-``````````````````````````````````````````````````````````
+Sorting output to fix list reordering
+`````````````````````````````````````
 In some cases, the ordering of items on a webpage might change regularly without the actual content changing. By
 default, this would show up in the diff output as an element being removed from one part of the page and inserted in
 another part of the page.
@@ -369,26 +336,27 @@ another part of the page.
 In cases where the order of items doesn't matter, it's possible to sort matched items lexicographically to avoid
 spurious reports when only the ordering of items changes on the page.
 
-The subfilter for ``css`` and ``xpath`` filters is ``sort``, and can be ``true`` or ``false`` (the default):
+The subfilter for the ``css`` filter is ``sort``, and can be ``true`` or ``false`` (the default):
 
 .. code:: yaml
 
-   url: https://example.org/items-random-order.html
+   url: https://example.org/css-items-random-order.html
    filters:
      - css:
          selector: span.item
          sort: true
 
+Alternatively, you can chain the :ref:`sort <sort>` filter.
 
 Optional directives
 ```````````````````
-* ``selector`` (for css) or ``path`` (for xpath) [can be entered as the value of the ``xpath`` or ``css`` directive].
+* ``selector``: the css selector  [can be entered as the value of the ``xpath`` or ``css`` directive].
 * ``method``: Either of ``html`` (default) or ``xml``.
-* ``namespaces`` Mapping of XML namespaces for matching.
-* ``exclude``: Elements to remove from the final result.
+* ``namespaces``: Mapping of XML namespaces for matching (default: None).
+* ``exclude``: css selector for elements to remove from the final result (default: None).
 * ``skip``: Number of elements to skip from the beginning (default: 0).
 * ``maxitems``: Maximum number of items to return (default: all).
-* ``sort``: Sort elements lexographically (boolean) (default: false).
+* ``sort`` (true/false): Sort elements lexographically (default: false).
 
 
 .. _csv2text:
@@ -1469,7 +1437,7 @@ line-based), for example to sort text paragraphs (text separated by an empty lin
      - sort:
          separator: "\n\n"
 
-This can be combined with a boolean ``reverse`` option, which is useful for sorting and reversing with the same
+This can be combined with a true/false ``reverse`` option, which is useful for sorting and reversing with the same
 separator (using ``%`` as separator, this would turn ``3%2%4%1`` into ``4%3%2%1``):
 
 .. code:: yaml
@@ -1542,3 +1510,132 @@ Optional sub-directives
 
 .. versionchanged:: 3.5
    Added optional sub-directives ``chars``, ``side`` and ``splitlines``.
+
+
+
+.. _xpath:
+
+xpath
+-----
+The ``xpath`` filter extracts HTML or XML content based on a `XPath <https://www.w3.org/TR/xpath-10/>`__ version
+1.0 expression. This filter works very similarly to, and its sub-directives are almost identical to, those of the
+:ref:`css <css>` filter.
+
+See Microsoft’s `XPath Examples
+<https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ms256086(v=vs.100)>`__ page for
+additional information on XPath.
+
+.. warning:: Make sure to use XPath 1.0 syntax and avoid using certain constructs available only in later versions, as
+   in many cases they will simply be ignored without an error and cause unexpected results to be returned.
+
+Examples: to filter only the ``<body>`` element of the HTML document, stripping out everything else:
+
+.. code-block:: yaml
+
+   url: https://example.net/xpath.html
+   filters:
+     - xpath: /html/body/marquee
+
+.. tip:: If you are looking at a website using Google Chrome, you can find the XPath of an HTML node in DevTools
+   (Ctrl+Shift+I) by right clicking on the element and selecting 'Copy -> Copy XPath'. You can learn more about Chrome
+   DevTools `here <https://developer.chrome.com/docs/devtools/>`__.
+
+Using the ``xpath`` filter with XML
+```````````````````````````````````
+By default, the ``xpath`` filter is set up to handle HTML documents, but it also works on XML documents by declaring the
+sub-directive ``method: xml``.
+
+For example, to parse an RSS feed for the titles and publication dates, use:
+
+.. code-block:: yaml
+
+   url: https://example.com/blog/xpath-index.rss
+   filters:
+     - xpath:
+         method: xml
+         path: //item/title/text()|//item/pubDate/text()
+
+To match an element in an `XML namespace <https://www.w3.org/TR/xml-names/>`__, use a namespace prefix before the tag
+name. Use a ``|`` to separate the namespace prefix and the tag name in a CSS selector.
+
+.. code-block:: yaml
+
+   url: https://example.net/feed/xpath-namespace.xml
+   filters:
+     - xpath:
+         method: xml
+         path: //item/media:keywords/text()
+         namespaces:
+           media: http://search.yahoo.com/mrss/
+
+Alternatively, use the XPath expression ``//*[name()='<tag_name>']`` to bypass the namespace entirely.
+
+Using the ``xpath`` filter to exclude content
+``````````````````````````````````````````````
+Elements selected by the ``exclude`` sub-directive are removed from the final result. For example, the following job
+will not have any ``<a>`` tag in its results:
+
+.. code-block:: yaml
+
+   url: https://example.org/xpath-exclude.html
+   filters:
+     - xpath:
+         path: //body
+         exclude: //a
+
+Limiting the returned items from an XPath expression
+`````````````````````````````````````````````````````
+If you only want to return a subset of the items returned by an XPath expression, you can use two additional
+sub-directives:
+
+* ``skip``: How many elements to skip from the beginning (default: 0).
+* ``maxitems``: How many elements to return at most (default: no limit).
+
+For example, if the page has multiple elements, but you only want to select the second and third matching element (skip
+the first, and return at most two elements), you can use this filter:
+
+.. code:: yaml
+
+   url: https://example.net/xpath-skip-maxitems.html
+   filters:
+     - xpath:
+         path: //div[@class="cpu"]
+         skip: 1
+         maxitems: 2
+
+Duplicated results
+``````````````````
+If you get multiple results from one page, but you only expected one (e.g. because the page contains both a mobile and
+desktop version in the same HTML document, and shows/hides one via CSS depending on the viewport size), you can use
+``maxitems: 1`` to only return the first item.
+
+Sorting output to fix list reordering
+`````````````````````````````````````
+In some cases, the ordering of items on a webpage might change regularly without the actual content changing. By
+default, this would show up in the diff output as an element being removed from one part of the page and inserted in
+another part of the page.
+
+In cases where the order of items doesn't matter, it's possible to sort matched items lexicographically to avoid
+spurious reports when only the ordering of items changes on the page.
+
+The subfilter for the ``xpath`` filter is ``sort``, and can be ``true`` or ``false`` (the default):
+
+.. code:: yaml
+
+   url: https://example.org/xpath-items-random-order.html
+   filters:
+     - xpath:
+         path: //span[@class="item"]
+         sort: true
+
+Alternatively, you can chain the :ref:`sort <sort>` filter.
+
+Optional directives
+```````````````````
+* ``path``: the XPath expression [can be entered as the value of the ``xpath`` or ``css`` directive].
+* ``method``: Either of ``html`` (default) or ``xml``.
+* ``namespaces``: Mapping of XML namespaces for matching (default: None).
+* ``exclude``: XPath expression for elements to remove from the final result (default: None).
+* ``skip``: Number of elements to skip from the beginning (default: 0).
+* ``maxitems``: Maximum number of items to return (default: all).
+* ``sort`` (true/flase): Sort elements lexographically (default: false).

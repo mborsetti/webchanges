@@ -991,6 +991,7 @@ class ImageDiffer(DifferBase):
         def ai_google(
             old_image: Image.Image,
             new_image: Image.Image,
+            diff_image: Image.Image,
             directives: AiGoogleDirectives,
         ) -> str:
             """Summarize changes in image using Generative AI (ALPHA)."""
@@ -1073,10 +1074,6 @@ class ImageDiffer(DifferBase):
                     }
                 }
 
-            # Create a diff image
-            # diff_image = ImageChops.difference(old_image, new_image)
-            # diff_image.format = new_image.format
-
             # upload to Google
             additional_parts: list[dict[str, dict[str, str]]] = []
             executor = ThreadPoolExecutor()
@@ -1085,7 +1082,7 @@ class ImageDiffer(DifferBase):
                 (
                     ('old image', old_image),
                     ('new image', new_image),
-                    # ('differences image', diff_image),
+                    ('differences image', diff_image),
                 ),
             ):
                 if 'error' not in additional_part:
@@ -1107,22 +1104,33 @@ class ImageDiffer(DifferBase):
                 'focus on the most significant changes.'
             )
             model_prompt = (
+                'You are a skilled visual analyst tasked with analyzing two versions of an image and summarizing the '
+                'key differences between them. The audience for your summary is already familiar with the '
+                "image's content, so you should focus only on the most significant differences.\n\n"
                 '**Instructions:**\n\n'
-                f"1. Compare the new image {additional_parts[1]['file_data']['file_uri']} to the old image "
-                f"{additional_parts[0]['file_data']['file_uri']}, focusing only on major changes.\n"
-                '2. Summarize the meaning of the changes in a clear and concise manner. Be specific.\n'
-                '3. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, and '
-                'other Markdown elements as needed to enhance readability.\n'
-                '4. Restrict your analysis and summary to these two specific images. Do not introduce external '
-                'information or assumptions. Do not introduce knowledge from images you may have already seen.\n'
+                '1. Carefully examine the yellow areas in the image '
+                f"{additional_parts[2]['file_data']['file_uri']}, identify the differences, and describe them.\n"
+                f"2. Refer to the old version of the image {additional_parts[0]['file_data']['file_uri']} and the new "
+                f" version {additional_parts[1]['file_data']['file_uri']}.\n"
+                '3. You are only interested in those differences, such as additions, removals, or alterations, that '
+                'modify the intended message or interpretation.\n'
+                '4. Summarize the identified differences, except those ignored, in a clear and concise manner, '
+                'explaining how the meaning has shifted or evolved in the new version compared to the old version only '
+                'when necessary. Be specific and provide examples to illustrate your points when needed.\n'
+                '5. If there are only additions to the image, then summarize the additions.\n'
+                '6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
+                'and other Markdown elements as needed to enhance readability.\n'
+                '7. Restrict your analysis and summary to the information provided within these images. Do '
+                'not introduce external information or assumptions.\n'
             )
-            summary = AIGoogleDiffer._send_to_model(
+            summary, _ = AIGoogleDiffer._send_to_model(
                 self.job,
                 system_instructions,
                 model_prompt,
                 additional_parts=additional_parts,  # type: ignore[arg-type]
                 directives=directives,
             )
+
             return summary
 
         data_type = directives.get('data_type', 'url')
@@ -1134,8 +1142,8 @@ class ImageDiffer(DifferBase):
         if data_type == 'url':
             old_image = load_image_from_web(self.state.old_data)
             new_image = load_image_from_web(self.state.new_data)
-            old_data = f' (<a href="{self.state.old_data}">Old image</a>)'
-            new_data = f' (<a href="{self.state.new_data}">New image</a>)'
+            old_data = f' (<a href="{self.state.old_data}" target="_blank">Old image</a>)'
+            new_data = f' (<a href="{self.state.new_data}" target="_blank">New image</a>)'
         elif data_type == 'ascii85':
             old_image = load_image_from_ascii85(self.state.old_data)
             new_image = load_image_from_ascii85(self.state.new_data)
@@ -1149,8 +1157,8 @@ class ImageDiffer(DifferBase):
         else:  # 'filename'
             old_image = load_image_from_file(self.state.old_data)
             new_image = load_image_from_file(self.state.new_data)
-            old_data = f' (<a href="file://{self.state.old_data}">Old image</a>)'
-            new_data = f' (<a href="file://{self.state.new_data}">New image</a>)'
+            old_data = f' (<a href="file://{self.state.old_data}" target="_blank">Old image</a>)'
+            new_data = f' (<a href="file://{self.state.new_data}" target="_blank">New image</a>)'
 
         # Check formats  TODO: is it needed? under which circumstances?
         # if new_image.format != old_image.format:
@@ -1202,7 +1210,7 @@ class ImageDiffer(DifferBase):
         # prepare AI summary
         summary = ''
         if 'ai_google' in directives:
-            summary = ai_google(old_image, new_image, directives.get('ai_google', {}))
+            summary = ai_google(old_image, new_image, diff_image, directives.get('ai_google', {}))
 
         # Prepare HTML output
         htm = [
@@ -1246,8 +1254,14 @@ class ImageDiffer(DifferBase):
         )
         footer = f'Summary generated by Google Generative AI (ai_google directive(s): {directives_text})'
         return {
-            'text': f'{summary}\n\n\nA visualization is available in HTML reports.\n------------\n{footer}',
-            'markdown': f'{summary}\n\n\nA visualization is available in HTML reports.\n* * *\n{footer}',
+            'text': (
+                f'{summary}\n\n\nA visualization of differences is available in {__package__} HTML reports.'
+                f'\n------------\n{footer}'
+            ),
+            'markdown': (
+                f'{summary}\n\n\nA visualization of differences is available in {__package__} HTML reports.'
+                f'\n* * *\n{footer}'
+            ),
             'html': '<br>\n'.join(
                 [
                     mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
@@ -1298,20 +1312,17 @@ class AIGoogleDiffer(DifferBase):
         model_prompt: str,
         additional_parts: list[dict[str, str | dict[str, str]]] | None = None,
         directives: AiGoogleDirectives | None = None,
-    ) -> str:
-        """Creates the summary request to the model"""
+    ) -> tuple[str, str]:
+        """Creates the summary request to the model; returns the summary and the version of the actual model used."""
         api_version = '1beta'
         if directives is None:
             directives = {}
-        if 'model' not in directives:
-            directives['model'] = 'gemini-2.0-flash'  # also for footer
-        model = directives.get('model')
+        model = directives.get('model', 'gemini-2.0-flash')
         timeout = directives.get('timeout', 300)
         max_output_tokens = directives.get('max_output_tokens')
         temperature = directives.get('temperature', 0.0)
-        top_p = directives.get('top_p')
+        top_p = directives.get('top_p', 1.0 if temperature == 0.0 else None)
         top_k = directives.get('top_k')
-
         GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
         if len(GOOGLE_AI_API_KEY) != 39:
             logger.error(
@@ -1321,7 +1332,8 @@ class AIGoogleDiffer(DifferBase):
             return (
                 f'## ERROR in summarizing changes using Google AI:\n'
                 f'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length '
-                f'{len(GOOGLE_AI_API_KEY)}.\n'
+                f'{len(GOOGLE_AI_API_KEY)}.\n',
+                '',
             )
 
         data: dict[str, Any] = {
@@ -1339,6 +1351,7 @@ class AIGoogleDiffer(DifferBase):
         if directives.get('tools'):
             data['tools'] = directives['tools']
         logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
+        model_version = model  # default
         try:
             r = httpx.Client(http2=True).post(  # noqa: S113 Call to httpx without timeout
                 f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
@@ -1358,6 +1371,8 @@ class AIGoogleDiffer(DifferBase):
                         f'AI summary unavailable: Model did not return any candidate output:\n'
                         f'{jsonlib.dumps(result, ensure_ascii=True, indent=2)}'
                     )
+                model_version = result['modelVersion']
+
             elif r.status_code == 400:
                 summary = (
                     f'AI summary unavailable: Received error from {r.url.host}: '
@@ -1375,7 +1390,7 @@ class AIGoogleDiffer(DifferBase):
                 f'AI summary unavailable: HTTP client error: {e} when requesting data from ' f'{e.request.url.host}'
             )
 
-        return summary
+        return summary, model_version
 
     def differ(
         self,
@@ -1392,8 +1407,8 @@ class AIGoogleDiffer(DifferBase):
             RuntimeWarning,
         )
 
-        def get_ai_summary(prompt: str, system_instructions: str) -> str:
-            """Generate AI summary from unified diff, or an error message"""
+        def get_ai_summary(prompt: str, system_instructions: str) -> tuple[str, str]:
+            """Generate AI summary from unified diff, or an error message, plus the model version."""
             GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
             if len(GOOGLE_AI_API_KEY) != 39:
                 logger.error(
@@ -1403,11 +1418,9 @@ class AIGoogleDiffer(DifferBase):
                 return (
                     f'## ERROR in summarizing changes using {self.__kind__}:\n'
                     f'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length '
-                    f'{len(GOOGLE_AI_API_KEY)}.\n'
+                    f'{len(GOOGLE_AI_API_KEY)}.\n',
+                    '',
                 )
-
-            if 'model' not in directives:
-                directives['model'] = 'gemini-1.5-flash-latest'  # also for footer
 
             if '{unified_diff' in prompt:  # matches unified_diff or unified_diff_new
                 default_context_lines = 9999 if '{unified_diff}' in prompt else 0  # none if only unified_diff_new
@@ -1425,7 +1438,7 @@ class AIGoogleDiffer(DifferBase):
                 )
                 if not unified_diff:
                     # no changes
-                    return ''
+                    return '', ''
             else:
                 unified_diff = ''
 
@@ -1440,7 +1453,7 @@ class AIGoogleDiffer(DifferBase):
 
             # check if data is different (same data is sent during testing)
             if '{old_text}' in prompt and '{new_text}' in prompt and self.state.old_data == self.state.new_data:
-                return ''
+                return '', ''
 
             model_prompt = prompt.format(
                 unified_diff=unified_diff,
@@ -1449,14 +1462,14 @@ class AIGoogleDiffer(DifferBase):
                 new_text=self.state.new_data,
             )
 
-            summary = self._send_to_model(
+            summary, model_version = self._send_to_model(
                 self.job,
                 system_instructions,
                 model_prompt,
                 directives=directives,
             )
 
-            return summary
+            return summary, model_version
 
         if directives.get('additions_only') or self.job.additions_only:
             default_system_instructions = (
@@ -1472,7 +1485,7 @@ class AIGoogleDiffer(DifferBase):
                 'You are a skilled journalist tasked with analyzing two versions of a text and summarizing the key '
                 'differences in meaning between them. The audience for your summary is already familiar with the '
                 "text's content, so you can focus on the most significant changes.\n\n"
-                "**Instructions:**\n\n'"
+                '**Instructions:**\n\n'
                 '1. Carefully examine the old version of the text, provided within the `<old_version>` and '
                 '`</old_version>` tags.\n'
                 '2. Carefully examine the new version of the text, provided within the `<new_version>` and '
@@ -1483,25 +1496,38 @@ class AIGoogleDiffer(DifferBase):
                 '5. Summarize the identified differences, except those ignored, in a clear and concise manner, '
                 'explaining how the meaning has shifted or evolved in the new version compared to the old version only '
                 'when necessary. Be specific and provide examples to illustrate your points when needed.\n'
-                '6. If ther are only additions to the text, then summarize the additions.\n'
+                '6. If there are only additions to the text, then summarize the additions.\n'
                 '7. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
                 'and other Markdown elements as needed to enhance readability.\n'
                 '8. Restrict your analysis and summary to the information provided within the `<old_version>` and '
-                '`<new_version> tags. Do not introduce external information or assumptions.\n'
+                '`<new_version>` tags. Do not introduce external information or assumptions.\n'
             )
             default_prompt = '<old_version>\n{old_text}\n</old_version>\n\n<new_version>\n{new_text}\n</new_version>'
         system_instructions = directives.get('system_instructions', default_system_instructions)
         prompt = directives.get('prompt', default_prompt).replace('\\n', '\n')
-        summary = get_ai_summary(prompt, system_instructions)
+        summary, model_version = get_ai_summary(prompt, system_instructions)
         if not summary:
             self.state.verb = 'changed,no_report'
             return {'text': '', 'markdown': '', 'html': ''}
         newline = '\n'  # For Python < 3.12 f-string {} compatibility
         back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
-        directives_text = (
-            ', '.join(f'{key}={str(value).replace(newline, back_n)}' for key, value in directives.items()) or 'None'
+        directives.pop('model', None)
+        if directives:
+            directives_text = (
+                ' (differ directive(s): '
+                + (
+                    ', '.join(f'{key}={str(value).replace(newline, back_n)}' for key, value in directives.items())
+                    or 'None'
+                )
+                + ')'
+            )
+        else:
+            directives_text = ''
+        footer = (
+            f"Summary by Google Generative AI's model {model_version}{directives_text}"
+            if model_version and directives_text
+            else ''
         )
-        footer = f'Summary generated by Google Generative AI (differ directive(s): {directives_text})'
         temp_unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
         for rep_kind in ['text', 'html']:  # markdown is same as text
             unified_report = DifferBase.process(
@@ -1513,17 +1539,16 @@ class AIGoogleDiffer(DifferBase):
                 temp_unfiltered_diff,
             )
         return {
-            'text': f"{summary}\n\n{unified_report['text']}\n------------\n{footer}",
-            'markdown': f"{summary}\n\n{unified_report['markdown']}\n* * *\n{footer}",
+            'text': f"{summary}\n\n{unified_report['text']}" + (f'\n------------\n{footer}' if footer else ''),
+            'markdown': f"{summary}\n\n{unified_report['markdown']}" + (f'\n* * *\n{footer}' if footer else ''),
             'html': '\n'.join(
                 [
                     mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
                     '<br>',
                     '<br>',
                     unified_report['html'],
-                    '-----<br>',
-                    f'<i><small>{footer}</small></i>',
                 ]
+                + (['-----<br>', f'<i><small>{footer}</small></i>'] if footer else [])
             ),
         }
 

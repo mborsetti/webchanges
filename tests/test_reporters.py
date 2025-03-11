@@ -13,7 +13,7 @@ import pytest
 try:
     from httpx import UnsupportedProtocol
 except ImportError:
-    from requests.exceptions import MissingSchema as UnsupportedProtocol
+    from requests.exceptions import MissingSchema as UnsupportedProtocol  # type: ignore[assignment]
 
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase

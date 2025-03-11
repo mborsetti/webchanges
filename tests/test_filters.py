@@ -105,10 +105,11 @@ def test_providing_subfilter_to_filter_without_subfilter_raises_valueerror() -> 
         list(FilterBase.normalize_filter_list([{'beautify': {'asubfilterthatdoesnotexist': True}}]))
     err_msg = str(pytest_wrapped_e.value)
     assert err_msg.startswith(
-        'Job None: Filter beautify does not support subfilter or filter directive(s) asubfilterthatdoesnotexist '
-        '(supported:'
+        'Job None: Filter beautify does not support subfilter or filter directive(s) asubfilterthatdoesnotexist. Only '
     )
-    assert err_msg.endswith('indent, absolute_links).') or err_msg.endswith('absolute_links, indent).')
+    assert err_msg.endswith('indent, absolute_links are supported.') or err_msg.endswith(
+        'absolute_links, indent are supported.'
+    )
 
 
 def test_providing_unknown_subfilter_raises_valueerror() -> None:
@@ -118,10 +119,10 @@ def test_providing_unknown_subfilter_raises_valueerror() -> None:
         )
     err_msg = str(pytest_wrapped_e.value)
     assert err_msg.startswith(
-        'Job None: Filter keep_lines_containing does not support subfilter or filter directive(s) anothersubfilter '
-        '(supported:'
+        'Job None: Filter keep_lines_containing does not support subfilter or filter directive(s) anothersubfilter. '
+        'Only '
     )
-    assert err_msg.endswith('re, text).') or err_msg.endswith('text, re).')
+    assert err_msg.endswith('re, text are supported.') or err_msg.endswith('text, re are supported.')
 
 
 @pytest.mark.skipif(

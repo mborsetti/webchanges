@@ -389,7 +389,6 @@ jobs:
 #          password: ${{ secrets.pypi_password }}
 
       - name: Create GitHub release
-#        uses: actions/create-release@main
         uses: softprops/action-gh-release@master
         with:
           body_path: RELEASE.rst

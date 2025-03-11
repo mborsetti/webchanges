@@ -786,7 +786,6 @@ class UrlJob(UrlJobBase):
                 http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
             else:
                 http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
-            logger.error(f'httpx received {http_error_msg}')
 
             if response.status_code != 404:
                 try:
@@ -858,8 +857,7 @@ class UrlJob(UrlJobBase):
                 urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
             except AttributeError:
                 logger.error(
-                    'Unable to ignore_dh_key_too_small due to bug in '
-                    'requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
+                    'Unable to ignore_dh_key_too_small due to bug in requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
                 )
                 logger.error('See https://github.com/psf/requests/issues/6443')
 
@@ -1105,7 +1103,6 @@ class UrlJob(UrlJobBase):
         ):
             # Instead of a full traceback, just show the error
             exception_str = str(exception).strip()
-            print(f'{exception_str=} {exception.args=} {type(exception)=}')
             if self.proxy and (
                 (httpx and isinstance(exception, httpx.TransportError))
                 or any(
@@ -1373,7 +1370,7 @@ class BrowserJob(UrlJobBase):
                     ignore_default_args=ignore_default_args,
                     timeout=timeout,
                     headless=headless,
-                    proxy=proxy,
+                    proxy=proxy,  # type: ignore[arg-type]
                 )
                 browser_version = browser.version
                 user_agent = headers.pop(
@@ -1402,7 +1399,7 @@ class BrowserJob(UrlJobBase):
                     args=args,
                     ignore_default_args=ignore_default_args,
                     headless=headless,
-                    proxy=proxy,
+                    proxy=proxy,  # type: ignore[arg-type]
                     no_viewport=no_viewport,
                     ignore_https_errors=self.ignore_https_errors,
                     extra_http_headers=dict(headers),
@@ -1811,7 +1808,7 @@ class BrowserJob(UrlJobBase):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
-        exception_str = f'Browser error in {str(exception).strip()}'
+        exception_str = str(exception).strip()
         print(f'{exception_str=}, {tb=}')
         if self.proxy and 'net::ERR' in exception_str:
             exception_str += f'\n\n(Job has proxy {self.proxy})'

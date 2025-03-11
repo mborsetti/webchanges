@@ -798,8 +798,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     )
                 else:
                     config['job_defaults']['command'] = config['job_defaults'].pop(
-                        'shell'
-                    )  # type: ignore[typeddict-item]
+                        'shell'  # type: ignore[typeddict-item]
+                    )
 
             for key in {'all', 'url', 'browser', 'command'}:
                 if key not in config['job_defaults']:

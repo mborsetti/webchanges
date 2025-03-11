@@ -701,10 +701,10 @@ def test_modify_urls_move_location(
 
     # try changing location of non-existing job
     setattr(command_config2, 'change_location', ('a', 'b'))
-    with pytest.raises(ValueError) as pytest_wrapped_e:
+    with pytest.raises(ValueError) as pytest_wrapped_ve:
         urlwatch_command2.handle_actions()
     setattr(command_config2, 'change_location', None)
-    message = str(pytest_wrapped_e.value)
+    message = str(pytest_wrapped_ve.value)
     assert message == "Job a does not match any job's url/user_visible_url or command."
 
     # try changing location of un-saved job
@@ -712,10 +712,10 @@ def test_modify_urls_move_location(
     old_guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
     new_loc = old_loc + '  # new location'
     setattr(command_config2, 'change_location', (old_loc, new_loc))
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command2.handle_actions()
     setattr(command_config2, 'change_location', None)
-    assert pytest_wrapped_e.value.code == 1
+    assert pytest_wrapped_se.value.code == 1
     message = capsys.readouterr().out
     assert message == f'Moving location of "{old_loc}" to "{new_loc}"\nNo snapshots found for "{old_loc}"\n'
 
@@ -726,10 +726,10 @@ def test_modify_urls_move_location(
 
     # try changing job database location
     setattr(command_config2, 'change_location', (old_loc, new_loc))
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command2.handle_actions()
     setattr(command_config2, 'change_location', None)
-    assert pytest_wrapped_e.value.code == 0
+    assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
     assert message == (
         f'Moving location of "{old_loc}" to "{new_loc}"\n'
@@ -750,10 +750,10 @@ def test_modify_urls_move_location(
 
     # change back
     setattr(command_config2, 'change_location', (new_loc, old_loc))
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command2.handle_actions()
     setattr(command_config2, 'change_location', None)
-    assert pytest_wrapped_e.value.code == 0
+    assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
     assert message == (
         f'Moving location of "{new_loc}" to "{old_loc}"\n'
@@ -910,28 +910,28 @@ def test_rollback_database(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
 
     urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     setattr(command_config, 'rollback_database', '1')
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'rollback_database', False)
-    assert pytest_wrapped_e.value.code == 0
+    assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
     assert 'No snapshots found after' in message
 
     urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     setattr(command_config, 'rollback_database', '10am')
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'rollback_database', False)
-    assert pytest_wrapped_e.value.code == 0
+    assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
     assert 'No snapshots found after' in message
 
     urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     setattr(command_config, 'rollback_database', 'Thisisjunk')
-    with pytest.raises(ValueError) as pytest_wrapped_e:
+    with pytest.raises(ValueError) as pytest_wrapped_ve:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'rollback_database', False)
-    assert pytest_wrapped_e.value.args[0] == 'Unknown string format: %s'
+    assert pytest_wrapped_ve.value.args[0] == 'Unknown string format: %s'
 
 
 def test_check_telegram_chats(capsys: pytest.CaptureFixture[str]) -> None:

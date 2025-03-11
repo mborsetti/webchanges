@@ -244,19 +244,18 @@ def first_run(command_config: CommandConfig) -> None:
 def load_hooks(hooks_file: Path) -> None:
     """Load hooks file."""
     if not hooks_file.is_file():
-        warnings.warn(
-            f'Hooks file not imported because {hooks_file} is not a file',
-            ImportWarning,
-        )
+        # do not use ImportWarning as it could be suppressed
+        warnings.warn(f'Hooks file not imported because {hooks_file} is not a file', RuntimeWarning)
         return
 
     hooks_file_errors = file_ownership_checks(hooks_file)
     if hooks_file_errors:
+        logger.debug('Here should come the warning')
+        # do not use ImportWarning as it could be suppressed
         warnings.warn(
-            f'Hooks file {hooks_file} not imported because '
-            f" {' and '.join(hooks_file_errors)}.\n"
+            f"Hooks file {hooks_file} not not imported because{' and '.join(hooks_file_errors)}.\n"
             f'(see {__docs_url__}en/stable/hooks.html#important-note-for-hooks-file)',
-            ImportWarning,
+            RuntimeWarning,
         )
     else:
         logger.info(f'Importing hooks module from {hooks_file}')
@@ -372,6 +371,10 @@ def main() -> None:  # pragma: no cover
     # Set up the logger to verbose if needed
     setup_logger(command_config.verbose, command_config.log_file)
 
+    # log defaults
+    logger.debug(f'Default config path is {config_path}')
+    logger.debug(f'Default data path is {data_path}')
+
     # For speed, run these here
     handle_unitialized_actions(command_config)
 
@@ -401,6 +404,7 @@ def main() -> None:  # pragma: no cover
 
     # load config (which for syntax checking requires hooks to be loaded too)
     if command_config.hooks_files:
+        logger.debug(f'Hooks files to be loaded: {command_config.hooks_files}')
         for hooks_file in command_config.hooks_files:
             load_hooks(hooks_file)
     config_storage.load()

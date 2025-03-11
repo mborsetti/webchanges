@@ -194,7 +194,7 @@ class FilterBase(metaclass=TrackSubClasses):
                 if unknown_keys and '<any>' not in allowed_keys:
                     raise ValueError(
                         f'Job {job_index_number}: Filter {filter_kind} does not support subfilter or filter '
-                        f"directive(s) {', '.join(unknown_keys)} (supported: {', '.join(allowed_keys)})."
+                        f"directive(s) {', '.join(unknown_keys)}. Only {', '.join(allowed_keys)} are supported."
                     )
 
             yield filter_kind, subfilter
@@ -794,7 +794,10 @@ class FormatJsonFilter(FilterBase):
         self.job.set_to_monospace()
         sort_keys = subfilter.get('sort_keys', False)
         indentation = int(subfilter.get('indentation', 4))
-        parsed_json = jsonlib.loads(data)
+        try:
+            parsed_json = jsonlib.loads(data)
+        except jsonlib.JSONDecodeError as e:
+            return f"Filter '{self.__kind__}' returned JSONDecodeError: {e}\n\n{data!s}", mime_type
         if not mime_type.endswith('json'):
             mime_type = 'application/json'
         return jsonlib.dumps(parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation), mime_type

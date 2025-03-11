@@ -14,7 +14,7 @@ flake8-quotes
 h2
 html5lib
 httpx
-jq; os_name != 'nt'
+jq; sys_platform != 'win32'
 jsbeautifier
 keyring
 matrix-client
@@ -33,6 +33,7 @@ python-dateutil; python_version == '3.13'  # only test latest
 # pytz  # bug in aioxmpp, which does not install in oct24
 redis
 requests
+tzdata; sys_platform == 'win32'
 urllib3
 vobject
 xmltodict

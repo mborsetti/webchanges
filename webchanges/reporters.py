@@ -117,7 +117,7 @@ if sys.platform == 'win32':
     try:
         from colorama import AnsiToWin32
     except ImportError as e:  # pragma: no cover
-        AnsiToWin32 = str(e)  # type: ignore[assignment]
+        AnsiToWin32 = str(e)  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 

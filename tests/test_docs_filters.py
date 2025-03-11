@@ -70,7 +70,8 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
 def load_filter_doc_jobs() -> list[JobBase]:
     """Load YAML code blocks from rst file."""
-    doc = parse_rst(open(docs_path.joinpath('filters.rst')).read())
+    filter_file = docs_path.joinpath('filters.rst')
+    doc = parse_rst(open(filter_file).read())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
 
@@ -89,7 +90,7 @@ def load_filter_doc_jobs() -> list[JobBase]:
             conflicting_jobs.append(guid_jobs[0].get_location())
 
     # Make sure all URLs are unique
-    assert not conflicting_jobs
+    assert not conflicting_jobs, f'Found conflicting job name in {filter_file}'
 
     return jobs
 

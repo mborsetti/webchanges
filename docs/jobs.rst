@@ -586,7 +586,6 @@ Returns:
 .. versionadded:: 3.2.7
 
 
-
 .. _params:
 
 params
@@ -603,7 +602,6 @@ Example (equivalent to the URL https://example.com/?Element1=Data&Element2=Other
        Element2: OtherData
 
 .. versionadded:: 3.25
-
 
 
 .. _retries:
@@ -710,7 +708,7 @@ to do so.
 .. _initialization_js:
 
 initialization_js
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 Only used with ``initialization_url``, executes the JavaScript in Chrome after navigating to ``initialization_url`` and
 before navigating to ``url`` (a string).
 
@@ -748,7 +746,7 @@ directive.
 .. _switches:
 
 switches
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^
 Additional command line `switch(es) <https://peter.sh/experiments/chromium-command-line-switches/>`__ to pass to
 Google Chrome, which is a derivative of Chromium (a list). These are called ``args`` in Playwright.
 
@@ -758,7 +756,7 @@ Google Chrome, which is a derivative of Chromium (a list). These are called ``ar
 .. _user_data_dir:
 
 user_data_dir
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^
 A path to a pre-existing user directory (containing, e.g., cookies etc.) that Chrome should be using (a string).
 
 .. versionadded:: 3.0
@@ -781,7 +779,7 @@ If ``wait_for_url`` and/or ``wait_for_selector`` is also used, ``wait_for_functi
 .. versionadded:: 3.10
 
 .. versionchanged:: 3.10
-   Replaces ``wait_for`` with a JavaScript function.
+   This directive replaces ``wait_for`` containing a JavaScript function.
 
 
 .. _wait_for_selector:
@@ -793,27 +791,38 @@ Waits for the element specified by selector string to become visible (a string o
 This happens when for the element to have non-empty bounding box and no visibility:hidden. Note that an element without
 any content or with display:none has an empty bounding box and is not considered visible.
 
-Selectors supported include text, css, layout, XPath, React and Vue, as well as the ``:has-text()``, ``:text()``,
-``:has()`` and ``:nth-match()`` pseudo classes. More information on working with selectors is `here
-<https://playwright.dev/python/docs/selectors>`__.
+Selectors supported include CSS selectors, XPath expressions, text (prefixed by ``text=``), React locator (experimental
+and prefixed by ```_react=```) and Vue locator(experimental and prefixed by ``_vue=``). In addition, the following CSS
+pseudo-classes are supported: ``:has-text()``, ``:text()``, ``:text-is()``, ``:text-matches()``, ``:visible``,
+``:has()``, ``:is()``, and ``:nth-match()``. plus the Playwright layout CSS pseudo-classes listed `here
+<https://playwright.dev/docs/other-locators#css-matching-elements-based-on-layout>`__.  More information on working with
+these selectors (called "other locators" by Playwright) is `here <https://playwright.dev/python/docs/other-locators>`__.
 
 Additional options (especially what state to wait for, which could be one of ``attached``, ``detached`` and ``hidden``
 in addition to the default ``visible``) can be passed by using a dict. See `here
 <https://playwright.dev/python/docs/api/class-page#page-wait-for-selector>`__ for all the arguments and additional
 details.
 
+For example, to wait until no spans having "loading" in their class are present, use either of these:
+
+.. code-block:: yaml
+
+  wait_for_selector:
+    selector: //span[contains(@class, "loading")]
+    state: hidden
+
 If ``wait_for_url`` is also used, ``wait_for_selector`` is applied after.
 
 .. versionadded:: 3.10
 
 .. versionchanged:: 3.10
-   Replaces ``wait_for`` with a selector or xpath string.
+   This directive replaces ``wait_for`` containing a CSS selector or XPath expression.
 
 
 .. _wait_for_timeout:
 
 wait_for_timeout
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 Waits for the given timeout in seconds (a number).
 
 If ``wait_for_url``, ``wait_for_selector`` and/or ``wait_for_function`` is also used, ``wait_for_timeout`` is applied
@@ -824,13 +833,13 @@ Cannot be used with ``block_elements``.
 .. versionadded:: 3.10
 
 .. versionchanged:: 3.10
-   Replaces ``wait_for`` with a number.
+   This directive replaces ``wait_for`` containing a number.
 
 
 .. _wait_for_url:
 
 wait_for_url
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
 Wait until navigation lands on a URL matching this text (a string or dict).
 
 The string (or the string in the ``url`` key of the dict) can be a glob pattern or regex pattern to match while
@@ -842,7 +851,6 @@ Useful to avoid capturing intermediate redirect pages.
 Additional options can be passed when a dict is used: see `here
 <https://playwright.dev/python/docs/api/class-page#page-wait-for-url>`__.
 
-
 If other ``wait_for_*`` directives are used, ``wait_for_url`` is applied first.
 
 Cannot be used with ``block_elements``.
@@ -850,13 +858,13 @@ Cannot be used with ``block_elements``.
 .. versionadded:: 3.10
 
 .. versionchanged:: 3.10
-   Replaces ``wait_for_navigation``
+   This directive replaces ``wait_for_navigation``.
 
 
 .. _wait_until:
 
 wait_until
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
 The event of when to consider navigation succeeded (a string):
 
 * ``load`` (default): Consider operation to be finished when the ``load`` event is fired.
@@ -869,7 +877,6 @@ The event of when to consider navigation succeeded (a string):
 
 .. versionchanged:: 3.10
    ``networkidle0`` and ``networkidle2`` are replaced by ``networkidle``;  added ``commit``.
-
 
 
 .. _command:

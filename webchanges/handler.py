@@ -67,7 +67,7 @@ class JobState(ContextManager):
     exception: Exception | None = None
     generated_diff: dict[Literal['text', 'markdown', 'html'], str]
     history_dic_snapshots: dict[str | bytes, Snapshot]
-    new_data: str | bytes
+    new_data: str | bytes = ''
     new_error_data: ErrorData = {}
     new_etag: str
     new_mime_type: str = ''
@@ -323,7 +323,7 @@ class JobState(ContextManager):
                 _generated_diff, _mime_type = FilterBase.process(  # type: ignore[assignment]
                     filter_kind, subfilter, self, _generated_diff, _mime_type
                 )
-        self.generated_diff[report_kind] = _generated_diff
+        self.generated_diff[report_kind] = str(_generated_diff)
 
         return self.generated_diff[report_kind]
 

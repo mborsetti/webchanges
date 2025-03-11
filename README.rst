@@ -29,7 +29,9 @@ For Generative AI summaries (BETA), you need a free `API Key from Google Cloud A
 
 Installation
 ============
-Install **webchanges** |pypi_version| |format| |status| |security| with:
+|pypi_version| |format| |status| |security|
+
+Install **webchanges**  with:
 
 .. code-block:: bash
 
@@ -37,7 +39,7 @@ Install **webchanges** |pypi_version| |format| |status| |security| with:
 
 Running in Docker
 -----------------
-**webchanges** can easily run in a container; you can find a `Docker <https://www.docker.com/>`__ implementation
+**webchanges** can easily run in a container and you will find a `Docker <https://www.docker.com/>`__ implementation
 `here <https://github.com/yubiuser/webchanges-docker>`__.
 
 
@@ -81,20 +83,19 @@ Schedule
 --------
 **webchanges** leverages the power of a system scheduler:
 
-- On Linux you can use cron, and a tool like `crontab.guru <https://crontab.guru>`__ can build a
-  schedule expression for you (note: see `here <https://www.computerhope.com/unix/ucrontab.htm>`__ if you have never
-  used cron before);
+- On Linux you can use cron, with the help of a tool like `crontab.guru <https://crontab.guru>`__ (help `here
+  <https://www.computerhope.com/unix/ucrontab.htm>`__);
 - On Windows you can use `Windows Task Scheduler <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__;
 - On macOS you can use `launchd <https://developer.apple
-  .com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/ScheduledJobs.html>`__ (note: see `here
-  <https://launchd.info/>`__ if you have never used launchd before).
+  .com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/ScheduledJobs.html>`__ (help `here
+  <https://launchd.info/>`__).
 
 
 Code
 ====
-|coveralls| |issues|
+|coveralls| |issues| |code_style|
 
-The code and issues tracker are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
+The code, issues tracker, and discussions are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 
 
 Contributing
@@ -178,7 +179,7 @@ Example enhancements to HTML reporting:
 .. |format| image:: https://img.shields.io/pypi/format/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: Kit format
-.. |downloads| image:: https://static.pepy.tech/badge/webchanges
+.. |downloads| image:: https://img.shields.io/pypi/dm/webchanges.svg
     :target: https://www.pepy.tech/project/webchanges
     :alt: PyPI downloads
 .. |license| image:: https://img.shields.io/pypi/l/webchanges.svg
@@ -190,15 +191,24 @@ Example enhancements to HTML reporting:
 .. |readthedocs| image:: https://img.shields.io/readthedocs/webchanges/stable.svg?label=
     :target: https://webchanges.readthedocs.io/
     :alt: Documentation status
-.. |CI| image:: https://github.com/mborsetti/webchanges/actions/workflows/ci-cd.yaml/badge.svg?event=push
+.. |old_CI| image:: https://github.com/mborsetti/webchanges/actions/workflows/ci-cd.yaml/badge.svg?event=push
     :target: https://github.com/mborsetti/webchanges/actions
     :alt: CI testing status
-.. |coveralls| image:: https://coveralls.io/repos/github/mborsetti/webchanges/badge.svg?branch=main
+.. |CI| image:: https://img.shields.io/github/check-runs/mborsetti/webchanges/main
+    :target: https://github.com/mborsetti/webchanges/actions
+    :alt: CI testing status
+.. |old_coveralls| image:: https://coveralls.io/repos/github/mborsetti/webchanges/badge.svg?branch=main
     :target: https://coveralls.io/github/mborsetti/webchanges?branch=main
     :alt: Code coverage by Coveralls
+.. |coveralls| image:: https://img.shields.io/coverallsCoverage/github/mborsetti/webchanges.svg
+    :target: https://coveralls.io/github/mborsetti/webchanges?branch=main
+    :alt: Code coverage by Coveralls
+.. |code_style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+    :alt: Code style black
 .. |status| image:: https://img.shields.io/pypi/status/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: Package stability
-.. |security| image:: https://img.shields.io/badge/security-bandit-yellow.svg
+.. |security| image:: https://img.shields.io/badge/security-bandit-green.svg
     :target: https://github.com/PyCQA/bandit
     :alt: Security Status

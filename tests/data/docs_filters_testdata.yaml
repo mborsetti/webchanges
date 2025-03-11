@@ -136,7 +136,7 @@ https://example.net/css-skip-maxitems.html:
   output: |-
     <div class="cpu">Pentium™</div>
     <div class="cpu">Pentium™ MMX</div>
-https://example.org/items-random-order.html:
+https://example.org/css-items-random-order.html:
   input: |
     <body>
       This is a test. <span class="item">B</span>
@@ -675,7 +675,7 @@ https://example.net/execute.html:
     The data is 'TEST'
     The job location is 'https://example.net/execute.html'
     The job name is 'Test execute filter'
-    The job number is '23'
+    The job number is '20'
     The job JSON is '{"filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 58, "name": "Test execute filter", "url": "https://example.net/execute.html"}'
 https://example.net/shellpipe.html:
   input: |
@@ -783,3 +783,40 @@ https://example.net/shellpipe-awk-oneliner.txt:
     3 How
     4 Are
     5 You
+https://example.org/xpath-exclude.html:
+  input: |-
+    <html>
+    <body>
+      <h1>A page™ in a book</h1>
+      <p>And some paragraph, too. <a href="http://example.net/">Also check out example.net!</a></p>
+    </body>
+    </html>
+  output: |-
+    <body>
+      <h1>A page™ in a book</h1>
+      <p>And some paragraph, too. </p>
+    </body>
+https://example.net/xpath-skip-maxitems.html:
+  input: |-
+    <body>
+      <div class="cpu">486</div>
+      <div class="cpu">Pentium™</div>
+      <div class="cpu">Pentium™ MMX</div>
+      <div class="cpu">Pentium™ Pro</div>
+    </body>
+  output: |-
+    <div class="cpu">Pentium™</div>
+    <div class="cpu">Pentium™ MMX</div>
+https://example.org/xpath-items-random-order.html:
+  input: |
+    <body>
+      This is a test. <span class="item">B</span>
+      And some other content. <span class="item">D</span>
+      <span class="item">A</span> Sort it please.
+      Thank you. <span class="item">C</span>
+    </body>
+  output: |-
+    <span class="item">A</span>
+    <span class="item">B</span>
+    <span class="item">C</span>
+    <span class="item">D</span>

@@ -498,8 +498,8 @@ class UrlwatchCommand:
 
     def test_differ(self, arg_test_differ: list[str]) -> int:
         """
-        Runs diffs for a job on all the saved snapshots and outputs the result to stdout or whatever reporter is
-        selected with --test-reporter.
+        Runs diffs for a job on all the saved snapshots and outputs the result to stdout or the reporter selected
+        with --test-reporter.
 
         :param arg_test_differ: Either the job_id or a list containing [job_id, max_diffs]
         :return: 1 if error, 0 if successful.
