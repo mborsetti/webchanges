@@ -640,7 +640,7 @@ class CommandDiffer(DifferBase):
                 }
             )
 
-        if command.get('is_html'):
+        if directives.get('is_html'):
             out_diff['html'] = diff
         elif report_kind == 'html':
             if command.startswith('wdiff'):
