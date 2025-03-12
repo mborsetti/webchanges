@@ -428,9 +428,8 @@ Prompt
    {unified_diff_new}
 
 
-.. versionchanged:: 3.25
-   ``old_data`` and ``new_data`` fields in prompt renamed to ``old_text`` and ``new_text``.  Added ``additions_only``
-   subdirective.
+.. versionchanged::
+   No detail changes are tracked here as the differ is BETA; please refer to the :ref:`changelog`.
 
 
 
@@ -461,6 +460,17 @@ Example
 
 .. versionchanged:: 3.21
    Was previously a job sub-directive by the name of ``diff_tool``.
+
+Optional directives
+```````````````````
+* ``command`` (default): The command to execute.
+* ``is_html`` (true/false): Whether the output of the command is HTML, for correct formatting in reports (default:
+  false).
+
+.. versionchanged:: 3.29
+   Added ``is_html`` sub-directive.
+
+
 
 .. _deepdiff_diff:
 

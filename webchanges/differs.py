@@ -261,9 +261,13 @@ class DifferBase(metaclass=TrackSubClasses):
         _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
         tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
-        """Create a diff from the data. Since this function could be called by different reporters of multiple report
-        types ('text', 'markdown', 'html'), the differ outputs a dict with data for the report_kind it generated so
-        that it can be reused.
+        """Generate a formatted diff representation of data changes.
+
+        Creates a diff representation in one or more output formats (text, markdown, or HTML).
+        At minimum, this function must return output in the format specified by 'report_kind'.
+        As results are memoized for performance optimization, it can generate up to all three formats simultaneously.
+
+        :param state: The JobState.
 
         :param directives: The directives.
         :param report_kind: The report_kind for which a diff must be generated (at a minimum).
@@ -281,12 +285,14 @@ class DifferBase(metaclass=TrackSubClasses):
         timestamp: float,
         tz: ZoneInfo | None = None,
     ) -> str:
-        """Creates a datetime string in RFC 5322 (email) format with the time zone name (if available) in the
-        Comments and Folding White Space (CFWS) section.
+        """Format a timestamp as an RFC 5322 compliant datetime string.
+
+        Converts a numeric timestamp to a formatted datetime string following the RFC 5322 (email) standard. When a
+        timezone is provided, its full name (abbreviation), if known, is appended.
 
         :param timestamp: The timestamp.
         :param tz: The IANA timezone of the report.
-        :returns: A datetime string in RFC 5322 (email) format.
+        :returns: A datetime string in RFC 5322 (email) format or 'NEW' if timestamp is 0.
         """
         if timestamp:
             dt = datetime.fromtimestamp(timestamp).astimezone(tz=tz)
@@ -549,6 +555,7 @@ class CommandDiffer(DifferBase):
 
     __supported_directives__ = {
         'command': 'The command to execute',
+        'is_html': 'Whether the output of the command is HTML',
     }
 
     re_ptags = re.compile(r'^<p>|</p>$')
@@ -633,7 +640,9 @@ class CommandDiffer(DifferBase):
                 }
             )
 
-        if report_kind == 'html':
+        if command.get('is_html'):
+            out_diff['html'] = diff
+        elif report_kind == 'html':
             if command.startswith('wdiff'):
                 # colorize output of wdiff
                 out_diff['html'] = self.wdiff_to_html(diff)

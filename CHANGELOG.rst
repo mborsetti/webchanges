@@ -33,6 +33,18 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.29.0rc0
+==================
+Unreleased
+
+Changed
+-------
+* The differ ``command`` now has a sub-directive ``is_html`` to indicate the output is in HTML. Thanks to `Jeff Hedlund
+  <https://github.com/jhedlund>`__ for requesting this enhancement in
+  `#95 <https://github.com/mborsetti/webchanges/issues/95>`__.
+
+
+
 Version 3.28.2
 ==================
 2025-03-11
