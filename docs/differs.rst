@@ -198,8 +198,8 @@ half for the changed text.
    API Key, which you obtain `here <https://aistudio.google.com/app/apikey>`__ and which itself requires a `Google
    Cloud <https://cloud.google.com/>`__ account.
 
-.. warning:: Gemini models are free only on the **free of charge plan**, which you obtain by creating an API key
-   from a Google Cloud project with `billing disabled
+.. warning:: Gemini developer models are free only on the **free of charge plan**, which you obtain by creating an API
+   key from a Google Cloud project with `billing disabled
    <https://cloud.google.com/billing/docs/how-to/modify-project#disable_billing_for_a_project>`__. Most jobs should
    work within free plan; if not, we highly recommend that you set up a `budget
    <https://console.cloud.google.com/billing/01457C-2ABCC1-8A6144/budgets>`__ with threshold notification enabled to
@@ -207,11 +207,12 @@ half for the changed text.
 
 By default, we specify the latest version of the `Gemini 2.0 Flash
 <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-2.0-flash>`__ model (``gemini-2.0-flash``) as it's faster
-than Pro, allows more concurrency, and if you are on a paid plan, is cheaper; however, note that it has a context window
-of 1 million tokens (max document size of approx 350,000 words, or about 700 pages single-spaced). For larger
-applications you can use the ``model`` directive to specify another `model <https://ai.google.dev/models/gemini>`__,
-such as the more powerful `Gemini 1.5 Pro <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro>`__ with
-a context window of 2 million tokens (``model: gemini-1.5-pro-latest``).
+than Pro, allows more concurrency, and if you are on a paid plan, is `cheaper
+<https://ai.google.dev/gemini-api/docs/pricing>`__; however, note that it has a context window of 1 million tokens (max
+document size of approx 350,000 words, or about 700 pages single-spaced). For larger applications you can use the
+``model`` directive to specify another `model <https://ai.google.dev/models/gemini>`__, such as the more powerful
+`Gemini 1.5 Pro <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro>`__ with a context window of 2
+million tokens (``model: gemini-1.5-pro-latest``).
 
 The full list of production models available is `here <https://ai.google.dev/gemini-api/docs/models/gemini>`__, and
 additional experimental models (if any) are listed `here
@@ -224,14 +225,14 @@ You can also set the default model in the :ref:`configuration <configuration>` f
 
    differ_defaults:
      _note: Default directives that are applied to individual differs.
-     unified': {}
-     ai_google':
+     unified: {}
+     ai_google:
        model: gemini-2.0-pro-exp
-     command': {}
-     deepdiff': {}
-     image': {}
-     table': {}
-     wdiff': {}
+     command: {}
+     deepdiff: {}
+     image: {}
+     table: {}
+     wdiff: {}
 
 
 .. note:: These models work with `38 languages
