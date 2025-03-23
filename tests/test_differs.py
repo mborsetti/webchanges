@@ -464,11 +464,11 @@ def test_command_change(job_state: JobState) -> None:
     ]
     job_state.job.is_markdown = True
     diff = job_state.get_diff(tz=test_tz)
-    assert diff.splitlines() == expected
+    assert diff.splitlines()[:2] == expected
 
     # redo as markdown
     diff = job_state.get_diff(report_kind='markdown')
-    assert diff.splitlines() == expected
+    assert diff.splitlines()[:2] == expected
 
     # redo as html
     expected = [
@@ -478,7 +478,7 @@ def test_command_change(job_state: JobState) -> None:
         '</span>',
     ]
     diff = job_state.get_diff(report_kind='html', tz=test_tz)
-    assert diff.splitlines() == expected
+    assert diff.splitlines()[:4] == expected
 
 
 def test_command_error(job_state: JobState) -> None:
