@@ -136,8 +136,8 @@ you are interested in, add the directive ``use_browser: true`` to the job:
 
 .. warning::
    As this job type renders the page in a headless Google Chrome instance, it requires more resources and time than a
-   simple ``url`` job. Only use when you can't find alternate ways to get to the data (e.g. an API being called by
-   the page, see tip below) you want to monitor.
+   simple ``url`` job. Only use when you can't find alternate ways to get to the data you want to monitor (e.g. by
+   monitoring an API being called by the page, see tip below).
 
 .. _rest_api:
 
@@ -147,6 +147,11 @@ you are interested in, add the directive ``use_browser: true`` to the job:
    its `network activity inspection tab <https://developer.chrome.com/docs/devtools/network/>`__. If you find
    relevant API calls, extract the URL, method, and data to monitor it in a ``url`` job without the need to
    specify ``use_browser: true``.
+
+.. attention::
+   Due to browser limitations, ``use_browser: true`` cannot be used to capture a pdf file (e.g.
+   https://www.example.com/prices.pdf). For a technical discussion, see `here
+   <https://github.com/microsoft/playwright/issues/7822>`__.
 
 .. important::
    * The optional `Playwright <https://playwright.dev/python/>`__ Python package must be installed; run
@@ -303,7 +308,6 @@ installed, you can install this :ref:`additional Python package <optional_packag
 .. code-block:: bash
 
    pip install --upgrade webchanges[requests]
-
 
 .. versionadded:: 3.16
 
@@ -1049,11 +1053,9 @@ then onwards at every run until the job succeeds again and the counter resets to
 
 monospace
 ---------
-Data is to be reported using a monospace font (true/false). Defaults to false unless set to true by a filter of a
-differ (see that filter/differ).
-
-When using an ``html`` report the data will be displayed using a monospace font. Useful e.g. when the ``pdf2text``
-filter extracts tabular text.
+Use a monospace font for reports for this job (true/false). Defaults to false unless set to true by a filter or a
+differ (see the documentation for that filter/differ). Especially useful with HTML reports, including when displaying
+tabular data extracted by the ``pdf2text`` filter.
 
 .. versionadded:: 3.9
 

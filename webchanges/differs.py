@@ -151,12 +151,13 @@ class DifferBase(metaclass=TrackSubClasses):
         ) -> dict[str, Any]:
             """Obtain differ subdirectives that also contains defaults from the configuration.
 
-            :param differ_kind: The differ kind.
+            :param differ_spec: The differ as entered by the user; use "unified" if empty.
             :param directives: The differ directives as stated in the job.
+            :param config: The configuration.
             :returns: directives inclusive of configuration defaults.
             """
             if config is None:
-                logger.error('Cannot merge differ differdirectives with defaults as no config object was passed')
+                logger.info('No configuration object found to look for differ defaults')
                 return directives
             cfg = config.get('differ_defaults')
             if isinstance(cfg, dict):
@@ -288,7 +289,7 @@ class DifferBase(metaclass=TrackSubClasses):
         """Format a timestamp as an RFC 5322 compliant datetime string.
 
         Converts a numeric timestamp to a formatted datetime string following the RFC 5322 (email) standard. When a
-        timezone is provided, its full name (abbreviation), if known, is appended.
+        timezone is provided, its full name, if known, is appended.
 
         :param timestamp: The timestamp.
         :param tz: The IANA timezone of the report.
@@ -569,15 +570,30 @@ class CommandDiffer(DifferBase):
         _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
         tz: ZoneInfo | None = None,
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
+        if self.job.monospace:
+            head_html = '\n'.join(
+                [
+                    '<span style="font-family:monospace;white-space:pre-wrap;">',
+                    # f"Using command differ: {directives['command']}",
+                    f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
+                    f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>',
+                ]
+            )
+        else:
+            head_html = '<br>\n'.join(
+                [
+                    '<span style="font-family:monospace;">',
+                    # f"Using command differ: {directives['command']}",
+                    f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
+                    f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>',
+                    '</span>',
+                ]
+            )
+
         out_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
         command = directives['command']
-        if (
-            report_kind == 'html'
-            and not command.startswith('wdiff')
-            and _unfiltered_diff is not None
-            and 'text' in _unfiltered_diff
-        ):
-            diff = _unfiltered_diff['text']
+        if report_kind == 'html' and _unfiltered_diff is not None and 'text' in _unfiltered_diff:
+            diff_text = ''.join(_unfiltered_diff['text'].splitlines(keepends=True)[2:])
         else:
             old_data = self.state.old_data
             new_data = self.state.new_data
@@ -613,12 +629,17 @@ class CommandDiffer(DifferBase):
                 ) from subprocess.CalledProcessError(proc.returncode, cmdline)
             if proc.returncode == 0:
                 self.state.verb = 'changed,no_report'
+                logger.info(
+                    f"Job {self.job.index_number}: Command in differ 'command' returned 0 (no report) "
+                    f'({self.job.get_location()})'
+                )
                 return {'text': '', 'markdown': '', 'html': ''}
-            head = '\n'.join(
+            head_text = '\n'.join(
                 [
-                    f'Using differ "{directives}"',
-                    f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}',
-                    f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}',
+                    # f"Using command differ: {directives['command']}",
+                    f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m',
+                    f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m',
+                    '',
                 ]
             )
             diff = proc.stdout
@@ -632,22 +653,33 @@ class CommandDiffer(DifferBase):
                     if any(x in line for x in {'{+', '+}', '[-', '-]'}):
                         keeplines.append(line)
                 diff = ''.join(keeplines)
-            diff = f'{head}\n{diff}'
-            out_diff.update(
-                {
-                    'text': diff,
-                    'markdown': diff,
-                }
-            )
+            if directives.get('is_html'):
+                diff_text = self.html2text(diff)
+                out_diff.update(
+                    {
+                        'text': head_text + diff_text,
+                        'markdown': head_text + diff_text,
+                        'html': head_html + diff,
+                    }
+                )
+            else:
+                diff_text = diff
+                out_diff.update(
+                    {
+                        'text': head_text + diff_text,
+                        'markdown': head_text + diff_text,
+                    }
+                )
 
-        if directives.get('is_html'):
-            out_diff['html'] = diff
-        elif report_kind == 'html':
+        if report_kind == 'html' and 'html' not in out_diff:
             if command.startswith('wdiff'):
                 # colorize output of wdiff
-                out_diff['html'] = self.wdiff_to_html(diff)
+                out_diff['html'] = head_html + self.wdiff_to_html(diff_text)
             else:
-                out_diff['html'] = html.escape(diff)
+                out_diff['html'] = head_html + html.escape(diff_text)
+
+        if self.job.monospace and 'html' in out_diff:
+            out_diff['html'] += '</span>'
 
         return out_diff
 
@@ -1609,10 +1641,13 @@ class WdiffDiffer(DifferBase):
         add_html = '<span style="background-color:#d1ffd1;color:#082b08;">'
         rem_html = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
 
-        head_text = (
-            # f'Differ: wdiff\n'
-            f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m\n'
-            f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m\n'
+        head_text = '\n'.join(
+            [
+                # f'Differ: wdiff',
+                f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m',
+                f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m',
+                '',
+            ]
         )
         head_html = '<br>\n'.join(
             [

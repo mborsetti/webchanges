@@ -234,18 +234,6 @@ class JobState(ContextManager):
                     f'{dict(data=data, etag=self.new_etag, mime_type=mime_type)}'
                 )
 
-                # Apply automatic filters first
-                filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
-
-                # Apply any specified filters
-                for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):
-                    filtered_data, mime_type = FilterBase.process(
-                        filter_kind, subfilter, self, filtered_data, mime_type
-                    )
-
-                self.new_data = filtered_data
-                self.new_mime_type = mime_type
-
             except Exception as e:
                 # Job has a chance to format and ignore its error
                 if self.debugger_attached():
@@ -258,31 +246,45 @@ class JobState(ContextManager):
                 if not (self.error_ignored or isinstance(e, NotModifiedError)):
                     self.tries += 1
                     self.new_error_data = {
-                        'type': type(self.exception).__name__,
-                        'message': str(self.exception),
+                        'type': e.__class__.__name__,
+                        'message': str(e),
                     }
                     logger.info(
                         f'Job {self.job.index_number}: Job ended with error; incrementing cumulative error runs to '
                         f'{self.tries}'
                     )
+
+            else:
+                # Apply automatic filters first
+                filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
+
+                # Apply any specified filters
+                for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):
+                    filtered_data, mime_type = FilterBase.process(
+                        filter_kind, subfilter, self, filtered_data, mime_type
+                    )
+
+                self.new_data = filtered_data
+                self.new_mime_type = mime_type
+
         except Exception as e:
-            # Job failed its chance to handle error
+            # Processing error or job failed its chance to handle error
             if self.debugger_attached():
                 logger.warning('Running in a debugger: raising the exception instead of processing it')
                 raise
+            self.new_timestamp = time.time()
             self.exception = e
-            self.traceback = self.job.format_error(e, traceback.format_exc())
+            self.traceback = ''.join(traceback.format_exception_only(e, show_group=True)).rstrip()
             self.error_ignored = False
-            if not isinstance(e, NotModifiedError):
-                self.tries += 1
-                self.new_error_data = {
-                    'type': type(self.exception).__name__,
-                    'message': str(self.exception),
-                }
-                logger.info(
-                    f'Job {self.job.index_number}: Job ended with error (internal handling failed); incrementing '
-                    f'cumulative error runs to {self.tries}'
-                )
+            self.tries += 1
+            self.new_error_data = {
+                'type': '.'.join(filter(None, [getattr(e, '__module__', None), e.__class__.__name__])),
+                'message': str(e),
+            }
+            logger.info(
+                f'Job {self.job.index_number}: Job ended with error (internal handling failed); incrementing '
+                f'cumulative error runs to {self.tries}'
+            )
 
         logger.debug(f'Job {self.job.index_number}: Processed as {self.added_data()}')
         logger.info(f'{self.job.get_indexed_location()} ended processing')

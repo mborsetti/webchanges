@@ -33,16 +33,28 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.29.0rc1
+Version 3.29.0rc2
 ==================
 Unreleased
 
+⚠ Breaking Changes
+-------------------
+* The differ ``command`` now requires that the ``name: command`` subdirective of ``differ`` be specified.
+
 Changed
 -------
-* The differ ``command`` now has a sub-directive ``is_html`` to indicate the output is in HTML. Thanks to `Jeff Hedlund
-  <https://github.com/jhedlund>`__ for requesting this enhancement in
+* The differ ``command`` now has a sub-directive ``is_html`` to indicate when output is in HTML format. Thanks to `Jeff
+  Hedlund <https://github.com/jhedlund>`__ for requesting this enhancement in
   `#95 <https://github.com/mborsetti/webchanges/issues/95>`__.
+* Added a tip in the documentation on how to `add bullet points
+  <https://webchanges.readthedocs.io/en/stable/advanced.html#bullet-points>`__ to improve the legibility of HTML
+  reports.
 
+Fixed
+-----
+* Fixed reporting of errors arising from filters or reporters.
+* Fixed reporting of repeated errors (i.e. when the same error occurs multiple times).
+* Fixed header and colorization of the differ ``command``.
 
 
 Version 3.28.2
@@ -51,8 +63,8 @@ Version 3.28.2
 
 Changed
 -------
-* The filter ``format-json`` will no longer raise an error when it is not fed JSON data to facilitate
-  troubleshooting, and will now report the JSONDecodeError details and the full string causing this.
+* The filter ``format-json`` will no longer raise an error when it is not fed JSON data, but, to facilitate
+  troubleshooting, it will report the JSONDecodeError details and the full string causing the error.
 * Documentation for the ``css`` and ``xml`` filters has been split into two separate entries for ease of reference.
 * Minor word editing of error messages to improve clarity.
 * Various updates to the differ ``ai_google`` (BETA):

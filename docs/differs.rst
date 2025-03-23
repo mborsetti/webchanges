@@ -18,7 +18,7 @@ of the filters listed in :ref:`filters` (see :ref:`diff_filters` below).
 At the moment, the following differs are available:
 
   - :ref:`unified <unified_diff>`: (default) Compares data line-by-line, showing changed lines in a "unified format";
-  - :ref:`command <command_diff>`: Executes an outside command that acts as a differ (e.g. wdiff);
+  - :ref:`command <command_diff>`: Executes an outside command that acts as a differ;
   - :ref:`deepdiff <deepdiff_diff>`: Compares structured data (JSON or XML) element-by-element;
   - :ref:`table <table_diff>`: A Python version of the :ref:`unified <unified_diff>` differ where the changes are
     displayed as an HTML table;
@@ -437,14 +437,17 @@ Prompt
 
 command
 -------
-Call an external differ (e.g. wdiff). The old data and new data are written to a temporary file, and the names of the
+Call an external differ. The old data and new data are written to a temporary file, and the names of the
 two files are appended to the command. The external program will have to exit with a status of 0 if no differences
-were found, a status of 1 if any differences were found, or any other status for any error.
+are found, a status of 1 if any differences are found, or any other status to signify an error (mimicking wdiff's
+behavior).
 
-If ``wdiff`` is called, its output will be colorized when displayed on stdout (typically a screen) and for HTML
-reports. However, we recommend you use the built-in :ref:`wdiff_diff` differ instead.
+If your differ outputs HTML, you should set ``is_html`` is true.
 
-For increased legibility, the differ directive ``name`` is not required (``command`` is sufficient).
+Although we recommend you use the built-in :ref:`wdiff_diff` differ for word-by-word diffing, if ``wdiff`` is called
+its output will be colorized when displayed on stdout (typically a screen) and for HTML reports.
+
+.. tip:: Use the job directive :ref:`monospace` if you want to use a monospace font in the report.
 
 Example
 ```````
@@ -453,7 +456,9 @@ Example
 
    url: https://example.net/command.html
    differ:
+     name: command
      command: python mycustomscript.py
+     is_html: true  # if the custom differ outputs HTML
 
 .. note:: See :ref:`this note <important_note_for_command_jobs>` for the file security settings required to
    run jobs with this differ in Linux.
@@ -461,9 +466,16 @@ Example
 .. versionchanged:: 3.21
    Was previously a job sub-directive by the name of ``diff_tool``.
 
+.. versionchanged:: 3.29
+   Added ``is_html`` directive.
+
+
+Required directives
+```````````````````
+* ``command``: The command to execute.
+
 Optional directives
 ```````````````````
-* ``command`` (default): The command to execute.
 * ``is_html`` (true/false): Whether the output of the command is HTML, for correct formatting in reports (default:
   false).
 

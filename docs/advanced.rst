@@ -23,6 +23,10 @@ directive. The ``method`` will be automatically changed to ``POST`` and, if no `
 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header is supplied, it will be set to
 ``application/x-www-form-urlencoded``.
 
+If the data needs to be sent in JSON, add the directive ``data_as_json`` to the job. If no `Content-type
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ header is supplied, it will be set to
+``application/json``.
+
 See examples :ref:`here <data>`.
 
 
@@ -33,7 +37,6 @@ Selecting items from a JSON dictionary
 If you are watching JSON-encoded dictionary data but are only interested in the data contained in certain key,
 you can use the :ref:`jq` filter (Linux/macOS only, ASCII only) to extract it, or write a cross-platform Python command
 like the one below:
-
 
 .. code-block:: yaml
 
@@ -149,11 +152,10 @@ Note the "h" in ``socks5h//``, which tells the underlying urllib3 library to res
 server (see `here <https://github.com/urllib3/urllib3/issues/1035>`__).
 
 Setting up Tor is out of scope for this document, but in Windows install the Windows Expert Bundle from `here
-<https://www.torproject.org/download/tor/>`__ and execute ``tor --service install`` as an Administrator per
-instructions `here <https://www.torproject.org/docs/faq#NTService>`__; in Linux the installation of the *tor* package
-usually is sufficient to create a SOCKS5 proxy service, otherwise run with ``tor --options RunAsDaemon 1``. Some
-useful options may be ``HardwareAccel 1 CircuitPadding 0 ConnectionPadding 0 ClientUseIPv6 1 FascistFirewall 1``
-(check documentation).
+<https://www.torproject.org/download/tor/>`__ and execute ``tor --service install`` as an Administrator; in Linux the
+installation of the *tor* package usually is sufficient to create a SOCKS5 proxy service, otherwise run with
+``tor --options RunAsDaemon 1``. Some useful options may be ``HardwareAccel 1 CircuitPadding 0 ConnectionPadding 0
+ClientUseIPv6 1 FascistFirewall 1`` (check documentation).
 
 Alternatively (Linux/macOS only), instead of proxying those sites you can use the **torsocks** (fka **torify**) tool
 from the **tor** package to to make every Internet communication go through the Tor network. Just run
@@ -162,7 +164,6 @@ from the **tor** package to to make every Internet communication go through the 
 .. code-block:: bash
 
    torsocks webchanges
-
 
 
 .. _diff_script:
@@ -188,38 +189,36 @@ can even have a "normal" filter attached to only watch links (the ``css: a`` par
 If running on Linux/macOS, please read about file permission restrictions in the filter's explanation
 :ref:`here <shellpipe>`.
 
-.. _word_based_differ:
 
-Using word-based differ (``wdiff`` or ``pandiff``)
+.. _markdown_differ:
+
+Using word-based differ for Markdown (``pandiff``)
 --------------------------------------------------
 You can also specify an **external** ``diff``-style tool (a tool that takes two filenames (old, new) as parameter and
-returns the difference of the files on its standard output). For example, to to get word-based differences instead of
-line-based difference, use GNU ``wdiff``:
+returns the difference of the files on its standard output). For example, to get Markdown differences you can use
+`PanDiff <https://github.com/davidar/pandiff>`__:
 
 .. code-block:: yaml
 
    url: https://example.com/
    differ:
-     command: wdiff
-
-In order for this to work, ``wdiff`` needs to be installed separately (e.g. ``apt install wdiff`` on Debian/Ubuntu,
-``brew install wdiff`` on macOS, or download from `here <https://www.di-mgt.com.au/wdiff-for-windows.html>`__ for
-Windows).
-
-You can more finely control the output of ``wdiff`` with command line arguments; see the manual for your installation
-(or a generic one `here <https://www.gnu.org/software/wdiff/manual/>`__) for more information.
-
-.. hint::
-   If you use an ``html`` report with a ``command: wdiff`` differ, the output of ``wdiff`` will be colorized.
-
-Alternatively you can use `PanDiff <https://github.com/davidar/pandiff>`__ to get markdown differences.
-
-.. code-block:: yaml
-
-   url: https://example.com/
-   differ:
+     name: command
      command: pandiff
-   is_markdown: true
+
+or:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   differ:
+     name: command
+     command: pandiff --to=HTML
+     is_html: true
+
+
+In order for this to work, ``pandiff`` needs to be installed separately (see
+`PanDiff <https://github.com/davidar/pandiff?tab=readme-ov-file#installation>`__.
+
 
 
 Creating a separate notification for each change
@@ -229,6 +228,16 @@ when set to true will cause :program:`webchanges` to send a report for each job 
 report with all jobs.
 
 These sub-directives are set in the :ref:`configuration <reports-and-reporters>`.
+
+
+Selecting recipients by individual job
+--------------------------------------
+Currently, configuring reporters on a per-job basis is not supported. All jobs share the same reporter configuration.
+
+To manage different reporting needs you can use multiple job files each with its separate configuration (``--config``)
+or, if using email, setting separate reports (``separate: true`` in `config.yaml
+<https://webchanges.readthedocs.io/en/stable/reports.html#optional-sub-directives>`__) and use email filtering to
+forward the reports as needed.
 
 
 Using environment variables in URLs
@@ -248,7 +257,6 @@ Authenticated requests
 Set the ``Authorization`` header to provide credentials that authenticate a ``url`` job with a server, allowing access
 to a protected resource. Some of the most popular authentication schemes are ``Basic``, ``Digest`` and ``NTLM``. For
 more information, see `here <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization>`__.
-
 
 
 .. _use_browser_local_storage:
@@ -282,10 +290,10 @@ You can now run a :program:`webchanges` job defined like this:
 Overriding the content encoding
 -------------------------------
 (rare) For web pages with missing or incorrect ``'Content-type'`` HTTP header or whose encoding cannot be
-`correctly guessed <https://docs.python-requests.org/en/master/api/#requests.Response.apparent_encoding>`__
+`correctly guessed <https://www.python-httpx.org/advanced/text-encodings/>`__
 by the `chardet <https://chardet.readthedocs.io/en/latest/faq.html#what-is-character-encoding-auto-detection>`__
-library we use, it may be useful to explicitly specify an encoding from Python’s `Standard Encodings
-<https://docs.python.org/3/library/codecs.html#standard-encodings>`__ list like this:
+library our default HTTP client uses, it may be useful to explicitly specify an encoding from Python's `Standard
+Encodings <https://docs.python.org/3/library/codecs.html#standard-encodings>`__ list like this:
 
 .. code-block:: yaml
 
@@ -296,7 +304,7 @@ library we use, it may be useful to explicitly specify an encoding from Python�
 Monitoring the HTTP response status code
 ----------------------------------------
 To monitor the `HTTP response status code <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status>`__ of a resource
-and be notified when it changes, use an external command like `curl <https://curl.haxx.se/>`__ to extract it. Here's a
+and be notified when it changes, use an external command like `curl <https://curl.se/>`__ to extract it. Here's a
 job example:
 
 .. code-block:: yaml
@@ -306,16 +314,6 @@ job example:
    note: Requires curl
 
 
-Selecting recipients by individual job
---------------------------------------
-Right now, reporter-related configuration per job isn't possible.
-
-To achieve this, you have to rely on having multiple configurations and/or set up mailing lists or something. Because
-reports are grouped (so there's only one notification sent out if both are changed) it wouldn't even be possible
-without some additional logic to split reports in those cases. Also, there are some reporters that don't have the
-concept of a "recipient".
-
-
 Creating job urls based on keywords
 -----------------------------------
 :program:`webchanges` does not support arrays and loops to generate jobs (e.g. to check different pricing of a set of
@@ -323,19 +321,19 @@ products on a set of shots). The best way to do this is to use some template lan
 :program:`webchanges` and let it generate the ``urls.yaml`` file from that template.
 
 
+.. _bullet_points:
 
-.. _bullet:
-
-Add bullet points for clarity
------------------------------
-To improve legibility of data  where each entry is a separate line, you can add bullet points with the hack below. Note
-that Markdown is required, and therefore works after the ``html2text`` filter. The HTML report will convert these into
-<ul><li> tags, which in most browsers will display a slightly indented '●' for maximum visual separation.
+Add bullet points in reports for clarity
+----------------------------------------
+You can improve the readability of line-by-line data by adding bullet points using the technique below. Notice the *two*
+spaces before the asterisk (*): this ensure it works in Markdown, and therfore also after the ```html2text``` filter,
+which outputs Markdown. When using an HTML reporter, these bullet points will be converted to proper <ul><li> tags, and
+most browsers will display each line with an indented bullet point (●), providing clear visual separation between items.
 
 .. code-block:: yaml
 
    filters:
-     # ... after filters that output Markdown (unless data is Markdown), e.g. html2text
+     - html2text #  example only: can be used with any or no previous filters!
      - re.sub
          pattern: (?m)^
          repl: '  * '
@@ -390,6 +388,8 @@ or like this in the config file for all ``use_browser: true`` jobs:
          - image
          - media
          - other
+
+.. rst-class:: strike
 
 The full list of supported resources is the following (from `here
 <https://playwright.dev/docs/api/class-request#request-resource-type>`__):

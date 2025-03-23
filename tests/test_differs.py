@@ -459,25 +459,26 @@ def test_command_change(job_state: JobState) -> None:
         command = 'bash -c " echo \'This is a custom diff\'; exit 1" #'
     job_state.job.differ = {'command': command}  # test with no differ name
     expected = [
-        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '\x1b[91m--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)\x1b[0m',
+        '\x1b[92m+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)\x1b[0m',
     ]
     job_state.job.is_markdown = True
     diff = job_state.get_diff(tz=test_tz)
-    assert diff.splitlines()[1:3] == expected
+    assert diff.splitlines() == expected
 
     # redo as markdown
     diff = job_state.get_diff(report_kind='markdown')
-    assert diff.splitlines()[1:3] == expected
+    assert diff.splitlines() == expected
 
     # redo as html
     expected = [
-        # f'Using differ &quot;{{&#x27;command&#x27;: &#x27;{html.escape(command)}&#x27;}}&quot;',
-        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '<span style="font-family:monospace;"><br>',
+        '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
+        '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
+        '</span>',
     ]
-    diff = job_state.get_diff(report_kind='html')
-    assert diff.splitlines()[1:3] == expected
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
+    assert diff.splitlines() == expected
 
 
 def test_command_error(job_state: JobState) -> None:
