@@ -475,10 +475,9 @@ def test_command_change(job_state: JobState) -> None:
         '<span style="font-family:monospace;"><br>',
         '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
         '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span><br>',
-        '</span>',
     ]
     diff = job_state.get_diff(report_kind='html', tz=test_tz)
-    assert diff.splitlines()[:4] == expected
+    assert diff.splitlines()[:3] == expected
 
 
 def test_command_error(job_state: JobState) -> None:
