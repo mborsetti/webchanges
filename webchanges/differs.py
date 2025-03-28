@@ -27,6 +27,7 @@ from typing import Any, Iterator, Literal, TYPE_CHECKING, TypedDict
 from zoneinfo import ZoneInfo
 
 import html2text
+import yaml
 
 from webchanges.jobs import JobBase
 from webchanges.util import linkify, mark_to_html, TrackSubClasses
@@ -64,9 +65,11 @@ except ImportError:  # pragma: no cover
     import json as jsonlib  # type: ignore[no-redef]
 
 try:
+    from xml.parsers.expat import ExpatError
+
     import xmltodict
 except ImportError as e:  # pragma: no cover
-    xmltodict = str(e)  # type: ignore[no-redef]
+    xmltodict = str(e)  # type: ignore[no-redef,assignment]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -743,7 +746,7 @@ class DeepdiffDiffer(DifferBase):
     __kind__ = 'deepdiff'
 
     __supported_directives__ = {
-        'data_type': "either 'json' (default) or 'xml'",
+        'data_type': "either 'json' (default), 'yaml', or 'xml'",
         'ignore_order': 'Whether to ignore the order in which the items have appeared (default: false)',
         'ignore_string_case': 'Whether to be case-sensitive or not when comparing strings (default: false)',
         'significant_digits': (
@@ -859,14 +862,70 @@ class DeepdiffDiffer(DifferBase):
 
             return '\n'.join(result)
 
-        data_type = directives.get('data_type', 'json')
-        old_data = ''
-        new_data = ''
-        if data_type == 'json':
+        if directives.get('data_type'):
+            old_data_type = directives['data_type']
+            new_data_type = directives['data_type']
+        else:
+            if self.state.old_mime_type:
+                media_subtype = self.state.old_mime_type.split('/')[-1].split('+')[-1].split('x-')[-1]
+                if media_subtype in ('yaml', 'yml'):
+                    old_data_type = 'yaml'
+                elif media_subtype == 'xml':
+                    old_data_type = 'xml'
+                elif media_subtype == 'json':
+                    old_data_type = 'json'
+                else:
+                    logger.info(
+                        f'Differ {self.__kind__} could not determine data type of old data from media type '
+                        f"{self.state.old_mime_type}; defaulting to 'json'"
+                    )
+                    old_data_type = 'json'
+            else:
+                logger.info(
+                    f"Differ {self.__kind__} data_type for old data defaulted to 'json' as media type is missing"
+                )
+                old_data_type = 'json'
+            if self.state.new_mime_type:
+                media_subtype = self.state.new_mime_type.split('/')[-1].split('+')[-1].split('x-')[-1]
+                if media_subtype in ('yaml', 'yml'):
+                    new_data_type = 'yaml'
+                elif media_subtype == 'xml':
+                    new_data_type = 'xml'
+                elif media_subtype == 'json':
+                    new_data_type = 'json'
+                else:
+                    logger.info(
+                        f'Differ {self.__kind__} could not determine data type of new data from media type '
+                        f"{self.state.new_mime_type}; defaulting to 'json'"
+                    )
+                    new_data_type = 'json'
+            else:
+                logger.info(
+                    f"Differ {self.__kind__} data_type for new data defaulted to 'json' as media type is missing"
+                )
+                new_data_type = 'json'
+
+        old_data: Any = ''
+        if old_data_type == 'json':
             try:
                 old_data = jsonlib.loads(self.state.old_data)
             except jsonlib.JSONDecodeError:
-                old_data = ''
+                pass
+        elif old_data_type == 'yaml':
+            try:
+                old_data = yaml.safe_load(self.state.old_data)
+            except yaml.YAMLError:
+                pass
+        elif old_data_type == 'xml':
+            if isinstance(xmltodict, str):  # pragma: no cover
+                self.raise_import_error('xmltodict', xmltodict)
+            try:
+                old_data = xmltodict.parse(self.state.old_data)
+            except ExpatError:
+                pass
+
+        new_data: Any = ''
+        if new_data_type == 'json':
             try:
                 new_data = jsonlib.loads(self.state.new_data)
             except jsonlib.JSONDecodeError as e:
@@ -879,12 +938,34 @@ class DeepdiffDiffer(DifferBase):
                     'markdown': f'Differ {self.__kind__} **ERROR: New data is invalid JSON**\n{e}',
                     'html': f'Differ {self.__kind__} <b>ERROR: New data is invalid JSON</b>\n{e}',
                 }
-        elif data_type == 'xml':
+        elif new_data_type == 'yaml':
+            try:
+                new_data = yaml.safe_load(self.state.new_data)
+            except yaml.YAMLError as e:
+                self.state.exception = e
+                self.state.traceback = self.job.format_error(e, traceback.format_exc())
+                logger.error(f'Job {self.job.index_number}: New data is invalid YAML: {e} ({self.job.get_location()})')
+                logger.info(f'Job {self.job.index_number}: {self.state.new_data!r}')
+                return {
+                    'text': f'Differ {self.__kind__} ERROR: New data is invalid YAML\n{e}',
+                    'markdown': f'Differ {self.__kind__} **ERROR: New data is invalid YAML**\n{e}',
+                    'html': f'Differ {self.__kind__} <b>ERROR: New data is invalid YAML</b>\n{e}',
+                }
+        elif new_data_type == 'xml':
             if isinstance(xmltodict, str):  # pragma: no cover
                 self.raise_import_error('xmltodict', xmltodict)
-
-            old_data = xmltodict.parse(self.state.old_data)
-            new_data = xmltodict.parse(self.state.new_data)
+            try:
+                new_data = xmltodict.parse(self.state.new_data)
+            except ExpatError as e:
+                self.state.exception = e
+                self.state.traceback = self.job.format_error(e, traceback.format_exc())
+                logger.error(f'Job {self.job.index_number}: New data is invalid XML: {e} ({self.job.get_location()})')
+                logger.info(f'Job {self.job.index_number}: {self.state.new_data!r}')
+                return {
+                    'text': f'Differ {self.__kind__} ERROR: New data is invalid XML\n{e}',
+                    'markdown': f'Differ {self.__kind__} **ERROR: New data is invalid XML**\n{e}',
+                    'html': f'Differ {self.__kind__} <b>ERROR: New data is invalid XML</b>\n{e}',
+                }
 
         ignore_order: bool = directives.get('ignore_order')  # type: ignore[assignment]
         ignore_string_case: bool = directives.get('ignore_string_case')  # type: ignore[assignment]
@@ -1566,7 +1647,7 @@ class AIGoogleDiffer(DifferBase):
             directives_text = ''
         footer = (
             f"Summary by Google Generative AI's model {model_version}{directives_text}"
-            if model_version and directives_text
+            if model_version or directives_text
             else ''
         )
         temp_unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
@@ -1585,7 +1666,6 @@ class AIGoogleDiffer(DifferBase):
             'html': '\n'.join(
                 [
                     mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
-                    '<br>',
                     '<br>',
                     unified_report['html'],
                 ]

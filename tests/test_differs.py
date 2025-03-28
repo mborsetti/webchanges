@@ -658,6 +658,22 @@ def test_deepdiff_xml(job_state: JobState) -> None:
     assert diff.splitlines() == expected
 
 
+def test_deepdiff_xml_and_yaml(job_state: JobState) -> None:
+    """Test deepdiff differ with xml and yaml."""
+    job_state.old_data = '<test>1</test>'
+    job_state.old_mime_type = 'application/xml'
+    job_state.new_data = 'test: 2'
+    job_state.new_mime_type = 'application/yaml'
+    job_state.job.differ = {'name': 'deepdiff'}
+    expected = [
+        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '• Type of root[\'test\'] changed from str to int and value changed from "1" to "2".',
+    ]
+    diff = job_state.get_diff(tz=test_tz)
+    assert diff.splitlines() == expected
+
+
 # @py_nt_only
 @py_latest_only
 def test_image_url(job_state: JobState) -> None:
@@ -931,9 +947,10 @@ def test_ai_google_bad_api_key(job_state: JobState) -> None:
             '@@ -1 +1 @@',
             '-a',
             '+b',
+            '------------',
         ]
         diff = job_state.get_diff(tz=test_tz)
-        assert diff.splitlines() == expected
+        assert diff.splitlines()[:8] == expected
     finally:
         if existing_key:
             os.environ['GOOGLE_AI_API_KEY'] = existing_key

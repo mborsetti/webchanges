@@ -37,7 +37,7 @@ Example ``hooks.py`` file:
 
 .. code-block:: python
 
-   """Example hooks file for webchanges (for Python >= 3.12)."""
+   """Example hooks file for webchanges (for Python >= 3.13)."""
 
    import re
    import threading
@@ -84,14 +84,14 @@ Example ``hooks.py`` file:
 
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
            """
-           :returns: The data retrieved, the ETag, and the data's MIME type (e.g. HTTP Content-Type).
+           :returns: The data retrieved, the ETag, and the data's media type (fka MIME type) (e.g. HTTP Content-Type).
            """
 
            ...  # custom code here to launch browser and capture data.
            return (
-               f'Data captured after browsing to {self.url}\n',
-               'The Etag (if any) or empty string',
-               'The Content-Type (if any) or empty string',
+               '<Data captured after browsing to self.url>',
+               '<The Etag (if any) or empty string>',
+               '<The Content-Type (if any) or empty string>',
            )
 
 
@@ -122,7 +122,7 @@ Example ``hooks.py`` file:
        def filter(
            data: str | bytes, mime_type: str, subfilter: dict[str, Any]
        ) -> tuple[str | bytes, str]:
-           """:returns: The filtered data and its MIME type."""
+           """:returns: The filtered data and its media type (fka MIME type)."""
 
            if not subfilter or subfilter.get('upper'):
                return data.upper(), mime_type
@@ -159,7 +159,7 @@ Example ``hooks.py`` file:
        def filter(
            data: str | bytes, mime_type: str, subfilter: dict[str, Any]
        ) -> tuple[str | bytes, str]:
-           """:returns: The filtered data and its MIME type."""
+           """:returns: The filtered data and its media type (fka MIME type)."""
 
            indent = int(subfilter.get('indent', 8))
 
@@ -177,7 +177,7 @@ Example ``hooks.py`` file:
        def filter(
            data: str | bytes, mime_type: str, subfilter: dict[str, Any]
        ) -> tuple[str | bytes, str]:
-           """:returns: The filtered data and its MIME type."""
+           """:returns: The filtered data and its media type (fka MIME type)."""
            return data.replace('foo', 'bar'), mime_type
 
 
@@ -192,7 +192,7 @@ Example ``hooks.py`` file:
        def filter(
            data: str | bytes, mime_type: str, subfilter: dict[str, Any]
        ) -> tuple[str | bytes, str]:
-           """:returns: The filtered data and its MIME type."""
+           """:returns: The filtered data and its media type (fka MIME type)."""
            return data.replace('foo', 'bar'), mime_type
 
 
@@ -276,9 +276,9 @@ Example ``hooks.py`` file:
       def filter(
           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
       ) -> tuple[str | bytes, str]:
-      """:returns: The filtered data and its MIME type."""
+      """:returns: The filtered data and its media type (fka MIME type)."""
       ...
 
       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
-      """:returns: The data retrieved, the ETag, and the data's MIME type (e.g. HTTP Content-Type)."""
+      """:returns: The data retrieved, the ETag, and the data's media type (fka MIME type) (e.g. HTTP Content-Type)."""
       ...

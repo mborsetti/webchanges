@@ -1,18 +1,20 @@
-⚠ Breaking Changes
--------------------
-* The differ ``command`` now requires that the ``name: command`` subdirective of ``differ`` be specified.
+Added
+-----
+* README links to a new Docker implementation which includes the Chrome browser. Generously offered by and maintained
+  by `Jeff Hedlund <https://github.com/jhedlund>`__ as per `#96 <https://github.com/mborsetti/webchanges/issues/96>`__.
+* New filter ``jsontoyaml`` to convert JSON to YAML, which is generally more readable in a report for humans.
+* New ``yaml`` data type for the ``deepdiff`` differ (in addition to ``json`` and ``xml``).
 
 Changed
 -------
-* The differ ``command`` now has a sub-directive ``is_html`` to indicate when output is in HTML format. Thanks to `Jeff
-  Hedlund <https://github.com/jhedlund>`__ for requesting this enhancement in
-  `#95 <https://github.com/mborsetti/webchanges/issues/95>`__.
-* Added a tip in the documentation on how to `add bullet points
-  <https://webchanges.readthedocs.io/en/stable/advanced.html#bullet-points>`__ to improve the legibility of HTML
-  reports.
+* The ``deepdiff`` differ will now try to derive the ``data-type`` (when it is not specified) from the data's media
+  type (fka MIME type) before defaulting to ``json``.
 
 Fixed
 -----
-* Fixed reporting of errors arising from filters or reporters.
-* Fixed reporting of repeated errors (i.e. when the same error occurs multiple times).
-* Fixed header and colorization of the differ ``command``.
+* Fixed confusing warning when no default hooks.py file exists. Thanks to `Marcos Alano <https://github.com/mhalano>`__
+  for reporting in `#97 <https://github.com/mborsetti/webchanges/issues/97>`__.
+* The ``format-json`` filter now uses JSON text instead of plain text to report errors caused by it not receiving
+  valid JSON data, to be compatible with downstream filters or differs.
+* Fixed the differ ``ai_google`` (BETA), which under certain circumstances was omitting the footnote with the version
+  of the GenAI model used.

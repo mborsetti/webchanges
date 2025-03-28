@@ -89,7 +89,6 @@ class CommandConfig(BaseConfig):
         super().__init__(config_path, config_file, jobs_def_file, hooks_def_file, ssdb_file)
         self.parse_args(args)
         self.jobs_files = self.jobs_files or [jobs_def_file]
-        self.hooks_files = self.hooks_files or [hooks_def_file]
 
     class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
         def __init__(self, prog: str) -> None:
@@ -145,7 +144,6 @@ class CommandConfig(BaseConfig):
             '--jobs',
             '--urls',
             action='append',
-            # default=[self.jobs_def_file],
             type=Path,
             help='read job list (URLs/commands) from FILE or files matching a glob pattern',
             metavar='FILE',

@@ -808,14 +808,14 @@ class UrlJob(UrlJobBase):
         if response.status_code == 304:
             raise NotModifiedError(response.status_code)
 
-        # Save ETag from response into job_state; is saved in database and used in future requests in If-None-Match
-        # header
-        # Also save the media-type (MIME type)
-        etag = ''
-        mime_type = ''
+        # Save ETag from response to be used as If-None-Match header in future requests
         if not response.history:  # no redirects
             etag = response.headers.get('ETag', '')
-            mime_type = response.headers.get('Content-Type', '').split(';')[0]
+        else:
+            logger.info(f'Job {self.index_number}: ETag not captured as response was redirected to {response.url}')
+            etag = ''
+        # Save the media type (fka MIME type)
+        mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
         if FilterBase.filter_chain_needs_bytes(self.filters):
             return response.content, etag, mime_type
@@ -913,14 +913,14 @@ class UrlJob(UrlJobBase):
         if response.status_code == 304:
             raise NotModifiedError(response.status_code)
 
-        # Save ETag from response into job_state; is saved in database and used in future requests in If-None-Match
-        # header
-        # Also save the media-type (MIME type)
-        etag = ''
-        mime_type = ''
+        # Save ETag from response to be used as If-None-Match header in future requests
         if not response.history:  # no redirects
             etag = response.headers.get('ETag', '')
-            mime_type = response.headers.get('Content-Type', '').split(';')[0]
+        else:
+            logger.info(f'Job {self.index_number}: ETag not captured as response was redirected to {response.url}')
+            etag = ''
+        # Save the media type (fka MIME type)
+        mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
         if FilterBase.filter_chain_needs_bytes(self.filters):
             return response.content, etag, mime_type

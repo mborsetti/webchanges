@@ -212,12 +212,9 @@ than Pro, allows more concurrency, and if you are on a paid plan, is `cheaper
 document size of approx 350,000 words, or about 700 pages single-spaced). For larger applications you can use the
 ``model`` directive to specify another `model <https://ai.google.dev/models/gemini>`__, such as the more powerful
 `Gemini 1.5 Pro <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-pro>`__ with a context window of 2
-million tokens (``model: gemini-1.5-pro-latest``).
-
-The full list of production models available is `here <https://ai.google.dev/gemini-api/docs/models/gemini>`__, and
-additional experimental models (if any) are listed `here
-<https://ai.google.dev/gemini-api/docs/models/experimental-models>`__. You can manually evaluate responses side-by-side
-across the various models using the tools `here <https://aistudio.google.com/app/prompts/new_comparison>`__.
+million tokens (``model: gemini-1.5-pro-latest``). The full list of models available is `here
+<https://ai.google.dev/gemini-api/docs/models/gemini>`__. You can manually evaluate responses side-by-side across the
+various models using the tools `here <https://aistudio.google.com/app/prompts/new_comparison>`__.
 
 You can also set the default model in the :ref:`configuration <configuration>` file as follows:
 
@@ -227,7 +224,7 @@ You can also set the default model in the :ref:`configuration <configuration>` f
      _note: Default directives that are applied to individual differs.
      unified: {}
      ai_google:
-       model: gemini-2.0-pro-exp
+       model: gemini-2.5-pro-exp
      command: {}
      deepdiff: {}
      image: {}
@@ -491,8 +488,8 @@ deepdiff
 --------
 .. versionadded:: 3.21
 
-Inspects structured data (JSON or XML) on an element by element basis and reports which elements have changed, using a
-customized report based on deepdiff's library `DeepDiff
+Inspects structured data (JSON, YAML, or XML) on an element by element basis and reports which elements have changed,
+using a customized report based on deepdiff's library `DeepDiff
 <https://zepworks.com/deepdiff/current/diff.html#module-deepdiff.diff>`__ module.
 
 Examples
@@ -501,7 +498,7 @@ Examples
 .. code-block:: yaml
 
    url: https://example.net/deepdiff_json.html
-   differ: deepdiff  # defaults to json data
+   differ: deepdiff
 
 
 .. code-block:: yaml
@@ -509,7 +506,7 @@ Examples
    url: https://example.net/deepdiff_xml_ignore_oder.html
    differ:
      name: deepdiff
-     data_type: xml
+     data_type: xml  # override deriving this from data/MIME type or, if unable, json default
      ignore_order: true
 
 Output:
@@ -528,7 +525,8 @@ Output:
 
 Optional directives
 ```````````````````
-* ``data_type`` (``json`` or ``xml``): The type of data being analyzed (default: ``json``).
+* ``data_type`` (``json``, ``yaml``, or ``xml``): The type of data being analyzed if different than the data's media
+  type (fka MIME type), defaulting to ``json`` if unable to derive.
 * ``ignore_order`` (true/false): Whether to ignore the order in which the items have appeared (default: false).
 * ``ignore_string_case`` (true/false): Whether to be case-sensitive or not when comparing strings (default: false).
 * ``significant_digits`` (int): The number of digits AFTER the decimal point to be used in the comparison (default:
@@ -542,6 +540,9 @@ follows:
 .. code-block:: bash
 
    pip install --upgrade webchanges[deepdiff]
+
+.. versionchanged:: 3.31
+   Added support for YAML data.
 
 
 

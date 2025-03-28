@@ -82,6 +82,7 @@ At the moment, the following filters are available:
 
 * To make JSON more readable:
 
+  - :ref:`jsontoyaml`: Reformat JSON to YAML.
   - :ref:`format-json`: Reformat (pretty-print) JSON.
 
 * To make XML more readable:
@@ -558,6 +559,8 @@ This filter serializes the JSON data to a pretty-printed indented string using P
 <https://simplejson.readthedocs.io/en/latest/index.html?highlight=dumps#simplejson.dumps>`__ library) with a default
 indent level of 4.
 
+..tip:: For a more compact and legible output, use :ref:`jsontoyaml` instead.
+
 If the job directive ``monospace`` is unset, to improve the readability in HTML reports this filter will set it to
 ``true``. To override, add the directive ``monospace: true`` to the job (see :ref:`here <monospace>`).
 
@@ -818,6 +821,26 @@ Filtering JSON on Windows or containing Unicode and without ``jq``
 ``````````````````````````````````````````````````````````````````
 Python programmers on all OSs can use an advanced technique to select only certain elements of the JSON object; see
 :ref:`json_dict`. This method will preserve Unicode characters.
+
+
+
+.. _jsontoyaml:
+
+_jsontoyaml
+---------------
+This filter serializes the JSON data to YAML using Python's `PyYAML <https://pyyaml.org/>`__ library with a default
+indent level of 2.
+
+If the job directive ``monospace`` is unset, to improve the readability in HTML reports this filter will set it to
+``true``. To override, add the directive ``monospace: true`` to the job (see :ref:`here <monospace>`).
+
+
+Optional sub-directives
+```````````````````````
+* ``indentation`` (integer or string): Either the number of spaces or a string to be used to indent each level with; if
+  ``0``, a negative number or ``""`` then no indentation (default: 2, i.e. 2 spaces).
+
+.. versionadded:: 3.30
 
 
 

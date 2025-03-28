@@ -39,8 +39,9 @@ Install **webchanges**  with:
 
 Running in Docker
 -----------------
-**webchanges** can easily run in a container and you will find a `Docker <https://www.docker.com/>`__ implementation
-`here <https://github.com/yubiuser/webchanges-docker>`__.
+**webchanges** can easily run in a `Docker <https://www.docker.com/>`__ container! You will find a minimal
+implementation (no browser) `here <https://github.com/yubiuser/webchanges-docker>`__, and one with a browser
+`here <https://github.com/jhedlund/webchanges-docker>`__.
 
 
 Documentation |readthedocs|

@@ -241,11 +241,16 @@ def first_run(command_config: CommandConfig) -> None:
             print(f'> Edit it with {__project_name__} --edit')
 
 
-def load_hooks(hooks_file: Path) -> None:
+def load_hooks(hooks_file: Path, is_default: bool = False) -> None:
     """Load hooks file."""
     if not hooks_file.is_file():
-        # do not use ImportWarning as it could be suppressed
-        warnings.warn(f'Hooks file not imported because {hooks_file} is not a file', RuntimeWarning)
+        if is_default:
+            logger.info(f'Hooks file {hooks_file} does not exist or is not a file')
+        else:
+            # do not use ImportWarning as it could be suppressed
+            warnings.warn(
+                f'Hooks file {hooks_file} not imported because it does not exist or is not a file', RuntimeWarning
+            )
         return
 
     hooks_file_errors = file_ownership_checks(hooks_file)
@@ -258,9 +263,9 @@ def load_hooks(hooks_file: Path) -> None:
             RuntimeWarning,
         )
     else:
-        logger.info(f'Importing hooks module from {hooks_file}')
+        logger.info(f'Importing into hooks module from {hooks_file}')
         import_module_from_source('hooks', hooks_file)
-        logger.info('Finished importing hooks module')
+        logger.info('Finished importing into hooks module')
 
 
 def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
@@ -368,6 +373,9 @@ def main() -> None:  # pragma: no cover
         default_ssdb_file,
     )
 
+    hooks_file_is_default = not bool(command_config.hooks_files)
+    command_config.hooks_files = command_config.hooks_files or [default_hooks_file]
+
     # Set up the logger to verbose if needed
     setup_logger(command_config.verbose, command_config.log_file)
 
@@ -406,7 +414,7 @@ def main() -> None:  # pragma: no cover
     if command_config.hooks_files:
         logger.debug(f'Hooks files to be loaded: {command_config.hooks_files}')
         for hooks_file in command_config.hooks_files:
-            load_hooks(hooks_file)
+            load_hooks(hooks_file, is_default=hooks_file_is_default)
     config_storage.load()
 
     # Setup database API

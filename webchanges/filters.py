@@ -262,7 +262,7 @@ class FilterBase(metaclass=TrackSubClasses):
         :param subfilter: The subfilter information.
         :param job_state: The JobState object (containing the Job).
         :param data: The data upon which to apply the filter.
-        :returns: The data and MIME type of the data after the filter has been applied.
+        :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
         filtercls: type[FilterBase] | None = cls.__subclasses__.get(filter_kind)  # type: ignore[assignment]
@@ -308,7 +308,7 @@ class FilterBase(metaclass=TrackSubClasses):
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The data and MIME type of the data after the filter has been applied.
+        :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         raise NotImplementedError()
 
@@ -354,7 +354,7 @@ class AutoMatchFilter(FilterBase):
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The data and MIME type of the data after the filter has been applied.
+        :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         pass
 
@@ -391,7 +391,7 @@ class RegexMatchFilter(FilterBase):
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The data and MIME type of the data after the filter has been applied.
+        :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         pass
 
@@ -414,7 +414,7 @@ class BeautifyFilter(FilterBase):
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The data and MIME type of the data after the filter has been applied.
+        :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         if isinstance(bs4, str):
             self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
@@ -523,7 +523,7 @@ class Html2TextFilter(FilterBase):
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The data and MIME type of the data after the filter has been applied.
+        :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
 
         # extract method and options from subfilter, defaulting to method html2text
@@ -797,7 +797,14 @@ class FormatJsonFilter(FilterBase):
         try:
             parsed_json = jsonlib.loads(data)
         except jsonlib.JSONDecodeError as e:
-            return f"Filter '{self.__kind__}' returned JSONDecodeError: {e}\n\n{data!s}", mime_type
+            return (
+                jsonlib.dumps(
+                    f"ERROR: Filter '{self.__kind__}' returned 'JSONDecodeError: {e}' on the following data:\n\n"
+                    f'{data!s}',
+                    ensure_ascii=False,
+                ),
+                'application/json',
+            )
         if not mime_type.endswith('json'):
             mime_type = 'application/json'
         return jsonlib.dumps(parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation), mime_type
@@ -908,7 +915,7 @@ class GrepFilter(FilterBase):
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The data and MIME type of the data after the filter has been applied.
+        :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         warnings.warn(
             f"The 'grep' filter is deprecated; replace with 'keep_lines_containing' + 're' subfilter"
@@ -1545,7 +1552,7 @@ class SortFilter(FilterBase):
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
-        :returns: The data and MIME type of the data after the filter has been applied.
+        :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         if not isinstance(data, str):
             raise ValueError
@@ -1808,3 +1815,30 @@ class Base64(FilterBase):
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         data_to_encode = data.encode() if isinstance(data, str) else data
         return base64.b64encode(data_to_encode).decode(), 'text/plain'
+
+
+class JsontoYamlFilter(FilterBase):
+    """Convert JSON to formatted YAML.  An alternative to format-json."""
+
+    __kind__ = 'jsontoyaml'
+
+    __supported_subfilters__ = {
+        'indentation': 'Indentation level for pretty-printing',
+    }
+
+    __default_subfilter__ = 'indentation'
+
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
+        self.job.set_to_monospace()
+        indentation = int(subfilter.get('indentation', 2))
+        try:
+            parsed_json = jsonlib.loads(data)
+        except jsonlib.JSONDecodeError as e:
+            return f"Filter '{self.__kind__}' returned JSONDecodeError: {e}\n\n{data!s}", mime_type
+        if isinstance(parsed_json, list):
+            yaml_data = yaml.safe_dump_all(
+                parsed_json, indent=indentation, width=999, allow_unicode=True, line_break='\n'
+            )
+        else:
+            yaml_data = yaml.safe_dump(parsed_json, indent=indentation, width=999, allow_unicode=True, line_break='\n')
+        return yaml_data, 'application/yaml'
