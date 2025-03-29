@@ -373,9 +373,6 @@ def main() -> None:  # pragma: no cover
         default_ssdb_file,
     )
 
-    hooks_file_is_default = not bool(command_config.hooks_files)
-    command_config.hooks_files = command_config.hooks_files or [default_hooks_file]
-
     # Set up the logger to verbose if needed
     setup_logger(command_config.verbose, command_config.log_file)
 
@@ -414,7 +411,7 @@ def main() -> None:  # pragma: no cover
     if command_config.hooks_files:
         logger.debug(f'Hooks files to be loaded: {command_config.hooks_files}')
         for hooks_file in command_config.hooks_files:
-            load_hooks(hooks_file, is_default=hooks_file_is_default)
+            load_hooks(hooks_file, is_default=not command_config.hooks_files_inputted)
     config_storage.load()
 
     # Setup database API

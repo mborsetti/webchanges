@@ -19,6 +19,7 @@ from webchanges import __copyright__, __min_python_version__, __project_name__, 
 from webchanges.cli import (
     first_run,
     handle_unitialized_actions,
+    load_hooks,
     locate_glob_files,
     locate_storage_file,
     migrate_from_legacy,
@@ -174,6 +175,24 @@ def test_first_run(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
     message = capsys.readouterr().out
     assert 'Created default config file at ' in message
     assert 'Created default jobs file at ' in message
+
+
+def test_load_hooks_file_warning(recwarn: pytest.WarningsRecorder) -> None:
+    """Test that a warning is issued if a specified hooks file is not found."""
+    hooks_file2 = tmp_path.joinpath('hooks_does_not_exist.py')
+    load_hooks(hooks_file2, is_default=False)
+    assert len(recwarn) == 1
+    message = recwarn.pop(RuntimeWarning).message.args[0]  # type: ignore[union-attr]
+    assert message == f'Hooks file {hooks_file2} not imported because it does not exist or is not a file'
+
+
+def test_load_hooks_file_no_warning(caplog: pytest.LogCaptureFixture, recwarn: pytest.WarningsRecorder) -> None:
+    """Test that no warning is issued if the default hooks file is not found, just a logging INFO."""
+    hooks_file2 = tmp_path.joinpath('hooks_does_not_exist.py')
+    with caplog.at_level(logging.INFO):
+        load_hooks(hooks_file2, is_default=True)
+    assert len(recwarn) == 0
+    assert f'Hooks file {hooks_file2} does not exist or is not a file' in caplog.text
 
 
 def test_edit() -> None:

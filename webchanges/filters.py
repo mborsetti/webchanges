@@ -34,9 +34,9 @@ try:
     from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
     from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
 except ImportError as e:
-    from xml import etree
+    from xml import etree  # type: ignore[no-redef]
 
-    CSSSelector = str(e)
+    CSSSelector = str(e)  # type: ignore[misc,assignment]
 
 # https://stackoverflow.com/questions/712791
 try:
@@ -90,7 +90,7 @@ except ImportError as e:  # pragma: has-pytesseract
     pytesseract = str(e)  # type: ignore[assignment]
 
 try:
-    import vobject
+    import vobject.base
 except ImportError as e:  # pragma: no cover
     vobject = str(e)  # type: ignore[assignment]
 
@@ -462,14 +462,14 @@ class AbsoluteLinksFilter(FilterBase):
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         tree = etree.HTML(data)
         elem: etree._Element
-        for elem in tree.xpath('//*[@action]'):
-            elem.attrib['action'] = urljoin(self.job.url, elem.attrib['action'])
-        for elem in tree.xpath('//object[@data]'):
-            elem.attrib['data'] = urljoin(self.job.url, elem.attrib['data'])
-        for elem in tree.xpath('//*[@href]'):
-            elem.attrib['href'] = urljoin(self.job.url, elem.attrib['href'])
-        for elem in tree.xpath('//*[@src]'):
-            elem.attrib['src'] = urljoin(self.job.url, elem.attrib['src'])
+        for elem in tree.xpath('//*[@action]'):  # type: ignore[assignment,union-attr]
+            elem.attrib['action'] = urljoin(self.job.url, elem.attrib['action'])  # type: ignore[type-var,assignment]
+        for elem in tree.xpath('//object[@data]'):  # type: ignore[assignment,union-attr]
+            elem.attrib['data'] = urljoin(self.job.url, elem.attrib['data'])  # type: ignore[type-var,assignment]
+        for elem in tree.xpath('//*[@href]'):  # type: ignore[assignment,union-attr]
+            elem.attrib['href'] = urljoin(self.job.url, elem.attrib['href'])  # type: ignore[type-var,assignment]
+        for elem in tree.xpath('//*[@src]'):  # type: ignore[assignment,union-attr]
+            elem.attrib['src'] = urljoin(self.job.url, elem.attrib['src'])  # type: ignore[type-var,assignment]
         return etree.tostring(tree, encoding='unicode', method='html'), mime_type
 
 
@@ -748,12 +748,12 @@ class Ical2TextFilter(FilterBase):
 
         result = []
         if isinstance(data, str):
-            parsedCal = vobject.readOne(data)
+            parsedCal = vobject.base.readOne(data)
         else:
             try:
-                parsedCal = vobject.readOne(data)
-            except vobject.ParseError:
-                parsedCal = vobject.readOne(data.decode(errors='ignore'))
+                parsedCal = vobject.base.readOne(data)
+            except vobject.base.ParseError:
+                parsedCal = vobject.base.readOne(data.decode(errors='ignore'))
                 logger.warning('Found and ignored Unicode-related errors when reading iCal entry.')
 
         for event in parsedCal.getChildren():
@@ -1366,7 +1366,7 @@ class LxmlParser:
         try:
             tree = element.getroottree()
             path = tree.getpath(element)
-            return element is not tree.xpath(path, namespaces=self.namespaces)[0]
+            return element is not tree.xpath(path, namespaces=self.namespaces)[0]  # type: ignore[index]
         except (ValueError, IndexError):
             return True
 
@@ -1399,11 +1399,22 @@ class LxmlParser:
         excluded_elems: list[etree._Element] | None = None
         try:
             if self.filter_kind == 'css':
-                selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(root)
-                excluded_elems = CSSSelector(self.exclude, namespaces=self.namespaces)(root) if self.exclude else None
+                selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(
+                    root
+                )  # type: ignore[assignment]
+                excluded_elems = (
+                    CSSSelector(self.exclude, namespaces=self.namespaces)(root)  # type: ignore[assignment]
+                    if self.exclude
+                    else None
+                )
+
             elif self.filter_kind == 'xpath':
-                selected_elems = root.xpath(self.expression, namespaces=self.namespaces)
-                excluded_elems = root.xpath(self.exclude, namespaces=self.namespaces) if self.exclude else None
+                selected_elems = root.xpath(self.expression, namespaces=self.namespaces)  # type: ignore[assignment]
+                excluded_elems = (
+                    root.xpath(self.exclude, namespaces=self.namespaces)  # type: ignore[assignment]
+                    if self.exclude
+                    else None
+                )
         except (etree.ParserError, etree.XMLSchemaError, etree.XPathError) as e:
             raise ValueError(f'Job {job_index_number} {type(e).__name__}: {e} {self.expression}') from e
         if excluded_elems is not None:

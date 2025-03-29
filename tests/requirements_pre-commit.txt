@@ -8,6 +8,7 @@ flake8-bandit
 flake8-quotes
 flynt
 isort
+lxml-stubs
 mypy
 pre-commit
 tox-ini-fmt
@@ -19,4 +20,5 @@ types-PyYAML
 types-redis
 types-requests
 types-simplejson
+types-vobject
 types-xmltodict
