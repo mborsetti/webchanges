@@ -13,7 +13,6 @@ from typing import Any, Callable, cast
 
 import pytest
 import yaml
-from _pytest.logging import LogCaptureFixture
 from httpx import HTTPStatusError
 from requests import HTTPError
 
@@ -213,15 +212,15 @@ def test__dict_deep__merge() -> None:
 )
 def test_run_job(
     input_job: dict[str, str | dict[str, str] | bool | int],
-    output: str,
-    caplog: LogCaptureFixture,
+    output: str | bytes,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     job = JobBase.unserialize(input_job)
     with JobState(ssdb_storage, job) as job_state:
         data, _, _ = job.retrieve(job_state)
         if job.filters == [{'pdf2text': {}}]:
             assert isinstance(data, bytes)
-        assert output in data
+        assert output in data  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
 
 
 @connection_required  # type: ignore[misc]
@@ -519,7 +518,7 @@ def test_with_defaults_headers() -> None:
         }
     }
     job = job.with_defaults(config)
-    assert job.headers == {'a': '1', 'b': '3', 'c': '4'}
+    assert dict(job.headers) == {'a': '1', 'b': '3', 'c': '4'}
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
 
 

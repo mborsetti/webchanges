@@ -797,10 +797,11 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         'ones.'
                     )
                 else:
-                    config['job_defaults']['command'] = config['job_defaults'].pop(
+                    config['job_defaults']['command'] = config[  # pyright: ignore[reportGeneralTypeIssues]
+                        'job_defaults'
+                    ].pop(
                         'shell'  # type: ignore[typeddict-item]
                     )
-
             for key in {'all', 'url', 'browser', 'command'}:
                 if key not in config['job_defaults']:
                     config['job_defaults'][key] = {}  # type: ignore[literal-required]
@@ -851,7 +852,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             logger.info(f'Loaded configuration from {self.filename}')
 
         else:
-            logger.info(f'No directives found in the configuration file {self.filename}; using default directives.')
+            logger.warning(f'No directives found in the configuration file {self.filename}; using default directives.')
             config = DEFAULT_CONFIG
 
         self.config = config
@@ -976,8 +977,11 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                             + job_files_for_error()
                         )
                     )
+                # We add GUID here to speed things up and to allow hooks to programmatically change job.url and/or
+                # job.user_visible_url
+                job.guid = job.get_guid()
                 jobs.append(job)
-                jobs_by_guid[job.get_guid()].append(job)
+                jobs_by_guid[job.guid].append(job)
         except yaml.scanner.ScannerError as e:
             raise ValueError(
                 '\n   '.join(
@@ -1109,8 +1113,8 @@ class SsdbStorage(BaseFileStorage, ABC):
         :returns: A generator of tuples, each consisting of (guid, data, timestamp, tries, etag, mime_type)
         """
         for guid in self.get_guids():
-            snapshot = self.load(guid)
-            yield guid, *snapshot
+            data, timestamp, tries, etag, mime_type, error_data = self.load(guid)
+            yield guid, data, timestamp, tries, etag, mime_type, error_data
 
     def restore(self, entries: Iterable[tuple[str, str | bytes, float, int, str, str, ErrorData]]) -> None:
         """Save multiple entries into the database.
@@ -1145,7 +1149,7 @@ class SsdbStorage(BaseFileStorage, ABC):
         :param keep_entries: Number of entries to keep after deletion.
         """
         if hasattr(self, 'clean_all'):
-            count = self.clean_all(keep_entries)
+            count = self.clean_all(keep_entries)  # pyright: ignore[reportAttributeAccessIssue]
             if count:
                 print(f'Deleted {count} old snapshots')
         else:
@@ -1892,7 +1896,9 @@ class SsdbRedisStorage(SsdbStorage):
             'mime_type': snapshot.mime_type,
             'error_data': snapshot.error_data,
         }
-        self.db.lpush(self._make_key(guid), msgpack.packb(r))
+        packed_data = msgpack.packb(r)
+        if packed_data:
+            self.db.lpush(self._make_key(guid), packed_data)
 
     def delete(self, guid: str) -> None:
         self.db.delete(self._make_key(guid))

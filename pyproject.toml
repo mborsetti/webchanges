@@ -319,3 +319,14 @@ asyncio_default_fixture_loop_scope = 'function'
 # https://github.com/pytest-dev/pytest-cov/issues/131) and to enable running tox --parallel
 # Instead of below, now runs with $ coverage run --parallel-mode
 # addopts = --cov=./ --cov-report=term --cov-report=html
+
+
+# -------------------------- pyright --------------------------
+# Config file documentation at https://microsoft.github.io/pyright/#/configuration
+[tool.pyright]
+ignore = ['webchanges/storage_minidb.py']
+
+reportMissingImports = false
+reportMissingModuleSource = false
+reportDeprecated = true
+# reportUnnecessaryTypeIgnoreComment = true

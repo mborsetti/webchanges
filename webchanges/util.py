@@ -68,10 +68,11 @@ class TrackSubClasses(type):
     __anonymous_subclasses__: list[TrackSubClasses]
     __required__: tuple[str, ...] = ()
     __optional__: tuple[str, ...] = ()
+    __supported_directives__: dict[str, str] = {}
+    __supported_subfilters__: dict[str, str] = {}
 
     __kind__: str
 
-    @staticmethod
     def sorted_by_kind(cls: TrackSubClasses) -> list[TrackSubClasses]:
         """Generates a list of all members of a class sorted by the value of their __kind__ attribute. Useful for
         documentation.
@@ -335,7 +336,7 @@ def get_new_version_number(timeout: float | None = None) -> str | bool:
 
     if r.is_success:
         latest_release: str = r.json()['info']['version']
-        if parse_version(latest_release) > parse_version(__version__):
+        if parse_version(latest_release) > parse_version(__version__):  # pyright: ignore[reportOperatorIssue]
             return latest_release
     else:
         logger.info(f'HTTP error when querying PyPi for latest release: {r}')

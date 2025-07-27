@@ -7,13 +7,13 @@ from __future__ import annotations
 import base64
 import difflib
 import html
-import io
 import logging
 import math
 import os
 import re
 import shlex
 import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import sys
 import tempfile
 import traceback
 import urllib.parse
@@ -24,6 +24,7 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Iterator, Literal, TYPE_CHECKING, TypedDict
+from xml.parsers.expat import ExpatError
 from zoneinfo import ZoneInfo
 
 import html2text
@@ -65,8 +66,6 @@ except ImportError:  # pragma: no cover
     import json as jsonlib  # type: ignore[no-redef]
 
 try:
-    from xml.parsers.expat import ExpatError
-
     import xmltodict
 except ImportError as e:  # pragma: no cover
     xmltodict = str(e)  # type: ignore[no-redef,assignment]
@@ -74,7 +73,7 @@ except ImportError as e:  # pragma: no cover
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from webchanges.handler import JobState
-    from webchanges.storage import _Config
+    from webchanges.storage import _ConfigDifferDefaults
 
 
 logger = logging.getLogger(__name__)
@@ -92,6 +91,7 @@ AiGoogleDirectives = TypedDict(
         'temperature': float | None,
         'top_p': float | None,
         'top_k': float | None,
+        'thinking_budget': float | None,
         'tools': list[Any],
     },
     total=False,
@@ -110,6 +110,7 @@ class DifferBase(metaclass=TrackSubClasses):
 
     css_added_style = 'background-color:#d1ffd1;color:#082b08;'
     css_deltd_style = 'background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;'
+    css_remvd_style = 'text-decoration:line-through;'
 
     def __init__(self, state: JobState) -> None:
         """
@@ -135,12 +136,20 @@ class DifferBase(metaclass=TrackSubClasses):
         result.append('\n[] ... Parameter can be supplied as unnamed value\n')
         return '\n'.join(result)
 
+    @staticmethod
+    def debugger_attached() -> bool:
+        """Checks if the code is currently running within an external debugger (e.g. IDE).
+
+        :returns: True if an external debugger is attached, False otherwise.
+        """
+        return sys.breakpointhook.__module__ != 'sys'
+
     @classmethod
     def normalize_differ(
         cls,
         differ_spec: dict[str, Any] | None,
         job_index_number: int | None = None,
-        config: _Config | None = None,
+        differ_defaults: _ConfigDifferDefaults | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """Checks the differ_spec for its validity and applies default values.
 
@@ -150,7 +159,7 @@ class DifferBase(metaclass=TrackSubClasses):
         """
 
         def directives_with_defaults(
-            differ_spec: str, directives: dict[str, Any], config: _Config | None = None
+            differ_spec: str, directives: dict[str, Any], differ_defaults: _ConfigDifferDefaults | None = None
         ) -> dict[str, Any]:
             """Obtain differ subdirectives that also contains defaults from the configuration.
 
@@ -159,16 +168,31 @@ class DifferBase(metaclass=TrackSubClasses):
             :param config: The configuration.
             :returns: directives inclusive of configuration defaults.
             """
-            if config is None:
+            if differ_defaults is None:
                 logger.info('No configuration object found to look for differ defaults')
                 return directives
-            cfg = config.get('differ_defaults')
-            if isinstance(cfg, dict):
-                defaults: dict[str, Any] = cfg.get(differ_spec)  # type: ignore[assignment]
-                if defaults:
-                    for key, value in defaults.items():
-                        if key not in directives:
+
+            differ_default = differ_defaults.get(differ_spec, {})
+            if isinstance(differ_default, dict):
+                # merge defaults from configuration (including dicts) into differ directives without overwriting them
+                for key, value in differ_default.items():
+                    if key in directives:
+                        if directives[key] is None:  # for speed
                             directives[key] = value
+                        elif isinstance(differ_default[key], dict) and isinstance(  # type: ignore[literal-required]
+                            directives[key], dict  # type: ignore[literal-required]
+                        ):
+                            for subkey, subvalue in differ_default[key].items():  # type: ignore[literal-required]
+                                if (
+                                    key in directives
+                                    and subkey not in directives[key]  # type: ignore[literal-required]
+                                ):
+                                    directives[key][subkey] = subvalue  # type: ignore[literal-required]
+                        # elif isinstance(differ_default[key], list) and isinstance(directives[key], list):
+                        #     directives[key] = list(set(directives[key] + differ_default[key]))
+                    else:
+                        directives[key] = value
+
             return directives
 
         differ_spec = differ_spec or {'name': 'unified'}
@@ -186,8 +210,7 @@ class DifferBase(metaclass=TrackSubClasses):
         if not differcls:
             raise ValueError(f'Job {job_index_number}: No differ named {differ_kind}.')
 
-        if directives:
-            directives = directives_with_defaults(differ_kind, directives, config)
+        directives = directives_with_defaults(differ_kind, directives, differ_defaults)
 
         if hasattr(differcls, '__supported_directives__'):
             provided_keys = set(directives.keys())
@@ -229,6 +252,8 @@ class DifferBase(metaclass=TrackSubClasses):
                 return differcls(job_state).differ(directives, report_kind, _unfiltered_diff, tz)
             except Exception as e:
                 # Differ failed
+                if cls.debugger_attached():
+                    raise
                 logger.info(
                     f'Job {job_state.job.index_number}: Differ {differ_kind} with {directives=} encountered '
                     f'error {e}'
@@ -238,7 +263,9 @@ class DifferBase(metaclass=TrackSubClasses):
 
                 job_state.exception = e
                 job_state.traceback = job_state.job.format_error(e, traceback.format_exc())
-                directives_text = ', '.join(f'{key}={value}' for key, value in directives.items()) or 'None'
+                directives_text = (
+                    ', '.join(f'{key}={value}' for key, value in directives.items()) if directives else 'None'
+                )
                 return {
                     'text': (
                         f'Differ {differ_kind} with directive(s) {directives_text} encountered an '
@@ -461,7 +488,7 @@ class UnifiedDiffer(DifferBase):
                         if not (line1.startswith('@') and line2.startswith('@'))
                     ][1:]
                     diff = diff[:-1] if diff[-1].startswith('@') else diff
-                    if len(diff) == 1 or len([line for line in diff if line.lstrip('+').rstrip()]) == 2:
+                    if len(diff) == 1 or len([line for line in diff if line.removeprefix('+').rstrip()]) == 2:
                         self.state.verb = 'changed,no_report'
                         return empty_return
                     diff = [head, diff[0], '/**Comparison type: Additions only**'] + diff[1:]
@@ -474,7 +501,7 @@ class UnifiedDiffer(DifferBase):
                     if not (line1.startswith('@') and line2.startswith('@'))
                 ][1:]
                 diff = diff[:-1] if diff[-1].startswith('@') else diff
-                if len(diff) == 1 or len([line for line in diff if line.lstrip('-').rstrip()]) == 2:
+                if len(diff) == 1 or len([line for line in diff if line.removeprefix('-').rstrip()]) == 2:
                     self.state.verb = 'changed,no_report'
                     return empty_return
                 diff = [diff[0], head, '/**Comparison type: Deletions only**'] + diff[1:]
@@ -648,7 +675,9 @@ class CommandDiffer(DifferBase):
             diff = proc.stdout
             if self.state.is_markdown():
                 # undo the protection of the link anchor from being split
-                diff = markdown_links_re.sub(lambda x: f'[{urllib.parse.unquote(x.group(1))}]({x.group(2)})', diff)
+                diff = markdown_links_re.sub(  # pyright: ignore[reportPossiblyUnboundVariable]
+                    lambda x: f'[{urllib.parse.unquote(x.group(1))}]({x.group(2)})', diff
+                )
             if command.startswith('wdiff') and self.job.contextlines == 0:
                 # remove lines that don't have any changes
                 keeplines = []
@@ -750,8 +779,9 @@ class DeepdiffDiffer(DifferBase):
         'ignore_order': 'Whether to ignore the order in which the items have appeared (default: false)',
         'ignore_string_case': 'Whether to be case-sensitive or not when comparing strings (default: false)',
         'significant_digits': (
-            'The number of digits AFTER the decimal point to be used in the comparison (default: ' 'no limit)'
+            'The number of digits AFTER the decimal point to be used in the comparison (default: no limit)'
         ),
+        'compact': 'Whether to output a compact representation that also ignores changes of types (default: false)',
     }
 
     def differ(
@@ -763,91 +793,164 @@ class DeepdiffDiffer(DifferBase):
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         if isinstance(DeepDiff, str):  # pragma: no cover
             self.raise_import_error('deepdiff', DeepDiff)
+            raise RuntimeError()  # for type checker
 
         span_added = f'<span style="{self.css_added_style}">'
         span_deltd = f'<span style="{self.css_deltd_style}">'
+        span_remvd = f'<span style="{self.css_remvd_style}">'
 
-        def _pretty_deepdiff(ddiff: DeepDiff, report_kind: Literal['text', 'markdown', 'html']) -> str:
+        def _pretty_deepdiff(
+            ddiff: DeepDiff,
+            report_kind: Literal['text', 'markdown', 'html'],
+            compact: bool,
+        ) -> str:
             """
             Customized version of deepdiff.serialization.SerializationMixin.pretty method, edited to include the
             values deleted or added and an option for colorized HTML output. The pretty human-readable string
             output for the diff object regardless of what view was used to generate the diff.
             """
-            if report_kind == 'html':
-                PRETTY_FORM_TEXTS = {
-                    'type_changes': (
-                        'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
-                        f'from {span_deltd}{{val_t1}}</span> to {span_added}{{val_t2}}</span>.'
-                    ),
-                    'values_changed': (
-                        f'Value of {{diff_path}} changed from {span_deltd}{{val_t1}}</span> to {span_added}{{val_t2}}'
-                        '</span>.'
-                    ),
-                    'dictionary_item_added': (
-                        f'Item {{diff_path}} added to dictionary as {span_added}{{val_t2}}</span>.'
-                    ),
-                    'dictionary_item_removed': (
-                        f'Item {{diff_path}} removed from dictionary (was {span_deltd}{{val_t1}}</span>).'
-                    ),
-                    'iterable_item_added': f'Item {{diff_path}} added to iterable as {span_added}{{val_t2}}</span>.',
-                    'iterable_item_removed': (
-                        f'Item {{diff_path}} removed from iterable (was {span_deltd}{{val_t1}}</span>).'
-                    ),
-                    'attribute_added': f'Attribute {{diff_path}} added as {span_added}{{val_t2}}</span>.',
-                    'attribute_removed': f'Attribute {{diff_path}} removed (was {span_deltd}{{val_t1}}</span>).',
-                    'set_item_added': f'Item root[{{val_t2}}] added to set as {span_added}{{val_t1}}</span>.',
-                    'set_item_removed': (
-                        f'Item root[{{val_t1}}] removed from set (was {span_deltd}{{val_t2}}</span>).'
-                    ),
-                    'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
-                }
-            else:
-                PRETTY_FORM_TEXTS = {
-                    'type_changes': (
-                        'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
-                        'from {val_t1} to {val_t2}.'
-                    ),
-                    'values_changed': 'Value of {diff_path} changed from {val_t1} to {val_t2}.',
-                    'dictionary_item_added': 'Item {diff_path} added to dictionary as {val_t2}.',
-                    'dictionary_item_removed': 'Item {diff_path} removed from dictionary (was {val_t1}).',
-                    'iterable_item_added': 'Item {diff_path} added to iterable as {val_t2}.',
-                    'iterable_item_removed': 'Item {diff_path} removed from iterable (was {val_t1}).',
-                    'attribute_added': 'Attribute {diff_path} added as {val_t2}.',
-                    'attribute_removed': 'Attribute {diff_path} removed (was {val_t1}).',
-                    'set_item_added': 'Item root[{val_t2}] added to set as {val_t1}.',
-                    'set_item_removed': 'Item root[{val_t1}] removed from set (was {val_t2}).',
-                    'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
-                }
+            # Edited strings originally in deepdiff.serialization._get_pretty_form_text
+            # See https://github.com/seperman/deepdiff/blob/master/deepdiff/serialization.py
+            if compact:
+                root = '⊤'
+                if report_kind == 'html':
+                    PRETTY_FORM_TEXTS = {
+                        'type_changes': (
+                            f'{{diff_path}}: {span_deltd}{{val_t1}}</span> ⮕ {span_added}{{val_t2}}</span>'
+                        ),
+                        'values_changed': (
+                            f'{{diff_path}}: {span_deltd}{{val_t1}}</span> ⮕ {span_added}{{val_t2}}</span>'
+                        ),
+                        'dictionary_item_added': f'{{diff_path}}: {span_added}{{val_t2}}</span>',
+                        'dictionary_item_removed': f'{span_deltd}{{diff_path}}: {{val_t1}}</span>',
+                        'iterable_item_added': f'{{diff_path}}: {span_added}{{val_t2}}</span>',
+                        'iterable_item_removed': f'{span_deltd}{{diff_path}}: {{val_t1}}</span>',
+                        'attribute_added': f'{{diff_path}}: {span_added}{{val_t2}}</span>',
+                        'attribute_removed': f'{span_remvd}{{diff_path}}</span>: {span_deltd}{{val_t1}}</span>',
+                        'set_item_added': f'⊤[{{val_t2}}]: {span_added}{{val_t1}}</span>',
+                        'set_item_removed': f'{span_remvd}⊤[{{val_t1}}]</span>: {span_deltd}{{val_t2}}</span>',
+                        'repetition_change': (
+                            f'{{diff_path}}: repetition change {span_deltd}{{val_t1}}</span> ⮕ '
+                            f'{span_added}{{val_t2}}</span>'
+                        ),
+                    }
+                else:
+                    PRETTY_FORM_TEXTS = {
+                        'type_changes': '{diff_path}: {val_t1} → {val_t2}',
+                        'values_changed': '{diff_path}: {val_t1} → {val_t2}',
+                        'dictionary_item_added': '{diff_path}: new {val_t2}',
+                        'dictionary_item_removed': '{diff_path}: removed {val_t1}',
+                        'iterable_item_added': '{diff_path}: new {val_t2}',
+                        'iterable_item_removed': '{diff_path}: removed {val_t1}',
+                        'attribute_added': '{diff_path}: new {val_t2}',
+                        'attribute_removed': '{diff_path}: removed {val_t1}',
+                        'set_item_added': '⊤[{val_t2}]: new {val_t1}',
+                        'set_item_removed': '⊤[{val_t1}]: removed {val_t2}',
+                        'repetition_change': '{diff_path}: repetition change {val_t1} → {val_t2}',
+                    }
+            else:  # not compact
+                root = 'root'
+                if report_kind == 'html':
+                    PRETTY_FORM_TEXTS = {
+                        'type_changes': (
+                            'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
+                            f'from {span_deltd}{{val_t1}}</span> to {span_added}{{val_t2}}</span>.'
+                        ),
+                        'values_changed': (
+                            f'Value of {{diff_path}} changed from {span_deltd}{{val_t1}}</span> to {span_added}'
+                            '{val_t2}</span>.'
+                        ),
+                        'dictionary_item_added': (
+                            f'Item {{diff_path}} added to dictionary as {span_added}{{val_t2}}</span>.'
+                        ),
+                        'dictionary_item_removed': (
+                            f'Item {{diff_path}} removed from dictionary (was {span_deltd}{{val_t1}}</span>).'
+                        ),
+                        'iterable_item_added': (
+                            f'Item {{diff_path}} added to iterable as {span_added}{{val_t2}}</span>.'
+                        ),
+                        'iterable_item_removed': (
+                            f'Item {{diff_path}} removed from iterable (was {span_deltd}{{val_t1}}</span>).'
+                        ),
+                        'attribute_added': f'Attribute {{diff_path}} added as {span_added}{{val_t2}}</span>.',
+                        'attribute_removed': f'Attribute {{diff_path}} removed (was {span_deltd}{{val_t1}}</span>).',
+                        'set_item_added': f'Item root[{{val_t2}}] added to set as {span_added}{{val_t1}}</span>.',
+                        'set_item_removed': (
+                            f'Item root[{{val_t1}}] removed from set (was {span_deltd}{{val_t2}}</span>).'
+                        ),
+                        'repetition_change': (
+                            f'Repetition change for item {{diff_path}} ({span_deltd}{{val_t2}}</span>).'
+                        ),
+                    }
+                else:
+                    PRETTY_FORM_TEXTS = {
+                        'type_changes': (
+                            'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
+                            'from {val_t1} to {val_t2}.'
+                        ),
+                        'values_changed': 'Value of {diff_path} changed from {val_t1} to {val_t2}.',
+                        'dictionary_item_added': 'Item {diff_path} added to dictionary as {val_t2}.',
+                        'dictionary_item_removed': 'Item {diff_path} removed from dictionary (was {val_t1}).',
+                        'iterable_item_added': 'Item {diff_path} added to iterable as {val_t2}.',
+                        'iterable_item_removed': 'Item {diff_path} removed from iterable (was {val_t1}).',
+                        'attribute_added': 'Attribute {diff_path} added as {val_t2}.',
+                        'attribute_removed': 'Attribute {diff_path} removed (was {val_t1}).',
+                        'set_item_added': 'Item root[{val_t2}] added to set as {val_t1}.',
+                        'set_item_removed': 'Item root[{val_t1}] removed from set (was {val_t2}).',
+                        'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
+                    }
+
+            def indent_except_first(text: str, indent: str = '  ') -> str:
+                """
+                Indents all lines of a string except the first line.
+
+                :param text: The input string (potentially multi-line).
+                :param indent: The string to use for indentation (defaults to two spaces).
+
+                :returns: The modified string with subsequent lines indented.
+                """
+                if not text:
+                    return text
+                lines = text.splitlines(keepends=True)
+                return indent.join(lines)
 
             def _pretty_print_diff(ddiff: DiffLevel) -> str:
                 """
                 Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
                 values deleted or added.
                 """
+
+                def stringify_value(value: Any, type: str) -> str:
+                    if compact:
+                        if type in {'str', 'int', 'float'}:
+                            return f"'{value}'"
+                        elif type in {'dict', 'list'}:
+                            value_string = str(yaml.safe_dump(value, default_flow_style=False, allow_unicode=True))
+                            value_list = value_string.splitlines(keepends=True)
+                            if len(value_list) < 2:
+                                return value_string
+                            value_string = '\n    ' + '    '.join(value_list)
+                            return value_string.rstrip()
+
+                        else:
+                            return str(value)
+                    else:
+                        if type in {'str', 'int', 'float'}:
+                            return f'"{value}"'
+                        elif type in {'dict', 'list'}:
+                            return jsonlib.dumps(value, ensure_ascii=False, indent=2)
+                        else:
+                            return str(value)
+
                 type_t1 = type(ddiff.t1).__name__
+                val_t1 = stringify_value(ddiff.t1, type_t1)
                 type_t2 = type(ddiff.t2).__name__
+                val_t2 = stringify_value(ddiff.t2, type_t2)
 
-                val_t1 = (
-                    f'"{ddiff.t1}"'
-                    if type_t1 in {'str', 'int', 'float'}
-                    else (
-                        jsonlib.dumps(ddiff.t1, ensure_ascii=False, indent=2)
-                        if type_t1 in {'dict', 'list'}
-                        else str(ddiff.t1)
-                    )
-                )
-                val_t2 = (
-                    f'"{ddiff.t2}"'
-                    if type_t2 in {'str', 'int', 'float'}
-                    else (
-                        jsonlib.dumps(ddiff.t2, ensure_ascii=False, indent=2)
-                        if type_t2 in {'dict', 'list'}
-                        else str(ddiff.t2)
-                    )
-                )
-
-                diff_path = ddiff.path()  # type: ignore[no-untyped-call]
-                return '• ' + PRETTY_FORM_TEXTS.get(ddiff.report_type, '').format(
+                diff_path = ddiff.path(root=root)  # type: ignore[no-untyped-call]
+                return '• ' + PRETTY_FORM_TEXTS.get(
+                    ddiff.report_type, ''  # pyright: ignore[reportCallIssue,reportArgumentType]
+                ).format(
                     diff_path=diff_path,
                     type_t1=type_t1,
                     type_t2=type_t2,
@@ -856,126 +959,128 @@ class DeepdiffDiffer(DifferBase):
                 )
 
             result = []
-            for key in ddiff.tree.keys():
-                for item_key in ddiff.tree[key]:
+            for tree_item in ddiff.tree.values():
+                for item_key in tree_item:
                     result.append(_pretty_print_diff(item_key))
 
             return '\n'.join(result)
 
-        if directives.get('data_type'):
-            old_data_type = directives['data_type']
-            new_data_type = directives['data_type']
-        else:
-            if self.state.old_mime_type:
-                media_subtype = self.state.old_mime_type.split('/')[-1].split('+')[-1].split('x-')[-1]
-                if media_subtype in ('yaml', 'yml'):
-                    old_data_type = 'yaml'
-                elif media_subtype == 'xml':
-                    old_data_type = 'xml'
-                elif media_subtype == 'json':
-                    old_data_type = 'json'
+        def deserialize_data(
+            data: str | bytes, mime_type: str | None, data_type: str | None, data_label: Literal['Old', 'New']
+        ) -> tuple[Any, dict | None]:
+            """Deserializes the stored data.
+
+            :param data: The stored data.
+            :param mime_type: The MIME type of the data.
+            :param data_type: The value of the data_type sub-parameter (overrides MIME type)
+            :param data_label: Either old or new, used for error reporting
+
+            :returns: The deserialized data, any errors
+            """
+            if not data:
+                return data, None
+            if data_type is None:
+                if mime_type:
+                    media_subtype = mime_type.split('/')[-1].split('+')[-1].split('x-')[-1]
+                    if media_subtype in ('yaml', 'yml'):
+                        data_type = 'yaml'
+                    elif media_subtype == 'xml':
+                        data_type = 'xml'
+                    elif media_subtype == 'json':
+                        data_type = 'json'
+                    else:
+                        logger.info(
+                            f'Differ {self.__kind__} could not determine data type of {data_label} data from media '
+                            f"type {mime_type}; defaulting to 'json'"
+                        )
+                        data_type = 'json'
                 else:
                     logger.info(
-                        f'Differ {self.__kind__} could not determine data type of old data from media type '
-                        f"{self.state.old_mime_type}; defaulting to 'json'"
+                        f"Differ {self.__kind__} data_type for {data_label} data defaulted to 'json' as media type is "
+                        'missing'
                     )
-                    old_data_type = 'json'
-            else:
-                logger.info(
-                    f"Differ {self.__kind__} data_type for old data defaulted to 'json' as media type is missing"
-                )
-                old_data_type = 'json'
-            if self.state.new_mime_type:
-                media_subtype = self.state.new_mime_type.split('/')[-1].split('+')[-1].split('x-')[-1]
-                if media_subtype in ('yaml', 'yml'):
-                    new_data_type = 'yaml'
-                elif media_subtype == 'xml':
-                    new_data_type = 'xml'
-                elif media_subtype == 'json':
-                    new_data_type = 'json'
-                else:
-                    logger.info(
-                        f'Differ {self.__kind__} could not determine data type of new data from media type '
-                        f"{self.state.new_mime_type}; defaulting to 'json'"
+                    data_type = 'json'
+            parsed_data: Any = ''
+            if data_type == 'json':
+                try:
+                    parsed_data = jsonlib.loads(data)
+                except jsonlib.JSONDecodeError as e:
+                    self.state.exception = e
+                    self.state.traceback = self.job.format_error(e, traceback.format_exc())
+                    logger.error(
+                        f'Job {self.job.index_number}: {data_label} data is invalid JSON: {e} '
+                        f'({self.job.get_location()})'
                     )
-                    new_data_type = 'json'
-            else:
-                logger.info(
-                    f"Differ {self.__kind__} data_type for new data defaulted to 'json' as media type is missing"
-                )
-                new_data_type = 'json'
+                    logger.info(f'Job {self.job.index_number}: {data!r}')
+                    return None, {
+                        'text': f'Differ {self.__kind__} ERROR: {data_label} data is invalid JSON\n{e}',
+                        'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid JSON**\n{e}',
+                        'html': f'Differ {self.__kind__} <b>ERROR: {data_label} data is invalid JSON</b>\n{e}',
+                    }
+            elif data_type == 'yaml':
+                try:
+                    parsed_data = yaml.safe_load(data)
+                except yaml.YAMLError as e:
+                    self.state.exception = e
+                    self.state.traceback = self.job.format_error(e, traceback.format_exc())
+                    logger.error(
+                        f'Job {self.job.index_number}: {data_label} data is invalid YAML: {e} '
+                        f'({self.job.get_location()})'
+                    )
+                    logger.info(f'Job {self.job.index_number}: {data!r}')
+                    return None, {
+                        'text': f'Differ {self.__kind__} ERROR: {data_label} data is invalid YAML\n{e}',
+                        'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid YAML**\n{e}',
+                        'html': f'Differ {self.__kind__} <b>ERROR: {data_label} data is invalid YAML</b>\n{e}',
+                    }
+            elif data_type == 'xml':
+                if isinstance(xmltodict, str):  # pragma: no cover
+                    self.raise_import_error('xmltodict', xmltodict)
+                    raise RuntimeError()  # for type checker
+                try:
+                    parsed_data = xmltodict.parse(data)
+                except ExpatError as e:
+                    self.state.exception = e
+                    self.state.traceback = self.job.format_error(e, traceback.format_exc())
+                    logger.error(
+                        f'Job {self.job.index_number}: {data_label} data is invalid XML: {e} '
+                        f'({self.job.get_location()})'
+                    )
+                    logger.info(f'Job {self.job.index_number}: {data!r}')
+                    return None, {
+                        'text': f'Differ {self.__kind__} ERROR: {data_label} data is invalid XML\n{e}',
+                        'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid XML**\n{e}',
+                        'html': f'Differ {self.__kind__} <b>ERROR: {data_label} data is invalid XML</b>\n{e}',
+                    }
+            return parsed_data, None
 
-        old_data: Any = ''
-        if old_data_type == 'json':
-            try:
-                old_data = jsonlib.loads(self.state.old_data)
-            except jsonlib.JSONDecodeError:
-                pass
-        elif old_data_type == 'yaml':
-            try:
-                old_data = yaml.safe_load(self.state.old_data)
-            except yaml.YAMLError:
-                pass
-        elif old_data_type == 'xml':
-            if isinstance(xmltodict, str):  # pragma: no cover
-                self.raise_import_error('xmltodict', xmltodict)
-            try:
-                old_data = xmltodict.parse(self.state.old_data)
-            except ExpatError:
-                pass
-
-        new_data: Any = ''
-        if new_data_type == 'json':
-            try:
-                new_data = jsonlib.loads(self.state.new_data)
-            except jsonlib.JSONDecodeError as e:
-                self.state.exception = e
-                self.state.traceback = self.job.format_error(e, traceback.format_exc())
-                logger.error(f'Job {self.job.index_number}: New data is invalid JSON: {e} ({self.job.get_location()})')
-                logger.info(f'Job {self.job.index_number}: {self.state.new_data!r}')
-                return {
-                    'text': f'Differ {self.__kind__} ERROR: New data is invalid JSON\n{e}',
-                    'markdown': f'Differ {self.__kind__} **ERROR: New data is invalid JSON**\n{e}',
-                    'html': f'Differ {self.__kind__} <b>ERROR: New data is invalid JSON</b>\n{e}',
-                }
-        elif new_data_type == 'yaml':
-            try:
-                new_data = yaml.safe_load(self.state.new_data)
-            except yaml.YAMLError as e:
-                self.state.exception = e
-                self.state.traceback = self.job.format_error(e, traceback.format_exc())
-                logger.error(f'Job {self.job.index_number}: New data is invalid YAML: {e} ({self.job.get_location()})')
-                logger.info(f'Job {self.job.index_number}: {self.state.new_data!r}')
-                return {
-                    'text': f'Differ {self.__kind__} ERROR: New data is invalid YAML\n{e}',
-                    'markdown': f'Differ {self.__kind__} **ERROR: New data is invalid YAML**\n{e}',
-                    'html': f'Differ {self.__kind__} <b>ERROR: New data is invalid YAML</b>\n{e}',
-                }
-        elif new_data_type == 'xml':
-            if isinstance(xmltodict, str):  # pragma: no cover
-                self.raise_import_error('xmltodict', xmltodict)
-            try:
-                new_data = xmltodict.parse(self.state.new_data)
-            except ExpatError as e:
-                self.state.exception = e
-                self.state.traceback = self.job.format_error(e, traceback.format_exc())
-                logger.error(f'Job {self.job.index_number}: New data is invalid XML: {e} ({self.job.get_location()})')
-                logger.info(f'Job {self.job.index_number}: {self.state.new_data!r}')
-                return {
-                    'text': f'Differ {self.__kind__} ERROR: New data is invalid XML\n{e}',
-                    'markdown': f'Differ {self.__kind__} **ERROR: New data is invalid XML**\n{e}',
-                    'html': f'Differ {self.__kind__} <b>ERROR: New data is invalid XML</b>\n{e}',
-                }
-
-        ignore_order: bool = directives.get('ignore_order')  # type: ignore[assignment]
-        ignore_string_case: bool = directives.get('ignore_string_case')  # type: ignore[assignment]
+        old_data, err = deserialize_data(
+            self.state.old_data,
+            self.state.old_mime_type,
+            directives.get('data_type'),
+            'Old',
+        )
+        if err:
+            return err
+        new_data, err = deserialize_data(
+            self.state.new_data,
+            self.state.new_mime_type,
+            directives.get('data_type'),
+            'New',
+        )
+        if err:
+            return err
+        ignore_order = bool(directives.get('ignore_order'))
+        ignore_string_case = bool(directives.get('ignore_string_case'))
         significant_digits = directives.get('significant_digits')
+        compact = bool(directives.get('compact'))
         ddiff = DeepDiff(
             old_data,
             new_data,
             cache_size=500,
             cache_purge_level=0,
             cache_tuning_sample_size=500,
+            default_timezone=tz,  # pyright: ignore[reportArgumentType]
             ignore_order=ignore_order,
             ignore_string_type_changes=True,
             ignore_numeric_type_changes=True,
@@ -983,7 +1088,7 @@ class DeepdiffDiffer(DifferBase):
             significant_digits=significant_digits,
             verbose_level=min(2, max(0, math.ceil(3 - logger.getEffectiveLevel() / 10))),
         )
-        diff_text = _pretty_deepdiff(ddiff, report_kind)
+        diff_text = _pretty_deepdiff(ddiff, report_kind, compact)
         if not diff_text:
             self.state.verb = 'changed,no_report'
             return {'text': '', 'markdown': '', 'html': ''}
@@ -995,7 +1100,7 @@ class DeepdiffDiffer(DifferBase):
                 # f'Differ: {self.__kind__} for {data_type}\n'
                 f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>\n'
                 f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>\n'
-                + diff_text[:-1].replace('][', ']<wbr>[')
+                + diff_text.replace('][', ']<wbr>[')
                 + '</span>'
             )
             return {'html': html_diff}
@@ -1041,8 +1146,10 @@ class ImageDiffer(DifferBase):
         )
         if isinstance(Image, str):  # pragma: no cover
             self.raise_import_error('pillow', Image)
+            raise RuntimeError()  # for type checker
         if isinstance(httpx, str):  # pragma: no cover
             self.raise_import_error('httpx', httpx)
+            raise RuntimeError()  # for type checker
 
         def load_image_from_web(url: str) -> Image.Image:
             """Fetches the image from an url."""
@@ -1115,34 +1222,42 @@ class ImageDiffer(DifferBase):
             new_image: Image.Image,
             diff_image: Image.Image,
             directives: AiGoogleDirectives,
-        ) -> str:
-            """Summarize changes in image using Generative AI (ALPHA)."""
+        ) -> tuple[str, str]:
+            """Summarize changes in image using Generative AI (ALPHA).  Returns summary and model name."""
             logger.info(f'Job {self.job.index_number}: Running ai_google for {self.__kind__} differ')
             warnings.warn(
-                f'Job {self.job.index_number}: Using ai_google in differ {self.__kind__}, which is ALPHA, '
+                f'Job {self.job.index_number}: Using differ {self.__kind__} with ai_google, which is ALPHA, '
                 f'may have bugs, and may change in the future. Please report any problems or suggestions at '
                 f'https://github.com/mborsetti/webchanges/discussions.',
                 RuntimeWarning,
             )
 
             api_version = '1beta'
-            GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
-            if len(GOOGLE_AI_API_KEY) != 39:
+            # GOOGLE_AI_API_KEY deprecated end of 2025
+            GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').rstrip()
+            if not GEMINI_API_KEY:
+                GEMINI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
+                if GEMINI_API_KEY:
+                    warnings.warn(
+                        'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.'
+                    )
+            if len(GEMINI_API_KEY) != 39:
                 logger.error(
-                    f'Job {self.job.index_number}: Environment variable GOOGLE_AI_API_KEY not found or is of the '
-                    f'incorrect length {len(GOOGLE_AI_API_KEY)} ({self.job.get_location()})'
+                    f'Job {self.job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
+                    f'incorrect length {len(GEMINI_API_KEY)} ({self.job.get_location()})'
                 )
                 return (
-                    f'## ERROR in summarizing changes using {self.__kind__}:\n'
-                    f'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length '
-                    f'{len(GOOGLE_AI_API_KEY)}.\n'
+                    f'## ERROR in summarizing changes using Google AI:\n'
+                    f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
+                    f'{len(GEMINI_API_KEY)}.\n',
+                    '',
                 )
             client = httpx.Client(http2=True, timeout=self.job.timeout)
 
             def _load_image(img_data: tuple[str, Image.Image]) -> dict[str, dict[str, str] | Exception | str]:
                 img_name, image = img_data
                 # Convert image to bytes
-                img_byte_arr = io.BytesIO()
+                img_byte_arr = BytesIO()
                 image.save(img_byte_arr, format=image.format)
                 image_data = img_byte_arr.getvalue()
                 mime_type = f'image/{image.format.lower()}'  # type: ignore[union-attr]
@@ -1165,7 +1280,7 @@ class ImageDiffer(DifferBase):
                 try:
                     response = client.post(
                         f'https://generativelanguage.googleapis.com/upload/v{api_version}/files?'
-                        f'key={GOOGLE_AI_API_KEY}',
+                        f'key={GEMINI_API_KEY}',
                         headers=headers,
                         json=data,
                     )
@@ -1204,7 +1319,7 @@ class ImageDiffer(DifferBase):
                 (
                     ('old image', old_image),
                     ('new image', new_image),
-                    ('differences image', diff_image),
+                    # ('differences image', diff_image),
                 ),
             ):
                 if 'error' not in additional_part:
@@ -1217,35 +1332,73 @@ class ImageDiffer(DifferBase):
                     )
                     return (
                         f"HTTP Client error {type(additional_part['error'])} when loading "
-                        f"{additional_part['img_name']} to Google AI: {additional_part['error']}"
+                        f"{additional_part['img_name']} to Google AI: {additional_part['error']}",
+                        '',
                     )
 
+            # system_instructions = (
+            #     'You are a skilled journalist tasked with summarizing the key differences between two versions '
+            #     'of the same image. The audience for your summary is already familiar with the image, so you can'
+            #     'focus on the most significant changes.'
+            # )
+            # model_prompt = (
+            #     'You are a skilled visual analyst tasked with analyzing two versions of an image and summarizing the '
+            #     'key differences between them. The audience for your summary is already familiar with the '
+            #     "image's content, so you should focus only on the most significant differences.\n\n"
+            #     '**Instructions:**\n\n'
+            #     # '1. Carefully examine the yellow areas in the image '
+            #     f"{additional_parts[2]['file_data']['file_uri']}, identify the differences, and describe them.\n"
+            #     f"2. Refer to the old version of the image {additional_parts[0]['file_data']['file_uri']} and the "
+            #     f"new version {additional_parts[1]['file_data']['file_uri']}.\n"
+            #     '3. You are only interested in those differences, such as additions, removals, or alterations, that '
+            #     'modify the intended message or interpretation.\n'
+            #     '4. Summarize the identified differences, except those ignored, in a clear and concise manner, '
+            #     'explaining how the meaning has shifted or evolved in the new version compared to the old version '
+            #     'only when necessary. Be specific and provide examples to illustrate your points when needed.\n'
+            #     '5. If there are only additions to the image, then summarize the additions.\n'
+            #     '6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
+            #     'and other Markdown elements as needed to enhance readability.\n'
+            #     '7. Restrict your analysis and summary to the information provided within these images. Do '
+            #     'not introduce external information or assumptions.\n'
+            # )
             system_instructions = (
-                'You are a skilled journalist tasked with summarizing the key differences between two versions '
-                'of the same image. The audience for your summary is already familiar with the image, so you can'
-                'focus on the most significant changes.'
+                'You are a meticulous visual comparison agent. Your task is to analyze two images: an "old '
+                'version" and a "new version". Your entire focus is on identifying and listing the concrete, '
+                'factual differences between them.'
             )
             model_prompt = (
-                'You are a skilled visual analyst tasked with analyzing two versions of an image and summarizing the '
-                'key differences between them. The audience for your summary is already familiar with the '
-                "image's content, so you should focus only on the most significant differences.\n\n"
-                '**Instructions:**\n\n'
-                '1. Carefully examine the yellow areas in the image '
-                f"{additional_parts[2]['file_data']['file_uri']}, identify the differences, and describe them.\n"
-                f"2. Refer to the old version of the image {additional_parts[0]['file_data']['file_uri']} and the new "
-                f" version {additional_parts[1]['file_data']['file_uri']}.\n"
-                '3. You are only interested in those differences, such as additions, removals, or alterations, that '
-                'modify the intended message or interpretation.\n'
-                '4. Summarize the identified differences, except those ignored, in a clear and concise manner, '
-                'explaining how the meaning has shifted or evolved in the new version compared to the old version only '
-                'when necessary. Be specific and provide examples to illustrate your points when needed.\n'
-                '5. If there are only additions to the image, then summarize the additions.\n'
-                '6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
-                'and other Markdown elements as needed to enhance readability.\n'
-                '7. Restrict your analysis and summary to the information provided within these images. Do '
-                'not introduce external information or assumptions.\n'
+                '**Instructions:**\n'
+                '\n'
+                f'1.  **Identify Changes:** Directly compare the "new version" '
+                f"{additional_parts[0]['file_data']['file_uri']} to the \"old version\" "
+                f"{additional_parts[1]['file_data']['file_uri']} and identify all additions, removals, and alterations "
+                'of visual elements.\n'
+                '\n'
+                '2.  **Filter for Significance:** From your initial list of changes, you must filter out any that '
+                'are minor or cosmetic. A difference is only significant if it alters the core subject matter or '
+                'the main message of the image.\n'
+                '    *   **IGNORE:** Minor shifts in layout, small changes in color saturation or brightness, or '
+                'other cosmetic adjustments that do not change what the image is depicting.\n'
+                '    *   **FOCUS ON:** Tangible changes such as added objects, removed people, or altered text.\n'
+                '\n'
+                '3.  **Summarize the Differences:**\n'
+                '    *   Present the significant differences as a bulleted list under the heading "Summary of '
+                'Changes".\n'
+                '    *   For each point, state the difference factually and concisely (e.g., "An apple was added '
+                'to the table," "The text on the sign was changed from \'Open\' to \'Closed\'").\n'
+                '    *   Only if a change directly and clearly alters the primary message or interpretation of the '
+                'image, you may add a brief, one-sentence explanation of this shift. Do not speculate on deeper '
+                'meanings.\n'
+                '\n'
+                '4.  **No Differences Found:** If you analyze both images and find no significant differences '
+                'according to the criteria above, you must respond with only the phrase: "No significant '
+                'differences were found between the two images." Do not attempt to find minor differences to report.\n'
+                '\n'
+                '5.  **Grounding:** Your entire analysis must be based solely on the visual information present in '
+                'the two images. Do not make assumptions or introduce any external information.'
             )
-            summary, _ = AIGoogleDiffer._send_to_model(
+            directives['thinking_budget'] = directives.get('thinking_budget', 24576)
+            summary, model_version = AIGoogleDiffer._send_to_model(
                 self.job,
                 system_instructions,
                 model_prompt,
@@ -1253,7 +1406,7 @@ class ImageDiffer(DifferBase):
                 directives=directives,
             )
 
-            return summary
+            return summary, model_version
 
         data_type = directives.get('data_type', 'url')
         mse_threshold = directives.get('mse_threshold', 2.5)
@@ -1288,6 +1441,17 @@ class ImageDiffer(DifferBase):
         # else:
         #     logger.debug(f'image format is {old_image.format}')
 
+        # Convert the images to a base64 object for HTML (before shrinking etc.)
+        output_stream = BytesIO()
+        old_image.save(output_stream, format=old_image.format)
+        encoded_old = b64encode(output_stream.getvalue()).decode()
+        if data_type == 'url':
+            encoded_new = ''
+        else:
+            output_stream = BytesIO()
+            new_image.save(output_stream, format=new_image.format)
+            encoded_new = b64encode(output_stream.getvalue()).decode()
+
         # If needed, shrink the larger image
         if new_image.size != old_image.size:
             if new_image.size > old_image.size:
@@ -1319,20 +1483,11 @@ class ImageDiffer(DifferBase):
             self.state.verb = 'changed,no_report'
             return {'text': '', 'markdown': '', 'html': ''}
 
-        # Convert the difference image to a base64 object
-        output_stream = BytesIO()
-        diff_image.save(output_stream, format=diff_image.format)
-        encoded_diff = b64encode(output_stream.getvalue()).decode()
-
-        # Convert the new image to a base64 object
-        output_stream = BytesIO()
-        new_image.save(output_stream, format=new_image.format)
-        encoded_new = b64encode(output_stream.getvalue()).decode()
-
         # prepare AI summary
         summary = ''
+        model_version = ''
         if 'ai_google' in directives:
-            summary = ai_google(old_image, new_image, diff_image, directives.get('ai_google', {}))
+            summary, model_version = ai_google(old_image, new_image, diff_image, directives.get('ai_google', {}))
 
         # Prepare HTML output
         htm = [
@@ -1345,16 +1500,23 @@ class ImageDiffer(DifferBase):
             'New image:',
         ]
         if data_type == 'url':
-            htm.append(f'<img src="{self.state.old_data}" style="max-width: 100%; display: block;">')
+            htm.append(f'<img src="{self.state.new_data}" style="max-width: 100%; display: block;">')
         else:
             htm.append(
                 f'<img src="data:image/{(new_image.format or "").lower()};base64,{encoded_new}" '
                 'style="max-width: 100%; display: block;">'
             )
+        # Convert the difference image to a base64 object
+        output_stream = BytesIO()
+        diff_image.save(output_stream, format=diff_image.format)
+        encoded_diff = b64encode(output_stream.getvalue()).decode()
         htm.extend(
             [
                 'Differences from old (in yellow):',
                 f'<img src="data:image/{(diff_image.format or "").lower()};base64,{encoded_diff}" '
+                'style="max-width: 100%; display: block;">',
+                'Old image:',
+                f'<img src="data:image/{(old_image.format or "").lower()};base64,{encoded_old}" '
                 'style="max-width: 100%; display: block;">',
             ]
         )
@@ -1368,13 +1530,19 @@ class ImageDiffer(DifferBase):
 
         newline = '\n'  # For Python < 3.12 f-string {} compatibility
         back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
+        directives_for_str = {key: value for key, value in directives.items() if key != 'model'}
+        if 'prompt' in directives_for_str:
+            directives_for_str['prompt'] = '<custom>'
         directives_text = (
-            ', '.join(
-                f'{key}={str(value).replace(newline, back_n)}' for key, value in directives.get('ai_google', {}).items()
+            (
+                ' (ai_google directive(s): '
+                + ', '.join(f'{key}={str(value).replace(newline, back_n)}' for key, value in directives_for_str.items())
+                + ')'
             )
-            or 'None'
+            if directives_for_str
+            else ''
         )
-        footer = f'Summary generated by Google Generative AI (ai_google directive(s): {directives_text})'
+        footer = f"Summary by Google Generative AI's model {model_version}{directives_text}"
         return {
             'text': (
                 f'{summary}\n\n\nA visualization of differences is available in {__package__} HTML reports.'
@@ -1445,39 +1613,48 @@ class AIGoogleDiffer(DifferBase):
         temperature = directives.get('temperature', 0.0)
         top_p = directives.get('top_p', 1.0 if temperature == 0.0 else None)
         top_k = directives.get('top_k')
-        GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
-        if len(GOOGLE_AI_API_KEY) != 39:
+        # GOOGLE_AI_API_KEY deprecated end of 2025
+        GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').rstrip()
+        if not GEMINI_API_KEY:
+            GEMINI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
+            if GEMINI_API_KEY:
+                warnings.warn(
+                    'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.'
+                )
+        if len(GEMINI_API_KEY) != 39:
             logger.error(
-                f'Job {job.index_number}: Environment variable GOOGLE_AI_API_KEY not found or is of the '
-                f'incorrect length {len(GOOGLE_AI_API_KEY)} ({job.get_location()})'
+                f'Job {job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
+                f'incorrect length {len(GEMINI_API_KEY)} ({job.get_location()})'
             )
             return (
                 f'## ERROR in summarizing changes using Google AI:\n'
-                f'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length '
-                f'{len(GOOGLE_AI_API_KEY)}.\n',
+                f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
+                f'{len(GEMINI_API_KEY)}.',
                 '',
             )
 
         data: dict[str, Any] = {
             'system_instruction': {'parts': [{'text': system_instructions}]},
             'contents': [{'parts': [{'text': model_prompt}]}],
-            'generation_config': {
-                'max_output_tokens': max_output_tokens,
+            'generationConfig': {
+                'maxOutputTokens': max_output_tokens,
                 'temperature': temperature,
-                'top_p': top_p,
-                'top_k': top_k,
+                'topP': top_p,
+                'topK': top_k,
             },
         }
         if additional_parts:
             data['contents'][0]['parts'].extend(additional_parts)
         if directives.get('tools'):
             data['tools'] = directives['tools']
+        if directives.get('thinking_budget'):
+            data['generationConfig']['thinkingConfig'].update({'thinkingBudget': directives['thinking_budget']})
         logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
         model_version = model  # default
         try:
             r = httpx.Client(http2=True).post(  # noqa: S113 Call to httpx without timeout
                 f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
-                f'key={GOOGLE_AI_API_KEY}',
+                f'key={GEMINI_API_KEY}',
                 json=data,
                 headers={'Content-Type': 'application/json'},
                 timeout=timeout,
@@ -1485,31 +1662,46 @@ class AIGoogleDiffer(DifferBase):
             if r.is_success:
                 result = r.json()
                 candidate = result['candidates'][0]
-                logger.info(f"Job {job.index_number}: AI generation finished by {candidate['finishReason']}")
+                finish_reason = candidate['finishReason']
+                logger.info(f'Job {job.index_number}: AI generation finished by {finish_reason}')
                 if 'content' in candidate:
-                    summary: str = candidate['content']['parts'][0]['text'].rstrip()
+                    if 'parts' in candidate['content']:
+                        summary: str = candidate['content']['parts'][0]['text'].rstrip()
+                    else:
+                        summary = (
+                            f'## ERROR in summarizing changes using Google AI:\n'
+                            f'Model did not return any candidate output:\n'
+                            f'finishReason={finish_reason}'
+                            f"{jsonlib.dumps(result['usageMetadata'], ensure_ascii=True, indent=2)}"
+                        )
                 else:
                     summary = (
-                        f'AI summary unavailable: Model did not return any candidate output:\n'
+                        f'## ERROR in summarizing changes using Google AI:\n'
+                        f'Model did not return any candidate output:\n'
                         f'{jsonlib.dumps(result, ensure_ascii=True, indent=2)}'
                     )
                 model_version = result['modelVersion']
 
             elif r.status_code == 400:
                 summary = (
-                    f'AI summary unavailable: Received error from {r.url.host}: '
+                    f'## ERROR in summarizing changes using Google AI:\n'
+                    f'Received error from {r.url.host}: '
                     f"{r.json().get('error', {}).get('message') or ''}"
                 )
             else:
                 summary = (
-                    f'AI summary unavailable: Received error {r.status_code} {r.reason_phrase} from ' f'{r.url.host}'
+                    f'## ERROR in summarizing changes using Google AI:\n'
+                    f'Received error {r.status_code} {r.reason_phrase} from '
+                    f'{r.url.host}'
                 )
                 if r.content:
                     summary += f": {r.json().get('error', {}).get('message') or ''}"
 
         except httpx.HTTPError as e:
             summary = (
-                f'AI summary unavailable: HTTP client error: {e} when requesting data from ' f'{e.request.url.host}'
+                f'## ERROR in summarizing changes using Google AI:\n'
+                f'HTTP client error: {e} when requesting data from '
+                f'{e.request.url.host}'
             )
 
         return summary, model_version
@@ -1531,16 +1723,23 @@ class AIGoogleDiffer(DifferBase):
 
         def get_ai_summary(prompt: str, system_instructions: str) -> tuple[str, str]:
             """Generate AI summary from unified diff, or an error message, plus the model version."""
-            GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
-            if len(GOOGLE_AI_API_KEY) != 39:
+            # GOOGLE_AI_API_KEY deprecated end of 2025
+            GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').rstrip()
+            if not GEMINI_API_KEY:
+                GEMINI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
+                if GEMINI_API_KEY:
+                    warnings.warn(
+                        'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.'
+                    )
+            if len(GEMINI_API_KEY) != 39:
                 logger.error(
-                    f'Job {self.job.index_number}: Environment variable GOOGLE_AI_API_KEY not found or is of the '
-                    f'incorrect length {len(GOOGLE_AI_API_KEY)} ({self.job.get_location()})'
+                    f'Job {self.job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
+                    f'incorrect length {len(GEMINI_API_KEY)} ({self.job.get_location()})'
                 )
                 return (
-                    f'## ERROR in summarizing changes using {self.__kind__}:\n'
-                    f'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length '
-                    f'{len(GOOGLE_AI_API_KEY)}.\n',
+                    f'## ERROR in summarizing changes using Google AI:\n'
+                    f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
+                    f'{len(GEMINI_API_KEY)}.\n',
                     '',
                 )
 
@@ -1619,9 +1818,11 @@ class AIGoogleDiffer(DifferBase):
                 'explaining how the meaning has shifted or evolved in the new version compared to the old version only '
                 'when necessary. Be specific and provide examples to illustrate your points when needed.\n'
                 '6. If there are only additions to the text, then summarize the additions.\n'
-                '7. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
+                '7. Ignore any changes in page numbers, footnotes numbering, and other such minor or cosmetic changes.'
+                '\n'
+                '8. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
                 'and other Markdown elements as needed to enhance readability.\n'
-                '8. Restrict your analysis and summary to the information provided within the `<old_version>` and '
+                '9. Restrict your analysis and summary to the information provided within the `<old_version>` and '
                 '`<new_version>` tags. Do not introduce external information or assumptions.\n'
             )
             default_prompt = '<old_version>\n{old_text}\n</old_version>\n\n<new_version>\n{new_text}\n</new_version>'
@@ -1633,18 +1834,18 @@ class AIGoogleDiffer(DifferBase):
             return {'text': '', 'markdown': '', 'html': ''}
         newline = '\n'  # For Python < 3.12 f-string {} compatibility
         back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
-        directives.pop('model', None)
-        if directives:
-            directives_text = (
+        directives_for_str = {key: value for key, value in directives.items() if key != 'model'}
+        if 'prompt' in directives_for_str:
+            directives_for_str['prompt'] = '<custom>'
+        directives_text = (
+            (
                 ' (differ directive(s): '
-                + (
-                    ', '.join(f'{key}={str(value).replace(newline, back_n)}' for key, value in directives.items())
-                    or 'None'
-                )
+                + ', '.join(f'{key}={str(value).replace(newline, back_n)}' for key, value in directives_for_str.items())
                 + ')'
             )
-        else:
-            directives_text = ''
+            if directives_for_str
+            else ''
+        )
         footer = (
             f"Summary by Google Generative AI's model {model_version}{directives_text}"
             if model_version or directives_text
@@ -1661,13 +1862,20 @@ class AIGoogleDiffer(DifferBase):
                 temp_unfiltered_diff,
             )
         return {
-            'text': f"{summary}\n\n{unified_report['text']}" + (f'\n------------\n{footer}' if footer else ''),
-            'markdown': f"{summary}\n\n{unified_report['markdown']}" + (f'\n* * *\n{footer}' if footer else ''),
+            'text': (
+                f"{summary}\n\n{unified_report['text']}"  # pyright: ignore[reportPossiblyUnboundVariable]
+                + (f'\n------------\n{footer}' if footer else '')
+            ),
+            'markdown': (
+                f"{summary}\n\n{unified_report['markdown']}"  # pyright: ignore[reportPossiblyUnboundVariable]
+                + (f'\n* * *\n{footer}' if footer else '')
+            ),
             'html': '\n'.join(
                 [
                     mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
                     '<br>',
-                    unified_report['html'],
+                    '<br>',
+                    unified_report['html'],  # pyright: ignore[reportPossiblyUnboundVariable]
                 ]
                 + (['-----<br>', f'<i><small>{footer}</small></i>'] if footer else [])
             ),

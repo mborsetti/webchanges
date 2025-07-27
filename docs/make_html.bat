@@ -46,4 +46,5 @@ if %errorlevel% equ 0 (
 )
 
 :end
+pause
 exit

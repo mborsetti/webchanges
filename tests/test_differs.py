@@ -138,8 +138,8 @@ def test_providing_subdirective_to_differ_without_differ_raises_valueerror() -> 
         list(DifferBase.normalize_differ({'name': 'deepdiff', 'asubdifferthatdoesnotexist': True}))
     err_msg = str(pytest_wrapped_e.value)
     assert err_msg == (
-        'Job None: Differ deepdiff does not support sub-directive(s) asubdifferthatdoesnotexist (supported: data_type, '
-        'ignore_order, ignore_string_case, significant_digits).'
+        'Job None: Differ deepdiff does not support sub-directive(s) asubdifferthatdoesnotexist (supported: compact, '
+        'data_type, ignore_order, ignore_string_case, significant_digits).'
     )
 
 
@@ -542,7 +542,7 @@ def test_command_wdiff_to_html(job_state: JobState) -> None:
 def test_command_wdiff_to_html_markdown(job_state: JobState) -> None:
     """Test wdiff colorizer with monospace markdown text."""
     diff = '## This is [-not-] what I [-want\nfor you-] {+want\n for me+}'
-    job_state.job.monospace = True
+    job_state.job.set_to_monospace()
     job_state.job.is_markdown = True
     expected = [
         '<span style="font-family:monospace;white-space:pre-wrap">## This is '
@@ -576,7 +576,7 @@ def test_deepdiff_json(job_state: JobState) -> None:
         '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
         "• Value of root['test'] changed from <span "
         'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">"1"</span> '
-        'to <span style="background-color:#d1ffd1;color:#082b08;">"2"</span></span>',
+        'to <span style="background-color:#d1ffd1;color:#082b08;">"2"</span>.</span>',
     ]
     diff = job_state.get_diff(report_kind='html', tz=test_tz)
     assert diff.splitlines() == expected
@@ -616,7 +616,38 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
         '  },',
         '  "morestuff",',
         '  323',
-        ']</span></span>',
+        ']</span>.</span>',
+    ]
+    diff = job_state.get_diff(report_kind='html', tz=test_tz)
+    assert diff.splitlines() == expected
+
+    # retest as compact
+    job_state.unfiltered_diff = {}
+    job_state.generated_diff = {}
+    job_state.job.differ.update({'compact': True})
+    expected = [
+        '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
+        "• ⊤: '' → ",
+        '    - second_test: 3',
+        '      test: 2',
+        '    - morestuff',
+        '    - 323',
+    ]
+    diff = job_state.get_diff(tz=test_tz)
+    assert diff.splitlines() == expected
+
+    # retest as compact html
+    expected = [
+        '<span style="font-family:monospace;white-space:pre-wrap;">'
+        '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+        '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
+        '• ⊤: <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">\'\''
+        '</span> ⮕ <span style="background-color:#d1ffd1;color:#082b08;">',
+        '    - second_test: 3',
+        '      test: 2',
+        '    - morestuff',
+        '    - 323</span></span>',
     ]
     diff = job_state.get_diff(report_kind='html', tz=test_tz)
     assert diff.splitlines() == expected
@@ -637,7 +668,7 @@ def test_deepdiff_json_bad_data(job_state: JobState) -> None:
     job_state.new_data = '{"test": 2'
     job_state.job.differ = {'name': 'deepdiff', 'data_type': 'json'}
     expected = [
-        'Differ deepdiff ERROR: New data is invalid JSON',
+        'Differ deepdiff ERROR: Old data is invalid JSON',
         "Expecting ',' delimiter: line 1 column 11 (char 10)",
     ]
     diff = job_state.get_diff()
@@ -693,7 +724,7 @@ def test_image_url(job_state: JobState) -> None:
             f'(<a href="{job_state.new_data}" target="_blank">New image</a>)</span>',
             '</span>',
             'New image:',
-            f'<img src="{job_state.old_data}" style="max-width: 100%; display: block;">',
+            f'<img src="{job_state.new_data}" style="max-width: 100%; display: block;">',
             'Differences from old (in yellow):',
             '<img src="data:image/gif;base64,',
         ]
@@ -895,52 +926,52 @@ def test_image_identical(job_state: JobState) -> None:
 def test_ai_google_unchanged(job_state: JobState) -> None:
     """Test ai_google but with unchanged data as not to trigger API charges."""
 
-    existing_key = os.environ.get('GOOGLE_AI_API_KEY')
+    existing_key = os.environ.get('GEMINI_API_KEY')
     try:
-        os.environ['GOOGLE_AI_API_KEY'] = generate_random_string(39)
+        os.environ['GEMINI_API_KEY'] = generate_random_string(39)
         job_state.new_data = job_state.old_data
         job_state.job.differ = {'name': 'ai_google', 'model': 'gemini-pro', 'timeout': 1e-9}
         diff = job_state.get_diff()
         assert diff == ''
     finally:
         if existing_key:
-            os.environ['GOOGLE_AI_API_KEY'] = existing_key
+            os.environ['GEMINI_API_KEY'] = existing_key
 
 
 def test_ai_google_no_key(job_state: JobState) -> None:
     """Test ai_google with no key."""
 
-    existing_key = os.environ.get('GOOGLE_AI_API_KEY')
+    existing_key = os.environ.get('GEMINI_API_KEY')
     try:
-        os.environ['GOOGLE_AI_API_KEY'] = ''
+        os.environ['GEMINI_API_KEY'] = ''
         job_state.job.differ = {'name': 'ai_google'}
         diff = job_state.get_diff()
         expected = (
-            '## ERROR in summarizing changes using ai_google:\n'
-            'Environment variable GOOGLE_AI_API_KEY not found or is of the incorrect length 0.\n'
+            '## ERROR in summarizing changes using Google AI:\n'
+            'Environment variable GEMINI_API_KEY not found or is of the incorrect length 0.\n'
             '\n'
             '\n'
         )
         assert diff[: len(expected)] == expected
     finally:
         if existing_key:
-            os.environ['GOOGLE_AI_API_KEY'] = existing_key
+            os.environ['GEMINI_API_KEY'] = existing_key
 
 
 @py_no_github
 def test_ai_google_bad_api_key(job_state: JobState) -> None:
     """Test ai_google but with unchanged data as not to trigger API charges."""
-    existing_key = os.environ.get('GOOGLE_AI_API_KEY')
+    existing_key = os.environ.get('GEMINI_API_KEY')
     try:
-        os.environ['GOOGLE_AI_API_KEY'] = generate_random_string(39)
+        os.environ['GEMINI_API_KEY'] = generate_random_string(39)
         job_state.old_data = 'a\n'
         job_state.new_data = 'b\n'
         job_state.job.differ = {'name': 'ai_google'}
         subdiffers = job_state.job.differ.copy()
         subdiffers.pop('name')
         expected = [
-            'AI summary unavailable: Received error from generativelanguage.googleapis.com: API key not valid. '
-            'Please pass a valid API key.',
+            '## ERROR in summarizing changes using Google AI:',
+            'Received error from generativelanguage.googleapis.com: API key not valid. ' 'Please pass a valid API key.',
             '',
             '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
             '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
@@ -950,16 +981,16 @@ def test_ai_google_bad_api_key(job_state: JobState) -> None:
             '------------',
         ]
         diff = job_state.get_diff(tz=test_tz)
-        assert diff.splitlines()[:8] == expected
+        assert diff.splitlines()[:9] == expected
     finally:
         if existing_key:
-            os.environ['GOOGLE_AI_API_KEY'] = existing_key
+            os.environ['GEMINI_API_KEY'] = existing_key
 
 
 @py_no_github
 def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, caplog: pytest.LogCaptureFixture) -> None:
     """Test ai_google with a unified_diff that is too long for the full diff."""
-    existing_key = os.environ.get('GOOGLE_AI_API_KEY')
+    existing_key = os.environ.get('GEMINI_API_KEY')
     try:
         job_state.old_data = 'aaaaaaaaaa\nb\nc\nd\nnew\ne\nf\ng\nhhhhhhhhhh\n'
         job_state.new_data = 'aaaaaaaaaa\nb\nc\nd\nold\ne\nf\ng\nhhhhhhhhhh\n'
@@ -975,7 +1006,7 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
         }
         subdiffers = job_state.job.differ.copy()
         subdiffers.pop('name')
-        prompt_text = prompt.replace('\n', '\\n')
+        # prompt_text = prompt.replace('\n', '\\n')
         expected = [
             '',
             '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
@@ -990,38 +1021,37 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
             ' f',
             ' g',
             '------------',
-            f"Summary by Google Generative AI's model gemini-pro (differ directive(s): prompt={prompt_text}, "
+            "Summary by Google Generative AI's model gemini-pro (differ directive(s): prompt=<custom>, "
             'timeout=1e-09)',
         ]
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
         diff = job_state.get_diff(tz=test_tz)
-        assert diff.splitlines()[1:] == expected
-        expected_first_line = {
-            'AI summary unavailable: HTTP client error: The read operation timed out when requesting data from '
+        assert diff.splitlines()[2:] == expected
+        expected_second_line = {
+            'HTTP client error: The read operation timed out when requesting data from '
             'generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: timed out when requesting data from '
-            'generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
+            'HTTP client error: timed out when requesting data from ' 'generativelanguage.googleapis.com',
+            'HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
             'data from generativelanguage.googleapis.com',  # line number may change based on ssl engine version
         }  # not sure why error flips flops
-        print(f'{diff.splitlines()[0]=}')
+        assert diff.splitlines()[0] == '## ERROR in summarizing changes using Google AI:'
         try:
-            assert any(diff.splitlines()[0] == exp_str for exp_str in expected_first_line) is True
+            assert any(diff.splitlines()[1] == exp_str for exp_str in expected_second_line) is True
         except AssertionError:
             print(f'{diff.splitlines()[0]=}')
             raise
     finally:
         if existing_key:
-            os.environ['GOOGLE_AI_API_KEY'] = existing_key
+            os.environ['GEMINI_API_KEY'] = existing_key
         logging.getLogger('webchanges.differs').setLevel(level=logging.WARNING)
 
 
 @py_no_github
 def test_ai_google_timeout_no_unified_diff(job_state: JobState, caplog: pytest.LogCaptureFixture) -> None:
     """Test ai_google timeout error with no unified diff."""
-    existing_key = os.environ.get('GOOGLE_AI_API_KEY')
+    existing_key = os.environ.get('GEMINI_API_KEY')
     try:
-        os.environ['GOOGLE_AI_API_KEY'] = generate_random_string(39)
+        os.environ['GEMINI_API_KEY'] = generate_random_string(39)
         job_state.old_data = 'a\n'
         job_state.new_data = 'b\n'
         job_state.job.differ = {
@@ -1035,24 +1065,24 @@ def test_ai_google_timeout_no_unified_diff(job_state: JobState, caplog: pytest.L
             'top_k': 1,
             'top_p': 1,
         }
-        expected_first_line = {
-            'AI summary unavailable: HTTP client error: The read operation timed out when requesting data from '
+        expected_second_line = {
+            'HTTP client error: The read operation timed out when requesting data from '
             'generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: timed out when requesting data from '
-            'generativelanguage.googleapis.com',
-            'AI summary unavailable: HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
+            'HTTP client error: timed out when requesting data from generativelanguage.googleapis.com',
+            'HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
             'data from generativelanguage.googleapis.com',  # line number may change based on ssl engine version
         }  # not sure why error flips flops
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
         diff = job_state.get_diff()
+        assert diff.splitlines()[0] == '## ERROR in summarizing changes using Google AI:'
         try:
-            assert any(diff.splitlines()[0] == exp_str for exp_str in expected_first_line) is True
+            assert any(diff.splitlines()[1] == exp_str for exp_str in expected_second_line) is True
         except AssertionError:
             print(f'{diff.splitlines()[0]=}')
             raise
     finally:
         if existing_key:
-            os.environ['GOOGLE_AI_API_KEY'] = existing_key
+            os.environ['GEMINI_API_KEY'] = existing_key
         logging.getLogger('webchanges.differs').setLevel(level=logging.WARNING)
 
 

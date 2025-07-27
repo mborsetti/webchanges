@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import subprocess  # noqa: S404 Consider possible security implications
 import sys
 import time
 import traceback
@@ -23,7 +24,7 @@ from webchanges.reporters import ReporterBase
 if TYPE_CHECKING:
     from webchanges.jobs import JobBase
     from webchanges.main import Urlwatch
-    from webchanges.storage import _Config, SsdbStorage
+    from webchanges.storage import _Config, _ConfigDifferDefaults, SsdbStorage
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class JobState(ContextManager):
     history_dic_snapshots: dict[str | bytes, Snapshot]
     new_data: str | bytes = ''
     new_error_data: ErrorData = {}
-    new_etag: str
+    new_etag: str = ''
     new_mime_type: str = ''
     new_timestamp: float
     old_snapshot = Snapshot(
@@ -149,7 +150,6 @@ class JobState(ContextManager):
 
         :returns: True if an external debugger is attached, False otherwise.
         """
-        return False
         return sys.breakpointhook.__module__ != 'sys'
 
     def added_data(self) -> dict[str, bool | str | Exception | float | None]:
@@ -159,7 +159,7 @@ class JobState(ContextManager):
 
     def load(self) -> None:
         """Loads form the database the last snapshot(s) for the job."""
-        guid = self.job.get_guid()
+        guid = self.job.guid
         self.old_snapshot = self.snapshots_db.load(guid)
         # TODO: remove these
         (
@@ -199,12 +199,12 @@ class JobState(ContextManager):
                 mime_type=self.new_mime_type,
                 error_data=self.new_error_data,
             )
-        self.snapshots_db.save(guid=self.job.get_guid(), snapshot=new_snapshot)
+        self.snapshots_db.save(guid=self.job.guid, snapshot=new_snapshot)
         logger.info(f'Job {self.job.index_number}: Saved new data to database')
 
     def delete_latest(self, temporary: bool = True) -> None:
         """Removes the last instance in the snapshot database."""
-        self.snapshots_db.delete_latest(guid=self.job.get_guid(), temporary=temporary)
+        self.snapshots_db.delete_latest(guid=self.job.guid, temporary=temporary)
 
     def process(self, headless: bool = True) -> JobState:
         """Processes the job: loads it (i.e. runs it) and handles Exceptions (errors).
@@ -240,10 +240,10 @@ class JobState(ContextManager):
                     logger.warning('Running in a debugger: raising the exception instead of processing it')
                     raise
                 self.new_timestamp = time.time()
-                self.exception = e
-                self.traceback = self.job.format_error(e, traceback.format_exc())
                 self.error_ignored = self.job.ignore_error(e)
                 if not (self.error_ignored or isinstance(e, NotModifiedError)):
+                    self.exception = e
+                    self.traceback = self.job.format_error(e, traceback.format_exc())
                     self.tries += 1
                     self.new_error_data = {
                         'type': e.__class__.__name__,
@@ -274,7 +274,13 @@ class JobState(ContextManager):
                 raise
             self.new_timestamp = time.time()
             self.exception = e
-            self.traceback = ''.join(traceback.format_exception_only(e, show_group=True)).rstrip()
+            if isinstance(e, subprocess.CalledProcessError):
+                self.traceback = (
+                    f'subprocess.CalledProcessError: Command returned non-zero exit status {e.returncode}.\n\n'
+                    f'{e.stderr}'
+                )
+            else:
+                self.traceback = ''.join(traceback.format_exception_only(e, show_group=True)).rstrip()
             self.error_ignored = False
             self.tries += 1
             self.new_error_data = {
@@ -294,8 +300,8 @@ class JobState(ContextManager):
         self,
         report_kind: Literal['text', 'markdown', 'html'] = 'text',
         differ: dict[str, Any] | None = None,
+        differ_defaults: _ConfigDifferDefaults | None = None,
         tz: ZoneInfo | None = None,
-        config: _Config | None = None,
     ) -> str:
         """Generates the job's diff and applies diff_filters to it (if any). Memoized.
 
@@ -311,7 +317,7 @@ class JobState(ContextManager):
             differ_kind, subdiffer = DifferBase.normalize_differ(
                 differ or self.job.differ,
                 self.job.index_number,
-                config,
+                differ_defaults,
             )
             unfiltered_diff = DifferBase.process(differ_kind, subdiffer, self, report_kind, tz, self.unfiltered_diff)
             self.unfiltered_diff.update(unfiltered_diff)
@@ -469,7 +475,7 @@ class Report:
             if (
                 job_state.verb == 'changed'
                 and not self.config['display']['empty-diff']
-                and job_state.get_diff(tz=self.tz, config=self.config) == ''
+                and job_state.get_diff(tz=self.tz, differ_defaults=self.config['differ_defaults']) == ''
             ):
                 return True
 

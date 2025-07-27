@@ -53,12 +53,9 @@ class IndentFilter(FilterBase):
     __default_subfilter__ = 'indent'
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
-        if isinstance(data, bytes):
-            data = data.decode()
-
         indent = int(subfilter.get('indent', 8))
 
-        return '\n'.join((' ' * indent) + line for line in data.splitlines()), mime_type
+        return '\n'.join((' ' * indent) + line for line in str(data).splitlines()), mime_type
 
 
 class CustomMatchUrlFilter(AutoMatchFilter):

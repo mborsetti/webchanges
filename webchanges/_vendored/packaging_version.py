@@ -1,6 +1,8 @@
 """
-Vendored version of packaging.version.parse() from packaging v23.2 released on 01-Oct-23
-(commit https://github.com/pypa/packaging/commit/7e4f2588923e647bb7c3d5b350473e39e4b279d4).
+Vendored version of packaging.version.parse() from packaging v24.2 released on 08-Nov-24
+(commit https://github.com/pypa/packaging/commit/d8e3b31b734926ebbcaff654279f6855a73e052f).
+
+Allows us to load this class in case packaging is not installed.
 
 See https://github.com/pypa/packaging and https://github.com/pypa/packaging/blob/main/src/packaging/version.py.
 
@@ -309,7 +311,7 @@ class _Version(NamedTuple):
     local: LocalType | None
 
 
-def parse(version: str) -> 'Version':
+def parse(version: str) -> Version:
     """Parse the given version string.
     >>> parse('1.0.dev1')
     <Version('1.0.dev1')>
@@ -321,7 +323,7 @@ def parse(version: str) -> 'Version':
 
 class InvalidVersion(ValueError):
     """Raised when a version string is not a valid version.
-    >>> Version("invalid")
+    >>> Version('invalid')
     Traceback (most recent call last):
     ...
     packaging.version.InvalidVersion: Invalid version: 'invalid'
@@ -354,13 +356,13 @@ class _BaseVersion:
 
         return self._key == other._key
 
-    def __ge__(self, other: '_BaseVersion') -> bool:
+    def __ge__(self, other: _BaseVersion) -> bool:
         if not isinstance(other, _BaseVersion):
             return NotImplemented
 
         return self._key >= other._key
 
-    def __gt__(self, other: '_BaseVersion') -> bool:
+    def __gt__(self, other: _BaseVersion) -> bool:
         if not isinstance(other, _BaseVersion):
             return NotImplemented
 
@@ -423,8 +425,8 @@ class Version(_BaseVersion):
 
     A :class:`Version` instance is comparison aware and can be compared and sorted using the standard Python interfaces.
 
-    >>> v1 = Version("1.0a5")
-    >>> v2 = Version("1.0")
+    >>> v1 = Version('1.0a5')
+    >>> v2 = Version('1.0')
     >>> v1
     <Version('1.0a5')>
     >>> v2
@@ -457,7 +459,7 @@ class Version(_BaseVersion):
         # Validate the version and parse it into pieces
         match = self._regex.search(version)
         if not match:
-            raise InvalidVersion(f"Invalid version: '{version}'")
+            raise InvalidVersion(f'Invalid version: {version!r}')
 
         # Store the parsed out pieces of the version
         self._version = _Version(
@@ -488,9 +490,9 @@ class Version(_BaseVersion):
         return f"<Version('{self}')>"
 
     def __str__(self) -> str:
-        """A string representation of the version that can be rounded-tripped.
+        """A string representation of the version that can be round-tripped.
 
-        >>> str(Version("1.0a5"))
+        >>> str(Version('1.0a5'))
         '1.0a5'
         """
         parts = []
@@ -524,9 +526,9 @@ class Version(_BaseVersion):
     def epoch(self) -> int:
         """The epoch of the version.
 
-        >>> Version("2.0.0").epoch
+        >>> Version('2.0.0').epoch
         0
-        >>> Version("1!2.0.0").epoch
+        >>> Version('1!2.0.0').epoch
         1
         """
         return self._version.epoch
@@ -535,11 +537,11 @@ class Version(_BaseVersion):
     def release(self) -> tuple[int, ...]:
         """The components of the "release" segment of the version.
 
-        >>> Version("1.2.3").release
+        >>> Version('1.2.3').release
         (1, 2, 3)
-        >>> Version("2.0.0").release
+        >>> Version('2.0.0').release
         (2, 0, 0)
-        >>> Version("1!2.0.0.post0").release
+        >>> Version('1!2.0.0.post0').release
         (2, 0, 0)
 
         Includes trailing zeroes but not the epoch or any pre-release / development / post-release suffixes.
@@ -550,13 +552,13 @@ class Version(_BaseVersion):
     def pre(self) -> tuple[str, int] | None:
         """The pre-release segment of the version.
 
-        >>> print(Version("1.2.3").pre)
+        >>> print(Version('1.2.3').pre)
         None
-        >>> Version("1.2.3a1").pre
+        >>> Version('1.2.3a1').pre
         ('a', 1)
-        >>> Version("1.2.3b1").pre
+        >>> Version('1.2.3b1').pre
         ('b', 1)
-        >>> Version("1.2.3rc1").pre
+        >>> Version('1.2.3rc1').pre
         ('rc', 1)
         """
         return self._version.pre
@@ -565,9 +567,9 @@ class Version(_BaseVersion):
     def post(self) -> int | None:
         """The post-release number of the version.
 
-        >>> print(Version("1.2.3").post)
+        >>> print(Version('1.2.3').post)
         None
-        >>> Version("1.2.3.post1").post
+        >>> Version('1.2.3.post1').post
         1
         """
         return self._version.post[1] if self._version.post else None
@@ -576,9 +578,9 @@ class Version(_BaseVersion):
     def dev(self) -> int | None:
         """The development number of the version.
 
-        >>> print(Version("1.2.3").dev)
+        >>> print(Version('1.2.3').dev)
         None
-        >>> Version("1.2.3.dev1").dev
+        >>> Version('1.2.3.dev1').dev
         1
         """
         return self._version.dev[1] if self._version.dev else None
@@ -587,9 +589,9 @@ class Version(_BaseVersion):
     def local(self) -> str | None:
         """The local version segment of the version.
 
-        >>> print(Version("1.2.3").local)
+        >>> print(Version('1.2.3').local)
         None
-        >>> Version("1.2.3+abc").local
+        >>> Version('1.2.3+abc').local
         'abc'
         """
         if self._version.local:
@@ -601,12 +603,12 @@ class Version(_BaseVersion):
     def public(self) -> str:
         """The public portion of the version.
 
-        >>> Version("1.2.3").public
+        >>> Version('1.2.3').public
         '1.2.3'
-        >>> Version("1.2.3+abc").public
+        >>> Version('1.2.3+abc').public
         '1.2.3'
-        >>> Version("1.2.3+abc.dev1").public
-        '1.2.3'
+        >>> Version('1!1.2.3dev1+abc').public
+        '1!1.2.3.dev1'
         """
         return str(self).split('+', 1)[0]
 
@@ -614,11 +616,11 @@ class Version(_BaseVersion):
     def base_version(self) -> str:
         """The "base version" of the version.
 
-        >>> Version("1.2.3").base_version
+        >>> Version('1.2.3').base_version
         '1.2.3'
-        >>> Version("1.2.3+abc").base_version
+        >>> Version('1.2.3+abc').base_version
         '1.2.3'
-        >>> Version("1!1.2.3+abc.dev1").base_version
+        >>> Version('1!1.2.3dev1+abc').base_version
         '1!1.2.3'
 
         The "base version" is the public version of the project without any pre or post release markers.
@@ -638,15 +640,15 @@ class Version(_BaseVersion):
     def is_prerelease(self) -> bool:
         """Whether this version is a pre-release.
 
-        >>> Version("1.2.3").is_prerelease
+        >>> Version('1.2.3').is_prerelease
         False
-        >>> Version("1.2.3a1").is_prerelease
+        >>> Version('1.2.3a1').is_prerelease
         True
-        >>> Version("1.2.3b1").is_prerelease
+        >>> Version('1.2.3b1').is_prerelease
         True
-        >>> Version("1.2.3rc1").is_prerelease
+        >>> Version('1.2.3rc1').is_prerelease
         True
-        >>> Version("1.2.3dev1").is_prerelease
+        >>> Version('1.2.3dev1').is_prerelease
         True
         """
         return self.dev is not None or self.pre is not None
@@ -655,9 +657,9 @@ class Version(_BaseVersion):
     def is_postrelease(self) -> bool:
         """Whether this version is a post-release.
 
-        >>> Version("1.2.3").is_postrelease
+        >>> Version('1.2.3').is_postrelease
         False
-        >>> Version("1.2.3.post1").is_postrelease
+        >>> Version('1.2.3.post1').is_postrelease
         True
         """
         return self.post is not None
@@ -666,9 +668,9 @@ class Version(_BaseVersion):
     def is_devrelease(self) -> bool:
         """Whether this version is a development release.
 
-        >>> Version("1.2.3").is_devrelease
+        >>> Version('1.2.3').is_devrelease
         False
-        >>> Version("1.2.3.dev1").is_devrelease
+        >>> Version('1.2.3.dev1').is_devrelease
         True
         """
         return self.dev is not None
@@ -677,7 +679,7 @@ class Version(_BaseVersion):
     def major(self) -> int:
         """The first item of :attr:`release` or ``0`` if unavailable.
 
-        >>> Version("1.2.3").major
+        >>> Version('1.2.3').major
         1
         """
         return self.release[0] if len(self.release) >= 1 else 0
@@ -686,9 +688,9 @@ class Version(_BaseVersion):
     def minor(self) -> int:
         """The second item of :attr:`release` or ``0`` if unavailable.
 
-        >>> Version("1.2.3").minor
+        >>> Version('1.2.3').minor
         2
-        >>> Version("1").minor
+        >>> Version('1').minor
         0
         """
         return self.release[1] if len(self.release) >= 2 else 0
@@ -697,9 +699,9 @@ class Version(_BaseVersion):
     def micro(self) -> int:
         """The third item of :attr:`release` or ``0`` if unavailable.
 
-        >>> Version("1.2.3").micro
+        >>> Version('1.2.3').micro
         3
-        >>> Version("1").micro
+        >>> Version('1').micro
         0
         """
         return self.release[2] if len(self.release) >= 3 else 0
@@ -726,9 +728,11 @@ def _parse_letter_version(letter: str | None, number: str | bytes | SupportsInt 
             letter = 'post'
 
         return letter, int(number)
-    if not letter and number:
-        # We assume if we are given a number, but we are not given a letter then this is using the implicit post
-        # release syntax (e.g. 1.0-1)
+
+    assert not letter
+    if number:
+        # We assume if we are given a number, but we are not given a letter
+        # then this is using the implicit post release syntax (e.g. 1.0-1)
         letter = 'post'
 
         return letter, int(number)
@@ -741,7 +745,7 @@ _local_version_separators = re.compile(r'[\._-]')
 
 def _parse_local_version(local: str | None) -> LocalType | None:
     """
-    Takes a string like abc.1.twelve and turns it into ("abc", 1, "twelve").
+    Takes a string like abc.1.twelve and turns it into ('abc', 1, 'twelve').
     """
     if local is not None:
         return tuple(

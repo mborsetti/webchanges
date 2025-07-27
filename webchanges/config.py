@@ -110,7 +110,7 @@ class CommandConfig(BaseConfig):
         :returns: The Python arguments parser.
         """
         description = '\n'.join(
-            textwrap.wrap(doc.replace('\n\n', '--par--').replace('\n', ' ').replace('--par--(', '\n\n'), 79)
+            textwrap.wrap(str(doc).replace('\n\n', '--par--').replace('\n', ' ').replace('--par--(', '\n\n'), 79)
         )
 
         parser = argparse.ArgumentParser(

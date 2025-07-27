@@ -59,6 +59,7 @@ if httpx is not None:
 if TYPE_CHECKING:
     from webchanges.handler import JobState, Report
     from webchanges.storage import (
+        _ConfigDifferDefaults,
         _ConfigReportBrowser,
         _ConfigReportDiscord,
         _ConfigReportEmail,
@@ -135,7 +136,8 @@ class ReporterBase(metaclass=TrackSubClasses):
         config: _ConfigReportersList,
         job_states: list[JobState],
         duration: float,
-        jobs_files: list[Path] | None = None,
+        jobs_files: list[Path],
+        differ_config: _ConfigDifferDefaults,
     ) -> None:
         """
         :param report: The Report object containing information about the report.
@@ -143,6 +145,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         :param job_states: The list of JobState objects containing the information about the jobs that were retrieved.
         :param duration: The duration of the retrieval of jobs.
         :param jobs_files: The list of paths to the files containing the list of jobs (optional, used in footers).
+        :param differ_config: The default configuration of differs (typically from config.yaml).
         """
         self.report = report
         self.config = config
@@ -150,6 +153,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         self.duration = duration
         self.jobs_files = jobs_files
         self.tz = ZoneInfo(self.report.config['report']['tz']) if self.report.config['report']['tz'] else None
+        self.differ_defaults = differ_config
         if jobs_files and (len(jobs_files) > 1 or jobs_files[0].stem != 'jobs'):
             self.footer_job_file = f" ({', '.join(f.stem for f in jobs_files)})"
         else:
@@ -172,7 +176,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         else:
             config = {}  # type: ignore[assignment]
 
-        return othercls(self.report, config, self.job_states, self.duration, self.jobs_files)
+        return othercls(self.report, config, self.job_states, self.duration, self.jobs_files, self.differ_defaults)
 
     @classmethod
     def get_base_config(cls, report: Report) -> dict[str, Any]:
@@ -190,7 +194,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         }
         if '{jobs_files}' in subject:
             if self.jobs_files and (len(self.jobs_files) > 1 or self.jobs_files[0].stem != 'jobs'):
-                jobs_files = f" ({', '.join(f.stem.lstrip('jobs-') for f in self.jobs_files)})"
+                jobs_files = f" ({', '.join(f.stem.removeprefix('jobs-') for f in self.jobs_files)})"
             else:
                 jobs_files = ''
             subject_args['jobs_files'] = jobs_files
@@ -230,15 +234,16 @@ class ReporterBase(metaclass=TrackSubClasses):
         """
         subclass = cls.__subclasses__[name]
         cfg = report.config['report'][name]  # type: ignore[literal-required]
+        differ_config = report.config['differ_defaults']
 
         if cfg.get('enabled', False) or not check_enabled:
             logger.info(f'Submitting with {name} ({subclass})')
             base_config = subclass.get_base_config(report)  # type: ignore[attr-defined]
             if base_config.get('separate', False):
                 for job_state in job_states:
-                    subclass(report, cfg, [job_state], duration, jobs_files).submit()
+                    subclass(report, cfg, [job_state], duration, jobs_files, differ_config=differ_config).submit()
             else:
-                subclass(report, cfg, job_states, duration, jobs_files).submit()
+                subclass(report, cfg, job_states, duration, jobs_files, differ_config=differ_config).submit()
         else:
             raise ValueError(f'Reporter not enabled: {name}')
 
@@ -260,6 +265,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
         # sort job_states
         job_states = sorted(job_states, key=lambda x: x.job.pretty_name().lower())
+        differ_config = report.config['differ_defaults']
 
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
@@ -270,9 +276,9 @@ class ReporterBase(metaclass=TrackSubClasses):
                 base_config = subclass.get_base_config(report)  # type: ignore[attr-defined]
                 if base_config.get('separate', False):
                     for job_state in job_states:
-                        subclass(report, cfg, [job_state], duration, jobs_files).submit()
+                        subclass(report, cfg, [job_state], duration, jobs_files, differ_config=differ_config).submit()
                 else:
-                    subclass(report, cfg, job_states, duration, jobs_files).submit()
+                    subclass(report, cfg, job_states, duration, jobs_files, differ_config=differ_config).submit()
 
         if not any_enabled:
             logger.warning('No reporters enabled.')
@@ -363,7 +369,7 @@ class HtmlReporter(ReporterBase):
                 else:
                     yield f'<h3>{job_state.verb.title()}: {html.escape(job_state.job.get_location())}</h3>'
                 if hasattr(job_state.job, 'note') and job_state.job.note:
-                    yield f'<h4>{html.escape(job_state.job.note)}</h4>'
+                    yield f'<h4>{self.markdown_to_html(job_state.job.note)}</h4>'
                 yield content
 
                 yield '<hr>'
@@ -391,6 +397,11 @@ class HtmlReporter(ReporterBase):
             )
         yield '</span>\n</body>\n</html>\n'
 
+    @staticmethod
+    def markdown_to_html(text: str, markdown_padded_tables: bool | None = None) -> str:
+        """Return an html representation of a markdown string."""
+        return '<br>\n'.join([mark_to_html(line, markdown_padded_tables) for line in text.splitlines()])
+
     def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
         """Returns the HTML of the report for a job; called by _parts.
 
@@ -398,12 +409,6 @@ class HtmlReporter(ReporterBase):
         :param differ: The type of differ to use.
         :returns: HTML for a single job.
         """
-
-        def markdown_to_html(text: str) -> str:
-            """Return an html representation of a markdown string."""
-            return '<br>\n'.join(
-                [mark_to_html(line, job_state.job.markdown_padded_tables) for line in text.splitlines()]
-            )
 
         if job_state.verb == 'error' or job_state.verb == 'repeated_error':
             htm = f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback)}</pre>'
@@ -416,7 +421,7 @@ class HtmlReporter(ReporterBase):
 
         if job_state.verb == 'unchanged':
             if job_state.is_markdown():
-                return markdown_to_html(str(job_state.old_data))
+                return self.markdown_to_html(str(job_state.old_data), job_state.job.markdown_padded_tables)
             elif job_state.new_mime_type == 'text/html':
                 return str(job_state.old_data)
             else:
@@ -424,21 +429,34 @@ class HtmlReporter(ReporterBase):
 
         if job_state.verb == 'error_ended':
             return (
-                f"<div style=\"color:green;\"><i>{job_state.old_error_data['type']} fixed; content unchanged.</i></div>"
+                f"<div style=\"color:green;\"><i>{job_state.old_error_data.get('type')} fixed; "
+                'content unchanged.</i></div>'
             )
 
         if job_state.verb == 'new':
             if job_state.is_markdown():
-                return markdown_to_html(str(job_state.new_data))
+                return self.markdown_to_html(str(job_state.new_data), job_state.job.markdown_padded_tables)
             elif job_state.new_mime_type == 'text/html':
                 return str(job_state.new_data)
             else:
                 return f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.new_data))}</pre>'
 
+        if job_state.verb == 'test':
+            if job_state.is_markdown():
+                data = self.markdown_to_html(str(job_state.new_data), job_state.job.markdown_padded_tables)
+            elif job_state.new_mime_type == 'text/html':
+                data = str(job_state.new_data)
+            else:
+                data = f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.new_data))}</pre>'
+            if job_state.job.monospace:
+                return f'<span style="font-family:monospace;white-space:pre-wrap">{data.replace('<br>\n', '\n')}</span>'
+            else:
+                return data
+
         if job_state.old_data is None or job_state.old_data == job_state.new_data:
             return '...'
 
-        return job_state.get_diff('html', differ=differ, tz=self.tz)
+        return job_state.get_diff('html', differ=differ, differ_defaults=self.differ_defaults, tz=self.tz)
 
 
 class TextReporter(ReporterBase):
@@ -480,15 +498,26 @@ class TextReporter(ReporterBase):
 
         if summary:
             sep = (line_length * '=') or None
-            yield from (
-                part
-                for part in itertools.chain(
-                    (sep,),
-                    (f'{idx + 1:02}. {line}' for idx, line in enumerate(summary)),
-                    (sep, ''),
+            if len(summary) == 1:
+                yield from (
+                    part
+                    for part in itertools.chain(
+                        (sep,),
+                        (line for line in summary),
+                        (sep, ''),
+                    )
+                    if part is not None
                 )
-                if part is not None
-            )
+            else:
+                yield from (
+                    part
+                    for part in itertools.chain(
+                        (sep,),
+                        (f'{idx + 1:02}. {line}' for idx, line in enumerate(summary)),
+                        (sep, ''),
+                    )
+                    if part is not None
+                )
 
         if show_details:
             yield from details
@@ -531,15 +560,15 @@ class TextReporter(ReporterBase):
             return str(job_state.old_data)
 
         if job_state.verb == 'error_ended':
-            return f"{job_state.old_error_data['type']} fixed; content unchanged."
+            return f"{job_state.old_error_data.get('type')} fixed; content unchanged."
 
-        if job_state.verb == 'new':
+        if job_state.verb in ('new', 'test'):
             return str(job_state.new_data)
 
         if job_state.old_data in {None, job_state.new_data}:
             return None
 
-        return job_state.get_diff('text', differ=differ, tz=self.tz)
+        return job_state.get_diff('text', differ=differ, differ_defaults=self.differ_defaults, tz=self.tz)
 
     def _format_output(self, job_state: JobState, line_length: int) -> tuple[list[str], list[str]]:
         summary_part: list[str] = []
@@ -790,7 +819,7 @@ class MarkdownReporter(ReporterBase):
             return str(job_state.old_data)
 
         if job_state.verb == 'error_ended':
-            return f"_{job_state.old_error_data['type']} fixed; content unchanged._"
+            return f"_{job_state.old_error_data.get('type')} fixed; content unchanged._"
 
         if job_state.verb == 'unchanged':
             return str(job_state.new_data)
@@ -798,7 +827,7 @@ class MarkdownReporter(ReporterBase):
         if job_state.old_data in {None, job_state.new_data}:
             return None
 
-        return job_state.get_diff('markdown', differ=differ, tz=self.tz)
+        return job_state.get_diff('markdown', differ=differ, differ_defaults=self.differ_defaults, tz=self.tz)
 
     def _format_output(self, job_state: JobState) -> tuple[list[str], list[tuple[str, str]]]:
         summary_part: list[str] = []
@@ -970,7 +999,9 @@ class EMailReporter(TextReporter):
             raise ValueError(f"Unknown email reporter method: {self.config['method']}")
 
         if self.config['html']:
-            html_reporter = HtmlReporter(self.report, self.config, self.job_states, self.duration, self.jobs_files)
+            html_reporter = HtmlReporter(
+                self.report, self.config, self.job_states, self.duration, self.jobs_files, self.differ_defaults
+            )
             body_html = '\n'.join(html_reporter.submit())
             msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html)
         else:
@@ -1405,7 +1436,7 @@ class WebhookReporter(TextReporter):
 
         if self.config['markdown']:
             markdown_reporter = MarkdownReporter(
-                self.report, self.config, self.job_states, self.duration, self.jobs_files
+                self.report, self.config, self.job_states, self.duration, self.jobs_files, self.differ_defaults
             )
             text = '\n'.join(markdown_reporter.submit())
         else:
@@ -1553,7 +1584,9 @@ class BrowserReporter(HtmlReporter):
             logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
             return
 
-        html_reporter = HtmlReporter(self.report, self.config, self.job_states, self.duration, self.jobs_files)
+        html_reporter = HtmlReporter(
+            self.report, self.config, self.job_states, self.duration, self.jobs_files, self.differ_defaults
+        )
         body_html = '\n'.join(html_reporter.submit())
 
         # recheck after running as diff_filters can modify job_states.verb

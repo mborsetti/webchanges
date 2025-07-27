@@ -33,7 +33,7 @@ data_path = here.joinpath('data')
 config_file = data_path.joinpath('config.yaml')
 ssdb_file = ':memory:'
 hooks_file = Path('')
-ssdb_storage: SsdbSQLite3Storage
+ssdb_storage = SsdbSQLite3Storage(None)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
 
 def cleanup(request: pytest.FixtureRequest) -> None:
@@ -267,7 +267,7 @@ def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
         # use an uri that definitely exists
         job = urlwatcher.jobs[0]
         job.url = Path(__file__).as_uri()
-        guid = job.get_guid()
+        guid = job.guid
 
         urlwatcher.run_jobs()
         ssdb_storage._copy_temp_to_permanent(delete=True)
@@ -303,14 +303,14 @@ def test_number_of_tries_in_cache_is_increased_minidb() -> None:
     urlwatcher, ssdb_storage = prepare_retry_test_minidb()
     try:
         job = urlwatcher.jobs[0]
-        snapshot = ssdb_storage.load(job.get_guid())
+        snapshot = ssdb_storage.load(job.guid)
         assert snapshot.tries == 0
 
         urlwatcher.run_jobs()
         urlwatcher.run_jobs()
 
         job = urlwatcher.jobs[0]
-        snapshot = ssdb_storage.load(job.get_guid())
+        snapshot = ssdb_storage.load(job.guid)
 
         assert snapshot.tries == 2
         assert urlwatcher.report.job_states[-1].verb == 'error'
@@ -323,7 +323,7 @@ def test_report_error_when_out_of_tries_minidb() -> None:
     urlwatcher, ssdb_storage = prepare_retry_test_minidb()
     try:
         job = urlwatcher.jobs[0]
-        snapshot = ssdb_storage.load(job.get_guid())
+        snapshot = ssdb_storage.load(job.guid)
         assert snapshot.tries == 0
 
         urlwatcher.run_jobs()

@@ -53,13 +53,14 @@ if httpx is not None:
     except ImportError:  # pragma: no cover
         h2 = None  # type: ignore[assignment]
 
-try:
-    import apt
-except ImportError:  # pragma: no cover
-    apt = None  # type: ignore[assignment]
+if os.name == 'posix':
+    try:
+        import apt
+    except ImportError:  # pragma: no cover
+        apt = None  # type: ignore[assignment]
 
 try:
-    from pip._internal.metadata import get_default_environment
+    from pip._internal.metadata import get_default_environment  # pyright: ignore[reportPrivateImportUsage]
 except ImportError:  # pragma: no cover
     get_default_environment = None  # type: ignore[assignment]
 
@@ -70,7 +71,7 @@ except ImportError:  # pragma: no cover
 
 try:
     import psutil
-    from psutil._common import bytes2human
+    from psutil._common import bytes2human  # pyright: ignore[reportPrivateImportUsage]
 except ImportError:  # pragma: no cover
     psutil = None  # type: ignore[assignment]
     bytes2human = None  # type: ignore[assignment]
@@ -255,13 +256,13 @@ class UrlwatchCommand:
             try:
                 virt_mem = psutil.virtual_memory().available
                 print(
-                    f'• Free memory: {bytes2human(virt_mem)} physical plus '
-                    f'{bytes2human(psutil.swap_memory().free)} swap.'
+                    f'• Free memory: {bytes2human(virt_mem)} physical plus '  # pyright: ignore[reportOptionalCall]
+                    f'{bytes2human(psutil.swap_memory().free)} swap.'  # pyright: ignore[reportOptionalCall]
                 )
             except psutil.Error as e:  # pragma: no cover
                 print(f'• Free memory: Could not read information: {e}')
             print(
-                f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} "
+                f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} "  # pyright: ignore[reportOptionalCall]
                 f"({100 - psutil.disk_usage('/').percent:.1f}%)"
             )
             executor = ThreadPoolExecutor()
@@ -297,8 +298,9 @@ class UrlwatchCommand:
                     try:
                         virt_mem = psutil.virtual_memory().available
                         print(
-                            f'• Free memory with browser loaded: {bytes2human(virt_mem)} physical plus '
-                            f'{bytes2human(psutil.swap_memory().free)} swap'
+                            f'• Free memory with browser loaded: '
+                            f'{bytes2human(virt_mem)} physical plus '  # pyright: ignore[reportOptionalCall]
+                            f'{bytes2human(psutil.swap_memory().free)} swap'  # pyright: ignore[reportOptionalCall]
                         )
                     except psutil.Error:
                         pass
@@ -425,8 +427,8 @@ class UrlwatchCommand:
 
     def test_job(self, job_id: bool | str | int) -> None:
         """
-        Tests the running of a single job outputting the filtered text to stdout. If job_id is True, don't run any
-        jobs but load config, jobs and hook files to trigger any syntax errors.
+        Tests the running of a single job outputting the filtered text to --test-reporter (default is stdout). If
+        job_id is True, don't run any jobs but load config, jobs and hook files to trigger any syntax errors.
 
         :param job_id: The job_id or True.
 
@@ -460,15 +462,30 @@ class UrlwatchCommand:
         job = job.with_defaults(self.urlwatcher.config_storage.config)
 
         with JobState(self.urlwatcher.ssdb_storage, job) as job_state:
-            job_state.process(headless=not self.urlwatch_config.no_headless)
             # duration = time.perf_counter() - start
+            job_state.process(headless=not self.urlwatch_config.no_headless)
+            if job_state.job.name is None:
+                job_state.job.name = ''
+            # if job_state.job.note is None:
+            #     job_state.job.note = ''
+            data_info = '\n'.join(
+                filter(
+                    None,
+                    (
+                        f'• [GUID: {job_state.job.guid}]',
+                        f'• [Media type: {job_state.new_mime_type}]' if job_state.new_mime_type else None,
+                        f'• [ETag: {job_state.new_etag}]' if job_state.new_etag else None,
+                    ),
+                )
+            )
+            job_state.new_data = f'{data_info}\n\n{str(job_state.new_data)}'
             if self.urlwatch_config.test_reporter is None:
                 self.urlwatch_config.test_reporter = 'stdout'  # default
             report = Report(self.urlwatcher)
             report.job_states = []  # required
             errorlevel = self.check_test_reporter(
                 job_state,
-                label='error' if job_state.exception else 'new',
+                label='error' if job_state.exception else 'test',
                 report=report,
             )
             if errorlevel:
@@ -484,7 +501,7 @@ class UrlwatchCommand:
         """
         new_jobs = set()
         for idx, job in enumerate(self.urlwatcher.jobs):
-            has_history = bool(self.urlwatcher.ssdb_storage.get_history_snapshots(job.get_guid()))
+            has_history = bool(self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid))
             if not has_history:
                 print(f'Adding new {job.get_indexed_location()}')
                 new_jobs.add(idx + 1)
@@ -517,7 +534,7 @@ class UrlwatchCommand:
 
         job = self._find_job_with_defaults(job_id)
 
-        history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.get_guid())
+        history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid)
 
         num_snapshots = len(history_data)
         if num_snapshots == 0:
@@ -582,17 +599,17 @@ class UrlwatchCommand:
         """
 
         job = self._find_job_with_defaults(job_id)
-        history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.get_guid())
+        history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid)
 
-        print(f'History for job {job.get_indexed_location()}:')
-        print(f'(ID: {job.get_guid()})')
-        total_failed = 0
+        title = f'History for {job.get_indexed_location()}'
+        print(f'{title}\nGUID: {job.guid}')
         if history_data:
-            print('=' * 50)
+            print('=' * max(len(title), 46))
+        total_failed = 0
         for i, snapshot in enumerate(history_data):
-            mime_type = f'; {snapshot.mime_type}' if snapshot.mime_type else ''
-            etag = f'; ETag: {snapshot.etag}' if snapshot.etag else ''
-            tries = f'; error run (number {snapshot.tries})' if snapshot.tries else ''
+            mime_type = f' | Media type: {snapshot.mime_type}' if snapshot.mime_type else ''
+            etag = f' | ETag: {snapshot.etag}' if snapshot.etag else ''
+            tries = f' | Error run (number {snapshot.tries})' if snapshot.tries else ''
             total_failed += snapshot.tries > 0
             tz = self.urlwatcher.report.config['report']['tz']
             tzinfo = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
@@ -602,7 +619,7 @@ class UrlwatchCommand:
             print(header)
             print('-' * sep_len)
             if snapshot.error_data:
-                print(f"{snapshot.error_data['type']}: {snapshot.error_data['message']}")
+                print(f"{snapshot.error_data.get('type')}: {snapshot.error_data.get('message')}")
                 print()
                 print('Last good data:')
             print(snapshot.data)
@@ -711,6 +728,11 @@ class UrlwatchCommand:
                     logger.debug("Found no jobs that require Chrome (i.e. with 'use_browser: true').")
 
         start = time.perf_counter()
+
+        # default max_workers (when not specified) to 1
+        if self.urlwatch_config.max_workers is None:
+            self.urlwatch_config.max_workers = 1
+
         if len(self.urlwatch_config.jobs_files) == 1:
             jobs_files = [f'in jobs file {self.urlwatch_config.jobs_files[0]}:']
         else:
@@ -760,7 +782,7 @@ class UrlwatchCommand:
     def delete_snapshot(self, job_id: str | int) -> int:
         job = self._find_job_with_defaults(job_id)
 
-        deleted = self.urlwatcher.ssdb_storage.delete_latest(job.get_guid())
+        deleted = self.urlwatcher.ssdb_storage.delete_latest(job.guid)
         if deleted:
             print(f'Deleted last snapshot of {job.get_indexed_location()}')
             return 0
@@ -810,12 +832,12 @@ class UrlwatchCommand:
                     # over to the job's updated guid.
                     old_loc = job.get_location()
                     print(f'Moving location of "{old_loc}" to "{new_loc}"')
-                    old_guid = job.get_guid()
+                    old_guid = job.guid
                     if old_guid not in self.urlwatcher.ssdb_storage.get_guids():
                         print(f'No snapshots found for "{old_loc}"')
                         return 1
                     job.set_base_location(new_loc)
-                    num_searched = self.urlwatcher.ssdb_storage.move(old_guid, job.get_guid())
+                    num_searched = self.urlwatcher.ssdb_storage.move(old_guid, job.guid)
                     if num_searched:
                         print(f'Searched through {num_searched:,} snapshots and moved "{old_loc}" to "{new_loc}"')
                 else:
@@ -938,7 +960,8 @@ class UrlwatchCommand:
             self.urlwatcher.config_storage.config['report']['markdown']['details'] = True
             self.urlwatcher.config_storage.config['report']['markdown']['footer'] = True
             self.urlwatcher.config_storage.config['report']['markdown']['minimal'] = False
-        if not cfg['enabled']:
+            self.urlwatcher.config_storage.config['report']['stdout']['color'] = False
+        elif not cfg['enabled']:
             print(f'WARNING: Reporter being tested is not enabled: {reporter_name}')
             print('Will still attempt to test it, but this may not work')
             print(f'Use {__project_name__} --edit-config to configure reporters')
@@ -1087,7 +1110,7 @@ class UrlwatchCommand:
         :return: Playwright's executable return code.
         """
         try:
-            from playwright._impl._driver import compute_driver_executable
+            from playwright._impl._driver import compute_driver_executable  # pyright: ignore[reportPrivateImportUsage]
         except ImportError:  # pragma: no cover
             raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
 
@@ -1153,14 +1176,14 @@ class UrlwatchCommand:
 
         if self.urlwatch_config.gc_database:
             self.urlwatcher.ssdb_storage.gc(
-                [job.get_guid() for job in self.urlwatcher.jobs], self.urlwatch_config.gc_database
+                [job.guid for job in self.urlwatcher.jobs], self.urlwatch_config.gc_database
             )
             self.urlwatcher.ssdb_storage.close()
             self._exit(0)
 
         if self.urlwatch_config.clean_database:
             self.urlwatcher.ssdb_storage.clean_ssdb(
-                [job.get_guid() for job in self.urlwatcher.jobs], self.urlwatch_config.clean_database
+                [job.guid for job in self.urlwatcher.jobs], self.urlwatch_config.clean_database
             )
             self.urlwatcher.ssdb_storage.close()
             self._exit(0)

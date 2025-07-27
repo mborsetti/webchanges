@@ -26,17 +26,11 @@ from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent de
 
 import html2text
 import yaml
+from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
+from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
 
 from webchanges import __project_name__
 from webchanges.util import TrackSubClasses
-
-try:
-    from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
-    from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
-except ImportError as e:
-    from xml import etree  # type: ignore[no-redef]
-
-    CSSSelector = str(e)  # type: ignore[misc,assignment]
 
 # https://stackoverflow.com/questions/712791
 try:
@@ -192,10 +186,16 @@ class FilterBase(metaclass=TrackSubClasses):
                 allowed_keys = set(filtercls.__supported_subfilters__.keys())
                 unknown_keys = provided_keys.difference(allowed_keys)
                 if unknown_keys and '<any>' not in allowed_keys:
-                    raise ValueError(
-                        f'Job {job_index_number}: Filter {filter_kind} does not support subfilter or filter '
-                        f"directive(s) {', '.join(unknown_keys)}. Only {', '.join(allowed_keys)} are supported."
-                    )
+                    if allowed_keys:
+                        raise ValueError(
+                            f'Job {job_index_number}: Filter {filter_kind} does not support subfilter or filter '
+                            f"directive(s) {', '.join(unknown_keys)}. Only {', '.join(allowed_keys)} are supported."
+                        )
+                    else:
+                        raise ValueError(
+                            f'Job {job_index_number}: Filter {filter_kind} does not support any subfilters or filter '
+                            f"directives, but {', '.join(unknown_keys)} was supplied."
+                        )
 
             yield filter_kind, subfilter
 
@@ -226,7 +226,7 @@ class FilterBase(metaclass=TrackSubClasses):
             ]
             warnings.warn(
                 f'String-based filter definitions ({old_filter_spec}) are deprecated, please convert to dict-style:\n\n'
-                f'{yaml.safe_dump(filter_spec, default_flow_style=False, allow_unicode=True)}',
+                f'{yaml.safe_dump(filter_spec, default_flow_style=False, allow_unicode=True, sort_keys=False,)}',
                 DeprecationWarning,
             )
 
@@ -356,7 +356,7 @@ class AutoMatchFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
-        pass
+        ...
 
 
 class RegexMatchFilter(FilterBase):
@@ -393,7 +393,7 @@ class RegexMatchFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
-        pass
+        ...
 
 
 class BeautifyFilter(FilterBase):
@@ -1017,9 +1017,9 @@ class StripFilter(FilterBase):
 
             if 'side' in subfilter:
                 if subfilter['side'] == 'right':
-                    return '\n'.join([line.rstrip(subfilter.get('chars')) for line in lines]), mime_type
+                    return '\n'.join([line.removesuffix(subfilter.get('chars', '')) for line in lines]), mime_type
                 if subfilter['side'] == 'left':
-                    return '\n'.join([line.lstrip(subfilter.get('chars')) for line in lines]), mime_type
+                    return '\n'.join([line.removeprefix(subfilter.get('chars', '')) for line in lines]), mime_type
 
                 raise ValueError(
                     f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
@@ -1031,9 +1031,9 @@ class StripFilter(FilterBase):
         else:
             if 'side' in subfilter:
                 if subfilter['side'] == 'right':
-                    return data.rstrip(subfilter.get('chars')), mime_type
+                    return data.removesuffix(subfilter.get('chars', '')), mime_type
                 if subfilter['side'] == 'left':
-                    return data.lstrip(subfilter.get('chars')), mime_type
+                    return data.removeprefix(subfilter.get('chars', '')), mime_type
 
                 raise ValueError(
                     f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
@@ -1848,8 +1848,20 @@ class JsontoYamlFilter(FilterBase):
             return f"Filter '{self.__kind__}' returned JSONDecodeError: {e}\n\n{data!s}", mime_type
         if isinstance(parsed_json, list):
             yaml_data = yaml.safe_dump_all(
-                parsed_json, indent=indentation, width=999, allow_unicode=True, line_break='\n'
+                parsed_json,
+                indent=indentation,
+                width=999,
+                allow_unicode=True,
+                line_break='\n',
+                sort_keys=False,
             )
         else:
-            yaml_data = yaml.safe_dump(parsed_json, indent=indentation, width=999, allow_unicode=True, line_break='\n')
+            yaml_data = yaml.safe_dump(
+                parsed_json,
+                indent=indentation,
+                width=999,
+                allow_unicode=True,
+                line_break='\n',
+                sort_keys=False,
+            )
         return yaml_data, 'application/yaml'

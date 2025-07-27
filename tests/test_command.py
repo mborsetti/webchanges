@@ -421,12 +421,15 @@ def test_test_job(capsys: pytest.CaptureFixture[str]) -> None:
     message = capsys.readouterr().out
     assert message.startswith(
         '===========================================================================\n'
-        '01. NEW: Sample webchanges job; used by test_command.py\n'
+        'TEST: Sample webchanges job; used by test_command.py\n'
         '===========================================================================\n'
         '\n'
         '---------------------------------------------------------------------------\n'
-        'NEW: Sample webchanges job; used by test_command.py (echo test)\n'
+        'TEST: Sample webchanges job; used by test_command.py (echo test)\n'
         '---------------------------------------------------------------------------\n'
+        '\n'
+        '• [GUID: 632d72116518282f9fb4cc2473c949125778e24a]\n'
+        '• [Media type: text/plain]\n'
         '\n'
         'test\n'
         '\n'
@@ -483,12 +486,15 @@ def test_test_job_with_test_reporter(capsys: pytest.CaptureFixture[str]) -> None
     message = capsys.readouterr().out
     assert message.startswith(
         '===========================================================================\n'
-        '01. NEW: Sample webchanges job; used by test_command.py\n'
+        'TEST: Sample webchanges job; used by test_command.py\n'
         '===========================================================================\n'
         '\n'
         '---------------------------------------------------------------------------\n'
-        'NEW: Sample webchanges job; used by test_command.py (echo test)\n'
+        'TEST: Sample webchanges job; used by test_command.py (echo test)\n'
         '---------------------------------------------------------------------------\n'
+        '\n'
+        '• [GUID: 632d72116518282f9fb4cc2473c949125778e24a]\n'
+        '• [Media type: text/plain]\n'
         '\n'
         'test\n'
         '\n'
@@ -506,7 +512,7 @@ def test_dump_history(capsys: pytest.CaptureFixture[str]) -> None:
     command_config = new_command_config(jobs_file=jobs_file)
     urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     urlwatcher.jobs[0].command = 'echo 1'
-    guid = urlwatcher.jobs[0].get_guid()
+    guid = urlwatcher.jobs[0].guid
 
     try:
         # never run
@@ -517,9 +523,7 @@ def test_dump_history(capsys: pytest.CaptureFixture[str]) -> None:
         setattr(command_config, 'dump_history', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert (
-            'History for job Job 1: echo 1:\n(ID: 452b9ef6128065e9e0329ba8d32daf9715595fa4)\nFound 0 snapshots.\n'
-        ) in message
+        assert ('History for Job 1: echo 1\n' f'GUID: {guid}\n' 'Found 0 snapshots.\n') in message
 
         # run once
         urlwatcher.run_jobs()
@@ -534,15 +538,15 @@ def test_dump_history(capsys: pytest.CaptureFixture[str]) -> None:
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
         assert (
-            'History for job Job 1: echo 1:\n'
-            '(ID: 452b9ef6128065e9e0329ba8d32daf9715595fa4)\n'
-            '==================================================\n'
+            'History for Job 1: echo 1\n' f'GUID: {guid}\n' '==============================================\n'
         ) in message
         assert (
-            '--------------------------------------------------\n'
+            '| Media type: text/plain\n'
+            '-----------------------------------------------------------\n'
             '1\n'
             '\n'
-            '================================================== \n'
+            '=========================================================== '
+            '\n'
             '\n'
             'Found 1 snapshot.\n'
         ) in message
@@ -558,7 +562,8 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
     urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
-    guid = urlwatcher.jobs[0].get_guid()
+        urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
+    guid = urlwatcher.jobs[0].guid
 
     try:
         # never run
@@ -612,7 +617,7 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
         setattr(command_config, 'test_differ', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
+        assert 'FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
         assert message.splitlines()[10][-6:] == ' -1200'
 
         # rerun to reuse cached _generated_diff but change timezone
@@ -623,7 +628,7 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
         setattr(command_config, 'test_differ', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
+        assert 'FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
         assert message.splitlines()[10][-12:] == ' +0000 (UTC)'
 
         # Try another timezone
@@ -634,7 +639,7 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
         setattr(command_config, 'test_differ', None)
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert '01. FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
+        assert 'FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
         assert message.splitlines()[10][-6:] == ' -0100'
 
     finally:
@@ -728,7 +733,7 @@ def test_modify_urls_move_location(
 
     # try changing location of un-saved job
     old_loc = urlwatch_command2.urlwatcher.jobs[0].get_location()
-    old_guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
+    old_guid = urlwatch_command2.urlwatcher.jobs[0].guid
     new_loc = old_loc + '  # new location'
     setattr(command_config2, 'change_location', (old_loc, new_loc))
     with pytest.raises(SystemExit) as pytest_wrapped_se:
@@ -757,7 +762,8 @@ def test_modify_urls_move_location(
     )
 
     # did it change?
-    new_guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
+    new_guid = urlwatch_command2.urlwatcher.jobs[0].guid
+    assert new_guid == urlwatch_command2.urlwatcher.jobs[0].get_guid()
     assert new_guid != old_guid
     assert urlwatch_command2.urlwatcher.jobs[0].get_location() == new_loc
 
@@ -781,6 +787,8 @@ def test_modify_urls_move_location(
     )
 
     # did it change back?
+    assert urlwatch_command2.urlwatcher.jobs[0].guid == old_guid
+    assert urlwatch_command2.urlwatcher.jobs[0].get_guid() == old_guid
     assert urlwatch_command2.urlwatcher.jobs[0].get_location() == old_loc
     assert ssdb_storage2.load(old_guid) == new_data
 
@@ -792,6 +800,7 @@ def test_delete_snapshot(capsys: pytest.CaptureFixture[str]) -> None:
     urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
+        urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
 
     setattr(command_config, 'delete_snapshot', True)
     urlwatch_command = UrlwatchCommand(urlwatcher)
@@ -805,7 +814,7 @@ def test_delete_snapshot(capsys: pytest.CaptureFixture[str]) -> None:
     # run once
     urlwatcher.run_jobs()
     snapshot_storage._copy_temp_to_permanent(delete=True)
-    guid = urlwatcher.jobs[0].get_guid()
+    guid = urlwatcher.jobs[0].guid
     history = snapshot_storage.get_history_data(guid)
     assert len(history) == 1
 
@@ -851,7 +860,8 @@ def test_gc_database(capsys: pytest.CaptureFixture[str]) -> None:
     urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
     if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
-    guid = urlwatcher.jobs[0].get_guid()
+        urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
+    guid = urlwatcher.jobs[0].guid
 
     # run once to save the job from 'jobs-time.yaml'
     urlwatcher.run_jobs()
@@ -905,21 +915,21 @@ def test_clean_database(capsys: pytest.CaptureFixture[str]) -> None:
     # clean database with RETAIN_LIMIT=2
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', 2)
     urlwatcher2.ssdb_storage.clean_ssdb(
-        [job.get_guid() for job in urlwatcher2.jobs],
+        [job.guid for job in urlwatcher2.jobs],
         command_config2.clean_database,  # type: ignore[arg-type]
     )
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', None)
-    guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
+    guid = urlwatch_command2.urlwatcher.jobs[0].guid
     assert len(ssdb_storage2.get_history_snapshots(guid)) == 2
 
     # clean database without specifying RETAIN_LIMIT
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', True)
     urlwatcher2.ssdb_storage.clean_ssdb(
-        [job.get_guid() for job in urlwatcher2.jobs],
+        [job.guid for job in urlwatcher2.jobs],
         command_config2.clean_database,  # type: ignore[arg-type]
     )
     setattr(urlwatch_command2.urlwatch_config, 'clean_database', None)
-    guid = urlwatch_command2.urlwatcher.jobs[0].get_guid()
+    guid = urlwatch_command2.urlwatcher.jobs[0].guid
     assert len(ssdb_storage2.get_history_snapshots(guid)) == 1
 
 
@@ -1034,7 +1044,7 @@ def test_check_smtp_login_not_config(capsys: pytest.CaptureFixture[str]) -> None
             'enabled': True,
             'method': 'sendmail',
             'smtp': {  # type: ignore[typeddict-item]
-                'auth': '',
+                'auth': False,
                 'host': '',
                 'user': '',
             },
@@ -1061,7 +1071,7 @@ def test_check_smtp_insecure_password(capsys: pytest.CaptureFixture[str]) -> Non
             'enabled': True,
             'method': 'smtp',
             'smtp': {
-                'auth': 'blah',  # type: ignore[typeddict-item]
+                'auth': True,
                 'host': 'localhost',
                 'user': 'me',
                 'insecure_password': 'pwd',
@@ -1228,7 +1238,7 @@ def test_job_states_verb_notimestamp_changed() -> None:
     assert urlwatcher.report.job_states[-1].verb == 'new'
 
     # modify database (save no timestamp)
-    guid = urlwatcher.jobs[0].get_guid()
+    guid = urlwatcher.jobs[0].guid
     snapshot = urlwatcher.ssdb_storage.load(guid)
     urlwatcher.ssdb_storage.delete(guid)
     urlwatcher.ssdb_storage.save(guid=guid, snapshot=snapshot)

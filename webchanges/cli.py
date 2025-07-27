@@ -301,7 +301,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
         :return: Playwright's executable return code.
         """
         try:
-            from playwright._impl._driver import compute_driver_executable
+            from playwright._impl._driver import compute_driver_executable  # pyright: ignore[reportPrivateImportUsage]
         except ImportError:  # pragma: no cover
             raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
 
@@ -395,10 +395,11 @@ def main() -> None:  # pragma: no cover
         YamlJobsStorage,
     )
 
-    # Locate config, job and hooks files
+    # Locate config, job, hooks and database files
     command_config.config_file = locate_storage_file(command_config.config_file, command_config.config_path, '.yaml')
     command_config.jobs_files = locate_glob_files(command_config.jobs_files, command_config.config_path, '.yaml')
     command_config.hooks_files = locate_glob_files(command_config.hooks_files, command_config.config_path, '.py')
+    command_config.ssdb_file = locate_storage_file(command_config.ssdb_file, data_path, '.db')
 
     # Check for first run
     if command_config.config_file == default_config_file and not Path(command_config.config_file).is_file():

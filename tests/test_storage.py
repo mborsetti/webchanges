@@ -95,6 +95,7 @@ def prepare_storage_test(
 
     if sys.platform == 'win32':
         urlwatcher.jobs[0].command = 'echo %time% %random%'
+        urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
 
     return urlwatcher, ssdb_storage, command_config
 

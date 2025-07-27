@@ -8,10 +8,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import docutils.frontend
+# import docutils.utils
+import docutils.core
+
+# import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
-import docutils.utils
 import pytest
 import yaml
 from flake8.api import legacy as flake8
@@ -30,18 +32,41 @@ if sys.version_info < (3, 12):
     pytest.skip('hooks.py is written for Python 3.13', allow_module_level=True)
 
 
-# https://stackoverflow.com/a/48719723/1047040
+# # https://stackoverflow.com/a/48719723/1047040
+# def _old_parse_rst(text: str) -> docutils.nodes.document:
+#     """Parse the rst document"""
+#     parser = docutils.parsers.rst.Parser()
+#     settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
+#     # suppress messages of unknown directive types etc. from sphinx (e.g. "versionchanged")
+#     settings.update(
+#         {'report_level': 4}, docutils.frontend.OptionParser(components=(docutils.parsers.rst.Parser,))
+#     )  # (critical): Only show critical messages, which indicate a fatal error that prevents completing processing.
+#     document = docutils.utils.new_document('<rst-doc>', settings=settings)
+#     parser.parse(text, document)
+#     return document
+
+
 def parse_rst(text: str) -> docutils.nodes.document:
-    """Parse the rst document"""
-    parser = docutils.parsers.rst.Parser()
-    settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
-    # suppress messages of unknown directive types etc. from sphinx (e.g. "versionchanged")
-    settings.update(
-        {'report_level': 4}, docutils.frontend.OptionParser(components=(docutils.parsers.rst.Parser,))
-    )  # (critical): Only show critical messages, which indicate a fatal error that prevents completing processing.
-    document = docutils.utils.new_document('<rst-doc>', settings=settings)
-    parser.parse(text, document)
-    return document
+    """
+    Parse the rst document.
+
+    This function uses docutils.core.publish_doctree to parse the text, which handles the setup of the parser,
+    settings, and document internally, avoiding deprecated components.
+    """
+    # Settings overrides are passed directly to the publish_doctree function.
+    # 'report_level': 4 corresponds to 'critical'.
+    settings_overrides = {
+        'report_level': 4,
+        'halt_level': 4,  # Prevents exiting on errors
+        'warning_stream': None,  # Suppress warnings from being printed to stderr
+    }
+
+    document = docutils.core.publish_doctree(
+        source=text,
+        parser=docutils.parsers.rst.Parser(),
+        settings_overrides=settings_overrides,
+    )
+    return document  # type: ignore[no-any-return]
 
 
 # https://stackoverflow.com/a/48719723/1047040
@@ -50,7 +75,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
     code: list[str] = []
 
-    def visit_literal_block(self, node: docutils.nodes.reference) -> None:
+    def visit_literal_block(self, node: docutils.nodes.literal_block) -> None:
         if 'python' in node.attributes['classes']:
             self.code.append(node.astext())
         elif node.rawsource.startswith('.. code-block:: python'):
@@ -95,7 +120,7 @@ else:
 
 def test_load_hooks(caplog: pytest.LogCaptureFixture) -> None:
     """Check the cli.py load of hooks.com"""
-    load_hooks(data_path.joinpath('hooks.example.py'))
+    load_hooks(data_path.joinpath('hooks.does_not_exist.py'))
     assert caplog.text == '' or 'not imported because' in caplog.text
 
 

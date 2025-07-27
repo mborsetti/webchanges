@@ -28,7 +28,7 @@ except ImportError:
 try:
     from matrix_client.errors import MatrixError
 except ImportError:
-    MatrixError = None
+    MatrixError = Exception
 
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None

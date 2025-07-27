@@ -11,7 +11,6 @@ from typing import Any
 
 import pytest
 import yaml
-from _pytest._code import ExceptionInfo
 
 from webchanges.filters import FilterBase, Html2TextFilter
 from webchanges.handler import JobState
@@ -255,7 +254,7 @@ def test_deprecated_filters() -> None:
 
 def test_filter_exceptions() -> None:
     filtercls = FilterBase.__subclasses__.get('html2text')
-    e: ExceptionInfo  # mypy
+    e: pytest.ExceptionInfo  # mypy
     with pytest.raises(NotImplementedError) as e:
         # noinspection PyTypeChecker
         filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 'lynx'})  # type: ignore[misc]

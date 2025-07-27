@@ -15,14 +15,14 @@ from __future__ import annotations
 __min_python_version__ = (3, 10)  # minimum version of Python required to run; supported until fall 2025
 
 
-__project_name__ = __package__
+__project_name__ = str(__package__)
 # Version numbering is PEP440-compliant https://www.python.org/dev/peps/pep-0440/
 # Release numbering largely follows Semantic Versioning https://semver.org/spec/v2.0.0.html#semantic-versioning-200
 # * MAJOR version when you make incompatible API changes,
 # * MINOR version when you add functionality in a backwards compatible manner, and
 # * MICRO or PATCH version when you make backwards compatible bug fixes. We no longer use '0'
 # If unsure on increments, use pkg_resources.parse_version to parse
-__version__ = '3.30.0'
+__version__ = '3.31.0rc0'
 __description__ = (
     'Check web (or command output) for changes since last run and notify.\n'
     '\n'

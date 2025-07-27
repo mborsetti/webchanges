@@ -1,6 +1,6 @@
-*********
+=========
 Changelog
-*********
+=========
 
 This changelog mostly follows '`keep a changelog <https://keepachangelog.com/en/1.0.0/>`__'. Release numbering mostly
 follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__
@@ -33,24 +33,86 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.31.0rc0
+------------------
+2025-07-26
+
+⚠ Breaking Change
+``````````````````
+* Differ ``ai_google`` (BETA) now expects the API key to be in the environment variable named ``GEMINI_API_KEY`` to
+  maintain consistency with the new API documentation from Google and is interoperable with Gemini CLI. The deprecated
+  ``GOOGLE_AI_API_KEY`` will be read until the end of 2025.
+
+Added
+`````
+* Directive ``wait_for_selector`` of URL jobs with ``browser: true`` (Playwright) can now be a list, enabling waiting
+  for multiple selectors in the order given.
+* Differ ``deepdiff`` has a new sub-directive ``compact`` which produces a much less wordy report in YAML and ignores
+  changes of data type (e.g. "type changed from NoneType to str").
+
+Changed
+```````
+* Differ ``deepdiff``'s report has been improved by indenting multi-line value changes.
+* Command line ``--test-job``: Improved display by adding to the report the media type (fka MIME type), ETag (when
+  present) and GUID (internal identifier).
+* Job directive ``note`` is converted from Markdown by the HTML reporter.
+
+Deprecated
+``````````
+* Environment variable ``GOOGLE_AI_API_KEY`` for the API key used by differ ``ai_google`` (BETA) is deprecated; use
+  ``GEMINI_API_KEY`` instead. This maintains consistency with the new API documentation from Google and is interoperable
+  with Gemini CLI.
+
+Fixed
+`````
+* Job directive ``ignore_connection_errors``: Did not work as expected with the default ``httpx`` HTML client library
+  (#`100 <https://github.com/mborsetti/webchanges/issues/100>`__.).
+* Command line argument ``--error``: Was reporting jobs with errors not present during regular execution. Changed
+  default ``--max-workers`` to 1 (no parallel jobs) when running with ``--error`` to prevent this. (#`102
+  <https://github.com/mborsetti/webchanges/issues/102>`__.)
+* Command line argument ``--database``: Filename was not being searched in default database directory if not present in
+  current directory.
+* Command line argument ``--test-job``:
+
+  - Output is no longer colorized as if it were a diff.
+  - When used in conjunction with ``--test-reporter browser`` or any other HTML reporter and job has
+    ``monospace: true``: Output now uses a monospaced font.
+* Configuration ``differ_defaults``: Was not being applied correctly in certain circumstances.
+* Differ ``ai_google`` (BETA): Improved reporting of upstream API errors.
+* Differ ``images`` (BETA):
+
+  - Report now includes the old image;
+  - Minor fixes to the ``ai_google`` summary (ALPHA), including proper application of defaults from the config file
+    and the inclusion in the footnote of the actual generative AI model used (vs. the one specified).
+
+Internals / hooks.py
+````````````````````
+* GUID is now assigned to the job when it's loaded, enabling for a hook to programmatically change ``job.url``,
+  ``job.user_visible_url`` and/or ``job.command`` without causing processing errors downstream.
+* Jobs with a directive ``kind`` belonging to a Class defined in hooks.py, and which inherits from UrlJob, BrowserJob or
+  ShellJob, were not initialized with the default configurations for the parent class (fixed).
+* Updated vendored code providing httpx.Headers (when httpx is not installed) to mirror version 0.28.1.
+* Updated vendored code providing packaging.versions (when packaging is not installed) to mirror version 24.2.
+* Minor code fixes resulting from newly using Pyright / Pylance in the IDE.
+
 Version 3.30.0
-==================
+------------------
 2025-03-29
 
 Added
------
+`````
 * README links to a new Docker implementation which includes the Chrome browser. Generously offered by and maintained
   by `Jeff Hedlund <https://github.com/jhedlund>`__ as per `#96 <https://github.com/mborsetti/webchanges/issues/96>`__.
 * New filter ``jsontoyaml`` to convert JSON to YAML, which is generally more readable in a report for humans.
 * New ``yaml`` data type for the ``deepdiff`` differ (in addition to ``json`` and ``xml``).
 
 Changed
--------
+```````
 * The ``deepdiff`` differ will now try to derive the ``data-type`` (when it is not specified) from the data's media
   type (fka MIME type) before defaulting to ``json``.
 
 Fixed
------
+`````
 * Fixed confusing warning when no default hooks.py file exists. Thanks to `Marcos Alano <https://github.com/mhalano>`__
   for reporting in `#97 <https://github.com/mborsetti/webchanges/issues/97>`__.
 * The ``format-json`` filter now uses JSON text instead of plain text to report errors caused by it not receiving
@@ -60,15 +122,15 @@ Fixed
 
 
 Version 3.29.0
-==================
+------------------
 2025-03-23
 
 ⚠ Breaking Changes
--------------------
+``````````````````
 * The differ ``command`` now requires that the ``name: command`` subdirective of ``differ`` be specified.
 
 Changed
--------
+```````
 * The differ ``command`` now has a sub-directive ``is_html`` to indicate when output is in HTML format. Thanks to `Jeff
   Hedlund <https://github.com/jhedlund>`__ for requesting this enhancement in
   `#95 <https://github.com/mborsetti/webchanges/issues/95>`__.
@@ -77,18 +139,18 @@ Changed
   reports.
 
 Fixed
------
+`````
 * Fixed reporting of errors arising from filters or reporters.
 * Fixed reporting of repeated errors (i.e. when the same error occurs multiple times).
 * Fixed header and colorization of the differ ``command``.
 
 
 Version 3.28.2
-==================
+------------------
 2025-03-11
 
 Changed
--------
+```````
 * The filter ``format-json`` will no longer raise an error when it is not fed JSON data, but, to facilitate
   troubleshooting, it will report the JSONDecodeError details and the full string causing the error.
 * Documentation for the ``css`` and ``xml`` filters has been split into two separate entries for ease of reference.
@@ -102,7 +164,7 @@ Changed
     ``gemini-2.0-pro-exp-02-05``).
 
 Internals
----------
+`````````
 * Tested the ``image`` differ's ``ai_google`` directive (ALPHA, undocumented), which uses GenAI to summarize
   differences between two images, with the new ``gemini-2.0-pro-exp-02-05`` `experimental
   <https://ai.google.dev/gemini-api/docs/models/experimental-models#available-models>`__ and improved default system
@@ -112,35 +174,35 @@ Internals
 
 
 Version 3.28.1
-==================
+------------------
 2025-02-11
 
 Changed
--------
+```````
 * Differ ``ai_google`` (BETA) now defaults to using the newer ``gemini-2.0-flash`` GenAI model, as it performs better.
   Please note that this model "only" handles 1,048,576 input tokens: if you require the full 2M tokens, manually revert
   to using the ``gemini-1.5-pro`` model or try the newer ``gemini-2.0-pro-exp-02-05`` `experimental
   <https://ai.google.dev/gemini-api/docs/models/experimental-models#available-models>`__ one.
 
 Fixed
------
+`````
 * Fixed bug introduced in 3.28.0 causing an execution error when loading a configuration file that does not contain
   the new directive ``differ_defaults``. Thanks `yubiuser <https://github.com/yubiuser>`__ for
   reporting this in `issue #93 <https://github.com/mborsetti/webchanges/issues/93>`__.
 
 Internals
----------
+`````````
 * When running with ``-verbose``, no longer logs an INFO message for the internal exception raised when receiving a
   an HTTP 304 status code "Not Modified".
 
 
 
 Version 3.28.0
-==================
+------------------
 2025-02-11
 
 Added
------
+`````
 * Added support for setting default differ directives in config.yaml. This is particularly useful for the ``ai_google``
   differ to specify a default GenAI model.
 * Added automatic installation of the `zstandard <https://github.com/indygreg/python-zstandard>`__ library to support
@@ -148,7 +210,7 @@ Added
   HTTPX HTTP client.
 
 Changed
--------
+```````
 * Renamed job directives ``filter`` and ``diff_filter`` to ``filters`` and ``diff_filters`` (plural nouns) to better
   reflect their list nature. The singular forms remain backward-compatible.
 * Consolidated HTTP proxy configuration into a single ``proxy`` directive, replacing the separate ``http_proxy`` and
@@ -157,7 +219,7 @@ Changed
   of available memory (or the maximum available, if lower).
 
 Fixed
------
+`````
 * Fixed handling of "Error Ended" reports to only send them with ``suppress_repeated_errors: true``.
 * Fixed error message when using job directive ``http_client: requests`` without the `requests
   <https://pypi.org/project/requests/>`__ library installed. Thanks `yubiuser <https://github.com/yubiuser>`__ for
@@ -168,7 +230,7 @@ Fixed
   present, rather than replacing them.
 
 Internals
----------
+`````````
 * Replaced JobBase attributes ``http_proxy`` and ``https_proxy`` with a unified ``proxy`` attribute.
 * Updated JobBase attributes from singular ``filter`` and ``diff_filter`` to plural ``filters`` and ``diff_filters``.
 * Removed unused JobBase attribute ``chromium_revision`` (deprecated since Pypetteer removal on 2022-05-02).
@@ -176,11 +238,11 @@ Internals
 
 
 Version 3.27.0
-==================
+------------------
 2025-02-03
 
 Added
------
+`````
 * Python 3.13: **webchanges** is now fully tested on Python 3.13 before releasing. However, ``orderedset``, a dependency
   of the `aioxmpp <https://pypi.org/project/aioxmpp/>`__ library required by the ``xmpp`` reporter will not install in
   Python 3.13 (at least on Windows) and this reporter is therefore not included in the tests. It appears that the
@@ -199,7 +261,7 @@ Added
 * New command-line option ``--prepare-jobs`` to run only newly added jobs (to capture and save their initial snapshot).
 
 Fixed
------
+`````
 * Fixed command line argument ``--errors`` to use the same exact logic as the one used when running *webchanges*.
   Reported by `yubiuser <https://github.com/yubiuser>`__ in `issue #88
   <https://github.com/mborsetti/webchanges/issues/88>`__.
@@ -207,14 +269,14 @@ Fixed
   <https://docs.python.org/3/library/http.html#http-status-codes>`__.
 
 Changed
--------
+```````
 * Command line ``--test`` can now be combined with ``--test-reporter`` to have the output sent to a different reporter.
 * Improved error reporting, including reporting error message in ``--test`` and adding proxy information if the error
   is a network error and the job has a proxy and.
 * Updated the default model instructions for the ``ai_google`` (BETA) differ to improve quality of summary.
 
 Internals
----------
+`````````
 * Now storing error information in snapshot database.
 * Added ``ai_google`` directive to the ``image`` differ to test Generative AI summarization of changes between two
   images, but in testing the results are unusable. This feature is in ALPHA and undocumented, and will not be
@@ -223,11 +285,11 @@ Internals
 
 
 Version 3.26.0
-===================
+------------------
 2024-10-13
 
 Added
------
+`````
 * Python 3.13 Support: **webchanges** now supports Python 3.13, but complete testing is pending due to dependencies
   such as ``lxml`` not having yet published installation packages ("wheels") for 3.13.
 * Glob Pattern Support for Hooks Files: The ``--hooks`` command-line argument now accepts glob patterns for flexible
@@ -244,7 +306,7 @@ Added
   * New ``unified_diff_new`` Field: Added to the ``prompt`` directive.
 
 Changed
--------
+```````
 * Relaxed Security for job and hook Files: The ownership requirement for files containing ``command`` jobs,
   ``shellpipe`` filters, or hook files has been expanded to include root ownership, in addition to the current user.
 * ``ai_google`` Differ Refinements (BETA):
@@ -256,23 +318,23 @@ Changed
   *  Updated documentation.
 
 Fixed
------
+`````
 * Markdown Handling: Improved handling of links with empty text in the Markdown to HTML converter.
 * ``image`` Differ Formatting: Fixed HTML formatting issues within the ``image`` differ.
 
 Removed
--------
+```````
 * Python 3.9 Support: Support for Python 3.9 has been dropped. As a reminder, older Python versions are supported for 3
   years after being superseded by a new major release (i.e. approximately 4 years after their initial release).
 
 
 
 Version 3.25.0
-===================
+------------------
 2024-08-15
 
 Added
--------------------
+`````
 * Multiple job files or glob patterns can now be specified by repeating the ``--jobs`` argument.
 * Job list filtering using `Python regular expression
   <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__. Example: ``webchanges --list blue`` lists
@@ -283,11 +345,11 @@ Added
 * Improved messaging at startup when a legacy database that requires conversion is found.
 
 Changed
--------------------
+```````
 * Updated ``ai_google`` differ to reflect Gemini 1.5 Pro's 2M token context window.
 
 Fixed
--------------------
+`````
 * Corrected the automated handling in differs and reporters of data with a 'text/markdown' media type (fka MIME type).
 * Multiple ``wdiff`` differ fixes and improvements:
   - Fixed body font issues;
@@ -300,18 +362,18 @@ Fixed
 * Improved the text-to-HTML URL parser to accurately extract URLs with multiple parameters.
 
 Internals
--------------------
+`````````
 * Replaced ``requests.structures.CaseInsensitiveDict`` with ``httpx.Headers`` as the Class holding headers.
 * The ``Job.headers`` attribute is now initialized with an empty ``httpx.Headers`` object instead of None.
 
 
 
 Version 3.24.1
-===================
+------------------
 2024-06-14
 
 Added
--------------------
+`````
 * Command line argument ``--rollback-database`` now accepts dates in ISO-8601 format in addition to Unix timestamps.
   If the library dateutil (not a dependency of **webchanges**) is found installed, then it will also accept any
   string recognized by ``dateutil.parser`` such as date only, time only, date and time, etc. (suggested
@@ -321,11 +383,11 @@ Added
 
 
 Version 3.24.0
-===================
+------------------
 2024-06-06
 
 Added
--------------------
+`````
 * New ``wdiff`` differ to perform word-by-word comparisons. Replaces the dependency on an outside executable and
   allows for much better formatting and integration.
 * New ``system_instructions`` directive added to the ``ai-google`` differ (BETA).
@@ -334,21 +396,21 @@ Added
   <https://github.com/mborsetti/webchanges/issues/81>`__).
 
 Changed
-------------------
+```````
 * Updated the documentation for the ``ai-google`` differ (BETA), mostly to reflect billing changes by Google, which is
   still free for most.
 
 Fixed
-------------------
+`````
 * Fixed a data type check in preventing ``URL`` jobs' ``data`` (for POSTs etc.) to be a list.
 
 
 Version 3.23.1
-===================
+------------------
 2024-05-22
 
 Changed
-------------------
+```````
 * Updated the ``ai-google`` differ (BETA)'s default model to  ``gemini-1.5-flash-latest`` due to changes in the Google
   API, and its default prompt to ``Identify and summarize the changes between the old and new
   documents:\n\n<old>\n{old_data}\n</old>\n\n``, due to the old prompt not generating the expected output.  Updated
@@ -356,11 +418,11 @@ Changed
 
 
 Version 3.23.0
-===================
+------------------
 2024-05-15
 
 Changed
-------------------
+```````
 * The ``ai-google`` (BETA) differ now defaults to using the new ``gemini-1.5-flash`` model (see documentation `here
   <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-flash-expandable>`__), as it still supports
   1M tokens, "excels at summarization" (per `here <https://blog
@@ -370,27 +432,27 @@ Changed
   use ``gemini-1.5-pro``, which may produce more "complex" results, specify it in the job's ``differ`` directive.
 
 Fixed
------
+`````
 * Fixed header of ``deepdiff`` and ``image`` (BETA) differs to be more consistent with the default ``unified`` differ.
 * Fixed the way images are handled in the email reporter so that they now display correctly in clients such as Gmail.
 
 Internals
----------
+`````````
 * Command line argument ``--test-differs`` now processes the new ``mime_type`` attribute correctly (``mime_type`` is
   an internal work in progress attribute to facilitate future automation of filtering, diffing, and reporting).
 
 
 Version 3.22
-===================
+------------------
 2024-04-25
 
 ⚠ Breaking Changes
-------------------
+```````````````````
 * Developers integrating custom Python code (hooks.py) should refer to the "Internals" section below for important
   changes.
 
 Changed
--------
+```````
 * Snapshot database
 
   - Moved the snapshot database from the "user_cache" directory (typically not backed up) to the "user_data" directory.
@@ -420,7 +482,7 @@ Changed
       changes:\n\n{unified_diff}`` for improved results.
 
 Fixed
------
+`````
 * Fixed an AttributeError Exception when the fallback HTTP client package ``requests`` is not installed, as reported
   by `yubiuser <https://github.com/yubiuser>`__ in `issue #76 <https://github.com/mborsetti/webchanges/issues/76>`__.
 * Addressed a ValueError in the ``--test-differ`` command, a regression reported by `Markus Weimar
@@ -429,7 +491,7 @@ Fixed
   with an Exception.
 
 Internals
----------
+`````````
 * New ``mime_type`` attribute: we are now capturing and storing the data's media type (fka MIME type) alongside data in
   the snapshot database to facilitate future automation of filtering, diffing, and reporting. Developers using custom
   Python code will need to update their filter and retrieval methods in classes inheriting from FilterBase and
@@ -440,11 +502,11 @@ Internals
 
 
 Version 3.21
-===================
+------------------
 2024-04-16
 
 Added
------
+`````
 * **Job selectable differs**: The differ, i.e. the method by which changes are detected and summarized, can now be
   selected job by job. Also gone is the restriction to have only unified diffs, HTML table diff, or calling an outside
   executable, as differs have become modular.
@@ -463,7 +525,7 @@ Added
     Gemini 1.0, but it can handle a lower number of tokens.
 
 Changed
--------
+```````
 * Filter ``absolute_links`` now converts URLs of the ``action``, ``href`` and ``src`` attributes in any HTML tag, as
   well as the ``data`` attribute of the ``<object>`` tag; it previously converted only the ``href`` attribute of
   ``<a>`` tags.
@@ -477,7 +539,7 @@ Deprecated
   <https://webchanges.readthedocs.io/en/stable/differs.html#command_diff>`__.
 
 Fixed
------
+`````
 * ``webchanges --errors`` will no longer check jobs who have ``disabled: true`` (thanks to `yubiuser
   <https://github.com/yubiuser>`__ for reporting this in issue `# 73
   <https://github.com/mborsetti/webchanges/issues/73>`__).
@@ -485,70 +547,70 @@ Fixed
   label.
 
 Internals
----------
+`````````
 * Improved speed of creating a unified diff for an HTML report.
 * Reduced excessive logging from ``httpx``'s sub-modules ``hpack`` and ``httpcore`` when running with ``-vv``.
 
 
 Version 3.20.2
-===================
+------------------
 2024-03-16
 
 Fixed
------
+`````
 * Parsing the ``to`` address for the ``sendmail`` ``email`` reporter.
 
 Version 3.20.1
-===================
+------------------
 2024-03-16
 
 Fixed
------
+`````
 * Regression introduced in supporting sending to multiple "to" addresses.
 
 
 Version 3.20
-===================
+------------------
 2024-03-15
 
 Added
------
+`````
 * ``re.findall`` filter to extract, delete or replace non-overlapping text using Python ``re.findall``.
 
 Changed
--------
+```````
 * ``--test-reporter`` now allows testing of reporters that are not enabled; if a reporter is not enabled, a warning
   will be issued. This simplifies testing.
 * ``email`` reporter (both SMTP and sendmail) supports sending to multiple "to" addresses.
 
 Fixed
------
+`````
 * Reports from jobs with ``monospace: true`` were not being rendered correctly in Gmail.
 
 
 Version 3.19.1
-===================
+------------------
 2024-03-07
 
 Fixed
------
+`````
 * Added the ``Date`` header field to SMTP email messages to ensure the timestamp is present even when it is not added
   by the server upon receipt. Contributed by `Dominik <https://github.com/DL6ER>`__ in `#71
   <https://github.com/mborsetti/webchanges/pull/71>`__.
 
 
 Version 3.19
-===================
+------------------
 2024-02-28
 
 Fixed
------
+`````
 * Under certain circumstances, certain default jobs directives declared in the configuration file would not be applied
   to jobs.
 * Fixed automatic fallback to ``requests`` when the **required** HTTP client package ``httpx`` is missing.
 
 Added
------
+`````
 * ``block_elements`` directive for jobs with ``use_browser: true`` is supported again and can be used to improve
   speed by preventing binary and media content loading, while providing all elements required dynamic web page load
   (see the advanced section of the documentation for a suggestion of elements to block). This was available under
@@ -559,33 +621,33 @@ Added
 
 
 Version 3.18.1
-===================
+------------------
 2024-02-20
 
 Fixed
------
+`````
 * Fixed regression whereby configuration key ``empty-diff`` was inadvertently renamed ``empty_diff``.
 
 
 Version 3.18
-===================
+------------------
 2024-02-19
 
 Fixed
------
+`````
 * Fixed incorrect handling of HTTP client libraries when ``httpx`` is not installed (should graciously fallback to
   ``requests``).  Reported by `drws <https://github.com/drws>`__ as an add-on to `issuse #66
   <https://github.com/mborsetti/webchanges/issues/66>`__.
 
 Added
------
+`````
 * Job directive ``enabled`` to allow disabling of a job without removing or commenting it in the jobs file (contributed
   by `James Hewitt <https://github.com/Jamstah>`__ `upstream <https://github.com/thp/urlwatch/pull/785>`__).
 * ``webhook`` reporter has a new ``rich_text`` config option for preformatted rich text for Slack (contributed
   by `K̶e̶v̶i̶n̶ <https://github.com/vimagick>`__ `upstream <https://github.com/thp/urlwatch/pull/780>`__).
 
 Changed
--------
+```````
 * Command line argument ``--errors`` now uses conditional requests to improve speed. Do not use to test newly modified
   jobs since websites reporting no changes from the last snapshot stored by **webchanges** are skipped; use
   ``--test`` instead.
@@ -594,31 +656,31 @@ Changed
 
 
 Version 3.17.2
-===================
+------------------
 2023-12-11
 
 Fixed
------
+`````
 * Exception in error handling when ``requests`` is not installed (reported by
   `yubiuser <https://github.com/yubiuser>`__ in `#66 <https://github.com/mborsetti/webchanges/issues/66>`__).
 
 
 Version 3.17.1
-===================
+------------------
 2023-12-10
 
 Fixed
------
+`````
 * Removed dependency on ``requests`` library inadvertently left behind (reported by
   `yubiuser <https://github.com/yubiuser>`__ in `#65 <https://github.com/mborsetti/webchanges/issues/65>`__).
 
 
 Version 3.17
-===================
+------------------
 2023-12-10
 
 Added
------
+`````
 * You can now specify a reporter name after the command line argument ``--errors`` to send the output to the reporter
   specified. For example, to be notified by email of any jobs that result in an error or who, after filtering,
   return no data (indicating they may no longer be monitoring resources as expected), run ``webchanges --errors
@@ -627,17 +689,17 @@ Added
 * You can now suppress the ``footer`` in an ``html`` report using the new ``footer: false`` sub-directive in
   ``config.yaml`` (same as the one already existing with ``text`` and ``markdown``).
 
-Internal
---------
+Internals
+`````````
 * Fixed a regression on the default ``User-Agent`` header for ``url`` jobs with the ``use_browser: true`` directive.
 
 
 Version 3.16
-===================
+------------------
 2023-12-07
 
 Added
------
+`````
 * The HTTP/2 network protocol (the same used by major browsers) is now used in ``url`` jobs. This allows the
   monitoring of certain websites who block requests made with older protocols like HTTP/1.1. This is implemented by
   using the ``HTTPX`` and ``h2`` HTTP client libraries instead of the ``requests`` one used previously.
@@ -671,7 +733,7 @@ Added
   <https://github.com/yubiuser>`__ in `#64 <https://github.com/mborsetti/webchanges/issues/64>`__).
 
 Changed
--------
+```````
 * ``url`` jobs will use the ``HTTPX`` library instead of ``requests`` if it's installed since it uses the HTTP/2 network
   protocol (when the ``h2`` library is also installed) as browsers do. To revert to the use of ``requests`` even if
   ``HTTPX`` is installed on the system, add ``http_client: requests`` to the relevant jobs or make it a default by
@@ -680,8 +742,8 @@ Changed
 * The ``beautify`` filter converts relative links to absolute ones; use the new ``absolute_links: false``
   sub-directive to disable.
 
-Internal
---------
+Internals
+`````````
 * Removed transitional support for the ``beautifulsoup<4.11`` library (i.e. older than 7 April 2022) for the
   ``beautify`` filter.
 * Removed dependency on the ``requests`` library and its own dependency on the ``urllib3`` library.
@@ -690,51 +752,51 @@ Internal
 
 
 Version 3.15
-===================
+------------------
 2023-10-25
 
 Added
------
+`````
 * Support for Python 3.12.
 * ``data_as_json`` job directive for ``url`` jobs to indicate that ``data`` entered as a dict should be
   serialized as JSON instead of urlencoded and, if missing, the header ``Content-Type`` set to ``application/json``
   instead of ``application/x-www-form-urlencoded``.
 
 Changed
--------
+```````
 * Improved error handling and documentation on the need of an external install when using ``parser: html5lib`` with the
   ``bs4`` method of the ``html2text`` filter and added ``html5lib`` as an optional dependency keyword (thanks to
   `101Dude <https://github.com/101Dude>`__'s report in `59 <https://github.com/mborsetti/webchanges/issues/59>`__).
 
 Removed
--------
+```````
 * Support for Python 3.8. A reminder that older Python versions are supported for 3 years after being obsoleted by a
   new major release (i.e. about 4 years since their original release).
 
 Internals
----------
+`````````
 * Upgraded build environment to use the ``build`` frontend and ``pyproject.toml``, eliminating ``setup.py``.
 * Migrated to ``pyproject.toml`` the configuration of all tools who support it.
 * Increased the default ``timeout`` for ``url`` jobs with ``use_browser: true`` (i.e. using Playwright) to 120 seconds.
 
 
 Version 3.14
-===================
+------------------
 2023-09-01
 
 Added
------
+`````
 * When running in verbose (``-v``) mode, if a ``url`` job with ``use_browser: true`` fails with a Playwright error,
   capture and save in the temporary folder a screenshot, a full page image, and the HTML contents of the page at the
   moment of the error (see logs for filenames).
 
 
 Version 3.13
-===================
+------------------
 2023-08-28
 
 Added
------
+`````
 * Reports have a new ``separate`` configuration option to split reports into one-per-job.
 * ``url`` jobs without ``use_browser`` have a new ``retries`` directive to specify the  number of times to retry a
   job that errors before giving up. Using ``retries: 1`` or higher will often solve the ``('Connection aborted.',
@@ -753,14 +815,14 @@ Added
     memory and disk space.
 
 Changed
--------
+```````
 * ``command`` jobs now have improved error reporting which includes the error text from the failed command.
 * ``--rollback-database`` now confirms the date (in ISO-8601 format) to roll back the database to and, if
   **webchanges** is being run in interactive mode, the user will be asked for positive confirmation before proceeding
   with the un-reversible deletion.
 
 Internals
----------
+`````````
 * Added `bandit <https://github.com/PyCQA/bandit>`__ testing to improve the security of code.
 * ``headers`` are now turned into strings before being passed to Playwright (addresses the error
   ``playwright._impl._api_types.Error: extraHTTPHeaders[13].value: expected string, got number``).
@@ -772,22 +834,22 @@ Internals
 
 
 Version 3.12
-===================
+------------------
 2022-11-19
 
 Added
------
+`````
 * Support for Python 3.11. Please note that the ``lxml`` dependency may fail to install on Windows due to
   `this <https://bugs.launchpad.net/lxml/+bug/1977998>`__ bug and that therefore for now **webchanges** can only be
   run in Python 3.10 on Windows.  [Update: ``lxml wheels`` for Python 3.11 on Windows are available as of 2022-12-13].
 
 Removed
--------
+```````
 * Support for Python 3.7. As a reminder, older Python versions are supported for 3 years after being obsoleted by a new
   major release; support for Python 3.8 will be removed on or about 5 October 2023.
 
 Fixed
------
+`````
 * Job sorting for reports is now case-insensitive.
 * Documentation on how to anonymously monitor GitHub releases (due to changes in GitHub) (contributed by `Luis Aranguren
   <https://github.com/mercurytoxic>`__ `upstream <https://github.com/thp/urlwatch/issues/723>`__).
@@ -795,7 +857,7 @@ Fixed
   `upstream <https://github.com/thp/urlwatch/issues/588>`__).
 
 Internals
----------
+`````````
 * Jobs base class now has a ``__is_browser__`` attribute, which can be used with custom hooks to identify jobs that run
   a browser so they can be executed in the correct parallel processing queue.
 * Fixed static typing to conform to the latest mypy checks.
@@ -803,7 +865,7 @@ Internals
 
 
 Version 3.11
-===================
+------------------
 2022-09-22
 
 Notice
@@ -812,7 +874,7 @@ Support for Python 3.7 will be removed on or about 22 October 2022 as older Pyth
 years after being obsoleted by a new major release.
 
 Added
------
+`````
 * The new ``no_conditional_request`` directive for ``url`` jobs turns off conditional requests for those extremely rare
   websites that don't handle it (e.g. Google Flights).
 * Selecting the database engine and the maximum number of changed snapshots saved is now set through the configuration
@@ -828,7 +890,7 @@ Added
   are ignored).
 
 Changed
--------
+```````
 * Reports are now sorted alphabetically and therefore you can use the ``name`` directive to affect the order by which
   your jobs are displayed in reports.
 * Implemented measures for ``url`` jobs using ``browser: true`` to avoid being detected: **webchanges** now passes all
@@ -842,7 +904,7 @@ Changed
   all ``url`` jobs (previously only for jobs with ``use_browser: true``).
 
 Fixed
------
+`````
 * Bug in command line arguments ``--config`` and ``--hooks``. Contributed by
   `Klaus Sperner <https://github.com/klaus-tux>`__ in PR `#46 <https://github.com/mborsetti/webchanges/pull/46>`__.
 * Job directive ``compared_versions`` now works as documented and testing has been added to the test suite. Reported by
@@ -851,7 +913,7 @@ Fixed
 * Markdown containing code in a link text now converts correctly in HTML reports.
 
 Internals
----------
+`````````
 * The job ``kind`` of ``shell`` has been renamed ``command`` to better reflect what it does and the way it's described
   in the documentation, but ``shell`` is still recognized for backward compatibility.
 * Readthedocs build upgraded to Python 3.10
@@ -859,17 +921,17 @@ Internals
 
 
 Version 3.10.3
-===================
+------------------
 2022-07-22
 
 Added
------
+`````
 * ``url`` jobs with ``use_browser: true`` that receive an error HTTP status code from the server will now include the
   text returned by the server in the error message (e.g. "Rate exceeded.", "upstream request timeout", etc.), except if
   HTTP status code 404 - Not Found is received.
 
 Changed
--------
+```````
 * The command line argument ``--jobs`` used to specify a jobs file now accepts a `glob pattern
   <https://en.wikipedia.org/wiki/Glob_(programming)>`__, e.g. wildcards, to specify multiple files. If more than one
   file matches the pattern, their contents will be concatenated before a job list is built. Useful e.g. if you have
@@ -880,30 +942,30 @@ Changed
   (or ``-v``) to display it.
 
 Fixed
------
+`````
 * Fixed ``Unicode strings with encoding declaration are not supported.`` error in the ``xpath`` filter using
   ``method: xml`` under certain conditions (MacOS only). Reported by `jprokos <https://github.com/jprokos>`__ in `#42
   <https://github.com/mborsetti/webchanges/issues/42>`__.
 
 Internals
----------
+`````````
 * The source distribution is now available on PyPI to support certain packagers like ``fpm``.
 * Improved handling and reporting of Playwright browser errors (for ``url`` jobs with ``use_browser: true``).
 
 
 
 Version 3.10.2
-===================
+------------------
 2022-06-22
 
 ⚠ Breaking Changes
-------------------
+``````````````````
 * Due to a fix to the ``html2text`` filter (see below), the first time you run this new version **you may get a change
   report with deletions and additions of lines that look identical. This will happen one time only** and will prevent
   future such change reports.
 
 Added
------
+`````
 * You can now run the command line argument ``--test`` without specifying a JOB; this will check the config
   (default: ``config.yaml``) and job (default: ``job.yaml``) files for syntax errors.
 * New job directive ``compared_versions`` allows change detection to be made against multiple saved snapshots;
@@ -914,7 +976,7 @@ Added
   due to limitations in Playwright.
 
 Changed
--------
+```````
 * On Linux and macOS systems, for security reasons we now check that the hooks file **and** the directory it is located
   in are **owned** and **writeable** by **only** the user who is running the job (and not by its group or by other
   users), identical to what we do with the jobs file if any job uses the ``shellpipe`` filter. An
@@ -924,7 +986,7 @@ Changed
   ``--verbose --verbose``) shows full verbosity.
 
 Fixed
------
+`````
 * The ``html2text`` filter is no longer retaining any spaces found in the HTML after *the end of the text* on a line,
   which are not displayed in HTML and therefore a bug in the conversion library used. This was causing a change report
   to be issued whenever the number of such invisible spaces changed.
@@ -940,7 +1002,7 @@ Fixed
   warnings to be issued as unrecognized directives.
 
 Internals
----------
+`````````
 * Changed bootstrapping logic so that when using ``-vv`` the logs will include messages relating to the registration of
   the various classes.
 * Improved execution speed of certain informational command line arguments.
@@ -955,30 +1017,30 @@ Internals
 
 
 Version 3.10.1
-===================
+------------------
 2022-05-03
 
 Fixed
------
+`````
 * ``KeyError: 'indent'`` error when using ``beautify`` filter. Reported by `César de Tassis Filho
   <https://github.com/CTassisF>`__ in `#37 <https://github.com/mborsetti/webchanges/issues/37>`__.
 
 
 
 Version 3.10
-===================
+------------------
 2022-05-02
 
-⚠ Breaking changes
-------------------
+⚠ Breaking Changes
+``````````````````
 
 Pyppeteer has been replaced with Playwright
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:::::::::::::::::::::::::::::::::::::::::::
 This change only affects jobs that ``use_browser: true`` (i.e. those running on a browser to run JavaScript). If none
 of your jobs have ``use_browser: true``, there's nothing new here (and nothing to do).
 
 Must do
-~~~~~~~
+:::::::
 If *any* of your jobs have ``use_browser: true``, you **MUST**:
 
 1) Install the new dependencies:
@@ -1017,7 +1079,7 @@ Finally, if you are  using the experimental ``block_elements`` sub-directive, it
 and is simply ignored.
 
 Improvements
-~~~~~~~~~~~~
+::::::::::::
 ``wait_until`` has additional functionality, and now takes one of:
 
 * ``load`` (default): Consider operation to be finished when the ``load`` event is fired.
@@ -1028,7 +1090,7 @@ Improvements
   loading.
 
 New directives
-~~~~~~~~~~~~~~
+::::::::::::::
 The following directives are new to the Playwright implementation:
 
 * ``referer``: Referer header value (a string). If provided, it will take preference over the referer header value set
@@ -1047,7 +1109,7 @@ See more details of the new directives in the updated documentation.
 
 
 Freeing space by removing Pyppeteer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:::::::::::::::::::::::::::::::::::
 You can free up disk space if no other packages use Pyppeteer by, in order:
 
 1) Removing the downloaded Chromium images by deleting the entire *directory* (and its subdirectories) shown by running:
@@ -1064,7 +1126,7 @@ You can free up disk space if no other packages use Pyppeteer by, in order:
 
 
 Rationale
-~~~~~~~~~
+:::::::::
 The implementation of ``use_browser: true`` jobs (i.e. those running on a browser to run JavaScript) using Pyppeteer
 and the Chromium browser it uses has been very problematic, as the library:
 
@@ -1115,17 +1177,17 @@ Advanced
 
 
 Version 3.9.2
-===================
+------------------
 2022-04-13
 
 ⚠ Last release using Pyppeteer
-------------------------------
+```````````````````````````````
 * This is the last release using Pyppeteer for jobs with ``use_browser: true``, which will be replaced by Playwright
   in release 9.10, forthcoming hopefully in a few weeks. See above for more information on how to prepare -- and start
   using Playwright now!
 
 Added
------
+`````
 * New ``ignore_dh_key_too_small`` directive for ``url`` jobs to overcome the ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh
   key too small (_ssl.c:1129)`` error.
 * New ``indent`` sub-directive for the ``beautify`` filter (requires BeautifulSoup version 4.11.0 or later).
@@ -1138,7 +1200,7 @@ Added
   `#33 <https://github.com/mborsetti/webchanges/issues/33>`__.)
 
 Fixed
------
+`````
 * We are no longer rewriting to disk the entire database at every run. Now it's only rewritten if there are changes
   (and minimally) and, obviously, when running with the ``--gc-cache`` or ``--clean-cache`` command line argument.
   Reported by `JsBergbau <https://github.com/JsBergbau>`__ `upstream <https://github.com/thp/urlwatch/issues/690>`__.
@@ -1160,7 +1222,7 @@ Documentation
 * Continued improvements.
 
 Internals
----------
+`````````
 * Updated licensing file to `GitHub naming standards
   <https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository>`__
   and updated its contents to more clearly state that this software redistributes source code of release 2.21 dated 30
@@ -1171,21 +1233,21 @@ Internals
   its subclasses.
 
 Version 3.9.1
-===================
+------------------
 2022-01-27
 
 Fixed
------
+`````
 * Config file directives checker would incorrect reject reports added through ``hooks.py``. Reported by `Knut Wannheden
   <https://github.com/knutwannheden>`__ in `#24 <https://github.com/mborsetti/webchanges/issues/24>`__.
 
 
 Version 3.9
-===================
+------------------
 2022-01-26
 
 Changed
--------
+```````
 * The method ``bs4`` of filter ``html2text`` has a new ``strip`` sub-directive which is passed to BeautifulSoup, and
   its default value has changed to false to conform to BeautifulSoup's default. This gives better output in most
   cases. To restore the previous non-standard behavior, add the ``strip: true`` sub-directive to the ``html2text``
@@ -1195,7 +1257,7 @@ Changed
   See above to start using Playwright now (highly suggested).
 
 Added
------
+`````
 * The method ``bs4`` of filter ``html2text`` now accepts the sub-directives ``separator`` and ``strip``.
 * When using the command line argument ``--test-diff``, the output can now be sent to a specific reporter by also
   specifying the ``--test-reporter`` argument. For example, if running on a machine with a web browser, you can see
@@ -1211,7 +1273,7 @@ Added
 * Opt-in to use Playwright for jobs with ``use_browser: true`` instead of pyppeteer (see above).
 
 Fixed
------
+`````
 * During conversion of Markdown to HTML,
   * Code blocks were not rendered without wrapping and in monospace font;
   * Spaces immediately after ````` (code block opening) were being dropped.
@@ -1231,38 +1293,38 @@ Documentation
 * Improved documentation for filter ``pdf2text``.
 
 Internals
----------
+`````````
 * Support for Python 3.10 (except for ``url`` jobs with ``use_browser`` using Pyppeteer since it does not yet support
   it; use Playwright instead).
 * Improved speed of detection and handling of lines starting with spaces during conversion of Markdown to HTML.
 * Logging (``--verbose``) now shows thread IDs to help with debugging.
 
 Known issues
-------------
+````````````
 * Pyppeteer (used for ``url`` jobs with ``use_browser: true``) is now crashing during certain tests with Python 3.7.
   There will be no new development to fix this as the use of Pyppeteer will soon be deprecated in favor of Playwright.
   See above to start using Playwright now (highly suggested).
 
 
 Version 3.8.3
-====================
+------------------
 2021-08-29
 
 Fixed
------
+`````
 * Fixed incorrect handling of timeout when checking if new version has been released.
 
 Internals
----------
+`````````
 * DictType hints for configuration.
 
 
 Version 3.8.2
-====================
+------------------
 2021-08-19
 
 ⚠ Breaking Changes (dependencies)
----------------------------------
+`````````````````````````````````
 * Filter ``pdf2text``'s dependency Python package `pdftotext <https://github.com/jalan/pdftotext>`__ in its latest
   version 2.2.0 has changed the way it displays text to no longer try to emulate formatting (columns etc.). This is
   generally a welcome improvement as changes in formatting no longer trigger change reports, but if you want to
@@ -1271,13 +1333,13 @@ Version 3.8.2
   time they are run after the pdftotext Python package is updated**.
 
 Changed
--------
+```````
 * Updated default Chromium executables to revisions equivalent to Chromium 92.0.4515.131 (latest stable release); this
   fixes unsupported browser error thrown by certain websites. Use ``webchanges --chromium-directory`` to locate where
   older revision were downloaded to delete them manually.
 
 Added
------
+`````
 * Filter ``pdf2text`` now supports the ``raw`` and ``physical`` sub-directives, which are passed to the underlying
   Python package `pdftotext <https://github.com/jalan/pdftotext>`__ (version 2.2.0 or higher).
 * New ``--chromium-directory`` command line displays the directory where the downloaded Chromium executables are
@@ -1286,7 +1348,7 @@ Added
   identification when running *webchanges* with a variety of jobs files.
 
 Fixed
------
+`````
 * Fixed legacy code handling ``--edit-config`` command line argument to allow editing of a configuration file
   with YAML syntax errors (`#15 <https://github.com/mborsetti/webchanges/issues/15>`__ by
   `Markus Weimar <https://github.com/Markus00000>`__).
@@ -1294,7 +1356,7 @@ Fixed
   <https://github.com/mborsetti/webchanges/issues/16>`__ by `Sean Tauber <https://github.com/buzzeddesign>`__).
 
 Internals
----------
+`````````
 * Type hints are checked during pre-commit by `mypy <http://www.mypy-lang.org/>`__.
 * Imports are rearranged during pre-commit by `isort <https://pycqa.github.io/isort/>`__.
 * Now testing all database engines, including redis, and more, adding 4 percentage points of code coverage to 81%.
@@ -1303,20 +1365,20 @@ Internals
 
 
 Version 3.8.1
-====================
+------------------
 2021-08-03
 
 Fixed
------
+`````
 * Files in the new _vendored directory are now installed correctly.
 
 
 Version 3.8
-====================
+------------------
 2021-07-31
 
 Added
------
+`````
 * ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) now recognize ``data`` and ``method`` directives,
   enabling e.g. to make a ``POST`` HTTP request using a browser with JavaScript support.
 * New ``tz`` key for  ``report`` in the configuration sets the timezone for the diff in reports (useful if running
@@ -1342,7 +1404,7 @@ Added
   added to the report footer (if footer is enabled).
 
 Fixed
------
+`````
 * The ``html2text`` filter's method ``strip_tags`` was returning HTML character references (e.g. &gt;, &#62;, &#x3e;)
   instead of the corresponding Unicode characters.
 * Fixed a rare case when html report would not correctly reconstruct a clickable link from Markdown for items inside
@@ -1352,7 +1414,7 @@ Fixed
   `here <https://github.com/thp/urlwatch/issues/604>`__.
 
 Internals
----------
+`````````
 * ``--verbose`` command line argument will now list configuration keys 'missing' from the file, keys for which default
   values have been used.
 * ``tox`` testing can now be run in parallel using ``tox --parallel``.
@@ -1367,21 +1429,21 @@ Internals
 
 
 Version 3.7
-====================
+------------------
 2021-06-27
 
 ⚠ Breaking Changes
-------------------
+``````````````````
 * Removed Python 3.6 support to simplify code. Older Python versions are supported for 3 years after being obsoleted by
   a new major release; as Python 3.7 was released on 27 June 2018, the last date of Python 3.6 support was 26 June 2021
 
 Changed
--------
+```````
 * Improved ``telegram`` reporter now uses MarkdownV2 and preserves most formatting of HTML sites processed by the
   ``html2text`` filter, e.g. clickable links, bolding, underlining, italics and strikethrough
 
 Added
------
+`````
 * New filter ``execute`` to filter the data using an executable without invoking the shell (as ``shellpipe`` does)
   and therefore exposing to additional security risks
 * New sub-directive ``silent`` for ``telegram`` reporter to receive a notification with no sound (true/false) (default:
@@ -1389,7 +1451,7 @@ Added
 * Github Issues templates for bug reports and feature requests
 
 Fixed
------
+`````
 * Job ``headers`` stored in the configuration file (``config.yaml``) are now merged correctly and case-insensitively
   with those present in the job (in ``jobs.yaml``). A header in the job replaces a header by the same name if already
   present in the configuration file, otherwise is added to the ones present in the configuration file.
@@ -1397,7 +1459,7 @@ Fixed
   some ``cookies`` being read from the jobs YAML file in other formats
 
 Internals
----------
+`````````
 * Strengthened security with `bandit <https://pypi.org/project/bandit/>`__ to catch common security issues
 * Standardized code formatting with `black <https://pypi.org/project/black/>`__
 * Improved pre-commit speed by using local libraries when practical
@@ -1406,7 +1468,7 @@ Internals
 
 
 Version 3.6.1
-====================
+------------------
 2021-05-28
 
 Reminder
@@ -1415,22 +1477,22 @@ Older Python versions are supported for 3 years after being obsoleted by a new m
 released on 27 June 2018, the codebase will be streamlined by removing support for Python 3.6 on or after 27 June 2021.
 
 Added
------
+`````
 * Clearer results messages for ``--delete-snapshot`` command line argument
 
 Fixed
------
+`````
 * First run would fail when creating new ``config.yaml`` file. Thanks to `David <https://github.com/notDavid>`__ in
   issue `#10 <https://github.com/mborsetti/webchanges/issues/10>`__.
 * Use same run duration precision in all reports
 
 
 Version 3.6
-====================
+------------------
 2021-05-14
 
 Added
------
+`````
 * Run a subset of jobs by adding their index number(s) as command line arguments. For example, run ``webchanges 2 3`` to
   only run jobs #2 and #3 of your jobs list. Run ``webchanges --list`` to find the job numbers. Suggested by `Dan Brown
   <https://github.com/dbro>`__ upstream `here <https://github.com/thp/urlwatch/pull/641>`__. API is experimental and
@@ -1438,14 +1500,14 @@ Added
 * Support for ``ftp://`` URLs to download a file from an ftp server
 
 Fixed
------
+`````
 * Sequential job numbering (skip numbering empty jobs). Suggested by `Markus Weimar
   <https://github.com/Markus00000>`__ in issue `#9 <https://github.com/mborsetti/webchanges/issues/9>`__.
 * Readthedocs.io failed to build autodoc API documentation
 * Error processing jobs with URL/URIs starting with ``file:///``
 
 Internals
----------
+`````````
 * Improvements of errors and DeprecationWarnings during the processing of job directives and their inclusion in tests
 * Additional testing adding 3 percentage points of coverage to 75%
 * Temporary database being written during run is now in memory-first (handled by SQLite3) (speed improvement)
@@ -1454,21 +1516,21 @@ Internals
 
 
 Version 3.5.1
-====================
+------------------
 2021-05-06
 
 Fixed
------
+`````
 * Crash in ``RuntimeError: dictionary changed size during iteration`` with custom headers; updated testing scenarios
 * Autodoc not building API documentation
 
 
 Version 3.5
-====================
+------------------
 2021-05-04
 
 Added
------
+`````
 * New sub-directives to the ``strip`` filter:
 
   * ``chars``: Set of characters to be removed (default: whitespace)
@@ -1484,7 +1546,7 @@ Added
   3.7 or higher
 
 Changed
--------
+```````
 * Diff-filter ``additions_only`` will no longer report additions that consist exclusively of added empty lines
   (issue `#6 <https://github.com/mborsetti/webchanges/issues/6>`__, contributed by `Fedora7
   <https://github.com/Fedora7>`__)
@@ -1493,7 +1555,7 @@ Changed
 * ``--smtp-password`` now checks that the credentials work with the SMTP server (i.e. logs in)
 
 Fixed
------
+`````
 * First run after install was not creating new files correctly (inherited from *urlwatch*); now **webchanges** creates
   the default directory, config and/or jobs files if not found when running (issue `#8
   <https://github.com/mborsetti/webchanges/issues/8>`__, contributed  by `rtfgvb01 <https://github.com/rtfgvb01>`__)
@@ -1510,7 +1572,7 @@ Fixed
 * Wrong ETag was being captured when a URL redirection took place
 
 Internals
----------
+`````````
 * ``url`` jobs using ``use_browser: true`` (i.e. using *Pyppeteer*) now capture and save the ETag
 * Snapshot timestamps are more accurate (reflect when the job was launched)
 * Each job now has a run-specific unique index_number, which is assigned sequentially when loading jobs, to use in
@@ -1521,7 +1583,7 @@ Internals
 * Additional cleanup of code and documentation
 
 Known issues
-------------
+````````````
 * ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
   stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
   fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
@@ -1532,16 +1594,16 @@ Known issues
 
 
 Version 3.4.1
-====================
+------------------
 2021-04-17
 
 Internals
----------
+`````````
 * Temporary database (``sqlite3`` database engine) is copied to permanent one exclusively using SQL code instead of
   partially using a Python loop
 
 Known issues
-------------
+````````````
 * ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
   stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
   fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
@@ -1552,18 +1614,18 @@ Known issues
 
 
 Version 3.4
-====================
+------------------
 2021-04-12
 
 ⚠ Breaking Changes
-------------------
+``````````````````
 * Fixed the database from growing unbounded to infinity. Fix only works when running in Python 3.7 or higher and using
   the new, default, ``sqlite3`` database engine. In this scenario only the latest 4 snapshots are kept, and older ones
   are purged after every run; the number is selectable with the new ``--max-snapshots`` command line argument. To keep
   the existing grow-to-infinity behavior, run **webchanges** with ``--max-snapshots 0``.
 
 Added
------
+`````
 * ``--max-snapshots`` command line argument sets the number of snapshots to keep stored in the database; defaults to
   4. If set to 0 an unlimited number of snapshots will be kept. Only applies to Python 3.7 or higher and only works if
   the default ``sqlite3`` database is being used.
@@ -1578,20 +1640,20 @@ Added
 * Alert user when the jobs file contains unrecognized directives (e.g. typo)
 
 Changed
---------
+```````
 * Job name is truncated to 60 characters when derived from the title of a page (no directive ``name`` is found in a
   ``url`` job)
 * ``--test-diff`` command line argument displays all saved snapshots (no longer limited to 10)
 
 Fixed
------
+`````
 * Diff (change) data is no longer lost if **webchanges** is interrupted mid-execution or encounters an error in
   reporting: the permanent database is updated only at the very end (after reports are dispatched)
 * ``use_browser: false`` was not being interpreted correctly
 * Jobs file (e.g. ``jobs.yaml``) is now loaded only once per run
 
 Internals
----------
+`````````
 * Database ``sqlite3`` engine now saves new snapshots to a temporary database, which is copied over to the permanent one
   at execution end (i.e. database.close())
 * Upgraded SMTP email message internals to use Python's `email.message.EmailMessage
@@ -1604,7 +1666,7 @@ Internals
 * Renamed class JobsYaml to YamlJobsStorage for consistency and clarity
 
 Known issues
-------------
+````````````
 * ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
   stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
   fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
@@ -1615,16 +1677,16 @@ Known issues
 
 
 Version 3.2.6
-===================
+------------------
 2021-03-21
 
 Changed
---------
+```````
 * Tweaked colors (esp. green) of HTML reporter to work with Dark Mode
 * Restored API documentation using Sphinx's autodoc (removed in 3.2.4 as it was not building correctly)
 
-Internal
---------
+Internals
+`````````
 * Replaced custom atomic_rename function with built-in `os.replace()
   <https://docs.python.org/3/library/os.html#os.replace>`__ (new in Python 3.3) that does the same thing
 * Added type hinting to the entire code
@@ -1632,7 +1694,7 @@ Internal
 * GitHub Actions CI now runs faster as it's set to cache required packages from prior runs
 
 Known issues
-------------
+````````````
 * Discovered that upstream (legacy) *urlwatch* 2.22 code has the database growing to infinity; run ``webchanges
   --clean-cache`` periodically to discard old snapshots until this is addressed in a future release
 * ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
@@ -1645,11 +1707,11 @@ Known issues
 
 
 Version 3.2
-===================
+------------------
 2021-03-08
 
 Added
------
+`````
 * Job directive ``note``: adds a freetext note appearing in the report after the job header
 * Job directive ``wait_for_navigation`` for ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*): wait for
   navigation to reach a URL starting with the specified one before extracting content. Useful when the URL redirects
@@ -1669,8 +1731,8 @@ Added
   (typical list includes ``stylesheet``, ``font``, ``image``, and ``media``). ⚠ On certain sites it seems to totally
   freeze execution; test before use.
 
-Changes
--------
+Changed
+```````
 * A new, more efficient indexed database is used and only the most recent saved snapshot is migrated the first time you
   run this version. This has no effect on the ordinary use of the program other than reducing the number of historical
   results from ``--test-diffs`` util more snapshots are captured. To continue using the legacy database format, launch
@@ -1687,12 +1749,12 @@ Changes
 * Temporarily removed code autodoc from the documentation as it was not building correctly
 
 Fixed
------
+`````
 * Specifying ``chromium_revision`` had no effect (bug introduced in version 3.1.0)
 * Improved the text of the error message when ``jobs.yaml`` has a mistake in the job parameters
 
 Internals
----------
+`````````
 * Removed dependency on ``minidb`` package and are now directly using Python's built-in ``sqlite3``, allowing for better
   control and increased functionality
 * Database is now smaller due to data compression with `msgpack <https://msgpack.org/index.html>`__
@@ -1709,7 +1771,7 @@ Internals
   and (for Python 3.7 and up) use *Pyppeteer*
 
 Known issues
-------------
+````````````
 * ``url`` jobs with ``use_browser: true`` (i.e. using *Pyppeteer*) will at times display the below error message in
   stdout (terminal console). This does not affect **webchanges** as all data is downloaded, and hopefully it will be
   fixed in the future (see `Pyppeteer issue #225 <https://github.com/pyppeteer/pyppeteer/issues/225>`__):
@@ -1720,20 +1782,20 @@ Known issues
 
 
 Version 3.1.1
-=================
+------------------
 2021-02-08
 
 Fixed
------
+`````
 * Documentation was failing to build at https://webchanges.readthedocs.io/
 
 
 Version 3.1
-=================
+------------------
 2021-02-07
 
 Added
------
+`````
 * Can specify different values of ``chromium_revision`` (used in jobs with ``use_browser" true``, i.e. using
   *Pyppeteer*) based on OS by specifying keys ``linux``, ``mac``, ``win32`` and/or ``win64``
 * If ``shellpipe`` filter returns an error it now shows the error text
@@ -1741,12 +1803,12 @@ Added
   release date of the next major version)
 
 Fixed
------
+`````
 * ``telegram`` reporter's ``chat_id`` can be numeric (fixes # `610 <https://github.com/thp/urlwatch/issues/610>`__
   upstream by `ramelito <https://github.com/ramelito>`__)
 
 Internals
----------
+`````````
 * First PyPI release with new continuous integration (CI) and continuous delivery (CD) pipeline based on `bump2version
   <https://pypi.org/project/bump2version/>`__, git tags, and `GitHub Actions <https://docs.github.com/en/actions>`__
 * Moved continuous integration (CI) testing from Travis to `GitHub Actions <https://docs.github.com/en/actions>`__
@@ -1757,11 +1819,11 @@ Internals
 
 
 Version 3.0.3
-=============
+------------------
 2020-12-21
 
 ⚠ Breaking Changes
-------------------
+``````````````````
 * Compatibility with *urlwatch* 2.22, including the ⚠ breaking change of removing the ability to write custom filters
   that do not take a subfilter as argument (see `here
   <https://urlwatch.readthedocs.io/en/latest/deprecated.html#filters-without-subfilters-since-2-22>`__ upstream)
@@ -1770,13 +1832,13 @@ Version 3.0.3
   discussion `here <https://github.com/thp/urlwatch/pull/600#issuecomment-754525630>`__ upstream)
 
 Added
------
+`````
 * New job sub-directive ``user_visible_url`` to replace the URL in reports, useful e.g. if the watched URL is a REST
   API endpoint but you want to link to the webpage instead (# `590 <https://github.com/thp/urlwatch/pull/590>`__
   upstream by `huxiba <https://github.com/huxiba>`__)
 
 Changed
--------
+```````
 * The Markdown reporter now supports limiting the report length via the ``max_length`` parameter of the ``submit``
   method. The length limiting logic is smart in the sense that it will try trimming the details first, followed by
   omitting them completely, followed by omitting the summary. If a part of the report is omitted, a note about this is
@@ -1784,7 +1846,7 @@ Changed
   <https://github.com/dkasak>`__)
 
 Fixed
------
+`````
 * Make imports thread-safe. This might increase startup times a bit, as dependencies are imported on boot instead of
   when first used, but importing in Python is not (yet) thread-safe, so we cannot import new modules from the parallel
   worker threads reliably (# `559 <https://github.com/thp/urlwatch/issues/559>`__ upstream by `Scott MacVicar
@@ -1792,26 +1854,26 @@ Fixed
 * Write Unicode-compatible YAML files
 
 Internals
----------
+`````````
 * Upgraded to use of `subprocess.run <https://docs.python.org/3/library/subprocess.html#subprocess.run>`__
 
 
 Version 3.0.2
-=============
+------------------
 2020-12-06
 
 Fixed
------
+`````
 * Logic error in reading ``EDITOR`` environment variable (# `1 <https://github.com/mborsetti/webchanges/issues/1>`__
   contributed by `MazdaFunSun <https://github.com/mazdafunsunn>`__)
 
 
 Version 3.0.1
-=============
+------------------
 2020-12-05
 
 Added
------
+`````
 * New ``format-json`` sub-directive ``sort_keys`` sets whether JSON dictionaries should be sorted (defaults to false)
 * New ``markdown`` directive for ``webhook`` reporter for services such as Mattermost, which expects
   Markdown-formatted text
@@ -1820,14 +1882,14 @@ Added
 * Reports now show date/time of diffs when using an external ``diff_tool``
 
 Changed and deprecated
-----------------------
+``````````````````````
 * Reporter ``slack`` has been renamed to ``webhook`` as it works with any webhook-enabled service such as Discord.
   Updated documentation with Discord example. The name ``slack``, while deprecated and in line to be removed in a future
   release, is still recognized.
 * Improvements in report colorization code
 
 Fixed
------
+`````
 * Fixed ``format-json`` filter from unexpectedly reordering contents of dictionaries
 * Fixed documentation for ``additions_only`` and ``deletions_only`` to specify that value of true is required
 * No longer creating a config directory if command line contains both ``--config`` and ``--urls``. Allow running on
@@ -1838,15 +1900,15 @@ Fixed
 
 
 Version 3.0
-=============
+------------------
 2020-11-12
 
 Milestone
----------
+`````````
 Initial release of **webchanges**, based on reworking of code from *urlwatch* 2.21 dated 30 July 2020.
 
 Added
------
+`````
 Relative to *urlwatch* 2.21:
 
 * If no job ``name`` is provided, the title of an HTML page will be used for a job name in reports
@@ -1877,7 +1939,7 @@ Relative to *urlwatch* 2.21:
   the built-in ``html2text`` filter)
 
 Changed and deprecated
-----------------------
+``````````````````````
 Relative to *urlwatch* 2.21:
 
 * Navigation by full browser is now accomplished by specifying the ``url`` and adding the ``use_browser: true``
@@ -1936,14 +1998,14 @@ Relative to *urlwatch* 2.21:
 * Upgraded Travis CI to Python Version 3.9 from Version 3.9-dev and cleaned up pip installs
 
 Removed
--------
+```````
 Relative to *urlwatch* 2.21:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported; use ``html2text`` instead
 * Python 3.5 (obsoleted by 3.6 on December 23, 2016) is no longer supported
 
 Fixed
------
+`````
 Relative to *urlwatch* 2.21:
 
 * The ``html2text`` filter's ``html2text`` method defaults to Unicode handling
@@ -1953,17 +2015,17 @@ Relative to *urlwatch* 2.21:
 * The presence of the ``data`` directive in a job would force the method to POST preventing PUTs
 
 Security
---------
+````````
 Relative to *urlwatch* 2.21:
 
 * None
 
 Documentation changes
----------------------
+`````````````````````
 Relative to *urlwatch* 2.21:
 
 * Complete rewrite of the documentation
 
 Known bugs
-----------
+``````````
 * None

@@ -435,7 +435,7 @@ query.
 
 note
 ^^^^
-Informational note added under the header in reports (a string). Example:
+Informational note added under the header in reports (a string, optionally in Markdown). Example:
 
 .. code-block:: yaml
 
@@ -444,7 +444,12 @@ Informational note added under the header in reports (a string). Example:
    url: https://example.org/weatherwarnings
 
 
+If the string is in Markdown, it will be converted to HTML by an HTML report.
+
 .. versionadded:: 3.2
+
+.. versionchanged:: 3.30
+   Accepts Markdown strings.
 
 
 .. _ignore_cached:
@@ -775,10 +780,16 @@ Waits for a JavaScript string to be evaluated in the browser context to return a
 If the string (or the string in the ``expression`` key of the dict) looks like a function declaration, it is interpreted
 as a function. Otherwise, it is evaluated as an expression.
 
-Additional options can be passed when a dict is used: see `here
-<https://playwright.dev/python/docs/api/class-page#page-wait-for-function>`__.
+If ``wait_for_url`` and/or ``wait_for_selector`` is also used, ``wait_for_function`` is applied after these.
 
-If ``wait_for_url`` and/or ``wait_for_selector`` is also used, ``wait_for_function`` is applied after.
+Sub-directives
+**************
+* ``expression`` (string): (default) JavaScript expression to be evaluated in the browser context. If the expression
+  evaluates to a function, the function is automatically invoked.
+* ``polling`` (float): An interval in milliseconds at which the function would be executed. Default is for the
+  expression to be constantly executed in requestAnimationFrame callback.
+* ``timeout`` (float): Maximum time in milliseconds. Defaults to the job's ``timeout``. Pass 0 to disable timeout.
+
 
 .. versionadded:: 3.10
 
@@ -795,19 +806,24 @@ Waits for the element specified by selector string to become visible (a string o
 This happens when for the element to have non-empty bounding box and no visibility:hidden. Note that an element without
 any content or with display:none has an empty bounding box and is not considered visible.
 
-Selectors supported include CSS selectors, XPath expressions, text (prefixed by ``text=``), React locator (experimental
-and prefixed by ```_react=```) and Vue locator(experimental and prefixed by ``_vue=``). In addition, the following CSS
-pseudo-classes are supported: ``:has-text()``, ``:text()``, ``:text-is()``, ``:text-matches()``, ``:visible``,
-``:has()``, ``:is()``, and ``:nth-match()``. plus the Playwright layout CSS pseudo-classes listed `here
-<https://playwright.dev/docs/other-locators#css-matching-elements-based-on-layout>`__.  More information on working with
-these selectors (called "other locators" by Playwright) is `here <https://playwright.dev/python/docs/other-locators>`__.
+Selectors supported include CSS selectors, XPath expressions, text (prefixed by ``text=``), React locators (experimental
+and prefixed by ```_react=```) and Vue locators (experimental and prefixed by ``_vue=``).
 
-Additional options (especially what state to wait for, which could be one of ``attached``, ``detached`` and ``hidden``
-in addition to the default ``visible``) can be passed by using a dict. See `here
-<https://playwright.dev/python/docs/api/class-page#page-wait-for-selector>`__ for all the arguments and additional
-details.
+The following CSS pseudo-classes are supported: ``:has-text()``, ``:text()``, ``:text-is()``, ``:text-matches()``,
+``:visible``, ``:has()``, ``:is()``, and ``:nth-match()``, plus the Playwright layout CSS pseudo-classes listed `here
+<https://playwright.dev/docs/other-locators#css-matching-elements-based-on-layout>`__.
 
-For example, to wait until no spans having "loading" in their class are present, use either of these:
+More information on working with selectors (called "other locators" by Playwright) is `here
+<https://playwright.dev/python/docs/other-locators>`__.
+
+To wait for more than one selector, ``wait_for_selector`` can be a list of items, which is executed in order.
+
+If ``wait_for_url`` is also used, ``wait_for_selector`` is applied after.  If ``wait_for_function`` is also used,
+``wait_for_selector`` is applied before.
+
+Examples:
+
+To wait until no spans having "loading" in their class are visible:
 
 .. code-block:: yaml
 
@@ -815,13 +831,37 @@ For example, to wait until no spans having "loading" in their class are present,
     selector: //span[contains(@class, "loading")]
     state: hidden
 
-If ``wait_for_url`` is also used, ``wait_for_selector`` is applied after.
+To wait until no spans having "loading" in their class are present AND that the div with id "data" is visible:
+
+.. code-block:: yaml
+
+  wait_for_selector:
+    - selector: //span[contains(@class, "loading")]
+      state: detached
+    - //div[@id="data"]
+
+Sub-directives
+**************
+* ``selector`` (string): (default) the selector to query for.
+* ``state`` (string): one of ``attached``, ``detached``, ``visible`` (default) or ``hidden``:
+
+  - ``attached`` - wait for element to be present in DOM.
+  - ``detached`` - wait for element to not be present in DOM.
+  - ``visible`` (default) - wait for element to have non-empty bounding box and no visibility:hidden. Note that element
+    without any content or with display:none has an empty bounding box and is not considered visible.
+  - ``hidden`` - wait for element to be either detached from DOM, or have an empty bounding box or visibility:hidden.
+    This is opposite to the 'visible' option.
+* ``strict`` (true/false): When true (default), the call requires selector to resolve to a single element. If given
+  selector resolves to more than one element, the call throws an exception.
+* ``timeout`` (float): Maximum time in milliseconds. Defaults to the job's ``timeout``. Pass 0 to disable timeout.
 
 .. versionadded:: 3.10
 
 .. versionchanged:: 3.10
    This directive replaces ``wait_for`` containing a CSS selector or XPath expression.
 
+.. versionchanged:: 3.31
+   This directive can now be a list to wait for multple selectors.
 
 .. _wait_for_timeout:
 
@@ -871,10 +911,12 @@ wait_until
 ^^^^^^^^^^
 The event of when to consider navigation succeeded (a string):
 
-* ``load`` (default): Consider operation to be finished when the ``load`` event is fired.
-* ``domcontentloaded``: Consider operation to be finished when the ``DOMContentLoaded`` event is fired.
-* ``networkidle`` (old ``networkidle0`` and ``networkidle2`` map here): Consider operation to be finished when
-  there are no network connections  for at least 500 ms.
+* ``load`` (default): Consider operation to be finished when the ``load`` event is fired (document's HTML is fully
+  parsed and all resources are loaded).
+* ``domcontentloaded``: Consider operation to be finished when the ``DOMContentLoaded`` event is fired (document's HTML
+  is fully parsed, but resources may not be loaded yet).
+* ``networkidle``: Consider operation to be finished when there are no network connections for at least 500 ms.
+  Deprecated  ``networkidle0`` and ``networkidle2`` map here.
 * ``commit``: Consider operation to be finished when network response is received and the document started loading.
 
 .. versionadded:: 3.0

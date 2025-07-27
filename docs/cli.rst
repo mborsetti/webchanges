@@ -97,7 +97,12 @@ following:
 
 .. code-block:: bash
 
-   webchanges --errors email
+   webchanges --error email
+
+Please note that since no reporting is involved, ``--error`` runs faster than a regular run and this has been known to
+cause DNS errors (e.g. ``[Errno-3] Try again``) when using a slow resolver (see `here
+<https://github.com/mborsetti/webchanges/issues/88>`__). To reduce this (and other) errors,  ``--max_workers`` is
+defaulted to 1 (no parallel job execution).
 
 .. versionchanged:: 3.17
    Send output to any reporter.
@@ -105,9 +110,9 @@ following:
 .. versionchanged:: 3.18
    Use conditional requests to improve speed.
 
-Please note that since no reporting is involved, ``--error`` runs faster than a regular run and this has been known to
-cause DNS errors (e.g. ``[Errno-3] Try again``) when using a slow resolver (see `here
-<https://github.com/mborsetti/webchanges/issues/88>`__).
+.. versionchanged:: 3.31
+   Default ``--max-workers`` to 1 to reduce spurious errors.
+
 
 
 .. _test:

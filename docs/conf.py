@@ -17,7 +17,7 @@ import sphinx.application
 # below required for local build
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused.
 from docutils import nodes
-from sphinx.writers.html import HTMLTranslator
+from sphinx.writers.html5 import HTML5Translator
 
 # -- Path setup --------------------------------------------------------------
 
@@ -79,7 +79,7 @@ extensions = [
 
 # General information about the project.
 project = project_data.__package__
-copyright = project_data.__copyright__.lstrip('Copyright ')
+copyright = project_data.__copyright__.removeprefix('Copyright ')
 author = project_data.__author__
 
 # The version info for the project you're documenting, acts as replacement for
@@ -367,7 +367,7 @@ autosummary_generate = True
 # https://github.com/sphinx-doc/sphinx/blob/master/sphinx/writers/html5.py
 
 
-class PatchedHTMLTranslator(HTMLTranslator):
+class PatchedHTMLTranslator(HTML5Translator):
     """Adds open-in-new-tab support.
     See https://stackoverflow.com/questions/25583581.
     """

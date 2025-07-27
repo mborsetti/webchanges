@@ -182,7 +182,7 @@ header(s) specified in the job will replace any default settings.
 Below are headers extracted from Google Chrome 128 running in incognito mode on Windows in US English, in YAML format
 useful for the ``config.yaml`` file. Note that the header "Accept-Encoding" is not included as it is set by the
 ref:`Python HTTP client library <http_client>` based on what is supported by your system and the compression libraries
-installed (e.g. see :ref:`here <zstd>` for support of zstd compression).
+installed.
 
 .. code-block:: yaml
 

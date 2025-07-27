@@ -1,79 +1,94 @@
 """
-Vendored version of httpx.Headers class from httpx v0.27.0 released on 21-Feb-24
-https://github.com/encode/httpx/releases/tag/0.27.0.
+Vendored version of httpx.Headers class from httpx v0.28.1 released on 06-Dec-24
+https://github.com/encode/httpx/releases/tag/0.28.1.
+(commit https://github.com/encode/httpx/commit/26d48e0634e6ee9cdc0533996db289ce4b430177).
 
-Allows us to load this class in case httpx isn't installed.
-
-See https://github.com/psf/requests and https://github.com/encode/httpx/blob/master/httpx/_models.py
+Allows us to load this class in case httpx is not installed.
 """
+
+# Copyright © 2019, [Encode OSS Ltd](https://www.encode.io/).
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+# following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+#   disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
+#   disclaimer in the documentation and/or other materials provided with the distribution.
+#
+# * Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote
+#   products derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import annotations
 
-from typing import (
-    Any,
-    AnyStr,
-    ItemsView,
-    Iterable,
-    Iterator,
-    KeysView,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    TypeAlias,
-    ValuesView,
-)
+import typing
+from collections.abc import Mapping
 
-HeaderTypes: TypeAlias = (
-    'Headers' | Mapping[str, str] | Mapping[bytes, bytes] | Sequence[tuple[str, str]] | Sequence[tuple[bytes, bytes]]
+# from https://github.com/encode/httpx/blob/master/httpx/_types.py
+HeaderTypes: typing.TypeAlias = (
+    'Headers'
+    | typing.Mapping[str, str]
+    | typing.Mapping[bytes, bytes]
+    | typing.Sequence[tuple[str, str]]
+    | typing.Sequence[tuple[bytes, bytes]]
 )
 
 
-def normalize_header_key(
-    value: str | bytes,
-    lower: bool,
-    encoding: str | None = None,
-) -> bytes:
+# from https://github.com/encode/httpx/blob/master/httpx/_utils.py
+def to_str(value: str | bytes, encoding: str = 'utf-8') -> str:
+    return value if isinstance(value, str) else value.decode(encoding)  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:
+    return value if isinstance(match_type_of, str) else value.encode()  # pyright: ignore[reportReturnType]
+
+
+# from https://github.com/encode/httpx/blob/master/httpx/_models.py
+SENSITIVE_HEADERS = {'authorization', 'proxy-authorization'}
+
+
+def _normalize_header_key(key: str | bytes, encoding: str | None = None) -> bytes:
     """
     Coerce str/bytes into a strictly byte-wise HTTP header key.
     """
-    if isinstance(value, bytes):
-        bytes_value = value
-    else:
-        bytes_value = value.encode(encoding or 'ascii')
+    return (
+        key
+        if isinstance(key, bytes)
+        else key.encode(encoding or 'ascii')  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
-    return bytes_value.lower() if lower else bytes_value
 
-
-def normalize_header_value(value: str | bytes, encoding: str | None = None) -> bytes:
+def _normalize_header_value(value: str | bytes, encoding: str | None = None) -> bytes:
     """
     Coerce str/bytes into a strictly byte-wise HTTP header value.
     """
     if isinstance(value, bytes):
         return value
+    if not isinstance(value, str):
+        raise TypeError(f'Header value must be str or bytes, not {type(value)}')
     return value.encode(encoding or 'ascii')
 
 
-SENSITIVE_HEADERS = {'authorization', 'proxy-authorization'}
-
-
-def obfuscate_sensitive_headers(
-    items: Iterable[tuple[AnyStr, AnyStr]],
-) -> Iterator[tuple[AnyStr, AnyStr]]:
+def _obfuscate_sensitive_headers(
+    items: typing.Iterable[tuple[typing.AnyStr, typing.AnyStr]],
+) -> typing.Iterator[tuple[typing.AnyStr, typing.AnyStr]]:
     for k, v in items:
         if to_str(k.lower()) in SENSITIVE_HEADERS:
             v = to_bytes_or_str('[secure]', match_type_of=v)
         yield k, v
 
 
-def to_str(value: str | bytes, encoding: str = 'utf-8') -> str:
-    return value if isinstance(value, str) else value.decode(encoding)
-
-
-def to_bytes_or_str(value: str, match_type_of: AnyStr) -> AnyStr:
-    return value if isinstance(match_type_of, str) else value.encode()
-
-
-class Headers(MutableMapping[str, str]):
+class Headers(typing.MutableMapping[str, str]):
     """
     HTTP headers, as a case-insensitive multi-dict.
     """
@@ -83,28 +98,20 @@ class Headers(MutableMapping[str, str]):
         headers: HeaderTypes | None = None,
         encoding: str | None = None,
     ) -> None:
-        if headers is None:
-            self._list: list[tuple[bytes, bytes, bytes]] = []
-        elif isinstance(headers, Headers):
+        self._list: list[tuple[bytes, bytes, bytes]] = []
+
+        if isinstance(headers, Headers):
             self._list = list(headers._list)
         elif isinstance(headers, Mapping):
-            self._list = [
-                (
-                    normalize_header_key(k, lower=False, encoding=encoding),
-                    normalize_header_key(k, lower=True, encoding=encoding),
-                    normalize_header_value(v, encoding),
-                )
-                for k, v in headers.items()
-            ]
-        else:
-            self._list = [
-                (
-                    normalize_header_key(k, lower=False, encoding=encoding),
-                    normalize_header_key(k, lower=True, encoding=encoding),
-                    normalize_header_value(v, encoding),
-                )
-                for k, v in headers
-            ]
+            for k, v in headers.items():
+                bytes_key = _normalize_header_key(k, encoding)
+                bytes_value = _normalize_header_value(v, encoding)
+                self._list.append((bytes_key, bytes_key.lower(), bytes_value))
+        elif headers is not None:
+            for k, v in headers:
+                bytes_key = _normalize_header_key(k, encoding)
+                bytes_value = _normalize_header_value(v, encoding)
+                self._list.append((bytes_key, bytes_key.lower(), bytes_value))
 
         self._encoding = encoding
 
@@ -144,10 +151,10 @@ class Headers(MutableMapping[str, str]):
         """
         return [(raw_key, value) for raw_key, _, value in self._list]
 
-    def keys(self) -> KeysView[str]:
+    def keys(self) -> typing.KeysView[str]:
         return {key.decode(self.encoding): None for _, key, value in self._list}.keys()
 
-    def values(self) -> ValuesView[str]:
+    def values(self) -> typing.ValuesView[str]:
         values_dict: dict[str, str] = {}
         for _, key, value in self._list:
             str_key = key.decode(self.encoding)
@@ -158,7 +165,7 @@ class Headers(MutableMapping[str, str]):
                 values_dict[str_key] = str_value
         return values_dict.values()
 
-    def items(self) -> ItemsView[str, str]:
+    def items(self) -> typing.ItemsView[str, str]:
         """
         Return `(key, value)` items of headers. Concatenate headers
         into a single comma separated value when a key occurs multiple times.
@@ -181,7 +188,7 @@ class Headers(MutableMapping[str, str]):
         """
         return [(key.decode(self.encoding), value.decode(self.encoding)) for _, key, value in self._list]
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: typing.Any = None) -> typing.Any:
         """
         Return a header value. If multiple occurrences of the header occur
         then concatenate them together with commas.
@@ -208,9 +215,9 @@ class Headers(MutableMapping[str, str]):
         if not split_commas:
             return values
 
-        split_values: list[str] = []
+        split_values = []
         for value in values:
-            split_values.extend((item.strip() for item in value.split(',')))
+            split_values.extend([item.strip() for item in value.split(',')])
         return split_values
 
     def update(self, headers: HeaderTypes | None = None) -> None:  # type: ignore[override]
@@ -277,17 +284,17 @@ class Headers(MutableMapping[str, str]):
         for idx in reversed(pop_indexes):
             del self._list[idx]
 
-    def __contains__(self, key: Any) -> bool:
+    def __contains__(self, key: typing.Any) -> bool:
         header_key = key.lower().encode(self.encoding)
         return header_key in [key for _, key, _ in self._list]
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> typing.Iterator[typing.Any]:
         return iter(self.keys())
 
     def __len__(self) -> int:
         return len(self._list)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         try:
             other_headers = Headers(other)
         except ValueError:
@@ -304,7 +311,7 @@ class Headers(MutableMapping[str, str]):
         if self.encoding != 'ascii':
             encoding_str = f', encoding={self.encoding!r}'
 
-        as_list = list(obfuscate_sensitive_headers(self.multi_items()))
+        as_list = list(_obfuscate_sensitive_headers(self.multi_items()))
         as_dict = dict(as_list)
 
         no_duplicate_keys = len(as_dict) == len(as_list)

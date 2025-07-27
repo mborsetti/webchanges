@@ -22,7 +22,7 @@ import warnings
 from ftplib import FTP  # noqa: S402 A FTP-related module is being imported. FTP is considered insecure.
 from http.client import responses as response_names
 from pathlib import Path
-from typing import Any, Literal, Mapping, Sequence, TYPE_CHECKING
+from typing import Any, Callable, Literal, Mapping, Sequence, TYPE_CHECKING
 from urllib.parse import parse_qsl, quote, SplitResult, SplitResultBytes, urlencode, urlparse, urlsplit
 
 import html2text
@@ -141,14 +141,16 @@ class JobBase(metaclass=TrackSubClasses):
     diff_tool: str | None = None  # deprecated in 3.21
     enabled: bool | None = None
     encoding: str | None = None
+    evaluate: str | None = None  # Playwright
     filters: str | list[str | dict[str, Any]] | None = None
+    guid: str = ''
     headers = Headers(encoding='utf-8')
     http_client: Literal['httpx', 'requests'] | None = None
     ignore_cached: bool | None = None
     ignore_connection_errors: bool | None = None
     ignore_default_args: bool | str | list[str] | None = None
     ignore_dh_key_too_small: bool | None = None
-    ignore_http_error_codes: bool | None = None
+    ignore_http_error_codes: int | str | list[str] | None = None
     ignore_https_errors: bool | None = None
     ignore_timeout_errors: bool | None = None
     ignore_too_many_redirects: bool | None = None
@@ -183,7 +185,7 @@ class JobBase(metaclass=TrackSubClasses):
     wait_for: int | str | None = None  # pyppeteer backwards compatibility (deprecated)
     wait_for_function: str | dict[str, Any] | None = None  # Playwright
     wait_for_navigation: str | tuple[str, ...] | None = None
-    wait_for_selector: str | dict[str, Any] | None = None  # Playwright
+    wait_for_selector: str | dict[str, Any] | list[str | dict[str, Any]] | None = None  # Playwright
     wait_for_timeout: int | float | None = None  # Playwright
     wait_for_url: str | dict[str, Any] | None = None  # Playwright
     wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None
@@ -209,10 +211,12 @@ class JobBase(metaclass=TrackSubClasses):
         # Fail if any required keys are not provided
         for k in self.__required__:
             if k not in kwargs:
-                raise ValueError(
-                    f"Job {kwargs.get('index_number')}: Required directive '{k}' missing: '{kwargs}'"
-                    f" ({kwargs.get('user_visible_url', kwargs.get('url', kwargs.get('command')))})"
-                )
+                # do not alert for missing use_browser if kind is explicity stated
+                if k != 'use_browser' or not kwargs.get('kind'):
+                    raise ValueError(
+                        f"Job {kwargs.get('index_number')}: Required directive '{k}' missing: '{kwargs}'"
+                        f" ({kwargs.get('user_visible_url', kwargs.get('url', kwargs.get('command')))})"
+                    )
 
         for k, v in list(kwargs.items()):
             setattr(self, k, v)
@@ -358,8 +362,10 @@ class JobBase(metaclass=TrackSubClasses):
         job = job_subclass.from_dict(data, filenames)
 
         # Format headers and cookies (and turn values into strings to avoid httpx Exception):
-        job.headers = Headers({k: str(v) for k, v in (job.headers or {}).items()}, encoding='utf-8')
-        job.cookies = {k: str(v) for k, v in job.cookies.items()} if job.cookies is not None else None
+        if isinstance(job.headers, dict):
+            job.headers = Headers({k: str(v) for k, v in (job.headers or {}).items()}, encoding='utf-8')
+        if isinstance(job.cookies, dict):
+            job.cookies = {k: str(v) for k, v in job.cookies.items()} if job.cookies is not None else None
         return job
 
     def to_dict(self) -> dict:
@@ -461,8 +467,13 @@ class JobBase(metaclass=TrackSubClasses):
 
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
-            job_with_defaults._set_defaults(cfg.get(self.__kind__))  # type: ignore[arg-type]
-            # all is done afterward, so that more specific defaults are not overwritten
+            if isinstance(self, UrlJob):
+                job_with_defaults._set_defaults(cfg.get(UrlJob.__kind__))  # type: ignore[arg-type]
+            elif isinstance(self, BrowserJob):
+                job_with_defaults._set_defaults(cfg.get(BrowserJob.__kind__))  # type: ignore[arg-type]
+            elif isinstance(self, ShellJob):
+                job_with_defaults._set_defaults(cfg.get(ShellJob.__kind__))  # type: ignore[arg-type]
+            # all is done last, so that more specific defaults are not overwritten
             job_with_defaults._set_defaults(cfg.get('all'))
 
         # backwards-compatible
@@ -600,7 +611,7 @@ class Job(JobBase):
 
         :returns: The user_visible_url, the URL, or the command of the job.
         """
-        pass
+        ...
 
     def get_indexed_location(self) -> str:
         """Get the job number plus its 'location', i.e. the (user_visible) URL or command. Typically used in error
@@ -620,7 +631,9 @@ class Job(JobBase):
         return self.name or self.get_location()
 
     def retrieve(  # type: ignore[empty-body]
-        self, job_state: JobState, headless: bool = True
+        self,
+        job_state: JobState,
+        headless: bool = True,
     ) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
@@ -628,7 +641,7 @@ class Job(JobBase):
         :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved, the ETag, and the mime_type.
         """
-        pass
+        ...
 
 
 CHARSET_RE = re.compile('text/(html|plain); charset=([^;]*)')
@@ -646,7 +659,10 @@ class UrlJobBase(Job):
     )
 
     def get_headers(
-        self, job_state: JobState, user_agent: str | None = __user_agent__, include_cookies: bool = True
+        self,
+        job_state: JobState,
+        user_agent: str | None = __user_agent__,
+        include_cookies: bool = True,
     ) -> Headers:
         """Get headers and modify them to add cookies and conditional request.
 
@@ -722,9 +738,13 @@ class UrlJob(UrlJobBase):
         """
         return self.user_visible_url or self.url
 
-    def set_base_location(self, location: str) -> None:
+    def set_base_location(
+        self,
+        location: str,
+    ) -> None:
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.url = location
+        self.guid = self.get_guid()
 
     def _retrieve_httpx(
         self,
@@ -945,7 +965,7 @@ class UrlJob(UrlJobBase):
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
         :param headless: For browser-based jobs, whether headless mode should be used.
-        :returns: The data retrieved and the ETag.
+        :returns: The data retrieved, the ETag, and the media type (fka MIME type)
         :raises NotModifiedError: If an HTTP 304 response is received.
         """
         if self._delay:  # pragma: no cover  TODO not yet implemented.
@@ -1142,11 +1162,7 @@ class UrlJob(UrlJobBase):
         if httpx and isinstance(exception, httpx.HTTPError):
             if self.ignore_timeout_errors and isinstance(exception, httpx.TimeoutException):
                 return True
-            if (
-                self.ignore_connection_errors
-                and not self.ignore_timeout_errors
-                and isinstance(exception, httpx.TransportError)
-            ):
+            if self.ignore_connection_errors and isinstance(exception, httpx.TransportError):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, httpx.TooManyRedirects):
                 return True
@@ -1196,6 +1212,7 @@ class BrowserJob(UrlJobBase):
         'cookies',
         'data',
         'data_as_json',
+        'evaluate',
         'headers',
         'ignore_default_args',  # Playwright
         'ignore_https_errors',
@@ -1224,6 +1241,12 @@ class BrowserJob(UrlJobBase):
     proxy_username: str = ''
     proxy_password: str = ''
 
+    if TYPE_CHECKING:
+        try:
+            from playwright.sync_api import Page, Response
+        except ImportError:  # pragma: no cover
+            pass
+
     def get_location(self) -> str:
         """Get the 'location' of the job, i.e. the (user_visible) URL.
 
@@ -1234,8 +1257,15 @@ class BrowserJob(UrlJobBase):
     def set_base_location(self, location: str) -> None:
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.url = location
+        self.guid = self.get_guid()
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
+    def retrieve(
+        self,
+        job_state: JobState,
+        headless: bool = True,
+        response_handler: Callable[[Page], Response] | None = None,
+        content_handler: Callable[[Page], tuple[str | bytes, str, str]] | None = None,
+    ) -> tuple[str | bytes, str, str]:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -1327,7 +1357,7 @@ class BrowserJob(UrlJobBase):
                     f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list; found a "
                     f'{type(self.switches).__name__} ( {self.get_indexed_location()} ).'
                 )
-            args: list[str] | None = [f"--{switch.lstrip('--')}" for switch in self.switches]
+            args: list[str] | None = [f"--{switch.removeprefix('--')}" for switch in self.switches]
         else:
             args = None
 
@@ -1336,7 +1366,7 @@ class BrowserJob(UrlJobBase):
                 self.ignore_default_args = self.ignore_default_args.split(',')
             ignore_default_args = self.ignore_default_args
             if isinstance(ignore_default_args, list):
-                ignore_default_args = [f"--{a.lstrip('--')}" for a in ignore_default_args]
+                ignore_default_args = [f"--{a.removeprefix('--')}" for a in ignore_default_args]
             elif not isinstance(self.ignore_default_args, bool):
                 raise TypeError(
                     f"Job {job_state.job.index_number}: Directive 'ignore_default_args' needs to be a bool, string or "
@@ -1546,7 +1576,7 @@ class BrowserJob(UrlJobBase):
                 if isinstance(self.block_elements, str):
                     self.block_elements = self.block_elements.split(',')
                 if not isinstance(self.block_elements, list):
-                    browser.close()
+                    context.close()
                     raise TypeError(
                         f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
                         f'( {self.get_indexed_location()} )'
@@ -1589,64 +1619,6 @@ class BrowserJob(UrlJobBase):
 
                 page.route('**/*', handler=handle_elements)
 
-            # if self.block_elements and not self.method or self.method == 'GET':
-            #     # FIXME: Pyppeteer freezes on certain sites if this is on; contribute if you know why
-            #     if isinstance(self.block_elements, str):
-            #         self.block_elements = self.block_elements.split(',')
-            #     if not isinstance(self.block_elements, list):
-            #         browser.close()
-            #         raise TypeError(
-            #             f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
-            #             f'( {self.get_indexed_location()} )'
-            #         )
-            #     chrome_web_request_resource_types = [
-            #         'main_frame',
-            #         'sub_frame',
-            #         'stylesheet',
-            #         'script',
-            #         'image',
-            #         'font',
-            #         'object',
-            #         'xmlhttprequest',
-            #         'ping',
-            #         'csp_report',
-            #         'media',
-            #         'websocket',
-            #         'other',
-            #     ]  # https://developer.chrome.com/docs/extensions/reference/webRequest/#type-ResourceType
-            #     for element in self.block_elements:
-            #         if element not in chrome_web_request_resource_types:
-            #             browser.close()
-            #             raise ValueError(
-            #                 f"Unknown or unsupported '{element}' resource type in 'block_elements' "
-            #                 f'( {self.get_indexed_location()} )'
-            #             )
-            #
-            #     def handle_request(
-            #         request_event: pyppeteer.network_manager.Request, block_elements: list[str]
-            #     ) -> None:
-            #         """Handle pyee.EventEmitter callback."""
-            #         logger.info(
-            #             f'Job {self.index_number}: resource_type={request_event.resourceType}'
-            #             f' elements={block_elements}'
-            #         )
-            #         if any(request_event.resourceType == el for el in block_elements):
-            #             logger.info(f'Job {self.index_number}: Aborting request {request_event.resourceType}')
-            #             request_event.abort()
-            #         else:
-            #             logger.info(
-            #                 f'Job {self.index_number}: Continuing request {request_event.resourceType}'
-            #             )
-            #             request_event.continue_()  # broken -- many sites hang here!
-            #
-            #     page.setRequestInterception(True)
-            #     page.on(
-            #         'request',
-            #         lambda request_event: asyncio.create_task(
-            #              handle_request(request_event, self.block_elements)
-            #          ),
-            #     )  # inherited from pyee.EventEmitter
-
             # navigate page
             logger.info(f'Job {self.index_number}: {browser_name} {browser_version} navigating to {url}')
             logger.debug(f'Job {self.index_number}: User agent {user_agent}')
@@ -1662,11 +1634,14 @@ class BrowserJob(UrlJobBase):
             # page.on('response', handle_response)
 
             try:
-                response = page.goto(
-                    url,
-                    wait_until=self.wait_until,
-                    referer=self.referer,
-                )
+                if response_handler is not None:
+                    response_handler(page)
+                else:
+                    response = page.goto(
+                        url,
+                        wait_until=self.wait_until,
+                        referer=self.referer,
+                    )
 
                 if not response:
                     context.close()
@@ -1692,17 +1667,20 @@ class BrowserJob(UrlJobBase):
                             )
                     if self.wait_for_selector:
                         logger.info(f'Job {self.index_number}: Waiting for selector {self.wait_for_selector}')
-                        if isinstance(self.wait_for_selector, str):
-                            page.wait_for_selector(self.wait_for_selector)
-                        elif isinstance(self.wait_for_selector, dict):
-                            page.wait_for_selector(**self.wait_for_selector)
-                        else:
-                            context.close()
-                            raise ValueError(
-                                f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a string "
-                                f'or a dictionary; found a {type(self.wait_for_selector).__name__}'
-                                f' ( {self.get_indexed_location()} ).'
-                            )
+                        if not isinstance(self.wait_for_selector, list):
+                            self.wait_for_selector = [self.wait_for_selector]
+                        for selector in self.wait_for_selector:
+                            if isinstance(selector, str):
+                                page.wait_for_selector(selector)
+                            elif isinstance(selector, dict):
+                                page.wait_for_selector(**selector)
+                            else:
+                                context.close()
+                                raise ValueError(
+                                    f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a "
+                                    f'string or a dictionary, or a list of these; found a '
+                                    f'{type(self.wait_for_selector).__name__} ( {self.get_indexed_location()} ).'
+                                )
                     if self.wait_for_function:
                         logger.info(f'Job {self.index_number}: Waiting for function {self.wait_for_function}')
                         if isinstance(self.wait_for_function, str):
@@ -1733,28 +1711,28 @@ class BrowserJob(UrlJobBase):
             except PlaywrightError as e:
                 logger.info(f'Job {self.index_number}: Browser returned error {e}\n({url})')
                 if logger.root.level <= 20:  # logging.INFO
+                    screenshot_filename = tempfile.NamedTemporaryFile(
+                        prefix=f'{__project_name__}_screenshot_{self.index_number}_', suffix='.png', delete=False
+                    ).name
                     try:
-                        screenshot_filename = tempfile.NamedTemporaryFile(
-                            prefix=f'{__project_name__}_screenshot_{self.index_number}_', suffix='.png', delete=False
-                        ).name
                         page.screenshot(path=screenshot_filename)
                         logger.info(f'Job {self.index_number}: Screenshot saved at {screenshot_filename}')
                     except PlaywrightError:
                         Path(screenshot_filename).unlink()
+                    full_filename = tempfile.NamedTemporaryFile(
+                        prefix=f'{__project_name__}_screenshot-full_{self.index_number}_',
+                        suffix='.png',
+                        delete=False,
+                    ).name
                     try:
-                        full_filename = tempfile.NamedTemporaryFile(
-                            prefix=f'{__project_name__}_screenshot-full_{self.index_number}_',
-                            suffix='.png',
-                            delete=False,
-                        ).name
                         page.screenshot(path=full_filename, full_page=True)
                         logger.info(f'Job {self.index_number}: Full page image saved at {full_filename}')
                     except PlaywrightError:
                         Path(full_filename).unlink()
+                    html_filename = tempfile.NamedTemporaryFile(
+                        prefix=f'{__project_name__}_content_{self.index_number}_', suffix='.html', delete=False
+                    ).name
                     try:
-                        html_filename = tempfile.NamedTemporaryFile(
-                            prefix=f'{__project_name__}_content_{self.index_number}_', suffix='.html', delete=False
-                        ).name
                         Path(html_filename).write_text(page.content())
                         logger.info(f'Job {self.index_number}: Page HTML content saved at {html_filename}')
                     except PlaywrightError:
@@ -1780,26 +1758,33 @@ class BrowserJob(UrlJobBase):
                 raise BrowserResponseError((message,), response.status)
 
             # extract content
-            content = page.content()
-            etag = response.header_value('etag') or ''
-            mime_type = response.header_value('content-type') or ''
-            virtual_memory = psutil.virtual_memory().available
-            swap_memory = psutil.swap_memory().free
-            used_mem = start_free_mem - (virtual_memory + swap_memory)
-            logger.debug(
-                f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical memory '
-                f'(plus {swap_memory / 1e6:,.0f} MB of swap) before closing the browser (a decrease of '
-                f'{used_mem / 1e6:,.0f} MB).'
-            )
+            if content_handler is not None:
+                return content_handler(page)
+            else:
+                if self.evaluate is not None:
+                    content = page.evaluate(self.evaluate)
+                    mime_type = 'text'
+                else:
+                    content = page.content()
+                    mime_type = response.header_value('content-type') or ''
+                etag = response.header_value('etag') or ''
+                virtual_memory = psutil.virtual_memory().available
+                swap_memory = psutil.swap_memory().free
+                used_mem = start_free_mem - (virtual_memory + swap_memory)
+                logger.debug(
+                    f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical '
+                    f'memory (plus {swap_memory / 1e6:,.0f} MB of swap) before closing the browser (a decrease of '
+                    f'{used_mem / 1e6:,.0f} MB).'
+                )
 
-            # if no name directive is given, set it to the title element if found in HTML or XML truncated to 60 chars
-            if not self.name:
-                title = re.search(r'<title.*?>(.+?)</title>', content)
-                if title:
-                    self.name = html.unescape(title.group(1))[:60]
+                # if no name directive is given, set to title tag if found in HTML or XML, truncated to 60 chars
+                if not self.name and content:
+                    title = re.search(r'<title.*?>(.+?)</title>', content)
+                    if title:
+                        self.name = html.unescape(title.group(1))[:60]
 
-            context.close()
-            return content, etag, mime_type
+                context.close()
+                return content, etag, mime_type
 
     def format_error(self, exception: Exception, tb: str) -> str:
         """Format the error of the job if one is encountered.
@@ -1809,7 +1794,6 @@ class BrowserJob(UrlJobBase):
         :returns: A string to display and/or use in reports.
         """
         exception_str = str(exception).strip()
-        print(f'{exception_str=}, {tb=}')
         if self.proxy and 'net::ERR' in exception_str:
             exception_str += f'\n\n(Job has proxy {self.proxy})'
             return exception_str
@@ -1950,6 +1934,7 @@ class ShellJob(Job):
     def set_base_location(self, location: str) -> None:
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
         self.command = location
+        self.guid = self.get_guid()
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data, ETag (which is blank) and mime_type (also blank).

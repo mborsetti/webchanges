@@ -57,7 +57,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
     jobs: list[dict] = []
 
-    def visit_literal_block(self, node: docutils.nodes.reference) -> None:
+    def visit_literal_block(self, node: docutils.nodes.literal_block) -> None:
         if 'yaml' in node.attributes['classes']:
             self.jobs.append(yaml.safe_load(node.astext()))
         elif node.rawsource.startswith('.. code-block:: yaml'):
@@ -82,7 +82,7 @@ def load_filter_doc_jobs() -> list[JobBase]:
             job_data['index_number'] = i + 1
             job = JobBase.unserialize(job_data)
             jobs.append(job)
-            jobs_by_guid[job.get_guid()].append(job)
+            jobs_by_guid[job.guid].append(job)
 
     conflicting_jobs = []
     for guid_jobs in jobs_by_guid.values():

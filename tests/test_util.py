@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 
 from webchanges.util import chunk_string, get_new_version_number, linkify
 
@@ -37,7 +36,7 @@ def test_chunkstring(string: str, length: int, numbering: bool, output: list[str
     assert list(chunk_string(string, length, numbering=numbering)) == output
 
 
-def test_chunk_tooshort_1(caplog: LogCaptureFixture) -> None:
+def test_chunk_tooshort_1(caplog: pytest.LogCaptureFixture) -> None:
     chunk_string(
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore '
         'magna aliqua.',
