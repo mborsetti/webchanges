@@ -7,10 +7,13 @@ import importlib.util
 from collections import defaultdict
 from pathlib import Path
 
-import docutils.frontend
+import docutils.core
+
+# import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
-import docutils.utils
+
+# import docutils.utils
 import pytest
 import yaml
 
@@ -36,19 +39,42 @@ pytesseract_is_installed = importlib.util.find_spec('pytesseract') is not None
 vobject_is_installed = importlib.util.find_spec('vobject') is not None
 
 
-# https://stackoverflow.com/a/48719723/1047040
-# https://stackoverflow.com/a/75996218/1047040
+# # https://stackoverflow.com/a/48719723/1047040
+# # https://stackoverflow.com/a/75996218/1047040
+# def parse_rst(text: str) -> docutils.nodes.document:
+#     """Parse the rst document"""
+#     parser = docutils.parsers.rst.Parser()
+#     settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
+#     # suppress messages of unknown directive types etc. from sphinx (e.g. "versionchanged")
+#     settings.update(
+#         {'report_level': 4}, docutils.frontend.OptionParser(components=(docutils.parsers.rst.Parser,))
+#     )  # (critical): Only show critical messages, which indicate a fatal error that prevents completing processing.
+#     document = docutils.utils.new_document('<rst-doc>', settings=settings)
+#     parser.parse(text, document)
+#     return document
+
+
 def parse_rst(text: str) -> docutils.nodes.document:
-    """Parse the rst document"""
-    parser = docutils.parsers.rst.Parser()
-    settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
-    # suppress messages of unknown directive types etc. from sphinx (e.g. "versionchanged")
-    settings.update(
-        {'report_level': 4}, docutils.frontend.OptionParser(components=(docutils.parsers.rst.Parser,))
-    )  # (critical): Only show critical messages, which indicate a fatal error that prevents completing processing.
-    document = docutils.utils.new_document('<rst-doc>', settings=settings)
-    parser.parse(text, document)
-    return document
+    """
+    Parse the rst document.
+
+    This function uses docutils.core.publish_doctree to parse the text, which handles the setup of the parser,
+    settings, and document internally, avoiding deprecated components.
+    """
+    # Settings overrides are passed directly to the publish_doctree function.
+    # 'report_level': 4 corresponds to 'critical'.
+    settings_overrides = {
+        'report_level': 4,
+        'halt_level': 4,  # Prevents exiting on errors
+        'warning_stream': None,  # Suppress warnings from being printed to stderr
+    }
+
+    document = docutils.core.publish_doctree(
+        source=text,
+        parser=docutils.parsers.rst.Parser(),
+        settings_overrides=settings_overrides,
+    )
+    return document  # type: ignore[no-any-return]
 
 
 # https://stackoverflow.com/a/48719723/1047040

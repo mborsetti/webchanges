@@ -33,7 +33,7 @@ data_path = here.joinpath('data')
 config_file = data_path.joinpath('config.yaml')
 ssdb_file = ':memory:'
 hooks_file = Path('')
-ssdb_storage = SsdbSQLite3Storage(None)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
 
 
 def cleanup(request: pytest.FixtureRequest) -> None:

@@ -220,7 +220,7 @@ def test_run_job(
         data, _, _ = job.retrieve(job_state)
         if job.filters == [{'pdf2text': {}}]:
             assert isinstance(data, bytes)
-        assert output in data  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
+        assert output in data  # type: ignore[operator]
 
 
 @connection_required  # type: ignore[misc]
