@@ -1,5 +1,5 @@
 """Test the jobs embedded in the documentation's filters.rst file by running them against the data in the
-data/doc_filter_testadata.yaml file."""
+data/docs_filter_testadata.yaml file."""
 
 from __future__ import annotations
 
@@ -8,18 +8,21 @@ from collections import defaultdict
 from pathlib import Path
 
 import docutils.core
-
-# import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
-
-# import docutils.utils
 import pytest
 import yaml
 
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase
+
+# import sys
+
+
+# if sys.platform == 'win32':
+#     sys.path.insert(1, str(Path(__file__).parent.parent))
+
 
 # https://stackoverflow.com/questions/712791
 # try:
@@ -28,6 +31,7 @@ from webchanges.jobs import JobBase
 #     import json as jsonlib  # type: ignore[no-redef]
 
 here = Path(__file__).parent
+data_path = here.joinpath('data')
 docs_path = here.parent.joinpath('docs')
 
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
@@ -41,7 +45,7 @@ vobject_is_installed = importlib.util.find_spec('vobject') is not None
 
 # # https://stackoverflow.com/a/48719723/1047040
 # # https://stackoverflow.com/a/75996218/1047040
-# def parse_rst(text: str) -> docutils.nodes.document:
+# def _old_parse_rst(text: str) -> docutils.nodes.document:
 #     """Parse the rst document"""
 #     parser = docutils.parsers.rst.Parser()
 #     settings = docutils.frontend.get_default_settings(docutils.parsers.rst.Parser)
@@ -102,18 +106,18 @@ def load_filter_doc_jobs() -> list[JobBase]:
     doc.walk(visitor)
 
     jobs = []
-    jobs_by_guid = defaultdict(list)
+    jobs_by_url = defaultdict(list)
     for i, job_data in enumerate(job for job in visitor.jobs if 'url' in job):
         if job_data is not None:
             job_data['index_number'] = i + 1
             job = JobBase.unserialize(job_data)
             jobs.append(job)
-            jobs_by_guid[job.guid].append(job)
+            jobs_by_url[job.url].append(job)
 
     conflicting_jobs = []
-    for guid_jobs in jobs_by_guid.values():
-        if len(guid_jobs) != 1:
-            conflicting_jobs.append(guid_jobs[0].get_location())
+    for url_jobs in jobs_by_url.values():
+        if len(url_jobs) != 1:
+            conflicting_jobs.append(url_jobs[0].get_location())
 
     # Make sure all URLs are unique
     assert not conflicting_jobs, f'Found conflicting job name in {filter_file}'
@@ -122,7 +126,7 @@ def load_filter_doc_jobs() -> list[JobBase]:
 
 
 def load_filter_testdata() -> dict[str, dict[str, str]]:
-    yaml_data = Path(here.joinpath('data').joinpath('docs_filters_testdata.yaml')).read_text()
+    yaml_data = data_path.joinpath('docs_filters_testdata.yaml').read_text()
     return yaml.safe_load(yaml_data)  # type: ignore[no-any-return]
 
 
@@ -131,14 +135,14 @@ testdata = load_filter_testdata()
 
 
 @pytest.mark.parametrize('job', FILTER_DOC_JOBS, ids=(v.url for v in FILTER_DOC_JOBS))  # type: ignore[misc]
-def test_filter_doc_jobs(job: JobBase) -> None:
+def test_jobs(job: JobBase) -> None:
     """Test the yaml code in docs/filters.rst against the source and expected results contained
     in tests/data/docs_filters_testdata.yaml using 'url' as the key."""
     # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
     # installations beyond pip)
     d = testdata[job.url]
     if 'filename' in d:
-        data: bytes | str = here.joinpath('data').joinpath(d['filename']).read_bytes()
+        data: bytes | str = data_path.joinpath(d['filename']).read_bytes()
     else:
         data = d['input']
     expected_output_data = d['output']
@@ -173,18 +177,7 @@ def test_filter_doc_jobs(job: JobBase) -> None:
             if filter_kind in {'pdf2text', 'shellpipe'}:  # fix for macOS or OS-specific end of line
                 data = data.rstrip()
 
-        if job.url == 'https://example.com/html2text.html':
-            # see https://github.com/Alir3z4/html2text/pull/339
-            assert data in {
-                expected_output_data,
-                # The below is for when html2text > 2020.1.16 (fixes included)
-                '| Date                    | #Sales™ |\n'
-                '|-------------------------|---------|\n'
-                '| Monday, 3 February 2020 | 10,000  |\n'
-                '| Tu, 3 Mar               | 20,000  |\n'
-                '\n',
-            }
-        elif job.url == 'https://example.net/execute.html':
+        if job.url == 'https://example.net/execute.html':
             assert data.splitlines()[:-1] == expected_output_data.splitlines()[:-1]
             # assert jsonlib.loads(data.splitlines()[-1][17:-1]) == jsonlib.loads(
             #     expected_output_data.splitlines()[-1][17:-1]

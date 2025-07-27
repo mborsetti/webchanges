@@ -1017,9 +1017,9 @@ class StripFilter(FilterBase):
 
             if 'side' in subfilter:
                 if subfilter['side'] == 'right':
-                    return '\n'.join([line.removesuffix(subfilter.get('chars', '')) for line in lines]), mime_type
+                    return '\n'.join([line.rstrip(subfilter.get('chars')) for line in lines]), mime_type
                 if subfilter['side'] == 'left':
-                    return '\n'.join([line.removeprefix(subfilter.get('chars', '')) for line in lines]), mime_type
+                    return '\n'.join([line.lstrip(subfilter.get('chars')) for line in lines]), mime_type
 
                 raise ValueError(
                     f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
@@ -1031,9 +1031,9 @@ class StripFilter(FilterBase):
         else:
             if 'side' in subfilter:
                 if subfilter['side'] == 'right':
-                    return data.removesuffix(subfilter.get('chars', '')), mime_type
+                    return data.rstrip(subfilter.get('chars')), mime_type
                 if subfilter['side'] == 'left':
-                    return data.removeprefix(subfilter.get('chars', '')), mime_type
+                    return data.lstrip(subfilter.get('chars')), mime_type
 
                 raise ValueError(
                     f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "

@@ -1,5 +1,5 @@
-"""Test the jobs embedded in the documentation's filters.rst file by running them against the data in the
-data/doc_filer_testadata.yaml file."""
+"""Test the jobs embedded in the documentation's hooks.rst file by running them against the data in the
+data/docs_hooks_testadata.yaml file."""
 
 from __future__ import annotations
 
@@ -8,10 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# import docutils.utils
 import docutils.core
-
-# import docutils.frontend
 import docutils.nodes
 import docutils.parsers.rst
 import pytest
