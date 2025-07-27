@@ -449,7 +449,9 @@ class HtmlReporter(ReporterBase):
             else:
                 data = f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.new_data))}</pre>'
             if job_state.job.monospace:
-                return f'<span style="font-family:monospace;white-space:pre-wrap">{data.replace('<br>\n', '\n')}</span>'
+                return (
+                    f"<span style=\"font-family:monospace;white-space:pre-wrap\">{data.replace('<br>\n', '\n')}</span>"
+                )
             else:
                 return data
 
