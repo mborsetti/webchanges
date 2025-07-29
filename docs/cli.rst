@@ -40,27 +40,72 @@ Use the ``--jobs`` command line argument to specify a file with a different name
 <https://en.wikipedia.org/wiki/Glob_(programming)>`__ for multiple files (the contents of matching files will be
 combined)
 
-- If you specify a file name without a directory, **webchanges** searches:
+- If you specify a file name without a directory, :program:`webchanges` searches:
   1. The current directory
   2. The default directory (if not found in the current directory)
 
-- If you specify a file name without a suffix and the file is not found, **webchanges** will attempt to add a ``.yaml``
-  suffix.
+- If you specify a file name without a suffix and the file is not found, :program:`webchanges` will attempt to load a
+  file with the ``.yaml`` suffix.
+- If you specify a file name that does not start with ``jobs``, :program:`webchanges` will attempt to load a file with a
+  ``jobs-`` prefix (and one with both a ``jobs-`` prefix and a ``.yaml`` suffix).
 
-  Example: ``--jobs test`` is equivalent to ``--jobs test.yaml`` unless a file named ``test`` exists.
+  Example: ``--jobs test`` is equivalent to ``--jobs test`` or ``--jobs test.yaml`` or ``--jobs jobs-test`` or
+  ``--jobs jobs-test.yaml`` and the first matching file will be loaded.
 
 Multiple job files
 ^^^^^^^^^^^^^^^^^^
 
-To specify multiple job files or glob patterns, repeat the ``--jobs`` argument:
+To load multiple job files in a single run, glob patterns are supported, as well as repeating the ``--jobs`` argument:
 
-``webchanges --jobs file1.yaml --jobs file2.yaml --jobs *.yaml``
+``webchanges --jobs file1.yaml --jobs file2.yaml --jobs morningrun/*.yaml``
 
-The contents of all specified files will be combined.
+The contents of all specified files will be combined by appending them in order.
 
 
 .. versionchanged:: 3.25
    Added ability to repeat the argument multiple times.
+
+
+.. _smart-file-specification:
+
+Smart file specification
+========================
+
+The command-line arguments ``--jobs``, ``--config``, and ``--hooks`` feature a "smart file specification" capability.
+This allows you to provide a shorthand name for your files, and  :program:`webchanges` will automatically search for
+several variations of that name.
+
+The search process is as follows:
+
+*   **For** ``--jobs <name>``:
+    #. ``<name>``
+    #. ``<name>.yaml``
+    #. ``jobs-<name>``
+    #. ``jobs-<name>.yaml``
+
+    *Example:* ``--jobs myjobs`` will look for ``myjobs``, then ``myjobs.yaml``, ``jobs-myjobs``, and finally
+    ``jobs-myjobs.yaml``.
+
+*   **For** ``--config <name>``:
+    #. ``<name>``
+    #. ``<name>.yaml``
+    #. ``config-<name>``
+    #. ``config-<name>.yaml``
+
+    *Example:* ``--config myconfig`` will look for ``myconfig``, then ``myconfig.yaml``, ``config-myconfig``, and
+    finally ``config-myconfig.yaml``.
+
+*   **For** ``--hooks <name>``:
+    #. ``<name>``
+    #. ``<name>.py``
+    #. ``hooks-<name>``
+    #. ``hooks-<name>.py``
+
+    *Example:* ``--hooks myhooks`` will look for ``myhooks``, then ``myhooks.py``, ``hooks-myhooks``, and
+    finally ``hooks-myhooks.py``.
+
+.. versionchanged::  3.31
+   Added prefix and expanded from ``--jobs`` to also include ``--config`` and ``--hooks``.
 
 
 .. _list:

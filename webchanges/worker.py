@@ -38,7 +38,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
     def insert_delay(jobs: set[JobBase]) -> set[JobBase]:  # pragma: no cover
         """
-        TODO: Evaluate whether this is necessary; currently not being called. Remove pragma no cover and move import.
+        TODO Evaluate whether this is necessary; currently not being called. Remove pragma no cover and move import.
 
         Sets a _delay value for URL jobs having the same network location as previous ones. Used to prevent
         multiple jobs hitting the same network location at the exact same time and being blocked as a result.

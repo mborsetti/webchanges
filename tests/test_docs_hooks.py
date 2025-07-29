@@ -112,7 +112,7 @@ if spec:
     exec(HOOKS, hooks.__dict__)  # noqa: S102 Use of exec detected.
 else:
     raise ImportError('hooks not loaded')
-# TODO: ensure that this is the version loaded during testing.
+# TODO Ensure that this is the version loaded during testing.
 
 
 def test_load_hooks(caplog: pytest.LogCaptureFixture) -> None:

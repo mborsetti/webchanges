@@ -161,7 +161,7 @@ class JobState(ContextManager):
         """Loads form the database the last snapshot(s) for the job."""
         guid = self.job.guid
         self.old_snapshot = self.snapshots_db.load(guid)
-        # TODO: remove these
+        # TODO Remove these
         (
             self.old_data,
             self.old_timestamp,
@@ -176,11 +176,7 @@ class JobState(ContextManager):
             }
 
     def save(self) -> None:
-        """Saves new data retrieved by the job into the snapshot database.
-
-        :param use_old_data: Whether old data (and ETag) should be used (e.g. due to error, leading to new data or
-           data being an error message instead of the relevant data).
-        """
+        """Saves new data retrieved by the job into the snapshot database."""
         if self.new_error_data:  # have encountered an exception, so save the old data
             new_snapshot = Snapshot(
                 data=self.old_data,
@@ -235,24 +231,25 @@ class JobState(ContextManager):
                 )
 
             except Exception as e:
-                # Job has a chance to format and ignore its error
-                if self.debugger_attached():
-                    logger.warning('Running in a debugger: raising the exception instead of processing it')
+                # # Job has a chance to format and ignore its error
+                if self.debugger_attached() and not isinstance(e, NotModifiedError):
+                    logger.warning('Running in a debugger: exception not to be ignored')
                     raise
                 self.new_timestamp = time.time()
                 self.error_ignored = self.job.ignore_error(e)
-                if not (self.error_ignored or isinstance(e, NotModifiedError)):
+                if not self.error_ignored:
                     self.exception = e
-                    self.traceback = self.job.format_error(e, traceback.format_exc())
-                    self.tries += 1
-                    self.new_error_data = {
-                        'type': e.__class__.__name__,
-                        'message': str(e),
-                    }
-                    logger.info(
-                        f'Job {self.job.index_number}: Job ended with error; incrementing cumulative error runs to '
-                        f'{self.tries}'
-                    )
+                    if not isinstance(e, NotModifiedError):
+                        self.traceback = self.job.format_error(e, traceback.format_exc())
+                        self.tries += 1
+                        self.new_error_data = {
+                            'type': e.__class__.__name__,
+                            'message': str(e),
+                        }
+                        logger.info(
+                            f'Job {self.job.index_number}: Job ended with error; incrementing cumulative error runs to '
+                            f'{self.tries}'
+                        )
 
             else:
                 # Apply automatic filters first
@@ -268,13 +265,16 @@ class JobState(ContextManager):
                 self.new_mime_type = mime_type
 
         except Exception as e:
-            # Processing error or job failed its chance to handle error
+            # Processing error of job failed its chance to handle error
             if self.debugger_attached():
                 logger.warning('Running in a debugger: raising the exception instead of processing it')
                 raise
             self.new_timestamp = time.time()
             self.exception = e
-            if isinstance(e, subprocess.CalledProcessError):
+            if self.job.__class__.__module__ == 'hooks':
+                logger.info('Job is hooks: including traceback in error message')
+                self.traceback = ''.join(traceback.format_exception(e)).rstrip()
+            elif isinstance(e, subprocess.CalledProcessError):
                 self.traceback = (
                     f'subprocess.CalledProcessError: Command returned non-zero exit status {e.returncode}.\n\n'
                     f'{e.stderr}'
@@ -378,7 +378,7 @@ class Report:
 
         :param job_state: The JobState object with the information of the job run.
         """
-        if job_state.exception is not None and not isinstance(job_state.exception, NotModifiedError):
+        if job_state.exception is not None:
             logger.info(
                 f'Job {job_state.job.index_number}: Got exception while processing job {job_state.job}',
                 exc_info=job_state.exception,

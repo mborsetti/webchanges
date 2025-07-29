@@ -925,7 +925,13 @@ class DeepdiffDiffer(DifferBase):
                         if type in {'str', 'int', 'float'}:
                             return f"'{value}'"
                         elif type in {'dict', 'list'}:
-                            value_string = str(yaml.safe_dump(value, default_flow_style=False, allow_unicode=True))
+                            value_string = yaml.safe_dump(
+                                value,
+                                default_flow_style=False,
+                                width=999,
+                                allow_unicode=True,
+                                sort_keys=False,
+                            )
                             value_list = value_string.splitlines(keepends=True)
                             if len(value_list) < 2:
                                 return value_string

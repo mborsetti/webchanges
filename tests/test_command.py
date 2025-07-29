@@ -272,7 +272,7 @@ def test_edit_hooks(capsys: pytest.CaptureFixture[str]) -> None:
     setattr(command_config, 'edit_hooks', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message == f'Saved edits in {urlwatch_command_common.urlwatch_config.hooks_def_file}\n'
+    assert message == f'Saved edits in {urlwatch_command_common.urlwatch_config.hooks_def_file}.\n'
 
 
 def test_edit_hooks_fail(capsys: pytest.CaptureFixture[str]) -> None:
@@ -672,20 +672,26 @@ def test_list_error_jobs_reporter(capsys: pytest.CaptureFixture[str]) -> None:
     setattr(command_config, 'errors', None)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
-    assert message == 'Invalid reporter garbageinput\n'
+    assert message == 'Invalid reporter garbageinput.\n'
 
 
-def test_modify_urls(capsys: pytest.CaptureFixture[str]) -> None:
+def test_modify_urls(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
     """Test --add JOB and --delete JOB."""
+    # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
+    monkeypatch.setattr('builtins.input', lambda _: 'y')
+
     # save current contents of job file
     before_file = jobs_file.read_text()
 
     # add new job
     setattr(command_config, 'add', 'url=https://www.example.com/#test_modify_urls')
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'add', None)
-    assert pytest_wrapped_e.value.code == 0
+    assert pytest_wrapped_se.value.code == 0
+    # assert pytest_wrapped_e.value.args[0] == (
+    #     'pytest: reading from stdin while output is captured!  Consider using `-s`.'
+    # )
     message = capsys.readouterr().out
     assert message.startswith('Adding <url ')
     assert 'index_number=0' in message
@@ -693,14 +699,12 @@ def test_modify_urls(capsys: pytest.CaptureFixture[str]) -> None:
 
     # delete the job just added
     setattr(command_config, 'delete', 'https://www.example.com/#test_modify_urls')
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'delete', None)
-    assert pytest_wrapped_e.value.code == 0
+    assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
-    assert message.startswith('Removed <url ')
-    assert 'index_number=0' in message
-    assert "url='https://www.example.com/#test_modify_urls'" in message
+    assert message.startswith('WARNING: About to permanently delete Job 0: https://www.example.com/#test_modify_urls.')
 
     # check that the job file is identical to before the add/delete operations
     after_file = jobs_file.read_text()
@@ -741,7 +745,7 @@ def test_modify_urls_move_location(
     setattr(command_config2, 'change_location', None)
     assert pytest_wrapped_se.value.code == 1
     message = capsys.readouterr().out
-    assert message == f'Moving location of "{old_loc}" to "{new_loc}"\nNo snapshots found for "{old_loc}"\n'
+    assert message == f'Moving location of "{old_loc}" to "{new_loc}".\nNo snapshots found for "{old_loc}".\n'
 
     # run jobs to save
     urlwatcher2.run_jobs()
@@ -756,9 +760,9 @@ def test_modify_urls_move_location(
     assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
     assert message == (
-        f'Moving location of "{old_loc}" to "{new_loc}"\n'
-        f'Searched through 1 snapshots and moved "{old_loc}" to "{new_loc}"\n'
-        f'Saving updated list to {str(urlwatcher2.jobs_storage.filename[0])}\n'
+        f'Moving location of "{old_loc}" to "{new_loc}".\n'
+        f'Searched through 1 snapshots and moved "{old_loc}" to "{new_loc}".\n'
+        f'Saving updated list to {str(urlwatcher2.jobs_storage.filename[0])}.\n'
     )
 
     # did it change?
@@ -781,9 +785,9 @@ def test_modify_urls_move_location(
     assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
     assert message == (
-        f'Moving location of "{new_loc}" to "{old_loc}"\n'
-        f'Searched through 1 snapshots and moved "{new_loc}" to "{old_loc}"\n'
-        f'Saving updated list to {str(urlwatcher2.jobs_storage.filename[0])}\n'
+        f'Moving location of "{new_loc}" to "{old_loc}".\n'
+        f'Searched through 1 snapshots and moved "{new_loc}" to "{old_loc}".\n'
+        f'Saving updated list to {str(urlwatcher2.jobs_storage.filename[0])}.\n'
     )
 
     # did it change back?
@@ -793,7 +797,10 @@ def test_modify_urls_move_location(
     assert ssdb_storage2.load(old_guid) == new_data
 
 
-def test_delete_snapshot(capsys: pytest.CaptureFixture[str]) -> None:
+def test_delete_snapshot(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
+    monkeypatch.setattr('builtins.input', lambda _: 'y')
+
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
@@ -804,12 +811,12 @@ def test_delete_snapshot(capsys: pytest.CaptureFixture[str]) -> None:
 
     setattr(command_config, 'delete_snapshot', True)
     urlwatch_command = UrlwatchCommand(urlwatcher)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
+    assert pytest_wrapped_se.value.code == 1
     message = capsys.readouterr().out
-    assert message[:43] == 'No snapshots found to be deleted for Job 1:'
-    assert pytest_wrapped_e.value.code == 1
+    assert message[:29] == 'No snapshots found for Job 1:'
 
     # run once
     urlwatcher.run_jobs()
@@ -826,34 +833,37 @@ def test_delete_snapshot(capsys: pytest.CaptureFixture[str]) -> None:
     assert len(history) == 2
 
     # delete once
-    setattr(command_config, 'delete_snapshot', True)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    setattr(command_config, 'delete_snapshot', 1)
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
     message = capsys.readouterr().out
-    assert message[:31] == 'Deleted last snapshot of Job 1:'
-    assert pytest_wrapped_e.value.code == 0
+    assert 'Deleted last snapshot of Job 1:' in message
+    assert pytest_wrapped_se.value.code == 0
 
     # delete twice
     setattr(command_config, 'delete_snapshot', True)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
     message = capsys.readouterr().out
-    assert message[:31] == 'Deleted last snapshot of Job 1:'
-    assert pytest_wrapped_e.value.code == 0
+    assert 'Deleted last snapshot of Job 1:' in message
+    assert pytest_wrapped_se.value.code == 0
 
     # test all empty
     setattr(command_config, 'delete_snapshot', True)
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command.handle_actions()
     setattr(command_config, 'delete_snapshot', False)
     message = capsys.readouterr().out
-    assert message[:43] == 'No snapshots found to be deleted for Job 1:'
-    assert pytest_wrapped_e.value.code == 1
+    assert message[:29] == 'No snapshots found for Job 1:'
+    assert pytest_wrapped_se.value.code == 1
 
 
-def test_gc_database(capsys: pytest.CaptureFixture[str]) -> None:
+def test_gc_database(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
+    monkeypatch.setattr('builtins.input', lambda _: 'y')
+
     jobs_file = config_path.joinpath('jobs-time.yaml')
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
@@ -883,9 +893,9 @@ def test_gc_database(capsys: pytest.CaptureFixture[str]) -> None:
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
     if sys.platform == 'win32':
-        assert message == f'Deleting job {guid} (no longer being tracked)\n'
+        assert message == f'Deleting job {guid} (no longer being tracked).\n'
     else:
-        # TODO: for some reason, Linux message is ''.  Need to figure out why.
+        # TODO Linux message is '' for some reason. Need to figure out why.
         ...
 
 
@@ -893,10 +903,10 @@ def test_clean_database(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --clean-database [RETAIN_LIMIT]."""
     setattr(command_config, 'clean_database', True)
     urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command_common.handle_actions()
     setattr(command_config, 'clean_database', None)
-    assert pytest_wrapped_e.value.code == 0
+    assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
     assert message == ''
 
@@ -970,7 +980,7 @@ def test_check_telegram_chats(capsys: pytest.CaptureFixture[str]) -> None:
     setattr(command_config, 'telegram_chats', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
-    assert message == 'You need to set up your bot token first (see documentation)\n'
+    assert message == 'You need to set up your bot token first (see documentation).\n'
 
     urlwatch_command_common.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # noqa: S105
     setattr(command_config, 'telegram_chats', True)
@@ -979,7 +989,7 @@ def test_check_telegram_chats(capsys: pytest.CaptureFixture[str]) -> None:
     setattr(command_config, 'telegram_chats', False)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
-    assert message == 'Error with token bogus: Not Found\n'
+    assert message == 'Error with token bogus: Not Found.\n'
 
     if os.getenv('TELEGRAM_TOKEN'):
         if os.getenv('GITHUB_ACTIONS'):
@@ -1014,7 +1024,7 @@ def test_check_test_reporter(capsys: pytest.CaptureFixture[str]) -> None:
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert 'WARNING: Reporter being tested is not enabled: stdout\n' in message
+    assert 'WARNING: Reporter being tested is not enabled: stdout.\n' in message
 
     setattr(command_config, 'test_reporter', 'does_not_exist')
     with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -1022,7 +1032,7 @@ def test_check_test_reporter(capsys: pytest.CaptureFixture[str]) -> None:
     setattr(command_config, 'test_reporter', None)
     assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
-    assert 'No such reporter: does_not_exist\n' in message
+    assert 'No such reporter: does_not_exist.\n' in message
 
 
 def test_check_smtp_login(capsys: pytest.CaptureFixture[str]) -> None:
@@ -1087,7 +1097,7 @@ def test_check_smtp_insecure_password(capsys: pytest.CaptureFixture[str]) -> Non
     # assert pytest_wrapped_e.value.code == 1
     message = capsys.readouterr().out
     assert message.splitlines() == [
-        'The SMTP password is set in the config file (key "insecure_password")',
+        'The SMTP password is set in the config file (key "insecure_password").',
         'Trying to log into the SMTP server...',
     ]
 
@@ -1295,6 +1305,7 @@ def test_list_error_jobs_with_error(urlwatch_command: UrlwatchCommand, capsys: p
 def test_prepare_jobs(urlwatch_command: UrlwatchCommand, capsys: pytest.CaptureFixture[str]) -> None:
     urlwatch_command.urlwatcher.jobs_storage = YamlJobsStorage([config_path.joinpath('jobs-echo_test.yaml')])
     urlwatch_command.urlwatcher.load_jobs()
+    urlwatch_command.urlwatcher.report.job_states = []
     setattr(urlwatch_command.urlwatch_config, 'prepare_jobs', True)
     urlwatch_command.urlwatcher.report.config['display']['new'] = False
     with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -1302,4 +1313,4 @@ def test_prepare_jobs(urlwatch_command: UrlwatchCommand, capsys: pytest.CaptureF
     setattr(urlwatch_command.urlwatch_config, 'prepare_jobs', False)
     assert pytest_wrapped_e.value.code == 0
     message = capsys.readouterr().out
-    assert message.startswith('Adding new Job 1: echo test\n')
+    assert message == 'Running new Job 1: echo test.\n'

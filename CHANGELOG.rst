@@ -33,9 +33,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.31.0rc0
+Version 3.31.0rc1
 ------------------
-2025-07-26
+2025-07-29
 
 ⚠ Breaking Change
 ``````````````````
@@ -49,6 +49,9 @@ Added
   for multiple selectors in the order given.
 * Differ ``deepdiff`` has a new sub-directive ``compact`` which produces a much less wordy report in YAML and ignores
   changes of data type (e.g. "type changed from NoneType to str").
+* The command-line arguments ``--jobs``, ``--config``, and ``--hooks`` feature a "smart file specification" capability.
+  This allows you to provide a shorthand name for your files, and  **webchanges** will automatically search for several
+  variations of that name.
 
 Changed
 ```````
@@ -60,23 +63,21 @@ Changed
 Deprecated
 ``````````
 * Environment variable ``GOOGLE_AI_API_KEY`` for the API key used by differ ``ai_google`` (BETA) is deprecated; use
-  ``GEMINI_API_KEY`` instead. This maintains consistency with the new API documentation from Google and is interoperable
-  with Gemini CLI.
+  ``GEMINI_API_KEY`` instead.
 
 Fixed
 `````
 * Job directive ``ignore_connection_errors``: Did not work as expected with the default ``httpx`` HTML client library
   (#`100 <https://github.com/mborsetti/webchanges/issues/100>`__.).
-* Command line argument ``--error``: Was reporting jobs with errors not present during regular execution. Changed
-  default ``--max-workers`` to 1 (no parallel jobs) when running with ``--error`` to prevent this. (#`102
-  <https://github.com/mborsetti/webchanges/issues/102>`__.)
-* Command line argument ``--database``: Filename was not being searched in default database directory if not present in
-  current directory.
+* Command line argument ``--error``: Was reporting jobs with sites returning HTTP response code 304 Not Modified as if
+  they returned no data (#`102 <https://github.com/mborsetti/webchanges/issues/102>`__).
+* Command line argument ``--database``: If filename was not not present in the current directory, it was not searched in
+  the default database directory.
 * Command line argument ``--test-job``:
 
   - Output is no longer colorized as if it were a diff.
-  - When used in conjunction with ``--test-reporter browser`` or any other HTML reporter and job has
-    ``monospace: true``: Output now uses a monospaced font.
+  - When used in conjunction with ``--test-reporter browser`` or any other HTML reporter and the job has
+    ``monospace: true``, the output now uses a monospaced font.
 * Configuration ``differ_defaults``: Was not being applied correctly in certain circumstances.
 * Differ ``ai_google`` (BETA): Improved reporting of upstream API errors.
 * Differ ``images`` (BETA):

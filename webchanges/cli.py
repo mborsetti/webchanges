@@ -104,8 +104,8 @@ def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> No
         elif verbose == 1:
             log_level = 'INFO'
 
-    if not verbose:
-        sys.tracebacklimit = 0
+    # if not verbose:
+    #     sys.tracebacklimit = 0
 
     logging.basicConfig(
         format='%(asctime)s %(module)s[%(thread)s] %(levelname)s: %(message)s',
@@ -131,12 +131,18 @@ def teardown_logger(verbose: int | None = None) -> None:
             os.environ.pop('DEBUG', None)
 
 
-def _expand_glob_files(filename: Path, default_path: Path, ext: str | None = None) -> list[Path]:
+def _expand_glob_files(
+    filename: Path,
+    default_path: Path,
+    ext: str | None = None,
+    prefix: str | None = None,
+) -> list[Path]:
     """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
 
     :param filename: The filename.
     :param default_path: The default directory.
     :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
+    :param prefix: The prefix, e.g. 'config', to add with a hypen (e.g. 'config-') for searching if first scan fails.
 
     :returns: The filename, either original or one with path where found and/or extension.
     """
@@ -145,8 +151,12 @@ def _expand_glob_files(filename: Path, default_path: Path, ext: str | None = Non
     # if ext is given, iterate both on raw filename and the filename with ext if different
     if ext and filename.suffix != ext:
         search_filenames.append(filename.with_suffix(ext))
-        # also iterate on file pre-pended with 'jobs-'
-        search_filenames.append(filename.with_stem(f'jobs-{filename.stem}').with_suffix(ext))
+
+    # if prefix is given, iterate both on raw filename and the filename with prefix if different
+    if prefix and not filename.name.startswith(prefix):
+        search_filenames.append(filename.with_stem(f'{prefix}-{filename.stem}'))
+        if ext and filename.suffix != ext:
+            search_filenames.append(filename.with_stem(f'{prefix}-{filename.stem}').with_suffix(ext))
 
     # try as given
     for file in search_filenames:
@@ -165,20 +175,31 @@ def _expand_glob_files(filename: Path, default_path: Path, ext: str | None = Non
     return [filename]
 
 
-def locate_glob_files(filenames: list[Path], default_path: Path, ext: str | None = None) -> list[Path]:
+def locate_glob_files(
+    filenames: list[Path],
+    default_path: Path,
+    ext: str | None = None,
+    prefix: str | None = None,
+) -> list[Path]:
     job_files = set()
     for filename in filenames:
-        for file in _expand_glob_files(filename, default_path, ext):
+        for file in _expand_glob_files(filename, default_path, ext, prefix):
             job_files.add(file)
     return list(job_files)
 
 
-def locate_storage_file(filename: Path, default_path: Path, ext: str | None = None) -> Path:
+def locate_storage_file(
+    filename: Path,
+    default_path: Path,
+    ext: str | None = None,
+    prefix: str | None = None,
+) -> Path:
     """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
 
     :param filename: The filename.
     :param default_path: The default directory.
     :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
+    :param prefix: The prefix, e.g. 'config', to add with a hypen (e.g. 'config-') for searching if first scan fails.
 
     :returns: The filename, either original or one with path where found and/or extension.
     """
@@ -187,6 +208,12 @@ def locate_storage_file(filename: Path, default_path: Path, ext: str | None = No
     # if ext is given, iterate both on raw filename and the filename with ext if different
     if ext and filename.suffix != ext:
         search_filenames.append(filename.with_suffix(ext))
+
+    # if prefix is given, iterate both on raw filename and the filename with prefix if different
+    if prefix and not filename.name.startswith(prefix):
+        search_filenames.append(filename.with_stem(f'{prefix}-{filename.stem}'))
+        if ext and filename.suffix != ext:
+            search_filenames.append(filename.with_stem(f'{prefix}-{filename.stem}').with_suffix(ext))
 
     for file in search_filenames:
         # return if found
@@ -203,18 +230,24 @@ def locate_storage_file(filename: Path, default_path: Path, ext: str | None = No
     return filename
 
 
-def locate_storage_files(filename_list: list[Path], default_path: Path, ext: str | None = None) -> set[Path]:
+def locate_storage_files(
+    filename_list: list[Path],
+    default_path: Path,
+    ext: str | None = None,
+    prefix: str | None = None,
+) -> set[Path]:
     """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
 
     :param filename_list: The list of filenames.
     :param default_path: The default directory.
     :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
+    :param prefix: The prefix, e.g. 'config', to add with a hypen (e.g. 'config-') for searching if first scan fails.
 
     :returns: The list filenames, either originals or ones with path where found and/or extension.
     """
     filenames = set()
     for filename in filename_list:
-        filenames.add(locate_storage_file(filename, default_path, ext))
+        filenames.add(locate_storage_file(filename, default_path, ext, prefix))
     return filenames
 
 
@@ -395,11 +428,30 @@ def main() -> None:  # pragma: no cover
         YamlJobsStorage,
     )
 
-    # Locate config, job, hooks and database files
-    command_config.config_file = locate_storage_file(command_config.config_file, command_config.config_path, '.yaml')
-    command_config.jobs_files = locate_glob_files(command_config.jobs_files, command_config.config_path, '.yaml')
-    command_config.hooks_files = locate_glob_files(command_config.hooks_files, command_config.config_path, '.py')
-    command_config.ssdb_file = locate_storage_file(command_config.ssdb_file, data_path, '.db')
+    # Locate config, jobs, hooks and database files
+    command_config.config_file = locate_storage_file(
+        filename=command_config.config_file,
+        default_path=command_config.config_path,
+        ext='.yaml',
+        prefix='config',
+    )
+    command_config.jobs_files = locate_glob_files(
+        filenames=command_config.jobs_files,
+        default_path=command_config.config_path,
+        ext='.yaml',
+        prefix='jobs',
+    )
+    command_config.hooks_files = locate_glob_files(
+        filenames=command_config.hooks_files,
+        default_path=command_config.config_path,
+        ext='.py',
+        prefix='hooks',
+    )
+    command_config.ssdb_file = locate_storage_file(
+        filename=command_config.ssdb_file,
+        default_path=data_path,
+        ext='.db',
+    )
 
     # Check for first run
     if command_config.config_file == default_config_file and not Path(command_config.config_file).is_file():

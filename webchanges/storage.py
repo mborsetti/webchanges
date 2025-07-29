@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import copy
-import email.utils
 import inspect
 import io
 import logging
@@ -19,10 +18,9 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime  # py311 use UTC instead of timezone.utc
-from datetime import timezone, tzinfo
+from datetime import timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Literal, TextIO, TypedDict
-from zoneinfo import ZoneInfo
 
 import msgpack
 import yaml
@@ -49,11 +47,6 @@ try:
     import redis
 except ImportError as e:  # pragma: no cover
     redis = str(e)  # type: ignore[assignment]
-
-try:
-    from dateutil import parser as dateutil_parser
-except ImportError:  # pragma: no cover
-    dateutil_parser = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -651,11 +644,11 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
             print(
                 f'ERROR: Removing the following jobs because '
                 f" {' and '.join(shelljob_errors)}: {' ,'.join(str(job.index_number) for job in removed_jobs)}\n"
-                f'(see {__docs_url__}en/stable/jobs.html#important-note-for-command-jobs)'
+                f'(see {__docs_url__}en/stable/jobs.html#important-note-for-command-jobs).'
             )
             jobs = [job for job in jobs if job not in removed_jobs]
 
-        logger.info(f"Loaded {len(jobs)} jobs from {', '.join(str(file) for file in self.filename)}")
+        logger.info(f"Loaded {len(jobs)} jobs from {', '.join(str(file) for file in self.filename)}.")
         return jobs
 
 
@@ -921,8 +914,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     )
                 job_data['index_number'] = i + 1
                 job = JobBase.unserialize(job_data, filenames)
-                # TODO: implement 100% validation and remove it from jobs.py
-                # TODO: try using pydantic to do this.
+                # TODO Implement 100% validation and remove it from jobs.py
+                # TODO Try using pydantic to do this.
                 if not isinstance(job.data, (NoneType, str, dict, list)):
                     raise ValueError(
                         '\n   '.join(
@@ -1039,7 +1032,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
 
         :param jobs: An iterable of JobBase objects to be written.
         """
-        print(f'Saving updated list to {self.filename[0]}')
+        print(f'Saving updated list to {self.filename[0]}.')
 
         with self.filename[0].open('w') as fp:
             yaml.safe_dump_all([job.serialize() for job in jobs], fp, allow_unicode=True, sort_keys=False)
@@ -1135,7 +1128,7 @@ class SsdbStorage(BaseFileStorage, ABC):
         :param keep_entries: Number of entries to keep after deletion for the guids to keep.
         """
         for guid in set(self.get_guids()) - set(known_guids):
-            print(f'Deleting job {guid} (no longer being tracked)')
+            print(f'Deleting job {guid} (no longer being tracked).')
             self.delete(guid)
         self.clean_ssdb(known_guids, keep_entries)
 
@@ -1151,47 +1144,12 @@ class SsdbStorage(BaseFileStorage, ABC):
         if hasattr(self, 'clean_all'):
             count = self.clean_all(keep_entries)  # pyright: ignore[reportAttributeAccessIssue]
             if count:
-                print(f'Deleted {count} old snapshots')
+                print(f'Deleted {count} old snapshots.')
         else:
             for guid in known_guids:
                 count = self.clean(guid, keep_entries)
                 if count:
-                    print(f'Deleted {count} old snapshots of {guid}')
-
-    @staticmethod
-    def _convert_to_datetime(timespec: str, tz: ZoneInfo | tzinfo | None) -> datetime:
-        try:
-            timestamp = float(timespec)
-            return datetime.fromtimestamp(timestamp, tz)
-        except ValueError:
-            if dateutil_parser is not None:
-                return dateutil_parser.parse(timespec)
-            else:
-                return datetime.fromisoformat(timespec)
-
-    def rollback_cache(self, timespec: str, tz_str: str | None = None) -> None:
-        """Issues a warning, calls rollback() and prints out the result.
-
-        :param timestamp: A timespec that if numeric is interpreted as a Unix timestamp otherwise it's passed to
-          dateutil.parser (if datetime is installed) or datetime.fromisoformat to be converted into a date.
-        :param tz: The IANA tz name to use for the prompts and confirmation dialogs.
-        """
-        tz = ZoneInfo(tz_str) if tz_str else datetime.now().astimezone().tzinfo  # from machine
-        dt = self._convert_to_datetime(timespec, tz)
-        timestamp_date = email.utils.format_datetime(dt)
-        print(f'Rolling back database to {timestamp_date}')
-        if sys.__stdin__ and sys.__stdin__.isatty():
-            print('WARNING: All snapshots after this date will be deleted! This operation cannot be undone;')
-            print('         We suggest you make a backup of the database file before proceeding.')
-            resp = input("         Please enter 'Y' to proceed: ")
-            if not resp.upper().startswith('Y'):
-                print('Quitting rollback. No snapshots have been deleted.')
-                sys.exit(1)
-        count = self.rollback(dt.timestamp())
-        if count:
-            print(f'Deleted {count} snapshots taken after {timestamp_date}')
-        else:
-            print(f'No snapshots found after {timestamp_date}')
+                    print(f'Deleted {count} old snapshots of {guid}.')
 
     @abstractmethod
     def flushdb(self) -> None:
@@ -1761,19 +1719,25 @@ class SsdbSQLite3Storage(SsdbStorage):
             self.db.commit()
         return num_del
 
-    def rollback(self, timestamp: float) -> int:
+    def rollback(self, timestamp: float, count: bool = False) -> int:
         """Rollback database to the entries present at timestamp.
 
         :param timestamp: The timestamp.
+        :param count: If set to true, only count the number that would be deleted without doing so.
 
-        :returns: Number of records deleted.
+        :returns: Number of records deleted (or to be deleted).
         """
+        command = 'SELECT COUNT(*)' if count else 'DELETE'
         with self.lock:
             self._execute(
-                'DELETE FROM webchanges '
+                f'{command} '  # noqa: ignore S608 Possible SQL injection
+                'FROM webchanges '
                 'WHERE EXISTS ( '
-                '     SELECT 1 FROM webchanges w '
-                '     WHERE w.uuid = webchanges.uuid AND webchanges.timestamp > ? AND w.timestamp > ? '
+                '     SELECT 1 '
+                '     FROM webchanges AS w '
+                '     WHERE w.uuid = webchanges.uuid '
+                '     AND webchanges.timestamp > ? '
+                '     AND w.timestamp > ? '
                 ')',
                 (timestamp, timestamp),
             )
@@ -1798,8 +1762,8 @@ class SsdbSQLite3Storage(SsdbStorage):
         legacy_db = SsdbMiniDBStorage(minidb_filename)
         self.restore(legacy_db.backup())
         legacy_db.close()
-        print(f'Database upgrade finished; the following backup file can be safely deleted: {minidb_filename}\n')
-        print("The 'minidb' package can be removed (unless used by another program): $ pip uninstall minidb")
+        print(f'Database upgrade finished; the following backup file can be safely deleted: {minidb_filename}.\n')
+        print("The 'minidb' package can be removed (unless used by another program): $ pip uninstall minidb.")
         print('-' * 80)
 
     def flushdb(self) -> None:

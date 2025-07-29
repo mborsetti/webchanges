@@ -149,11 +149,13 @@ def import_module_from_source(module_name: str, source_path: str | bytes | PathL
     spec = importlib.util.spec_from_file_location(module_name, source_path, loader=loader)
     module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
     sys.modules[module_name] = module
-    try:
-        loader.exec_module(module)
-    except Exception:
-        sys.tracebacklimit = 1000
-        raise
+    loader.exec_module(module)
+    # try:
+    #     loader.exec_module(module)
+    # except Exception:
+    #     sys.tracebacklimit = 1000
+    #     raise
+    loader.exec_module(module)
     return module
 
 

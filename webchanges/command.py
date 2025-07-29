@@ -20,7 +20,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
-from datetime import datetime
+from datetime import datetime, tzinfo
 from pathlib import Path
 from typing import Iterable, Iterator, TYPE_CHECKING
 from urllib.parse import unquote_plus
@@ -39,7 +39,7 @@ try:
     import httpx
 except ImportError:  # pragma: no cover
     httpx = None  # type: ignore[assignment]
-    print("Required package 'httpx' not found; will attempt to run using 'requests'")
+    print("Required package 'httpx' not found; will attempt to run using 'requests'.")
     try:
         import requests
     except ImportError as e:  # pragma: no cover
@@ -157,7 +157,7 @@ class UrlwatchCommand:
             else:
                 hooks_edit.replace(hooks_file)
             hooks_edit.unlink(missing_ok=True)
-            print(f'Saved edits in {hooks_file}')
+            print(f'Saved edits in {hooks_file}.')
 
         return 0
 
@@ -168,7 +168,7 @@ class UrlwatchCommand:
 
         :return: 0.
         """
-        print(f'Please see full documentation at {__docs_url__}')
+        print(f'Please see full documentation at {__docs_url__}.')
         print()
         print('Supported jobs:\n')
         print(JobBase.job_documentation())
@@ -181,7 +181,7 @@ class UrlwatchCommand:
         print('Supported reporters:\n')
         print(ReporterBase.reporter_documentation())
         print()
-        print(f'Please see full documentation at {__docs_url__}')
+        print(f'Please see full documentation at {__docs_url__}.')
 
         return 0
 
@@ -503,7 +503,7 @@ class UrlwatchCommand:
         for idx, job in enumerate(self.urlwatcher.jobs):
             has_history = bool(self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid))
             if not has_history:
-                print(f'Adding new {job.get_indexed_location()}')
+                print(f'Running new {job.get_indexed_location()}.')
                 new_jobs.add(idx + 1)
         if not new_jobs and not self.urlwatch_config.joblist:
             print('Found no new jobs to run.')
@@ -612,8 +612,8 @@ class UrlwatchCommand:
             tries = f' | Error run (number {snapshot.tries})' if snapshot.tries else ''
             total_failed += snapshot.tries > 0
             tz = self.urlwatcher.report.config['report']['tz']
-            tzinfo = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
-            dt = datetime.fromtimestamp(snapshot.timestamp, tzinfo)
+            tz_info = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
+            dt = datetime.fromtimestamp(snapshot.timestamp, tz_info)
             header = f'{i + 1}) {email.utils.format_datetime(dt)}{mime_type}{etag}{tries}'
             sep_len = max(50, len(header))
             print(header)
@@ -638,7 +638,7 @@ class UrlwatchCommand:
 
     def list_error_jobs(self) -> int:
         if self.urlwatch_config.errors not in ReporterBase.__subclasses__:
-            print(f'Invalid reporter {self.urlwatch_config.errors}')
+            print(f'Invalid reporter {self.urlwatch_config.errors}.')
             return 1
 
         def error_jobs_lines(jobs: Iterable[JobBase]) -> Iterator[str]:
@@ -668,31 +668,32 @@ class UrlwatchCommand:
                     lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
                     (stack.enter_context(JobState(self.urlwatcher.ssdb_storage, job)) for job in jobs),
                 ):
-                    if job_state.exception is None or isinstance(job_state.exception, NotModifiedError):
-                        if (
-                            len(job_state.new_data.strip()) == 0
-                            if hasattr(job_state, 'new_data')
-                            else len(job_state.old_data.strip()) == 0
-                        ):
-                            if self.urlwatch_config.verbose:
-                                yield f'{job_state.job.index_number:3}: No data: {job_state.job!r}'
-                            else:
-                                pretty_name = job_state.job.pretty_name()
-                                location = job_state.job.get_location()
-                                if pretty_name != location:
-                                    yield f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})'
+                    if not isinstance(job_state.exception, NotModifiedError):
+                        if job_state.exception is None:
+                            if (
+                                len(job_state.new_data.strip()) == 0
+                                if hasattr(job_state, 'new_data')
+                                else len(job_state.old_data.strip()) == 0
+                            ):
+                                if self.urlwatch_config.verbose:
+                                    yield f'{job_state.job.index_number:3}: No data: {job_state.job!r}'
                                 else:
-                                    yield f'{job_state.job.index_number:3}: No data: {pretty_name}'
-                    else:
-                        pretty_name = job_state.job.pretty_name()
-                        location = job_state.job.get_location()
-                        if pretty_name != location:
-                            yield (
-                                f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name} '
-                                f'({location})'
-                            )
+                                    pretty_name = job_state.job.pretty_name()
+                                    location = job_state.job.get_location()
+                                    if pretty_name != location:
+                                        yield f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})'
+                                    else:
+                                        yield f'{job_state.job.index_number:3}: No data: {pretty_name}'
                         else:
-                            yield f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})'
+                            pretty_name = job_state.job.pretty_name()
+                            location = job_state.job.get_location()
+                            if pretty_name != location:
+                                yield (
+                                    f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name} '
+                                    f'({location})'
+                                )
+                            else:
+                                yield f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})'
 
             with ExitStack() as stack:
                 # This code is from worker.run_jobs, modified to yield from job_runner.
@@ -774,31 +775,117 @@ class UrlwatchCommand:
                 print(header)
                 print('--')
                 duration = time.perf_counter() - start
-                print('Found no errors')
+                print('Found no errors.')
                 print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}.")
 
         return 0
 
+    def rollback_database(self, timespec: str) -> int:
+        """Issues a warning, calls rollback() and prints out the result.
+
+        :param timestamp: A timespec that if numeric is interpreted as a Unix timestamp otherwise it's passed to
+          dateutil.parser (if datetime is installed) or datetime.fromisoformat to be converted into a date.
+
+        :return: A sys.exit code (0 for succcess, 1 for failure)
+        """
+
+        def _convert_to_datetime(timespec: str, tz_info: ZoneInfo | tzinfo | None) -> datetime:
+            """Converts inputted string to a datetime object, using dateutil if installed.
+
+            :param timespec: The string.
+            :param tz_info: The timezone.
+
+            :return: The datetime object.
+            """
+            try:
+                timestamp = float(timespec)
+                return datetime.fromtimestamp(timestamp, tz_info)
+            except ValueError:
+                try:
+                    from dateutil import parser as dateutil_parser
+
+                    default_dt_with_tz = datetime.now().replace(second=0, microsecond=0, tzinfo=tz_info)
+                    return dateutil_parser.parse(timespec, default=default_dt_with_tz)
+                    # return dateutil_parser.parse(timespec)
+                except ImportError:
+                    dt = datetime.fromisoformat(timespec)
+                    if not dt.tzinfo:
+                        dt = dt.replace(tzinfo=tz_info)
+                    return dt
+
+        tz = self.urlwatcher.report.config['report']['tz']
+        tz_info = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
+        dt = _convert_to_datetime(timespec, tz_info)
+        timestamp_date = email.utils.format_datetime(dt)
+        count = self.urlwatcher.ssdb_storage.rollback(dt.timestamp())
+        print(f'Rolling back database to {timestamp_date}.')
+        if sys.__stdin__ and sys.__stdin__.isatty():
+            print(
+                f'WARNING: All {count} snapshots after this date/time (check timezone) will be deleted.\n'
+                '         💀 This operation cannot be undone!\n'
+                '         We suggest you make a backup of the database file before proceeding.\n'
+            )
+            resp = input("         Please enter 'Y' to proceed: ")
+            if not resp.upper().startswith('Y'):
+                print('Quitting rollback. No snapshots have been deleted.')
+                return 1
+        count = self.urlwatcher.ssdb_storage.rollback(dt.timestamp())
+        if count:
+            print(f'Deleted {count} snapshots taken after {timestamp_date}.')
+            self.urlwatcher.ssdb_storage.close()
+        else:
+            print(f'No snapshots found after {timestamp_date}')
+        return 0
+
     def delete_snapshot(self, job_id: str | int) -> int:
         job = self._find_job_with_defaults(job_id)
-
-        deleted = self.urlwatcher.ssdb_storage.delete_latest(job.guid)
-        if deleted:
-            print(f'Deleted last snapshot of {job.get_indexed_location()}')
+        history = self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid)
+        if not history:
+            print(f'No snapshots found for {job.get_indexed_location()}.')
+            return 1
+        if sys.__stdin__ and sys.__stdin__.isatty():
+            print(f'WARNING: About to delete the latest snapshot of\n         {job.get_indexed_location()}:')
+            for i, history_job in enumerate(history):
+                print(
+                    f"         {i + 1}. {'❌ ' if i == 0 else '   '}"
+                    f'{email.utils.format_datetime(datetime.fromtimestamp(history_job.timestamp))}'
+                    f"{'  ⬅  ABOUT TO BE DELETED!' if i == 0 else ''}"
+                )
+            print(
+                '         This operation cannot be undone!\n'
+                '         We suggest you make a backup of the database file before proceeding.\n'
+            )
+            resp = input("         Please enter 'Y' to proceed: ")
+            if not resp.upper().startswith('Y'):
+                print('Quitting. No snapshots have been deleted.')
+                return 1
+        count = self.urlwatcher.ssdb_storage.delete_latest(job.guid)
+        if count:
+            print(f'Deleted last snapshot of {job.get_indexed_location()}; {len(history) - 1} snapshots left.')
             return 0
         else:
-            print(f'No snapshots found to be deleted for {job.get_indexed_location()}')
+            print(f'No snapshots found for {job.get_indexed_location()}.')
             return 1
 
     def modify_urls(self) -> int:
         if self.urlwatch_config.delete is not None:
             job = self._find_job(self.urlwatch_config.delete)
             if job is not None:
+                if sys.__stdin__ and sys.__stdin__.isatty():
+                    print(
+                        f'WARNING: About to permanently delete {job.get_indexed_location()}.\n'
+                        '         Job file will be overwritten and all remarks lost.'
+                        '         This operation cannot be undone!\n'
+                    )
+                    resp = input("         Please enter 'Y' to proceed: ")
+                    if not resp.upper().startswith('Y'):
+                        print(f'Quitting. Job {job.index_number} has not been deleted and job file is unmodified.')
+                        return 1
                 self.urlwatcher.jobs.remove(job)
-                print(f'Removed {job}')
+                print(f'Removed {job}.')
                 self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
             else:
-                print(f'Job not found: {self.urlwatch_config.delete}')
+                print(f'Job not found: {self.urlwatch_config.delete}.')
                 return 1
 
         if self.urlwatch_config.add is not None:
@@ -811,7 +898,7 @@ class UrlwatchCommand:
                 d['filter'] = ','.join(filters)
 
             job = JobBase.unserialize(d)
-            print(f'Adding {job}')
+            print(f'Adding {job}.')
             self.urlwatcher.jobs.append(job)
             self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
@@ -831,17 +918,17 @@ class UrlwatchCommand:
                     # Update the job's location (which will also update the guid) and move any history in the database
                     # over to the job's updated guid.
                     old_loc = job.get_location()
-                    print(f'Moving location of "{old_loc}" to "{new_loc}"')
+                    print(f'Moving location of "{old_loc}" to "{new_loc}".')
                     old_guid = job.guid
                     if old_guid not in self.urlwatcher.ssdb_storage.get_guids():
-                        print(f'No snapshots found for "{old_loc}"')
+                        print(f'No snapshots found for "{old_loc}".')
                         return 1
                     job.set_base_location(new_loc)
                     num_searched = self.urlwatcher.ssdb_storage.move(old_guid, job.guid)
                     if num_searched:
-                        print(f'Searched through {num_searched:,} snapshots and moved "{old_loc}" to "{new_loc}"')
+                        print(f'Searched through {num_searched:,} snapshots and moved "{old_loc}" to "{new_loc}".')
                 else:
-                    print(f'Job not found: "{self.urlwatch_config.change_location[0]}"')
+                    print(f'Job not found: "{self.urlwatch_config.change_location[0]}".')
                     return 1
             message = 'Do you want me to update the jobs file (remarks will be lost)? [y/N] '
             if not input(message).lower().startswith('y'):
@@ -860,7 +947,7 @@ class UrlwatchCommand:
 
         bot_token = config['bot_token']
         if not bot_token:
-            print('You need to set up your bot token first (see documentation)')
+            print('You need to set up your bot token first (see documentation).')
             self._exit(1)
 
         if httpx:
@@ -870,7 +957,7 @@ class UrlwatchCommand:
 
         info = get_client(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
         if not info['ok']:
-            print(f"Error with token {bot_token}: {info['description']}")
+            print(f"Error with token {bot_token}: {info['description']}.")
             self._exit(1)
 
         chats = {}
@@ -884,7 +971,7 @@ class UrlwatchCommand:
                     )
 
         if not chats:
-            print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}")
+            print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}.")
             self._exit(1)
 
         headers = ('Chat ID', 'Name')
@@ -895,7 +982,7 @@ class UrlwatchCommand:
         print(fmt % ('-' * maxchat, '-' * maxname))
         for k, v in sorted(chats.items(), key=lambda kv: kv[1]):
             print(fmt % (k, v))
-        print(f"\nChat up your bot here: https://t.me/{info['result']['username']}")
+        print(f"\nChat up your bot here: https://t.me/{info['result']['username']}.")
 
         self._exit(0)
 
@@ -944,8 +1031,10 @@ class UrlwatchCommand:
 
         reporter_name = self.urlwatch_config.test_reporter
         if reporter_name not in ReporterBase.__subclasses__:
-            print(f'No such reporter: {reporter_name}')
-            print(f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}\n')
+            print(
+                f'No such reporter: {reporter_name}.\n'
+                f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}.\n'
+            )
             return 1
 
         cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][
@@ -962,9 +1051,11 @@ class UrlwatchCommand:
             self.urlwatcher.config_storage.config['report']['markdown']['minimal'] = False
             self.urlwatcher.config_storage.config['report']['stdout']['color'] = False
         elif not cfg['enabled']:
-            print(f'WARNING: Reporter being tested is not enabled: {reporter_name}')
-            print('Will still attempt to test it, but this may not work')
-            print(f'Use {__project_name__} --edit-config to configure reporters')
+            print(
+                f'WARNING: Reporter being tested is not enabled: {reporter_name}.\n'
+                f'Will still attempt to test it, but this may not work.\n'
+                f'Use {__project_name__} --edit-config to configure reporters.'
+            )
             cfg['enabled'] = True
 
         if report is None:
@@ -1047,7 +1138,7 @@ class UrlwatchCommand:
 
         insecure_password = smtp_config['insecure_password']
         if insecure_password:
-            print('The SMTP password is set in the config file (key "insecure_password")')
+            print('The SMTP password is set in the config file (key "insecure_password").')
         elif smtp_have_password(smtp_hostname, smtp_username):
             message = f'Password for {smtp_username} / {smtp_hostname} already set, update? [y/N] '
             if not input(message).lower().startswith('y'):
@@ -1061,7 +1152,7 @@ class UrlwatchCommand:
         mailer = SMTPMailer(smtp_username, smtp_hostname, smtp_port, smtp_tls, smtp_auth, insecure_password)
         print('Trying to log into the SMTP server...')
         mailer.send(None)
-        print('Successfully logged into SMTP server')
+        print('Successfully logged into SMTP server.')
 
         self._exit(0)
 
@@ -1189,10 +1280,9 @@ class UrlwatchCommand:
             self._exit(0)
 
         if self.urlwatch_config.rollback_database:
-            tz = self.urlwatcher.report.config['report']['tz']
-            self.urlwatcher.ssdb_storage.rollback_cache(self.urlwatch_config.rollback_database, tz)
+            exit_arg = self.rollback_database(self.urlwatch_config.rollback_database)
             self.urlwatcher.ssdb_storage.close()
-            self._exit(0)
+            self._exit(exit_arg)
 
         if self.urlwatch_config.delete_snapshot:
             self._exit(self.delete_snapshot(self.urlwatch_config.delete_snapshot))

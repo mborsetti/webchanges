@@ -629,8 +629,8 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
         '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         "• ⊤: '' → ",
-        '    - second_test: 3',
-        '      test: 2',
+        '    - test: 2',
+        '      second_test: 3',
         '    - morestuff',
         '    - 323',
     ]
@@ -644,8 +644,8 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
         '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
         '• ⊤: <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">\'\''
         '</span> ⮕ <span style="background-color:#d1ffd1;color:#082b08;">',
-        '    - second_test: 3',
-        '      test: 2',
+        '    - test: 2',
+        '      second_test: 3',
         '    - morestuff',
         '    - 323</span></span>',
     ]

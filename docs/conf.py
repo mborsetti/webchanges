@@ -376,32 +376,32 @@ class PatchedHTMLTranslator(HTML5Translator):
         pass
 
     def visit_reference(self, node: nodes.Element) -> None:
-        atts = {'class': 'reference'}
+        attributes = {'class': 'reference'}
         if node.get('internal') or 'refuri' not in node:
-            atts['class'] += ' internal'
+            attributes['class'] += ' internal'
         else:
-            atts['class'] += ' external'
+            attributes['class'] += ' external'
             # ---------------------------------------------------------
             # Customize behavior (open in new tab, secure linking site)
-            atts['target'] = '_blank'
-            atts['rel'] = 'noopener noreferrer'
+            attributes['target'] = '_blank'
+            attributes['rel'] = 'noopener noreferrer'
             # ---------------------------------------------------------
         if 'refuri' in node:
-            atts['href'] = node['refuri'] or '#'
-            if self.settings.cloak_email_addresses and atts['href'].startswith('mailto:'):
-                atts['href'] = self.cloak_mailto(atts['href'])
+            attributes['href'] = node['refuri'] or '#'
+            if self.settings.cloak_email_addresses and attributes['href'].startswith('mailto:'):
+                attributes['href'] = self.cloak_mailto(attributes['href'])
                 self.in_mailto = True
         else:
             assert 'refid' in node, 'References must have "refuri" or "refid" attribute.'
-            atts['href'] = '#' + node['refid']
+            attributes['href'] = '#' + node['refid']
         if not isinstance(node.parent, nodes.TextElement):
             assert len(node) == 1 and isinstance(node[0], nodes.image)
-            atts['class'] += ' image-reference'
+            attributes['class'] += ' image-reference'
         if 'reftitle' in node:
-            atts['title'] = node['reftitle']
+            attributes['title'] = node['reftitle']
         if 'target' in node:
-            atts['target'] = node['target']
-        self.body.append(self.starttag(node, 'a', '', **atts))
+            attributes['target'] = node['target']
+        self.body.append(self.starttag(node=node, tagname='a', suffix='', empty=False, **attributes))
 
         if node.get('secnumber'):
             self.body.append(('%s' + self.secnumber_suffix) % '.'.join(map(str, node['secnumber'])))

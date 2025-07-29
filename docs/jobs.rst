@@ -7,8 +7,8 @@ Each job contains the pointer to the source of the data to be monitored (:ref:`U
 and related directives, plus eventual directives on transformations (:ref:`filters <filters>`) to apply to the data
 (and/or diff) once retrieved.
 
-The list of jobs is contained in the jobs file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable with the
-command ``webchanges --edit`` or using any text editor.
+The list of jobs is contained by default in the jobs file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable
+with the command ``webchanges --edit`` or using any text editor.
 
 **YAML tips**
 

@@ -499,7 +499,7 @@ class JobBase(metaclass=TrackSubClasses):
         return job_with_defaults
 
     def get_fips_guid(self) -> str:
-        # TODO:
+        # TODO Implement SHA256 hash GUIDs
         """Calculate the GUID as a SHA256 hash of the location (URL or command).
 
         :returns: the GUID.
@@ -1450,7 +1450,7 @@ class BrowserJob(UrlJobBase):
             # # launch playwright (memoized)
             # if self._playwright is None:
             #     logger.info('Starting the instance of playwright')
-            #     self._playwright = sync_playwright().start()  # TODO this should be in a context manager with .stop()
+            #     self._playwright = sync_playwright().start()  # TODO This should be in a context manager with .stop()
 
             # # launch browser (memoized)
             # executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
