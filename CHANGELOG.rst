@@ -37,8 +37,8 @@ Version 3.31.0rc1
 ------------------
 2025-07-29
 
-⚠ Breaking Change
-``````````````````
+⚠ Breaking Changes
+```````````````````
 * Differ ``ai_google`` (BETA) now expects the API key to be in the environment variable named ``GEMINI_API_KEY`` to
   maintain consistency with the new API documentation from Google and is interoperable with Gemini CLI. The deprecated
   ``GOOGLE_AI_API_KEY`` will be read until the end of 2025.
@@ -58,7 +58,7 @@ Changed
 * Differ ``deepdiff``'s report has been improved by indenting multi-line value changes.
 * Command line ``--test-job``: Improved display by adding to the report the media type (fka MIME type), ETag (when
   present) and GUID (internal identifier).
-* Job directive ``note`` is converted from Markdown by the HTML reporter.
+* HTML reports now treat the job directive ``note`` as Markdown.
 
 Deprecated
 ``````````

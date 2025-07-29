@@ -704,7 +704,15 @@ def test_modify_urls(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.Mon
     setattr(command_config, 'delete', None)
     assert pytest_wrapped_se.value.code == 0
     message = capsys.readouterr().out
-    assert message.startswith('WARNING: About to permanently delete Job 0: https://www.example.com/#test_modify_urls.')
+    if sys.__stdin__ and sys.__stdin__.isatty():
+        assert message.startswith(
+            'WARNING: About to permanently delete Job 0: https://www.example.com/#test_modify_urls.'
+        )
+    else:
+        assert message.startswith(
+            "Removed <url url='https://www.example.com/#test_modify_urls' headers={} index_number=0.\n"
+            'Saving updated list to'
+        )
 
     # check that the job file is identical to before the add/delete operations
     after_file = jobs_file.read_text()
