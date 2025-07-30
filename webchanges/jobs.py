@@ -796,6 +796,7 @@ class UrlJob(UrlJobBase):
             data=self.data,  # type: ignore[arg-type]
             params=self.params,
         )
+        logger.debug(f'Job {self.index_number}: Response headers: {response.headers}')
 
         if 400 <= response.status_code < 600:
             # Custom version of request.raise_for_status() to include returned text.

@@ -33,9 +33,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.31.0rc1
+Version 3.31.0
 ------------------
-2025-07-29
+2025-07-30
 
 ⚠ Breaking Changes
 ```````````````````
