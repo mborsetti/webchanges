@@ -274,6 +274,7 @@ these directives as follows:
          starttls: true
          auth: true
          insecure_password: "this_is_my_secret_password"  # (edit accordingly)
+         utf-8: true
 
 
 .. _gmail:
@@ -320,6 +321,7 @@ Then configure these directives as follows:
          starttls: true
          auth: true
          insecure_password: "this_is_my_secret_password"  # (edit accordingly)
+         utf-8: true
 
 .. _sendmail:
 
