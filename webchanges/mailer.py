@@ -76,7 +76,7 @@ class Mailer:
             edited_html = re.sub(r'src="data:image/(.+?);base64,(.+?)"', replace_img, html_body)
             return edited_html, cid_dict
 
-        msg = EmailMessage(policy=policy.SMTPUTF8)
+        msg = EmailMessage(policy=policy.SMTPUTF8 if utf_8 else policy.SMTP)
         msg['From'] = from_email
         msg['To'] = to_email
         msg['Subject'] = subject
