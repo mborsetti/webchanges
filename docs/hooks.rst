@@ -71,15 +71,14 @@ Example ``hooks.py`` file:
        __kind__ = 'hooks_custom_login'
        __required__ = ('username', 'password')  # These are added to the ones from the super classes.
 
-
        # IMPORTANT!
        # We want to put all job modifications within the with_defaults function so that --test-filters etc. work
        def with_defaults(self, config: _Config) -> JobBase:
-       """Obtain a Job object that also contains defaults from the configuration.
+           """Obtain a Job object that also contains defaults from the configuration.
 
-       :param config: The configuration as a dict.
-       :returns: A JobBase object.
-       """
+           :param config: The configuration as a dict.
+           :returns: A JobBase object.
+           """
            self.filters = ['jsontoyaml']  # applies to all jobs with ``kind: hooks_custom_login``
            self.differ = {'name': 'deepdiff', 'ignore_order': True, 'compact': True}
            return super().with_defaults(config)
@@ -117,7 +116,6 @@ Example ``hooks.py`` file:
            :returns: The data retrieved, the ETag, and the media type (fka MIME type)
            :raises NotModifiedError: If an HTTP 304 response is received.
            """
-
            ...  # custom code here to launch browser and capture data.
            return (
                '<Data captured after browsing to self.url>',

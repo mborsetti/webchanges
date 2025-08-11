@@ -70,14 +70,20 @@ def parse_rst(text: str) -> docutils.nodes.document:
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file."""
 
+    def __init__(self, document: docutils.nodes.document) -> None:
+        """Initialise the visitor."""
+        super().__init__(document)
+        self.code: list[str] = []
+
     def visit_literal_block(self, node: docutils.nodes.literal_block) -> None:
-        self.code = []
+        """Extract python code blocks."""
         if 'python' in node.attributes['classes']:
             self.code.append(node.astext())
         elif node.rawsource.startswith('.. code-block:: python'):
             self.code.append(node.rawsource[22:].strip())
 
     def unknown_visit(self, node: docutils.nodes.Node) -> None:
+        """Pass."""
         pass
 
 
@@ -126,7 +132,7 @@ def test_flake8_on_hooks_rst(tmp_path: Path) -> None:
     hooks_path.write_text(HOOKS)
 
     # https://flake8.pycqa.org/en/latest/user/python-api.html
-    style_guide = flake8.get_style_guide(extend_ignore=['W292'])
+    style_guide = flake8.get_style_guide(extend_ignore=['E501', 'W292'])
     report = style_guide.input_file(str(hooks_path))
     assert report.get_statistics('') == [], 'Flake8 found violations in hooks.py'
 

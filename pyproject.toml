@@ -314,9 +314,9 @@ log_cli = true
 minversion = '8.3.3'
 testpaths = ['tests']
 
-# the below is for pytest-asyncio (required due to Playwright)
-asyncio_mode = 'auto'
-asyncio_default_fixture_loop_scope = 'function'
+# the below is for pytest-asyncio (used to be required due to Playwright)
+# asyncio_mode = 'auto'
+# asyncio_default_fixture_loop_scope = 'function'
 
 # Adds pytest-cov functionality (see https://pytest-cov.readthedocs.io/en/latest/config.html)
 # Note: --cov moved to .github/workflows/ci-cd.yaml and tox.ini due to interference with PyCharm breakpoints (see
