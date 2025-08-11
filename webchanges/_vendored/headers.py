@@ -46,11 +46,11 @@ HeaderTypes: typing.TypeAlias = (
 
 # from https://github.com/encode/httpx/blob/master/httpx/_utils.py
 def to_str(value: str | bytes, encoding: str = 'utf-8') -> str:
-    return value if isinstance(value, str) else value.decode(encoding)  # pyright: ignore[reportAttributeAccessIssue]
+    return value if isinstance(value, str) else value.decode(encoding)
 
 
 def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:
-    return value if isinstance(match_type_of, str) else value.encode()  # pyright: ignore[reportReturnType]
+    return value if isinstance(match_type_of, str) else value.encode()
 
 
 # from https://github.com/encode/httpx/blob/master/httpx/_models.py
@@ -62,9 +62,7 @@ def _normalize_header_key(key: str | bytes, encoding: str | None = None) -> byte
     Coerce str/bytes into a strictly byte-wise HTTP header key.
     """
     return (
-        key
-        if isinstance(key, bytes)
-        else key.encode(encoding or 'ascii')  # pyright: ignore[reportAttributeAccessIssue]
+        key if isinstance(key, bytes) else key.encode(encoding or 'ascii')
     )
 
 

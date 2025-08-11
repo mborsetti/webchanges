@@ -111,121 +111,6 @@ dependencies = {file = 'requirements.txt'}
 'webchanges' = ['py.typed']
 
 
-# -------------------------- isort --------------------------
-# isort your imports, so you don't have to.
-# Runs as part of pre-commit.
-# Config file documentation https://pycqa.github.io/isort/docs/configuration/options.html
-[tool.isort]
-profile = 'black'
-# multi_line_output = 3
-# use_parentheses = True
-# include_trailing_comma = True
-# force_grid_wrap = 0
-# ensure_newline_before_comments = True
-line_length = 120
-
-# Treat project as a git repository and ignore files listed in .gitignore.
-skip_gitignore = true
-
-# Force isort to recognize a module as being part of the current python project.
-known_first_party = 'webchanges'
-
-# Force isort to recognize a module as being a local folder.
-# Generally, this is reserved for relative imports (from . import module).
-known_local_folder = 'webchanges'
-
-# Force all imports to be sorted alphabetically within a section.
-force_alphabetical_sort_within_sections = true
-
-# Automatically create section groups by the top-level package they come from.
-group_by_package = true
-
-# Remove redundant aliases from imports, such as import os as os.
-remove_redundant_aliases = true
-
-# Use color in terminal output.
-color_output = true
-
-
-# -------------------------- black --------------------------
-# Uncompromising code formatting
-# Runs as part of pre-commit
-# Config file documentation
-# https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
-[tool.black]
-# What's in here overrides the command-line options shown by running $ black --help.
-line_length = 120
-target_version = ['py310']
-skip_string_normalization = true
-extend_exclude = '/(\.idea|\.pytest_cache|\__pycache__|\venv.*|\webchanges.egg-info)/'
-color = true
-
-
-# -------------------------- mypy --------------------------
-# Static Typing for Python
-# Runs as part of pre-commit
-# Config file documentation at https://mypy.readthedocs.io/en/stable/config_file.html
-[tool.mypy]
-
-# Disables import discovery of namespace packages (see PEP 420)
-namespace_packages = false
-
-# Specifies the Python version used to parse and check the target program.
-# python_version = 3.12
-
-# Suppresses error messages about imports that cannot be resolved.
-ignore_missing_imports = true
-
-# Disallows calling functions without type annotations from functions with type annotations.
-disallow_untyped_calls = true
-
-# Disallows defining functions without type annotations or with incomplete type annotations.
-disallow_untyped_defs = true
-
-# Reports an error whenever a function with type annotations is decorated with a decorator without annotations.
-disallow_untyped_decorators = true
-
-# Warns about casting an expression to its inferred type.
-warn_redundant_casts = true
-
-# Warns about unneeded # type: ignore comments.
-# May behave differently in GitHub Actions than it does on Windows.
-# warn_unused_ignores = true
-
-# Shows a warning when returning a value with type Any from a function declared with a non-Any return type.
-warn_return_any = true
-
-# Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis.
-warn_unreachable = false
-
-# Enables additional checks that are technically correct but may be impractical in real code.
-extra_checks = true
-
-# Shows documentation link to corresponding error code.
-show_error_code_links = true
-
-# Use visually nicer output in error messages: use soft word wrap, show source code snippets, and show error location
-# markers.
-pretty = true
-
-# Use an SQLite database to store the cache.
-sqlite_cache = true
-
-# Warns about per-module sections in the config file that do not match any files processed when invoking mypy.
-warn_unused_configs = true
-
-
-# -------------------------- rstcheck --------------------------
-# Checks syntax of reStructuredText and code blocks nested within it.
-# Runs as part of pre-commit.
-# Config file documentation at https://rstcheck.readthedocs.io/en/latest/usage/config/
-[tool.rstcheck]
-
-report_level = 'WARNING'
-# The below is needed when comments in *.rst files turn it into invalid python code
-# ignore_language = 'python'
-
-
 # -------------------------- bandit --------------------------
 [tool.bandit]
 # Find common security issues in Python code.
@@ -241,10 +126,26 @@ skips = [
 ]
 
 
+# -------------------------- black --------------------------
+[tool.black]
+# Uncompromising code formatting
+# Runs as part of pre-commit
+# Config file documentation
+# https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
+
+# What's in here overrides the command-line options shown by running $ black --help.
+line-length = 120
+target-version = ['py310']
+skip-string-normalization = true
+extend-exclude = '/(\.idea|\.pytest_cache|\__pycache__|\venv.*|\webchanges.egg-info)/'
+color = true
+
+
 # -------------------------- coverage --------------------------
+[tool.coverage.run]
 # Runs in Github Actions (see .github/workflows/ci-cd.yaml) and in tox (see tox.ini).
 # Config file documentation at https://coverage.readthedocs.io/en/latest/config.html
-[tool.coverage.run]
+
 branch = true
 concurrency = ['multiprocessing']
 source = ['./']
@@ -300,10 +201,113 @@ exclude_lines = [
 # ignore_errors = true
 
 
+# -------------------------- isort --------------------------
+[tool.isort]
+# isort your imports, so you don't have to.
+# Runs as part of pre-commit.
+# Config file documentation https://pycqa.github.io/isort/docs/configuration/options.html
+
+profile = 'black'
+# multi_line_output = 3
+# use_parentheses = True
+# include_trailing_comma = True
+# force_grid_wrap = 0
+# ensure_newline_before_comments = True
+line_length = 120
+
+# Treat project as a git repository and ignore files listed in .gitignore.
+skip_gitignore = true
+
+# Force isort to recognize a module as being part of the current python project.
+known_first_party = 'webchanges'
+
+# Force isort to recognize a module as being a local folder.
+# Generally, this is reserved for relative imports (from . import module).
+known_local_folder = 'webchanges'
+
+# Force all imports to be sorted alphabetically within a section.
+force_alphabetical_sort_within_sections = true
+
+# Automatically create section groups by the top-level package they come from.
+group_by_package = true
+
+# Remove redundant aliases from imports, such as import os as os.
+remove_redundant_aliases = true
+
+# Use color in terminal output.
+color_output = true
+
+
+# -------------------------- mypy --------------------------
+[tool.mypy]
+# Static Typing for Python
+# Runs as part of pre-commit
+# Config file documentation at https://mypy.readthedocs.io/en/stable/config_file.html
+
+# Disables import discovery of namespace packages (see PEP 420)
+namespace_packages = false
+
+# Specifies the Python version used to parse and check the target program.
+# python_version = 3.12
+
+# Suppresses error messages about imports that cannot be resolved.
+ignore_missing_imports = true
+
+# Disallows calling functions without type annotations from functions with type annotations.
+disallow_untyped_calls = true
+
+# Disallows defining functions without type annotations or with incomplete type annotations.
+disallow_untyped_defs = true
+
+# Reports an error whenever a function with type annotations is decorated with a decorator without annotations.
+disallow_untyped_decorators = true
+
+# Warns about casting an expression to its inferred type.
+warn_redundant_casts = true
+
+# Warns about unneeded # type: ignore comments.
+# May behave differently in GitHub Actions than it does on Windows.
+# warn_unused_ignores = true
+
+# Shows a warning when returning a value with type Any from a function declared with a non-Any return type.
+warn_return_any = true
+
+# Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis.
+warn_unreachable = false
+
+# Enables additional checks that are technically correct but may be impractical in real code.
+extra_checks = true
+
+# Shows documentation link to corresponding error code.
+show_error_code_links = true
+
+# Use visually nicer output in error messages: use soft word wrap, show source code snippets, and show error location
+# markers.
+pretty = true
+
+# Use an SQLite database to store the cache.
+sqlite_cache = true
+
+# Warns about per-module sections in the config file that do not match any files processed when invoking mypy.
+warn_unused_configs = true
+
+
+# -------------------------- rstcheck --------------------------
+[tool.rstcheck]
+# Checks syntax of reStructuredText and code blocks nested within it.
+# Runs as part of pre-commit.
+# Config file documentation at https://rstcheck.readthedocs.io/en/latest/usage/config/
+
+report_level = 'WARNING'
+# The below is needed when comments in *.rst files turn it into invalid python code
+# ignore_language = 'python'
+
+
 # -------------------------- pytest --------------------------
+[tool.pytest.ini_options]
 # Testing framework
 # Config file documentation at https://docs.pytest.org/en/stable/reference/reference.html#ini-options-ref
-[tool.pytest.ini_options]
+
 log_auto_indent = true
 # Enable log display during test run (aka "live logging" https://docs.pytest.org/en/stable/logging.html#live-logs)
 log_cli = true
@@ -321,12 +325,123 @@ asyncio_default_fixture_loop_scope = 'function'
 # addopts = --cov=./ --cov-report=term --cov-report=html
 
 
-# -------------------------- pyright --------------------------
-# Config file documentation at https://microsoft.github.io/pyright/#/configuration
-[tool.pyright]
-ignore = ['webchanges/storage_minidb.py']
+# -------------------------- ruff --------------------------
+[tool.ruff]
+# Config file documentation at https://docs.astral.sh/ruff/configuration/
 
-reportMissingImports = false
-reportMissingModuleSource = false
-reportDeprecated = true
-# reportUnnecessaryTypeIgnoreComment = true
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+
+    "webchanges/storage_minidb.py",
+    "webchanges/_vendored",
+]
+
+# By default, Ruff will discover files matching *.py, *.pyi, *.ipynb, or pyproject.toml.
+# Include additional files
+# include = []
+
+# Set the maximum line length.
+line-length = 120
+indent-width = 4
+
+# Target Python version
+# target-version = "py311"  # Commented out to infer from [project] requires-python
+
+[tool.ruff.lint]
+# By default, Ruff enables Flake8's F rules, along with a subset of the E rules
+# Enable rules not enabled by default, and ignore specific rules.
+select = [
+    # flake8-builtins
+    "B",
+    # flake8-bandit
+    "S",
+    # flake8-datetimez
+    "DTZ",
+    # isort
+    "I",
+    # McCabe complexity 
+    # "C901",
+    # pepe8-naming
+    "N",
+    # Pyflakes
+    "F",
+    # pycodestyle errors and warnings
+    "E", "W",
+    # Ruff-specific rules
+    "RUF",
+]
+ignore = [
+    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Enable the formatter, which is a drop-in replacement for Black.
+# No extra configuration is needed for basic formatting.
+
+# Exclude files for formatting only
+exclude = []
+
+# Use single quotes for strings.
+quote-style = "single"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = true
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    # Use of `assert` detected
+    "S101"
+]

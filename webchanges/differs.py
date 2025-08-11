@@ -12,7 +12,7 @@ import math
 import os
 import re
 import shlex
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import subprocess
 import sys
 import tempfile
 import traceback
@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Iterator, Literal, TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, Iterator, Literal, TypedDict
 from xml.parsers.expat import ExpatError
 from zoneinfo import ZoneInfo
 
@@ -31,7 +31,7 @@ import html2text
 import yaml
 
 from webchanges.jobs import JobBase
-from webchanges.util import linkify, mark_to_html, TrackSubClasses
+from webchanges.util import TrackSubClasses, linkify, mark_to_html
 
 try:
     from deepdiff import DeepDiff
@@ -68,7 +68,7 @@ except ImportError:  # pragma: no cover
 try:
     import xmltodict
 except ImportError as e:  # pragma: no cover
-    xmltodict = str(e)  # type: ignore[no-redef,assignment]
+    xmltodict = str(e)  # type: ignore[assignment]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -179,15 +179,13 @@ class DifferBase(metaclass=TrackSubClasses):
                     if key in directives:
                         if directives[key] is None:  # for speed
                             directives[key] = value
-                        elif isinstance(differ_default[key], dict) and isinstance(  # type: ignore[literal-required]
-                            directives[key], dict  # type: ignore[literal-required]
+                        elif isinstance(differ_default[key], dict) and isinstance(
+                            directives[key],
+                            dict,
                         ):
-                            for subkey, subvalue in differ_default[key].items():  # type: ignore[literal-required]
-                                if (
-                                    key in directives
-                                    and subkey not in directives[key]  # type: ignore[literal-required]
-                                ):
-                                    directives[key][subkey] = subvalue  # type: ignore[literal-required]
+                            for subkey, subvalue in differ_default[key].items():
+                                if key in directives and subkey not in directives[key]:
+                                    directives[key][subkey] = subvalue
                         # elif isinstance(differ_default[key], list) and isinstance(directives[key], list):
                         #     directives[key] = list(set(directives[key] + differ_default[key]))
                     else:
@@ -219,7 +217,7 @@ class DifferBase(metaclass=TrackSubClasses):
             if unknown_keys and '<any>' not in allowed_keys:
                 raise ValueError(
                     f'Job {job_index_number}: Differ {differ_kind} does not support sub-directive(s) '
-                    f"{', '.join(unknown_keys)} (supported: {', '.join(sorted(allowed_keys))})."
+                    f'{", ".join(unknown_keys)} (supported: {", ".join(sorted(allowed_keys))}).'
                 )
 
         return differ_kind, directives
@@ -255,8 +253,7 @@ class DifferBase(metaclass=TrackSubClasses):
                 if cls.debugger_attached():
                     raise
                 logger.info(
-                    f'Job {job_state.job.index_number}: Differ {differ_kind} with {directives=} encountered '
-                    f'error {e}'
+                    f'Job {job_state.job.index_number}: Differ {differ_kind} with {directives=} encountered error {e}'
                 )
                 # Undo saving of new data since user won't see the diff
                 job_state.delete_latest()
@@ -329,7 +326,7 @@ class DifferBase(metaclass=TrackSubClasses):
             dt = datetime.fromtimestamp(timestamp).astimezone(tz=tz)
             # add timezone name if known
             if dt.strftime('%Z') != dt.strftime('%z')[:3]:
-                cfws = f" ({dt.strftime('%Z')})"
+                cfws = f' ({dt.strftime("%Z")})'
             else:
                 cfws = ''
             return dt.strftime('%a, %d %b %Y %H:%M:%S %z') + cfws
@@ -370,7 +367,7 @@ class UnifiedDiffer(DifferBase):
 
     __kind__ = 'unified'
 
-    __supported_directives__ = {
+    __supported_directives__: dict[str, str] = {
         'context_lines': 'the number of context lines (default: 3)',
         'range_info': 'include range information lines (default: true)',
         'additions_only': 'keep only addition lines (default: false)',
@@ -473,38 +470,38 @@ class UnifiedDiffer(DifferBase):
 
             if additions_only:
                 if len(self.state.old_data) and len(self.state.new_data) / len(self.state.old_data) <= 0.25:
-                    diff = (
-                        diff[:2]
-                        + ['/**Comparison type: Additions only**']
-                        + ['/**Deletions are being shown as 75% or more of the content has been deleted**']
-                        + diff[2:]
-                    )
+                    diff = [
+                        *diff[:2],
+                        '/**Comparison type: Additions only**',
+                        '/**Deletions are being shown as 75% or more of the content has been deleted**',
+                        *diff[2:],
+                    ]
                 else:
                     head = '---' + diff[0][3:]
                     diff = [line for line in diff if line.startswith('+') or line.startswith('@')]
                     diff = [
                         line1
-                        for line1, line2 in zip([''] + diff, diff + [''])
+                        for line1, line2 in zip(['', *diff], [*diff, ''], strict=False)
                         if not (line1.startswith('@') and line2.startswith('@'))
                     ][1:]
                     diff = diff[:-1] if diff[-1].startswith('@') else diff
                     if len(diff) == 1 or len([line for line in diff if line.removeprefix('+').rstrip()]) == 2:
                         self.state.verb = 'changed,no_report'
                         return empty_return
-                    diff = [head, diff[0], '/**Comparison type: Additions only**'] + diff[1:]
+                    diff = [head, diff[0], '/**Comparison type: Additions only**', *diff[1:]]
             elif deletions_only:
                 head = '--- @' + diff[1][3:]
                 diff = [line for line in diff if line.startswith('-') or line.startswith('@')]
                 diff = [
                     line1
-                    for line1, line2 in zip([''] + diff, diff + [''])
+                    for line1, line2 in zip(['', *diff], [*diff, ''], strict=False)
                     if not (line1.startswith('@') and line2.startswith('@'))
                 ][1:]
                 diff = diff[:-1] if diff[-1].startswith('@') else diff
                 if len(diff) == 1 or len([line for line in diff if line.removeprefix('-').rstrip()]) == 2:
                     self.state.verb = 'changed,no_report'
                     return empty_return
-                diff = [diff[0], head, '/**Comparison type: Deletions only**'] + diff[1:]
+                diff = [diff[0], head, '/**Comparison type: Deletions only**', *diff[1:]]
 
             # remove range info lines if needed
             if directives.get('range_info') is False or (
@@ -532,7 +529,7 @@ class TableDiffer(DifferBase):
 
     __kind__ = 'table'
 
-    __supported_directives__ = {
+    __supported_directives__: dict[str, str] = {
         'tabsize': 'tab stop spacing (default: 8)',
     }
 
@@ -584,7 +581,7 @@ class CommandDiffer(DifferBase):
 
     __kind__ = 'command'
 
-    __supported_directives__ = {
+    __supported_directives__: dict[str, str] = {
         'command': 'The command to execute',
         'is_html': 'Whether the output of the command is HTML',
     }
@@ -650,7 +647,7 @@ class CommandDiffer(DifferBase):
                     new_file_path.write_text(new_data)
                 else:
                     new_file_path.write_bytes(new_data)
-                cmdline = shlex.split(command) + [str(old_file_path), str(new_file_path)]
+                cmdline = [*shlex.split(command), str(old_file_path), str(new_file_path)]
                 proc = subprocess.run(cmdline, capture_output=True, text=True)  # noqa: S603 subprocess call
             if proc.stderr or proc.returncode > 1:
                 raise RuntimeError(
@@ -675,9 +672,7 @@ class CommandDiffer(DifferBase):
             diff = proc.stdout
             if self.state.is_markdown():
                 # undo the protection of the link anchor from being split
-                diff = markdown_links_re.sub(  # pyright: ignore[reportPossiblyUnboundVariable]
-                    lambda x: f'[{urllib.parse.unquote(x.group(1))}]({x.group(2)})', diff
-                )
+                diff = markdown_links_re.sub(lambda x: f'[{urllib.parse.unquote(x.group(1))}]({x.group(2)})', diff)
             if command.startswith('wdiff') and self.job.contextlines == 0:
                 # remove lines that don't have any changes
                 keeplines = []
@@ -771,15 +766,14 @@ class CommandDiffer(DifferBase):
 
 
 class DeepdiffDiffer(DifferBase):
-
     __kind__ = 'deepdiff'
 
-    __supported_directives__ = {
+    __supported_directives__: dict[str, str] = {
         'data_type': "either 'json' (default), 'yaml', or 'xml'",
         'ignore_order': 'Whether to ignore the order in which the items have appeared (default: false)',
         'ignore_string_case': 'Whether to be case-sensitive or not when comparing strings (default: false)',
         'significant_digits': (
-            'The number of digits AFTER the decimal point to be used in the comparison (default: no limit)'
+            'The number of digits AFTER the decimal point to be used in the comparis: ston (default: no limit)'
         ),
         'compact': 'Whether to output a compact representation that also ignores changes of types (default: false)',
     }
@@ -812,9 +806,9 @@ class DeepdiffDiffer(DifferBase):
             # Edited strings originally in deepdiff.serialization._get_pretty_form_text
             # See https://github.com/seperman/deepdiff/blob/master/deepdiff/serialization.py
             if compact:
-                root = '⊤'
+                root = '⊤'  # noqa: RUF001 DOWN TACK
                 if report_kind == 'html':
-                    PRETTY_FORM_TEXTS = {
+                    pretty_form_texts = {
                         'type_changes': (
                             f'{{diff_path}}: {span_deltd}{{val_t1}}</span> ⮕ {span_added}{{val_t2}}</span>'
                         ),
@@ -827,15 +821,17 @@ class DeepdiffDiffer(DifferBase):
                         'iterable_item_removed': f'{span_deltd}{{diff_path}}: {{val_t1}}</span>',
                         'attribute_added': f'{{diff_path}}: {span_added}{{val_t2}}</span>',
                         'attribute_removed': f'{span_remvd}{{diff_path}}</span>: {span_deltd}{{val_t1}}</span>',
-                        'set_item_added': f'⊤[{{val_t2}}]: {span_added}{{val_t1}}</span>',
-                        'set_item_removed': f'{span_remvd}⊤[{{val_t1}}]</span>: {span_deltd}{{val_t2}}</span>',
+                        'set_item_added': f'⊤[{{val_t2}}]: {span_added}{{val_t1}}</span>',  # noqa: RUF001 DOWN TACK
+                        'set_item_removed': (
+                            f'{span_remvd}⊤[{{val_t1}}]</span>: {span_deltd}{{val_t2}}</span>'  # noqa: RUF001
+                        ),
                         'repetition_change': (
                             f'{{diff_path}}: repetition change {span_deltd}{{val_t1}}</span> ⮕ '
                             f'{span_added}{{val_t2}}</span>'
                         ),
                     }
                 else:
-                    PRETTY_FORM_TEXTS = {
+                    pretty_form_texts = {
                         'type_changes': '{diff_path}: {val_t1} → {val_t2}',
                         'values_changed': '{diff_path}: {val_t1} → {val_t2}',
                         'dictionary_item_added': '{diff_path}: new {val_t2}',
@@ -844,14 +840,14 @@ class DeepdiffDiffer(DifferBase):
                         'iterable_item_removed': '{diff_path}: removed {val_t1}',
                         'attribute_added': '{diff_path}: new {val_t2}',
                         'attribute_removed': '{diff_path}: removed {val_t1}',
-                        'set_item_added': '⊤[{val_t2}]: new {val_t1}',
-                        'set_item_removed': '⊤[{val_t1}]: removed {val_t2}',
+                        'set_item_added': '⊤[{val_t2}]: new {val_t1}',  # noqa: RUF001 DOWN TACK
+                        'set_item_removed': '⊤[{val_t1}]: removed {val_t2}',  # noqa: RUF001 DOWN TACK
                         'repetition_change': '{diff_path}: repetition change {val_t1} → {val_t2}',
                     }
             else:  # not compact
                 root = 'root'
                 if report_kind == 'html':
-                    PRETTY_FORM_TEXTS = {
+                    pretty_form_texts = {
                         'type_changes': (
                             'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
                             f'from {span_deltd}{{val_t1}}</span> to {span_added}{{val_t2}}</span>.'
@@ -883,7 +879,7 @@ class DeepdiffDiffer(DifferBase):
                         ),
                     }
                 else:
-                    PRETTY_FORM_TEXTS = {
+                    pretty_form_texts = {
                         'type_changes': (
                             'Type of {diff_path} changed from {type_t1} to {type_t2} and value changed '
                             'from {val_t1} to {val_t2}.'
@@ -954,8 +950,9 @@ class DeepdiffDiffer(DifferBase):
                 val_t2 = stringify_value(ddiff.t2, type_t2)
 
                 diff_path = ddiff.path(root=root)  # type: ignore[no-untyped-call]
-                return '• ' + PRETTY_FORM_TEXTS.get(
-                    ddiff.report_type, ''  # pyright: ignore[reportCallIssue,reportArgumentType]
+                return '• ' + pretty_form_texts.get(
+                    ddiff.report_type,
+                    '',
                 ).format(
                     diff_path=diff_path,
                     type_t1=type_t1,
@@ -1086,7 +1083,7 @@ class DeepdiffDiffer(DifferBase):
             cache_size=500,
             cache_purge_level=0,
             cache_tuning_sample_size=500,
-            default_timezone=tz,  # pyright: ignore[reportArgumentType]
+            default_timezone=tz,
             ignore_order=ignore_order,
             ignore_string_type_changes=True,
             ignore_numeric_type_changes=True,
@@ -1125,7 +1122,7 @@ class ImageDiffer(DifferBase):
 
     __kind__ = 'image'
 
-    __supported_directives__ = {
+    __supported_directives__: dict[str, str] = {
         'data_type': (
             "'url' (to retrieve an image), 'ascii85' (Ascii85 data), 'base64' (Base64 data) or 'filename' (the path "
             "to an image file) (default: 'url')"
@@ -1149,6 +1146,7 @@ class ImageDiffer(DifferBase):
             f'change in the future. Please report any problems or suggestions at '
             f'https://github.com/mborsetti/webchanges/discussions.',
             RuntimeWarning,
+            stacklevel=1,
         )
         if isinstance(Image, str):  # pragma: no cover
             self.raise_import_error('pillow', Image)
@@ -1236,26 +1234,29 @@ class ImageDiffer(DifferBase):
                 f'may have bugs, and may change in the future. Please report any problems or suggestions at '
                 f'https://github.com/mborsetti/webchanges/discussions.',
                 RuntimeWarning,
+                stacklevel=1,
             )
 
             api_version = '1beta'
             # GOOGLE_AI_API_KEY deprecated end of 2025
-            GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').rstrip()
-            if not GEMINI_API_KEY:
-                GEMINI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
-                if GEMINI_API_KEY:
+            gemini_api_key = os.environ.get('GEMINI_API_KEY', '').rstrip()
+            if not gemini_api_key:
+                gemini_api_key = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
+                if gemini_api_key:
                     warnings.warn(
-                        'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.'
+                        'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.',
+                        DeprecationWarning,
+                        stacklevel=1,
                     )
-            if len(GEMINI_API_KEY) != 39:
+            if len(gemini_api_key) != 39:
                 logger.error(
                     f'Job {self.job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
-                    f'incorrect length {len(GEMINI_API_KEY)} ({self.job.get_location()})'
+                    f'incorrect length {len(gemini_api_key)} ({self.job.get_location()})'
                 )
                 return (
                     f'## ERROR in summarizing changes using Google AI:\n'
                     f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
-                    f'{len(GEMINI_API_KEY)}.\n',
+                    f'{len(gemini_api_key)}.\n',
                     '',
                 )
             client = httpx.Client(http2=True, timeout=self.job.timeout)
@@ -1285,8 +1286,7 @@ class ImageDiffer(DifferBase):
 
                 try:
                     response = client.post(
-                        f'https://generativelanguage.googleapis.com/upload/v{api_version}/files?'
-                        f'key={GEMINI_API_KEY}',
+                        f'https://generativelanguage.googleapis.com/upload/v{api_version}/files?key={gemini_api_key}',
                         headers=headers,
                         json=data,
                     )
@@ -1333,12 +1333,12 @@ class ImageDiffer(DifferBase):
                 else:
                     logger.error(
                         f'Job {self.job.index_number}: ai_google for {self.__kind__} HTTP Client error '
-                        f"{type(additional_part['error'])} when loading {additional_part['img_name']} to Google AI: "
-                        f"{additional_part['error']}"
+                        f'{type(additional_part["error"])} when loading {additional_part["img_name"]} to Google AI: '
+                        f'{additional_part["error"]}'
                     )
                     return (
-                        f"HTTP Client error {type(additional_part['error'])} when loading "
-                        f"{additional_part['img_name']} to Google AI: {additional_part['error']}",
+                        f'HTTP Client error {type(additional_part["error"])} when loading '
+                        f'{additional_part["img_name"]} to Google AI: {additional_part["error"]}',
                         '',
                     )
 
@@ -1376,8 +1376,8 @@ class ImageDiffer(DifferBase):
                 '**Instructions:**\n'
                 '\n'
                 f'1.  **Identify Changes:** Directly compare the "new version" '
-                f"{additional_parts[0]['file_data']['file_uri']} to the \"old version\" "
-                f"{additional_parts[1]['file_data']['file_uri']} and identify all additions, removals, and alterations "
+                f'{additional_parts[0]["file_data"]["file_uri"]} to the "old version" '
+                f'{additional_parts[1]["file_data"]["file_uri"]} and identify all additions, removals, and alterations '
                 'of visual elements.\n'
                 '\n'
                 '2.  **Filter for Significance:** From your initial list of changes, you must filter out any that '
@@ -1391,7 +1391,7 @@ class ImageDiffer(DifferBase):
                 '    *   Present the significant differences as a bulleted list under the heading "Summary of '
                 'Changes".\n'
                 '    *   For each point, state the difference factually and concisely (e.g., "An apple was added '
-                'to the table," "The text on the sign was changed from \'Open\' to \'Closed\'").\n'
+                "to the table,\" \"The text on the sign was changed from 'Open' to 'Closed'\").\n"
                 '    *   Only if a change directly and clearly alters the primary message or interpretation of the '
                 'image, you may add a brief, one-sentence explanation of this shift. Do not speculate on deeper '
                 'meanings.\n'
@@ -1538,7 +1538,7 @@ class ImageDiffer(DifferBase):
         back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
         directives_for_str = {key: value for key, value in directives.items() if key != 'model'}
         if 'prompt' in directives_for_str:
-            directives_for_str['prompt'] = '<custom>'
+            directives_for_str['prompt'] = '«custom»'
         directives_text = (
             (
                 ' (ai_google directive(s): '
@@ -1548,7 +1548,7 @@ class ImageDiffer(DifferBase):
             if directives_for_str
             else ''
         )
-        footer = f"Summary by Google Generative AI's model {model_version}{directives_text}"
+        footer = f"Summary by Google Generative AI's model {model_version}{directives_text}."
         return {
             'text': (
                 f'{summary}\n\n\nA visualization of differences is available in {__package__} HTML reports.'
@@ -1562,9 +1562,7 @@ class ImageDiffer(DifferBase):
                 [
                     mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
                     '',
-                ]
-                + htm
-                + [
+                    *htm,
                     '-----',
                     f'<i><small>{footer}</small></i>',
                 ]
@@ -1582,7 +1580,7 @@ class AIGoogleDiffer(DifferBase):
 
     __kind__ = 'ai_google'
 
-    __supported_directives__ = {
+    __supported_directives__: dict[str, str] = {
         'model': ('model name from https://ai.google.dev/gemini-api/docs/models/gemini (default: gemini-2.0-flash)'),
         'system_instructions': (
             'Optional tone and style instructions for the model (default: see documentation at'
@@ -1620,22 +1618,24 @@ class AIGoogleDiffer(DifferBase):
         top_p = directives.get('top_p', 1.0 if temperature == 0.0 else None)
         top_k = directives.get('top_k')
         # GOOGLE_AI_API_KEY deprecated end of 2025
-        GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').rstrip()
-        if not GEMINI_API_KEY:
-            GEMINI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
-            if GEMINI_API_KEY:
+        gemini_api_key = os.environ.get('GEMINI_API_KEY', '').rstrip()
+        if not gemini_api_key:
+            gemini_api_key = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
+            if gemini_api_key:
                 warnings.warn(
-                    'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.'
+                    'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.',
+                    DeprecationWarning,
+                    stacklevel=1,
                 )
-        if len(GEMINI_API_KEY) != 39:
+        if len(gemini_api_key) != 39:
             logger.error(
                 f'Job {job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
-                f'incorrect length {len(GEMINI_API_KEY)} ({job.get_location()})'
+                f'incorrect length {len(gemini_api_key)} ({job.get_location()})'
             )
             return (
                 f'## ERROR in summarizing changes using Google AI:\n'
                 f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
-                f'{len(GEMINI_API_KEY)}.',
+                f'{len(gemini_api_key)}.',
                 '',
             )
 
@@ -1654,13 +1654,13 @@ class AIGoogleDiffer(DifferBase):
         if directives.get('tools'):
             data['tools'] = directives['tools']
         if directives.get('thinking_budget'):
-            data['generationConfig']['thinkingConfig'].update({'thinkingBudget': directives['thinking_budget']})
+            data['generationConfig'].update({'thinkingConfig': {'thinkingBudget': directives['thinking_budget']}})
         logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
         model_version = model  # default
         try:
-            r = httpx.Client(http2=True).post(  # noqa: S113 Call to httpx without timeout
+            r = httpx.Client(http2=True).post(
                 f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
-                f'key={GEMINI_API_KEY}',
+                f'key={gemini_api_key}',
                 json=data,
                 headers={'Content-Type': 'application/json'},
                 timeout=timeout,
@@ -1669,7 +1669,12 @@ class AIGoogleDiffer(DifferBase):
                 result = r.json()
                 candidate = result['candidates'][0]
                 finish_reason = candidate['finishReason']
-                logger.info(f'Job {job.index_number}: AI generation finished by {finish_reason}')
+                model_version = result['modelVersion']
+                logger.info(f'Job {job.index_number}: AI generation finished by {finish_reason} using {model_version}')
+                logger.debug(
+                    f'Job {job.index_number}: Used {result["usageMetadata"]["totalTokenCount"]:,} tokens, '
+                    f'{result["usageMetadata"]["totalTokenCount"]:,} of which for the prompt.'
+                )
                 if 'content' in candidate:
                     if 'parts' in candidate['content']:
                         summary: str = candidate['content']['parts'][0]['text'].rstrip()
@@ -1678,7 +1683,7 @@ class AIGoogleDiffer(DifferBase):
                             f'## ERROR in summarizing changes using Google AI:\n'
                             f'Model did not return any candidate output:\n'
                             f'finishReason={finish_reason}'
-                            f"{jsonlib.dumps(result['usageMetadata'], ensure_ascii=True, indent=2)}"
+                            f'{jsonlib.dumps(result["usageMetadata"], ensure_ascii=True, indent=2)}'
                         )
                 else:
                     summary = (
@@ -1686,13 +1691,12 @@ class AIGoogleDiffer(DifferBase):
                         f'Model did not return any candidate output:\n'
                         f'{jsonlib.dumps(result, ensure_ascii=True, indent=2)}'
                     )
-                model_version = result['modelVersion']
 
             elif r.status_code == 400:
                 summary = (
                     f'## ERROR in summarizing changes using Google AI:\n'
                     f'Received error from {r.url.host}: '
-                    f"{r.json().get('error', {}).get('message') or ''}"
+                    f'{r.json().get("error", {}).get("message") or ""}'
                 )
             else:
                 summary = (
@@ -1701,7 +1705,7 @@ class AIGoogleDiffer(DifferBase):
                     f'{r.url.host}'
                 )
                 if r.content:
-                    summary += f": {r.json().get('error', {}).get('message') or ''}"
+                    summary += f': {r.json().get("error", {}).get("message") or ""}'
 
         except httpx.HTTPError as e:
             summary = (
@@ -1725,27 +1729,30 @@ class AIGoogleDiffer(DifferBase):
             f'change in the future. Please report any problems or suggestions at '
             f'https://github.com/mborsetti/webchanges/discussions.',
             RuntimeWarning,
+            stacklevel=1,
         )
 
         def get_ai_summary(prompt: str, system_instructions: str) -> tuple[str, str]:
             """Generate AI summary from unified diff, or an error message, plus the model version."""
             # GOOGLE_AI_API_KEY deprecated end of 2025
-            GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').rstrip()
-            if not GEMINI_API_KEY:
-                GEMINI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
-                if GEMINI_API_KEY:
+            gemini_api_key = os.environ.get('GEMINI_API_KEY', '').rstrip()
+            if not gemini_api_key:
+                gemini_api_key = os.environ.get('GOOGLE_AI_API_KEY', '').rstrip()
+                if gemini_api_key:
                     warnings.warn(
-                        'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.'
+                        'The environment variable GOOGLE_AI_API_KEY is deprecated; please use GEMINI_API_KEY instead.',
+                        DeprecationWarning,
+                        stacklevel=1,
                     )
-            if len(GEMINI_API_KEY) != 39:
+            if len(gemini_api_key) != 39:
                 logger.error(
                     f'Job {self.job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
-                    f'incorrect length {len(GEMINI_API_KEY)} ({self.job.get_location()})'
+                    f'incorrect length {len(gemini_api_key)} ({self.job.get_location()})'
                 )
                 return (
                     f'## ERROR in summarizing changes using Google AI:\n'
                     f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
-                    f'{len(GEMINI_API_KEY)}.\n',
+                    f'{len(gemini_api_key)}.\n',
                     '',
                 )
 
@@ -1798,40 +1805,77 @@ class AIGoogleDiffer(DifferBase):
 
             return summary, model_version
 
+        default_system_instructions = ''
         if directives.get('additions_only') or self.job.additions_only:
-            default_system_instructions = (
-                'You are a skilled journalist. Your task is to summarize the provided text in a clear and concise '
-                'manner. Restrict your analysis and summary *only* to the text provided. Do not introduce any '
-                'external information or assumptions.\n\n'
-                'Format your summary using Markdown. Use headings, bullet points, and other Markdown elements where '
-                'appropriate to create a well-structured and easily readable summary.'
+            default_prompt = '\n'.join(
+                (
+                    'You are an expert analyst AI, specializing in the meticulous summarization of change documents. '
+                    'Your task is to summarize the provided unified diff in a clear and concise manner with 100% '
+                    'fidelity. Restrict your analysis and summary *only* to the diff provided. Do not introduce any '
+                    'external information or assumptions.',
+                    '',
+                    'Format your summary using Markdown. Use headings, bullet points, and other Markdown elements '
+                    'where appropriate to create a well-structured and easily readable summary.',
+                    '',
+                    '{unified_diff_new}',
+                )
             )
-            default_prompt = '{unified_diff_new}'
         else:
-            default_system_instructions = (
-                'You are a skilled journalist tasked with analyzing two versions of a text and summarizing the key '
-                'differences in meaning between them. The audience for your summary is already familiar with the '
-                "text's content, so you can focus on the most significant changes.\n\n"
-                '**Instructions:**\n\n'
-                '1. Carefully examine the old version of the text, provided within the `<old_version>` and '
-                '`</old_version>` tags.\n'
-                '2. Carefully examine the new version of the text, provided within the `<new_version>` and '
-                '`</new_version>` tags.\n'
-                '3. Compare the two versions, identifying areas where the meaning differs. This includes additions, '
-                'removals, or alterations that change the intended message or interpretation.\n'
-                '4. Ignore changes that do not affect the overall meaning, even if the wording has been modified.\n'
-                '5. Summarize the identified differences, except those ignored, in a clear and concise manner, '
-                'explaining how the meaning has shifted or evolved in the new version compared to the old version only '
-                'when necessary. Be specific and provide examples to illustrate your points when needed.\n'
-                '6. If there are only additions to the text, then summarize the additions.\n'
-                '7. Ignore any changes in page numbers, footnotes numbering, and other such minor or cosmetic changes.'
-                '\n'
-                '8. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
-                'and other Markdown elements as needed to enhance readability.\n'
-                '9. Restrict your analysis and summary to the information provided within the `<old_version>` and '
-                '`<new_version>` tags. Do not introduce external information or assumptions.\n'
+            default_prompt = '\n'.join(
+                (
+                    'You are an expert analyst AI, specializing in the meticulous comparison of documents. Your task '
+                    'is to identify and summarize only the substantive differences between two versions of a text. '
+                    'Your audience is already familiar with the original document and needs a concise summary of the '
+                    'most significant changes in meaning or information.',
+                    '',
+                    '**Instructions:**',
+                    '',
+                    '1.  **Analyze the Texts:** Carefully review the document provided in the `<old_version>` and '
+                    '`</old_version>` tags and the one in the `<new_version>` and `</new_version>` tags.',
+                    '',
+                    '2.  **Identify Substantive Changes:** Compare the two versions to identify all substantive '
+                    'changes. A "substantive change" is defined as any modification that alters the core meaning, '
+                    'intent, instructions, or factual information presented in the text. This includes, but is not '
+                    'limited to:',
+                    '*   Additions of new concepts, data, or requirements.',
+                    '*   Deletions of existing information, arguments, or clauses.',
+                    '*   Alterations to definitions, conclusions, instructions, or key takeaways.',
+                    '',
+                    '3.  **Exclude Non-Substantive Changes:** You must disregard any changes that are purely cosmetic, '
+                    'typographical, or structural and do not alter the substantive meaning of the document. Explicitly '
+                    'ignore the following:',
+                    '*   Changes in page numbers, section/chapter numbering, or paragraph numbering.',
+                    '*   Corrections of spelling, punctuation, or grammatical errors.',
+                    '*   Modifications in formatting, layout, or font.',
+                    '*   Rewording or rephrasing that does not change the underlying meaning or intent.',
+                    '',
+                    '4.  **Summarize Material Differences:** Create a summary of the identified substantive changes '
+                    'with 100% fidelity. For each change, provide:',
+                    '*   A clear heading identifying the relevant section (e.g., "Section 4: User Guidelines" or '
+                    '"Chapteron Methodology").',
+                    '*   A concise description of the modification, explaining whether it is an addition, deletion, or '
+                    'alteration.',
+                    '*   A brief analysis of how the change impacts the overall message or instructions, if not '
+                    'immediately obvious.',
+                    '',
+                    '5.  **Output Format:**',
+                    '*   Use Markdown for clear and structured presentation (e.g., headings and bullet points).',
+                    '*   If no substantive changes are found, state this clearly.',
+                    '*   If the changes consist only of additions, summarize the new content.',
+                    '',
+                    '6.  **Scope Limitation:** Base your analysis strictly on the provided text excerpts. Do not '
+                    'infer or introduce any external context or information.',
+                    '',
+                    '<old_version>',
+                    '{old_text}',
+                    '</old_version>',
+                    '',
+                    '<new_version>',
+                    '{new_text}',
+                    '</new_version>',
+                )
             )
-            default_prompt = '<old_version>\n{old_text}\n</old_version>\n\n<new_version>\n{new_text}\n</new_version>'
+
         system_instructions = directives.get('system_instructions', default_system_instructions)
         prompt = directives.get('prompt', default_prompt).replace('\\n', '\n')
         summary, model_version = get_ai_summary(prompt, system_instructions)
@@ -1842,7 +1886,7 @@ class AIGoogleDiffer(DifferBase):
         back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
         directives_for_str = {key: value for key, value in directives.items() if key != 'model'}
         if 'prompt' in directives_for_str:
-            directives_for_str['prompt'] = '<custom>'
+            directives_for_str['prompt'] = '«custom»'
         directives_text = (
             (
                 ' (differ directive(s): '
@@ -1853,7 +1897,7 @@ class AIGoogleDiffer(DifferBase):
             else ''
         )
         footer = (
-            f"Summary by Google Generative AI's model {model_version}{directives_text}"
+            f"Summary by Google Generative AI's model {model_version}{directives_text}."
             if model_version or directives_text
             else ''
         )
@@ -1868,20 +1912,14 @@ class AIGoogleDiffer(DifferBase):
                 temp_unfiltered_diff,
             )
         return {
-            'text': (
-                f"{summary}\n\n{unified_report['text']}"  # pyright: ignore[reportPossiblyUnboundVariable]
-                + (f'\n------------\n{footer}' if footer else '')
-            ),
-            'markdown': (
-                f"{summary}\n\n{unified_report['markdown']}"  # pyright: ignore[reportPossiblyUnboundVariable]
-                + (f'\n* * *\n{footer}' if footer else '')
-            ),
+            'text': (f'{summary}\n\n{unified_report["text"]}' + (f'\n------------\n{footer}' if footer else '')),
+            'markdown': (f'{summary}\n\n{unified_report["markdown"]}' + (f'\n* * *\n{footer}' if footer else '')),
             'html': '\n'.join(
                 [
                     mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
                     '<br>',
                     '<br>',
-                    unified_report['html'],  # pyright: ignore[reportPossiblyUnboundVariable]
+                    unified_report['html'],
                 ]
                 + (['-----<br>', f'<i><small>{footer}</small></i>'] if footer else [])
             ),
@@ -1907,6 +1945,7 @@ class WdiffDiffer(DifferBase):
             f'Job {self.job.index_number}: Differ {self.__kind__} is WORK IN PROGRESS and has KNOWN bugs which '
             "are being worked on. DO NOT USE AS THE RESULTS WON'T BE CORRECT.",
             RuntimeWarning,
+            stacklevel=1,
         )
         if not isinstance(self.state.old_data, str):
             raise ValueError
@@ -1963,7 +2002,7 @@ class WdiffDiffer(DifferBase):
         add = False
         rem = False
 
-        for word_text in diff + ['  ']:
+        for word_text in [*diff, '  ']:
             if word_text[0] == '?':  # additional context line
                 continue
             word_html = word_text
@@ -2049,7 +2088,9 @@ class WdiffDiffer(DifferBase):
             last_line = 0
             skip = False
             i = 0
-            for i, (line_text, line_html) in enumerate(zip(diff_text.splitlines(), diff_html.splitlines())):
+            for i, (line_text, line_html) in enumerate(
+                zip(diff_text.splitlines(), diff_html.splitlines(), strict=False)
+            ):
                 if i in lines_to_keep:
                     if range_info and skip:
                         new_diff_text.append(f'@@ {last_line + 1}...{i} @@')

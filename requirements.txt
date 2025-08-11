@@ -1,4 +1,4 @@
-colorama; sys_platform == "win32"
+colorama; sys_platform == 'win32'
 cssselect
 h2
 html2text
@@ -8,5 +8,5 @@ markdown2
 msgpack
 platformdirs
 pyyaml
-tzdata; sys_platform == "win32"
+tzdata; sys_platform == 'win32'
 zstandard

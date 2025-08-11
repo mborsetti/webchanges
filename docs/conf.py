@@ -28,7 +28,7 @@ from sphinx.writers.html5 import HTML5Translator
 
 # below required to import project_data module
 sys.path.insert(1, str(Path(__file__).parent.parent))
-import webchanges as project_data  # noqa: E402 module level import not at top of file.
+import webchanges as project_data
 
 # below required to import inheritance_ascii_tree module
 sys.path.insert(1, str(Path(__file__).parent))
@@ -292,7 +292,7 @@ html_static_path = ['_static']
 htmlhelp_basename = 'testdoc'
 
 
-# The “title” for HTML documentation generated with Sphinx’s own templates.
+# The “title” for HTML documentation generated with Sphinx’s own templates.  # noqa: RUF003
 #
 # html_title = '<project> v<revision> documentation'  # default
 
@@ -308,7 +308,7 @@ htmlhelp_basename = 'testdoc'
 #
 # html_favicon = None  # default
 
-# A ‘Last updated on:’ timestamp is inserted at every page bottom, using the
+# A ‘Last updated on:’ timestamp is inserted at every page bottom, using the  # noqa: RUF003
 #  given strftime() format. The empty # string is equivalent to '%b %d, %Y'
 #  (or a locale-dependent equivalent).
 #
@@ -392,10 +392,10 @@ class PatchedHTMLTranslator(HTML5Translator):
                 attributes['href'] = self.cloak_mailto(attributes['href'])
                 self.in_mailto = True
         else:
-            assert 'refid' in node, 'References must have "refuri" or "refid" attribute.'
+            assert 'refid' in node, 'References must have "refuri" or "refid" attribute.'  # noqa: S101 use of `assert`
             attributes['href'] = '#' + node['refid']
         if not isinstance(node.parent, nodes.TextElement):
-            assert len(node) == 1 and isinstance(node[0], nodes.image)
+            assert len(node) == 1 and isinstance(node[0], nodes.image)  # noqa: S101 use of `assert`
             attributes['class'] += ' image-reference'
         if 'reftitle' in node:
             attributes['title'] = node['reftitle']

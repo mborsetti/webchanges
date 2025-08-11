@@ -17,8 +17,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime  # py311 use UTC instead of timezone.utc
-from datetime import timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Literal, TextIO, TypedDict
 
@@ -41,7 +40,7 @@ except ImportError:  # pragma: no cover
 try:
     from types import NoneType
 except ImportError:  # pragma: no cover # Python 3.9
-    NoneType = type(None)  # type: ignore[assignment,misc]
+    NoneType = type(None)  # type: ignore[misc]
 
 try:
     import redis
@@ -120,6 +119,7 @@ _ConfigReportEmailSmtp = TypedDict(
         'starttls': bool,
         'auth': bool,
         'insecure_password': str,
+        'utf-8': bool,
     },
 )
 _ConfigReportEmailSendmail = TypedDict(
@@ -372,6 +372,7 @@ DEFAULT_CONFIG: _Config = {
                 'auth': True,
                 'user': '',
                 'insecure_password': '',
+                'utf-8': True,
             },
             'sendmail': {
                 'path': 'sendmail',
@@ -485,7 +486,7 @@ yaml.add_constructor('!include', yaml_include, Loader=yaml.SafeLoader)
 
 
 @dataclass
-class BaseStorage(ABC):
+class BaseStorage(ABC):  # noqa:  B024 abstract base class, but it has no abstract methods or properties
     """Base class for storage."""
 
 
@@ -643,12 +644,12 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         if shelljob_errors and any(removed_jobs):
             print(
                 f'ERROR: Removing the following jobs because '
-                f" {' and '.join(shelljob_errors)}: {' ,'.join(str(job.index_number) for job in removed_jobs)}\n"
+                f' {" and ".join(shelljob_errors)}: {" ,".join(str(job.index_number) for job in removed_jobs)}\n'
                 f'(see {__docs_url__}en/stable/jobs.html#important-note-for-command-jobs).'
             )
             jobs = [job for job in jobs if job not in removed_jobs]
 
-        logger.info(f"Loaded {len(jobs)} jobs from {', '.join(str(file) for file in self.filename)}.")
+        logger.info(f'Loaded {len(jobs)} jobs from {", ".join(str(file) for file in self.filename)}.')
         return jobs
 
 
@@ -775,6 +776,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 f'{yaml.safe_dump(extras)}Check for typos or the hooks.py file (if any); documentation is at '
                 f'{__docs_url__}\n',
                 RuntimeWarning,
+                stacklevel=1,
             )
 
     @staticmethod
@@ -790,9 +792,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         'ones.'
                     )
                 else:
-                    config['job_defaults']['command'] = config[  # pyright: ignore[reportGeneralTypeIssues]
-                        'job_defaults'
-                    ].pop(
+                    config['job_defaults']['command'] = config['job_defaults'].pop(
                         'shell'  # type: ignore[typeddict-item]
                     )
             for key in {'all', 'url', 'browser', 'command'}:
@@ -908,8 +908,10 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 if not isinstance(job_data, dict):
                     raise ValueError(
                         '\n   '.join(
-                            [f'Found invalid job data (consisting of the {type(job_data).__name__} {job_data})']
-                            + job_files_for_error()
+                            [
+                                f'Found invalid job data (consisting of the {type(job_data).__name__} {job_data})',
+                                *job_files_for_error(),
+                            ]
                         )
                     )
                 job_data['index_number'] = i + 1
@@ -923,8 +925,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                                 f"The 'data' key needs to contain a string, a dictionary or a list; found a"
                                 f' {type(job.data).__name__} ',
                                 f'in {job.get_indexed_location()}',
+                                *job_files_for_error(),
                             ]
-                            + job_files_for_error()
                         )
                     )
                 if not isinstance(job.filters, (NoneType, list)):
@@ -933,8 +935,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                             [
                                 f"The 'filter' key needs to contain a list; found a {type(job.filters).__name__} ",
                                 f'in {job.get_indexed_location()}',
+                                *job_files_for_error(),
                             ]
-                            + job_files_for_error()
                         )
                     )
                 if not isinstance(job.headers, (NoneType, dict, Headers)):
@@ -944,8 +946,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                                 f"The 'headers' key needs to contain a dictionary; found a "
                                 f'{type(job.headers).__name__} ',
                                 f'in {job.get_indexed_location()})',
+                                *job_files_for_error(),
                             ]
-                            + job_files_for_error()
                         )
                     )
                 if not isinstance(job.cookies, (NoneType, dict)):
@@ -955,8 +957,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                                 f"The 'cookies' key needs to contain a dictionary; found a "
                                 f'{type(job.headers).__name__} ',
                                 f'in {job.get_indexed_location()})',
+                                *job_files_for_error(),
                             ]
-                            + job_files_for_error()
                         )
                     )
                 if not isinstance(job.switches, (NoneType, str, list)):
@@ -966,8 +968,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                                 f"The 'switches' key needs to contain a string or a list; found a "
                                 f'{type(job.switches).__name__} ',
                                 f'in {job.get_indexed_location()}',
+                                *job_files_for_error(),
                             ]
-                            + job_files_for_error()
                         )
                     )
                 # We add GUID here to speed things up and to allow hooks to programmatically change job.url and/or
@@ -979,15 +981,15 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             raise ValueError(
                 '\n   '.join(
                     [
-                        f"YAML parser {e.args[2].replace('here', '')} in line {e.args[3].line + 1}, column"
-                        f' {e.args[3].column + 1}'
+                        f'YAML parser {e.args[2].replace("here", "")} in line {e.args[3].line + 1}, column'
+                        f' {e.args[3].column + 1}',
+                        *job_files_for_error(),
                     ]
-                    + job_files_for_error()
                 )
             ) from None
 
         conflicting_jobs = []
-        for guid, guid_jobs in jobs_by_guid.items():
+        for _, guid_jobs in jobs_by_guid.items():
             if len(guid_jobs) != 1:
                 conflicting_jobs.append(guid_jobs[0].get_location())
 
@@ -1142,7 +1144,7 @@ class SsdbStorage(BaseFileStorage, ABC):
         :param keep_entries: Number of entries to keep after deletion.
         """
         if hasattr(self, 'clean_all'):
-            count = self.clean_all(keep_entries)  # pyright: ignore[reportAttributeAccessIssue]
+            count = self.clean_all(keep_entries)
             if count:
                 print(f'Deleted {count} old snapshots.')
         else:
@@ -1209,7 +1211,7 @@ class SsdbDirStorage(SsdbStorage):
         filename = self._get_filename(guid)
         with filename.open('w+') as fp:
             fp.write(str(snapshot.data))
-        os.utime(filename, times=(datetime.now().timestamp(), snapshot.timestamp))
+        os.utime(filename, times=(datetime.now().timestamp(), snapshot.timestamp))  # noqa: DTZ005
 
     def delete(self, guid: str) -> None:
         filename = self._get_filename(guid)
@@ -1730,7 +1732,7 @@ class SsdbSQLite3Storage(SsdbStorage):
         command = 'SELECT COUNT(*)' if count else 'DELETE'
         with self.lock:
             self._execute(
-                f'{command} '  # noqa: ignore S608 Possible SQL injection
+                f'{command} '  # noqa: S608 Possible SQL injection
                 'FROM webchanges '
                 'WHERE EXISTS ( '
                 '     SELECT 1 '

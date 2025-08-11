@@ -29,12 +29,11 @@ class CaseFilter(FilterBase):
 
     __kind__ = 'case'
 
-    __supported_subfilters__ = {'upper': 'Upper case (default)', 'lower': 'Lower case'}
+    __supported_subfilters__: dict[str, str] = {'upper': 'Upper case (default)', 'lower': 'Lower case'}
 
     __default_subfilter__ = 'upper'
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
-
         if not subfilter or subfilter.get('upper'):
             return data.upper(), mime_type
         elif subfilter.get('lower'):
@@ -48,7 +47,7 @@ class IndentFilter(FilterBase):
 
     __kind__ = 'indent'
 
-    __supported_subfilters__ = {'indent': 'Number of spaces to indent (default 8)'}
+    __supported_subfilters__: dict[str, str] = {'indent': 'Number of spaces to indent (default 8)'}
 
     __default_subfilter__ = 'indent'
 

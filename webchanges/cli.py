@@ -13,7 +13,7 @@ import os
 import platform
 import shutil
 import signal
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import subprocess
 import sys
 import warnings
 from pathlib import Path, PurePath
@@ -70,6 +70,7 @@ def migrate_from_legacy(
     for old_file, new_file in zip(
         (leagacy_config_file, legacy_urls_file, legacy_hooks_file, legacy_cache_file),
         (config_file, jobs_file, hooks_file, ssdb_file),
+        strict=False,
     ):
         if new_file and old_file.is_file() and not new_file.is_file():
             new_file.parent.mkdir(parents=True, exist_ok=True)
@@ -282,7 +283,9 @@ def load_hooks(hooks_file: Path, is_default: bool = False) -> None:
         else:
             # do not use ImportWarning as it could be suppressed
             warnings.warn(
-                f'Hooks file {hooks_file} not imported because it does not exist or is not a file', RuntimeWarning
+                f'Hooks file {hooks_file} not imported because it does not exist or is not a file',
+                RuntimeWarning,
+                stacklevel=1,
             )
         return
 
@@ -291,9 +294,10 @@ def load_hooks(hooks_file: Path, is_default: bool = False) -> None:
         logger.debug('Here should come the warning')
         # do not use ImportWarning as it could be suppressed
         warnings.warn(
-            f"Hooks file {hooks_file} not not imported because{' and '.join(hooks_file_errors)}.\n"
+            f'Hooks file {hooks_file} not not imported because{" and ".join(hooks_file_errors)}.\n'
             f'(see {__docs_url__}en/stable/hooks.html#important-note-for-hooks-file)',
             RuntimeWarning,
+            stacklevel=1,
         )
     else:
         logger.info(f'Importing into hooks module from {hooks_file}')
@@ -334,7 +338,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
         :return: Playwright's executable return code.
         """
         try:
-            from playwright._impl._driver import compute_driver_executable  # pyright: ignore[reportPrivateImportUsage]
+            from playwright._impl._driver import compute_driver_executable
         except ImportError:  # pragma: no cover
             raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
 
@@ -342,7 +346,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
         env = os.environ.copy()
         env['PW_CLI_TARGET_LANG'] = 'python'
         cmd = [str(driver_executable), 'install', 'chrome']
-        logger.info(f"Running playwright CLI: {' '.join(cmd)}")
+        logger.info(f'Running playwright CLI: {" ".join(cmd)}')
         completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)  # noqa: S603
         if completed_process.returncode:
             print(completed_process.stderr)

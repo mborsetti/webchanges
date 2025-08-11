@@ -47,7 +47,7 @@ def cleanup(request: pytest.FixtureRequest) -> None:
 
 
 def test_required_classattrs_in_subclasses() -> None:
-    for kind, subclass in JobBase.__subclasses__.items():
+    for _, subclass in JobBase.__subclasses__.items():
         assert hasattr(subclass, '__kind__')
         assert hasattr(subclass, '__required__')
         assert hasattr(subclass, '__optional__')
@@ -85,7 +85,7 @@ def test_load_config_yaml() -> None:
         assert config.config is not None
         assert config.config == DEFAULT_CONFIG
     else:
-        warnings.warn(f'{config_file} not found', UserWarning)
+        warnings.warn(f'{config_file} not found', UserWarning, stacklevel=1)
 
 
 def test_load_jobs_yaml() -> None:
@@ -93,7 +93,7 @@ def test_load_jobs_yaml() -> None:
     if jobs_file.is_file():
         assert len(YamlJobsStorage([jobs_file]).load_secure()) > 0
     else:
-        warnings.warn(f'{jobs_file} not found', UserWarning)
+        warnings.warn(f'{jobs_file} not found', UserWarning, stacklevel=1)
 
 
 def test_duplicates_in_jobs_yaml() -> None:
@@ -112,7 +112,7 @@ def test_duplicates_in_jobs_yaml() -> None:
         )
         assert str(pytest_wrapped_e.value)[: len(expected)] == expected
     else:
-        warnings.warn(f'{jobs_file} not found', UserWarning)
+        warnings.warn(f'{jobs_file} not found', UserWarning, stacklevel=1)
 
 
 def test_disabled_job() -> None:
@@ -146,7 +146,7 @@ def test_load_hooks_py() -> None:
     if hooks_file.is_file():
         import_module_from_source('hooks', hooks_file)
     else:
-        warnings.warn(f'{hooks_file} not found', UserWarning)
+        warnings.warn(f'{hooks_file} not found', UserWarning, stacklevel=1)
 
 
 def test_run_watcher_sqlite3() -> None:

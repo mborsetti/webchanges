@@ -536,7 +536,7 @@ With ``compact``
    url: https://example.net/deepdiff_xml_ignore_oder.html
    differ:
      name: deepdiff
-     compact: true  #  more compact report, does not report type changes
+     compact: true  #  more compact YAML-style report, does not report type changes
 
 Output:
 
@@ -559,8 +559,21 @@ Optional directives
 * ``ignore_string_case`` (true/false): Whether to be case-sensitive or not when comparing strings (default: false).
 * ``significant_digits`` (int): The number of digits AFTER the decimal point to be used in the comparison (default:
   no limit).
-* ``compact`` (true/false): Produce a more compact report which also ignores type changes (e.g. "type changed from
-  NoneType to str").
+* ``compact`` (true/false): Produce a more compact YAML-style report which also ignores type changes (e.g. "type changed
+  from NoneType to str").
+
+
+.. note::
+   
+   When you set ``ignore_order: true``, DeepDiff will treat lists as if they were sets. To compare two
+   sets, it needs to be able to pair up the items and DeepDiff's default strategy is to try and hash the objects in the 
+   list. However, if the items in the list are dictionaries, since they are not hashable in Python, when DeepDiff finds 
+   a dictionary in new_data that has even a tiny difference from its counterpart in old_data, since it can't be sure 
+   they are "the same object, but modified", it reports that the entire old dictionary is gone and that the entire new
+   dictionary has been added. This will cause the report to show a change for the entire, and potentially large,
+   dictionary, not just of the any changed nested value(s).
+
+
 
 Required packages
 `````````````````

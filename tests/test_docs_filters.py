@@ -85,9 +85,8 @@ def parse_rst(text: str) -> docutils.nodes.document:
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file."""
 
-    jobs: list[dict] = []
-
     def visit_literal_block(self, node: docutils.nodes.literal_block) -> None:
+        self.jobs = []
         if 'yaml' in node.attributes['classes']:
             self.jobs.append(yaml.safe_load(node.astext()))
         elif node.rawsource.startswith('.. code-block:: yaml'):
@@ -151,7 +150,7 @@ def test_jobs(job: JobBase) -> None:
     with JobState(None, job) as job_state:  # type: ignore[arg-type]
         for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filters):
             if (
-                filter_kind == 'beautify' or filter_kind == 'html2text' and subfilter.get('method') == 'bs4'
+                filter_kind == 'beautify' or (filter_kind == 'html2text' and subfilter.get('method') == 'bs4')
             ) and not bs4_is_installed:
                 pytest.skip(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
             if (

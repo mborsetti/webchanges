@@ -11,7 +11,7 @@ import random
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
-from typing import Iterable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 from webchanges.command import UrlwatchCommand
 from webchanges.handler import JobState
@@ -102,8 +102,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 elif isinstance(job_state.exception, NotModifiedError):
                     # We captured a 304 Not Modified
                     logger.info(
-                        f'Job {job_state.job.index_number}: Job has not changed (HTTP 304 response or same strong '
-                        f'ETag)'
+                        f'Job {job_state.job.index_number}: Job has not changed (HTTP 304 response or same strong ETag)'
                     )
                     if job_state.tries > 0:
                         job_state.tries = 0

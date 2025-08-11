@@ -9,7 +9,7 @@ import getpass
 import logging
 import re
 import smtplib
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import subprocess
 from dataclasses import dataclass
 from email import policy
 from email.message import EmailMessage
@@ -37,7 +37,9 @@ class Mailer:
         raise NotImplementedError
 
     @staticmethod
-    def msg(from_email: str, to_email: str, subject: str, text_body: str, html_body: str | None = None) -> EmailMessage:
+    def msg(
+        from_email: str, to_email: str, subject: str, text_body: str, html_body: str | None = None, utf_8: bool = True
+    ) -> EmailMessage:
         """Create an Email object for a message.
 
         :param from_email: The 'From' email address
@@ -45,6 +47,7 @@ class Mailer:
         :param subject: The 'Subject' of the email
         :param text_body: The body in text format
         :param html_body: The body in html format (optional)
+        :param utf_8: Whether to format the message using SMTPUTF8 (optional)
         """
 
         def extract_inline_images(html_body: str) -> tuple[str, dict[str, bytes]]:
@@ -122,7 +125,7 @@ class SMTPMailer(Mailer):
 
         :param msg: The message to be sent. Optional in order to allow server login testing.
         """
-        passwd = ''  # noqa: S105 Possible hardcoded password.
+        passwd = ''
         if self.auth:
             if self.insecure_password:
                 passwd = self.insecure_password
@@ -143,7 +146,7 @@ class SMTPMailer(Mailer):
                 server.login(self.smtp_user, passwd)
             if msg:
                 server.send_message(msg)
-                logger.info(f"SMTP email sent to {msg.get('to')} via {self.smtp_server}")
+                logger.info(f'SMTP email sent to {msg.get("to")} via {self.smtp_server}')
 
 
 @dataclass
@@ -158,9 +161,7 @@ class SendmailMailer(Mailer):
         :param msg: The message to be sent.
         """
         if msg['From']:
-            command = [self.sendmail_path, '-oi', '-f', msg['From']] + [
-                addr.strip() for addr in msg['To'].split(',' '')
-            ]
+            command = [self.sendmail_path, '-oi', '-f', msg['From']] + [addr.strip() for addr in msg['To'].split(',')]
         else:
             command = [self.sendmail_path, '-oi'] + [addr.strip() for addr in msg['To'].split(',')]
         p = subprocess.run(  # noqa: S603 subprocess call - check for execution of untrusted input.

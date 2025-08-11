@@ -15,19 +15,19 @@ import logging
 import os
 import re
 import shlex
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import subprocess
 import warnings
 from abc import ABC
 from enum import Enum
 from html.parser import HTMLParser
-from typing import Any, Iterator, Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterator, Literal
 from urllib.parse import urljoin
-from xml.dom import minidom  # noqa: S408 Replace minidom with the equivalent defusedxml package. TODO
+from xml.dom import minidom
 
 import html2text
 import yaml
-from lxml import etree  # noqa: S410 insecure use of XML modules, prefer "defusedxml". TODO
-from lxml.cssselect import CSSSelector  # noqa: S410 insecure use of XML ... "defusedxml". TODO
+from lxml import etree
+from lxml.cssselect import CSSSelector
 
 from webchanges import __project_name__
 from webchanges.util import TrackSubClasses
@@ -51,7 +51,7 @@ except ImportError as e:  # pragma: has-bs4
 try:
     import cssbeautifier
 except ImportError as e:  # pragma: no cover
-    cssbeautifier = str(e)  # type: ignore[assignment]
+    cssbeautifier = str(e)
 
 try:
     import jq
@@ -61,7 +61,7 @@ except ImportError as e:  # pragma: has-jq
 try:
     import jsbeautifier
 except ImportError as e:  # pragma: no cover
-    jsbeautifier = str(e)  # type: ignore[assignment]
+    jsbeautifier = str(e)
 
 try:
     from pypdf import PdfReader
@@ -71,7 +71,7 @@ except ImportError as e:  # pragma: no cover
 try:
     import pdftotext
 except ImportError as e:  # pragma: has-pdftotext
-    pdftotext = str(e)  # type: ignore[assignment]
+    pdftotext = str(e)
 
 try:
     from PIL import Image
@@ -81,7 +81,7 @@ except ImportError as e:  # pragma: no cover
 try:
     import pytesseract
 except ImportError as e:  # pragma: has-pytesseract
-    pytesseract = str(e)  # type: ignore[assignment]
+    pytesseract = str(e)
 
 try:
     import vobject.base
@@ -127,7 +127,7 @@ class FilterBase(metaclass=TrackSubClasses):
             if hasattr(sc, '__supported_subfilters__'):
                 for key, doc in sc.__supported_subfilters__.items():
                     result.append(
-                        f"      {'[' if key == default_subfilter else ''}{key}{']' if key == default_subfilter else ''}"
+                        f'      {"[" if key == default_subfilter else ""}{key}{"]" if key == default_subfilter else ""}'
                         f' ... {doc}'
                     )
         result.append('\n[] ... Parameter can be supplied as unnamed value\n')
@@ -189,12 +189,12 @@ class FilterBase(metaclass=TrackSubClasses):
                     if allowed_keys:
                         raise ValueError(
                             f'Job {job_index_number}: Filter {filter_kind} does not support subfilter or filter '
-                            f"directive(s) {', '.join(unknown_keys)}. Only {', '.join(allowed_keys)} are supported."
+                            f'directive(s) {", ".join(unknown_keys)}. Only {", ".join(allowed_keys)} are supported.'
                         )
                     else:
                         raise ValueError(
                             f'Job {job_index_number}: Filter {filter_kind} does not support any subfilters or filter '
-                            f"directives, but {', '.join(unknown_keys)} was supplied."
+                            f'directives, but {", ".join(unknown_keys)} was supplied.'
                         )
 
             yield filter_kind, subfilter
@@ -226,8 +226,9 @@ class FilterBase(metaclass=TrackSubClasses):
             ]
             warnings.warn(
                 f'String-based filter definitions ({old_filter_spec}) are deprecated, please convert to dict-style:\n\n'
-                f'{yaml.safe_dump(filter_spec, default_flow_style=False, allow_unicode=True, sort_keys=False,)}',
+                f'{yaml.safe_dump(filter_spec, default_flow_style=False, allow_unicode=True, sort_keys=False)}',
                 DeprecationWarning,
+                stacklevel=1,
             )
 
         if isinstance(filter_spec, list):
@@ -247,8 +248,8 @@ class FilterBase(metaclass=TrackSubClasses):
                     yield filter_kind, subfilter
                 elif subfilter is None:
                     yield filter_kind, {}
-                elif hasattr(filtercls, '__default_subfilter__'):
-                    yield filter_kind, {getattr(filtercls, '__default_subfilter__'): subfilter}
+                elif hasattr(filtercls, '__default_subfilter__') and filtercls is not None:
+                    yield filter_kind, {filtercls.__default_subfilter__: subfilter}
                 else:
                     yield filter_kind, subfilter
 
@@ -402,7 +403,7 @@ class BeautifyFilter(FilterBase):
 
     __kind__ = 'beautify'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'absolute_links': 'Convert relative links to absolute ones.',
         'indent': 'Number of spaces by which to indent HTML output.',
     }
@@ -478,7 +479,7 @@ class Html2TextFilter(FilterBase):
 
     __kind__ = 'html2text'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'method': 'Method to use for conversion (html2text [default], bs4, or strip_tags)',
         'separator': 'bs4: Strings will be concatenated using this separator',
         'strip': 'bs4: If True, strings will be stripped before being concatenated',
@@ -538,6 +539,7 @@ class Html2TextFilter(FilterBase):
                     f"Filter html2text's method 'pyhtml2text' is deprecated: remove method as it's now the "
                     f"filter's default ({self.job.get_indexed_location()})",
                     DeprecationWarning,
+                    stacklevel=1,
                 )
             parser = html2text.HTML2Text()
             parser.unicode_snob = True
@@ -564,7 +566,7 @@ class Html2TextFilter(FilterBase):
             try:
                 soup = bs4.BeautifulSoup(data, bs4_parser)
             except bs4.FeatureNotFound:
-                raise ValueError(
+                raise ValueError(  # noqa: B904
                     f"Filter html2text's method 'bs4' has been invoked with parser '{bs4_parser}', which is either not "
                     f'installed or is not supported by Beautiful Soup. Please refer to the documentation at '
                     f'https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser. '
@@ -580,6 +582,7 @@ class Html2TextFilter(FilterBase):
                     f"Filter html2text's method 're' is deprecated: replace with 'strip_tags' "
                     f'({self.job.get_indexed_location()})',
                     DeprecationWarning,
+                    stacklevel=1,
                 )
             stripped_tags = html.unescape(re.sub(r'<[^>]*>', '', data))
             return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != '')), 'text/plain'
@@ -599,7 +602,7 @@ class Csv2TextFilter(FilterBase):
 
     __kind__ = 'csv2text'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'format_message': 'A format string with the headers that will be outputted for each csv'
         'line (header will be lower-cased)',
         'has_header': 'If specified and true - use the first line as a header. '
@@ -635,7 +638,7 @@ class Csv2TextFilter(FilterBase):
         lines = []
         for i in data_list:
             if header and not ignore_header:
-                legend = dict(zip(header, i))
+                legend = dict(zip(header, i, strict=False))
                 lines.append(message.format(**legend))
             else:
                 lines.append(message.format(*i))
@@ -653,7 +656,7 @@ class PypdfFilter(FilterBase):
     __kind__ = 'pypdf'
     __uses_bytes__ = True
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'password': 'PDF password for decryption',
         'extraction_mode': '"layout" for experimental layout mode functionality',
     }
@@ -703,7 +706,7 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
     __kind__ = 'pdf2text'
     __uses_bytes__ = True
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'password': 'PDF password for decryption',
         'raw': 'If true, output text in same order as in PDF content stream',
         'physical': 'If true, try to format text to look the same (columns etc.)',
@@ -748,15 +751,15 @@ class Ical2TextFilter(FilterBase):
 
         result = []
         if isinstance(data, str):
-            parsedCal = vobject.base.readOne(data)
+            parsed_cal = vobject.base.readOne(data)
         else:
             try:
-                parsedCal = vobject.base.readOne(data)
+                parsed_cal = vobject.base.readOne(data)
             except vobject.base.ParseError:
-                parsedCal = vobject.base.readOne(data.decode(errors='ignore'))
+                parsed_cal = vobject.base.readOne(data.decode(errors='ignore'))
                 logger.warning('Found and ignored Unicode-related errors when reading iCal entry.')
 
-        for event in parsedCal.getChildren():
+        for event in parsed_cal.getChildren():
             if event.name == 'VEVENT':
                 if hasattr(event, 'dtstart'):
                     start_date = event.dtstart.value.strftime('%F %H:%M')
@@ -783,7 +786,7 @@ class FormatJsonFilter(FilterBase):
 
     __kind__ = 'format-json'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'indentation': 'Indentation level for pretty-printing',
         'sort_keys': 'Sort the output of dictionaries by key',
     }
@@ -817,7 +820,7 @@ class FormatXMLFilter(FilterBase):
 
     __no_subfilter__ = True
 
-    # __supported_subfilters__ = {
+    # __supported_subfilters__: dict[str, str] = {
     #     'indentation': 'Indentation level for pretty-printing',
     # }
     #
@@ -835,7 +838,7 @@ class PrettyXMLFilter(FilterBase):
 
     __kind__ = 'pretty-xml'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'indentation': 'Indentation level for pretty-printing',
     }
 
@@ -853,7 +856,7 @@ class KeepLinesContainingFilter(FilterBase):
 
     __kind__ = 'keep_lines_containing'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'text': 'Lines matching this text are kept (default)',
         're': 'Lines matching this expression are kept',
     }
@@ -877,7 +880,7 @@ class KeepLinesContainingFilter(FilterBase):
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
-                    f"{type(subfilter['text']).__name__}. ({self.job.get_indexed_location()})"
+                    f'{type(subfilter["text"]).__name__}. ({self.job.get_indexed_location()})'
                 )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
@@ -890,7 +893,7 @@ class KeepLinesContainingFilter(FilterBase):
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
-                    f"{type(subfilter['re']).__name__}. ({self.job.get_indexed_location()})"
+                    f'{type(subfilter["re"]).__name__}. ({self.job.get_indexed_location()})'
                 )
         else:
             raise ValueError(
@@ -904,7 +907,7 @@ class GrepFilter(FilterBase):
 
     __kind__ = 'grep'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         're': 'Lines matching this expression are kept (required)',
     }
 
@@ -921,6 +924,7 @@ class GrepFilter(FilterBase):
             f"The 'grep' filter is deprecated; replace with 'keep_lines_containing' + 're' subfilter"
             f' ({self.job.get_indexed_location()})',
             DeprecationWarning,
+            stacklevel=1,
         )
         return KeepLinesContainingFilter.filter(self, data, mime_type, subfilter)
 
@@ -930,7 +934,7 @@ class DeleteLinesContainingFilter(FilterBase):
 
     __kind__ = 'delete_lines_containing'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'text': 'Lines matching this text are deleted (default)',
         're': 'Lines matching this expression deleted kept',
     }
@@ -954,7 +958,7 @@ class DeleteLinesContainingFilter(FilterBase):
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
-                    f"{type(subfilter['text']).__name__}. ({self.job.get_indexed_location()})"
+                    f'{type(subfilter["text"]).__name__}. ({self.job.get_indexed_location()})'
                 )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
@@ -967,7 +971,7 @@ class DeleteLinesContainingFilter(FilterBase):
             else:
                 raise TypeError(
                     f"The '{self.__kind__}' filter requires a string but you provided a "
-                    f"{type(subfilter['re']).__name__}. ({self.job.get_indexed_location()})"
+                    f'{type(subfilter["re"]).__name__}. ({self.job.get_indexed_location()})'
                 )
         else:
             raise ValueError(
@@ -981,7 +985,7 @@ class GrepIFilter(FilterBase):
 
     __kind__ = 'grepi'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         're': 'Lines matching this expression are removed (required)',
     }
 
@@ -992,6 +996,7 @@ class GrepIFilter(FilterBase):
             f"The 'grepi' filter is deprecated; replace with 'delete_lines_containing' + 're' subfilter"
             f' ({self.job.get_indexed_location()})',
             DeprecationWarning,
+            stacklevel=1,
         )
         return DeleteLinesContainingFilter.filter(self, data, mime_type, subfilter)
 
@@ -1001,7 +1006,7 @@ class StripFilter(FilterBase):
 
     __kind__ = 'strip'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'splitlines': 'Apply the filter on each line of text (default: false, apply to the entire data)',
         'chars': 'String specifying the set of characters to be removed. If omitted, defaults to removing whitespace',
         'side': "One-sided removal: either 'left' (leading characters) or 'right' (trailing characters)",
@@ -1055,6 +1060,7 @@ class StripLinesFilter(FilterBase):
             f"The 'strip_each_line' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: "
             f"true' ({self.job.get_indexed_location()})",
             DeprecationWarning,
+            stacklevel=1,
         )
         if not isinstance(data, str):
             raise ValueError
@@ -1093,7 +1099,7 @@ class ElementsBy(HTMLParser, ABC):
             self._inside = True
 
         if self._inside:
-            self._result.append(f"<{tag}{' ' if attrs else ''}%s>" % ' '.join(f'{k}="{v}"' for k, v in attrs))
+            self._result.append(f'<{tag}{" " if attrs else ""}%s>' % ' '.join(f'{k}="{v}"' for k, v in attrs))
             self._elts.append(tag)
 
     def handle_endtag(self, tag: str) -> None:
@@ -1116,7 +1122,7 @@ class ElementByIdFilter(FilterBase):
 
     __kind__ = 'element-by-id'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'id': 'ID of the element to filter for (required)',
     }
 
@@ -1140,7 +1146,7 @@ class ElementByClassFilter(FilterBase):
 
     __kind__ = 'element-by-class'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'class': 'HTML class attribute to filter for (required)',
     }
 
@@ -1164,7 +1170,7 @@ class ElementByStyleFilter(FilterBase):
 
     __kind__ = 'element-by-style'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'style': 'HTML style attribute value to filter for (required)',
     }
 
@@ -1188,7 +1194,7 @@ class ElementByTagFilter(FilterBase):
 
     __kind__ = 'element-by-tag'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'tag': 'HTML tag name to filter for (required)',
     }
 
@@ -1247,7 +1253,7 @@ class HexDumpFilter(FilterBase):
         blocks = [arr[i * 16 : (i + 1) * 16] for i in range(int((len(arr) + (16 - 1)) / 16))]
         return (
             '\n'.join(
-                f"{' '.join(f'{c:02x}' for c in block):49}{''.join((chr(c) if (31 < c < 127) else '.') for c in block)}"
+                f'{" ".join(f"{c:02x}" for c in block):49}{"".join((chr(c) if (31 < c < 127) else ".") for c in block)}'
                 for block in blocks
             ),
             'text/plain',
@@ -1255,7 +1261,7 @@ class HexDumpFilter(FilterBase):
 
 
 class LxmlParser:
-    EXPR_NAMES = {
+    EXPR_NAMES: dict[str, str] = {
         'css': 'a CSS selector',
         'xpath': 'an XPath expression',
     }
@@ -1308,9 +1314,7 @@ class LxmlParser:
         if isinstance(element, str):
             return element
 
-        return (  # type: ignore[no-any-return]
-            etree.tostring(element, encoding='unicode', method=method, pretty_print=True, with_tail=False).strip()
-        )
+        return etree.tostring(element, encoding='unicode', method=method, pretty_print=True, with_tail=False).strip()
 
     @staticmethod
     def _remove_element(element: etree._Element) -> None:
@@ -1399,9 +1403,7 @@ class LxmlParser:
         excluded_elems: list[etree._Element] | None = None
         try:
             if self.filter_kind == 'css':
-                selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(
-                    root
-                )  # type: ignore[assignment]
+                selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(root)  # type: ignore[assignment]
                 excluded_elems = (
                     CSSSelector(self.exclude, namespaces=self.namespaces)(root)  # type: ignore[assignment]
                     if self.exclude
@@ -1450,7 +1452,7 @@ class CSSFilter(FilterBase):
 
     __kind__ = 'css'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'selector': 'The CSS selector to use for filtering (required)',
         **LXML_PARSER_COMMON_SUBFILTERS,
     }
@@ -1477,7 +1479,7 @@ class XPathFilter(FilterBase):
 
     __kind__ = 'xpath'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'path': 'The XPath to use for filtering (required)',
         **LXML_PARSER_COMMON_SUBFILTERS,
     }
@@ -1504,7 +1506,7 @@ class ReSubFilter(FilterBase):
 
     __kind__ = 're.sub'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'pattern': 'Regular expression to search for (required)',
         'repl': 'Replacement string (default: empty string)',
     }
@@ -1524,7 +1526,7 @@ class RegexFindall(FilterBase):
 
     __kind__ = 're.findall'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'pattern': 'Regular expression to search for (required)',
         'repl': "Replacement string applied iteratively to each match (default: '\\g<0>', or extract all matches)",
     }
@@ -1551,7 +1553,7 @@ class SortFilter(FilterBase):
 
     __kind__ = 'sort'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'reverse': 'Set to true to reverse sorting order',
         'separator': 'Item separator (default: newline)',
     }
@@ -1577,7 +1579,7 @@ class RemoveRepeatedFilter(FilterBase):
 
     __kind__ = 'remove_repeated'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'separator': 'Item separator (default: newline)',
         'ignore_case': 'Ignore differences in case when comparing',
         'adjacent': 'Remove only adjacent lines or items (default: true)',
@@ -1617,7 +1619,7 @@ class RemoveDuplicateLinesFilter(FilterBase):
 
     __kind__ = 'remove-duplicate-lines'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'separator': 'Item separator (default: newline)',
     }
 
@@ -1644,7 +1646,7 @@ class ReverseFilter(FilterBase):
 
     __kind__ = 'reverse'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'separator': 'Item separator (default: newline)',
     }
 
@@ -1680,11 +1682,11 @@ def _pipe_filter(f_cls: FilterBase, data: str | bytes, subfilter: dict[str, Any]
         shell = True
 
     try:
-        return subprocess.run(  # type: ignore[no-any-return]
+        return subprocess.run(  # type: ignore[no-any-return]  # noqa: S603 Check for untrusted input
             command,
             input=data,
             capture_output=True,
-            shell=shell,  # noqa: S602 subprocess call with shell=True identified, security issue.
+            shell=shell,
             check=True,
             text=True,
             env=env,
@@ -1702,7 +1704,7 @@ class ExecuteFilter(FilterBase):
 
     __kind__ = 'execute'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'command': 'Command to execute for filtering (required)',
     }
 
@@ -1719,7 +1721,7 @@ class ShellPipeFilter(FilterBase):
 
     __kind__ = 'shellpipe'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'command': 'Shell command to execute for filtering (required)',
     }
 
@@ -1737,7 +1739,7 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
     __kind__ = 'ocr'
     __uses_bytes__ = True
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'language': 'Language of the text (e.g. "fra" or "eng+fra")',
         'timeout': 'Timeout (in seconds) for OCR (default 10 seconds)',
     }
@@ -1771,7 +1773,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
 
     __kind__ = 'jq'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'query': 'jq query function to execute on data',
     }
 
@@ -1783,7 +1785,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
         try:
             jsondata = jsonlib.loads(data)
         except ValueError:
-            raise ValueError(f"The 'jq' filter needs valid JSON. ({self.job.get_indexed_location()})")
+            raise ValueError(f"The 'jq' filter needs valid JSON. ({self.job.get_indexed_location()})")  # noqa: B904
 
         if isinstance(jq, str):
             self.raise_import_error('jq', self.__kind__, jq)
@@ -1815,7 +1817,7 @@ class Base64(FilterBase):
     """Convert bytes data (e.g. images) into a base64 string.
 
     Base64 encoding causes an overhead of 33–37% relative to the size of the original binary data.
-    """
+    """  # noqa: RUF002 ambiguous EN DASH
 
     __kind__ = 'base64'
 
@@ -1833,7 +1835,7 @@ class JsontoYamlFilter(FilterBase):
 
     __kind__ = 'jsontoyaml'
 
-    __supported_subfilters__ = {
+    __supported_subfilters__: dict[str, str] = {
         'indentation': 'Indentation level for pretty-printing',
     }
 

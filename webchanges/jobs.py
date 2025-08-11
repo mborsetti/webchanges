@@ -13,17 +13,17 @@ import logging
 import os
 import re
 import ssl
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import subprocess
 import sys
 import tempfile
 import textwrap
 import time
 import warnings
-from ftplib import FTP  # noqa: S402 A FTP-related module is being imported. FTP is considered insecure.
+from ftplib import FTP
 from http.client import responses as response_names
 from pathlib import Path
-from typing import Any, Callable, Literal, Mapping, Sequence, TYPE_CHECKING
-from urllib.parse import parse_qsl, quote, SplitResult, SplitResultBytes, urlencode, urlparse, urlsplit
+from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping, Sequence
+from urllib.parse import SplitResult, SplitResultBytes, parse_qsl, quote, urlencode, urlparse, urlsplit
 
 import html2text
 import yaml
@@ -101,7 +101,7 @@ class BrowserResponseError(Exception):
         if self.status_code:
             return (
                 f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
-                f"{response_names.get(self.status_code, '')}"
+                f'{response_names.get(self.status_code, "")}'
                 + (f' with content "{self.args[0]}"' if self.args[0] else '')
             )
         else:
@@ -215,7 +215,7 @@ class JobBase(metaclass=TrackSubClasses):
                 if k != 'use_browser' or not kwargs.get('kind'):
                     raise ValueError(
                         f"Job {kwargs.get('index_number')}: Required directive '{k}' missing: '{kwargs}'"
-                        f" ({kwargs.get('user_visible_url', kwargs.get('url', kwargs.get('command')))})"
+                        f' ({kwargs.get("user_visible_url", kwargs.get("url", kwargs.get("command")))})'
                     )
 
         for k, v in list(kwargs.items()):
@@ -297,6 +297,7 @@ class JobBase(metaclass=TrackSubClasses):
                 f"Error in jobs file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: "
                 f"true':\n{yaml.safe_dump(data)}",
                 DeprecationWarning,
+                stacklevel=1,
             )
             data['url'] = data.get('url', data['navigate'])
             data['use_browser'] = True
@@ -400,13 +401,15 @@ class JobBase(metaclass=TrackSubClasses):
                     jobs_files = []
                 raise ValueError(
                     '\n   '.join(
-                        [f"Directive '{k}' is unrecognized in the following job"]
-                        + jobs_files
-                        + ['']
-                        + ['---']
-                        + yaml.safe_dump(data).splitlines()
-                        + ['---\n']
-                        + ['Please check for typos or refer to the documentation.']
+                        [
+                            f"Directive '{k}' is unrecognized in the following job",
+                            *jobs_files,
+                            '',
+                            '---',
+                            *yaml.safe_dump(data).splitlines(),
+                            '---\n',
+                            'Please check for typos or refer to the documentation.',
+                        ]
                     )
                 )
         return cls(**{k: v for k, v in list(data.items())})
@@ -416,7 +419,7 @@ class JobBase(metaclass=TrackSubClasses):
 
         :returns: A string representing the Job.
         """
-        return f"<{self.__kind__} {' '.join(f'{k}={v!r}' for k, v in list(self.to_dict().items()))}"
+        return f'<{self.__kind__} {" ".join(f"{k}={v!r}" for k, v in list(self.to_dict().items()))}'
 
     def _dict_deep_merge(self, source: dict | Headers, destination: dict) -> dict:
         """Deep merges source dict into destination dict.
@@ -484,6 +487,7 @@ class JobBase(metaclass=TrackSubClasses):
                     f"Job {job_with_defaults.index_number}: 'diff_tool' is a deprecated job directive. Please use"
                     f" differ '{{'command': {job_with_defaults.diff_tool}}}' instead.",
                     DeprecationWarning,
+                    stacklevel=1,
                 )
             elif job_with_defaults.diff_tool is not None:
                 raise ValueError(
@@ -574,7 +578,7 @@ class JobBase(metaclass=TrackSubClasses):
             if os.getenv((scheme + '_proxy').upper()):
                 proxy = os.getenv((scheme + '_proxy').upper())
             logger.debug(
-                f"Job {self.index_number}: Setting proxy from environment variable {(scheme + '_proxy').upper()}"
+                f'Job {self.index_number}: Setting proxy from environment variable {(scheme + "_proxy").upper()}'
             )
         return proxy
 
@@ -688,7 +692,9 @@ class UrlJobBase(Job):
                 warnings.warn(
                     f"Job {self.index_number}: Found both a header 'Cookie' and a directive 'cookies'; "
                     f"please specify only one of them (using content of the cookies 'directive') "
-                    f'( {self.get_indexed_location()} ).'
+                    f'( {self.get_indexed_location()} ).',
+                    RuntimeWarning,
+                    stacklevel=1,
                 )
             headers['Cookie'] = '; '.join([f'{k}={v}' for k, v in self.cookies.items()])
         if self.no_conditional_request:
@@ -875,7 +881,7 @@ class UrlJob(UrlJobBase):
             )
             try:
                 # only works with urllib3 <2.0
-                urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # type: ignore[attr-defined]
+                urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'
             except AttributeError:
                 logger.error(
                     'Unable to ignore_dh_key_too_small due to bug in requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
@@ -954,8 +960,7 @@ class UrlJob(UrlJobBase):
             # with whatever is detected by the charset_normalizer or chardet libraries used in requests
             # (see https://requests.readthedocs.io/en/latest/user/advanced/#encodings)
             logger.debug(
-                f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from '
-                f'{response.encoding}'
+                f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from {response.encoding}'
             )
             response.encoding = response.apparent_encoding
 
@@ -1119,9 +1124,7 @@ class UrlJob(UrlJobBase):
         if (
             httpx
             and isinstance(exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError))
-            or not isinstance(requests, str)
-            and isinstance(exception, requests.exceptions.RequestException)
-        ):
+        ) or (not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException)):
             # Instead of a full traceback, just show the error
             exception_str = str(exception).strip()
             if self.proxy and (
@@ -1256,7 +1259,7 @@ class BrowserJob(UrlJobBase):
         return self.user_visible_url or self.url
 
     def set_base_location(self, location: str) -> None:
-        """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
+        """Sets the job's location (command or url) to location. Used for changing location (uuid)."""
         self.url = location
         self.guid = self.get_guid()
 
@@ -1266,7 +1269,7 @@ class BrowserJob(UrlJobBase):
         headless: bool = True,
         response_handler: Callable[[Page], Response] | None = None,
         content_handler: Callable[[Page], tuple[str | bytes, str, str]] | None = None,
-    ) -> tuple[str | bytes, str, str]:  # pyright: ignore[reportIncompatibleMethodOverride]
+    ) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -1314,6 +1317,7 @@ class BrowserJob(UrlJobBase):
                 f"Job {self.index_number}: Value '{self.wait_until}' of the 'wait_until' directive is deprecated "
                 f"with Playwright; for future compatibility replace it with 'networkidle'.",
                 DeprecationWarning,
+                stacklevel=1,
             )
             self.wait_until = 'networkidle'
         if self.wait_for_navigation:
@@ -1321,6 +1325,7 @@ class BrowserJob(UrlJobBase):
                 f"Job {self.index_number}: Directive 'wait_for_navigation' is deprecated with Playwright; "
                 "for future compatibility replace it with 'wait_for_url'.",
                 DeprecationWarning,
+                stacklevel=1,
             )
             if isinstance(self.wait_for_navigation, str):
                 self.wait_for_url = self.wait_for_navigation
@@ -1330,6 +1335,7 @@ class BrowserJob(UrlJobBase):
                     f'of type {type(self.wait_for_navigation).__name__} and cannot be converted for use with '
                     f"Playwright; please use 'wait_for_url' (see documentation)  ( {self.get_indexed_location()} ).",
                     DeprecationWarning,
+                    stacklevel=1,
                 )
 
         headers = self.get_headers(job_state, user_agent=None)
@@ -1358,7 +1364,7 @@ class BrowserJob(UrlJobBase):
                     f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list; found a "
                     f'{type(self.switches).__name__} ( {self.get_indexed_location()} ).'
                 )
-            args: list[str] | None = [f"--{switch.removeprefix('--')}" for switch in self.switches]
+            args: list[str] | None = [f'--{switch.removeprefix("--")}' for switch in self.switches]
         else:
             args = None
 
@@ -1367,7 +1373,7 @@ class BrowserJob(UrlJobBase):
                 self.ignore_default_args = self.ignore_default_args.split(',')
             ignore_default_args = self.ignore_default_args
             if isinstance(ignore_default_args, list):
-                ignore_default_args = [f"--{a.removeprefix('--')}" for a in ignore_default_args]
+                ignore_default_args = [f'--{a.removeprefix("--")}' for a in ignore_default_args]
             elif not isinstance(self.ignore_default_args, bool):
                 raise TypeError(
                     f"Job {job_state.job.index_number}: Directive 'ignore_default_args' needs to be a bool, string or "
@@ -1407,7 +1413,7 @@ class BrowserJob(UrlJobBase):
                 user_agent = headers.pop(
                     'User-Agent',
                     f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                    f"Chrome/{browser_version.split('.', maxsplit=1)[0]}.0.0.0 Safari/537.36",
+                    f'Chrome/{browser_version.split(".", maxsplit=1)[0]}.0.0.0 Safari/537.36',
                 )
                 context = browser.new_context(
                     no_viewport=no_viewport,
@@ -1521,7 +1527,7 @@ class BrowserJob(UrlJobBase):
                     new_url = url.format(**init_url_params)
                 except KeyError as e:
                     context.close()
-                    raise ValueError(
+                    raise ValueError(  # noqa: B904
                         f"Job {job_state.job.index_number}: Directive 'initialization_url' did not find key"
                         f" {e} to substitute in 'url'."
                     )
@@ -1602,8 +1608,7 @@ class BrowserJob(UrlJobBase):
                     if element not in playwright_request_resource_types:
                         context.close()
                         raise ValueError(
-                            f"Unknown '{element}' resource type in 'block_elements' "
-                            f'( {self.get_indexed_location()} )'
+                            f"Unknown '{element}' resource type in 'block_elements' ( {self.get_indexed_location()} )"
                         )
                 logger.info(f"Job {self.index_number}: Found 'block_elements' and adding a route to intercept elements")
 
@@ -1709,6 +1714,52 @@ class BrowserJob(UrlJobBase):
                                 f' ( {self.get_indexed_location()} ).'
                             )
 
+                # if response.status and 400 <= response.status < 600:
+                #     context.close()
+                #     raise BrowserResponseError((response.status_text,), response.status)
+                if not response.ok:
+                    # logger.info(
+                    #     f'Job {self.index_number}: Received response HTTP {response.status} {response.status_text} '
+                    #     f'from {response.url}'
+                    # )
+                    # logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
+                    message = response.status_text
+                    if response.status != 404:
+                        body = page.text_content('body')
+                        if body is not None:
+                            message = f'{message}\n{body.strip()}' if message else body.strip()
+                    context.close()
+                    raise BrowserResponseError((message,), response.status)
+
+                # extract content
+                if content_handler is not None:
+                    return content_handler(page)
+                else:
+                    if self.evaluate is not None:
+                        content = page.evaluate(self.evaluate)
+                        mime_type = 'text'
+                    else:
+                        content = page.content()
+                        mime_type = response.header_value('content-type') or ''
+                    etag = response.header_value('etag') or ''
+                    virtual_memory = psutil.virtual_memory().available
+                    swap_memory = psutil.swap_memory().free
+                    used_mem = start_free_mem - (virtual_memory + swap_memory)
+                    logger.debug(
+                        f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical '
+                        f'memory (plus {swap_memory / 1e6:,.0f} MB of swap) before closing the browser (a decrease of '
+                        f'{used_mem / 1e6:,.0f} MB).'
+                    )
+
+                    # if no name directive is given, set to title tag if found in HTML or XML, truncated to 60 chars
+                    if not self.name and content:
+                        title = re.search(r'<title.*?>(.+?)</title>', content)
+                        if title:
+                            self.name = html.unescape(title.group(1))[:60]
+
+                    context.close()
+                    return content, etag, mime_type
+
             except PlaywrightError as e:
                 logger.info(f'Job {self.index_number}: Browser returned error {e}\n({url})')
                 if logger.root.level <= 20:  # logging.INFO
@@ -1741,52 +1792,6 @@ class BrowserJob(UrlJobBase):
                 context.close()
                 raise BrowserResponseError(e.args, None) from None
 
-            # if response.status and 400 <= response.status < 600:
-            #     context.close()
-            #     raise BrowserResponseError((response.status_text,), response.status)
-            if not response.ok:
-                # logger.info(
-                #     f'Job {self.index_number}: Received response HTTP {response.status} {response.status_text} from '
-                #     f'{response.url}'
-                # )
-                # logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
-                message = response.status_text
-                if response.status != 404:
-                    body = page.text_content('body')
-                    if body is not None:
-                        message = f'{message}\n{body.strip()}' if message else body.strip()
-                context.close()
-                raise BrowserResponseError((message,), response.status)
-
-            # extract content
-            if content_handler is not None:
-                return content_handler(page)
-            else:
-                if self.evaluate is not None:
-                    content = page.evaluate(self.evaluate)
-                    mime_type = 'text'
-                else:
-                    content = page.content()
-                    mime_type = response.header_value('content-type') or ''
-                etag = response.header_value('etag') or ''
-                virtual_memory = psutil.virtual_memory().available
-                swap_memory = psutil.swap_memory().free
-                used_mem = start_free_mem - (virtual_memory + swap_memory)
-                logger.debug(
-                    f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical '
-                    f'memory (plus {swap_memory / 1e6:,.0f} MB of swap) before closing the browser (a decrease of '
-                    f'{used_mem / 1e6:,.0f} MB).'
-                )
-
-                # if no name directive is given, set to title tag if found in HTML or XML, truncated to 60 chars
-                if not self.name and content:
-                    title = re.search(r'<title.*?>(.+?)</title>', content)
-                    if title:
-                        self.name = html.unescape(title.group(1))[:60]
-
-                context.close()
-                return content, etag, mime_type
-
     def format_error(self, exception: Exception, tb: str) -> str:
         """Format the error of the job if one is encountered.
 
@@ -1808,7 +1813,7 @@ class BrowserJob(UrlJobBase):
            False otherwise.
         """
         # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
-        CHROMIUM_CONNECTION_ERRORS = [  # range 100-199 Connection related errors
+        chromium_connection_errors = [  # range 100-199 Connection related errors
             'CONNECTION_CLOSED',
             'CONNECTION_RESET',
             'CONNECTION_REFUSED',
@@ -1888,7 +1893,7 @@ class BrowserJob(UrlJobBase):
         if isinstance(exception, (BrowserResponseError, PlaywrightError)):
             if self.ignore_connection_errors:
                 if isinstance(exception, (BrowserResponseError, PlaywrightError)) or any(
-                    str(exception.args[0]).split()[0] == f'net::ERR_{error}' for error in CHROMIUM_CONNECTION_ERRORS
+                    str(exception.args[0]).split()[0] == f'net::ERR_{error}' for error in chromium_connection_errors
                 ):
                     return True
             if self.ignore_timeout_errors:
@@ -1951,10 +1956,10 @@ class ShellJob(Job):
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filters)
         try:
             return (
-                subprocess.run(
+                subprocess.run(  # noqa: S602 `shell=True`, security issue
                     self.command,
                     capture_output=True,
-                    shell=True,  # noqa: S602 subprocess call with shell=True identified, security issue.
+                    shell=True,
                     check=True,
                     text=(not needs_bytes),
                 ).stdout,

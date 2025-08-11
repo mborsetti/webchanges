@@ -130,47 +130,58 @@ repos:
 
   - repo: local
     hooks:
-#       - id: bandit  # https://github.com/PyCQA/bandit
-#         name: Find common security issues in Python code (bandit)
-#         entry: bandit
-#         # additional_dependencies: [bandit]
-#         language: system
-#         types: [python]
-#         args:  [--ini, .bandit, --recursive]
-      - id: isort  # https://github.com/PyCQA/isort
-        name: isort your imports, so you don't have to (isort)
-        entry: isort
-        require_serial: true
-        # additional_dependencies: [isort]
+      - id: ruff # https://docs.astral.sh/ruff/
+        name: lint Python code (ruff check)
+        entry: ruff check --fix
         language: system
-        types_or: [cython, pyi, python]
-        args: [--filter-files]
-      - id: flynt  # https://github.com/ikamensh/flynt
-        name: convert % strings to f-strings (flynt)
-        entry: flynt
-        # additional_dependencies: [flynt]
+        pass_filenames: false
+      - id: ruff-format  # https://docs.astral.sh/ruff/
+        name: format Python code (ruff format)
+        entry: ruff format
         language: system
-        require_serial: true
-        types: [python]
-        args: [--fail-on-change]
-      - id: black  # https://github.com/python/black
-        name: uncompromising code formatting (black)
-        entry: black
-        # additional_dependencies: [black]
-        language: system
-        types: [python]
-      - id: flake8
-        name: check for errors, style [and over-complexity], security (flake8, bandit)
-        description: Code linter
-        entry: flake8  # https://gitlab.com/pycqa/flake8
-        # additional_dependencies: [flake8, flake8-bandit, flake8-quotes]
-        language: system
-        types: [python]
-        require_serial: true
-        args: [--max-line-length, '120']
+        pass_filenames: false
+      # - id: flynt  # https://github.com/ikamensh/flynt
+      #   name: convert % strings to f-strings (flynt)
+      #   entry: flynt
+      #   # additional_dependencies: [flynt]
+      #   language: system
+      #   require_serial: true
+      #   types: [python]
+      #   args: [--fail-on-change]
+      # - id: bandit  # https://github.com/PyCQA/bandit
+      #   name: Find common security issues in Python code (bandit)
+      #   entry: bandit
+      #   # additional_dependencies: [bandit]
+      #   language: system
+      #   types: [python]
+      #   args:  [--ini, .bandit, --recursive]
+      # - id: isort  # https://github.com/PyCQA/isort
+      #   name: isort your imports, so you don't have to (isort)
+      #   entry: isort
+      #   require_serial: true
+      #   # additional_dependencies: [isort]
+      #   language: system
+      #   types_or: [cython, pyi, python]
+      #   args: [--filter-files]
+      # - id: black  # https://github.com/python/black
+      #   name: uncompromising code formatting (black)
+      #   entry: black
+      #   # additional_dependencies: [black]
+      #   language: system
+      #   types: [python]
+      # - id: flake8
+      #   name: check for errors, style [and over-complexity], security (flake8, bandit)
+      #   description: Code linter
+      #   entry: flake8  # https://gitlab.com/pycqa/flake8
+      #   # additional_dependencies: [flake8, flake8-bandit, flake8-quotes]
+      #   language: system
+      #   types: [python]
+      #   require_serial: true
+      #   args: [--max-line-length, '120']
       - id: mypy  # https://github.com/python/mypy
         name: check Python static typing (mypy)
-        entry: mypy
+        entry: dmypy
+        args: ['run', '--timeout', '1800', '.', '--', '--config-file', 'pyproject.toml', '--cache-fine-grained']
         # additional_dependencies:
         #   - mypy
         #   - types-backports
@@ -181,44 +192,48 @@ repos:
         #   - types-requests
         #   - types-simplejson
         language: system
-        types: [python]
-      - id: doc8  # https://github.com/pycqa/doc8
-        name: check for style in rst documentation (doc8)
-        description: Documentation linter
-        entry: doc8
-        # additional_dependencies: [doc8]
+        pass_filenames: false
+            # - id: doc8  # https://github.com/pycqa/doc8
+      #   name: check for style in rst documentation (doc8)
+      #   description: Documentation linter
+      #   entry: doc8
+      #   # additional_dependencies: [doc8]
+      #   language: system
+      #   types: [rst]
+      #   require_serial: true
+      #   args: [--max-line-length, '120']
+      # # Not running tox-ini-fmt as it removes all remarks
+      # - id: tox-ini-fmt  # https://github.com/tox-dev/tox-ini-fmt
+      #   name: Apply a consistent format to tox.ini files (tox-ini-fmt)
+      #   entry: tox-ini-fmt
+      #   # additional_dependencies: [tox-ini-fmt]
+      #   language: system
+      #   files: tox.ini
+      #   types: [ini]
+      # - id: python -m sphinx.apidoc
+      #   name: Build autodoc API subdirectory (sphinx-apidoc)
+      #   entry: sphinx-apidoc
+      #   args: [-f, -e, -T, -o, docs\_api, webchanges]
+      #   # additional_dependencies: [sphinx]
+      #   language: system
+      # - id: sphinx-build
+      #   name: Check documentation build (sphinx-build)
+      #   entry: python -m sphinx.cmd.build
+      #   args: [-W, docs, docs/_build]
+      #   # additional_dependencies: [sphinx]
+      #   language: system
+      #   pass_filenames: false
+      # # https://www.sphinx-doc.org/en/master/usage/extensions/doctest.html#module-sphinx.ext.doctest
+      # - id: sphinx-doctest
+      #   name: sphinx doctest
+      #   entry: python -m sphinx-build
+      #   args: [-a, -E, -b, doctest, docs, docs/_build]
+      #   # additional_dependencies: [sphinx]
+      #   language: system
+      #   pass_filenames: false
+      - id: cli-help
+        name: update cli_help.txt (used in documentation build)
+        entry: webchanges
+        args: ['--help', '>', 'cli_help.txt']
         language: system
-        types: [rst]
-        require_serial: true
-        args: [--max-line-length, '120']
-# Not running tox-ini-fmt as it removes all remarks
-#      - id: tox-ini-fmt  # https://github.com/tox-dev/tox-ini-fmt
-#        name: Apply a consistent format to tox.ini files (tox-ini-fmt)
-#        entry: tox-ini-fmt
-#        # additional_dependencies: [tox-ini-fmt]
-#        language: system
-#        files: tox.ini
-#        types: [ini]
-#      - id: python -m sphinx.apidoc
-#        name: Build autodoc API subdirectory (sphinx-apidoc)
-#        entry: sphinx-apidoc
-#        args: [-f, -e, -T, -o, docs\_api, webchanges]
-#        # additional_dependencies: [sphinx]
-#        language: system
-#      - id: sphinx-build
-#        name: Check documentation build (sphinx-build)
-#        entry: python -m sphinx.cmd.build
-#        args: [-W, docs, docs/_build]
-#        # additional_dependencies: [sphinx]
-#        language: system
-#        pass_filenames: false
-#      # https://www.sphinx-doc.org/en/master/usage/extensions/doctest.html#module-sphinx.ext.doctest
-#      - id: sphinx-doctest
-#        name: sphinx doctest
-#        entry: python -m sphinx-build
-#        args: [-a, -E, -b, doctest, docs, docs/_build]
-#        # additional_dependencies: [sphinx]
-#        language: system
-#        files: ^docs
-#        types: [file]
-#        pass_filenames: false
+        pass_filenames: false

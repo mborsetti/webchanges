@@ -13,12 +13,12 @@ import logging
 import os
 import re
 import shlex
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.s
+import subprocess
 import sys
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, TypeAlias
 from warnings import warn
 from zoneinfo import ZoneInfo
 
@@ -27,7 +27,7 @@ from markdown2 import Markdown
 from webchanges import __project_name__, __url__, __version__
 from webchanges.jobs import UrlJob
 from webchanges.mailer import Mailer, SendmailMailer, SMTPMailer
-from webchanges.util import chunk_string, dur_text, mark_to_html, TrackSubClasses
+from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_html
 
 # https://stackoverflow.com/questions/712791
 try:
@@ -97,12 +97,12 @@ if TYPE_CHECKING:
 try:
     import aioxmpp
 except ImportError as e:  # pragma: no cover
-    aioxmpp = str(e)  # type: ignore[assignment]
+    aioxmpp = str(e)
 
 try:
     import chump
 except ImportError as e:  # pragma: no cover
-    chump = str(e)  # type: ignore[assignment]
+    chump = str(e)
 
 try:
     import keyring
@@ -112,13 +112,13 @@ except ImportError as e:  # pragma: no cover
 try:
     import matrix_client.api
 except ImportError as e:  # pragma: no cover
-    matrix_client = str(e)  # type: ignore[assignment]
+    matrix_client = str(e)
 
 if sys.platform == 'win32':
     try:
         from colorama import AnsiToWin32
     except ImportError as e:  # pragma: no cover
-        AnsiToWin32 = str(e)  # type: ignore[assignment,misc]
+        AnsiToWin32 = str(e)  # type: ignore[misc,assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -155,11 +155,11 @@ class ReporterBase(metaclass=TrackSubClasses):
         self.tz = ZoneInfo(self.report.config['report']['tz']) if self.report.config['report']['tz'] else None
         self.differ_defaults = differ_config
         if jobs_files and (len(jobs_files) > 1 or jobs_files[0].stem != 'jobs'):
-            self.footer_job_file = f" ({', '.join(f.stem for f in jobs_files)})"
+            self.footer_job_file = f' ({", ".join(f.stem for f in jobs_files)})'
         else:
             self.footer_job_file = ''
         if httpx:
-            self.post_client = httpx.Client(http2=h2 is not None, follow_redirects=True).post  # noqa: S113 no timeout
+            self.post_client = httpx.Client(http2=h2 is not None, follow_redirects=True).post
         else:
             self.post_client = requests.post  # type: ignore[assignment]
 
@@ -194,7 +194,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         }
         if '{jobs_files}' in subject:
             if self.jobs_files and (len(self.jobs_files) > 1 or self.jobs_files[0].stem != 'jobs'):
-                jobs_files = f" ({', '.join(f.stem.removeprefix('jobs-') for f in self.jobs_files)})"
+                jobs_files = f' ({", ".join(f.stem.removeprefix("jobs-") for f in self.jobs_files)})'
             else:
                 jobs_files = ''
             subject_args['jobs_files'] = jobs_files
@@ -219,7 +219,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         report: Report,
         job_states: list[JobState],
         duration: float,
-        jobs_files: list[Path] | None = None,
+        jobs_files: list[Path],
         check_enabled: bool | None = True,
     ) -> None:
         """Run a single named report.
@@ -253,7 +253,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         report: Report,
         job_states: list[JobState],
         duration: float,
-        jobs_files: list[Path] | None = None,
+        jobs_files: list[Path],
     ) -> None:
         """Run all (enabled) reports.
 
@@ -377,12 +377,12 @@ class HtmlReporter(ReporterBase):
         # HTML footer
         yield '<span style="font-style:italic">'
         if self.report.config['footnote']:
-            yield f"{self.report.config['footnote']}\n"
+            yield f'{self.report.config["footnote"]}\n'
         if cfg['footer']:
             if self.report.config['footnote']:
                 yield '\n<hr>'
             yield (
-                f"Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
+                f'Checked {len(self.job_states)} source{"s" if len(self.job_states) > 1 else ""} in '
                 f'{dur_text(self.duration)} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
                 f'{html.escape(__version__)}{self.footer_job_file}.<br>\n'
             )
@@ -429,7 +429,7 @@ class HtmlReporter(ReporterBase):
 
         if job_state.verb == 'error_ended':
             return (
-                f"<div style=\"color:green;\"><i>{job_state.old_error_data.get('type')} fixed; "
+                f'<div style="color:green;"><i>{job_state.old_error_data.get("type")} fixed; '
                 'content unchanged.</i></div>'
             )
 
@@ -527,9 +527,9 @@ class TextReporter(ReporterBase):
         if summary and show_footer:
             # Text footer
             if self.report.config['footnote']:
-                yield f"--\n{self.report.config['footnote']}"
+                yield f'--\n{self.report.config["footnote"]}'
             yield (
-                f"--\nChecked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
+                f'--\nChecked {len(self.job_states)} source{"s" if len(self.job_states) > 1 else ""} in '
                 f'{dur_text(self.duration)} with {__project_name__} {__version__}{self.footer_job_file}.\n'
             )
             if (
@@ -562,7 +562,7 @@ class TextReporter(ReporterBase):
             return str(job_state.old_data)
 
         if job_state.verb == 'error_ended':
-            return f"{job_state.old_error_data.get('type')} fixed; content unchanged."
+            return f'{job_state.old_error_data.get("type")} fixed; content unchanged.'
 
         if job_state.verb in ('new', 'test'):
             return str(job_state.new_data)
@@ -628,7 +628,7 @@ class MarkdownReporter(ReporterBase):
                 location = job_state.job.get_location()
                 if pretty_name != location:
                     location = f'{pretty_name} ({location})'
-                yield f"* {': '.join((job_state.verb.replace('_', ' ').upper(), location))}"
+                yield f'* {": ".join((job_state.verb.replace("_", " ").upper(), location))}'
                 if hasattr(job_state.job, 'note') and job_state.job.note:
                     yield job_state.job.note
             return
@@ -643,12 +643,12 @@ class MarkdownReporter(ReporterBase):
         if summary and show_footer:
             # Markdown footer
             if self.report.config['footnote']:
-                footer = f"--\n{self.report.config['footnote']}"
+                footer = f'--\n{self.report.config["footnote"]}'
             else:
                 footer = ''
 
             footer += (
-                f"--\n_Checked {len(self.job_states)} source{'s' if len(self.job_states) > 1 else ''} in "
+                f'--\n_Checked {len(self.job_states)} source{"s" if len(self.job_states) > 1 else ""} in '
                 f'{dur_text(self.duration)} with {__project_name__} {__version__}{self.footer_job_file}_.\n'
             )
             if (
@@ -821,7 +821,7 @@ class MarkdownReporter(ReporterBase):
             return str(job_state.old_data)
 
         if job_state.verb == 'error_ended':
-            return f"_{job_state.old_error_data.get('type')} fixed; content unchanged._"
+            return f'_{job_state.old_error_data.get("type")} fixed; content unchanged._'
 
         if job_state.verb == 'unchanged':
             return str(job_state.new_data)
@@ -905,8 +905,8 @@ class StdoutReporter(TextReporter):
             for differ in (job_state.job.differ for job_state in self.job_states if job_state.job.differ)
         ):
             # wdiff colorization
-            body = re.sub(r'\{\+.*?\+}', lambda x: self._green(x.group(0)), body, flags=re.DOTALL)
-            body = re.sub(r'\[-.*?-]', lambda x: self._red(x.group(0)), body, flags=re.DOTALL)
+            body = re.sub(r'\{\+.*?\+}', lambda x: self._green(str(x.group(0))), body, flags=re.DOTALL)
+            body = re.sub(r'\[-.*?-]', lambda x: self._red(str(x.group(0))), body, flags=re.DOTALL)
             separators = (*separators, '-' * 36)
 
         class LineType(Enum):
@@ -998,16 +998,18 @@ class EMailReporter(TextReporter):
         elif self.config['method'] == 'sendmail':
             mailer = SendmailMailer(self.config['sendmail']['path'])
         else:
-            raise ValueError(f"Unknown email reporter method: {self.config['method']}")
+            raise ValueError(f'Unknown email reporter method: {self.config["method"]}')
 
         if self.config['html']:
             html_reporter = HtmlReporter(
                 self.report, self.config, self.job_states, self.duration, self.jobs_files, self.differ_defaults
             )
             body_html = '\n'.join(html_reporter.submit())
-            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html)
+            msg = mailer.msg(
+                self.config['from'], self.config['to'], subject, body_text, body_html, utf_8=smtp_config['utf-8']
+            )
         else:
-            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text)
+            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, utf_8=smtp_config['utf-8'])
 
         mailer.send(msg)
 
@@ -1117,7 +1119,7 @@ class PushbulletReport(WebServiceReporter):
         try:
             from pushbullet import Pushbullet
         except ImportError as e:  # pragma: no cover
-            Pushbullet = str(e)  # type: ignore[assignment]
+            Pushbullet = str(e)  # noqa: N806 variable should be lowercase
 
         if isinstance(Pushbullet, str):
             self.raise_import_error('pushbullet', self.__kind__, Pushbullet)
@@ -1179,7 +1181,7 @@ class MailgunReporter(TextReporter):
             if result.status_code == 200:
                 logger.info(f"Mailgun response: id '{json_res['id']}'. {json_res['message']}")
             else:
-                raise RuntimeError(f"Mailgun error: {json_res['message']}")
+                raise RuntimeError(f'Mailgun error: {json_res["message"]}')
         except ValueError:
             raise RuntimeError(
                 f'Failed to parse Mailgun response. HTTP status code: {result.status_code}, content: {result.text}'
@@ -1233,7 +1235,7 @@ class TelegramReporter(MarkdownReporter):
             if result.status_code == 200:
                 logger.info(f"Telegram response: ok '{json_res['ok']}'. {json_res['result']}")
             else:
-                raise RuntimeError(f"Telegram error: {json_res['description']}")
+                raise RuntimeError(f'Telegram error: {json_res["description"]}')
         except ValueError:
             logger.error(
                 f'Failed to parse telegram response. HTTP status code: {result.status_code}, '
@@ -1504,7 +1506,9 @@ class SlackReporter(WebhookReporter):
     __kind__ = 'slack'
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        warn("'slack' reporter is deprecated; replace with 'webhook' (same exact keys)", DeprecationWarning)
+        warn(
+            "'slack' reporter is deprecated; replace with 'webhook' (same exact keys)", DeprecationWarning, stacklevel=1
+        )
         super().__init__(*args, **kwargs)
 
 
@@ -1546,7 +1550,7 @@ class MatrixReporter(MarkdownReporter):
                 },
             )
         except Exception as e:
-            raise RuntimeError(f'Matrix error: {e}')
+            raise RuntimeError(f'Matrix error: {e}')  # noqa: B904
 
 
 class XMPPReporter(TextReporter):
@@ -1612,7 +1616,7 @@ class XMPP:
     def __init__(self, sender: str, recipient: str, insecure_password: str | None = None) -> None:
         if isinstance(aioxmpp, str):
             raise ImportError(
-                f"Python package 'aioxmpp' cannot be imported; cannot use the 'xmpp' reporter.\n" f'{aioxmpp}'
+                f"Python package 'aioxmpp' cannot be imported; cannot use the 'xmpp' reporter.\n{aioxmpp}"
             )
         self.sender = sender
         self.recipient = recipient
@@ -1761,7 +1765,7 @@ class RunCommandReporter(TextReporter):
             raise e
         except FileNotFoundError as e:
             logger.error(f"The '{self.__kind__}' filter with command {command} returned error:\n{e}")
-            raise FileNotFoundError(e, f'with command {command}')
+            raise FileNotFoundError(e, f'with command {command}')  # noqa: B904
         print(result.stdout, end='')
 
 
@@ -1771,7 +1775,7 @@ class ShellReporter(WebhookReporter):
     __kind__ = 'shell'
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        warn("'shell' reporter is deprecated; use 'run_command' instead", DeprecationWarning)
+        warn("'shell' reporter is deprecated; use 'run_command' instead", DeprecationWarning, stacklevel=1)
         super().__init__(*args, **kwargs)
 
 

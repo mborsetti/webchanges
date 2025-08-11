@@ -74,6 +74,7 @@ def test_filters(test_name: str, test_data: dict[str, str]) -> None:
     filter_spec = test_data['filter']
     data = test_data['data']
     expected_result = test_data['expected_result']
+    filter_result = ''
 
     result = data
     for filter_kind, subfilter in FilterBase.normalize_filter_list(filter_spec):
@@ -84,11 +85,11 @@ def test_filters(test_name: str, test_data: dict[str, str]) -> None:
         if filtercls is None:
             raise ValueError('Unknown filter kind: {filter_kind}:{subfilter}')
         # noinspection PyTypeChecker
-        result = filtercls(job_state).filter(result, '', subfilter)
+        filter_result = filtercls(job_state).filter(result, '', subfilter)
 
     logger.debug(f'Expected result:\n{expected_result}')
-    logger.debug(f'Actual result:\n{result}')
-    assert result[0] == expected_result
+    logger.debug(f'Actual result:\n{filter_result}')
+    assert filter_result[0] == expected_result
 
 
 def test_invalid_filter_name_raises_valueerror() -> None:
@@ -124,9 +125,7 @@ def test_providing_unknown_subfilter_raises_valueerror() -> None:
     assert err_msg.endswith('re, text are supported.') or err_msg.endswith('text, re are supported.')
 
 
-@pytest.mark.skipif(
-    sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS'
-)  # type: ignore[misc]
+@pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')  # type: ignore[misc]
 def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     # https://github.com/thp/urlwatch/issues/541
 
@@ -149,15 +148,13 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     )
 
     # Check that the inherited value and the job name are set properly
-    assert data.rstrip('"') == 'parent-process/test\n'
+    assert str(data).rstrip('"') == 'parent-process/test\n'
 
     # Check that the outside variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
 
 
-@pytest.mark.skipif(
-    sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS'
-)  # type: ignore[misc]
+@pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')  # type: ignore[misc]
 def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     # https://github.com/thp/urlwatch/issues/541
     # if os.getenv('GITHUB_ACTIONS') and sys.version_info[0:2] == (3, 6) and sys.platform == 'linux':
@@ -183,7 +180,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     )
 
     # Check that the inherited value and the job name are set properly
-    assert data.rstrip('"') == 'parent-process/test\n'
+    assert str(data).rstrip('"') == 'parent-process/test\n'
 
     # Check that the outside variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'

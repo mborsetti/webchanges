@@ -1,16 +1,17 @@
-usage: webchanges [-h] [-V] [-v] [--jobs FILE] [--config FILE] [--hooks FILE]
-                  [--database FILE] [--list-jobs [REGEX]]
-                  [--errors [REPORTER]] [--test [JOB]] [--no-headless]
-                  [--test-differ JOB [JOB ...]] [--dump-history JOB]
-                  [--max-workers WORKERS] [--test-reporter REPORTER]
-                  [--smtp-login] [--telegram-chats] [--xmpp-login]
-                  [--footnote FOOTNOTE] [--edit] [--edit-config]
-                  [--edit-hooks] [--gc-database [RETAIN_LIMIT]]
+usage: webchanges [-h] [-V] [-v] [--log-file FILE] [--jobs FILE]
+                  [--config FILE] [--hooks FILE] [--database FILE]
+                  [--list-jobs [REGEX]] [--errors [REPORTER]] [--test [JOB]]
+                  [--no-headless] [--test-differ JOB [JOB ...]]
+                  [--dump-history JOB] [--max-workers WORKERS]
+                  [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
+                  [--xmpp-login] [--footnote FOOTNOTE] [--edit]
+                  [--edit-config] [--edit-hooks]
+                  [--gc-database [RETAIN_LIMIT]]
                   [--clean-database [RETAIN_LIMIT]]
                   [--rollback-database TIMESTAMP] [--delete-snapshot JOB]
-                  [--change-location JOB NEW_LOCATION] [--check-new]
-                  [--install-chrome] [--features] [--detailed-versions]
-                  [--database-engine DATABASE_ENGINE]
+                  [--prepare-jobs] [--change-location JOB NEW_LOCATION]
+                  [--check-new] [--install-chrome] [--features]
+                  [--detailed-versions] [--database-engine DATABASE_ENGINE]
                   [--max-snapshots NUM_SNAPSHOTS] [--add JOB] [--delete JOB]
                   [JOB(S) ...]
 
@@ -27,15 +28,15 @@ options:
   -h, --help            show this help message and exit
   -V, --version         show program's version number and exit
   -v, --verbose         show logging output; use -vv for maximum verbosity
+  --log-file FILE       send log to FILE
 
 override file defaults:
-  --jobs FILE, --urls FILE
-                        read job list (URLs/commands) from FILE or files
+  --jobs, --urls FILE   read job list (URLs/commands) from FILE or files
                         matching a glob pattern
   --config FILE         read configuration from FILE
   --hooks FILE          use FILE or files matching a glob pattern as hooks.py
                         module to import
-  --database FILE, --cache FILE
+  --database, --cache FILE
                         use FILE as snapshots database; FILE can be a redis
                         URI
 
@@ -44,13 +45,13 @@ job management:
                         who match REGEX)
   --errors [REPORTER]   test run all jobs and list those with errors or no
                         data captured; optionally send output to REPORTER
-  --test [JOB], --test-filter [JOB]
+  --test, --test-filter [JOB]
                         test a JOB (by index or URL/command) and show filtered
                         output; if no JOB, check syntax of config and jobs
                         file(s)
   --no-headless         turn off browser headless mode (for jobs using a
                         browser)
-  --test-differ JOB [JOB ...], --test-diff JOB [JOB ...], --test-diff-filter JOB [JOB ...]
+  --test-differ, --test-diff, --test-diff-filter JOB [JOB ...]
                         show diff(s) using existing saved snapshots of a JOB
                         (by index or URL/command)
   --dump-history JOB    print all saved changed snapshots for a JOB (by index
@@ -73,20 +74,21 @@ launch editor ($EDITOR/$VISUAL):
   --edit-hooks          edit hooks script
 
 database:
-  --gc-database [RETAIN_LIMIT], --gc-cache [RETAIN_LIMIT]
+  --gc-database, --gc-cache [RETAIN_LIMIT]
                         garbage collect the database: remove all snapshots of
                         jobs not listed in the jobs file and keep only the
                         latest RETAIN_LIMIT snapshots for remaining jobs
                         (default: 1)
-  --clean-database [RETAIN_LIMIT], --clean-cache [RETAIN_LIMIT]
+  --clean-database, --clean-cache [RETAIN_LIMIT]
                         clean up the database by keeping only the latest
                         RETAIN_LIMIT snapshots (default: 1)
-  --rollback-database TIMESTAMP, --rollback-cache TIMESTAMP
+  --rollback-database, --rollback-cache TIMESTAMP
                         delete changed snapshots added since TIMESTAMP (backup
                         the database before using!)
   --delete-snapshot JOB
                         delete the last saved changed snapshot of JOB (index
                         or URL/command)
+  --prepare-jobs        run only newly added jobs (without history)
   --change-location JOB NEW_LOCATION
                         change the location of an existing JOB (index or
                         URL/command)

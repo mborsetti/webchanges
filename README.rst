@@ -29,7 +29,7 @@ For Generative AI summaries (BETA), you need a free `API Key from Google Cloud A
 
 Installation
 ============
-|pypi_version| |format| |status| |security|
+|pypi_version| |format| |status|
 
 Install **webchanges**  with:
 
@@ -94,7 +94,7 @@ Schedule
 
 Code
 ====
-|coveralls| |issues| |code_style|
+|coveralls| |snyk| |issues| |code_style|
 
 The code, issues tracker, and discussions are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 
@@ -120,55 +120,14 @@ licensed under a `BSD 3-Clause License
 <https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__).
 
 
-Compatibility with and improvements from **urlwatch**
-=====================================================
+Compatibility **urlwatch**
+===========================
 
 This project is based on code from `urlwatch 2.21
 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020.
 
-You can easily upgrade to **webchanges** from the current version of **urlwatch** using the same job and
-configuration files (see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__) and benefit from many
-improvements, including:
-
-* :underline:`AI-Powered Summaries`: Summary of changes in plain text using generative AI, useful for long documents
-  (e.g. legal);
-* :underline:`Image Change Detection`: Monitor changes to images and receive notifications with an image highlighting
-  the differences;
-* :underline:`Structured Data Monitoring`: Track changes in JSON or XML data on an element-by-element basis;
-* :underline:`Improved Documentation`: We've revamped the `documentation <https://webchanges.readthedocs.io/>`__ to make
-  implementation easier;
-* :underline:`Enhanced HTML Reports`: HTML reports are now much clearer and include:
-
-  * Clickable links!
-  * Retention of most original formatting (**bolding / headers**, *italics*, :underline:`underlining`, lists with
-    bullets (•), and indentation;
-  * :additions:`added` and :deletions:`deleted` lines clearly highlighted with color and strikethrough;
-  * Wrapping of long lines (instead of truncation);
-  * Improved compatibility with a wider range of HTML email clients, including those that override stylesheets (e.g.,
-    Gmail);
-  * General legibility improvements.
-
-* :underline:`New Filtering Options`: New filters, like `additions_only
-  <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__, which allows you to focus on
-  added content without the distraction of deletions;
-* :underline:`New Command Line Arguments`: New command-line arguments such as ``--errors``, which helps you identify
-  jobs that are no longer functioning correctly;
-* :underline:`Increased Reliability and Stability`: Testing coverage has increased by approximately 30 percentage
-  points;
-* :underline:`Additional Enhancements`: Numerous other additions, refinements, and bug fixes have been implemented.
-  For more information, see `here <https://webchanges.readthedocs.io/en/stable/migration.html#upgrade-details>`__.
-
-Example enhancements to HTML reporting:
-
-.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/main/docs/html_diff_filters_example_1.png
-    :width: 504
-
-|
-
-.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/main/docs/html_diff_filters_example_3.png
-    :width: 504
-
-
+For upgrading from **urlwatch** to **webchanges** (using the same job and
+configuration files), see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__). 
 
 
 .. |support| image:: https://img.shields.io/pypi/pyversions/webchanges.svg
@@ -204,12 +163,15 @@ Example enhancements to HTML reporting:
 .. |coveralls| image:: https://img.shields.io/coverallsCoverage/github/mborsetti/webchanges.svg
     :target: https://coveralls.io/github/mborsetti/webchanges?branch=main
     :alt: Code coverage by Coveralls
-.. |code_style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://github.com/psf/black
-    :alt: Code style black
+.. |code_style| image:: https://img.shields.io/badge/code%20style-ruff-000000.svg
+    :target: https://github.com/astral-sh/ruff
+    :alt: Code style ruff
 .. |status| image:: https://img.shields.io/pypi/status/webchanges.svg
     :target: https://pypi.org/project/webchanges/
     :alt: Package stability
-.. |security| image:: https://img.shields.io/badge/security-bandit-green.svg
-    :target: https://github.com/PyCQA/bandit
-    :alt: Security Status
+.. .. |security| image:: https://img.shields.io/badge/security-bandit-green.svg
+..     :target: https://github.com/PyCQA/bandit
+..     :alt: Security Status
+.. |snyk| image:: https://snyk.io/advisor/python/holidays/badge.svg
+    :target: https://snyk.io/advisor/python/holidays
+    :alt: Snyk Package Health Score

@@ -3,6 +3,7 @@ __pycache__/
 /.idea/
 /.mypy_cache/
 /.pytest_cache/
+/.ruff_cache/
 /.tox/
 /.vscode/
 /build/
@@ -15,8 +16,8 @@ __pycache__/
 /tests/htmlcov/
 /venv*/
 /webchanges/.*
-cli_help.txt
 /.coverage*
+/.dmypy.json
 /coverage.xml
 /credentials*
 /Dockerfile

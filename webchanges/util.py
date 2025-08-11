@@ -11,18 +11,21 @@ import os
 import re
 import shlex
 import stat
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import subprocess
 import sys
 import textwrap
 from math import floor, log10
 from os import PathLike
 from pathlib import Path
 from types import ModuleType
-from typing import Callable, Iterable, Match
+from typing import TYPE_CHECKING, Callable, Iterable, Match
 
 from markdown2 import Markdown
 
 from webchanges import __project_name__, __version__
+
+if TYPE_CHECKING:
+    from webchanges.jobs import JobState
 
 try:
     import httpx
@@ -73,6 +76,8 @@ class TrackSubClasses(type):
 
     __kind__: str
 
+    job_states: list[JobState]
+
     def sorted_by_kind(cls: TrackSubClasses) -> list[TrackSubClasses]:
         """Generates a list of all members of a class sorted by the value of their __kind__ attribute. Useful for
         documentation.
@@ -84,7 +89,7 @@ class TrackSubClasses(type):
 
     def __init__(cls, name: str, bases: tuple[type, ...], namespace: dict) -> None:
         for base in bases:
-            if base == object:
+            if base is object:
                 continue
 
             for attr in {'__required__', '__optional__'}:
@@ -97,7 +102,7 @@ class TrackSubClasses(type):
                 setattr(cls, attr, new_value)
 
         for base in bases:
-            if base == object:
+            if base is object:
                 continue
 
             if hasattr(cls, '__kind__'):
@@ -132,8 +137,7 @@ def edit_file(filename: str | bytes | PathLike) -> None:
             raise SystemExit(1)
 
     subprocess.run(  # noqa: S603 subprocess call - check for execution of untrusted input.
-        shlex.split(editor) + [str(filename)],
-        check=True,
+        [*shlex.split(editor), str(filename)], check=True
     )
 
 
@@ -232,7 +236,7 @@ def linkify(
     :parameter permitted_protocols: Protocols which should be linkified, e.g. linkify(text,
         permitted_protocols=('http', 'ftp', 'mailto')); it is very unsafe to include protocols such as javascript.
     """
-    # _URL_RE = re.compile(  # original re
+    # _url_re = re.compile(  # original re
     #     r'\b('
     #     r'(?:([\w-]+):(/{1,3})|www[.])'
     #     r'(?:('
@@ -242,9 +246,9 @@ def linkify(
     #     r'|(?:\((?:[^\s&()]|&amp;|&quot;)*\))'
     #     r')+'
     #     r')'
-    # )  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible.
+    # )
 
-    _URL_RE = re.compile(  # modified to catch all URL parameters
+    _url_re = re.compile(  # modified to catch all URL parameters
         r'\b('
         r'(?:([\w-]+):(/{1,3})|www[.])'
         r'(?:('
@@ -254,7 +258,7 @@ def linkify(
         r'|(?:\((?:[^\s()])*\))'
         r')+'
         r')'
-    )  # noqa: DUO138 catastrophic "re" usage - denial-of-service possible.
+    )
 
     if extra_params and not callable(extra_params):
         extra_params = f' {extra_params.strip()}'
@@ -316,7 +320,7 @@ def linkify(
         return f'<a href="{href}"{params}>{url}</a>'
 
     # text = html.escape(text)
-    return _URL_RE.sub(make_link, text)
+    return _url_re.sub(make_link, text)
 
 
 def get_new_version_number(timeout: float | None = None) -> str | bool:
@@ -338,7 +342,7 @@ def get_new_version_number(timeout: float | None = None) -> str | bool:
 
     if r.is_success:
         latest_release: str = r.json()['info']['version']
-        if parse_version(latest_release) > parse_version(__version__):  # pyright: ignore[reportOperatorIssue]
+        if parse_version(latest_release) > parse_version(__version__):
             return latest_release
     else:
         logger.info(f'HTTP error when querying PyPi for latest release: {r}')
@@ -370,7 +374,7 @@ def file_ownership_checks(filename: Path) -> list[str]:
         return []
 
     file_ownership_errors = []
-    current_uid = os.getuid()  # type: ignore[attr-defined]  # not defined in Windows
+    current_uid = os.getuid()
 
     dirname = filename.parent
     dir_st = dirname.stat()
@@ -434,3 +438,24 @@ def mark_to_html(text: str, markdown_padded_tables: bool | None = False, extras:
         return pre + html_out + post
     html_out = re.sub(r'<(/?)h\d>', r'<\g<1>strong>', html_out)  # replace heading tags with <strong>
     return pre + html_out + post
+
+
+def import_optional_dependency(name: str, extra: str = '') -> ModuleType:
+    """
+    Import an optional dependency.
+
+    If a dependency is missing an ImportError with a nice message will be raised.
+
+    :param name: The module name.
+    :param extra: Additional text to include in the ImportError message.
+
+    :returns maybe_module: The imported module, when found and the version is correct.
+      None is returned when the package is not found.
+    """
+    try:
+        module = importlib.import_module(name)
+    except ImportError as err:
+        msg = f'`Import {name}` failed. {extra} Use pip or conda to install the {name} package.'
+        raise ImportError(msg) from err
+
+    return module

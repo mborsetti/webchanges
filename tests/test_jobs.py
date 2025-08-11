@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import ftplib  # noqa: S402 A FTP-related module is being imported.
+import ftplib
 import importlib.util
 import os
 import socket
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Callable, cast
@@ -22,7 +22,7 @@ from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifi
 from webchanges.main import Urlwatch
 
 # from webchanges.reporters import ReporterBase
-from webchanges.storage import _Config, DEFAULT_CONFIG, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage
+from webchanges.storage import DEFAULT_CONFIG, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -33,7 +33,7 @@ ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
 class UrlwatchTest:
     """A mock Urlwatch class for testing."""
 
-    class config_storage:
+    class ConfigStorage:
         """A mock config_storage class for testing."""
 
         config = DEFAULT_CONFIG
@@ -364,13 +364,14 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
         if isinstance(job_state.exception, (HTTPStatusError, HTTPError)):
             assert job_state.exception.args[0].lower() == (
                 "418 client error: i'm a teapot for url: https://www.google.com/teapot\n[](https://www.google.com/)\n"
-                '**418.** i’m a teapot.\nthe requested entity body is short and stout. tip me over and pour me out.'
+                '**418.** i’m a teapot.\nthe requested entity body is short and stout. '  # noqa: RUF001
+                'tip me over and pour me out.'
             )
         elif isinstance(job_state.exception, BrowserResponseError):
             assert job_state.exception.status_code == 418
-            assert (
-                job_state.exception.args[0]
-                == '418. I’m a teapot. The requested entity body is short and stout. Tip me over and pour me out.'
+            assert job_state.exception.args[0] == (
+                '418. I’m a teapot. The requested entity body is short and stout. '  # noqa: RUF001
+                'Tip me over and pour me out.'
             )
         elif job_state.exception:
             pytest.fail(
@@ -468,7 +469,7 @@ def test_navigate_directive() -> None:
 #     with pytest.deprecated_call() as pytest_wrapped_warning:
 #         JobBase.unserialize(job_data.copy())
 #     assert str(pytest_wrapped_warning.list[0].message) == (
-#         f"Job directive 'kind' is deprecated and ignored: delete from job ({job_data})"  # noqa: S608
+#         f"Job directive 'kind' is deprecated and ignored: delete from job ({job_data})"
 #     )
 
 

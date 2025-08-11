@@ -5,14 +5,14 @@
 from __future__ import annotations
 
 import logging
-import subprocess  # noqa: S404 Consider possible security implications
+import subprocess
 import sys
 import time
 import traceback
 from concurrent.futures import Future
 from pathlib import Path
 from types import TracebackType
-from typing import Any, ContextManager, Iterator, Literal, NamedTuple, TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, ContextManager, Iterator, Literal, NamedTuple, TypedDict
 from zoneinfo import ZoneInfo
 
 from webchanges.differs import DifferBase
@@ -24,7 +24,7 @@ from webchanges.reporters import ReporterBase
 if TYPE_CHECKING:
     from webchanges.jobs import JobBase
     from webchanges.main import Urlwatch
-    from webchanges.storage import _Config, _ConfigDifferDefaults, SsdbStorage
+    from webchanges.storage import SsdbStorage, _Config, _ConfigDifferDefaults
 
 logger = logging.getLogger(__name__)
 
@@ -485,7 +485,7 @@ class Report:
             if not should_skip_job(self, job_state):
                 yield job_state
 
-    def finish(self, jobs_file: list[Path] | None = None) -> None:
+    def finish(self, jobs_file: list[Path]) -> None:
         """Finish job run: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_all`.
 
@@ -506,5 +506,7 @@ class Report:
         """
         end = time.perf_counter()
         duration = end - self.start
+        if jobs_file is None:
+            jobs_file = []
 
         ReporterBase.submit_one(name, self, self.job_states, duration, jobs_file, check_enabled)

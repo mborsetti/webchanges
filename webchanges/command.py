@@ -14,7 +14,7 @@ import platform
 import re
 import shutil
 import sqlite3
-import subprocess  # noqa: S404 Consider possible security implications associated with the subprocess module.
+import subprocess
 import sys
 import time
 import traceback
@@ -22,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from datetime import datetime, tzinfo
 from pathlib import Path
-from typing import Iterable, Iterator, TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, Iterator
 from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
@@ -31,7 +31,7 @@ from webchanges.differs import DifferBase
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase, NotModifiedError, UrlJob
-from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
+from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
 from webchanges.reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from webchanges.util import dur_text, edit_file, import_module_from_source
 
@@ -57,10 +57,10 @@ if os.name == 'posix':
     try:
         import apt
     except ImportError:  # pragma: no cover
-        apt = None  # type: ignore[assignment]
+        apt = None
 
 try:
-    from pip._internal.metadata import get_default_environment  # pyright: ignore[reportPrivateImportUsage]
+    from pip._internal.metadata import get_default_environment
 except ImportError:  # pragma: no cover
     get_default_environment = None  # type: ignore[assignment]
 
@@ -71,7 +71,7 @@ except ImportError:  # pragma: no cover
 
 try:
     import psutil
-    from psutil._common import bytes2human  # pyright: ignore[reportPrivateImportUsage]
+    from psutil._common import bytes2human
 except ImportError:  # pragma: no cover
     psutil = None  # type: ignore[assignment]
     bytes2human = None  # type: ignore[assignment]
@@ -104,14 +104,14 @@ class UrlwatchCommand:
             disabled = len(enabled_jobs) - len(jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
             logger.debug(
-                f"Processing {len(enabled_jobs)} job{'s' if len(enabled_jobs) else ''}{disabled_str} as specified in "
-                f"command line: {', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}"
+                f'Processing {len(enabled_jobs)} job{"s" if len(enabled_jobs) else ""}{disabled_str} as specified in '
+                f'command line: {", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
             )
         else:
             enabled_jobs = {job for job in self.urlwatcher.jobs if job.is_enabled()}
             disabled = len(enabled_jobs) - len(self.urlwatcher.jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
-            logger.debug(f"Processing {len(enabled_jobs)} job{'s' if len(enabled_jobs) else ''}{disabled_str}")
+            logger.debug(f'Processing {len(enabled_jobs)} job{"s" if len(enabled_jobs) else ""}{disabled_str}')
         for job in enabled_jobs:
             yield job.with_defaults(self.urlwatcher.config_storage.config)
 
@@ -256,14 +256,14 @@ class UrlwatchCommand:
             try:
                 virt_mem = psutil.virtual_memory().available
                 print(
-                    f'• Free memory: {bytes2human(virt_mem)} physical plus '  # pyright: ignore[reportOptionalCall]
-                    f'{bytes2human(psutil.swap_memory().free)} swap.'  # pyright: ignore[reportOptionalCall]
+                    f'• Free memory: {bytes2human(virt_mem)} physical plus '
+                    f'{bytes2human(psutil.swap_memory().free)} swap.'
                 )
             except psutil.Error as e:  # pragma: no cover
                 print(f'• Free memory: Could not read information: {e}')
             print(
-                f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} "  # pyright: ignore[reportOptionalCall]
-                f"({100 - psutil.disk_usage('/').percent:.1f}%)"
+                f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} "
+                f'({100 - psutil.disk_usage("/").percent:.1f}%)'
             )
             executor = ThreadPoolExecutor()
             print(f'• --max-threads default: {executor._max_workers}')
@@ -299,8 +299,8 @@ class UrlwatchCommand:
                         virt_mem = psutil.virtual_memory().available
                         print(
                             f'• Free memory with browser loaded: '
-                            f'{bytes2human(virt_mem)} physical plus '  # pyright: ignore[reportOptionalCall]
-                            f'{bytes2human(psutil.swap_memory().free)} swap'  # pyright: ignore[reportOptionalCall]
+                            f'{bytes2human(virt_mem)} physical plus '
+                            f'{bytes2human(psutil.swap_memory().free)} swap'
                         )
                     except psutil.Error:
                         pass
@@ -448,8 +448,8 @@ class UrlwatchCommand:
                     )
                 )
             if 'hooks' in sys.modules:
-                message.append(f"\nand hooks file {sys.modules['hooks'].__file__}")
-            print(f"{''.join(message)}.")
+                message.append(f'\nand hooks file {sys.modules["hooks"].__file__}')
+            print(f'{"".join(message)}.')
             return
 
         job = self._find_job_with_defaults(job_id)
@@ -457,9 +457,6 @@ class UrlwatchCommand:
         if isinstance(job, UrlJob):
             # Force re-retrieval of job, as we're testing filters
             job.ignore_cached = True
-
-        # Add defaults, as if when run
-        job = job.with_defaults(self.urlwatcher.config_storage.config)
 
         with JobState(self.urlwatcher.ssdb_storage, job) as job_state:
             # duration = time.perf_counter() - start
@@ -478,7 +475,7 @@ class UrlwatchCommand:
                     ),
                 )
             )
-            job_state.new_data = f'{data_info}\n\n{str(job_state.new_data)}'
+            job_state.new_data = f'{data_info}\n\n{job_state.new_data!s}'
             if self.urlwatch_config.test_reporter is None:
                 self.urlwatch_config.test_reporter = 'stdout'  # default
             report = Report(self.urlwatcher)
@@ -562,7 +559,9 @@ class UrlwatchCommand:
                 else:
                     history_dic_snapshots = {s.data: s for s in history_data[i + 1 : i + 1 + job.compared_versions]}
                     close_matches: list[str] = difflib.get_close_matches(
-                        str(job_state.new_data), history_dic_snapshots.keys(), n=1  # type: ignore[arg-type]
+                        str(job_state.new_data),
+                        history_dic_snapshots.keys(),  # type: ignore[arg-type]
+                        n=1,
                     )
                     if close_matches:
                         job_state.old_data = close_matches[0]
@@ -619,7 +618,7 @@ class UrlwatchCommand:
             print(header)
             print('-' * sep_len)
             if snapshot.error_data:
-                print(f"{snapshot.error_data.get('type')}: {snapshot.error_data.get('message')}")
+                print(f'{snapshot.error_data.get("type")}: {snapshot.error_data.get("message")}')
                 print()
                 print('Last good data:')
             print(snapshot.data)
@@ -740,7 +739,7 @@ class UrlwatchCommand:
             jobs_files = ['in the concatenation of the jobs files'] + [
                 f'• {file},' for file in self.urlwatch_config.jobs_files
             ]
-        header = '\n   '.join(['Jobs with errors or returning no data (after unmodified filters, if any)'] + jobs_files)
+        header = '\n   '.join(['Jobs with errors or returning no data (after unmodified filters, if any)', *jobs_files])
 
         jobs = {
             job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs if job.is_enabled()
@@ -751,7 +750,7 @@ class UrlwatchCommand:
                 print(line)
             print('--')
             duration = time.perf_counter() - start
-            print(f"Checked {len(jobs)} enabled job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}.")
+            print(f'Checked {len(jobs)} enabled job{"s" if len(jobs) else ""} for errors in {dur_text(duration)}.')
 
         else:
             message = '\n'.join(error_jobs_lines(jobs))
@@ -764,7 +763,7 @@ class UrlwatchCommand:
                 job_state.traceback = f'{header}\n{message}'
                 duration = time.perf_counter() - start
                 self.urlwatcher.report.config['footnote'] = (
-                    f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}."
+                    f'Checked {len(jobs)} job{"s" if len(jobs) else ""} for errors in {dur_text(duration)}.'
                 )
                 self.urlwatcher.report.config['report']['html']['footer'] = False
                 self.urlwatcher.report.config['report']['markdown']['footer'] = False
@@ -776,7 +775,7 @@ class UrlwatchCommand:
                 print('--')
                 duration = time.perf_counter() - start
                 print('Found no errors.')
-                print(f"Checked {len(jobs)} job{'s' if len(jobs) else ''} for errors in {dur_text(duration)}.")
+                print(f'Checked {len(jobs)} job{"s" if len(jobs) else ""} for errors in {dur_text(duration)}.')
 
         return 0
 
@@ -804,7 +803,7 @@ class UrlwatchCommand:
                 try:
                     from dateutil import parser as dateutil_parser
 
-                    default_dt_with_tz = datetime.now().replace(second=0, microsecond=0, tzinfo=tz_info)
+                    default_dt_with_tz = datetime.now(tz_info).replace(second=0, microsecond=0)
                     return dateutil_parser.parse(timespec, default=default_dt_with_tz)
                     # return dateutil_parser.parse(timespec)
                 except ImportError:
@@ -847,9 +846,9 @@ class UrlwatchCommand:
             print(f'WARNING: About to delete the latest snapshot of\n         {job.get_indexed_location()}:')
             for i, history_job in enumerate(history):
                 print(
-                    f"         {i + 1}. {'❌ ' if i == 0 else '   '}"
-                    f'{email.utils.format_datetime(datetime.fromtimestamp(history_job.timestamp))}'
-                    f"{'  ⬅  ABOUT TO BE DELETED!' if i == 0 else ''}"
+                    f'         {i + 1}. {"❌ " if i == 0 else "   "}'
+                    f'{email.utils.format_datetime(datetime.fromtimestamp(history_job.timestamp))}'  # noqa: DTZ006
+                    f'{"  ⬅  ABOUT TO BE DELETED!" if i == 0 else ""}'
                 )
             print(
                 '         This operation cannot be undone!\n'
@@ -951,13 +950,13 @@ class UrlwatchCommand:
             self._exit(1)
 
         if httpx:
-            get_client = httpx.Client(http2=h2 is not None).get  # noqa: S113 Call to httpx without timeout
+            get_client = httpx.Client(http2=h2 is not None).get
         else:
             get_client = requests.get  # type: ignore[assignment]
 
         info = get_client(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
         if not info['ok']:
-            print(f"Error with token {bot_token}: {info['description']}.")
+            print(f'Error with token {bot_token}: {info["description"]}.')
             self._exit(1)
 
         chats = {}
@@ -971,7 +970,7 @@ class UrlwatchCommand:
                     )
 
         if not chats:
-            print(f"No chats found. Say hello to your bot at https://t.me/{info['result']['username']}.")
+            print(f'No chats found. Say hello to your bot at https://t.me/{info["result"]["username"]}.')
             self._exit(1)
 
         headers = ('Chat ID', 'Name')
@@ -982,7 +981,7 @@ class UrlwatchCommand:
         print(fmt % ('-' * maxchat, '-' * maxname))
         for k, v in sorted(chats.items(), key=lambda kv: kv[1]):
             print(fmt % (k, v))
-        print(f"\nChat up your bot here: https://t.me/{info['result']['username']}.")
+        print(f'\nChat up your bot here: https://t.me/{info["result"]["username"]}.')
 
         self._exit(0)
 
@@ -1201,7 +1200,7 @@ class UrlwatchCommand:
         :return: Playwright's executable return code.
         """
         try:
-            from playwright._impl._driver import compute_driver_executable  # pyright: ignore[reportPrivateImportUsage]
+            from playwright._impl._driver import compute_driver_executable
         except ImportError:  # pragma: no cover
             raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
 
@@ -1209,7 +1208,7 @@ class UrlwatchCommand:
         env = os.environ.copy()
         env['PW_CLI_TARGET_LANG'] = 'python'
         cmd = [str(driver_executable), 'install', 'chrome']
-        logger.info(f"Running playwright CLI: {' '.join(cmd)}")
+        logger.info(f'Running playwright CLI: {" ".join(cmd)}')
         completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)  # noqa: S603 subprocess call
         if completed_process.returncode:
             print(completed_process.stderr)

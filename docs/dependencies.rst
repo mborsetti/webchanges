@@ -37,8 +37,8 @@ square brackets, like this::
 | ``bs4`` method of the   | * `beautifulsoup4 <https://www.crummy.com/software/BeautifulSoup/>`__   |
 | html2text filter        |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
-| ``html5lib`` parser for | * `html5lib <https://pypi.org/project/html5lib/>`__                     |
-| the bs4 method of the   |                                                                         |
+| ``parser: html5lib`` w/ | * `html5lib <https://pypi.org/project/html5lib/>`__                     |
+| ``bs4`` method of the   |                                                                         |
 | html2text filter        |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
 | ``ical2text`` filter    | * `vobject <https://eventable.github.io/vobject/>`__                    |

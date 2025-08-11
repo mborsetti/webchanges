@@ -1,6 +1,9 @@
-# pip requirements for pytest (testing) (in addition to ./requirements.txt)
+# pip requirements for pytest (testing)
 # EXCLUDES requirements for testing 'ocr' and 'pdf2text' filters as they require OS-specific installs
-# aioxmpp  # does not install in oct24 (orderedset dependency fails to build)
+
+-r ../requirements.txt
+
+# aioxmpp  # does not install in aug25 (lxml~=4.0 dependency fails to build)
 beautifulsoup4
 chump
 coverage
@@ -8,9 +11,6 @@ coverage-conditional-plugin
 cssbeautifier
 deepdiff
 docutils
-flake8
-flake8-bandit
-flake8-quotes
 h2
 html5lib
 httpx

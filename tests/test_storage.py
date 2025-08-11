@@ -149,7 +149,7 @@ def test_jobs_parse() -> None:
     jobs_storage = YamlJobsStorage([jobs_file])
     jobs = jobs_storage.parse(jobs_file)
     assert len(jobs) == 1
-    assert jobs[0].command == "perl -MTime::HiRes -e 'printf \"%f\n\",Time::HiRes::time()'"
+    assert jobs[0].command == 'perl -MTime::HiRes -e \'printf "%f\n",Time::HiRes::time()\''
 
 
 def test_check_for_shell_job() -> None:
@@ -206,15 +206,15 @@ def test_keep_latest(database_engine: SsdbStorage) -> None:
 
         # check that history matches load
         snapshot = ssdb_storage.load(guid)
-        assert snapshot.data == list(history.keys())[0]
-        assert snapshot.timestamp == list(history.values())[0]
+        assert snapshot.data == next(iter(history.keys()))
+        assert snapshot.timestamp == next(iter(history.values()))
 
         # only keep last one
         if isinstance(ssdb_storage, SsdbSQLite3Storage):
             ssdb_storage.keep_latest(1)
             history = ssdb_storage.get_history_data(guid)
             assert len(history) == 1
-            timestamp = list(history.values())[0]
+            timestamp = next(iter(history.values()))
             # is it the most recent?
             assert timestamp == timestamps[0]
 
@@ -251,13 +251,13 @@ def test_clean(database_engine: SsdbStorage) -> None:
 
         # check that history matches load
         snapshot = ssdb_storage.load(guid)
-        assert snapshot.data == list(history.keys())[0]
-        assert snapshot.timestamp == list(history.values())[0]
+        assert snapshot.data == next(iter(history.keys()))
+        assert snapshot.timestamp == next(iter(history.values()))
 
         ssdb_storage.clean(guid, 1)
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 1
-        timestamp = list(history.values())[0]
+        timestamp = next(iter(history.values()))
         # is it the most recent?
         assert timestamp == timestamps[0]
 
@@ -295,7 +295,7 @@ def test_gc_delete_1_of_2(database_engine: SsdbStorage) -> None:
     urlwatcher.jobs.append(new_job)
 
     # run twice
-    for i in range(3):
+    for _ in range(3):
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
@@ -333,7 +333,7 @@ def test_gc_delete_2_of_4(database_engine: SsdbStorage) -> None:
     urlwatcher.jobs.append(new_job)
 
     # run four times
-    for i in range(5):
+    for _ in range(5):
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
@@ -362,7 +362,7 @@ def test_clean_ssdb(database_engine: SsdbStorage) -> None:
         urlwatcher, ssdb_storage, _ = prepare_storage_test(database_engine)
 
         # run five times
-        for i in range(5):
+        for _ in range(5):
             if isinstance(database_engine, SsdbSQLite3Storage):
                 time.sleep(0.0001)
             urlwatcher.run_jobs()
@@ -391,7 +391,7 @@ def test_clean_ssdb(database_engine: SsdbStorage) -> None:
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 1
 
-        timestamp = list(history.values())[0]
+        timestamp = next(iter(history.values()))
         # is it the most recent?
         assert timestamp == timestamps[0]
 
@@ -463,7 +463,7 @@ def test_clean_all(database_engine: SsdbStorage) -> None:
             ssdb_storage.clean_all()
             history = ssdb_storage.get_history_data(guid)
             assert len(history) == 1
-            timestamp = list(history.values())[0]
+            timestamp = next(iter(history.values()))
             # is it the most recent?
             assert timestamp == timestamps[0]
 
@@ -503,7 +503,7 @@ def test_clean_ssdb_no_clean_all(database_engine: SsdbStorage) -> None:
         ssdb_storage.clean_ssdb([guid])
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 1
-        timestamp = list(history.values())[0]
+        timestamp = next(iter(history.values()))
         # is it the most recent?
         assert timestamp == timestamps[0]
 

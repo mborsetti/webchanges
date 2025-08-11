@@ -77,7 +77,7 @@ class Urlwatch:
         if any(f.is_file() for f in self.urlwatch_config.jobs_files):
             jobs = self.jobs_storage.load_secure()
         else:
-            print(f"Jobs file not found: {' ,'.join((str(file) for file in self.urlwatch_config.jobs_files))}")
+            print(f'Jobs file not found: {" ,".join((str(file) for file in self.urlwatch_config.jobs_files))}')
             raise SystemExit(1)
 
         self.jobs = jobs

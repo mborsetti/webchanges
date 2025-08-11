@@ -197,8 +197,7 @@ def test_unified(job_state: JobState) -> None:
     expected = [
         '<table style="border-collapse:collapse;">',
         '<tr><td style="font-family:monospace;color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</td></tr>',
-        '<tr><td style="font-family:monospace;color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 '
-        '+0000 (UTC)</td></tr>',
+        '<tr><td style="font-family:monospace;color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</td></tr>',
         '<tr><td style="font-family:monospace;background-color:#fbfbfb;">@@ -1 +1 @@</td></tr>',
         '<tr><td style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">a</td></tr>',
         '<tr><td style="background-color:#d1ffd1;color:#082b08;">b</td></tr>',
@@ -230,8 +229,7 @@ def test_unified_additions_only(job_state: JobState) -> None:
     expected = [
         '<table style="border-collapse:collapse;">',
         '<tr><td style="font-family:monospace;color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</td></tr>',
-        '<tr><td style="font-family:monospace;color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 '
-        '+0000 (UTC)</td></tr>',
+        '<tr><td style="font-family:monospace;color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</td></tr>',
         '<tr><td style="background-color:lightyellow;"><strong>Comparison type: Additions only</strong></td></tr>',
         '<tr><td style="background-color:#d1ffd1;color:#082b08;">b</td></tr>',
         '</table>',
@@ -519,9 +517,9 @@ def test_command_command_error(job_state: JobState) -> None:
     assert isinstance(job_state.exception, (RuntimeError, FileNotFoundError))
     if sys.platform == 'win32':
         assert str(job_state.exception) == (
-            '[WinError 2] The system cannot find the file specified'
-            # "Job 0: External differ '{'command': 'dir /x'}' returned 'dir: cannot access "
-            # "'/x': No such file or directory' ()"
+            # '[WinError 2] The system cannot find the file specified'
+            "Job 0: External differ '{'command': 'dir /x'}' returned 'dir: cannot access "
+            "'/x': No such file or directory' ()"
         )
     # else:
     # assert str(pytest_wrapped_e.value) == ("[Errno 2] No such file or directory: 'dir'")
@@ -628,7 +626,7 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
     expected = [
         '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
         '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
-        "• ⊤: '' → ",
+        "• ⊤: '' → ",  # noqa: RUF001
         '    - test: 2',
         '      second_test: 3',
         '    - morestuff',
@@ -642,7 +640,7 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
         '<span style="font-family:monospace;white-space:pre-wrap;">'
         '<span style="color:darkred;">--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
         '<span style="color:darkgreen;">+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)</span>',
-        '• ⊤: <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">\'\''
+        '• ⊤: <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">\'\''  # noqa: RUF001
         '</span> ⮕ <span style="background-color:#d1ffd1;color:#082b08;">',
         '    - test: 2',
         '      second_test: 3',
@@ -971,7 +969,7 @@ def test_ai_google_bad_api_key(job_state: JobState) -> None:
         subdiffers.pop('name')
         expected = [
             '## ERROR in summarizing changes using Google AI:',
-            'Received error from generativelanguage.googleapis.com: API key not valid. ' 'Please pass a valid API key.',
+            'Received error from generativelanguage.googleapis.com: API key not valid. Please pass a valid API key.',
             '',
             '--- @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
             '+++ @ Thu, 12 Nov 2020 02:23:57 +0000 (UTC)',
@@ -1021,8 +1019,7 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
             ' f',
             ' g',
             '------------',
-            "Summary by Google Generative AI's model gemini-pro (differ directive(s): prompt=<custom>, "
-            'timeout=1e-09)',
+            "Summary by Google Generative AI's model gemini-pro (differ directive(s): prompt=«custom», timeout=1e-09).",
         ]
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
         diff = job_state.get_diff(tz=test_tz)
@@ -1030,7 +1027,7 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
         expected_second_line = {
             'HTTP client error: The read operation timed out when requesting data from '
             'generativelanguage.googleapis.com',
-            'HTTP client error: timed out when requesting data from ' 'generativelanguage.googleapis.com',
+            'HTTP client error: timed out when requesting data from generativelanguage.googleapis.com',
             'HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
             'data from generativelanguage.googleapis.com',  # line number may change based on ssl engine version
         }  # not sure why error flips flops
@@ -1057,9 +1054,7 @@ def test_ai_google_timeout_no_unified_diff(job_state: JobState, caplog: pytest.L
         job_state.job.differ = {
             'name': 'ai_google',
             'model': 'gemini-pro',
-            'prompt': (
-                'Identify and summarize the changes:\n\n<old>\n{old_text}\n</old>\n\n<new>\n{' 'new_text}\n</new>'
-            ),
+            'prompt': ('Identify and summarize the changes:\n\n<old>\n{old_text}\n</old>\n\n<new>\n{new_text}\n</new>'),
             'timeout': 1e-9,
             'temperature': 1,
             'top_k': 1,

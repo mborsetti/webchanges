@@ -70,9 +70,8 @@ def parse_rst(text: str) -> docutils.nodes.document:
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file."""
 
-    code: list[str] = []
-
     def visit_literal_block(self, node: docutils.nodes.literal_block) -> None:
+        self.code = []
         if 'python' in node.attributes['classes']:
             self.code.append(node.astext())
         elif node.rawsource.startswith('.. code-block:: python'):

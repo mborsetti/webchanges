@@ -92,11 +92,12 @@ Here is an example configuration that reports using UTC timezone on standard out
        method: smtp
        smtp:
          host: smtp.example.com
-         user: 'username_goes_here'
-         insecure_password: 'password_goes_here'
-         auth: true
          port: 587
          starttls: true
+         auth: true
+         user: 'username_goes_here'
+         insecure_password: 'password_goes_here'
+         utf-8: true
        subject: '{count} changes: {jobs}'
        to: 'User <user@example.com>'
        stdout:
@@ -111,6 +112,10 @@ Here is an example configuration that reports using UTC timezone on standard out
 Configuration options for reports is described in :ref:`reports <reports>`.
 
 Configuration options for reporters is described in :ref:`reporters <reporters>`.
+
+Configuration options for email is described in :ref:`email <email>`.
+
+
 
 Reporters are implemented in a hierarchy, and configuration settings of a report apply to all descendant reporters:
 

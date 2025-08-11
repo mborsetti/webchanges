@@ -54,7 +54,7 @@ class SsdbMiniDBStorage(SsdbStorage):
         self.db = None
 
     def get_guids(self) -> list[str]:
-        return [guid for guid, in self.CacheEntry.query(self.db, minidb.Function('distinct', self.CacheEntry.c.guid))]
+        return [guid for (guid,) in self.CacheEntry.query(self.db, minidb.Function('distinct', self.CacheEntry.c.guid))]
 
     def load(self, guid: str) -> Snapshot:
         for data, timestamp, tries, etag in self.CacheEntry.query(

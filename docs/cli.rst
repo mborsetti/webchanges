@@ -7,7 +7,7 @@ Command line arguments
 .. code-block to column ~103 only; beyond has horizontal scroll bar
    1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
 
-.. include:: cli_help.txt
+.. include:: ..\cli_help.txt
    :code:
 
 

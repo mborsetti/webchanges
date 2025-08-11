@@ -42,19 +42,27 @@ Example ``hooks.py`` file:
    import re
    import threading
    from pathlib import Path
-   from typing import Any, Literal
+   from typing import TYPE_CHECKING
 
    from webchanges.differs import DifferBase
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
-   from webchanges.handler import JobState
    from webchanges.jobs import UrlJob, UrlJobBase
    from webchanges.reporters import HtmlReporter, TextReporter
+
+   if TYPE_CHECKING:
+       from typing import Any, Literal
+   
+       from webchanges.handler import JobState
+       from webchanges.jobs import JobBase
+       from webchanges.storage import _Config
 
    hooks_custom_login_lock = threading.Lock()
 
 
    class CustomLoginJob(UrlJob):
-       """Custom login for my webpage.
+       """Custom job that adds filters and differ and runs login for my webpage.
+
+       Adds a standard filter and differ to the job, and executes code to perform login before retrieving data.
 
        Add ``kind: hooks_custom_login`` to the job to retrieve data using this class instead of the
        built-in ones.
@@ -63,8 +71,27 @@ Example ``hooks.py`` file:
        __kind__ = 'hooks_custom_login'
        __required__ = ('username', 'password')  # These are added to the ones from the super classes.
 
+
+       # IMPORTANT!
+       # We want to put all job modifications within the with_defaults function so that --test-filters etc. work
+       def with_defaults(self, config: _Config) -> JobBase:
+       """Obtain a Job object that also contains defaults from the configuration.
+
+       :param config: The configuration as a dict.
+       :returns: A JobBase object.
+       """
+           self.filters = ['jsontoyaml']  # applies to all jobs with ``kind: hooks_custom_login``
+           self.differ = {'name': 'deepdiff', 'ignore_order': True, 'compact': True}
+           return super().with_defaults(config)
+
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
-           """:returns: The data retrieved, the ETag, and the mime_type (e.g. HTTP Content-Type)."""
+           """Runs job to retrieve the data, and returns data and ETag.
+
+           :param job_state: The JobState object, to keep track of the state of the retrieval.
+           :param headless: For browser-based jobs, whether headless mode should be used.
+           :returns: The data retrieved, the ETag, and the media type (fka MIME type)
+           :raises NotModifiedError: If an HTTP 304 response is received.
+           """
            with hooks_custom_login_lock:  # this site doesn't like parallel logins
                ...  # custom code here to actually do the login.
            additional_headers = {'x-special': 'test'}
@@ -83,8 +110,12 @@ Example ``hooks.py`` file:
        __is_browser__ = True  # This is required for execution in the correct parallel processing queue.
 
        def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
-           """
-           :returns: The data retrieved, the ETag, and the data's media type (fka MIME type) (e.g. HTTP Content-Type).
+           """Runs job to retrieve the data, and returns data and ETag.
+
+           :param job_state: The JobState object, to keep track of the state of the retrieval.
+           :param headless: For browser-based jobs, whether headless mode should be used.
+           :returns: The data retrieved, the ETag, and the media type (fka MIME type)
+           :raises NotModifiedError: If an HTTP 304 response is received.
            """
 
            ...  # custom code here to launch browser and capture data.
@@ -106,12 +137,11 @@ Example ``hooks.py`` file:
           url: example.com/hooks/len
           filter:
             - hooks_case: lower
-
        """
 
        __kind__ = 'hooks_case'
 
-       __supported_subfilters__ = {
+       __supported_subfilters__: dict[str, str] = {
            'upper': 'Upper case (default)',
            'lower': 'Lower case'
        }
@@ -144,12 +174,11 @@ Example ``hooks.py`` file:
           url: example.com/hooks/indent
           filter:
             - hooks_indent: 4
-
        """
 
        __kind__ = 'hooks_indent'
 
-       __supported_subfilters__ = {
+       __supported_subfilters__: dict[str, str] = {
            'indent': 'Number of spaces to indent (default 8)'
        }
 
@@ -205,7 +234,6 @@ Example ``hooks.py`` file:
 
           url: example.com/hooks/len
           differ: hooks_lendiffer
-
        """
 
        __kind__ = 'hooks_lendiffer'
@@ -240,7 +268,6 @@ Example ``hooks.py`` file:
           report:
             hooks_save_text_report:
               enabled: true
-
        """
 
        __kind__ = 'hooks_save_text_report'
@@ -258,7 +285,6 @@ Example ``hooks.py`` file:
           report:
             hooks_save_html_report:
               enabled: true
-
        """
 
        __kind__ = 'hooks_save_html_report'

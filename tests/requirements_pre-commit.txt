@@ -1,13 +1,8 @@
 # pip requirements for pre-commit (in addition to ./requirements.txt and /docs/requirements.txt)
-black
 doc8
 docutils
 docutils-stubs
-flake8
-flake8-bandit
-flake8-quotes
 flynt
-isort
 lxml-stubs
 mypy
 pre-commit

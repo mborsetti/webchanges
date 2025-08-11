@@ -14,10 +14,57 @@
 Upgrading from urlwatch
 =======================
 
-:program:`webchanges` |version| is derived from `urlwatch <https://github.com/thp/urlwatch>`__ and is mostly
-backward-compatible with :program:`urlwatch` 2.28's job and configuration files.
+Introduction
+------------
+You can easily upgrade to **webchanges** from the current version of **urlwatch** using the same job and
+configuration files (see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__) and benefit from many
+improvements, including:
 
-Upgrading from a :program:`urlwatch` 2.28 setup is automatic (see more below), and gives you:
+* :underline:`AI-Powered Summaries`: Summary of changes in plain text using generative AI, useful for long documents
+  (e.g. legal);
+* :underline:`Image Change Detection`: Monitor changes to images and receive notifications with an image highlighting
+  the differences;
+* :underline:`Structured Data Monitoring`: Track changes in JSON or XML data on an element-by-element basis;
+* :underline:`Improved Documentation`: We've revamped the `documentation <https://webchanges.readthedocs.io/>`__ to make
+  implementation easier;
+* :underline:`Enhanced HTML Reports`: HTML reports are now much clearer and include:
+
+  * Clickable links!
+  * Retention of most original formatting (**bolding / headers**, *italics*, :underline:`underlining`, lists with
+    bullets (•), and indentation;
+  * :additions:`added` and :deletions:`deleted` lines clearly highlighted with color and strikethrough;
+  * Wrapping of long lines (instead of truncation);
+  * Improved compatibility with a wider range of HTML email clients, including those that override stylesheets (e.g.,
+    Gmail);
+  * General legibility improvements.
+
+* :underline:`New Filtering Options`: New filters, like `additions_only
+  <https://webchanges.readthedocs.io/en/stable/diff_filters.html#additions-only>`__, which allows you to focus on
+  added content without the distraction of deletions;
+* :underline:`New Command Line Arguments`: New command-line arguments such as ``--errors``, which helps you identify
+  jobs that are no longer functioning correctly;
+* :underline:`Increased Reliability and Stability`: Testing coverage has increased by approximately 30 percentage
+  points;
+* :underline:`Additional Enhancements`: Numerous other additions, refinements, and bug fixes have been implemented.
+  For more information, see `here <https://webchanges.readthedocs.io/en/stable/migration.html#upgrade-details>`__.
+
+Example enhancements to HTML reporting:
+
+.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/main/docs/html_diff_filters_example_1.png
+    :width: 504
+
+|
+
+.. image:: https://raw.githubusercontent.com/mborsetti/webchanges/main/docs/html_diff_filters_example_3.png
+    :width: 504
+
+
+Installation
+------------
+:program:`webchanges` |version| is derived from `urlwatch <https://github.com/thp/urlwatch>`__ and is mostly
+backward-compatible with the latest version of :program:`urlwatch`'s job and configuration files.
+
+Upgrading from a :program:`urlwatch` setup is automatic (see more below), and gives you:
 
 * Vastly improved HTML email reporting, including:
 
@@ -85,10 +132,11 @@ Examples:
 
 How-to
 ------
-If you are using :program:`urlwatch` 2.28, simply install :program:`webchanges` and run it. It will find the existing
-:program:`urlwatch` job and configuration files, and, unless you were still running ``lynx`` or have custom code (see
-below), it *should* run just fine as is. It may complain about some directive name being changed for clarity and other
-:ref:`deprecations <upgrade_deprecations>`, but you will have time to make the edits if you decide to stick around!
+If you are using the latest version of :program:`urlwatch`, simply install :program:`webchanges` and run it. It will
+find the existing :program:`urlwatch` job and configuration files, and, unless you were still running ``lynx`` or have
+custom code (see below), it *should* run just fine as is. It may complain about some directive name being changed for
+clarity and other :ref:`deprecations <upgrade_deprecations>`, but you will have time to make the edits if you decide
+to stick around!
 
 .. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
    mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
@@ -128,9 +176,9 @@ If you encounter any problems or have any suggestions please open an issue `here
 
 .. note::
 
-   If you are upgrading from a version of :program:`urlwatch` prior to 2.28, before running :program:`webchanges` make
-   sure that you can run :program:`urlwatch` 2.28 successfully, having implemented all :program:`urlwatch` breaking
-   changes in your job and configuration files.
+   If you are upgrading from an older version of :program:`urlwatch`, before running :program:`webchanges` make
+   sure that you can run the latest version of :program:`urlwatch` successfully, having implemented all
+   :program:`urlwatch` breaking changes in your job and configuration files.
 
    For example, per :program:`urlwatch` issue `#600
    <https://github.com/thp/urlwatch/pull/600#issuecomment-753944678>`__
@@ -140,8 +188,8 @@ If you encounter any problems or have any suggestions please open an issue `here
       url: https://example.com/
       filter: html2text
 
-   no longer works in :program:`urlwatch` 2.28, and therefore in :program:`webchanges`, as all filters must be
-   specified as sub-directives like this:
+   no longer works in the latest version of :program:`urlwatch`, and therefore in :program:`webchanges`, as all filters
+   must be specified as sub-directives like this:
 
    .. code-block:: yaml
 
@@ -155,12 +203,12 @@ If you encounter any problems or have any suggestions please open an issue `here
 Upgrade details
 ---------------
 Most everything, except the breaking changes below, *should* work out of the box when upgrading from a
-:program:`urlwatch` 2.28 setup, as long as you run it in Python 3.9 or higher, and you can switch back whenever you
+:program:`urlwatch` setup for version 2.29. No changes to the files are made, so that you can switch back whenever you
 want.
 
 ⚠ Breaking Changes
 ~~~~~~~~~~~~~~~~~~
-Relative to :program:`urlwatch` 2.28:
+Relative to :program:`urlwatch`:
 
 * Must run on Python version 3.9 or higher.
 * By default a new much improved database engine is used; run with ``--database-engine minidb`` command line argument to
@@ -181,7 +229,7 @@ Relative to :program:`urlwatch` 2.28:
 
 Additions and changes
 ~~~~~~~~~~~~~~~~~~~~~
-Relative to :program:`urlwatch` 2.28:
+Relative to the latest version of :program:`urlwatch`:
 
 * Installation and command line
 
@@ -332,7 +380,7 @@ Relative to :program:`urlwatch` 2.28:
 
 Fixed
 ~~~~~
-Relative to :program:`urlwatch` 2.28:
+Relative to :program:`urlwatch`:
 
 * Diff (change) data is no longer lost if :program:`webchanges` is interrupted mid-execution or encounters an error in
   reporting: the permanent database is updated only at the very end (after reports are sent).
@@ -378,7 +426,7 @@ Relative to :program:`urlwatch` 2.28:
 
 Deprecations
 ~~~~~~~~~~~~
-Relative to :program:`urlwatch` 2.28:
+Relative to :program:`urlwatch`:
 
 * The ``html2text`` filter's ``lynx`` method is no longer supported as it was obsoleted by Python libraries; use the
   default method instead or construct a custom ``execute`` command.
@@ -410,7 +458,6 @@ The roots of :program:`webchanges` from code of urlwatch 2.21 dated 30 July 2020
 code is appropriately copyrighted/licensed:
 
 (1) :program:`webchanges`' `main page <https://github.com/mborsetti/webchanges/blob/main/README.rst>`__ reads:
-
 
 ::
 
@@ -449,5 +496,6 @@ File. In. Every. Single. Directory; the above notice is amply sufficient.
 
    [follows full text of the urlwatch license]
 
-While a lot of improvements have been made from urlwatch 2.21, there's no lack of proper acknowledgement of the
-package's use of Thomas Perl's code -- in multiple ways -- and of its full, explicit licensing.
+(4) While a lot of improvements have been made from urlwatch 2.21, there's no lack of proper and complete
+acknowledgement of the package's use of Thomas Perl's code -- in multiple ways, incuding the required full and explicit
+licensing language.

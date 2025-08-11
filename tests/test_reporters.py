@@ -17,7 +17,7 @@ except ImportError:
 
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
-from webchanges.mailer import smtp_have_password, smtp_set_password, SMTPMailer
+from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
 from webchanges.storage import DEFAULT_CONFIG
 
 try:
@@ -44,7 +44,7 @@ ALL_REPORTERS = [
 class UrlwatchTest:
     """A mock Urlwatch class for testing."""
 
-    class config_storage:
+    class config_storage:  # noqa: N801 should use CapWords
         """A mock config_storage class for testing."""
 
         config = DEFAULT_CONFIG
@@ -226,13 +226,13 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
 
 
 def test_mailer_send() -> None:
-    mailer = SMTPMailer(  # noqa: S106 Possible hardcoded password: 'password'.
+    mailer = SMTPMailer(
         smtp_user='test@gmail.com',
         smtp_server='smtp.gmail.com',
         smtp_port=587,
         tls=True,
         auth=True,
-        insecure_password='password',
+        insecure_password='password',  # noqa: S106 possible hardcoded password
     )
     with pytest.raises(SMTPAuthenticationError) as pytest_wrapped_e:
         mailer.send(msg=None)

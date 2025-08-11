@@ -213,10 +213,12 @@ low-risk way to run unattended.
        smtp:
          host: smtp.example.com
          port: 587
-         user: throwawayaccount@example.com  # (edit accordingly; don't use your primary account for this!!)
          starttls: true
          auth: true
+         user: throwawayaccount@example.com  # (edit accordingly; don't use your primary account for this!!)
          insecure_password: "this_is_my_secret_password"
+         utf-8: true
+
 
 .. warning::
    **Never ever use this method with your your primary email account!**  Seriously! This method makes it really easy
@@ -239,9 +241,11 @@ SMTP sub-directives
 * ``host``: The address of the SMTP server. Default is 'localhost'
 * ``port``: The port used to communicate with the server. Default is 25.
 * ``starttls``: Whether the server uses SSL/TLS encryption (true/false). Default is true.
-* ``user``: The username used to authenticate.
 * ``auth``: Whether authentication via username/password is required (true/false). Default is true.
+* ``user``: The username used to authenticate.
 * ``insecure_password``: The password used to authenticate (if keyring is not used).
+* ``utf-8``: Whether to use RFC 6531 Internationalized Email, aka SMTPUTF8 service extension (true/false). Default is
+  true.
 
 Amazon Simple Email Service (SES) example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
