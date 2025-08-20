@@ -1,4 +1,8 @@
-# pip requirements for pre-commit (in addition to ./requirements.txt and /docs/requirements.txt)
+# pip requirements for pre-commit (in addition to ../requirements.txt and ../docs/requirements.txt)
+
+-r ../requirements.txt
+-r ../docs/requirements.txt
+
 doc8
 docutils
 docutils-stubs
@@ -14,6 +18,5 @@ types-python-dateutil
 types-PyYAML
 types-redis
 types-requests
-types-simplejson
 types-vobject
 types-xmltodict

@@ -141,6 +141,22 @@ _ConfigReportEmail = TypedDict(
         'sendmail': _ConfigReportEmailSendmail,
     },
 )
+_ConfigReportGithubIssue = TypedDict(
+    '_ConfigReportGithubIssue',
+    {
+        'enabled': bool,
+        'token': str,
+        'owner': str,
+        'repo': str,
+        'title': str,
+        'labels': list[str],
+        'format_dt': str,
+        'format_content': str,
+        'assignees': list[str],
+        'type': str,
+        'milestone': str,
+    },
+)
 _ConfigReportGotify = TypedDict(
     '_ConfigReportGotify',
     {
@@ -256,6 +272,7 @@ _ConfigReport = TypedDict(
         'browser': _ConfigReportBrowser,
         'discord': _ConfigReportDiscord,
         'email': _ConfigReportEmail,
+        'github_issue': _ConfigReportGithubIssue,
         'gotify': _ConfigReportGotify,
         'ifttt': _ConfigReportIfttt,
         'mailgun': _ConfigReportMailgun,
@@ -377,6 +394,19 @@ DEFAULT_CONFIG: _Config = {
             'sendmail': {
                 'path': 'sendmail',
             },
+        },
+        'github_issue': {
+            'enabled': False,
+            'token': '',
+            'owner': '',
+            'repo': '',
+            'title': '',
+            'labels': [],
+            'format_dt': '',
+            'format_content': '',
+            'assignees': [],
+            'type': '',
+            'milestone': '',
         },
         'gotify': {  # uses markdown
             'enabled': False,
@@ -816,8 +846,11 @@ class YamlConfigStorage(BaseYamlFileStorage):
             missing = self.dict_deep_difference(DEFAULT_CONFIG, config, ignore_underline_keys=True)
             if missing:
                 logger.info(
-                    f'The configuration file {self.filename} is missing directive(s); the following default '
-                    f'values are being used:\n'
+                    f'The configuration file {self.filename} is missing directive(s); using default value for those. '
+                    'Run with -vv for more detalis.'
+                )
+                logger.debug(
+                    f'The following default values are being used:\n'
                     f'{yaml.safe_dump(missing)}'
                     f'See documentation at {__docs_url__}en/stable/configuration.html'
                 )

@@ -63,7 +63,7 @@ except ImportError as e:  # pragma: no cover
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib  # type: ignore[no-redef]
+    import json as jsonlib
 
 try:
     import xmltodict
@@ -940,7 +940,7 @@ class DeepdiffDiffer(DifferBase):
                         if type in {'str', 'int', 'float'}:
                             return f'"{value}"'
                         elif type in {'dict', 'list'}:
-                            return jsonlib.dumps(value, ensure_ascii=False, indent=2)
+                            return jsonlib.dumps(value, ensure_ascii=False, indent=2)  # type: ignore[no-any-return]
                         else:
                             return str(value)
 
@@ -949,9 +949,9 @@ class DeepdiffDiffer(DifferBase):
                 type_t2 = type(ddiff.t2).__name__
                 val_t2 = stringify_value(ddiff.t2, type_t2)
 
-                diff_path = ddiff.path(root=root)  # type: ignore[no-untyped-call]
+                diff_path = ddiff.path(root=root)
                 return '• ' + pretty_form_texts.get(
-                    ddiff.report_type,
+                    ddiff.report_type or '',
                     '',
                 ).format(
                     diff_path=diff_path,

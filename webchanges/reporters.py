@@ -18,13 +18,14 @@ import sys
 import time
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, TypeAlias
+from typing import TYPE_CHECKING, Any, Callable, Generator, Iterable, Sequence, TypeAlias
 from warnings import warn
 from zoneinfo import ZoneInfo
 
 from markdown2 import Markdown
 
 from webchanges import __project_name__, __url__, __version__
+from webchanges.filters import FilterBase
 from webchanges.jobs import UrlJob
 from webchanges.mailer import Mailer, SendmailMailer, SMTPMailer
 from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_html
@@ -33,7 +34,7 @@ from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_htm
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib  # type: ignore[no-redef]
+    import json as jsonlib
 
 try:
     import httpx
@@ -63,6 +64,7 @@ if TYPE_CHECKING:
         _ConfigReportBrowser,
         _ConfigReportDiscord,
         _ConfigReportEmail,
+        _ConfigReportGithubIssue,
         _ConfigReportGotify,
         _ConfigReportIfttt,
         _ConfigReportMailgun,
@@ -283,7 +285,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         if not any_enabled:
             logger.warning('No reporters enabled.')
 
-    def submit(self, **kwargs: Any) -> Iterator[str]:
+    def submit(self, **kwargs: Any) -> Iterable[str]:
         """For the ReporterBase subclass, submit a job to generate the report.
 
         :returns: The content of the report.
@@ -314,14 +316,14 @@ class HtmlReporter(ReporterBase):
     re_htags = re.compile(r'<(/?)h\d>')
     re_tagend = re.compile(r'<(?!.*<).*>+$')
 
-    def submit(self, **kwargs: Any) -> Iterator[str]:
+    def submit(self, **kwargs: Any) -> Iterable[str]:
         """Submit a job to generate the report.
 
         :returns: The content of the HTML report.
         """
         yield from self._parts()
 
-    def _parts(self) -> Iterator[str]:
+    def _parts(self) -> Iterable[str]:
         """Generator yielding the HTML; called by submit. Calls _format_content.
 
         :returns: The content of the report.
@@ -466,7 +468,7 @@ class TextReporter(ReporterBase):
 
     __kind__ = 'text'
 
-    def submit(self, **kwargs: Any) -> Iterator[str]:
+    def submit(self, **kwargs: Any) -> Iterable[str]:
         """Submit a job to generate the report.
 
         :returns: The content of the plain text report.
@@ -606,7 +608,7 @@ class MarkdownReporter(ReporterBase):
 
     __kind__ = 'markdown'
 
-    def submit(self, max_length: int | None = None, **kwargs: Any) -> Iterator[str]:
+    def submit(self, max_length: int | None = None, **kwargs: Any) -> Iterable[str]:
         """Submit a job to generate the report in Markdown format.
         We use the CommonMark spec: https://spec.commonmark.org/
 
@@ -1813,3 +1815,140 @@ class GotifyReporter(MarkdownReporter):
             'title': title,
         }
         self.post_client(url, headers=headers, json=data)
+
+
+class GitHubIssueReporter(MarkdownReporter):
+    """Reporter that submits reports as issues to a GitHub repository."""
+
+    __kind__ = 'github_issue'
+
+    config: _ConfigReportGithubIssue
+
+    _API_URL = 'https://api.github.com/repos/{owner}/{repo}/issues'
+    _CONTENT_LIMIT = 65536  # GitHub issue body limit
+
+    def _format_title(self) -> str:
+        """Format the title of the issue."""
+        from datetime import UTC, datetime
+
+        now = datetime.now(tz=UTC)
+        format_dt = self.config['format_dt'] or '%Y-%m-%d %H:%M:%S'
+
+        title = self.config['title']
+        if not title:
+            title = 'WebChanges report'
+        else:
+            dt = now.strftime(format_dt)
+            title = title.format(dt=dt)
+
+        return title
+
+    def _format_text(self, content: str) -> str:
+        """Format the content of the issue."""
+        format_content = self.config['format_content']
+        content = content[: self._CONTENT_LIMIT]
+        if format_content:
+            placeholder = '{content}'
+            max_content_length = self._CONTENT_LIMIT - (len(format_content) - len(placeholder))
+            content = content[:max_content_length]
+            content = format_content.format(content=content)
+
+        return content
+
+    def _create_issue(self, content: str) -> None:
+        """Create an issue on GitHub."""
+        from http import HTTPStatus
+
+        url = self._API_URL.format(owner=self.config['owner'], repo=self.config['repo'])
+        headers = {'Authorization': f'Bearer {self.config["token"]}', 'Accept': 'application/json'}
+
+        title = self._format_title()
+        content = self._format_text(content)
+        issue_data = {'title': title, 'body': content, 'labels': self.config['labels']}
+
+        assignees = self.config['assignees']
+        if assignees:
+            issue_data['assignees'] = assignees
+
+        type_ = self.config['type']
+        if type_:
+            issue_data['type'] = type_
+
+        milestone = self.config['milestone']
+        if milestone:
+            issue_data['milestone'] = milestone
+
+        response = self.post_client(url, headers=headers, json=issue_data)
+
+        if response.status_code == HTTPStatus.CREATED:
+            logger.info('Issue created successfully.')
+        else:
+            json_object = jsonlib.loads(response.text)
+            json_formatted_str = jsonlib.dumps(json_object, indent=2)
+            raise RuntimeError(f'Failed to create issue: {json_formatted_str}')
+
+    def submit(
+        self,
+        max_length: int | None = None,
+        **kwargs: Any,
+    ) -> Iterable[str]:
+        """Submit the report to GitHub as an issue."""
+        lines = super().submit(max_length, **kwargs)
+        content = '\n'.join(lines)
+        if not content:
+            logger.info('No content to submit.')
+            return []
+
+        logger.info('Submitting issue to GitHub...')
+        self._create_issue(content)
+
+        return lines
+
+
+def get_lines_between(
+    lines: Sequence[str],
+    start_pattern: str | None = None,
+    end_pattern: str | None = None,
+) -> Generator[str, None, None]:
+    """Yield lines between start and end patterns."""
+    started = False
+    for line in lines:
+        if not started:
+            if start_pattern and re.search(start_pattern, line):
+                started = True
+            continue
+        if end_pattern and re.search(end_pattern, line):
+            break
+
+        yield line
+
+
+class BetweenLinesFilter(FilterBase):
+    """Filter to extract lines between two patterns."""
+
+    __kind__ = 'between'
+
+    __supported_subfilters__ = {
+        'start': 'Pattern to match the start line.',
+        'end': 'Pattern to match the end line.',
+    }
+
+    __default_subfilter__ = 'indent'
+
+    @staticmethod
+    def filter(
+        data: str | bytes,
+        mime_type: str,
+        subfilter: dict[str, Any],
+    ) -> tuple[str | bytes, str]:
+        """Filter lines between start and end patterns."""
+        start_pattern = subfilter.get('start')
+        end_pattern = subfilter.get('end')
+
+        lines = str(data).splitlines(keepends=True)
+        filtered_lines = get_lines_between(lines, start_pattern, end_pattern)
+
+        return (
+            '\n'.join(filtered_lines),
+            mime_type,
+        )

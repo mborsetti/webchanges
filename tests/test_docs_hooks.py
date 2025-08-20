@@ -132,7 +132,13 @@ def test_flake8_on_hooks_rst(tmp_path: Path) -> None:
     hooks_path.write_text(HOOKS)
 
     # https://flake8.pycqa.org/en/latest/user/python-api.html
-    style_guide = flake8.get_style_guide(extend_ignore=['E501', 'W292'])
+    style_guide = flake8.get_style_guide(
+        extend_ignore=[
+            'W292',  # No newline at end of file
+            'W503',  # Line break before binary operator [conflicts with W504]
+        ],
+        max_line_length=120,
+    )
     report = style_guide.input_file(str(hooks_path))
     assert report.get_statistics('') == [], 'Flake8 found violations in hooks.py'
 

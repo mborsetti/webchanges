@@ -1,0 +1,117 @@
+usage: webchanges [-h] [-V] [-v] [--log-file FILE] [--jobs FILE]
+                  [--config FILE] [--hooks FILE] [--database FILE]
+                  [--list-jobs [REGEX]] [--errors [REPORTER]] [--test [JOB]]
+                  [--no-headless] [--test-differ JOB [JOB ...]]
+                  [--dump-history JOB] [--max-workers WORKERS]
+                  [--test-reporter REPORTER] [--smtp-login] [--telegram-chats]
+                  [--xmpp-login] [--footnote FOOTNOTE] [--edit]
+                  [--edit-config] [--edit-hooks]
+                  [--gc-database [RETAIN_LIMIT]]
+                  [--clean-database [RETAIN_LIMIT]]
+                  [--rollback-database TIMESTAMP] [--delete-snapshot JOB]
+                  [--prepare-jobs] [--change-location JOB NEW_LOCATION]
+                  [--check-new] [--install-chrome] [--features]
+                  [--detailed-versions] [--database-engine DATABASE_ENGINE]
+                  [--max-snapshots NUM_SNAPSHOTS] [--add JOB] [--delete JOB]
+                  [JOB(S) ...]
+
+Checks web content, including images, to detect any changes since the prior
+run. If any are found, it summarizes (including with Gen AI) what changed
+('diff') and displays it and/or sends it via email and/or other supported
+services. Can check the output of local commands as well.
+
+positional arguments:
+  JOB(S)                JOB(S) to run (index number(s) as per --list; if one
+                        also URL/command) (default: run all jobs)
+
+options:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  -v, --verbose         show logging output; use -vv for maximum verbosity
+  --log-file FILE       send log to FILE
+
+override file defaults:
+  --jobs, --urls FILE   read job list (URLs/commands) from FILE or files
+                        matching a glob pattern
+  --config FILE         read configuration from FILE
+  --hooks FILE          use FILE or files matching a glob pattern as hooks.py
+                        module to import
+  --database, --cache FILE
+                        use FILE as snapshots database; FILE can be a redis
+                        URI
+
+job management:
+  --list-jobs [REGEX]   list jobs and their index number (optional: only those
+                        who match REGEX)
+  --errors [REPORTER]   test run all jobs and list those with errors or no
+                        data captured; optionally send output to REPORTER
+  --test, --test-filter [JOB]
+                        test a JOB (by index or URL/command) and show filtered
+                        output; if no JOB, check syntax of config and jobs
+                        file(s)
+  --no-headless         turn off browser headless mode (for jobs using a
+                        browser)
+  --test-differ, --test-diff, --test-diff-filter JOB [JOB ...]
+                        show diff(s) using existing saved snapshots of a JOB
+                        (by index or URL/command)
+  --dump-history JOB    print all saved changed snapshots for a JOB (by index
+                        or URL/command)
+  --max-workers WORKERS
+                        maximum number of parallel threads (WORKERS)
+
+reporters:
+  --test-reporter REPORTER
+                        test the REPORTER or redirect output of --test-differ
+  --smtp-login          verify SMTP login credentials with server (and enter
+                        or check password if using keyring)
+  --telegram-chats      list telegram chats webchanges is joined to
+  --xmpp-login          enter or check password for XMPP (stored in keyring)
+  --footnote FOOTNOTE   FOOTNOTE text (quoted text)
+
+launch editor ($EDITOR/$VISUAL):
+  --edit                edit job (URL/command) list
+  --edit-config         edit configuration file
+  --edit-hooks          edit hooks script
+
+database:
+  --gc-database, --gc-cache [RETAIN_LIMIT]
+                        garbage collect the database: remove all snapshots of
+                        jobs not listed in the jobs file and keep only the
+                        latest RETAIN_LIMIT snapshots for remaining jobs
+                        (default: 1)
+  --clean-database, --clean-cache [RETAIN_LIMIT]
+                        clean up the database by keeping only the latest
+                        RETAIN_LIMIT snapshots (default: 1)
+  --rollback-database, --rollback-cache TIMESTAMP
+                        delete changed snapshots added since TIMESTAMP (backup
+                        the database before using!)
+  --delete-snapshot JOB
+                        delete the last saved changed snapshot of JOB (index
+                        or URL/command)
+  --prepare-jobs        run only newly added jobs (without history)
+  --change-location JOB NEW_LOCATION
+                        change the location of an existing JOB (index or
+                        URL/command)
+
+miscellaneous:
+  --check-new           check if a new release is available
+  --install-chrome      install or update Google Chrome browser
+  --features            list supported job kinds, filters and reporters
+                        (including those loaded from hooks.py)
+  --detailed-versions   list detailed versions including those of installed
+                        dependencies
+
+override configuration file:
+  --database-engine DATABASE_ENGINE
+                        override database engine to use
+  --max-snapshots NUM_SNAPSHOTS
+                        override maximum number of changed snapshots to retain
+                        in database (sqlite3 only)
+
+deprecated:
+  --add JOB             add a job (key1=value1,key2=value2,...) [use --edit
+                        instead]
+  --delete JOB          delete a job (by index or URL/command) [use --edit
+                        instead]
+
+Full documentation is at https://webchanges.readthedocs.io/

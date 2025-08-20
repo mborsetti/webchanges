@@ -1028,14 +1028,13 @@ def test_ai_google_timeout_and_unified_diff_medium_long(job_state: JobState, cap
             'HTTP client error: The read operation timed out when requesting data from '
             'generativelanguage.googleapis.com',
             'HTTP client error: timed out when requesting data from generativelanguage.googleapis.com',
-            'HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
-            'data from generativelanguage.googleapis.com',  # line number may change based on ssl engine version
+            'The handshake operation timed out when requesting data from generativelanguage.googleapis.com',
         }  # not sure why error flips flops
         assert diff.splitlines()[0] == '## ERROR in summarizing changes using Google AI:'
         try:
-            assert any(diff.splitlines()[1] == exp_str for exp_str in expected_second_line) is True
+            assert any(exp_str in diff.splitlines()[1] for exp_str in expected_second_line) is True
         except AssertionError:
-            print(f'{diff.splitlines()[0]=}')
+            print(f'{diff.splitlines()[1]=}')
             raise
     finally:
         if existing_key:
@@ -1064,16 +1063,15 @@ def test_ai_google_timeout_no_unified_diff(job_state: JobState, caplog: pytest.L
             'HTTP client error: The read operation timed out when requesting data from '
             'generativelanguage.googleapis.com',
             'HTTP client error: timed out when requesting data from generativelanguage.googleapis.com',
-            'HTTP client error: _ssl.c:1011: The handshake operation timed out when requesting '
-            'data from generativelanguage.googleapis.com',  # line number may change based on ssl engine version
+            'The handshake operation timed out when requesting data from generativelanguage.googleapis.com',
         }  # not sure why error flips flops
         logging.getLogger('webchanges.differs').setLevel(level=logging.DEBUG)
         diff = job_state.get_diff()
         assert diff.splitlines()[0] == '## ERROR in summarizing changes using Google AI:'
         try:
-            assert any(diff.splitlines()[1] == exp_str for exp_str in expected_second_line) is True
+            assert any(exp_str in diff.splitlines()[1] for exp_str in expected_second_line) is True
         except AssertionError:
-            print(f'{diff.splitlines()[0]=}')
+            print(f'{diff.splitlines()[1]=}')
             raise
     finally:
         if existing_key:

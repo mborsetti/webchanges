@@ -215,6 +215,8 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                 test_report.config['report']['run_command']['command'] = 'echo TEST'
             test_report.finish_one(reporter, check_enabled=False)
             assert capsys.readouterr().out == 'TEST\n'
+        case 'github_issue':
+            pytest.skip('We cannot create GitHub issues')
         case _:
             if reporter != 'browser':
                 test_report.config['footnote'] = 'Footnote'

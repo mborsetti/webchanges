@@ -1,7 +1,7 @@
 # pip requirements for pytest (testing)
 # EXCLUDES requirements for testing 'ocr' and 'pdf2text' filters as they require OS-specific installs
 
--r ../requirements.txt
+# requires one of ../requirements.txt or ../requirements-free-threaded.txt to also be installed
 
 # aioxmpp  # does not install in aug25 (lxml~=4.0 dependency fails to build)
 beautifulsoup4

@@ -1,3 +1,6 @@
-# pip requirements for building docs (in addition to ./requirements.txt)
+# pip requirements for building docs (in addition to ../requirements.txt)
+
+-r ../requirements.txt
+
 sphinx
 sphinx_rtd_theme
