@@ -281,7 +281,7 @@ class FilterBase(metaclass=TrackSubClasses):
         """
         first_filter = next(cls.normalize_filter_list(filter_name), None)
         if first_filter is not None:
-            filter_kind, subfilter = first_filter
+            filter_kind, _ = first_filter
             return cls.is_bytes_filter_kind(filter_kind)
 
         return False
@@ -1422,6 +1422,8 @@ class LxmlParser:
         if excluded_elems is not None:
             for el in excluded_elems:
                 self._remove_element(el)
+        if isinstance(selected_elems, str):
+            return [selected_elems]
         if selected_elems is not None:
             return [el for el in map(self._reevaluate, selected_elems) if el is not None]
         else:

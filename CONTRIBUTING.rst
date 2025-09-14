@@ -69,14 +69,14 @@ packages, as below) before creating a pull request, starting from the project's 
 
 .. code-block:: bash
 
-   pip install -U tox
+   uv pip install --update tox
    tox --parallel
 
 Alternatively, you can manually run the following commands:
 
 .. code-block:: bash
 
-   pip install -U -r tests/requirements_pre-commit.txt -r tests/requirements_pytest.txt -r docs/requirements.txt
+   uv pip install --update -r tests/requirements_pre-commit.txt -r tests/requirements_pytest.txt -r docs/requirements.txt
    pre-commit autoupdate
    pre-commit run -a
    python -m pytest -v --cov --cov-report=term
@@ -92,7 +92,13 @@ the docs directory to check for errors before contributing.
 
 Unreleased version
 ------------------
-To install the unreleased version, please run:
+To install the unreleased version with ``uv`` (recommended), please run:
+
+.. code-block:: bash
+
+   uv pip install https://github.com/mborsetti/webchanges/archive/unreleased.tar.gz
+
+Using ``pip``:
 
 .. code-block:: bash
 

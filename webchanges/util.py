@@ -108,13 +108,16 @@ class TrackSubClasses(type):
             if hasattr(cls, '__kind__'):
                 subclasses = getattr(base, '__subclasses__', None)
                 if subclasses is not None:
-                    logger.debug(f'Registering {cls} as {cls.__kind__}')
+                    logger.debug(
+                        f'Registering Class {cls.__module__}.{cls.__qualname__}'
+                        + (f' as {cls.__kind__}' if cls.__kind__ else '')
+                    )
                     subclasses[cls.__kind__] = cls
                     break
             else:
                 anonymous_subclasses = getattr(base, '__anonymous_subclasses__', None)
                 if anonymous_subclasses is not None:
-                    logger.debug(f'Registering {cls}')
+                    logger.debug(f'Registering Class {cls.__module__}.{cls.__qualname__}')
                     anonymous_subclasses.append(cls)
                     break
 

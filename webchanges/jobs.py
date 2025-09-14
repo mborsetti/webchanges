@@ -11,6 +11,7 @@ import hashlib
 import html
 import logging
 import os
+import platform
 import re
 import ssl
 import subprocess
@@ -379,7 +380,7 @@ class JobBase(metaclass=TrackSubClasses):
             k: dict(getattr(self, k)) if isinstance(getattr(self, k), Headers) else getattr(self, k)
             for keys in {self.__required__, self.__optional__}
             for k in keys
-            if getattr(self, k) is not None
+            if hasattr(self, k) and getattr(self, k)
         }
 
     @classmethod
@@ -457,8 +458,6 @@ class JobBase(metaclass=TrackSubClasses):
                                 getattr(self, key)[subkey] = subvalue
                     # elif isinstance(defaults[key], list) and isinstance(getattr(self, key), list):
                     #     setattr(self, key, list(set(getattr(self, key) + defaults[key])))
-                    else:
-                        setattr(self, key, value)
 
     def with_defaults(self, config: _Config) -> JobBase:
         """Obtain a Job object that also contains defaults from the configuration.
@@ -567,8 +566,9 @@ class JobBase(metaclass=TrackSubClasses):
             self.monospace = True
 
     def get_proxy(self) -> str | None:
-        """Check that URL is http or https and return proxy value."""
-        scheme = urlsplit(self.url).scheme
+        """Return the correct proxy, depending on whether the URL is http or https."""
+        url = self.url.removeprefix('view-source:')
+        scheme = urlsplit(url).scheme
         if scheme not in {'http', 'https'}:
             raise ValueError(
                 f'Job {self.index_number}: URL should start with https:// or http:// (check for typos): {self.url}'
@@ -817,7 +817,7 @@ class UrlJob(UrlJobBase):
             if response.status_code != 404:
                 try:
                     parsed_json = jsonlib.loads(response.text)
-                    error_message = jsonlib.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+                    error_message = jsonlib.dumps(parsed_json, ensure_ascii=False, separators=(',', ':'))
                 except jsonlib.JSONDecodeError:
                     html_text = (
                         response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
@@ -850,7 +850,23 @@ class UrlJob(UrlJobBase):
         if self.encoding:
             response.encoding = self.encoding
 
-        return response.text, etag, mime_type
+        if self.no_redirects and response.is_redirect:
+            new_location = response.headers['Location']
+            if mime_type == 'text/plain':
+                data = f'Redirect {response.status_code} {response.reason_phrase} to {new_location}:\n{response.text}'
+            elif mime_type == 'text/html':
+                data = (
+                    f'Redirect <b>{response.status_code} {response.reason_phrase}</b> to <a href="{new_location}">'
+                    f'{new_location}</a>:<br>{response.text}'
+                )
+            elif mime_type == 'application/json':
+                data = f'{{"Redirect {response.status_code} {response.reason_phrase}":"{new_location}"}}'
+            else:
+                data = f'Redirect {response.status_code} {response.reason_phrase} to {new_location}.'
+        else:
+            data = response.text
+
+        return data, etag, mime_type
 
     def _retrieve_requests(
         self, headers: Mapping[str, str | bytes] | None, timeout: int | float | None
@@ -922,7 +938,7 @@ class UrlJob(UrlJobBase):
             if response.status_code != 404:
                 try:
                     parsed_json = jsonlib.loads(response.text)
-                    error_message = jsonlib.dumps(parsed_json, ensure_ascii=False, separators=(',', ': '))
+                    error_message = jsonlib.dumps(parsed_json, ensure_ascii=False, separators=(',', ':'))
                 except jsonlib.JSONDecodeError:
                     html_text = (
                         response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
@@ -964,7 +980,23 @@ class UrlJob(UrlJobBase):
             )
             response.encoding = response.apparent_encoding
 
-        return response.text, etag, mime_type
+        if self.no_redirects and response.is_redirect:
+            new_location = response.headers['Location']
+            if mime_type == 'text/plain':
+                data = f'Redirect {response.status_code} {response.reason} to {new_location}:\n{response.text}'
+            elif mime_type == 'text/html':
+                data = (
+                    f'Redirect <b>{response.status_code} {response.reason}</b> to <a href="{new_location}">'
+                    f'{new_location}</a>:<br>{response.text}'
+                )
+            elif mime_type == 'application/json':
+                data = f'{{"Redirect {response.status_code} {response.reason}":"{new_location}"}}'
+            else:
+                data = f'Redirect {response.status_code} {response.reason} to {new_location}.'
+        else:
+            data = response.text
+
+        return data, etag, mime_type
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
@@ -1036,7 +1068,7 @@ class UrlJob(UrlJobBase):
                     headers['Content-Type'] = 'application/x-www-form-urlencoded'
             if isinstance(self.data, (dict, list)):
                 if self.data_as_json:
-                    self.data = jsonlib.dumps(self.data, ensure_ascii=False)
+                    self.data = jsonlib.dumps(self.data, ensure_ascii=False, separators=(',', ':'))
                 else:
                     self.data = urlencode(self.data)
             elif not isinstance(self.data, str):
@@ -1263,6 +1295,25 @@ class BrowserJob(UrlJobBase):
         self.url = location
         self.guid = self.get_guid()
 
+    @staticmethod
+    def get_user_agent_platform() -> str:
+        # Get system information
+        system_name = platform.system()  # e.g., 'Windows', 'Linux', 'Darwin' (macOS)
+        machine_arch = platform.machine()  # e.g., 'x86_64', 'AMD64'
+
+        # Create a basic platform string
+        if system_name == 'Windows':
+            machine_arch = machine_arch.replace('AMD64', 'Win64; x64')
+            nt_version = platform.version().rsplit('.', maxsplit=1)[0]
+            platform_string = f'Windows NT {nt_version}; {machine_arch}'
+        elif system_name == 'Linux':
+            platform_string = f'X11; Linux {machine_arch}'
+        elif system_name == 'Darwin':
+            platform_string = f'Macintosh; Intel Mac OS X {platform.mac_ver()[0].replace(".", "_")}'
+        else:
+            platform_string = f'{system_name}; {machine_arch}'
+        return platform_string
+
     def retrieve(
         self,
         job_state: JobState,
@@ -1412,7 +1463,7 @@ class BrowserJob(UrlJobBase):
                 browser_version = browser.version
                 user_agent = headers.pop(
                     'User-Agent',
-                    f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                    f'Mozilla/5.0 ({self.get_user_agent_platform()}) AppleWebKit/537.36 (KHTML, like Gecko) '
                     f'Chrome/{browser_version.split(".", maxsplit=1)[0]}.0.0.0 Safari/537.36',
                 )
                 context = browser.new_context(
@@ -1568,7 +1619,7 @@ class BrowserJob(UrlJobBase):
                         f"Job {job_state.job.index_number}: Directive 'params' needs to be a string, dictionary or "
                         f'list; found a {type(self.params).__name__} ( {self.get_indexed_location()} ).'
                     )
-                self.url += f'?{params}'
+                url += f'?{params}'
 
             if self.method and self.method != 'GET':
 
@@ -1737,7 +1788,17 @@ class BrowserJob(UrlJobBase):
                 else:
                     if self.evaluate is not None:
                         content = page.evaluate(self.evaluate)
-                        mime_type = 'text'
+                        if isinstance(content, str):
+                            mime_type = 'text/plain'
+                        elif isinstance(content, bytes):
+                            mime_type = 'application/octet-stream'
+                        else:
+                            try:
+                                content = jsonlib.dumps(content, ensure_ascii=False)
+                                mime_type = 'application/json'
+                            except TypeError:
+                                content = str(content)
+                                mime_type = 'text/plain'
                     else:
                         content = page.content()
                         mime_type = response.header_value('content-type') or ''

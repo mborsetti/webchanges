@@ -836,6 +836,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         :param args: None used.
         """
+        logger.debug(f'Loading configuration from {self.filename}')
         config: _Config = self.parse(self.filename)
 
         if config:

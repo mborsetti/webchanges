@@ -228,7 +228,7 @@ def test_run_job(
 def test_run_ftp_job() -> None:
     job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt', 'timeout': 2})
     with JobState(ssdb_storage, job) as job_state:
-        data, _, mi_me_type = job.retrieve(job_state)
+        data, _, _ = job.retrieve(job_state)
         assert len(data) == 319
 
 

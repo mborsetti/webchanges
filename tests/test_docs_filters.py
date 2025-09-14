@@ -172,7 +172,7 @@ def test_jobs(job: JobBase) -> None:
             elif filter_kind == 'beautify' and not cssbeautifier_is_installed:
                 pytest.skip(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
 
-            data, mime_type = FilterBase.process(filter_kind, subfilter, job_state, data, '')
+            data, _ = FilterBase.process(filter_kind, subfilter, job_state, data, '')
             if filter_kind in {'pdf2text', 'shellpipe'}:  # fix for macOS or OS-specific end of line
                 data = data.rstrip()
 

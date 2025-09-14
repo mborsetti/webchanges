@@ -112,27 +112,27 @@ Output:
 
 .. raw:: html
 
-  <embed>
-  <div class="output-box-mono">---------------------------------------------------------------------------
-  CHANGED: https://example.com/#lots_of_contextlines
-  ---------------------------------------------------------------------------
-  --- @   Thu, 01 Oct 2020 00:00:00 +0000
-  ... @   Thu, 01 Oct 2020 01:00:00 +0000
-  @@ -1,15 +1,15 @@
-   This is line 10
-   This is line 11
-   This is line 12
-   This is line 13
-   This is line 14
-  -This is line 15
-  +This is line fifteen
-   This is line 16
-   This is line 17
-   This is line 18
-   This is line 19
-   This is line 20
-  </div>
-  <embed>
+   <embed>
+   <div class="output-box-mono">---------------------------------------------------------------------------
+   CHANGED: https://example.com/#lots_of_contextlines
+   ---------------------------------------------------------------------------
+   --- @   Thu, 01 Oct 2020 00:00:00 +0000
+   ... @   Thu, 01 Oct 2020 01:00:00 +0000
+   @@ -1,15 +1,15 @@
+    This is line 10
+    This is line 11
+    This is line 12
+    This is line 13
+    This is line 14
+   -This is line 15
+   +This is line fifteen
+    This is line 16
+    This is line 17
+    This is line 18
+    This is line 19
+    This is line 20
+   </div>
+   <embed>
 
 The same example using the default number of context lines, i.e. 3:
 

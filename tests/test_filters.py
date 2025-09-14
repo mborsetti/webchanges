@@ -141,7 +141,7 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('execute')
     # noinspection PyTypeChecker
-    data, mime_type = filtercls(job_state).filter(  # type: ignore[misc]
+    data, _ = filtercls(job_state).filter(  # type: ignore[misc]
         'input-string',
         'text/plain',
         {'command': command},
@@ -173,7 +173,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('shellpipe')
     # noinspection PyTypeChecker
-    data, mime_type = filtercls(job_state).filter(  # type: ignore[misc]
+    data, _ = filtercls(job_state).filter(  # type: ignore[misc]
         'input-string',
         'text/plain',
         {'command': command},
@@ -399,7 +399,7 @@ def test_filter_exceptions() -> None:
 def test_html2text_roundtrip() -> None:
     pytest.xfail('Not working due to an html2text bug')
     html = '1 | <a href="https://www.example.com">1</a><br><strong>2 | <a href="https://www.example.com">2</a></strong>'
-    data, mime_type = Html2TextFilter(job_state).filter(html, 'text/plain', {})  # type: ignore[arg-type]
+    data, _ = Html2TextFilter(job_state).filter(html, 'text/plain', {})  # type: ignore[arg-type]
     html2_lines = []
     for line in str(data).splitlines():
         html2_lines.append(

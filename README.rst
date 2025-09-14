@@ -31,7 +31,13 @@ Installation
 ============
 |pypi_version| |format| |status|
 
-Install **webchanges**  with:
+Install **webchanges**  with ``uv`` (recommended):
+
+.. code-block:: bash
+
+   uv pip install webchanges
+   
+or with ``pip``:
 
 .. code-block:: bash
 

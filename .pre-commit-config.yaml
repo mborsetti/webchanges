@@ -22,7 +22,7 @@ default_language_version:
 # A list of repository mappings.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       # see https://github.com/pre-commit/pre-commit-hooks
 #      - id: check-added-large-files
@@ -37,6 +37,8 @@ repos:
 #        description: Checks for a common error of placing code before the docstring.
       - id: check-executables-have-shebangs
         description: Checks that non-binary executables have a proper shebang.
+      - id: check-illegal-windows-names
+        description: Check for files that cannot be created on Windows.
 #      - id: check-json  # have no json files
 #        description: Attempts to load all json files to verify syntax.
       - id: check-merge-conflict
@@ -72,9 +74,6 @@ repos:
 #        description: Sort the lines in specified files (defaults to alphabetical).
       - id: fix-byte-order-marker
         description: removes UTF-8 byte order marker
-      - id: fix-encoding-pragma
-        args: [--remove]
-        description: "Remove # -*- coding: utf-8 -*- from the top of python files"
 #      - id: forbid-new-submodules
 #        description: Prevent addition of new git submodules
       - id: forbid-submodules
@@ -130,16 +129,19 @@ repos:
 
   - repo: local
     hooks:
-      - id: ruff # https://docs.astral.sh/ruff/
+      - id: ruff-check # https://github.com/astral-sh/ruff-pre-commit/blob/main/.pre-commit-hooks.yaml
         name: lint Python code (ruff check)
-        entry: ruff check --fix
+        entry: ruff check --fix --force-exclude
         language: system
-        pass_filenames: false
-      - id: ruff-format  # https://docs.astral.sh/ruff/
+        types_or: [python, pyi, jupyter]
+        require_serial: true
+      - id: ruff-format  # https://github.com/astral-sh/ruff-pre-commit/blob/main/.pre-commit-hooks.yaml
         name: format Python code (ruff format)
-        entry: ruff format
+        entry: ruff format --force-exclude
         language: system
         pass_filenames: false
+        types_or: [python, pyi, jupyter]
+        require_serial: true
       # - id: flynt  # https://github.com/ikamensh/flynt
       #   name: convert % strings to f-strings (flynt)
       #   entry: flynt
@@ -148,52 +150,20 @@ repos:
       #   require_serial: true
       #   types: [python]
       #   args: [--fail-on-change]
-      # - id: bandit  # https://github.com/PyCQA/bandit
-      #   name: Find common security issues in Python code (bandit)
-      #   entry: bandit
-      #   # additional_dependencies: [bandit]
-      #   language: system
-      #   types: [python]
-      #   args:  [--ini, .bandit, --recursive]
-      # - id: isort  # https://github.com/PyCQA/isort
-      #   name: isort your imports, so you don't have to (isort)
-      #   entry: isort
-      #   require_serial: true
-      #   # additional_dependencies: [isort]
-      #   language: system
-      #   types_or: [cython, pyi, python]
-      #   args: [--filter-files]
-      # - id: black  # https://github.com/python/black
-      #   name: uncompromising code formatting (black)
-      #   entry: black
-      #   # additional_dependencies: [black]
-      #   language: system
-      #   types: [python]
-      # - id: flake8
-      #   name: check for errors, style [and over-complexity], security (flake8, bandit)
-      #   description: Code linter
-      #   entry: flake8  # https://gitlab.com/pycqa/flake8
-      #   # additional_dependencies: [flake8, flake8-bandit, flake8-quotes]
-      #   language: system
-      #   types: [python]
-      #   require_serial: true
-      #   args: [--max-line-length, '120']
       - id: mypy  # https://github.com/python/mypy
         name: check Python static typing (mypy)
         entry: dmypy
+        language: system
         args: ['run', '--timeout', '1800', '.', '--', '--config-file', 'pyproject.toml', '--cache-fine-grained']
-        # additional_dependencies:
-        #   - mypy
-        #   - types-backports
-        #   - types-docutils
-        #   - types-python-dateutil
-        #   - types-PyYAML
-        #   - types-redis
-        #   - types-requests
-        #   - types-simplejson
+        pass_filenames: false
+      - id: cli-help
+        name: update cli_help.txt (used in documentation build)
+        entry: webchanges
+        args: ['--help', '>', 'cli_help.txt']
         language: system
         pass_filenames: false
-            # - id: doc8  # https://github.com/pycqa/doc8
+
+      # - id: doc8  # https://github.com/pycqa/doc8
       #   name: check for style in rst documentation (doc8)
       #   description: Documentation linter
       #   entry: doc8
@@ -202,6 +172,7 @@ repos:
       #   types: [rst]
       #   require_serial: true
       #   args: [--max-line-length, '120']
+
       # # Not running tox-ini-fmt as it removes all remarks
       # - id: tox-ini-fmt  # https://github.com/tox-dev/tox-ini-fmt
       #   name: Apply a consistent format to tox.ini files (tox-ini-fmt)
@@ -210,12 +181,14 @@ repos:
       #   language: system
       #   files: tox.ini
       #   types: [ini]
+
       # - id: python -m sphinx.apidoc
       #   name: Build autodoc API subdirectory (sphinx-apidoc)
       #   entry: sphinx-apidoc
       #   args: [-f, -e, -T, -o, docs\_api, webchanges]
       #   # additional_dependencies: [sphinx]
       #   language: system
+
       # - id: sphinx-build
       #   name: Check documentation build (sphinx-build)
       #   entry: python -m sphinx.cmd.build
@@ -224,6 +197,7 @@ repos:
       #   language: system
       #   pass_filenames: false
       # # https://www.sphinx-doc.org/en/master/usage/extensions/doctest.html#module-sphinx.ext.doctest
+
       # - id: sphinx-doctest
       #   name: sphinx doctest
       #   entry: python -m sphinx-build
@@ -231,9 +205,3 @@ repos:
       #   # additional_dependencies: [sphinx]
       #   language: system
       #   pass_filenames: false
-      - id: cli-help
-        name: update cli_help.txt (used in documentation build)
-        entry: webchanges
-        args: ['--help', '>', 'cli_help.txt']
-        language: system
-        pass_filenames: false

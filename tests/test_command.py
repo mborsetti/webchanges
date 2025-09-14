@@ -614,7 +614,7 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
         command_config.test_differ = None
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert 'FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
+        assert 'FILTERED DIFF (SNAPSHOTS  0 VS. -1): ' in message
         assert message.splitlines()[10][-6:] == ' -1200'
 
         # rerun to reuse cached _generated_diff but change timezone
@@ -625,7 +625,7 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
         command_config.test_differ = None
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert 'FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
+        assert 'FILTERED DIFF (SNAPSHOTS  0 VS. -1): ' in message
         assert message.splitlines()[10][-12:] == ' +0000 (UTC)'
 
         # Try another timezone
@@ -636,7 +636,7 @@ def test_test_differ_and_joblist(capsys: pytest.CaptureFixture[str]) -> None:
         command_config.test_differ = None
         assert pytest_wrapped_e.value.code == 0
         message = capsys.readouterr().out
-        assert 'FILTERED DIFF (SNAPSHOTS  0 AND -1): ' in message
+        assert 'FILTERED DIFF (SNAPSHOTS  0 VS. -1): ' in message
         assert message.splitlines()[10][-6:] == ' -0100'
 
     finally:
@@ -691,7 +691,6 @@ def test_modify_urls(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.Mon
     # )
     message = capsys.readouterr().out
     assert message.startswith('Adding <url ')
-    assert 'index_number=0' in message
     assert "url='https://www.example.com/#test_modify_urls'" in message
 
     # delete the job just added

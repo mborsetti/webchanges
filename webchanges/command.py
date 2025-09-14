@@ -27,12 +27,8 @@ from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
 from webchanges import __docs_url__, __project_name__, __version__
-from webchanges.differs import DifferBase
-from webchanges.filters import FilterBase
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase, NotModifiedError, UrlJob
-from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
-from webchanges.reporters import ReporterBase, xmpp_have_password, xmpp_set_password
 from webchanges.util import dur_text, edit_file, import_module_from_source
 
 try:
@@ -52,29 +48,6 @@ if httpx is not None:
         import h2
     except ImportError:  # pragma: no cover
         h2 = None  # type: ignore[assignment]
-
-if os.name == 'posix':
-    try:
-        import apt
-    except ImportError:  # pragma: no cover
-        apt = None
-
-try:
-    from pip._internal.metadata import get_default_environment
-except ImportError:  # pragma: no cover
-    get_default_environment = None  # type: ignore[assignment]
-
-try:
-    from playwright.sync_api import sync_playwright
-except ImportError:  # pragma: no cover
-    sync_playwright = None  # type: ignore[assignment]
-
-try:
-    import psutil
-    from psutil._common import bytes2human
-except ImportError:  # pragma: no cover
-    psutil = None  # type: ignore[assignment]
-    bytes2human = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +141,10 @@ class UrlwatchCommand:
 
         :return: 0.
         """
+        from webchanges.differs import DifferBase
+        from webchanges.filters import FilterBase
+        from webchanges.reporters import ReporterBase
+
         print(f'Please see full documentation at {__docs_url__}.')
         print()
         print('Supported jobs:\n')
@@ -194,14 +171,21 @@ class UrlwatchCommand:
         """
 
         def dependencies() -> list[str]:
-            if get_default_environment is not None:
+            try:
+                from pip._internal.metadata import get_default_environment
+
                 env = get_default_environment()
                 dist = None
                 for dist in env.iter_all_distributions():
                     if dist.canonical_name == __project_name__:
                         break
                 if dist and dist.canonical_name == __project_name__:
-                    return sorted(set(d.split()[0] for d in dist.metadata_dict['requires_dist']), key=str.lower)
+                    requires_dist = dist.metadata_dict.get('requires_dist', [])
+                    dependencies = [re.split('[ <>=;#^[]', d)[0] for d in requires_dist]
+                    dependencies.extend(('packaging', 'simplejson'))
+                    return sorted(dependencies, key=str.lower)
+            except ImportError:
+                pass
 
             # default list of all possible dependencies
             logger.info(f'Found no pip distribution for {__project_name__}; returning all possible dependencies.')
@@ -224,6 +208,7 @@ class UrlwatchCommand:
                 'markdown2',
                 'matrix_client',
                 'msgpack',
+                'packaging',
                 'pdftotext',
                 'Pillow',
                 'platformdirs',
@@ -235,6 +220,7 @@ class UrlwatchCommand:
                 'pyyaml',
                 'redis',
                 'requests',
+                'simplejson',
                 'tzdata',
                 'vobject',
             ]
@@ -247,7 +233,10 @@ class UrlwatchCommand:
         )
         print(f'• SQLite: {sqlite3.sqlite_version}')
 
-        if psutil:
+        try:
+            import psutil
+            from psutil._common import bytes2human
+
             print()
             print('System:')
             print(f'• Platform: {platform.platform()}, {platform.machine()}')
@@ -267,9 +256,11 @@ class UrlwatchCommand:
             )
             executor = ThreadPoolExecutor()
             print(f'• --max-threads default: {executor._max_workers}')
+        except ImportError:
+            pass
 
         print()
-        print('Installed PyPi dependencies:')
+        print('Relevant PyPi packages:')
         for module_name in dependencies():
             try:
                 mod = importlib.metadata.distribution(module_name)
@@ -286,70 +277,85 @@ class UrlwatchCommand:
                     print(f'  - {req_name}: {req.version}')
 
         # playwright
-        if sync_playwright is not None:
+        try:
+            from playwright.sync_api import Error as PlaywrightError
+            from playwright.sync_api import sync_playwright
+
             with sync_playwright() as p:
-                browser = p.chromium.launch(channel='chrome')
-                print()
-                print('Playwright browser:')
-                print(f'• Name: {browser.browser_type.name}')
-                print(f'• Version: {browser.version}')
-                if psutil:
-                    browser.new_page()
-                    try:
-                        virt_mem = psutil.virtual_memory().available
-                        print(
-                            f'• Free memory with browser loaded: '
-                            f'{bytes2human(virt_mem)} physical plus '
-                            f'{bytes2human(psutil.swap_memory().free)} swap'
-                        )
-                    except psutil.Error:
-                        pass
-
-        if os.name == 'posix' and apt:
-            apt_cache = apt.Cache()
-
-            def print_version(libs: list[str]) -> None:
-                for lib in libs:
-                    if lib in apt_cache:
-                        if ver := apt_cache[lib].versions:
-                            print(f'   - {ver[0].package}: {ver[0].version}')
-                return None
-
-            print()
-            print('Installed dpkg dependencies:')
-            for module, apt_dists in (
-                ('jq', ['jq']),
-                # https://github.com/jalan/pdftotext#os-dependencies
-                ('pdftotext', ['libpoppler-cpp-dev']),
-                # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
-                (
-                    'Pillow',
-                    [
-                        'libjpeg-dev',
-                        'zlib-dev',
-                        'zlib1g-dev',
-                        'libtiff-dev',
-                        'libfreetype-dev',
-                        'littlecms-dev',
-                        'libwebp-dev',
-                        'tcl/tk-dev',
-                        'openjpeg-dev',
-                        'libimagequant-dev',
-                        'libraqm-dev',
-                        'libxcb-dev',
-                        'libxcb1-dev',
-                    ],
-                ),
-                ('playwright', ['google-chrome-stable']),
-                # https://tesseract-ocr.github.io/tessdoc/Installation.html
-                ('pytesseract', ['tesseract-ocr']),
-            ):
                 try:
-                    importlib.metadata.distribution(module)
-                    print(f'• {module}')
-                    print_version(apt_dists)
-                except importlib.metadata.PackageNotFoundError:
-                    pass
+                    browser = p.chromium.launch(channel='chrome')
+                    print()
+                    print('Playwright browser:')
+                    print(f'• Name: {browser.browser_type.name}')
+                    print(f'• Version: {browser.version}')
+                    if psutil:
+                        browser.new_page()
+                        try:
+                            virt_mem = psutil.virtual_memory().available
+                            print(
+                                f'• Free memory with browser loaded: '
+                                f'{bytes2human(virt_mem)} physical plus '
+                                f'{bytes2human(psutil.swap_memory().free)} swap'
+                            )
+                        except psutil.Error:
+                            pass
+                except PlaywrightError as e:
+                    print()
+                    print('Playwright browser:')
+                    print(f'• Error: {e}')
+        except ImportError:
+            pass
+
+        if os.name == 'posix':
+            try:
+                import apt
+
+                apt_cache = apt.Cache()
+
+                def print_version(libs: list[str]) -> None:
+                    for lib in libs:
+                        if lib in apt_cache:
+                            if ver := apt_cache[lib].versions:
+                                print(f'   - {ver[0].package}: {ver[0].version}')
+                    return None
+
+                print()
+                print('Installed dpkg dependencies:')
+                for module, apt_dists in (
+                    ('jq', ['jq']),
+                    # https://github.com/jalan/pdftotext#os-dependencies
+                    ('pdftotext', ['libpoppler-cpp-dev']),
+                    # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
+                    (
+                        'Pillow',
+                        [
+                            'libjpeg-dev',
+                            'zlib-dev',
+                            'zlib1g-dev',
+                            'libtiff-dev',
+                            'libfreetype-dev',
+                            'littlecms-dev',
+                            'libwebp-dev',
+                            'tcl/tk-dev',
+                            'openjpeg-dev',
+                            'libimagequant-dev',
+                            'libraqm-dev',
+                            'libxcb-dev',
+                            'libxcb1-dev',
+                        ],
+                    ),
+                    ('playwright', ['google-chrome-stable']),
+                    # https://tesseract-ocr.github.io/tessdoc/Installation.html
+                    ('pytesseract', ['tesseract-ocr']),
+                ):
+                    try:
+                        importlib.metadata.distribution(module)
+                        print(f'• {module}')
+                        print_version(apt_dists)
+                    except importlib.metadata.PackageNotFoundError:
+                        pass
+            except ImportError:
+                pass
         return 0
 
     def list_jobs(self, regex: bool | str) -> None:
@@ -472,6 +478,9 @@ class UrlwatchCommand:
                         f'• [GUID: {job_state.job.guid}]',
                         f'• [Media type: {job_state.new_mime_type}]' if job_state.new_mime_type else None,
                         f'• [ETag: {job_state.new_etag}]' if job_state.new_etag else None,
+                        f'\nERROR {job_state.new_error_data["type"]}: {job_state.new_error_data["message"]}'
+                        if job_state.new_error_data
+                        else None,
                     ),
                 )
             )
@@ -482,7 +491,7 @@ class UrlwatchCommand:
             report.job_states = []  # required
             errorlevel = self.check_test_reporter(
                 job_state,
-                label='error' if job_state.exception else 'test',
+                label='test',
                 report=report,
             )
             if errorlevel:
@@ -574,12 +583,12 @@ class UrlwatchCommand:
                 report.job_states = []  # required
                 if job_state.new_data == job_state.old_data:
                     label = (
-                        f'No change (snapshots {-i:2} AND {-(i + 1):2}) with '
+                        f'No change (snapshots {-i:2} vs. {-(i + 1):2}) with '
                         f"'compared_versions: {job.compared_versions}'"
                     )
                     job_state.verb = 'changed,no_report'
                 else:
-                    label = f'Filtered diff (snapshots {-i:2} and {-(i + 1):2})'
+                    label = f'Filtered diff (snapshots {-i:2} vs. {-(i + 1):2})'
                 errorlevel = self.check_test_reporter(job_state, label=label, report=report)
                 if errorlevel:
                     self._exit(errorlevel)
@@ -636,6 +645,8 @@ class UrlwatchCommand:
         return 0
 
     def list_error_jobs(self) -> int:
+        from webchanges.reporters import ReporterBase
+
         if self.urlwatch_config.errors not in ReporterBase.__subclasses__:
             print(f'Invalid reporter {self.urlwatch_config.errors}.')
             return 1
@@ -821,8 +832,9 @@ class UrlwatchCommand:
         if sys.__stdin__ and sys.__stdin__.isatty():
             print(
                 f'WARNING: All {count} snapshots after this date/time (check timezone) will be deleted.\n'
-                '         💀 This operation cannot be undone!\n'
-                '         We suggest you make a backup of the database file before proceeding.\n'
+                f'         ☠  This operation cannot be undone!\n'
+                f'         We suggest you make a backup of the database file before proceeding:\n'
+                f'         {self.urlwatch_config.ssdb_file}'
             )
             resp = input("         Please enter 'Y' to proceed: ")
             if not resp.upper().startswith('Y'):
@@ -842,17 +854,20 @@ class UrlwatchCommand:
         if not history:
             print(f'No snapshots found for {job.get_indexed_location()}.')
             return 1
+        tz = self.urlwatcher.report.config['report']['tz']
+        tz_info = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
         if sys.__stdin__ and sys.__stdin__.isatty():
             print(f'WARNING: About to delete the latest snapshot of\n         {job.get_indexed_location()}:')
             for i, history_job in enumerate(history):
                 print(
                     f'         {i + 1}. {"❌ " if i == 0 else "   "}'
-                    f'{email.utils.format_datetime(datetime.fromtimestamp(history_job.timestamp))}'  # noqa: DTZ006
+                    f'{email.utils.format_datetime(datetime.fromtimestamp(history_job.timestamp).astimezone(tz_info))}'
                     f'{"  ⬅  ABOUT TO BE DELETED!" if i == 0 else ""}'
                 )
             print(
-                '         This operation cannot be undone!\n'
-                '         We suggest you make a backup of the database file before proceeding.\n'
+                f'         ☠  This operation cannot be undone!\n'
+                f'         We suggest you make a backup of the database file before proceeding:\n'
+                f'         {self.urlwatch_config.ssdb_file}'
             )
             resp = input("         Please enter 'Y' to proceed: ")
             if not resp.upper().startswith('Y'):
@@ -1002,6 +1017,7 @@ class UrlwatchCommand:
         :param report: A Report class to use for testing (Optional).
         :return: 0 if successful, 1 otherwise.
         """
+        from webchanges.reporters import ReporterBase
 
         def build_job(job_name: str, url: str, old: str, new: str) -> JobState:
             """Builds a pseudo-job for the reporter to run on."""
@@ -1104,6 +1120,8 @@ class UrlwatchCommand:
         return 0
 
     def check_smtp_login(self) -> None:
+        from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
+
         config: _ConfigReportEmail = self.urlwatcher.config_storage.config['report']['email']
         smtp_config: _ConfigReportEmailSmtp = config['smtp']
 
@@ -1156,6 +1174,8 @@ class UrlwatchCommand:
         self._exit(0)
 
     def check_xmpp_login(self) -> None:
+        from webchanges.reporters import xmpp_have_password, xmpp_set_password
+
         xmpp_config: _ConfigReportXmpp = self.urlwatcher.config_storage.config['report']['xmpp']
 
         success = True

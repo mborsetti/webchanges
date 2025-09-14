@@ -417,11 +417,12 @@ class UnifiedDiffer(DifferBase):
                     line = linkify(line[1:])
             return f'<tr><td{style}>{line}</td></tr>'
 
-        table_style = (
-            ' style="border-collapse:collapse;font-family:monospace;white-space:pre-wrap;"'
-            if self.job.monospace
-            else ' style="border-collapse:collapse;"'
-        )
+        table_style = ' style="border-collapse:collapse;"'
+        # table_style = (
+        #     ' style="border-collapse:collapse;font-family:monospace;white-space:pre-wrap;"'
+        #     if self.job.monospace
+        #     else ' style="border-collapse:collapse;"'
+        # )
         yield f'<table{table_style}>'
         is_markdown = self.state.is_markdown()
         monospace_style = 'font-family:monospace;' if self.job.monospace else ''
@@ -802,6 +803,10 @@ class DeepdiffDiffer(DifferBase):
             Customized version of deepdiff.serialization.SerializationMixin.pretty method, edited to include the
             values deleted or added and an option for colorized HTML output. The pretty human-readable string
             output for the diff object regardless of what view was used to generate the diff.
+
+            :param ddiff: The diff object.
+            :param report_kind: The report kind.
+            :param compact: Whether to return diff text in compact mode.
             """
             # Edited strings originally in deepdiff.serialization._get_pretty_form_text
             # See https://github.com/seperman/deepdiff/blob/master/deepdiff/serialization.py
@@ -896,20 +901,6 @@ class DeepdiffDiffer(DifferBase):
                         'repetition_change': 'Repetition change for item {diff_path} ({val_t2}).',
                     }
 
-            def indent_except_first(text: str, indent: str = '  ') -> str:
-                """
-                Indents all lines of a string except the first line.
-
-                :param text: The input string (potentially multi-line).
-                :param indent: The string to use for indentation (defaults to two spaces).
-
-                :returns: The modified string with subsequent lines indented.
-                """
-                if not text:
-                    return text
-                lines = text.splitlines(keepends=True)
-                return indent.join(lines)
-
             def _pretty_print_diff(ddiff: DiffLevel) -> str:
                 """
                 Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
@@ -917,10 +908,13 @@ class DeepdiffDiffer(DifferBase):
                 """
 
                 def stringify_value(value: Any, type: str) -> str:
-                    if compact:
-                        if type in {'str', 'int', 'float'}:
+                    if type in {'str', 'int', 'float'}:
+                        if compact:
                             return f"'{value}'"
-                        elif type in {'dict', 'list'}:
+                        else:
+                            return f'"{value}"'
+                    elif type in {'dict', 'list'}:
+                        if compact:
                             value_string = yaml.safe_dump(
                                 value,
                                 default_flow_style=False,
@@ -933,16 +927,10 @@ class DeepdiffDiffer(DifferBase):
                                 return value_string
                             value_string = '\n    ' + '    '.join(value_list)
                             return value_string.rstrip()
-
                         else:
-                            return str(value)
-                    else:
-                        if type in {'str', 'int', 'float'}:
-                            return f'"{value}"'
-                        elif type in {'dict', 'list'}:
                             return jsonlib.dumps(value, ensure_ascii=False, indent=2)  # type: ignore[no-any-return]
-                        else:
-                            return str(value)
+                    else:
+                        return str(value)
 
                 type_t1 = type(ddiff.t1).__name__
                 val_t1 = stringify_value(ddiff.t1, type_t1)
@@ -961,10 +949,60 @@ class DeepdiffDiffer(DifferBase):
                     val_t2=val_t2,
                 )
 
-            result = []
-            for tree_item in ddiff.tree.values():
-                for item_key in tree_item:
-                    result.append(_pretty_print_diff(item_key))
+            def _pretty_print_diff_markdown_to_html(ddiff: DiffLevel) -> str:
+                """
+                Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
+                values deleted or added and to convert markdown into html.
+                """
+
+                def stringify_value(value: Any, type: str) -> str:
+                    if type in {'str', 'int', 'float'}:
+                        return f"'{mark_to_html(str(value))}'"
+                    elif type in {'dict', 'list'}:
+                        if compact:
+                            value_string = yaml.safe_dump(
+                                value,
+                                default_flow_style=False,
+                                width=999,
+                                allow_unicode=True,
+                                sort_keys=False,
+                            )
+                            value_list = value_string.splitlines(keepends=True)
+                            if len(value_list) < 2:
+                                return value_string
+                            value_string = mark_to_html('\n    ' + '    '.join(value_list))
+                            return value_string.rstrip()
+                        else:
+                            return mark_to_html(jsonlib.dumps(value, ensure_ascii=False, indent=2))
+                    else:
+                        return mark_to_html(str(value))
+
+                type_t1 = type(ddiff.t1).__name__
+                val_t1 = stringify_value(ddiff.t1, type_t1)
+                type_t2 = type(ddiff.t2).__name__
+                val_t2 = stringify_value(ddiff.t2, type_t2)
+
+                diff_path = ddiff.path(root=root)
+                return '• ' + pretty_form_texts.get(
+                    ddiff.report_type or '',
+                    '',
+                ).format(
+                    diff_path=diff_path,
+                    type_t1=type_t1,
+                    type_t2=type_t2,
+                    val_t1=val_t1,
+                    val_t2=val_t2,
+                )
+
+            result: list[str] = []
+            if report_kind == 'html' and self.state.is_markdown():
+                for tree_item in ddiff.tree.values():
+                    for item_key in tree_item:
+                        result.append(_pretty_print_diff_markdown_to_html(item_key))
+            else:
+                for tree_item in ddiff.tree.values():
+                    for item_key in tree_item:
+                        result.append(_pretty_print_diff(item_key))
 
             return '\n'.join(result)
 

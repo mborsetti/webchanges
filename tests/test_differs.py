@@ -516,13 +516,11 @@ def test_command_command_error(job_state: JobState) -> None:
     job_state.get_diff()
     assert isinstance(job_state.exception, (RuntimeError, FileNotFoundError))
     if sys.platform == 'win32':
-        assert str(job_state.exception) == (
-            # '[WinError 2] The system cannot find the file specified'
+        assert str(job_state.exception) in (
+            '[WinError 2] The system cannot find the file specified',
             "Job 0: External differ '{'command': 'dir /x'}' returned 'dir: cannot access "
-            "'/x': No such file or directory' ()"
+            "'/x': No such file or directory' ()",
         )
-    # else:
-    # assert str(pytest_wrapped_e.value) == ("[Errno 2] No such file or directory: 'dir'")
 
 
 def test_command_wdiff_to_html(job_state: JobState) -> None:

@@ -16,6 +16,7 @@ import shlex
 import subprocess
 import sys
 import time
+import warnings
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Generator, Iterable, Sequence, TypeAlias
@@ -412,7 +413,25 @@ class HtmlReporter(ReporterBase):
         :returns: HTML for a single job.
         """
 
-        if job_state.verb == 'error' or job_state.verb == 'repeated_error':
+        def _format_for_return(data: str) -> str:
+            if job_state.is_markdown():
+                data = self.markdown_to_html(data, job_state.job.markdown_padded_tables)
+            elif job_state.new_mime_type == 'text/html':
+                pass
+            elif not job_state.job.monospace:
+                data = f'<pre style="white-space:pre-wrap">{html.escape(data)}</pre>'
+
+            if job_state.job.monospace:
+                return '<span style="font-family:monospace;white-space:pre-wrap">{0}</span>'.format(
+                    data.replace('<br>\n', '\n')
+                )
+            else:
+                return data
+
+        if job_state.verb in ('new', 'test'):
+            return _format_for_return(str(job_state.new_data))
+
+        if job_state.verb in ('error', 'repeated_error'):
             htm = f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback)}</pre>'
             if job_state.job.suppress_repeated_errors:
                 htm += (
@@ -421,41 +440,14 @@ class HtmlReporter(ReporterBase):
                 )
             return htm
 
-        if job_state.verb == 'unchanged':
-            if job_state.is_markdown():
-                return self.markdown_to_html(str(job_state.old_data), job_state.job.markdown_padded_tables)
-            elif job_state.new_mime_type == 'text/html':
-                return str(job_state.old_data)
-            else:
-                return f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.old_data))}</pre>'
-
         if job_state.verb == 'error_ended':
             return (
                 f'<div style="color:green;"><i>{job_state.old_error_data.get("type")} fixed; '
                 'content unchanged.</i></div>'
             )
 
-        if job_state.verb == 'new':
-            if job_state.is_markdown():
-                return self.markdown_to_html(str(job_state.new_data), job_state.job.markdown_padded_tables)
-            elif job_state.new_mime_type == 'text/html':
-                return str(job_state.new_data)
-            else:
-                return f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.new_data))}</pre>'
-
-        if job_state.verb == 'test':
-            if job_state.is_markdown():
-                data = self.markdown_to_html(str(job_state.new_data), job_state.job.markdown_padded_tables)
-            elif job_state.new_mime_type == 'text/html':
-                data = str(job_state.new_data)
-            else:
-                data = f'<pre style="white-space:pre-wrap">{html.escape(str(job_state.new_data))}</pre>'
-            if job_state.job.monospace:
-                return '<span style="font-family:monospace;white-space:pre-wrap">{0}</span>'.format(
-                    data.replace('<br>\n', '\n')
-                )
-            else:
-                return data
+        if job_state.verb == 'unchanged':
+            return _format_for_return(str(job_state.old_data))
 
         if job_state.old_data is None or job_state.old_data == job_state.new_data:
             return '...'
@@ -1893,6 +1885,14 @@ class GitHubIssueReporter(MarkdownReporter):
         **kwargs: Any,
     ) -> Iterable[str]:
         """Submit the report to GitHub as an issue."""
+
+        warnings.warn(
+            f'Reporter {self.__kind__} is ALPHA, is undocumented, may have bugs, and may change in the future. '
+            'Please report any problems or suggestions in https://github.com/mborsetti/webchanges/issues/105.',
+            RuntimeWarning,
+            stacklevel=1,
+        )
+
         lines = super().submit(max_length, **kwargs)
         content = '\n'.join(lines)
         if not content:

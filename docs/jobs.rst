@@ -579,18 +579,20 @@ Example:
    filters:
      - html2text:
 
-Returns:
+Returns (HTML report version):
 
-.. code-block::
+.. raw:: html
 
-   302 Found
-   ---------
-
-   # Found
-   The document has moved [here](https://donneespubliques.meteofrance.fr/?fond=donnee_indisponible).
-   * * *
+   <embed>
+   <div class="output-box">
+   Redirect <strong>302 Found</strong> to <a style="font-family:inherit" rel="noopener" target="_blank" href="https://donneespubliques.meteofrance.fr/?fond=donnee_indisponible">https://donneespubliques.meteofrance.fr/?fond=donnee_indisponible</a>:<br>
+   <br>
+   <strong>Found</strong><br>
+   The document has moved <a style="font-family:inherit" rel="noopener" target="_blank" href="https://donneespubliques.meteofrance.fr/?fond=donnee_indisponible">here</a>.<br>
+   --------------------------------------------------------------------------------<br>
    Apache/2.2.15 (CentOS) Server at donneespubliques.meteofrance.fr Port 80
-
+   </div>
+   </embed>
 
 .. versionadded:: 3.2.7
 

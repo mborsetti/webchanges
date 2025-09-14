@@ -593,7 +593,7 @@ def test_rollback_ssdb(database_engine: SsdbStorage) -> None:
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
 )
 def test_restore_and_backup(database_engine: SsdbStorage) -> None:
-    urlwatcher, ssdb_storage, _ = prepare_storage_test(database_engine)
+    _, ssdb_storage, _ = prepare_storage_test(database_engine)
 
     mime_type = 'text/plain' if isinstance(database_engine, (SsdbSQLite3Storage, SsdbRedisStorage)) else ''
 
