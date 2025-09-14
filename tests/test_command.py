@@ -1087,7 +1087,7 @@ def test_check_smtp_insecure_password(capsys: pytest.CaptureFixture[str]) -> Non
                 'host': 'localhost',
                 'user': 'me',
                 'insecure_password': 'pwd',
-                'port': 25,
+                'port': 587,
                 'starttls': True,
                 'utf-8': True,
             },
