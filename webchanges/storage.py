@@ -19,6 +19,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from types import NoneType
 from typing import Any, Iterable, Iterator, Literal, TextIO, TypedDict
 
 import msgpack
@@ -36,11 +37,6 @@ try:
     from httpx import Headers
 except ImportError:  # pragma: no cover
     from webchanges._vendored.headers import Headers  # type: ignore[assignment]
-
-try:
-    from types import NoneType
-except ImportError:  # pragma: no cover # Python 3.9
-    NoneType = type(None)  # type: ignore[misc]
 
 try:
     import redis
