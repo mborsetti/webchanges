@@ -384,7 +384,7 @@ DEFAULT_CONFIG: _Config = {
             'method': 'smtp',  # either 'smtp' or 'sendmail'
             'smtp': {
                 'host': 'localhost',
-                'port': 25,
+                'port': 587,
                 'starttls': True,
                 'auth': True,
                 'user': '',

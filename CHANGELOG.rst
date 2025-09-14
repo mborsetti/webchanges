@@ -33,16 +33,22 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.31.1rc2
+Version 3.31.1
 ------------------
-Unreleased
+2025-09-14
+
+Reminder
+````````
+Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.10 was
+released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24 
+October 2025.
 
 Added
 `````
 * Documented the ``deepdiff`` differ for side-effects when using ``ignore_order: true``.
-* Added the ``utf-8`` configuration  within the ``smtp`` emailer (``email`` report) to turn off RFC 6531
-  Internationalized Email, aka SMTPUTF8 service extension. Requested in #`108
-  <https://github.com/mborsetti/webchanges/issues/108>`__.
+* Added the ``utf-8`` configuration sub-directive within the ``smtp`` emailer (``email`` report) to enable turning off 
+  RFC 6531 Internationalized Email, aka SMTPUTF8 service extension, for backward compatibility with old SMTP servers.
+  Requested in #`108 <https://github.com/mborsetti/webchanges/issues/108>`__.
 
 Fixed
 `````
@@ -55,18 +61,20 @@ Fixed
 * Fixed ``monospace: true`` in HTML reports, which was overly applied to include Comparison Type banners.
 * Fixed ``deepdiff`` differ, which would not convert Markdown to HTML when needed.
 * Fixed url jobs with ``no_redirects: true``, who would not report the redirect response correctly.
-* Fixed ``delete-snapshot``, which would not display the time of snapshots in the timezone set for reports (if one is
+* Fixed ``--delete-snapshot`` CLI, which would not display the snapshot time in the timezone set for reports (if one is
   set).
 * Fixed ``xpath`` filter, which would throw an Exception with an XPath ``concat()`` string function.
+* Fixed default port for SMTP email to ``port: 587``, as is the correct one given the default ``starttls: true``.
 
 Internals
 `````````
 * Code is now formated with ``ruff format`` instead of ``black``.
-* Code is now linted with ``ruff check`` instead of ``isort`` and ``flake8`` and its extensions.
+* Code is now linted with ``ruff check`` instead of ``isort`` and ``flake8`` (and its extensions).
 * Packages in test environments are now installed with ``uv``.
 * Experimenting with `Gemini CLI GitHub Action <https://github.com/google-github-actions/run-gemini-cli/>`__ to triage
   issues and perform pull request reviews (thanks to Google's generous free-of-charge quotas).
-* Starting to implement lazy loading of packages and modules to improve startup time for command line arguments.
+* Starting to implement lazy loading of packages and modules to improve startup time to execute simple command line 
+  arguments.
 
 
 Version 3.31.0

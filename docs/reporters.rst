@@ -240,8 +240,8 @@ blank.
 SMTP sub-directives
 ^^^^^^^^^^^^^^^^^^^
 * ``host``: The address of the SMTP server. Default is 'localhost'
-* ``port``: The port used to communicate with the server. Default is 25.
-* ``starttls``: Whether the server uses SSL/TLS encryption (true/false). Default is true.
+* ``port``: The port used to communicate with the server. Default is 587.
+* ``starttls``: Whether the server uses TLS (fka SSL) encryption (true/false). Default is true.
 * ``auth``: Whether authentication via username/password is required (true/false). Default is true.
 * ``user``: The username used to authenticate.
 * ``insecure_password``: The password used to authenticate (if keyring is not used).
@@ -349,6 +349,8 @@ If using a Keychain to store the password, you also need to:
 .. versionchanged:: 3.10
    Can specify multiple "to" email addresses.
 
+.. versionchanged:: 3.31.1
+   Added ``utf-8`` SMTP configuration sub-directive.
 
 
 .. _github_issue:
