@@ -43,7 +43,7 @@ report:
     smtp:
       host: localhost
       user: ''
-      port: 25
+      port: 587
       starttls: true
       auth: true
       insecure_password: ''
