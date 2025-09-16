@@ -977,10 +977,12 @@ class EMailReporter(TextReporter):
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
         subject = self.subject_with_args(filtered_job_states)
 
+        utf_8 = True
         if self.config['method'] == 'smtp':
             smtp_config = self.config['smtp']
             smtp_user = smtp_config['user'] or self.config['from']
             use_auth = smtp_config['auth']
+            utf_8 = smtp_config['utf-8']
             mailer: Mailer = SMTPMailer(
                 smtp_user,
                 smtp_config['host'],
@@ -999,11 +1001,9 @@ class EMailReporter(TextReporter):
                 self.report, self.config, self.job_states, self.duration, self.jobs_files, self.differ_defaults
             )
             body_html = '\n'.join(html_reporter.submit())
-            msg = mailer.msg(
-                self.config['from'], self.config['to'], subject, body_text, body_html, utf_8=smtp_config['utf-8']
-            )
+            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html, utf_8=utf_8)
         else:
-            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, utf_8=smtp_config['utf-8'])
+            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, utf_8=utf_8)
 
         mailer.send(msg)
 
