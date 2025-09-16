@@ -3,6 +3,7 @@ __pycache__/
 /.idea/
 /.mypy_cache/
 /.pytest_cache/
+/.private/
 /.ruff_cache/
 /.tox/
 /.vscode/

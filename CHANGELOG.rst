@@ -33,6 +33,20 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.31.2
+------------------
+2025-09-16
+
+Fixed
+`````
+* Fixed UnboundLocalError when using new ``utf-8`` sub-directive within the ``smtp`` emailer (``email`` report).
+  Reported in #`104 <https://github.com/mborsetti/webchanges/issues/110>`__.
+
+Internals
+`````````
+* Removed workaround for Python 3.9, which is no longer supported.
+
+
 Version 3.31.1
 ------------------
 2025-09-14
@@ -139,6 +153,7 @@ Internals / hooks.py
 * Updated vendored code providing httpx.Headers (when httpx is not installed) to mirror version 0.28.1.
 * Updated vendored code providing packaging.versions (when packaging is not installed) to mirror version 24.2.
 * Minor code fixes resulting from newly using Pyright / Pylance in the IDE.
+
 
 Version 3.30.0
 ------------------
