@@ -157,6 +157,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github_token }}
           COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
           COVERALLS_PARALLEL: true
+        continue-on-error: true
 
       - name: Minimize uv cache
         run: uv cache prune --ci
@@ -254,6 +255,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github_token }}
           COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
           COVERALLS_PARALLEL: true
+        continue-on-error: true
 
       - name: Minimize uv cache
         run: uv cache prune --ci
@@ -346,12 +348,14 @@ jobs:
 #          GITHUB_TOKEN: ${{ secrets.github_token }}
 #          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
 #          COVERALLS_PARALLEL: true
+#        continue-on-error: true
 
   coveralls:
     name: Completion -> coveralls.io
 #    needs: [test_ubuntu, test_macos, test_windows]
     needs: [test_ubuntu, test_macos]
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
     - name: Coveralls parallel finished
       uses: coverallsapp/github-action@main
