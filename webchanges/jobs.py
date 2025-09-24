@@ -62,7 +62,6 @@ else:
 
 try:
     import requests
-    import requests.adapters
     import urllib3
     import urllib3.exceptions
 except ImportError as e:  # pragma: no cover
@@ -70,6 +69,15 @@ except ImportError as e:  # pragma: no cover
     urllib3 = str(e)  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
+
+
+# Custom YAML representer function for httpx.Headers
+def represent_headers(dumper: yaml.SafeDumper, data: Headers) -> yaml.MappingNode:
+    return dumper.represent_dict(dict(data))
+
+
+# Add the custom representer to the SafeDumper
+yaml.SafeDumper.add_representer(Headers, represent_headers)
 
 # reduce logging from httpx's sub-modules
 if httpx is not None and logger.getEffectiveLevel() == logging.DEBUG:
@@ -1556,6 +1564,7 @@ class BrowserJob(UrlJobBase):
                 try:
                     response = page.goto(
                         self.initialization_url,
+                        wait_until=self.wait_until,
                     )
                 except PlaywrightError as e:
                     logger.info(f'Job {self.index_number}: Website initialization page returned error {e}')
@@ -2016,16 +2025,8 @@ class ShellJob(Job):
         """
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filters)
         try:
-            return (
-                subprocess.run(  # noqa: S602 `shell=True`, security issue
-                    self.command,
-                    capture_output=True,
-                    shell=True,
-                    check=True,
-                    text=(not needs_bytes),
-                ).stdout,
-                '',
-                'application/octet-stream' if needs_bytes else 'text/plain',
+            response = subprocess.run(  # noqa: S602 `shell=True`, security issue
+                self.command, capture_output=True, shell=True, check=True, text=(not needs_bytes)
             )
         except subprocess.CalledProcessError as e:
             logger.info(f'Job {self.index_number}: Command: {e.cmd} ')
@@ -2033,6 +2034,7 @@ class ShellJob(Job):
             logger.info(f'Job {self.index_number}: stderr : {e.stderr}')
             logger.info(f'Job {self.index_number}: stdout : {e.stdout}')
             raise
+        return (response.stdout, '', 'application/octet-stream' if needs_bytes else 'text/plain')
 
     def format_error(self, exception: Exception, tb: str) -> str:
         """Format the error of the job if one is encountered.
