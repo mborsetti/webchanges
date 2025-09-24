@@ -132,16 +132,18 @@ repos:
       - id: ruff-check # https://github.com/astral-sh/ruff-pre-commit/blob/main/.pre-commit-hooks.yaml
         name: lint Python code (ruff check)
         entry: ruff check --fix --force-exclude
-        language: system
+        language: python
         types_or: [python, pyi, jupyter]
         require_serial: true
+        additional_dependencies: [ruff]
       - id: ruff-format  # https://github.com/astral-sh/ruff-pre-commit/blob/main/.pre-commit-hooks.yaml
         name: format Python code (ruff format)
         entry: ruff format --force-exclude
-        language: system
+        language: python
         pass_filenames: false
         types_or: [python, pyi, jupyter]
         require_serial: true
+        additional_dependencies: [ruff]
       # - id: flynt  # https://github.com/ikamensh/flynt
       #   name: convert % strings to f-strings (flynt)
       #   entry: flynt
@@ -153,9 +155,10 @@ repos:
       - id: mypy  # https://github.com/python/mypy
         name: check Python static typing (mypy)
         entry: dmypy
-        language: system
+        language: python
         args: ['run', '--timeout', '1800', '.', '--', '--config-file', 'pyproject.toml', '--cache-fine-grained']
         pass_filenames: false
+        additional_dependencies: [mypy]
       - id: cli-help
         name: update cli_help.txt (used in documentation build)
         entry: webchanges

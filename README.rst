@@ -11,7 +11,7 @@ webchanges |downloads|
 
 **webchanges** *anonymously* checks web content (including images) and commands for changes, delivering instant
 notifications and AI-powered summaries to your favorite `platform
-<https://webchanges.readthedocs.io/en/stable/introduction.html#reporters-list>`__.
+<https://webchanges.readthedocs.io/en/stable/introduction.html#reporters>`__.
 
 
 Requirements
@@ -126,14 +126,13 @@ licensed under a `BSD 3-Clause License
 <https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__).
 
 
-Compatibility **urlwatch**
-===========================
+Compatibility with **urlwatch**
+===============================
 
 This project is based on code from `urlwatch 2.21
 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020.
-
 For upgrading from **urlwatch** to **webchanges** (using the same job and
-configuration files), see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__). 
+configuration files), see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__. 
 
 
 .. |support| image:: https://img.shields.io/pypi/pyversions/webchanges.svg
