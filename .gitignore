@@ -24,3 +24,9 @@ __pycache__/
 /Dockerfile
 /hooks*.py
 /test_vendored.py
+
+# gemini-cli settings
+.gemini/
+
+# GitHub App credentials
+gha-creds-*.json
