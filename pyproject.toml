@@ -6,7 +6,7 @@
 
 [build-system]
 # Minimum requirements for the build system to execute.
-requires = ['setuptools']  # PEP 508 specifications.
+requires = ['setuptools'] # PEP 508 specifications.
 # Setuptools specification
 build-backend = "setuptools.build_meta"
 
@@ -17,12 +17,10 @@ name = 'webchanges'
 description = 'Web Changes Delivered. AI-Summarized. Totally Anonymous.'
 readme = { file = 'README.rst', content-type = 'text/x-rst' }
 requires-python = '>=3.10'
-license = {file = 'LICENSE'}
-authors = [
-    {name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com'},
-]
+license = { file = 'LICENSE' }
+authors = [{ name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com' }]
 maintainers = [
-    {name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com'},
+    { name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com' },
 ]
 keywords = ['webmonitoring', 'monitoring']
 classifiers = [
@@ -90,7 +88,7 @@ redis = ['redis']
 requests = ['requests']
 safe_password = ['keyring']
 all = [
-    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff_xml,imagediff,matrix,pushbullet,pushover,xmpp,redis,requests,safe_password]'
+    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff_xml,imagediff,matrix,pushbullet,pushover,xmpp,redis,requests,safe_password]',
 ]
 
 
@@ -103,41 +101,11 @@ all = [
 packages = ['webchanges', 'webchanges._vendored']
 
 [tool.setuptools.dynamic]
-version = {attr = 'webchanges.__version__'}
-dependencies = {file = 'requirements.txt'}
+version = { attr = 'webchanges.__version__' }
+dependencies = { file = 'requirements.txt' }
 
 [tool.setuptools.package-data]
 'webchanges' = ['py.typed']
-
-
-# -------------------------- bandit --------------------------
-[tool.bandit]
-# Find common security issues in Python code.
-# Runs as part of pre-commit.
-# Config file documentation at https://bandit.readthedocs.io/en/latest/config.html
-
-targets = ['webchanges', 'tests']
-skips = [
-    'B101',  # Use of assert detected.
-    'B404',  # Consider possible security implications associated with subprocess module.
-    'B602',  # subprocess call with shell=True identified, security issue.
-    'B603'   # subprocess call - check for execution of untrusted input.
-]
-
-
-# -------------------------- black --------------------------
-[tool.black]
-# Uncompromising code formatting
-# Runs as part of pre-commit
-# Config file documentation
-# https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
-
-# What's in here overrides the command-line options shown by running $ black --help.
-line-length = 120
-target-version = ['py310']
-skip-string-normalization = true
-extend-exclude = '/(\.idea|\.pytest_cache|\__pycache__|\venv.*|\webchanges.egg-info)/'
-color = true
 
 
 # -------------------------- coverage --------------------------
@@ -193,48 +161,11 @@ exclude_lines = [
     'except ImportError:',
 
     # Don't cover IDE code:
-    'if TYPE_CHECKING:'
+    'if TYPE_CHECKING:',
 ]
 # Exclude entire files if they have a custom # pragma: exclude file remark
 # exclude_also = '(?s)\A.*# pragma: exclude file.*\Z'
 # ignore_errors = true
-
-
-# -------------------------- isort --------------------------
-[tool.isort]
-# isort your imports, so you don't have to.
-# Runs as part of pre-commit.
-# Config file documentation https://pycqa.github.io/isort/docs/configuration/options.html
-
-profile = 'black'
-# multi_line_output = 3
-# use_parentheses = True
-# include_trailing_comma = True
-# force_grid_wrap = 0
-# ensure_newline_before_comments = True
-line_length = 120
-
-# Treat project as a git repository and ignore files listed in .gitignore.
-skip_gitignore = true
-
-# Force isort to recognize a module as being part of the current python project.
-known_first_party = 'webchanges'
-
-# Force isort to recognize a module as being a local folder.
-# Generally, this is reserved for relative imports (from . import module).
-known_local_folder = 'webchanges'
-
-# Force all imports to be sorted alphabetically within a section.
-force_alphabetical_sort_within_sections = true
-
-# Automatically create section groups by the top-level package they come from.
-group_by_package = true
-
-# Remove redundant aliases from imports, such as import os as os.
-remove_redundant_aliases = true
-
-# Use color in terminal output.
-color_output = true
 
 
 # -------------------------- mypy --------------------------
@@ -391,7 +322,8 @@ select = [
     # Pyflakes
     "F",
     # pycodestyle errors and warnings
-    "E", "W",
+    "E",
+    "W",
     # Ruff-specific rules
     "RUF",
 ]
@@ -442,5 +374,5 @@ docstring-code-line-length = "dynamic"
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
     # Use of `assert` detected
-    "S101"
+    "S101",
 ]
