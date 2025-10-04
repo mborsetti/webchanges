@@ -5,11 +5,13 @@ Extension to Sphinx that generates a hierarchical list of classes using the cont
 from __future__ import annotations
 
 import importlib
-from typing import Iterator, TypeVar
+from typing import TYPE_CHECKING, Iterator, TypeVar
 
 from docutils.nodes import literal_block
 from docutils.parsers.rst import Directive
-from sphinx.application import Sphinx
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 T = TypeVar('T')
 

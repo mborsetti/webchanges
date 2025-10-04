@@ -42,7 +42,7 @@ tmp_path = Path(tempfile.mkdtemp())
 here = Path(__file__).parent
 data_path = here.joinpath('data')
 config_file = data_path.joinpath('config.yaml')
-hooks_file = Path('')
+hooks_file = Path()
 config_storage = YamlConfigStorage(config_file)
 
 
@@ -155,7 +155,7 @@ def test_jobs_parse() -> None:
 def test_check_for_shell_job() -> None:
     """Test if a job is a shell job."""
     jobs_file = data_path.joinpath('jobs-is_shell_job.yaml')
-    # TODO The below generates PermissionError: [Errno 1] Operation not permitted when run by GitHub Actions in macOS
+    # TODO: The below generates PermissionError: [Errno 1] Operation not permitted when run by GitHub Actions in macOS
     # if os.name != 'nt':
     #     os.chown(jobs_file, 65534, 65534)
     jobs_storage = YamlJobsStorage([jobs_file])

@@ -1,5 +1,4 @@
-"""
-Configuration file for the Sphinx documentation builder.
+"""Configuration file for the Sphinx documentation builder.
 
 This file only contains a selection of the most common options. For a full
 list see the documentation:
@@ -10,14 +9,16 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any
-
-import sphinx.application
+from typing import TYPE_CHECKING, Any
 
 # below required for local build
 import sphinx_rtd_theme  # noqa: F401 'sphinx_rtd_theme' imported but unused.
 from docutils import nodes
 from sphinx.writers.html5 import HTML5Translator
+
+if TYPE_CHECKING:
+    import sphinx.application
+
 
 # -- Path setup --------------------------------------------------------------
 
@@ -79,7 +80,7 @@ extensions = [
 
 # General information about the project.
 project = project_data.__package__
-copyright = project_data.__copyright__.removeprefix('Copyright ')
+copyright = project_data.__copyright__.removeprefix('Copyright ')  # noqa: A001
 author = project_data.__author__
 
 # The version info for the project you're documenting, acts as replacement for
@@ -395,7 +396,8 @@ class PatchedHTMLTranslator(HTML5Translator):
             assert 'refid' in node, 'References must have "refuri" or "refid" attribute.'  # noqa: S101 use of `assert`
             attributes['href'] = '#' + node['refid']
         if not isinstance(node.parent, nodes.TextElement):
-            assert len(node) == 1 and isinstance(node[0], nodes.image)  # noqa: S101 use of `assert`
+            assert len(node) == 1  # noqa: S101 use of `assert`
+            assert isinstance(node[0], nodes.image)  # noqa: S101 use of `assert`
             attributes['class'] += ' image-reference'
         if 'reftitle' in node:
             attributes['title'] = node['reftitle']

@@ -20,7 +20,7 @@ class CustomLoginJob(UrlJob):
     password: str
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
-        ...  # custom code here
+        # custom code here
         return f'Would log in to {self.url} with {self.username} and {self.password}\n', '', ''
 
 
@@ -36,10 +36,9 @@ class CaseFilter(FilterBase):
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         if not subfilter or subfilter.get('upper'):
             return data.upper(), mime_type
-        elif subfilter.get('lower'):
+        if subfilter.get('lower'):
             return data.lower(), mime_type
-        else:
-            raise ValueError(f'Unknown case subfilter {subfilter}')
+        raise ValueError(f'Unknown case subfilter {subfilter}')
 
 
 class IndentFilter(FilterBase):

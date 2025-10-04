@@ -49,7 +49,7 @@ TESTDATA = [
 ]
 
 
-@pytest.mark.parametrize('in_spec, out_spec', TESTDATA, ids=(str(d[0]) for d in TESTDATA))  # type: ignore[misc]
+@pytest.mark.parametrize(('in_spec', 'out_spec'), TESTDATA, ids=(str(d[0]) for d in TESTDATA))  # type: ignore[misc]
 def test_normalize_filter_list(
     in_spec: str | list[str | dict[str, Any]],
     out_spec: list[tuple[str, dict[str, Any]]],
@@ -68,7 +68,7 @@ class FakeJob(JobBase):
         return ''
 
 
-@pytest.mark.parametrize('test_name, test_data', FILTER_TESTS, ids=(d[0] for d in FILTER_TESTS))  # type: ignore[misc]
+@pytest.mark.parametrize(('test_name', 'test_data'), FILTER_TESTS, ids=(d[0] for d in FILTER_TESTS))  # type: ignore[misc]
 def test_filters(test_name: str, test_data: dict[str, str]) -> None:
     """Runs the tests defined in data/filters_testdata.yaml."""
     filter_spec = test_data['filter']
@@ -107,9 +107,7 @@ def test_providing_subfilter_to_filter_without_subfilter_raises_valueerror() -> 
     assert err_msg.startswith(
         'Job None: Filter beautify does not support subfilter or filter directive(s) asubfilterthatdoesnotexist. Only '
     )
-    assert err_msg.endswith('indent, absolute_links are supported.') or err_msg.endswith(
-        'absolute_links, indent are supported.'
-    )
+    assert err_msg.endswith(('indent, absolute_links are supported.', 'absolute_links, indent are supported.'))
 
 
 def test_providing_unknown_subfilter_raises_valueerror() -> None:
@@ -122,7 +120,7 @@ def test_providing_unknown_subfilter_raises_valueerror() -> None:
         'Job None: Filter keep_lines_containing does not support subfilter or filter directive(s) anothersubfilter. '
         'Only '
     )
-    assert err_msg.endswith('re, text are supported.') or err_msg.endswith('text, re are supported.')
+    assert err_msg.endswith(('re, text are supported.', 'text, re are supported.'))
 
 
 @pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')  # type: ignore[misc]
@@ -196,8 +194,7 @@ def test_deprecated_filters() -> None:
     def _warning_message(warning: Warning | str) -> str:
         if isinstance(warning, Warning):
             return warning.args[0]  # type: ignore[no-any-return]
-        else:
-            return warning
+        return warning
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
@@ -400,10 +397,9 @@ def test_html2text_roundtrip() -> None:
     pytest.xfail('Not working due to an html2text bug')
     html = '1 | <a href="https://www.example.com">1</a><br><strong>2 | <a href="https://www.example.com">2</a></strong>'
     data, _ = Html2TextFilter(job_state).filter(html, 'text/plain', {})  # type: ignore[arg-type]
-    html2_lines = []
-    for line in str(data).splitlines():
-        html2_lines.append(
-            mark_to_html(line).replace('style="font-family:inherit" rel="noopener" target="_blank" ', '')
-        )
+    html2_lines = [
+        mark_to_html(line).replace('style="font-family:inherit" rel="noopener" target="_blank" ', '')
+        for line in str(data).splitlines()
+    ]
     html2 = '<br>'.join(html2_lines)
     assert html2 == html

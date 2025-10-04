@@ -23,7 +23,7 @@ if minidb_is_installed:
     from webchanges.storage_minidb import SsdbMiniDBStorage
 
 minidb_required = cast(
-    Callable[[Callable], Callable],
+    'Callable[[Callable], Callable]',
     pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed"),
 )
 
@@ -32,7 +32,7 @@ data_path = here.joinpath('data')
 
 config_file = data_path.joinpath('config.yaml')
 ssdb_file = ':memory:'
-hooks_file = Path('')
+hooks_file = Path()
 ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
 
 
@@ -47,7 +47,7 @@ def cleanup(request: pytest.FixtureRequest) -> None:
 
 
 def test_required_classattrs_in_subclasses() -> None:
-    for _, subclass in JobBase.__subclasses__.items():
+    for subclass in JobBase.__subclasses__.values():
         assert hasattr(subclass, '__kind__')
         assert hasattr(subclass, '__required__')
         assert hasattr(subclass, '__optional__')
@@ -66,10 +66,10 @@ def test_save_load_jobs() -> None:
     name = Path(tmpfile)
     YamlJobsStorage([name]).save(jobs)
     jobs2 = YamlJobsStorage([name]).load()
-    os.chmod(name, 0o777)  # noqa: S103 Chmod setting a permissive mask 0o777 on file (name).
+    name.chmod(0o777)
     jobs3 = YamlJobsStorage([name]).load_secure()
     os.close(fd)
-    os.remove(name)
+    name.unlink()
 
     assert len(jobs2) == len(jobs)
     # Assert that the shell jobs have been removed due to secure loading in Linux

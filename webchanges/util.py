@@ -16,8 +16,6 @@ import sys
 import textwrap
 from math import floor, log10
 from os import PathLike
-from pathlib import Path
-from types import ModuleType
 from typing import TYPE_CHECKING, Callable, Iterable, Match
 
 from markdown2 import Markdown
@@ -25,6 +23,9 @@ from markdown2 import Markdown
 from webchanges import __project_name__, __version__
 
 if TYPE_CHECKING:
+    from pathlib import Path
+    from types import ModuleType
+
     from webchanges.jobs import JobState
 
 try:
@@ -92,7 +93,7 @@ class TrackSubClasses(type):
             if base is object:
                 continue
 
-            for attr in {'__required__', '__optional__'}:
+            for attr in ('__required__', '__optional__'):
                 if not hasattr(base, attr):
                     continue
 
@@ -281,19 +282,13 @@ def linkify(
             proto = 'https'
             href = f'https://{href}'  # no proto specified, use https
 
-        if callable(extra_params):
-            params = f' {extra_params(href).strip()}'
-        else:
-            params = extra_params
+        params = f' {extra_params(href).strip()}' if callable(extra_params) else extra_params
 
         # clip long urls. max_len is just an approximation
         max_len = 30
         if shorten and len(url) > max_len:
             before_clip = url
-            if proto:
-                proto_len = len(proto) + 1 + len(m.group(3) or '')  # +1 for :
-            else:
-                proto_len = 0
+            proto_len = len(proto) + 1 + len(m.group(3) or '') if proto else 0
 
             parts = url[proto_len:].split('/')
             if len(parts) > 1:
@@ -361,9 +356,8 @@ def dur_text(duration: float) -> str:
     """
     if duration < 60:
         return f'{float(f"{duration:.2g}"):g} seconds'
-    else:
-        m, s = divmod(duration, 60)
-        return f'{m:.0f}:{s:02.0f}'
+    m, s = divmod(duration, 60)
+    return f'{m:.0f}:{s:02.0f}'
 
 
 def file_ownership_checks(filename: Path) -> list[str]:
@@ -372,7 +366,6 @@ def file_ownership_checks(filename: Path) -> list[str]:
 
     :returns: List of errors encountered (if any).
     """
-
     if sys.platform == 'win32':
         return []
 
@@ -444,8 +437,7 @@ def mark_to_html(text: str, markdown_padded_tables: bool | None = False, extras:
 
 
 def import_optional_dependency(name: str, extra: str = '') -> ModuleType:
-    """
-    Import an optional dependency.
+    """Import an optional dependency.
 
     If a dependency is missing an ImportError with a nice message will be raised.
 

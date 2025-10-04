@@ -9,7 +9,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path, PurePath
-from typing import Callable, cast
+from typing import Callable, Generator, cast
 
 import pytest
 
@@ -43,7 +43,7 @@ config_file = tmp_path.joinpath('config.yaml')
 shutil.copyfile(base_config_file, config_file)
 
 # Copy jobs files to temporary directory
-for filename in {'jobs-echo_test.yaml', 'jobs-time.yaml'}:
+for filename in ('jobs-echo_test.yaml', 'jobs-time.yaml'):
     shutil.copyfile(config_path.joinpath(filename), tmp_path.joinpath(filename))
 
 jobs_file = tmp_path.joinpath('jobs-echo_test.yaml')
@@ -65,7 +65,7 @@ if visual:
     del os.environ['VISUAL']
 
 py_latest_only = cast(
-    Callable[[Callable], Callable],
+    'Callable[[Callable], Callable]',
     pytest.mark.skipif(
         sys.version_info < (3, 13),
         reason='Time consuming; testing latest version only',
@@ -84,7 +84,7 @@ def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_fil
     )
 
 
-@pytest.fixture()  # type: ignore[misc]
+@pytest.fixture  # type: ignore[misc]
 def urlwatch_command() -> UrlwatchCommand:
     config_storage = YamlConfigStorage(config_file)
     config_storage.load()
@@ -101,8 +101,7 @@ def urlwatch_command() -> UrlwatchCommand:
         ssdb_storage=SsdbSQLite3Storage(':memory:'),  # type: ignore[arg-type]
         jobs_storage=YamlJobsStorage([jobs_file]),
     )  # main.py
-    urlwatch_command = UrlwatchCommand(urlwatcher)
-    return urlwatch_command
+    return UrlwatchCommand(urlwatcher)
 
 
 # Set up classes
@@ -116,21 +115,21 @@ urlwatch_command_common = UrlwatchCommand(urlwatcher)
 
 
 @pytest.fixture(scope='module', autouse=True)  # type: ignore[misc]
-def cleanup(request: pytest.FixtureRequest) -> None:
+def cleanup(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """Cleanup once we are finished."""
+    # Setup phase
 
-    def finalizer() -> None:
-        """Cleanup once we are finished."""
-        if editor:
-            os.environ['EDITOR'] = editor
-        if visual:
-            os.environ['VISUAL'] = visual
-        try:
-            urlwatcher.close()
-        except:  # noqa: S110,E722
-            pass
+    yield
 
-    request.addfinalizer(finalizer)
+    # Teardown phase
+    if editor:
+        os.environ['EDITOR'] = editor
+    if visual:
+        os.environ['VISUAL'] = visual
+    try:
+        urlwatcher.close()
+    except:  # noqa: S110,E722
+        pass
 
 
 def test_python_version_warning(capsys: pytest.CaptureFixture[str]) -> None:
@@ -897,7 +896,7 @@ def test_gc_database(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.Mon
     if sys.platform == 'win32':
         assert message == f'Deleting job {guid} (no longer being tracked).\n'
     else:
-        # TODO Linux message is '' for some reason. Need to figure out why.
+        # TODO: Linux message is '' for some reason. Need to figure out why.
         ...
 
 

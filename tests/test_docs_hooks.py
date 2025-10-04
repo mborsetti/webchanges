@@ -1,12 +1,13 @@
 """Test the jobs embedded in the documentation's hooks.rst file by running them against the data in the
-data/docs_hooks_testadata.yaml file."""
+data/docs_hooks_testadata.yaml file.
+"""
 
 from __future__ import annotations
 
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import docutils.core
 import docutils.nodes
@@ -18,8 +19,11 @@ from flake8.api import legacy as flake8
 from webchanges.cli import load_hooks
 from webchanges.filters import FilterBase
 from webchanges.handler import JobState
-from webchanges.jobs import JobBase
 from webchanges.storage import YamlJobsStorage
+
+if TYPE_CHECKING:
+    from webchanges.jobs import JobBase
+
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -44,8 +48,7 @@ if sys.version_info < (3, 12):
 
 
 def parse_rst(text: str) -> docutils.nodes.document:
-    """
-    Parse the rst document.
+    """Parse the rst document.
 
     This function uses docutils.core.publish_doctree to parse the text, which handles the setup of the parser,
     settings, and document internally, avoiding deprecated components.
@@ -58,12 +61,11 @@ def parse_rst(text: str) -> docutils.nodes.document:
         'warning_stream': None,  # Suppress warnings from being printed to stderr
     }
 
-    document = docutils.core.publish_doctree(
+    return docutils.core.publish_doctree(  # type: ignore[no-any-return]
         source=text,
         parser=docutils.parsers.rst.Parser(),
         settings_overrides=settings_overrides,
     )
-    return document  # type: ignore[no-any-return]
 
 
 # https://stackoverflow.com/a/48719723/1047040
@@ -84,7 +86,6 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 
     def unknown_visit(self, node: docutils.nodes.Node) -> None:
         """Pass."""
-        pass
 
 
 def load_hooks_from_doc() -> str:
@@ -117,7 +118,7 @@ if spec:
     exec(HOOKS, hooks.__dict__)  # noqa: S102 Use of exec detected.
 else:
     raise ImportError('hooks not loaded')
-# TODO Ensure that this is the version loaded during testing.
+# TODO: Ensure that this is the version loaded during testing.
 
 
 def test_load_hooks(caplog: pytest.LogCaptureFixture) -> None:

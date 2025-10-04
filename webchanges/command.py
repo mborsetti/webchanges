@@ -77,14 +77,14 @@ class UrlwatchCommand:
             disabled = len(enabled_jobs) - len(jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
             logger.debug(
-                f'Processing {len(enabled_jobs)} job{"s" if len(enabled_jobs) else ""}{disabled_str} as specified in '
+                f'Processing {len(enabled_jobs)} job{"s" if enabled_jobs else ""}{disabled_str} as specified in '
                 f'command line: {", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
             )
         else:
             enabled_jobs = {job for job in self.urlwatcher.jobs if job.is_enabled()}
             disabled = len(enabled_jobs) - len(self.urlwatcher.jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
-            logger.debug(f'Processing {len(enabled_jobs)} job{"s" if len(enabled_jobs) else ""}{disabled_str}')
+            logger.debug(f'Processing {len(enabled_jobs)} job{"s" if enabled_jobs else ""}{disabled_str}')
         for job in enabled_jobs:
             yield job.with_defaults(self.urlwatcher.config_storage.config)
 
@@ -111,12 +111,12 @@ class UrlwatchCommand:
                     break  # stop if no exception on parser
                 except SystemExit:
                     raise
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 Do not catch blind exception: `Exception`
                     print('Parsing failed:')
                     print('======')
                     print(e)
                     print('======')
-                    print('')
+                    print()
                     print(f'The file {hooks_file} was NOT updated.')
                     user_input = input('Do you want to retry the same edit? (Y/n)')
                     if not user_input or user_input.lower()[0] == 'y':
@@ -136,8 +136,7 @@ class UrlwatchCommand:
 
     @staticmethod
     def show_features() -> int:
-        """
-        Prints the "features", i.e. a list of job types, filters and reporters.
+        """Prints the "features", i.e. a list of job types, filters and reporters.
 
         :return: 0.
         """
@@ -164,8 +163,7 @@ class UrlwatchCommand:
 
     @staticmethod
     def show_detailed_versions() -> int:
-        """
-        Prints the detailed versions, including of dependencies.
+        """Prints the detailed versions, including of dependencies.
 
         :return: 0.
         """
@@ -307,60 +305,54 @@ class UrlwatchCommand:
             pass
 
         if os.name == 'posix':
-            try:
-                import apt
+            import apt
 
-                apt_cache = apt.Cache()
+            apt_cache = apt.Cache()
 
-                def print_version(libs: list[str]) -> None:
-                    for lib in libs:
-                        if lib in apt_cache:
-                            if ver := apt_cache[lib].versions:
-                                print(f'   - {ver[0].package}: {ver[0].version}')
-                    return None
+            def print_version(libs: list[str]) -> None:
+                for lib in libs:
+                    if lib in apt_cache and apt_cache[lib].versions:
+                        ver = apt_cache[lib].versions
+                        print(f'   - {ver[0].package}: {ver[0].version}')
 
-                print()
-                print('Installed dpkg dependencies:')
-                for module, apt_dists in (
-                    ('jq', ['jq']),
-                    # https://github.com/jalan/pdftotext#os-dependencies
-                    ('pdftotext', ['libpoppler-cpp-dev']),
-                    # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
-                    (
-                        'Pillow',
-                        [
-                            'libjpeg-dev',
-                            'zlib-dev',
-                            'zlib1g-dev',
-                            'libtiff-dev',
-                            'libfreetype-dev',
-                            'littlecms-dev',
-                            'libwebp-dev',
-                            'tcl/tk-dev',
-                            'openjpeg-dev',
-                            'libimagequant-dev',
-                            'libraqm-dev',
-                            'libxcb-dev',
-                            'libxcb1-dev',
-                        ],
-                    ),
-                    ('playwright', ['google-chrome-stable']),
-                    # https://tesseract-ocr.github.io/tessdoc/Installation.html
-                    ('pytesseract', ['tesseract-ocr']),
-                ):
-                    try:
-                        importlib.metadata.distribution(module)
-                        print(f'• {module}')
-                        print_version(apt_dists)
-                    except importlib.metadata.PackageNotFoundError:
-                        pass
-            except ImportError:
-                pass
+            installed_packages = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
+            print()
+            print('Installed dpkg dependencies:')
+            for module, apt_dists in (
+                ('jq', ['jq']),
+                # https://github.com/jalan/pdftotext#os-dependencies
+                ('pdftotext', ['libpoppler-cpp-dev']),
+                # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
+                (
+                    'Pillow',
+                    [
+                        'libjpeg-dev',
+                        'zlib-dev',
+                        'zlib1g-dev',
+                        'libtiff-dev',
+                        'libfreetype-dev',
+                        'littlecms-dev',
+                        'libwebp-dev',
+                        'tcl/tk-dev',
+                        'openjpeg-dev',
+                        'libimagequant-dev',
+                        'libraqm-dev',
+                        'libxcb-dev',
+                        'libxcb1-dev',
+                    ],
+                ),
+                ('playwright', ['google-chrome-stable']),
+                # https://tesseract-ocr.github.io/tessdoc/Installation.html
+                ('pytesseract', ['tesseract-ocr']),
+            ):
+                if module in installed_packages:
+                    importlib.metadata.distribution(module)
+                    print(f'• {module}')
+                    print_version(apt_dists)
         return 0
 
     def list_jobs(self, regex: bool | str) -> None:
-        """
-        Lists the job and their respective _index_number.
+        """Lists the job and their respective _index_number.
 
         :return: None.
         """
@@ -414,14 +406,12 @@ class UrlwatchCommand:
         try:
             if index <= 0:
                 return self.urlwatcher.jobs[index]
-            else:
-                return self.urlwatcher.jobs[index - 1]
+            return self.urlwatcher.jobs[index - 1]
         except IndexError as e:
             raise ValueError(f'Job index {index} out of range (found {len(self.urlwatcher.jobs)} jobs).') from e
 
     def _find_job_with_defaults(self, query: str | int) -> JobBase:
-        """
-        Returns the job with defaults based on job_id, which could match an index or match a location
+        """Returns the job with defaults based on job_id, which could match an index or match a location
         (url/user_visible_url or command). Accepts negative numbers.
 
         :param query: The query.
@@ -432,8 +422,7 @@ class UrlwatchCommand:
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
     def test_job(self, job_id: bool | str | int) -> None:
-        """
-        Tests the running of a single job outputting the filtered text to --test-reporter (default is stdout). If
+        """Tests the running of a single job outputting the filtered text to --test-reporter (default is stdout). If
         job_id is True, don't run any jobs but load config, jobs and hook files to trigger any syntax errors.
 
         :param job_id: The job_id or True.
@@ -502,9 +491,7 @@ class UrlwatchCommand:
         # (ignore_cached) and we do not want to store the newly-retrieved data yet (filter testing)
 
     def prepare_jobs(self) -> None:
-        """
-        Runs jobs that have no history to populate the snapshot database when they're newly added.
-        """
+        """Runs jobs that have no history to populate the snapshot database when they're newly added."""
         new_jobs = set()
         for idx, job in enumerate(self.urlwatcher.jobs):
             has_history = bool(self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid))
@@ -520,8 +507,7 @@ class UrlwatchCommand:
         return
 
     def test_differ(self, arg_test_differ: list[str]) -> int:
-        """
-        Runs diffs for a job on all the saved snapshots and outputs the result to stdout or the reporter selected
+        """Runs diffs for a job on all the saved snapshots and outputs the result to stdout or the reporter selected
         with --test-reporter.
 
         :param arg_test_differ: Either the job_id or a list containing [job_id, max_diffs]
@@ -546,7 +532,7 @@ class UrlwatchCommand:
         if num_snapshots == 0:
             print('This job has never been run before.')
             return 1
-        elif num_snapshots < 2:
+        if num_snapshots < 2:
             print('Not enough historic data available (need at least 2 different snapshots).')
             return 1
 
@@ -599,13 +585,11 @@ class UrlwatchCommand:
         return 0
 
     def dump_history(self, job_id: str) -> int:
-        """
-        Displays the historical data stored in the snapshot database for a job.
+        """Displays the historical data stored in the snapshot database for a job.
 
         :param job_id: The Job ID.
         :return: An argument to be used in sys.exit.
         """
-
         job = self._find_job_with_defaults(job_id)
         history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid)
 
@@ -664,8 +648,8 @@ class UrlwatchCommand:
                 jobs: Iterable[JobBase],
                 max_workers: int | None = None,
             ) -> Iterator[str]:
-                """
-                Modified worker.job_runner that yields error text for jobs who fail with an exception or yield no data.
+                """Modified worker.job_runner that yields error text for jobs who fail with an exception or yield no
+                data.
 
                 :param stack: The context manager.
                 :param jobs: The jobs to run.
@@ -761,7 +745,7 @@ class UrlwatchCommand:
                 print(line)
             print('--')
             duration = time.perf_counter() - start
-            print(f'Checked {len(jobs)} enabled job{"s" if len(jobs) else ""} for errors in {dur_text(duration)}.')
+            print(f'Checked {len(jobs)} enabled job{"s" if jobs else ""} for errors in {dur_text(duration)}.')
 
         else:
             message = '\n'.join(error_jobs_lines(jobs))
@@ -774,7 +758,7 @@ class UrlwatchCommand:
                 job_state.traceback = f'{header}\n{message}'
                 duration = time.perf_counter() - start
                 self.urlwatcher.report.config['footnote'] = (
-                    f'Checked {len(jobs)} job{"s" if len(jobs) else ""} for errors in {dur_text(duration)}.'
+                    f'Checked {len(jobs)} job{"s" if jobs else ""} for errors in {dur_text(duration)}.'
                 )
                 self.urlwatcher.report.config['report']['html']['footer'] = False
                 self.urlwatcher.report.config['report']['markdown']['footer'] = False
@@ -786,7 +770,7 @@ class UrlwatchCommand:
                 print('--')
                 duration = time.perf_counter() - start
                 print('Found no errors.')
-                print(f'Checked {len(jobs)} job{"s" if len(jobs) else ""} for errors in {dur_text(duration)}.')
+                print(f'Checked {len(jobs)} job{"s" if jobs else ""} for errors in {dur_text(duration)}.')
 
         return 0
 
@@ -815,7 +799,7 @@ class UrlwatchCommand:
                     from dateutil import parser as dateutil_parser
 
                     default_dt_with_tz = datetime.now(tz_info).replace(second=0, microsecond=0)
-                    return dateutil_parser.parse(timespec, default=default_dt_with_tz)
+                    return dateutil_parser.parse(timespec, default=default_dt_with_tz)  # type: ignore[no-any-return] # bug!
                     # return dateutil_parser.parse(timespec)
                 except ImportError:
                     dt = datetime.fromisoformat(timespec)
@@ -877,9 +861,8 @@ class UrlwatchCommand:
         if count:
             print(f'Deleted last snapshot of {job.get_indexed_location()}; {len(history) - 1} snapshots left.')
             return 0
-        else:
-            print(f'No snapshots found for {job.get_indexed_location()}.')
-            return 1
+        print(f'No snapshots found for {job.get_indexed_location()}.')
+        return 1
 
     def modify_urls(self) -> int:
         if self.urlwatch_config.delete is not None:
@@ -907,7 +890,7 @@ class UrlwatchCommand:
             items = [item.split('=', 1) for item in self.urlwatch_config.add.split(',')]
             filters = [v for k, v in items if k == 'filter']
             items2 = [(k, v) for k, v in items if k != 'filter']
-            d = {k: v for k, v in items2}
+            d = dict(items2)
             if filters:
                 d['filter'] = ','.join(filters)
 
@@ -926,24 +909,23 @@ class UrlwatchCommand:
                     f'Hint: you have to run --change-location before you update the jobs.yaml file!'
                 )
                 return 1
-            else:
-                job = self._find_job(self.urlwatch_config.change_location[0])
-                if job is not None:
-                    # Update the job's location (which will also update the guid) and move any history in the database
-                    # over to the job's updated guid.
-                    old_loc = job.get_location()
-                    print(f'Moving location of "{old_loc}" to "{new_loc}".')
-                    old_guid = job.guid
-                    if old_guid not in self.urlwatcher.ssdb_storage.get_guids():
-                        print(f'No snapshots found for "{old_loc}".')
-                        return 1
-                    job.set_base_location(new_loc)
-                    num_searched = self.urlwatcher.ssdb_storage.move(old_guid, job.guid)
-                    if num_searched:
-                        print(f'Searched through {num_searched:,} snapshots and moved "{old_loc}" to "{new_loc}".')
-                else:
-                    print(f'Job not found: "{self.urlwatch_config.change_location[0]}".')
+            job = self._find_job(self.urlwatch_config.change_location[0])
+            if job is not None:
+                # Update the job's location (which will also update the guid) and move any history in the database
+                # over to the job's updated guid.
+                old_loc = job.get_location()
+                print(f'Moving location of "{old_loc}" to "{new_loc}".')
+                old_guid = job.guid
+                if old_guid not in self.urlwatcher.ssdb_storage.get_guids():
+                    print(f'No snapshots found for "{old_loc}".')
                     return 1
+                job.set_base_location(new_loc)
+                num_searched = self.urlwatcher.ssdb_storage.move(old_guid, job.guid)
+                if num_searched:
+                    print(f'Searched through {num_searched:,} snapshots and moved "{old_loc}" to "{new_loc}".')
+            else:
+                print(f'Job not found: "{self.urlwatch_config.change_location[0]}".')
+                return 1
             message = 'Do you want me to update the jobs file (remarks will be lost)? [y/N] '
             if not input(message).lower().startswith('y'):
                 print(f'Please manually update the jobs file by replacing "{old_loc}" with "{new_loc}".')
@@ -953,8 +935,7 @@ class UrlwatchCommand:
         return 0
 
     def edit_config(self) -> int:
-        result = self.urlwatcher.config_storage.edit()
-        return result
+        return self.urlwatcher.config_storage.edit()
 
     def check_telegram_chats(self) -> None:
         config: _ConfigReportTelegram = self.urlwatcher.config_storage.config['report']['telegram']
@@ -964,10 +945,7 @@ class UrlwatchCommand:
             print('You need to set up your bot token first (see documentation).')
             self._exit(1)
 
-        if httpx:
-            get_client = httpx.Client(http2=h2 is not None).get
-        else:
-            get_client = requests.get  # type: ignore[assignment]
+        get_client = httpx.Client(http2=h2 is not None).get if httpx else requests.get
 
         info = get_client(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
         if not info['ok']:
@@ -1006,8 +984,7 @@ class UrlwatchCommand:
         label: str = 'test',
         report: Report | None = None,
     ) -> int:
-        """
-        Tests a reporter by creating pseudo-jobs of new, changed, unchanged, and error outcomes ('verb').
+        """Tests a reporter by creating pseudo-jobs of new, changed, unchanged, and error outcomes ('verb').
 
         Note: The report will only show new, unchanged and error content if enabled in the respective `display` keys
         of the configuration file.
@@ -1213,8 +1190,7 @@ class UrlwatchCommand:
 
     @staticmethod
     def playwright_install_chrome() -> int:  # pragma: no cover
-        """
-        Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
+        """Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
         install the browser executable.
 
         :return: Playwright's executable return code.
@@ -1229,7 +1205,7 @@ class UrlwatchCommand:
         env['PW_CLI_TARGET_LANG'] = 'python'
         cmd = [str(driver_executable), 'install', 'chrome']
         logger.info(f'Running playwright CLI: {" ".join(cmd)}')
-        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)  # noqa: S603 subprocess call
+        completed_process = subprocess.run(cmd, check=False, env=env, capture_output=True, text=True)  # noqa: S603 subprocess call
         if completed_process.returncode:
             print(completed_process.stderr)
             return completed_process.returncode

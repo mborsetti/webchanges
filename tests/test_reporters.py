@@ -155,31 +155,30 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                 with pytest.raises(ValueError) as pytest_wrapped_e:
                     test_report.finish_one(reporter, check_enabled=False)
             assert sum(
-                list(
+                [
                     x in str(pytest_wrapped_e.value)
-                    for x in {
+                    for x in (
                         'No password available in keyring for localhost ',
                         'No password available for localhost ',
                         'No recommended backend was available.',
-                    }
-                )
+                    )
+                ]
             )
         case 'xmpp':
             if not aioxmpp_is_installed:
                 pytest.skip(f"Skipping {reporter} since 'aioxmpp' package is not installed")
-            else:
-                if NoKeyringError is not None:
-                    with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
-                        test_report.finish_one(reporter, check_enabled=False)
-                    assert sum(
-                        list(
-                            x in str(pytest_wrapped_e.value)
-                            for x in {
-                                'No password available in keyring for ',
-                                'No recommended backend was available.',
-                            }
+            elif NoKeyringError is not None:
+                with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
+                    test_report.finish_one(reporter, check_enabled=False)
+                assert sum(
+                    [
+                        x in str(pytest_wrapped_e.value)
+                        for x in (
+                            'No password available in keyring for ',
+                            'No recommended backend was available.',
                         )
-                    )
+                    ]
+                )
         case 'ifttt' | 'mailgun' | 'prowl' | 'pushover' | 'telegram':
             with pytest.raises(RuntimeError) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)

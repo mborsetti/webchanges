@@ -107,10 +107,7 @@ class FilterBase(metaclass=TrackSubClasses):
     method: str
 
     def __init__(self, state: JobState) -> None:
-        """
-
-        :param state: the JobState.
-        """
+        """:param state: the JobState."""
         self.job = state.job
         self.state = state
 
@@ -269,8 +266,7 @@ class FilterBase(metaclass=TrackSubClasses):
         filtercls: type[FilterBase] | None = cls.__subclasses__.get(filter_kind)  # type: ignore[assignment]
         if filtercls:
             return filtercls(job_state).filter(data, mime_type, subfilter)
-        else:
-            return data, mime_type
+        return data, mime_type
 
     @classmethod
     def filter_chain_needs_bytes(cls, filter_name: str | list[str | dict[str, Any]] | None) -> bool:
@@ -311,7 +307,7 @@ class FilterBase(metaclass=TrackSubClasses):
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def raise_import_error(self, package_name: str, filter_name: str, error_message: str) -> None:
         """Raise ImportError for missing package.
@@ -357,14 +353,14 @@ class AutoMatchFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
-        ...
 
 
 class RegexMatchFilter(FilterBase):
     """Base class for filters that automatically match one or more directives.
 
     Same as AutoMatchFilter but MATCH is a dict of {directive: Regular Expression Object}, where a Regular
-    Expression Object is a compiled regex."""
+    Expression Object is a compiled regex.
+    """
 
     MATCH: dict[str, re.Pattern] | None = None
 
@@ -394,12 +390,12 @@ class RegexMatchFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
-        ...
 
 
 class BeautifyFilter(FilterBase):
     """Beautify HTML (requires Python package ``BeautifulSoup`` and optionally ``jsbeautifier`` and/or
-    ``cssbeautifier``)."""
+    ``cssbeautifier``).
+    """
 
     __kind__ = 'beautify'
 
@@ -526,7 +522,6 @@ class Html2TextFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
-
         # extract method and options from subfilter, defaulting to method html2text
         if not isinstance(data, str):
             raise ValueError
@@ -557,14 +552,14 @@ class Html2TextFilter(FilterBase):
             # html2text returns lines with spaces at the end even if they are ignored when rendered
             return '\n'.join(line.rstrip() for line in parser.handle(data).splitlines()), 'text/markdown'
 
-        elif method == 'bs4':
+        if method == 'bs4':
             if isinstance(bs4, str):
                 self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
 
             default_bs4_parser = 'lxml' if importlib.util.find_spec('lxml') is not None else 'html'
             bs4_parser: str = options.pop('parser', default_bs4_parser)
             try:
-                soup = bs4.BeautifulSoup(data, bs4_parser)
+                soup = bs4.BeautifulSoup(data, features=bs4_parser)
             except bs4.FeatureNotFound:
                 raise ValueError(  # noqa: B904
                     f"Filter html2text's method 'bs4' has been invoked with parser '{bs4_parser}', which is either not "
@@ -576,7 +571,7 @@ class Html2TextFilter(FilterBase):
             strip: bool = options.pop('strip', False)
             return soup.get_text(separator=separator, strip=strip), 'text/plain'
 
-        elif method in {'strip_tags', 're'}:  # re for backward compatibility
+        if method in {'strip_tags', 're'}:  # re for backward compatibility
             if method == 're':
                 warnings.warn(
                     f"Filter html2text's method 're' is deprecated: replace with 'strip_tags' "
@@ -587,14 +582,13 @@ class Html2TextFilter(FilterBase):
             stripped_tags = html.unescape(re.sub(r'<[^>]*>', '', data))
             return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != '')), 'text/plain'
 
-        elif method == 'lynx':
+        if method == 'lynx':
             raise NotImplementedError(
                 f"Filter html2text's method 'lynx' is no longer supported; for similar results, use the filter without "
                 f'specifying a method. ({self.job.get_indexed_location()})'
             )
 
-        else:
-            raise ValueError(f"Unknown method {method} for filter 'html2text'. ({self.job.get_indexed_location()})")
+        raise ValueError(f"Unknown method {method} for filter 'html2text'. ({self.job.get_indexed_location()})")
 
 
 class Csv2TextFilter(FilterBase):
@@ -619,10 +613,7 @@ class Csv2TextFilter(FilterBase):
             raise ValueError
         has_header_config = subfilter.get('has_header')
 
-        if has_header_config is None:
-            has_header = csv.Sniffer().has_header(data)
-        else:
-            has_header = has_header_config
+        has_header = csv.Sniffer().has_header(data) if has_header_config is None else has_header_config
 
         reader = csv.reader(data.split('\n'))
         data_list = list(reader)
@@ -674,7 +665,7 @@ class PypdfFilter(FilterBase):
         if isinstance(PdfReader, str):
             self.raise_import_error('pypdf', self.__kind__, PdfReader)
 
-        password = subfilter.get('password', None)
+        password = subfilter.get('password')
         extraction_mode: Literal['plain', 'layout'] = subfilter.get('extraction_mode', 'plain')
 
         if password:
@@ -687,11 +678,9 @@ class PypdfFilter(FilterBase):
                     "Please install with 'pip install --upgrade webchanges[pypdf_crypto]'",
                 )
 
-        text = []
         reader = PdfReader(io.BytesIO(data), password=password)
         logger.info(f'Job {self.job.index_number}: Found {reader.pdf_header} file')
-        for page in reader.pages:
-            text.append(page.extract_text(extraction_mode=extraction_mode))
+        text = [page.extract_text(extraction_mode=extraction_mode) for page in reader.pages]
 
         return '\n'.join(text), 'text/plain'
 
@@ -766,15 +755,8 @@ class Ical2TextFilter(FilterBase):
                 else:
                     start_date = 'unknown start date'
 
-                if hasattr(event, 'dtend'):
-                    end_date = event.dtend.value.strftime('%F %H:%M')
-                else:
-                    end_date = start_date
-
-                if start_date == end_date:
-                    date_str = start_date
-                else:
-                    date_str = f'{start_date} -- {end_date}'
+                end_date = event.dtend.value.strftime('%F %H:%M') if hasattr(event, 'dtend') else start_date
+                date_str = start_date if start_date == end_date else f'{start_date} -- {end_date}'
 
                 result.append(f'{date_str}: {event.summary.value}')
 
@@ -877,11 +859,10 @@ class KeepLinesContainingFilter(FilterBase):
                     ''.join(line for line in data.splitlines(keepends=True) if subfilter['text'] in line).rstrip(),
                     mime_type,
                 )
-            else:
-                raise TypeError(
-                    f"The '{self.__kind__}' filter requires a string but you provided a "
-                    f'{type(subfilter["text"]).__name__}. ({self.job.get_indexed_location()})'
-                )
+            raise TypeError(
+                f"The '{self.__kind__}' filter requires a string but you provided a "
+                f'{type(subfilter["text"]).__name__}. ({self.job.get_indexed_location()})'
+            )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
                 return (
@@ -890,16 +871,13 @@ class KeepLinesContainingFilter(FilterBase):
                     ).rstrip(),
                     mime_type,
                 )
-            else:
-                raise TypeError(
-                    f"The '{self.__kind__}' filter requires a string but you provided a "
-                    f'{type(subfilter["re"]).__name__}. ({self.job.get_indexed_location()})'
-                )
-        else:
-            raise ValueError(
-                f"The '{self.__kind__}' filter requires a 'text' or 're' sub-directive. "
-                f'({self.job.get_indexed_location()})'
+            raise TypeError(
+                f"The '{self.__kind__}' filter requires a string but you provided a "
+                f'{type(subfilter["re"]).__name__}. ({self.job.get_indexed_location()})'
             )
+        raise ValueError(
+            f"The '{self.__kind__}' filter requires a 'text' or 're' sub-directive. ({self.job.get_indexed_location()})"
+        )
 
 
 class GrepFilter(FilterBase):
@@ -955,11 +933,10 @@ class DeleteLinesContainingFilter(FilterBase):
                     ''.join(line for line in data.splitlines(keepends=True) if subfilter['text'] not in line).rstrip(),
                     mime_type,
                 )
-            else:
-                raise TypeError(
-                    f"The '{self.__kind__}' filter requires a string but you provided a "
-                    f'{type(subfilter["text"]).__name__}. ({self.job.get_indexed_location()})'
-                )
+            raise TypeError(
+                f"The '{self.__kind__}' filter requires a string but you provided a "
+                f'{type(subfilter["text"]).__name__}. ({self.job.get_indexed_location()})'
+            )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
                 return (
@@ -968,16 +945,13 @@ class DeleteLinesContainingFilter(FilterBase):
                     ).rstrip(),
                     mime_type,
                 )
-            else:
-                raise TypeError(
-                    f"The '{self.__kind__}' filter requires a string but you provided a "
-                    f'{type(subfilter["re"]).__name__}. ({self.job.get_indexed_location()})'
-                )
-        else:
-            raise ValueError(
-                f"The '{self.__kind__}' filter requires a 'text' or 're' sub-directive. "
-                f'({self.job.get_indexed_location()})'
+            raise TypeError(
+                f"The '{self.__kind__}' filter requires a string but you provided a "
+                f'{type(subfilter["re"]).__name__}. ({self.job.get_indexed_location()})'
             )
+        raise ValueError(
+            f"The '{self.__kind__}' filter requires a 'text' or 're' sub-directive. ({self.job.get_indexed_location()})"
+        )
 
 
 class GrepIFilter(FilterBase):
@@ -1033,19 +1007,18 @@ class StripFilter(FilterBase):
 
             return '\n'.join([line.strip(subfilter.get('chars')) for line in lines]), mime_type
 
-        else:
-            if 'side' in subfilter:
-                if subfilter['side'] == 'right':
-                    return data.rstrip(subfilter.get('chars')), mime_type
-                if subfilter['side'] == 'left':
-                    return data.lstrip(subfilter.get('chars')), mime_type
+        if 'side' in subfilter:
+            if subfilter['side'] == 'right':
+                return data.rstrip(subfilter.get('chars')), mime_type
+            if subfilter['side'] == 'left':
+                return data.lstrip(subfilter.get('chars')), mime_type
 
-                raise ValueError(
-                    f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
-                    f'({self.job.get_indexed_location()})'
-                )
+            raise ValueError(
+                f"The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. "
+                f'({self.job.get_indexed_location()})'
+            )
 
-            return data.strip(subfilter.get('chars')), mime_type
+        return data.strip(subfilter.get('chars')), mime_type
 
 
 class StripLinesFilter(FilterBase):
@@ -1073,7 +1046,7 @@ class FilterBy(Enum):
 
 
 class ElementsBy(HTMLParser, ABC):
-    def __init__(self, filter_by: FilterBy, name: str, value: Any = None) -> None:
+    def __init__(self, filter_by: FilterBy, name: str, value: Any = None) -> None:  # noqa: ANN401 Dynamically typed expressions Any are disallowed
         super().__init__()
 
         self._filter_by = filter_by
@@ -1093,9 +1066,9 @@ class ElementsBy(HTMLParser, ABC):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         ad = dict(attrs)
 
-        if self._filter_by == FilterBy.ATTRIBUTE and all(ad.get(k, None) == v for k, v in self._attributes.items()):
-            self._inside = True
-        elif self._filter_by == FilterBy.TAG and tag == self._name:
+        if (self._filter_by == FilterBy.ATTRIBUTE and all(ad.get(k) == v for k, v in self._attributes.items())) or (
+            self._filter_by == FilterBy.TAG and tag == self._name
+        ):
             self._inside = True
 
         if self._inside:
@@ -1314,7 +1287,7 @@ class LxmlParser:
         if isinstance(element, str):
             return element
 
-        return etree.tostring(element, encoding='unicode', method=method, pretty_print=True, with_tail=False).strip()
+        return etree.tostring(element, encoding='unicode', method=method, pretty_print=True, with_tail=False).strip()  # type: ignore[no-any-return] # bug!
 
     @staticmethod
     def _remove_element(element: etree._Element) -> None:
@@ -1347,14 +1320,12 @@ class LxmlParser:
                 return element
             if element.is_tail:
                 return parent.tail
-            elif element.is_text:
+            if element.is_text:
                 return parent.text
-            elif element.is_attribute:
+            if element.is_attribute:
                 return parent.attrib.get(element.attrname)
-            else:
-                return element
-        else:
             return element
+        return element
 
     def _orphaned(self, element: etree._Element) -> bool:
         if isinstance(element, etree._ElementUnicodeResult):
@@ -1365,8 +1336,7 @@ class LxmlParser:
                 or (element.is_attribute and parent.attrib.get(element.attrname) is None)
             ):
                 return True
-            else:
-                element = parent
+            element = parent
         try:
             tree = element.getroottree()
             path = tree.getpath(element)
@@ -1387,10 +1357,7 @@ class LxmlParser:
         else:
             data = self.data
         try:
-            if self.method == 'xml':
-                root = etree.XML(data)
-            else:  # html
-                root = etree.HTML(data)
+            root = etree.XML(data) if self.method == 'xml' else etree.HTML(data)
         except ValueError as e:
             args = (
                 f"Filter '{self.filter_kind}' encountered the following error when parsing the data. Check that "
@@ -1426,8 +1393,7 @@ class LxmlParser:
             return [selected_elems]
         if selected_elems is not None:
             return [el for el in map(self._reevaluate, selected_elems) if el is not None]
-        else:
-            return []
+        return []
 
     def get_filtered_data(self, job_index_number: int | None = None) -> str:
         elements = self._get_filtered_elements(job_index_number)
@@ -1599,17 +1565,14 @@ class RemoveRepeatedFilter(FilterBase):
         uniq_lines = [data_lines[0]]
         if not ignore_case:
             for line in data_lines[1:]:
-                if consecutive and line not in uniq_lines[-1]:
-                    uniq_lines.append(line)
-                elif line not in uniq_lines:
+                if (consecutive and line not in uniq_lines[-1]) or line not in uniq_lines:
                     uniq_lines.append(line)
         else:
             past_lines = [data_lines[0].strip().lower()]
             for line in data_lines[1:]:
-                if consecutive and line.strip().lower() not in past_lines[-1]:
-                    past_lines.append(line.strip().lower())
-                    uniq_lines.append(line)
-                elif line.strip().lower() not in past_lines:
+                if (
+                    consecutive and line.strip().lower() not in past_lines[-1]
+                ) or line.strip().lower() not in past_lines:
                     past_lines.append(line.strip().lower())
                     uniq_lines.append(line)
 
@@ -1753,7 +1716,7 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
                 f'({self.job.get_indexed_location()})'
             )
 
-        language = subfilter.get('language', None)
+        language = subfilter.get('language')
         timeout = int(subfilter.get('timeout', 10))
 
         if isinstance(Image, str):

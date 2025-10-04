@@ -31,33 +31,6 @@ from webchanges.jobs import UrlJob
 from webchanges.mailer import Mailer, SendmailMailer, SMTPMailer
 from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_html
 
-# https://stackoverflow.com/questions/712791
-try:
-    import simplejson as jsonlib
-except ImportError:  # pragma: no cover
-    import json as jsonlib
-
-try:
-    import httpx
-    from httpx import Response
-except ImportError:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
-    try:
-        import requests
-        from requests import Response  # type: ignore[assignment]
-    except ImportError as e:  # pragma: no cover
-        raise RuntimeError(
-            f"A Python HTTP client package (either 'httpx' or 'requests' is required to run {__project_name__}; "
-            'neither can be imported.'
-        ) from e
-if httpx is not None:
-    try:
-        import h2
-    except ImportError:  # pragma: no cover
-        h2 = None  # type: ignore[assignment]
-
-
-# https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from webchanges.handler import JobState, Report
     from webchanges.storage import (
@@ -96,6 +69,31 @@ if TYPE_CHECKING:
         | _ConfigReportWebhook
         | _ConfigReportXmpp
     )
+
+# https://stackoverflow.com/questions/712791
+try:
+    import simplejson as jsonlib
+except ImportError:  # pragma: no cover
+    import json as jsonlib
+
+try:
+    import httpx
+    from httpx import Response
+except ImportError:  # pragma: no cover
+    httpx = None  # type: ignore[assignment]
+    try:
+        import requests
+        from requests import Response  # type: ignore[assignment]
+    except ImportError as e:  # pragma: no cover
+        raise RuntimeError(
+            f"A Python HTTP client package (either 'httpx' or 'requests' is required to run {__project_name__}; "
+            'neither can be imported.'
+        ) from e
+if httpx is not None:
+    try:
+        import h2
+    except ImportError:  # pragma: no cover
+        h2 = None  # type: ignore[assignment]
 
 try:
     import aioxmpp
@@ -142,8 +140,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         jobs_files: list[Path],
         differ_config: _ConfigDifferDefaults,
     ) -> None:
-        """
-        :param report: The Report object containing information about the report.
+        """:param report: The Report object containing information about the report.
         :param config: The configuration of the run (typically from config.yaml).
         :param job_states: The list of JobState objects containing the information about the jobs that were retrieved.
         :param duration: The duration of the retrieval of jobs.
@@ -201,8 +198,7 @@ class ReporterBase(metaclass=TrackSubClasses):
             else:
                 jobs_files = ''
             subject_args['jobs_files'] = jobs_files
-        subject = subject.format(**subject_args)
-        return subject
+        return subject.format(**subject_args)
 
     @classmethod
     def reporter_documentation(cls) -> str:
@@ -265,7 +261,6 @@ class ReporterBase(metaclass=TrackSubClasses):
         :param duration: The duration of the retrieval of jobs.
         :param jobs_files: The path(s) to the file(s) containing the list of jobs (optional, used in footers).
         """
-
         # sort job_states
         job_states = sorted(job_states, key=lambda x: x.job.pretty_name().lower())
         differ_config = report.config['differ_defaults']
@@ -291,7 +286,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
         :returns: The content of the report.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def raise_import_error(self, package_name: str, reporter_name: str, error_message: str) -> None:
         """Raise ImportError for missing package.
@@ -425,8 +420,7 @@ class HtmlReporter(ReporterBase):
                 return '<span style="font-family:monospace;white-space:pre-wrap">{0}</span>'.format(
                     data.replace('<br>\n', '\n')
                 )
-            else:
-                return data
+            return data
 
         if job_state.verb in ('new', 'test'):
             return _format_for_return(str(job_state.new_data))
@@ -544,10 +538,7 @@ class TextReporter(ReporterBase):
         :returns: HTML for a single job.
         """
         if job_state.verb == 'error' or job_state.verb == 'repeated_error':
-            if isinstance(self, StdoutReporter):
-                text = self._red(job_state.traceback)
-            else:
-                text = job_state.traceback
+            text = self._red(job_state.traceback) if isinstance(self, StdoutReporter) else job_state.traceback
             if job_state.job.suppress_repeated_errors:
                 text += 'Reminder: No further alerts until the error is resolved or changes.'
             return text
@@ -636,11 +627,7 @@ class MarkdownReporter(ReporterBase):
 
         if summary and show_footer:
             # Markdown footer
-            if self.report.config['footnote']:
-                footer = f'--\n{self.report.config["footnote"]}'
-            else:
-                footer = ''
-
+            footer = f'--\n{self.report.config["footnote"]}' if self.report.config['footnote'] else ''
             footer += (
                 f'--\n_Checked {len(self.job_states)} source{"s" if len(self.job_states) > 1 else ""} in '
                 f'{dur_text(self.duration)} with {__project_name__} {__version__}{self.footer_job_file}_.\n'
@@ -694,7 +681,6 @@ class MarkdownReporter(ReporterBase):
         The first element of the tuple (trimmed) indicates whether any part of the report  was omitted due to
         maximum length. The other elements are the potentially trimmed report components (summary, details, and footer).
         """
-
         # The footer/summary lengths are the sum of the length of their parts
         # plus the space taken up by newlines.
         if summary:
@@ -711,57 +697,54 @@ class MarkdownReporter(ReporterBase):
                 _, body = cls._format_details_body(body)
                 processed_details.append((header, body))
             return False, summary, processed_details, footer
-        else:
-            if summary_len > max_length:
-                return True, [], [], ''
-            elif footer_len > max_length - summary_len:
-                return True, summary, [], footer[: max_length - summary_len]
-            elif not details:
-                return False, summary, [], footer
+        if summary_len > max_length:
+            return True, [], [], ''
+        if footer_len > max_length - summary_len:
+            return True, summary, [], footer[: max_length - summary_len]
+        if not details:
+            return False, summary, [], footer
+        # Determine the space remaining after taking into account summary and footer.
+        remaining_len = max_length - summary_len - footer_len
+        headers_len = sum(len(header) for header, _ in details)
+
+        details_trimmed = False
+
+        # First ensure we can show all the headers.
+        if headers_len > remaining_len:
+            return True, summary, [], footer
+        remaining_len -= headers_len
+
+        # Calculate approximate available length per item, shared equally between all details components.
+        body_len_per_details = remaining_len // len(details)
+
+        trimmed_details: list[tuple[str, str]] = []
+        unprocessed = len(details)
+
+        for header, body in details:
+            # Calculate the available length for the body and render it
+            avail_length = body_len_per_details - 1
+
+            body_trimmed, body = cls._format_details_body(body, avail_length)
+
+            if body_trimmed:
+                details_trimmed = True
+
+            if len(body) <= body_len_per_details:
+                trimmed_details.append((header, body))
             else:
-                # Determine the space remaining after taking into account summary and footer.
-                remaining_len = max_length - summary_len - footer_len
-                headers_len = sum(len(header) for header, _ in details)
+                trimmed_details.append((header, ''))
 
-                details_trimmed = False
+            # If the current item's body did not use all of its allocated space, distribute the unused space
+            # into subsequent items, unless we're at the last item already.
+            unused = body_len_per_details - len(body)
+            remaining_len -= body_len_per_details
+            remaining_len += unused
+            unprocessed -= 1
 
-                # First ensure we can show all the headers.
-                if headers_len > remaining_len:
-                    return True, summary, [], footer
-                else:
-                    remaining_len -= headers_len
+            if unprocessed > 0:
+                body_len_per_details = remaining_len // unprocessed
 
-                    # Calculate approximate available length per item, shared equally between all details components.
-                    body_len_per_details = remaining_len // len(details)
-
-                    trimmed_details: list[tuple[str, str]] = []
-                    unprocessed = len(details)
-
-                    for header, body in details:
-                        # Calculate the available length for the body and render it
-                        avail_length = body_len_per_details - 1
-
-                        body_trimmed, body = cls._format_details_body(body, avail_length)
-
-                        if body_trimmed:
-                            details_trimmed = True
-
-                        if len(body) <= body_len_per_details:
-                            trimmed_details.append((header, body))
-                        else:
-                            trimmed_details.append((header, ''))
-
-                        # If the current item's body did not use all of its allocated space, distribute the unused space
-                        # into subsequent items, unless we're at the last item already.
-                        unused = body_len_per_details - len(body)
-                        remaining_len -= body_len_per_details
-                        remaining_len += unused
-                        unprocessed -= 1
-
-                        if unprocessed > 0:
-                            body_len_per_details = remaining_len // unprocessed
-
-                    return details_trimmed, summary, trimmed_details, footer
+        return details_trimmed, summary, trimmed_details, footer
 
     @staticmethod
     def _format_details_body(s: str, max_length: int | None = None) -> tuple[bool, str]:
@@ -771,7 +754,6 @@ class MarkdownReporter(ReporterBase):
         :param max_length: The maximum length.
         :returns: The fitted string.
         """
-
         if s[:3] in {'+++', '---', '...'}:  # is a unified diff (with our '...' modification)
             lines = s.splitlines(keepends=True)
             for i in range(len(lines)):
@@ -785,18 +767,13 @@ class MarkdownReporter(ReporterBase):
 
         if max_length is None or len(s) <= max_length:
             return False, s
-        else:
-            target_max_length = max_length - trim_message_length
-            pos = s.rfind('\n', 0, target_max_length)
+        target_max_length = max_length - trim_message_length
+        pos = s.rfind('\n', 0, target_max_length)
 
-            if pos == -1:
-                # Just a single long line, so cut it short.
-                s = s[0:target_max_length]
-            else:
-                # Multiple lines, cut off extra lines.
-                s = s[0:pos]
+        # Cut short if a single long line, else (multiple lines) cut off extra lines.
+        s = s[0:target_max_length] if pos == -1 else s[0:pos]
 
-            return True, f'{trim_message}{s}'
+        return True, f'{trim_message}{s}'
 
     def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
         """Returns the Markdown of the report for a job; called by _format_output.
@@ -916,14 +893,13 @@ class StdoutReporter(TextReporter):
             """Classifies each line"""
             if line in separators:
                 return LineType.SEPARATOR
-            elif line.startswith('+'):
+            if line.startswith('+'):
                 return LineType.ADDITION
-            elif line.startswith('-'):
+            if line.startswith('-'):
                 return LineType.DELETION
-            elif any(line.startswith(prefix) for prefix in {'NEW: ', 'CHANGED: ', 'UNCHANGED: ', 'ERROR: '}):
+            if any(line.startswith(prefix) for prefix in ('NEW: ', 'CHANGED: ', 'UNCHANGED: ', 'ERROR: ')):
                 return LineType.STATUS
-            else:
-                return LineType.OTHER
+            return LineType.OTHER
 
         def print_status_line(line: str, print_color: Callable, red_color: Callable, blue_color: Callable) -> None:
             """Prints a status line"""
@@ -1106,7 +1082,7 @@ class PushbulletReport(WebServiceReporter):
 
     config: _ConfigReportPushbullet
 
-    def web_service_get(self) -> Any:
+    def web_service_get(self) -> Any:  # noqa: ANN401 Dynamically typed expressions Any are disallowed
         # def web_service_get(self) -> Pushbullet:
         # Moved here as loading breaks Pytest in Python 3.13 on Windows
         # Is stuck in collecting due to File Windows fatal exception: access violation
@@ -1120,7 +1096,7 @@ class PushbulletReport(WebServiceReporter):
 
         return Pushbullet(self.config['api_key'])
 
-    def web_service_submit(self, service: Any, title: str, body: str) -> None:
+    def web_service_submit(self, service: Any, title: str, body: str) -> None:  # noqa: ANN401 Dynamically typed expressions Any are disallowed
         # def web_service_submit(self, service: Pushbullet, title: str, body: str) -> None:
         service.push_note(title, body)
 
@@ -1202,7 +1178,7 @@ class TelegramReporter(MarkdownReporter):
 
         if not text:
             logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
-            return None
+            return
 
         chunks = self.telegram_chunk_by_line(text, max_length)
 
@@ -1240,8 +1216,7 @@ class TelegramReporter(MarkdownReporter):
 
     @staticmethod
     def telegram_escape_markdown(text: str, version: int = 2, entity_type: str | None = None) -> str:
-        """
-        Helper function to escape telegram markup symbols. See https://core.telegram.org/bots/api#formatting-options
+        """Helper function to escape telegram markup symbols. See https://core.telegram.org/bots/api#formatting-options
 
         Inspired by https://github.com/python-telegram-bot/python-telegram-bot/blob/master/telegram/utils/helpers.py
         v13.5 30-Apr-21
@@ -1490,8 +1465,7 @@ class WebhookReporter(TextReporter):
                     }
                 ]
             }
-        else:
-            return {'text': text}
+        return {'text': text}
 
 
 class SlackReporter(WebhookReporter):
@@ -1543,7 +1517,7 @@ class MatrixReporter(MarkdownReporter):
                     'formatted_body': body_html,
                 },
             )
-        except Exception as e:
+        except matrix_client.api.MatrixError as e:
             raise RuntimeError(f'Matrix error: {e}')  # noqa: B904
 
 
@@ -1598,12 +1572,17 @@ class BrowserReporter(HtmlReporter):
         import tempfile
         import webbrowser
 
-        f = tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False)
-        f.write(body_html)
-        f.close()
-        webbrowser.open(f.name)
+        # Create a temporary file using a 'with' statement
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+            f.write(body_html)
+            temp_path = Path(f.name)
+
+        # Open the file in the browser after it has been written and closed
+        webbrowser.open(temp_path.as_uri())  # .as_uri() is more robust for local files
         time.sleep(2)
-        os.remove(f.name)
+
+        # Clean up the file
+        temp_path.unlink()
 
 
 class XMPP:
@@ -1623,8 +1602,7 @@ class XMPP:
             passw = keyring.get_password('urlwatch_xmpp', self.sender)
             if passw is None:
                 raise ValueError(f'No password available in keyring for {self.sender}')
-            else:
-                password = passw
+            password = passw
         else:
             raise ValueError(f'No password available for {self.sender}')
 
@@ -1667,7 +1645,7 @@ class ProwlReporter(TextReporter):
 
     config: _ConfigReportProwl
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
     def submit(self) -> None:  # type: ignore[override]
@@ -1677,7 +1655,7 @@ class ProwlReporter(TextReporter):
 
         if not text:
             logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
-            return None
+            return
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
 
@@ -1885,7 +1863,6 @@ class GitHubIssueReporter(MarkdownReporter):
         **kwargs: Any,
     ) -> Iterable[str]:
         """Submit the report to GitHub as an issue."""
-
         warnings.warn(
             f'Reporter {self.__kind__} is ALPHA, is undocumented, may have bugs, and may change in the future. '
             'Please report any problems or suggestions in https://github.com/mborsetti/webchanges/issues/105.',

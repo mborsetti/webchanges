@@ -1,5 +1,6 @@
 """Test the jobs embedded in the documentation's filters.rst file by running them against the data in the
-data/docs_filter_testadata.yaml file."""
+data/docs_filter_testadata.yaml file.
+"""
 
 from __future__ import annotations
 
@@ -59,8 +60,7 @@ vobject_is_installed = importlib.util.find_spec('vobject') is not None
 
 
 def parse_rst(text: str) -> docutils.nodes.document:
-    """
-    Parse the rst document.
+    """Parse the rst document.
 
     This function uses docutils.core.publish_doctree to parse the text, which handles the setup of the parser,
     settings, and document internally, avoiding deprecated components.
@@ -73,12 +73,11 @@ def parse_rst(text: str) -> docutils.nodes.document:
         'warning_stream': None,  # Suppress warnings from being printed to stderr
     }
 
-    document = docutils.core.publish_doctree(
+    return docutils.core.publish_doctree(  # type: ignore[no-any-return]
         source=text,
         parser=docutils.parsers.rst.Parser(),
         settings_overrides=settings_overrides,
     )
-    return document  # type: ignore[no-any-return]
 
 
 # https://stackoverflow.com/a/48719723/1047040
@@ -100,7 +99,7 @@ class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
 def load_filter_doc_jobs() -> list[JobBase]:
     """Load YAML code blocks from rst file."""
     filter_file = docs_path.joinpath('filters.rst')
-    doc = parse_rst(open(filter_file).read())
+    doc = parse_rst(filter_file.read_text())
     visitor = YAMLCodeBlockVisitor(doc)
     doc.walk(visitor)
 
@@ -113,10 +112,7 @@ def load_filter_doc_jobs() -> list[JobBase]:
             jobs.append(job)
             jobs_by_url[job.url].append(job)
 
-    conflicting_jobs = []
-    for url_jobs in jobs_by_url.values():
-        if len(url_jobs) != 1:
-            conflicting_jobs.append(url_jobs[0].get_location())
+    conflicting_jobs = [url_jobs[0].get_location() for url_jobs in jobs_by_url.values() if len(url_jobs) != 1]
 
     # Make sure all URLs are unique
     assert not conflicting_jobs, f'Found conflicting job name in {filter_file}'
@@ -136,7 +132,8 @@ testdata = load_filter_testdata()
 @pytest.mark.parametrize('job', FILTER_DOC_JOBS, ids=(v.url for v in FILTER_DOC_JOBS))  # type: ignore[misc]
 def test_jobs(job: JobBase) -> None:
     """Test the yaml code in docs/filters.rst against the source and expected results contained
-    in tests/data/docs_filters_testdata.yaml using 'url' as the key."""
+    in tests/data/docs_filters_testdata.yaml using 'url' as the key.
+    """
     # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
     # installations beyond pip)
     d = testdata[job.url]

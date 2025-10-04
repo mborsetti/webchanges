@@ -1,20 +1,25 @@
 """The main class.
 
-For the entry point, see main() in the cli module."""
+For the entry point, see main() in the cli module.
+"""
 
 # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
 
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from webchanges import __project_name__
-from webchanges.config import CommandConfig
 from webchanges.handler import Report
-from webchanges.jobs import JobBase
-from webchanges.storage import SsdbStorage, YamlConfigStorage, YamlJobsStorage
 from webchanges.util import get_new_version_number
 from webchanges.worker import run_jobs
+
+if TYPE_CHECKING:
+    from webchanges.config import CommandConfig
+    from webchanges.jobs import JobBase
+    from webchanges.storage import SsdbStorage, YamlConfigStorage, YamlJobsStorage
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +34,11 @@ class Urlwatch:
         ssdb_storage: SsdbStorage,
         jobs_storage: YamlJobsStorage,
     ) -> None:
-        """
-
-        :param urlwatch_config: The CommandConfig object containing the program run information.
+        """:param urlwatch_config: The CommandConfig object containing the program run information.
         :param config_storage: The YamlConfigStorage object containing the configuration information.
         :param ssdb_storage: The CacheStorage object containing snapshot database information
         :param jobs_storage: The YamlJobsStorage object containing information about the jobs.
         """
-
         self.urlwatch_config = urlwatch_config
 
         self.config_storage = config_storage

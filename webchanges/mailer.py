@@ -14,13 +14,16 @@ from dataclasses import dataclass
 from email import policy
 from email.message import EmailMessage
 from email.utils import formatdate
-from pathlib import Path
 from types import ModuleType
+from typing import TYPE_CHECKING
 
 try:
     import keyring
 except ImportError as e:  # pragma: no cover
     keyring = str(e)  # type: ignore[assignment]
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -133,8 +136,7 @@ class SMTPMailer(Mailer):
                 key_pass = keyring.get_password(self.smtp_server, self.smtp_user)
                 if key_pass is None:
                     raise ValueError(f'No password available in keyring for {self.smtp_server} {self.smtp_user}')
-                else:
-                    passwd = key_pass
+                passwd = key_pass
             else:
                 raise ValueError(f'No password available for {self.smtp_server} {self.smtp_user}')
 
@@ -166,6 +168,7 @@ class SendmailMailer(Mailer):
             command = [self.sendmail_path, '-oi'] + [addr.strip() for addr in msg['To'].split(',')]
         p = subprocess.run(  # noqa: S603 subprocess call - check for execution of untrusted input.
             command,
+            check=False,
             input=msg.as_string(),
             capture_output=True,
             text=True,

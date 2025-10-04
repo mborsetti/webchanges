@@ -190,7 +190,7 @@ disallow_untyped_calls = false
 disallow_untyped_defs = true
 
 # Reports an error whenever a function with type annotations is decorated with a decorator without annotations.
-disallow_untyped_decorators = false
+disallow_untyped_decorators = true
 
 # Warns about casting an expression to its inferred type.
 warn_redundant_casts = true
@@ -200,7 +200,7 @@ warn_redundant_casts = true
 # warn_unused_ignores = true
 
 # Shows a warning when returning a value with type Any from a function declared with a non-Any return type.
-warn_return_any = false
+warn_return_any = true
 
 # Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis.
 warn_unreachable = false
@@ -241,12 +241,8 @@ report_level = 'WARNING'
 log_auto_indent = true
 # Enable log display during test run (aka "live logging" https://docs.pytest.org/en/stable/logging.html#live-logs)
 log_cli = true
-minversion = '8.3.3'
+minversion = '8.4.1'
 testpaths = ['tests']
-
-# the below is for pytest-asyncio (used to be required due to Playwright)
-# asyncio_mode = 'auto'
-# asyncio_default_fixture_loop_scope = 'function'
 
 # Adds pytest-cov functionality (see https://pytest-cov.readthedocs.io/en/latest/config.html)
 # Note: --cov moved to .github/workflows/ci-cd.yaml and tox.ini due to interference with PyCharm breakpoints (see
@@ -259,35 +255,8 @@ testpaths = ['tests']
 [tool.ruff]
 # Config file documentation at https://docs.astral.sh/ruff/configuration/
 
-# Exclude a variety of commonly ignored directories.
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".git-rewrite",
-    ".hg",
-    ".ipynb_checkpoints",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pyenv",
-    ".pytest_cache",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    ".vscode",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "site-packages",
-    "venv",
-
+# File patterns to omit from formatting and linting, in addition to those specified by exclude.
+extend-exclude = [
     "webchanges/storage_minidb.py",
     "webchanges/_vendored",
 ]
@@ -298,7 +267,6 @@ exclude = [
 
 # Set the maximum line length.
 line-length = 120
-indent-width = 4
 
 # Target Python version
 # target-version = "py311"  # Commented out to infer from [project] requires-python
@@ -307,28 +275,55 @@ indent-width = 4
 # By default, Ruff enables Flake8's F rules, along with a subset of the E rules
 # Enable rules not enabled by default, and ignore specific rules.
 select = [
-    # flake8-builtins
-    "B",
-    # flake8-bandit
-    "S",
-    # flake8-datetimez
-    "DTZ",
-    # isort
-    "I",
-    # McCabe complexity 
-    # "C901",
-    # pepe8-naming
-    "N",
-    # Pyflakes
-    "F",
-    # pycodestyle errors and warnings
-    "E",
-    "W",
-    # Ruff-specific rules
-    "RUF",
+    "ANN",  # flake8-annotations
+    "S",    # flake8-bandit
+    "BLE",  # flake8-blind-except
+    "B",    # flake8-bugbear
+    "A",    # flake8-builtin
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    # "EM",   # flake8-errmsg  # TODO
+    "FA",   # flake8-future-annotations
+    "INT",  # flake8-gettext
+    "ISC",  # flake8-implicit-str-concat
+    "LOG",  # flake8-logging
+    # "G",    # flake8-logging-format  # TODO
+    "PIE",  # flake8-pie
+    "PYI",  # flake8-pyi
+    "PT",   # flake8-pytest-style
+    "Q",    # flake8-quotes
+    "RSE",  # flake8-raise
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "TD",   # flake8-todos
+    "TC",   # flake8-type-checking
+    # "ARG",  # flake8-unused-arguments  # TODO
+    "PTH",  # flake8-use-pathlib
+    # "FLY",  # flynt   # TODO
+    "I",    # isort
+    "C90",  # mccabe 
+    "N",    # pep8-naming
+    "PERF", # Perflint
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    # "DOC",  # pydoclint  # TODO
+    # "D",    # pydocstyle  # TODO
+    "F",    # Pyflakes
+    # "PL",   # Pylint  # TODO
+    "FURB", # refurb 
+    "RUF",  # Ruff-specific rules
+    # "TRY",  # tryceratops  # TODO
 ]
+
 ignore = [
+    "PT011",  # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
+    "PT030",  # pytest.warns({warning}) is too broad, set the match parameter or use a more specific warning
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "SIM105", # Use contextlib.suppress({exception}) instead of try-except-pass
+    "SIM115", # Use a context manager for opening files
+    "TD002",  #	Missing author in TODO
+    "TD003",  # Missing issue link for this TODO
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -337,6 +332,28 @@ unfixable = []
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true  # TODO
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+
+[tool.ruff.lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds below.
+max-complexity = 30
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "S101",  # Use of `assert` detected
+]
+
+[tool.ruff.lint.pydoclint]
+# Skip docstrings which fit on a single line.
+ignore-one-line-docstrings = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.format]
 # Enable the formatter, which is a drop-in replacement for Black.
@@ -370,9 +387,3 @@ docstring-code-format = true
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = [
-    # Use of `assert` detected
-    "S101",
-]

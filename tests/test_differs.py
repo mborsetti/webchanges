@@ -26,14 +26,14 @@ from webchanges.jobs import JobBase, ShellJob
 from webchanges.storage import SsdbSQLite3Storage
 
 py_latest_only = cast(
-    Callable[[Callable], Callable],
+    'Callable[[Callable], Callable]',
     pytest.mark.skipif(
         sys.version_info < (3, 13),
         reason='Time consuming; testing latest version only',
     ),
 )
 py_no_github = cast(
-    Callable[[Callable], Callable],
+    'Callable[[Callable], Callable]',
     pytest.mark.skipif(
         os.getenv('GITHUB_ACTIONS') is not None,
         reason='Google AI API call not placed from GitHub Actions',
@@ -103,14 +103,12 @@ DIFF_TO_HTML_TEST_DATA = [
 
 
 def generate_random_string(length: int = 39) -> str:
-    """
-    Generates a random alphanumeric string of specified length.
-    """
+    """Generates a random alphanumeric string of specified length."""
     characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for _ in range(length))  # noqa: S311 not suitable for security/cryptogr.
 
 
-@pytest.fixture()  # type: ignore[misc]
+@pytest.fixture  # type: ignore[misc]
 def job_state() -> JobState:
     """Get a JobState object for testing."""
     ssdb_file = ':memory:'
@@ -155,7 +153,7 @@ def test_providing_unknown_subdirective_raises_valueerror() -> None:
 
 def test_process_no_valid_differ_returns_empty(job_state: JobState) -> None:
     diff = DifferBase(job_state).process(differ_kind='', directives={}, job_state=job_state)
-    assert {} == diff
+    assert diff == {}
 
 
 def test_make_timestamp() -> None:
@@ -173,7 +171,6 @@ def test_html2text() -> None:
 
 def test_raise_import_error(job_state: JobState) -> None:
     """Test ai_google with no key."""
-
     with pytest.raises(ImportError) as pytest_wrapped_e:
         DifferBase(job_state).raise_import_error('test', 'error!')
     assert str(pytest_wrapped_e.value) == (
@@ -316,7 +313,7 @@ def test_unified_deletions_only_additions(job_state: JobState) -> None:
         job_state.job.deletions_only = False
 
 
-@pytest.mark.parametrize('inpt, out', DIFF_TO_HTML_TEST_DATA)  # type: ignore[misc]
+@pytest.mark.parametrize(('inpt', 'out'), DIFF_TO_HTML_TEST_DATA)  # type: ignore[misc]
 def test_unified_diff_to_html(inpt: str, out: str, job_state: JobState) -> None:
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
@@ -431,17 +428,17 @@ def test_command_no_change(job_state: JobState) -> None:
     job_state.job.is_markdown = True
     diff = job_state.get_diff(tz=test_tz)
     assert not diff
-    assert 'changed,no_report' == job_state.verb
+    assert job_state.verb == 'changed,no_report'
 
     # redo as markdown
     diff = job_state.get_diff(report_kind='markdown')
     assert not diff
-    assert 'changed,no_report' == job_state.verb
+    assert job_state.verb == 'changed,no_report'
 
     # redo as html
     diff = job_state.get_diff(report_kind='html')
     assert not diff
-    assert 'changed,no_report' == job_state.verb
+    assert job_state.verb == 'changed,no_report'
 
 
 def test_command_change(job_state: JobState) -> None:
@@ -921,7 +918,6 @@ def test_image_identical(job_state: JobState) -> None:
 
 def test_ai_google_unchanged(job_state: JobState) -> None:
     """Test ai_google but with unchanged data as not to trigger API charges."""
-
     existing_key = os.environ.get('GEMINI_API_KEY')
     try:
         os.environ['GEMINI_API_KEY'] = generate_random_string(39)
@@ -936,7 +932,6 @@ def test_ai_google_unchanged(job_state: JobState) -> None:
 
 def test_ai_google_no_key(job_state: JobState) -> None:
     """Test ai_google with no key."""
-
     existing_key = os.environ.get('GEMINI_API_KEY')
     try:
         os.environ['GEMINI_API_KEY'] = ''
@@ -1138,7 +1133,7 @@ WDIFF_TEST_DATA = [
 ]
 
 
-@pytest.mark.parametrize('old_data, new_data, expected_text, expected_html', WDIFF_TEST_DATA)  # type: ignore[misc]
+@pytest.mark.parametrize(('old_data', 'new_data', 'expected_text', 'expected_html'), WDIFF_TEST_DATA)  # type: ignore[misc]
 def test_worddiff(old_data: str, new_data: str, expected_text: str, expected_html: str, job_state: JobState) -> None:
     job_state.job.differ = {'name': 'wdiff'}
     job_state.old_data = old_data

@@ -37,8 +37,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     """
 
     def insert_delay(jobs: set[JobBase]) -> set[JobBase]:  # pragma: no cover
-        """
-        TODO Evaluate whether this is necessary; currently not being called. Remove pragma no cover and move import.
+        """TODO Evaluate whether this is necessary; currently not being called. Remove pragma no cover and move import.
 
         Sets a _delay value for URL jobs having the same network location as previous ones. Used to prevent
         multiple jobs hitting the same network location at the exact same time and being blocked as a result.
@@ -69,8 +68,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         jobs: Iterable[JobBase],
         max_workers: int | None = None,
     ) -> None:
-        """
-        Runs the jobs in parallel.
+        """Runs the jobs in parallel.
 
         :param stack: The context manager.
         :param jobs: The jobs to run.
@@ -131,10 +129,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         urlwatcher.report.error(job_state)
             elif job_state.old_data or job_state.old_timestamp != 0:
                 # This is not the first time running this job (we have snapshots)
-                if (
-                    job_state.new_data == job_state.old_data
-                    or job_state.new_data in job_state.history_dic_snapshots.keys()
-                ):
+                if job_state.new_data == job_state.old_data or job_state.new_data in job_state.history_dic_snapshots:
                     # Exactly matches one of the previous snapshots
                     if job_state.tries > 0:
                         job_state.tries = 0
@@ -207,7 +202,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
 def get_virt_mem() -> int:
     """Return the amount of virtual memory available, i.e. the memory that can be given instantly to processes
-    without the system going into swap. Expressed in bytes."""
+    without the system going into swap. Expressed in bytes.
+    """
     if isinstance(psutil, str):
         raise ImportError(
             "Error when loading package 'psutil'; cannot use 'use_browser: true'. Please install "

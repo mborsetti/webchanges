@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import copy
 import email.utils
 import hashlib
@@ -41,6 +40,8 @@ except ImportError:  # pragma: no cover
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    import asyncio
+
     from webchanges.handler import JobState
     from webchanges.storage import _Config
 
@@ -87,19 +88,17 @@ if httpx is not None and logger.getEffectiveLevel() == logging.DEBUG:
 
 class NotModifiedError(Exception):
     """Raised when an HTTP 304 response status code (Not Modified client redirection) is received or the strong
-    validation ETag matches the previous one; this indicates that there was no change in content."""
-
-    ...
+    validation ETag matches the previous one; this indicates that there was no change in content.
+    """
 
 
 class BrowserResponseError(Exception):
     """Raised by 'url' jobs with 'use_browser: true' (i.e. using Playwright) when an HTTP error response status code is
-    received."""
+    received.
+    """
 
     def __init__(self, args: tuple[Any, ...], status_code: int | None) -> None:
-        """
-
-        :param args: Tuple with the underlying error args, typically a string with the error text.
+        """:param args: Tuple with the underlying error args, typically a string with the error text.
         :param status_code: The HTTP status code received.
         """
         Exception.__init__(self)
@@ -113,8 +112,7 @@ class BrowserResponseError(Exception):
                 f'{response_names.get(self.status_code, "")}'
                 + (f' with content "{self.args[0]}"' if self.args[0] else '')
             )
-        else:
-            return str(self.args[0])
+        return str(self.args[0])
 
 
 class JobBase(metaclass=TrackSubClasses):
@@ -219,13 +217,12 @@ class JobBase(metaclass=TrackSubClasses):
 
         # Fail if any required keys are not provided
         for k in self.__required__:
-            if k not in kwargs:
-                # do not alert for missing use_browser if kind is explicity stated
-                if k != 'use_browser' or not kwargs.get('kind'):
-                    raise ValueError(
-                        f"Job {kwargs.get('index_number')}: Required directive '{k}' missing: '{kwargs}'"
-                        f' ({kwargs.get("user_visible_url", kwargs.get("url", kwargs.get("command")))})'
-                    )
+            # do not alert for missing use_browser if kind is explicity stated
+            if k not in kwargs and (k != 'use_browser' or not kwargs.get('kind')):
+                raise ValueError(
+                    f"Job {kwargs.get('index_number')}: Required directive '{k}' missing: '{kwargs}'"
+                    f' ({kwargs.get("user_visible_url", kwargs.get("url", kwargs.get("command")))})'
+                )
 
         for k, v in list(kwargs.items()):
             setattr(self, k, v)
@@ -255,7 +252,7 @@ class JobBase(metaclass=TrackSubClasses):
 
         :returns: The user_visible_url, the URL, or the command of the job.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def get_indexed_location(self) -> str:
         """Get the job number plus its 'location', i.e. the (user_visible) URL or command. Typically used in error
@@ -264,11 +261,11 @@ class JobBase(metaclass=TrackSubClasses):
         :returns: The job number followed by a colon and the 'location' of the job, i.e. its user_visible_url, URL,
            or command.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def set_base_location(self, location: str) -> None:
         """Sets the job's location (command or url) to location.  Used for changing location (uuid)."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def pretty_name(self) -> str:
         """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (user_visible_url,
@@ -276,7 +273,7 @@ class JobBase(metaclass=TrackSubClasses):
 
         :returns: The 'pretty name' the job.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def serialize(self) -> dict:
         """Serialize the Job object, excluding its index_number (e.g. for saving).
@@ -355,11 +352,10 @@ class JobBase(metaclass=TrackSubClasses):
                         f"Error in jobs file: Job directive has no value or doesn't match a job type (check for "
                         f'errors/typos/escaping or documentation):\n{yaml.safe_dump(data)}'
                     )
-                else:
-                    raise ValueError(
-                        f"Error in jobs file: Job directives (with values) don't match a job type (check for "
-                        f'errors/typos/escaping):\n{yaml.safe_dump(data)}'
-                    )
+                raise ValueError(
+                    f"Error in jobs file: Job directives (with values) don't match a job type (check for "
+                    f'errors/typos/escaping):\n{yaml.safe_dump(data)}'
+                )
 
         # Remove extra required directives ("Falsy")
         other_subclasses: list[JobBase] = list(cls.__subclasses__.values())[1:]  # type: ignore[assignment]
@@ -399,7 +395,7 @@ class JobBase(metaclass=TrackSubClasses):
         :param data: Job data in dict format (e.g. from the YAML jobs file).
         :returns: A JobBase type object.
         """
-        for k in data.keys():
+        for k in data:
             # backward-compatibility
             if k not in cls.__required__ + cls.__optional__ + ('filter', 'diff_filter', 'http_client', 'http_proxy'):
                 if len(filenames) > 1:
@@ -421,7 +417,7 @@ class JobBase(metaclass=TrackSubClasses):
                         ]
                     )
                 )
-        return cls(**{k: v for k, v in list(data.items())})
+        return cls(**data)
 
     def __repr__(self) -> str:
         """Represent the Job object as a string.
@@ -453,15 +449,14 @@ class JobBase(metaclass=TrackSubClasses):
 
         :param defaults: The default Job parameters.
         """
-
         if isinstance(defaults, dict):
             # merge defaults from configuration (including dicts) into Job attributes without overwriting them
             for key, value in defaults.items():
                 if key in self.__optional__:
                     if getattr(self, key) is None:  # for speed
                         setattr(self, key, value)
-                    elif isinstance(defaults[key], (dict, Headers)) and isinstance(getattr(self, key), (dict, Headers)):
-                        for subkey, subvalue in defaults[key].items():
+                    elif isinstance(value, (dict, Headers)) and isinstance(getattr(self, key), (dict, Headers)):
+                        for subkey, subvalue in value.items():
                             if hasattr(self, key) and subkey not in getattr(self, key):
                                 getattr(self, key)[subkey] = subvalue
                     # elif isinstance(defaults[key], list) and isinstance(getattr(self, key), list):
@@ -510,7 +505,7 @@ class JobBase(metaclass=TrackSubClasses):
         return job_with_defaults
 
     def get_fips_guid(self) -> str:
-        # TODO Implement SHA256 hash GUIDs
+        # TODO: Implement SHA256 hash GUIDs
         """Calculate the GUID as a SHA256 hash of the location (URL or command).
 
         :returns: the GUID.
@@ -533,15 +528,13 @@ class JobBase(metaclass=TrackSubClasses):
         :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved and the ETag.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def main_thread_enter(self) -> None:
         """Called from the main thread before running the job. No longer needed (does nothing)."""
-        ...
 
     def main_thread_exit(self) -> None:
         """Called from the main thread after running the job. No longer needed (does nothing)."""
-        ...
 
     def format_error(self, exception: Exception, tb: str) -> str:
         """Format the error of the job if one is encountered.
@@ -623,7 +616,6 @@ class Job(JobBase):
 
         :returns: The user_visible_url, the URL, or the command of the job.
         """
-        ...
 
     def get_indexed_location(self) -> str:
         """Get the job number plus its 'location', i.e. the (user_visible) URL or command. Typically used in error
@@ -653,7 +645,6 @@ class Job(JobBase):
         :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved, the ETag, and the mime_type.
         """
-        ...
 
 
 CHARSET_RE = re.compile('text/(html|plain); charset=([^;]*)')
@@ -683,11 +674,7 @@ class UrlJobBase(Job):
 
         :returns: The headers.
         """
-
-        if self.headers:
-            headers = self.headers.copy()
-        else:
-            headers = Headers(encoding='utf-8')
+        headers = self.headers.copy() if self.headers else Headers(encoding='utf-8')
         if 'User-Agent' not in headers and user_agent:
             headers['User-Agent'] = user_agent
         if include_cookies and self.cookies:
@@ -708,18 +695,17 @@ class UrlJobBase(Job):
         if self.no_conditional_request:
             headers.pop('If-Modified-Since', None)
             headers.pop('If-None-Match', None)
+        elif self.ignore_cached or job_state.tries > 0:
+            headers['Cache-Control'] = 'max-age=172800'
+            headers['Expires'] = email.utils.formatdate()
+            headers['If-Modified-Since'] = email.utils.formatdate(0)
+            headers.pop('If-None-Match', None)
         else:
-            if self.ignore_cached or job_state.tries > 0:
-                headers['Cache-Control'] = 'max-age=172800'
-                headers['Expires'] = email.utils.formatdate()
-                headers['If-Modified-Since'] = email.utils.formatdate(0)
-                headers.pop('If-None-Match', None)
-            else:
-                if job_state.old_etag:
-                    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
-                    headers['If-None-Match'] = job_state.old_etag
-                if job_state.old_timestamp is not None:
-                    headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
+            if job_state.old_etag:
+                # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#caching_of_unchanged_resources
+                headers['If-None-Match'] = job_state.old_etag
+            if job_state.old_timestamp is not None:
+                headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
         return headers
 
 
@@ -765,7 +751,7 @@ class UrlJob(UrlJobBase):
         headers: (
             Mapping[str, str] | Mapping[bytes, bytes] | Sequence[tuple[str, str]] | Sequence[tuple[bytes, bytes]] | None
         ),
-        timeout: int | float | None,
+        timeout: float | None,
     ) -> tuple[str | bytes, str, str]:
         """Retrieves the data and Etag using the HTTPX library.
 
@@ -877,7 +863,7 @@ class UrlJob(UrlJobBase):
         return data, etag, mime_type
 
     def _retrieve_requests(
-        self, headers: Mapping[str, str | bytes] | None, timeout: int | float | None
+        self, headers: Mapping[str, str | bytes] | None, timeout: float | None
     ) -> tuple[str | bytes, str, str]:
         """Retrieves the data and Etag using the requests library.
 
@@ -1028,8 +1014,7 @@ class UrlJob(UrlJobBase):
 
             if FilterBase.filter_chain_needs_bytes(self.filters):
                 return filename.read_bytes(), '', 'application/octet-stream'
-            else:
-                return filename.read_text(), '', 'text/plain'
+            return filename.read_text(), '', 'text/plain'
 
         if urlparse(self.url).scheme == 'ftp':
             url = urlparse(self.url)
@@ -1053,16 +1038,15 @@ class UrlJob(UrlJobBase):
                     ftp.retrbinary(f'RETR {url.path}', callback_bytes)
 
                     return data_bytes, '', 'application/octet-stream'
-                else:
-                    data_list: list[str] = []
+                data_list: list[str] = []
 
-                    def callback(dt: str) -> None:
-                        """Handle FTP callback."""
-                        data_list.append(dt)
+                def callback(dt: str) -> None:
+                    """Handle FTP callback."""
+                    data_list.append(dt)
 
-                    ftp.retrlines(f'RETR {url.path}', callback)
+                ftp.retrlines(f'RETR {url.path}', callback)
 
-                    return '\n'.join(data_list), '', 'text/plain'
+                return '\n'.join(data_list), '', 'text/plain'
 
         headers = self.get_headers(job_state, include_cookies=False)
 
@@ -1085,9 +1069,8 @@ class UrlJob(UrlJobBase):
                     f'found a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
                 )
 
-        else:
-            if self.method is None:
-                self.method = 'GET'
+        elif self.method is None:
+            self.method = 'GET'
 
         # if self.headers:
         #     self.add_custom_headers(headers)
@@ -1210,12 +1193,12 @@ class UrlJob(UrlJobBase):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, httpx.TooManyRedirects):
                 return True
-            elif self.ignore_http_error_codes and isinstance(exception, httpx.HTTPStatusError):
+            if self.ignore_http_error_codes and isinstance(exception, httpx.HTTPStatusError):
                 status_code = exception.response.status_code
                 ignored_codes: list[str] = []
                 if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
                     return True
-                elif isinstance(self.ignore_http_error_codes, str):
+                if isinstance(self.ignore_http_error_codes, str):
                     ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
                 elif isinstance(self.ignore_http_error_codes, list):
                     ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
@@ -1227,7 +1210,7 @@ class UrlJob(UrlJobBase):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, requests.exceptions.TooManyRedirects):
                 return True
-            elif (
+            if (
                 self.ignore_http_error_codes
                 and isinstance(exception, requests.exceptions.HTTPError)
                 and exception.response is not None
@@ -1236,7 +1219,7 @@ class UrlJob(UrlJobBase):
                 ignored_codes = []
                 if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
                     return True
-                elif isinstance(self.ignore_http_error_codes, str):
+                if isinstance(self.ignore_http_error_codes, str):
                     ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
                 elif isinstance(self.ignore_http_error_codes, list):
                     ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
@@ -1322,7 +1305,7 @@ class BrowserJob(UrlJobBase):
             platform_string = f'{system_name}; {machine_arch}'
         return platform_string
 
-    def retrieve(
+    def retrieve(  # noqa: C901 mccabe complexity too high
         self,
         job_state: JobState,
         headless: bool = True,
@@ -1516,7 +1499,7 @@ class BrowserJob(UrlJobBase):
             # # launch playwright (memoized)
             # if self._playwright is None:
             #     logger.info('Starting the instance of playwright')
-            #     self._playwright = sync_playwright().start()  # TODO This should be in a context manager with .stop()
+            #     self._playwright = sync_playwright().start()  # TODO: This should be in a context manager with .stop()
 
             # # launch browser (memoized)
             # executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
@@ -1601,15 +1584,11 @@ class BrowserJob(UrlJobBase):
                     self.method = 'POST'
                 logger.info(f'Job {self.index_number}: Sending POST request to {url}')
                 if 'Content-Type' not in headers:
-                    if self.data_as_json:
-                        headers['Content-Type'] = 'application/json'
-                    else:
-                        headers['Content-Type'] = 'application/x-www-form-urlencoded'
+                    headers['Content-Type'] = (
+                        'application/json' if self.data_as_json else 'application/x-www-form-urlencoded'
+                    )
                 if isinstance(self.data, (dict, list)):
-                    if self.data_as_json:
-                        data = jsonlib.dumps(self.data, ensure_ascii=False)
-                    else:
-                        data = urlencode(self.data)
+                    data = jsonlib.dumps(self.data, ensure_ascii=False) if self.data_as_json else urlencode(self.data)
                 elif isinstance(self.data, str):
                     data = quote(self.data)
                 else:
@@ -1794,41 +1773,40 @@ class BrowserJob(UrlJobBase):
                 # extract content
                 if content_handler is not None:
                     return content_handler(page)
-                else:
-                    if self.evaluate is not None:
-                        content = page.evaluate(self.evaluate)
-                        if isinstance(content, str):
-                            mime_type = 'text/plain'
-                        elif isinstance(content, bytes):
-                            mime_type = 'application/octet-stream'
-                        else:
-                            try:
-                                content = jsonlib.dumps(content, ensure_ascii=False)
-                                mime_type = 'application/json'
-                            except TypeError:
-                                content = str(content)
-                                mime_type = 'text/plain'
+                if self.evaluate is not None:
+                    content = page.evaluate(self.evaluate)
+                    if isinstance(content, str):
+                        mime_type = 'text/plain'
+                    elif isinstance(content, bytes):
+                        mime_type = 'application/octet-stream'
                     else:
-                        content = page.content()
-                        mime_type = response.header_value('content-type') or ''
-                    etag = response.header_value('etag') or ''
-                    virtual_memory = psutil.virtual_memory().available
-                    swap_memory = psutil.swap_memory().free
-                    used_mem = start_free_mem - (virtual_memory + swap_memory)
-                    logger.debug(
-                        f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical '
-                        f'memory (plus {swap_memory / 1e6:,.0f} MB of swap) before closing the browser (a decrease of '
-                        f'{used_mem / 1e6:,.0f} MB).'
-                    )
+                        try:
+                            content = jsonlib.dumps(content, ensure_ascii=False)
+                            mime_type = 'application/json'
+                        except TypeError:
+                            content = str(content)
+                            mime_type = 'text/plain'
+                else:
+                    content = page.content()
+                    mime_type = response.header_value('content-type') or ''
+                etag = response.header_value('etag') or ''
+                virtual_memory = psutil.virtual_memory().available
+                swap_memory = psutil.swap_memory().free
+                used_mem = start_free_mem - (virtual_memory + swap_memory)
+                logger.debug(
+                    f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical '
+                    f'memory (plus {swap_memory / 1e6:,.0f} MB of swap) before closing the browser (a decrease of '
+                    f'{used_mem / 1e6:,.0f} MB).'
+                )
 
-                    # if no name directive is given, set to title tag if found in HTML or XML, truncated to 60 chars
-                    if not self.name and content:
-                        title = re.search(r'<title.*?>(.+?)</title>', content)
-                        if title:
-                            self.name = html.unescape(title.group(1))[:60]
+                # if no name directive is given, set to title tag if found in HTML or XML, truncated to 60 chars
+                if not self.name and content:
+                    title = re.search(r'<title.*?>(.+?)</title>', content)
+                    if title:
+                        self.name = html.unescape(title.group(1))[:60]
 
-                    context.close()
-                    return content, etag, mime_type
+                context.close()
+                return content, etag, mime_type
 
             except PlaywrightError as e:
                 logger.info(f'Job {self.index_number}: Browser returned error {e}\n({url})')
@@ -1961,34 +1939,31 @@ class BrowserJob(UrlJobBase):
         from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
         if isinstance(exception, (BrowserResponseError, PlaywrightError)):
-            if self.ignore_connection_errors:
-                if isinstance(exception, (BrowserResponseError, PlaywrightError)) or any(
-                    str(exception.args[0]).split()[0] == f'net::ERR_{error}' for error in chromium_connection_errors
-                ):
-                    return True
-            if self.ignore_timeout_errors:
-                if (
-                    isinstance(exception, PlaywrightTimeoutError)
-                    or str(exception.args[0].split()[0]) == 'net::ERR_TIMED_OUT'
-                ):
-                    return True
-            if self.ignore_too_many_redirects:
-                if str(exception.args[0].split()[0]) == 'net::ERR_TOO_MANY_REDIRECTS':
-                    return True
+            if self.ignore_connection_errors and (
+                isinstance(exception, (BrowserResponseError, PlaywrightError))
+                or any(str(exception.args[0]).split()[0] == f'net::ERR_{error}' for error in chromium_connection_errors)
+            ):
+                return True
+            if self.ignore_timeout_errors and (
+                isinstance(exception, PlaywrightTimeoutError)
+                or str(exception.args[0].split()[0]) == 'net::ERR_TIMED_OUT'
+            ):
+                return True
+            if self.ignore_too_many_redirects and str(exception.args[0].split()[0]) == 'net::ERR_TOO_MANY_REDIRECTS':
+                return True
 
         if isinstance(exception, BrowserResponseError) and self.ignore_http_error_codes:
             status_code = exception.status_code
             ignored_codes: list[str] = []
             if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
                 return True
-            elif isinstance(self.ignore_http_error_codes, str):
+            if isinstance(self.ignore_http_error_codes, str):
                 ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
             elif isinstance(self.ignore_http_error_codes, list):
                 ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
             if isinstance(status_code, int):
                 return str(status_code) in ignored_codes or f'{(status_code // 100) in ignored_codes}xx'
-            else:
-                return str(status_code)
+            return str(status_code)
         return False
 
 
@@ -2049,6 +2024,6 @@ class ShellJob(Job):
                 f'Error: Exit status {exception.returncode} returned from subprocess:\n'
                 f'{(exception.stderr or exception.stdout).strip()}'
             )
-        elif isinstance(exception, FileNotFoundError):
+        if isinstance(exception, FileNotFoundError):
             return f'Error returned by OS: {str(exception).strip()}'
         return tb

@@ -310,7 +310,7 @@ _ConfigDifferDefaults = TypedDict(
 _ConfigDatabase = TypedDict(
     '_ConfigDatabase',
     {
-        'engine': Literal['sqlite3', 'redis', 'minidb', 'textfiles'] | str,
+        'engine': Literal['sqlite3', 'redis', 'minidb', 'textfiles'] | str,  # noqa: PYI051
         'max_snapshots': int,
     },
 )
@@ -520,10 +520,7 @@ class BaseFileStorage(BaseStorage, ABC):
     """Base class for file storage."""
 
     def __init__(self, filename: str | Path) -> None:
-        """
-
-        :param filename: The filename or directory name to storage.
-        """
+        """:param filename: The filename or directory name to storage."""
         if isinstance(filename, str):
             self.filename = Path(filename)
         else:
@@ -534,42 +531,36 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
     """Base class for textual files."""
 
     def __init__(self, filename: str | Path) -> None:
-        """
-
-        :param filename: The filename or directory name to storage.
-        """
+        """:param filename: The filename or directory name to storage."""
         super().__init__(filename)
         # if not isinstance(self, JobsBaseFileStorage):
         #     self.load()
 
     @abstractmethod
-    def load(self, *args: Any) -> Any:
+    def load(self, *args: Any) -> Any:  # noqa: ANN401 Dynamically typed expressions (typing.Any) are disallowed
         """Load from storage.
 
         :param args: Specified by the subclass.
         :return: Specified by the subclass.
         """
-        pass
 
     @abstractmethod
-    def save(self, *args: Any, **kwargs: Any) -> Any:
+    def save(self, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401 Dynamically typed expressions (typing.Any) are disallowed
         """Save to storage.
 
         :param args: Specified by the subclass.
         :param kwargs: Specified by the subclass.
         :return: Specified by the subclass.
         """
-        pass
 
     @classmethod
     @abstractmethod
-    def parse(cls, filename: Path) -> Any:
+    def parse(cls, filename: Path) -> Any:  # noqa: ANN401 Dynamically typed expressions (typing.Any) are disallowed
         """Parse storage contents.
 
         :param filename: The filename.
         :return: Specified by the subclass.
         """
-        pass
 
     def edit(self) -> int:
         """Edit file.
@@ -600,13 +591,13 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
                 break  # stop if no exception on parser
             except SystemExit:
                 raise
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 Do not catch blind exception: `Exception`
                 print()
                 print('Errors in updating file:')
                 print('======')
                 print(e)
                 print('======')
-                print('')
+                print()
                 print(f'The file {filename} was NOT updated.')
                 user_input = input('Do you want to retry the same edit? [Y/n] ')
                 if not user_input or user_input.lower().startswith('y'):
@@ -631,6 +622,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
 
     def __init__(self, filename: list[Path]) -> None:
         """
+        Class for jobs textual files storage.
 
         :param filename: The filenames of the jobs file.
         """
@@ -683,7 +675,7 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
     """Base class for YAML textual files storage."""
 
     @classmethod
-    def parse(cls, filename: Path) -> Any:
+    def parse(cls, filename: Path) -> Any:  # noqa: ANN401 Dynamically typed expressions (typing.Any) are disallowed
         """Return contents of YAML file if it exists
 
         :param filename: The filename Path.
@@ -692,6 +684,7 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
         if filename is not None and filename.is_file():
             with filename.open() as fp:
                 return yaml.safe_load(fp)
+        return None
 
 
 class YamlConfigStorage(BaseYamlFileStorage):
@@ -723,9 +716,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     _sub_dict_deep_difference(value, d2_[key])  # type: ignore[arg-type,literal-required]
                     if not len(value):
                         d1_.pop(key)  # type: ignore[misc]
-                else:
-                    if key in d2_:
-                        d1_.pop(key)  # type: ignore[misc]
+                elif key in d2_:
+                    d1_.pop(key)  # type: ignore[misc]
             return d1_
 
         return _sub_dict_deep_difference(copy.deepcopy(d1), d2)
@@ -738,7 +730,6 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param destination: The second dict.
         :return: The deep merged dict.
         """
-
         # https://stackoverflow.com/a/20666342
 
         def _sub_dict_deep_merge(source_: _Config, destination_: _Config) -> _Config:
@@ -783,13 +774,13 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 sys.modules['hooks'], lambda x: inspect.isclass(x) and x.__module__ == 'hooks'
             ):
                 if issubclass(obj, JobBase):
-                    if obj.__kind__ not in DEFAULT_CONFIG['job_defaults'].keys():
+                    if (
+                        obj.__kind__ not in DEFAULT_CONFIG['job_defaults']
+                        or obj.__kind__ not in DEFAULT_CONFIG['job_defaults']
+                    ):
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
-                    elif obj.__kind__ not in DEFAULT_CONFIG['job_defaults'].keys():
-                        config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
-                elif issubclass(obj, ReporterBase):
-                    if obj.__kind__ not in DEFAULT_CONFIG['report'].keys():
-                        config_for_extras['report'].pop(obj.__kind__, None)  # type: ignore[misc]
+                elif issubclass(obj, ReporterBase) and obj.__kind__ not in DEFAULT_CONFIG['report']:
+                    config_for_extras['report'].pop(obj.__kind__, None)  # type: ignore[misc]
         if 'slack' in config_for_extras.get('report', {}):
             # Ignore legacy key
             config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
@@ -817,15 +808,12 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         "Found both 'shell' and 'command' job_defaults in config, a duplicate. Please remove 'shell' "
                         'ones.'
                     )
-                else:
-                    config['job_defaults']['command'] = config['job_defaults'].pop(
-                        'shell'  # type: ignore[typeddict-item]
-                    )
-            for key in {'all', 'url', 'browser', 'command'}:
-                if key not in config['job_defaults']:
-                    config['job_defaults'][key] = {}  # type: ignore[literal-required]
-                elif config['job_defaults'][key] is None:  # type: ignore[literal-required]
-                    config['job_defaults'][key] = {}  # type: ignore[literal-required]
+                config['job_defaults']['command'] = config['job_defaults'].pop(
+                    'shell'  # type: ignore[typeddict-item]
+                )
+            for key in ('all', 'url', 'browser', 'command'):
+                if key not in config['job_defaults'] or config['job_defaults'][key] is None:
+                    config['job_defaults'][key] = {}
 
     def load(self, *args: Any) -> None:
         """Load configuration file from self.filename into self.config adding missing keys from DEFAULT_CONFIG.
@@ -854,23 +842,15 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
 
             # format headers
-            for job_defaults_type in {'all', 'url', 'browser'}:
-                if 'headers' in config['job_defaults'][job_defaults_type]:  # type: ignore[literal-required]
-                    config['job_defaults'][job_defaults_type]['headers'] = Headers(  # type: ignore[literal-required]
-                        {
-                            k: str(v)
-                            for k, v in config['job_defaults'][job_defaults_type][  # type: ignore[literal-required]
-                                'headers'
-                            ].items()
-                        },
+            for job_defaults_type in ('all', 'url', 'browser'):
+                if 'headers' in config['job_defaults'][job_defaults_type]:
+                    config['job_defaults'][job_defaults_type]['headers'] = Headers(
+                        {k: str(v) for k, v in config['job_defaults'][job_defaults_type]['headers'].items()},
                         encoding='utf-8',
                     )
-                if 'cookies' in config['job_defaults'][job_defaults_type]:  # type: ignore[literal-required]
-                    config['job_defaults'][job_defaults_type]['cookies'] = {  # type: ignore[literal-required]
-                        k: str(v)
-                        for k, v in config['job_defaults'][job_defaults_type][  # type: ignore[literal-required]
-                            'cookies'
-                        ].items()
+                if 'cookies' in config['job_defaults'][job_defaults_type]:
+                    config['job_defaults'][job_defaults_type]['cookies'] = {
+                        k: str(v) for k, v in config['job_defaults'][job_defaults_type]['cookies'].items()
                     }
             logger.info(f'Loaded configuration from {self.filename}')
 
@@ -920,9 +900,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         """
 
         def job_files_for_error() -> list[str]:
-            """
-            :return: A list of line containing the names of the job files.
-            """
+            """:return: A list of line containing the names of the job files."""
             if len(filenames) > 1:
                 jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file},' for file in filenames]
             elif len(filenames) == 1:
@@ -946,8 +924,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     )
                 job_data['index_number'] = i + 1
                 job = JobBase.unserialize(job_data, filenames)
-                # TODO Implement 100% validation and remove it from jobs.py
-                # TODO Try using pydantic to do this.
+                # TODO: Implement 100% validation and remove it from jobs.py
+                # TODO: Try using pydantic to do this.
                 if not isinstance(job.data, (NoneType, str, dict, list)):
                     raise ValueError(
                         '\n   '.join(
@@ -1018,11 +996,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 )
             ) from None
 
-        conflicting_jobs = []
-        for _, guid_jobs in jobs_by_guid.items():
-            if len(guid_jobs) != 1:
-                conflicting_jobs.append(guid_jobs[0].get_location())
-
+        conflicting_jobs = [guid_jobs[0].get_location() for _, guid_jobs in jobs_by_guid.items() if len(guid_jobs) != 1]
         if conflicting_jobs:
             raise ValueError(
                 '\n   '.join(
@@ -1110,7 +1084,6 @@ class SsdbStorage(BaseFileStorage, ABC):
 
         :returns: Number of records deleted.
         """
-        pass
 
     @abstractmethod
     def delete_all(self) -> int:
@@ -1118,7 +1091,6 @@ class SsdbStorage(BaseFileStorage, ABC):
 
         :returns: Number of records deleted.
         """
-        pass
 
     @abstractmethod
     def clean(self, guid: str, keep_entries: int = 1) -> int:
@@ -1186,7 +1158,6 @@ class SsdbStorage(BaseFileStorage, ABC):
     @abstractmethod
     def flushdb(self) -> None:
         """Delete all entries of the database.  Use with care, there is no undo!"""
-        pass
 
 
 class SsdbDirStorage(SsdbStorage):
@@ -1225,16 +1196,14 @@ class SsdbDirStorage(SsdbStorage):
     def get_history_data(self, guid: str, count: int | None = None) -> dict[str | bytes, float]:
         if count is not None and count < 1:
             return {}
-        else:
-            snapshot = self.load(guid)
-            return {snapshot.data: snapshot.timestamp} if snapshot.data and snapshot.timestamp else {}
+        snapshot = self.load(guid)
+        return {snapshot.data: snapshot.timestamp} if snapshot.data and snapshot.timestamp else {}
 
     def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
         if count is not None and count < 1:
             return []
-        else:
-            snapshot = self.load(guid)
-            return [snapshot] if snapshot.data and snapshot.timestamp else []
+        snapshot = self.load(guid)
+        return [snapshot] if snapshot.data and snapshot.timestamp else []
 
     def save(self, *args: Any, guid: str, snapshot: Snapshot, **kwargs: Any) -> None:
         # ETag and mime_type are ignored
@@ -1246,7 +1215,6 @@ class SsdbDirStorage(SsdbStorage):
     def delete(self, guid: str) -> None:
         filename = self._get_filename(guid)
         filename.unlink(missing_ok=True)
-        return
 
     def delete_latest(self, guid: str, delete_entries: int = 1, **kwargs: Any) -> int:
         """For the given 'guid', delete the latest entry and keep all other (older) ones.
@@ -1280,7 +1248,13 @@ class SsdbDirStorage(SsdbStorage):
     def move(self, guid: str, new_guid: str) -> int:
         if guid == new_guid:
             return 0
-        os.rename(self._get_filename(guid), self._get_filename(new_guid))
+        old_filepath = Path(self._get_filename(guid))
+        new_filepath = Path(self._get_filename(new_guid))
+        if old_filepath.exists():
+            new_filepath.parent.mkdir(parents=True, exist_ok=True)
+            old_filepath.rename(new_filepath)
+        else:
+            raise ValueError(f'Old snapshot file {old_filepath} does not exist')
         return 1
 
     def rollback(self, timestamp: float) -> None:
@@ -1293,9 +1267,8 @@ class SsdbDirStorage(SsdbStorage):
 
 
 class SsdbSQLite3Storage(SsdbStorage):
-    """
-    Handles storage of the snapshot as a SQLite database in the 'filename' file using Python's built-in sqlite3 module
-    and the msgpack package.
+    """Handles storage of the snapshot as a SQLite database in the 'filename' file using Python's built-in sqlite3
+    module and the msgpack package.
 
     A temporary database is created by __init__ and will be written by the 'save()' function (unless temporary=False).
     This data will be written to the permanent one by the 'close()' function, which is called at the end of program
@@ -1310,8 +1283,7 @@ class SsdbSQLite3Storage(SsdbStorage):
     """
 
     def __init__(self, filename: Path, max_snapshots: int = 4) -> None:
-        """
-        :param filename: The full filename of the database file
+        """:param filename: The full filename of the database file
         :param max_snapshots: The maximum number of snapshots to retain in the database for each 'guid'
         """
         # Opens the database file and, if new, creates a table and index.
@@ -1380,18 +1352,16 @@ class SsdbSQLite3Storage(SsdbStorage):
         if args is None:
             logger.debug(f"Executing (perm) '{sql}'")
             return self.cur.execute(sql)
-        else:
-            logger.debug(f"Executing (perm) '{sql}' with {args}")
-            return self.cur.execute(sql, args)
+        logger.debug(f"Executing (perm) '{sql}' with {args}")
+        return self.cur.execute(sql, args)
 
     def _temp_execute(self, sql: str, args: tuple | None = None) -> sqlite3.Cursor:
         """Execute SQL command on temp database."""
         if args is None:
             logger.debug(f"Executing (temp) '{sql}'")
             return self.temp_cur.execute(sql)
-        else:
-            logger.debug(f"Executing (temp) '{sql}' with {args[:2]}...")
-            return self.temp_cur.execute(sql, args)
+        logger.debug(f"Executing (temp) '{sql}' with {args[:2]}...")
+        return self.temp_cur.execute(sql, args)
 
     def _copy_temp_to_permanent(self, delete: bool = False) -> None:
         """Copy contents of temporary database to permanent one.
@@ -1417,7 +1387,8 @@ class SsdbSQLite3Storage(SsdbStorage):
 
     def close(self) -> None:
         """Writes the temporary database to the permanent one, purges old entries if required, and closes all database
-        connections."""
+        connections.
+        """
         self._copy_temp_to_permanent()
         with self.temp_lock:
             self.temp_db.close()
@@ -1498,11 +1469,10 @@ class SsdbSQLite3Storage(SsdbStorage):
         if rows:
             for msgpack_data, timestamp in rows:
                 r = msgpack.unpackb(msgpack_data)
-                if not r['t']:  # No data is saved when errors are encountered; use get_history_snapshots()
-                    if r['d'] not in history:
-                        history[r['d']] = timestamp
-                        if count is not None and len(history) >= count:
-                            break
+                if not r['t'] and r['d'] not in history:
+                    history[r['d']] = timestamp
+                    if count is not None and len(history) >= count:
+                        break
         return history
 
     def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
@@ -1558,7 +1528,6 @@ class SsdbSQLite3Storage(SsdbStorage):
         :param etag: The ETag (could be empty string).
         :param temporary: If true, saved to temporary database (default).
         """
-
         c = {
             'd': snapshot.data,
             't': snapshot.tries,
@@ -1782,7 +1751,6 @@ class SsdbSQLite3Storage(SsdbStorage):
 
         :param minidb_filename: The filename of the legacy minidb database.
         """
-
         print("Found 'minidb' database and upgrading it to the new engine (note: only the last snapshot is retained).")
         logger.info(
             "Found legacy 'minidb' database and converting it to 'sqlite3' and new schema. Package 'minidb' needs to be"
@@ -1826,10 +1794,7 @@ class SsdbRedisStorage(SsdbStorage):
         del self.db
 
     def get_guids(self) -> list[str]:
-        guids = []
-        for guid in self.db.keys('guid:*'):
-            guids.append(guid[5:].decode())
-        return guids
+        return [guid.decode() for guid in self.db.keys('guid:*')]
 
     def load(self, guid: str) -> Snapshot:
         key = self._make_key(guid)
@@ -1849,14 +1814,13 @@ class SsdbRedisStorage(SsdbStorage):
 
         history = {}
         key = self._make_key(guid)
-        for i in range(0, self.db.llen(key)):
+        for i in range(self.db.llen(key)):
             r = self.db.lindex(key, i)
             c = msgpack.unpackb(r)
-            if c['tries'] == 0 or c['tries'] is None:
-                if c['data'] not in history:
-                    history[c['data']] = c['timestamp']
-                    if count is not None and len(history) >= count:
-                        break
+            if c['tries'] == 0 or (c['tries'] is None and c['data'] not in history):
+                history[c['data']] = c['timestamp']
+                if count is not None and len(history) >= count:
+                    break
         return history
 
     def get_history_snapshots(self, guid: str, count: int | None = None) -> list[Snapshot]:
@@ -1865,7 +1829,7 @@ class SsdbRedisStorage(SsdbStorage):
 
         history: list[Snapshot] = []
         key = self._make_key(guid)
-        for i in range(0, self.db.llen(key)):
+        for i in range(self.db.llen(key)):
             r = self.db.lindex(key, i)
             c = msgpack.unpackb(r)
             if c['tries'] == 0 or c['tries'] is None:
@@ -1929,7 +1893,7 @@ class SsdbRedisStorage(SsdbStorage):
         key = self._make_key(guid)
         i = self.db.llen(key)
         if self.db.ltrim(key, 0, 0):
-            return i - self.db.llen(key)
+            return i - self.db.llen(key)  # type: ignore[no-any-return] # bug!
 
         return 0
 
@@ -1941,7 +1905,7 @@ class SsdbRedisStorage(SsdbStorage):
         # Note if a list with 'new_key' already exists, the data stored there
         # will be overwritten.
         self.db.rename(key, new_key)  # type: ignore[no-untyped-call]
-        return self.db.llen(new_key)
+        return self.db.llen(new_key)  # type: ignore[no-any-return] # bug!
 
     def rollback(self, timestamp: float) -> None:
         raise NotImplementedError("Rolling back the database is not supported by 'redis' database engine")

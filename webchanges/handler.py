@@ -9,9 +9,6 @@ import subprocess
 import sys
 import time
 import traceback
-from concurrent.futures import Future
-from pathlib import Path
-from types import TracebackType
 from typing import TYPE_CHECKING, Any, ContextManager, Iterator, Literal, NamedTuple, TypedDict
 from zoneinfo import ZoneInfo
 
@@ -22,6 +19,10 @@ from webchanges.reporters import ReporterBase
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from concurrent.futures import Future
+    from pathlib import Path
+    from types import TracebackType
+
     from webchanges.jobs import JobBase
     from webchanges.main import Urlwatch
     from webchanges.storage import SsdbStorage, _Config, _ConfigDifferDefaults
@@ -92,8 +93,7 @@ class JobState(ContextManager):
     verb: Verb
 
     def __init__(self, snapshots_db: SsdbStorage, job: JobBase) -> None:
-        """
-        Initializes the class
+        """Initializes the class
 
         :param snapshots_db: The SsdbStorage object with the snapshot database methods.
         :param job: A JobBase object with the job information.
@@ -161,7 +161,7 @@ class JobState(ContextManager):
         """Loads form the database the last snapshot(s) for the job."""
         guid = self.job.guid
         self.old_snapshot = self.snapshots_db.load(guid)
-        # TODO Remove these
+        # TODO: Remove these
         (
             self.old_data,
             self.old_timestamp,
@@ -227,7 +227,7 @@ class JobState(ContextManager):
                 data, self.new_etag, mime_type = self.job.retrieve(self, headless)
                 logger.debug(
                     f'Job {self.job.index_number}: Retrieved data '
-                    f'{dict(data=data, etag=self.new_etag, mime_type=mime_type)}'
+                    f'{{data=data, etag=self.new_etag, mime_type=mime_type}}'
                 )
 
             except Exception as e:
@@ -348,10 +348,7 @@ class Report:
     start: float = time.perf_counter()
 
     def __init__(self, urlwatch: Urlwatch) -> None:
-        """
-
-        :param urlwatch: The Urlwatch object with the program configuration information.
-        """
+        """:param urlwatch: The Urlwatch object with the program configuration information."""
         self.config: _Config = urlwatch.config_storage.config
         self.tz = (
             ZoneInfo(self.config['report']['tz'])
@@ -472,14 +469,11 @@ class Report:
             if job_state.verb == 'repeated_error' and job_state.job.suppress_repeated_errors:
                 return True
             # Skip empty diffs unless empty-diff is configured
-            if (
+            return (
                 job_state.verb == 'changed'
                 and not self.config['display']['empty-diff']
                 and job_state.get_diff(tz=self.tz, differ_defaults=self.config['differ_defaults']) == ''
-            ):
-                return True
-
-            return False
+            )
 
         for job_state in job_states:
             if not should_skip_job(self, job_state):

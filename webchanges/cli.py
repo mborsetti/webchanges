@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 
 def python_version_warning() -> None:
     """Check if we're running on the minimum Python version supported and if so print and issue a pending deprecation
-    warning."""
+    warning.
+    """
     if sys.version_info[0:2] == __min_python_version__:
         current_minor_version = '.'.join(str(n) for n in sys.version_info[0:2])
         next_minor_version = f'{__min_python_version__[0]}.{__min_python_version__[1] + 1}'
@@ -126,10 +127,9 @@ def teardown_logger(verbose: int | None = None) -> None:
 
     :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
     """
-    if verbose is not None:
-        if verbose >= 2:
-            # https://playwright.dev/python/docs/debug#verbose-api-logs
-            os.environ.pop('DEBUG', None)
+    if verbose is not None and verbose >= 2:
+        # https://playwright.dev/python/docs/debug#verbose-api-logs
+        os.environ.pop('DEBUG', None)
 
 
 def _expand_glob_files(
@@ -167,7 +167,7 @@ def _expand_glob_files(
             return file_list
 
         # no directory specified (and not in current one): add default one
-        if not file.is_absolute() and not Path(file).parent == Path.cwd():
+        if not file.is_absolute() and Path(file).parent != Path.cwd():
             file_list = list(default_path.glob(str(file)))
             if any(f.is_file() for f in file_list):
                 return file_list
@@ -222,7 +222,7 @@ def locate_storage_file(
             return file
 
         # no directory specified (and not in current one): add default one
-        if file.parent == PurePath('.'):
+        if file.parent == PurePath():
             new_file = default_path.joinpath(file)
             if new_file.is_file():
                 return new_file
@@ -307,7 +307,8 @@ def load_hooks(hooks_file: Path, is_default: bool = False) -> None:
 
 def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
     """Handles CLI actions that do not require all classes etc. to be initialized (and command.py loaded). For speed
-    purposes."""
+    purposes.
+    """
 
     def _exit(arg: str | int | None) -> None:
         logger.info(f'Exiting with exit code {arg}')
@@ -323,16 +324,14 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
                 f"'pip install -U {__project_name__}'."
             )
             return 0
-        elif new_release == '':
+        if new_release == '':
             print(' You are running the latest release.')
             return 0
-        else:
-            print(' Error contacting PyPI to determine the latest release.')
-            return 1
+        print(' Error contacting PyPI to determine the latest release.')
+        return 1
 
     def playwright_install_chrome() -> int:  # pragma: no cover
-        """
-        Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
+        """Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
         install the browser executable.
 
         :return: Playwright's executable return code.
@@ -347,7 +346,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
         env['PW_CLI_TARGET_LANG'] = 'python'
         cmd = [str(driver_executable), 'install', 'chrome']
         logger.info(f'Running playwright CLI: {" ".join(cmd)}')
-        completed_process = subprocess.run(cmd, env=env, capture_output=True, text=True)  # noqa: S603
+        completed_process = subprocess.run(cmd, check=False, env=env, capture_output=True, text=True)  # noqa: S603
         if completed_process.returncode:
             print(completed_process.stderr)
             return completed_process.returncode
@@ -478,7 +477,7 @@ def main() -> None:  # pragma: no cover
     max_snapshots = command_config.max_snapshots or config_storage.config.get('database', {}).get('max_snapshots') or 4
     if database_engine == 'sqlite3':
         ssdb_storage: SsdbStorage = SsdbSQLite3Storage(command_config.ssdb_file, max_snapshots)  # storage.py
-    elif any(str(command_config.ssdb_file).startswith(prefix) for prefix in {'redis://', 'rediss://'}):
+    elif any(str(command_config.ssdb_file).startswith(prefix) for prefix in ('redis://', 'rediss://')):
         ssdb_storage = SsdbRedisStorage(command_config.ssdb_file)  # storage.py
     elif database_engine.startswith('redis'):
         ssdb_storage = SsdbRedisStorage(database_engine)

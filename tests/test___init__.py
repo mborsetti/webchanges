@@ -30,5 +30,5 @@ INITDATAKEYS = {
 
 
 def test_init_data() -> None:
-    assert set(key for key in init_data().keys() if key[:2] == '__').issuperset(INITDATAKEYS)
-    assert sorted([key for key in init_data().keys() if key[:2] == '__']) == sorted(INITDATAKEYS)
+    assert {key for key in init_data() if key[:2] == '__'}.issuperset(INITDATAKEYS)
+    assert sorted([key for key in init_data() if key[:2] == '__']) == sorted(INITDATAKEYS)

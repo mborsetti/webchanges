@@ -53,11 +53,11 @@ def is_connected() -> bool:
 
 
 connection_required = cast(
-    Callable[[Callable], Callable], pytest.mark.skipif(not is_connected(), reason='no Internet connection')
+    'Callable[[Callable], Callable]', pytest.mark.skipif(not is_connected(), reason='no Internet connection')
 )
 
 py_latest_only = cast(
-    Callable[[Callable], Callable],
+    'Callable[[Callable], Callable]',
     pytest.mark.skipif(
         sys.version_info < (3, 13),
         reason='Time consuming; testing latest version only',
@@ -206,7 +206,7 @@ def test__dict_deep__merge() -> None:
 
 @connection_required  # type: ignore[misc]
 @pytest.mark.parametrize(  # type: ignore[misc]
-    'input_job, output',
+    ('input_job', 'output'),
     TEST_JOBS,
     ids=(f'{type(JobBase.unserialize(v[0])).__name__}: {v[1]}' for v in TEST_JOBS),  # type: ignore[arg-type]
 )
@@ -301,9 +301,10 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
     job = JobBase.unserialize(job_data)
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
-        assert job_state.exception and any(
+        assert job_state.exception
+        assert any(
             x in str(job_state.exception.args)
-            for x in {'Max retries exceeded', 'Timeout 0.1ms exceeded.', 'timed out', 'Connection refused'}
+            for x in ('Max retries exceeded', 'Timeout 0.1ms exceeded.', 'timed out', 'Connection refused')
         )
         assert getattr(job_state, 'error_ignored', False) is False
 
@@ -332,15 +333,16 @@ def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         if job_state.exception and not isinstance(job_state.exception, BrowserResponseError):
-            assert job_state.exception and any(
+            assert job_state.exception
+            assert any(
                 x in str(job_state.exception.args)
-                for x in {
+                for x in (
                     'Max retries exceeded',
                     'Read timed out',
                     'Timeout 0.1ms exceeded.',
                     'timed out',
                     'Connection refused',
-                }
+                )
             )
         assert job_state.error_ignored is False
 
@@ -394,7 +396,7 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
 def test_stress_use_browser() -> None:
     jobs_file = data_path.joinpath('jobs-use_browser.yaml')
     config_file = data_path.joinpath('config.yaml')
-    hooks_file = Path('')
+    hooks_file = Path()
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
@@ -508,7 +510,8 @@ def test_with_defaults() -> None:
 
 def test_with_defaults_headers() -> None:
     """Tests that the default headers are overwritten correctly: those more specific (i.e. ``url`` and ``browser``)
-    override those more generic (i.e. ``all``)."""
+    override those more generic (i.e. ``all``).
+    """
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
     config: _Config = {  # type: ignore[typeddict-item]
@@ -575,7 +578,7 @@ def test_shell_error() -> None:
 
 def test_compared_versions() -> None:
     config_file = data_path.joinpath('config.yaml')
-    hooks_file = Path('')
+    hooks_file = Path()
     jobs_file = data_path.joinpath('jobs-time.yaml')
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])

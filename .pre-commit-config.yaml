@@ -66,14 +66,14 @@ repos:
 #        description: Checks for the existence of AWS secrets that you have set up with the AWS CLI.
 #      - id: detect-private-key  # have none
 #        description: Checks for the existence of private keys.
-      - id: double-quote-string-fixer
-        description: This hook replaces double quoted strings with single quoted strings.
-      - id: end-of-file-fixer
-        description: Makes sure files end in a newline and only a newline.
+      # - id: double-quote-string-fixer  # [superseded by ruff format]
+      #   description: This hook replaces double quoted strings with single quoted strings.
+      # - id: end-of-file-fixer  # [superseded by ruff format]
+      #   description: Makes sure files end in a newline and only a newline.
 #      - id: file-contents-sorter
 #        description: Sort the lines in specified files (defaults to alphabetical).
-      - id: fix-byte-order-marker
-        description: removes UTF-8 byte order marker
+      # - id: fix-byte-order-marker  # [superseded by ruff format]
+      #   description: removes UTF-8 byte order marker
 #      - id: forbid-new-submodules
 #        description: Prevent addition of new git submodules
       - id: forbid-submodules

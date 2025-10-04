@@ -1197,7 +1197,7 @@ plus additional text (``(?!\n.+)``):
 .. code-block:: yaml
 
    url: https://example.com/regex-lastline.html
-   command: python -c "[print(f'line {n}') for n in range(0, 3)]"
+   command: python -c "[print(f'line {n}') for n in range(3)]"
    filters:
      - re.findall: '(?m)(^.*$)(?!\n.+)'
 

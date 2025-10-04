@@ -25,19 +25,26 @@ from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, Literal, TypedDict
 from xml.parsers.expat import ExpatError
-from zoneinfo import ZoneInfo
 
 import html2text
 import yaml
 
-from webchanges.jobs import JobBase
 from webchanges.util import TrackSubClasses, linkify, mark_to_html
+
+if TYPE_CHECKING:
+    from zoneinfo import ZoneInfo
+
+    from webchanges.jobs import JobBase
+
 
 try:
     from deepdiff import DeepDiff
-    from deepdiff.model import DiffLevel
+
+    if TYPE_CHECKING:
+        from deepdiff.model import DiffLevel
 except ImportError as e:  # pragma: no cover
     DeepDiff = str(e)  # type: ignore[assignment,misc]
+
 
 try:
     import httpx
@@ -113,10 +120,7 @@ class DifferBase(metaclass=TrackSubClasses):
     css_remvd_style = 'text-decoration:line-through;'
 
     def __init__(self, state: JobState) -> None:
-        """
-
-        :param state: the JobState.
-        """
+        """:param state: the JobState."""
         self.job = state.job
         self.state = state
 
@@ -179,11 +183,11 @@ class DifferBase(metaclass=TrackSubClasses):
                     if key in directives:
                         if directives[key] is None:  # for speed
                             directives[key] = value
-                        elif isinstance(differ_default[key], dict) and isinstance(
+                        elif isinstance(value, dict) and isinstance(
                             directives[key],
                             dict,
                         ):
-                            for subkey, subvalue in differ_default[key].items():
+                            for subkey, subvalue in value.items():
                                 if key in directives and subkey not in directives[key]:
                                     directives[key][subkey] = subvalue
                         # elif isinstance(differ_default[key], list) and isinstance(directives[key], list):
@@ -306,7 +310,7 @@ class DifferBase(metaclass=TrackSubClasses):
            (as a minimum for the report_kind requested).
         :raises RuntimeError: If the external diff tool returns an error.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @staticmethod
     def make_timestamp(
@@ -325,13 +329,9 @@ class DifferBase(metaclass=TrackSubClasses):
         if timestamp:
             dt = datetime.fromtimestamp(timestamp).astimezone(tz=tz)
             # add timezone name if known
-            if dt.strftime('%Z') != dt.strftime('%z')[:3]:
-                cfws = f' ({dt.strftime("%Z")})'
-            else:
-                cfws = ''
+            cfws = f' ({dt.strftime("%Z")})' if dt.strftime('%Z') != dt.strftime('%z')[:3] else ''
             return dt.strftime('%a, %d %b %Y %H:%M:%S %z') + cfws
-        else:
-            return 'NEW'
+        return 'NEW'
 
     @staticmethod
     def html2text(data: str) -> str:
@@ -375,15 +375,13 @@ class UnifiedDiffer(DifferBase):
     }
 
     def unified_diff_to_html(self, diff: str) -> Iterator[str]:
-        """
-        Generates a colorized HTML table from unified diff, applying styles and processing based on job values.
+        """Generates a colorized HTML table from unified diff, applying styles and processing based on job values.
 
         :param diff: the unified diff
         """
 
         def process_line(line: str, line_num: int, is_markdown: bool, monospace_style: str) -> str:
-            """
-            Processes each line for HTML output, handling special cases and styles.
+            """Processes each line for HTML output, handling special cases and styles.
 
             :param line: The line to analyze.
             :param line_num: The line number in the document.
@@ -446,10 +444,7 @@ class UnifiedDiffer(DifferBase):
             empty_return: dict[Literal['text', 'markdown', 'html'], str] = {'text': '', 'markdown': '', 'html': ''}
             contextlines = directives.get('context_lines', self.job.contextlines)
             if contextlines is None:
-                if additions_only or deletions_only:
-                    contextlines = 0
-                else:
-                    contextlines = 3
+                contextlines = 0 if additions_only or deletions_only else 3
             diff = list(
                 difflib.unified_diff(
                     str(self.state.old_data).splitlines(),
@@ -479,7 +474,7 @@ class UnifiedDiffer(DifferBase):
                     ]
                 else:
                     head = '---' + diff[0][3:]
-                    diff = [line for line in diff if line.startswith('+') or line.startswith('@')]
+                    diff = [line for line in diff if line.startswith(('+', '@'))]
                     diff = [
                         line1
                         for line1, line2 in zip(['', *diff], [*diff, ''], strict=False)
@@ -492,7 +487,7 @@ class UnifiedDiffer(DifferBase):
                     diff = [head, diff[0], '/**Comparison type: Additions only**', *diff[1:]]
             elif deletions_only:
                 head = '--- @' + diff[1][3:]
-                diff = [line for line in diff if line.startswith('-') or line.startswith('@')]
+                diff = [line for line in diff if line.startswith(('-', '@'))]
                 diff = [
                     line1
                     for line1, line2 in zip(['', *diff], [*diff, ''], strict=False)
@@ -649,7 +644,7 @@ class CommandDiffer(DifferBase):
                 else:
                     new_file_path.write_bytes(new_data)
                 cmdline = [*shlex.split(command), str(old_file_path), str(new_file_path)]
-                proc = subprocess.run(cmdline, capture_output=True, text=True)  # noqa: S603 subprocess call
+                proc = subprocess.run(cmdline, check=False, capture_output=True, text=True)  # noqa: S603 subprocess call
             if proc.stderr or proc.returncode > 1:
                 raise RuntimeError(
                     f"Job {self.job.index_number}: External differ '{directives}' returned '{proc.stderr.strip()}' "
@@ -676,10 +671,9 @@ class CommandDiffer(DifferBase):
                 diff = markdown_links_re.sub(lambda x: f'[{urllib.parse.unquote(x.group(1))}]({x.group(2)})', diff)
             if command.startswith('wdiff') and self.job.contextlines == 0:
                 # remove lines that don't have any changes
-                keeplines = []
-                for line in diff.splitlines(keepends=True):
-                    if any(x in line for x in {'{+', '+}', '[-', '-]'}):
-                        keeplines.append(line)
+                keeplines = [
+                    line for line in diff.splitlines(keepends=True) if any(x in line for x in ('{+', '+}', '[-', '-]'))
+                ]
                 diff = ''.join(keeplines)
             if directives.get('is_html'):
                 diff_text = self.html2text(diff)
@@ -712,8 +706,7 @@ class CommandDiffer(DifferBase):
         return out_diff
 
     def wdiff_to_html(self, diff: str) -> str:
-        """
-        Colorize output of wdiff.
+        """Colorize output of wdiff.
 
         :param diff: The output of the wdiff command.
         :returns: The colorized HTML output.
@@ -762,8 +755,7 @@ class CommandDiffer(DifferBase):
         )
         if self.job.monospace:
             return f'<span style="font-family:monospace;white-space:pre-wrap">{html_diff}</span>'
-        else:
-            return html_diff
+        return html_diff
 
 
 class DeepdiffDiffer(DifferBase):
@@ -779,7 +771,7 @@ class DeepdiffDiffer(DifferBase):
         'compact': 'Whether to output a compact representation that also ignores changes of types (default: false)',
     }
 
-    def differ(
+    def differ(  # noqa: C901 mccabe complexity too high
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
@@ -788,7 +780,7 @@ class DeepdiffDiffer(DifferBase):
     ) -> dict[Literal['text', 'markdown', 'html'], str]:
         if isinstance(DeepDiff, str):  # pragma: no cover
             self.raise_import_error('deepdiff', DeepDiff)
-            raise RuntimeError()  # for type checker
+            raise RuntimeError  # for type checker
 
         span_added = f'<span style="{self.css_added_style}">'
         span_deltd = f'<span style="{self.css_deltd_style}">'
@@ -799,8 +791,7 @@ class DeepdiffDiffer(DifferBase):
             report_kind: Literal['text', 'markdown', 'html'],
             compact: bool,
         ) -> str:
-            """
-            Customized version of deepdiff.serialization.SerializationMixin.pretty method, edited to include the
+            """Customized version of deepdiff.serialization.SerializationMixin.pretty method, edited to include the
             values deleted or added and an option for colorized HTML output. The pretty human-readable string
             output for the diff object regardless of what view was used to generate the diff.
 
@@ -902,18 +893,16 @@ class DeepdiffDiffer(DifferBase):
                     }
 
             def _pretty_print_diff(ddiff: DiffLevel) -> str:
-                """
-                Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
+                """Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
                 values deleted or added.
                 """
 
-                def stringify_value(value: Any, type: str) -> str:
-                    if type in {'str', 'int', 'float'}:
+                def stringify_value(value: Any, value_type: str) -> str:  # noqa: ANN401 Dynamically typed expressions Any are disallowed
+                    if value_type in {'str', 'int', 'float'}:
                         if compact:
                             return f"'{value}'"
-                        else:
-                            return f'"{value}"'
-                    elif type in {'dict', 'list'}:
+                        return f'"{value}"'
+                    if value_type in {'dict', 'list'}:
                         if compact:
                             value_string = yaml.safe_dump(
                                 value,
@@ -924,13 +913,11 @@ class DeepdiffDiffer(DifferBase):
                             )
                             value_list = value_string.splitlines(keepends=True)
                             if len(value_list) < 2:
-                                return value_string
+                                return value_string  # type: ignore[no-any-return] # bug!
                             value_string = '\n    ' + '    '.join(value_list)
                             return value_string.rstrip()
-                        else:
-                            return jsonlib.dumps(value, ensure_ascii=False, indent=2)  # type: ignore[no-any-return]
-                    else:
-                        return str(value)
+                        return jsonlib.dumps(value, ensure_ascii=False, indent=2)  # type: ignore[no-any-return]
+                    return str(value)
 
                 type_t1 = type(ddiff.t1).__name__
                 val_t1 = stringify_value(ddiff.t1, type_t1)
@@ -950,15 +937,14 @@ class DeepdiffDiffer(DifferBase):
                 )
 
             def _pretty_print_diff_markdown_to_html(ddiff: DiffLevel) -> str:
-                """
-                Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
+                """Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
                 values deleted or added and to convert markdown into html.
                 """
 
-                def stringify_value(value: Any, type: str) -> str:
-                    if type in {'str', 'int', 'float'}:
+                def stringify_value(value: Any, value_type: str) -> str:  # noqa: ANN401 Dynamically typed expressions Any are disallowed
+                    if value_type in {'str', 'int', 'float'}:
                         return f"'{mark_to_html(str(value))}'"
-                    elif type in {'dict', 'list'}:
+                    if value_type in {'dict', 'list'}:
                         if compact:
                             value_string = yaml.safe_dump(
                                 value,
@@ -969,13 +955,11 @@ class DeepdiffDiffer(DifferBase):
                             )
                             value_list = value_string.splitlines(keepends=True)
                             if len(value_list) < 2:
-                                return value_string
+                                return value_string  # type: ignore[no-any-return] # bug!
                             value_string = mark_to_html('\n    ' + '    '.join(value_list))
                             return value_string.rstrip()
-                        else:
-                            return mark_to_html(jsonlib.dumps(value, ensure_ascii=False, indent=2))
-                    else:
-                        return mark_to_html(str(value))
+                        return mark_to_html(jsonlib.dumps(value, ensure_ascii=False, indent=2))
+                    return mark_to_html(str(value))
 
                 type_t1 = type(ddiff.t1).__name__
                 val_t1 = stringify_value(ddiff.t1, type_t1)
@@ -994,15 +978,15 @@ class DeepdiffDiffer(DifferBase):
                     val_t2=val_t2,
                 )
 
-            result: list[str] = []
-            if report_kind == 'html' and self.state.is_markdown():
-                for tree_item in ddiff.tree.values():
-                    for item_key in tree_item:
-                        result.append(_pretty_print_diff_markdown_to_html(item_key))
-            else:
-                for tree_item in ddiff.tree.values():
-                    for item_key in tree_item:
-                        result.append(_pretty_print_diff(item_key))
+            result = (
+                [
+                    _pretty_print_diff_markdown_to_html(item_key)
+                    for tree_item in ddiff.tree.values()
+                    for item_key in tree_item
+                ]
+                if report_kind == 'html' and self.state.is_markdown()
+                else [_pretty_print_diff(item_key) for tree_item in ddiff.tree.values() for item_key in tree_item]
+            )
 
             return '\n'.join(result)
 
@@ -1077,7 +1061,7 @@ class DeepdiffDiffer(DifferBase):
             elif data_type == 'xml':
                 if isinstance(xmltodict, str):  # pragma: no cover
                     self.raise_import_error('xmltodict', xmltodict)
-                    raise RuntimeError()  # for type checker
+                    raise RuntimeError  # for type checker
                 try:
                     parsed_data = xmltodict.parse(data)
                 except ExpatError as e:
@@ -1145,14 +1129,13 @@ class DeepdiffDiffer(DifferBase):
                 + '</span>'
             )
             return {'html': html_diff}
-        else:
-            text_diff = (
-                # f'Differ: {self.__kind__} for {data_type}\n'
-                f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\n'
-                f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\n'
-                f'{diff_text}'
-            )
-            return {'text': text_diff, 'markdown': text_diff}
+        text_diff = (
+            # f'Differ: {self.__kind__} for {data_type}\n'
+            f'--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\n'
+            f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\n'
+            f'{diff_text}'
+        )
+        return {'text': text_diff, 'markdown': text_diff}
 
 
 class ImageDiffer(DifferBase):
@@ -1172,7 +1155,7 @@ class ImageDiffer(DifferBase):
         'ai_google': 'Generative AI summary of changes (BETA)',
     }
 
-    def differ(
+    def differ(  # noqa: C901 mccabe complexity too high
         self,
         directives: dict[str, Any],
         report_kind: Literal['text', 'markdown', 'html'],
@@ -1188,31 +1171,31 @@ class ImageDiffer(DifferBase):
         )
         if isinstance(Image, str):  # pragma: no cover
             self.raise_import_error('pillow', Image)
-            raise RuntimeError()  # for type checker
+            raise RuntimeError  # for type checker
         if isinstance(httpx, str):  # pragma: no cover
             self.raise_import_error('httpx', httpx)
-            raise RuntimeError()  # for type checker
+            raise RuntimeError  # for type checker
 
         def load_image_from_web(url: str) -> Image.Image:
             """Fetches the image from an url."""
-            logging.debug(f'Retrieving image from {url}')
+            logger.debug(f'Retrieving image from {url}')
             with httpx.stream('GET', url, timeout=10) as response:
                 response.raise_for_status()
                 return Image.open(BytesIO(b''.join(response.iter_bytes())))
 
         def load_image_from_file(filename: str) -> Image.Image:
             """Load an image from a file."""
-            logging.debug(f'Reading image from {filename}')
+            logger.debug(f'Reading image from {filename}')
             return Image.open(filename)
 
         def load_image_from_base64(base_64: str) -> Image.Image:
             """Load an image from an encoded bytes object."""
-            logging.debug('Retrieving image from a base64 string')
+            logger.debug('Retrieving image from a base64 string')
             return Image.open(BytesIO(base64.b64decode(base_64)))
 
         def load_image_from_ascii85(ascii85: str) -> Image.Image:
             """Load an image from an encoded bytes object."""
-            logging.debug('Retrieving image from an ascii85 string')
+            logger.debug('Retrieving image from an ascii85 string')
             return Image.open(BytesIO(base64.a85decode(ascii85)))
 
         def compute_diff_image(img1: Image.Image, img2: Image.Image) -> tuple[Image.Image, np.float64]:
@@ -1499,13 +1482,13 @@ class ImageDiffer(DifferBase):
         # If needed, shrink the larger image
         if new_image.size != old_image.size:
             if new_image.size > old_image.size:
-                logging.debug(f'Job {self.job.index_number}: Shrinking the new image')
+                logger.debug(f'Job {self.job.index_number}: Shrinking the new image')
                 img_format = new_image.format
                 new_image = new_image.resize(old_image.size, Image.Resampling.LANCZOS)
                 new_image.format = img_format
 
             else:
-                logging.debug(f'Job {self.job.index_number}: Shrinking the old image')
+                logger.debug(f'Job {self.job.index_number}: Shrinking the old image')
                 img_format = old_image.format
                 old_image = old_image.resize(new_image.size, Image.Resampling.LANCZOS)
                 old_image.format = img_format
@@ -1815,10 +1798,7 @@ class AIGoogleDiffer(DifferBase):
                 unified_diff = ''
 
             if '{unified_diff_new}' in prompt:
-                unified_diff_new_lines = []
-                for line in unified_diff.splitlines():
-                    if line.startswith('+'):
-                        unified_diff_new_lines.append(line[1:])
+                unified_diff_new_lines = [line[1:] for line in unified_diff.splitlines() if line.startswith('+')]
                 unified_diff_new = '\n'.join(unified_diff_new_lines)
             else:
                 unified_diff_new = ''
@@ -2139,10 +2119,9 @@ class WdiffDiffer(DifferBase):
                     last_line = i + 1
                 else:
                     skip = True
-            if (i + 1) != last_line:
-                if range_info and skip:
-                    new_diff_text.append(f'@@ {last_line + 1}...{i + 1} @@')
-                    new_diff_html.append(f'@@ {last_line + 1}...{i + 1} @@')
+            if (i + 1) != last_line and range_info and skip:
+                new_diff_text.append(f'@@ {last_line + 1}...{i + 1} @@')
+                new_diff_html.append(f'@@ {last_line + 1}...{i + 1} @@')
             diff_text = '\n'.join(new_diff_text)
             diff_html = '\n'.join(new_diff_html)
 
