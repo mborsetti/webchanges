@@ -531,7 +531,7 @@ class TextReporter(ReporterBase):
                 )
 
     def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
-        """Returns the text of the report for a job; called by _format_output.
+        """Returns the plain text of the report for a job; called by _format_output.
 
         :param job_state: The JobState object with the job information.
         :param differ: The type of differ to use.
@@ -555,7 +555,7 @@ class TextReporter(ReporterBase):
         if job_state.old_data in {None, job_state.new_data}:
             return None
 
-        return job_state.get_diff('text', differ=differ, differ_defaults=self.differ_defaults, tz=self.tz)
+        return job_state.get_diff('plain', differ=differ, differ_defaults=self.differ_defaults, tz=self.tz)
 
     def _format_output(self, job_state: JobState, line_length: int) -> tuple[list[str], list[str]]:
         summary_part: list[str] = []

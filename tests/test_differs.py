@@ -412,7 +412,7 @@ def test_table_diff_normal(job_state: JobState) -> None:
         '---|---|---|---',
         't| 1| a| t| 1| b',
     ]
-    diff = job_state.get_diff(report_kind='text')
+    diff = job_state.get_diff(report_kind='plain')
     assert diff.splitlines() == expected
 
 
@@ -649,7 +649,9 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
 def test_deepdiff_json_no_change(job_state: JobState) -> None:
     """Test deepdiff json differ with bad data."""
     job_state.old_data = '{"test": 1}'
+    job_state.old_mime_type = 'application/json'
     job_state.new_data = '{"test": 1}'
+    job_state.new_mime_type = 'application/json'
     job_state.job.differ = {'name': 'deepdiff'}
     diff = job_state.get_diff()
     assert diff == ''
@@ -696,6 +698,17 @@ def test_deepdiff_xml_and_yaml(job_state: JobState) -> None:
     ]
     diff = job_state.get_diff(tz=test_tz)
     assert diff.splitlines() == expected
+
+
+def test_deepdiff_yaml_and_json(job_state: JobState) -> None:
+    """Test deepdiff json differ with bad data."""
+    job_state.old_data = 'test: 1'
+    job_state.old_mime_type = 'application/yaml'
+    job_state.new_data = '{"test": 1}'
+    job_state.new_mime_type = 'application/json'
+    job_state.job.differ = {'name': 'deepdiff'}
+    diff = job_state.get_diff()
+    assert diff == ''
 
 
 # @py_nt_only

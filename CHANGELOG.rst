@@ -30,6 +30,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Removed, for now removed features. [if to API, triggers a major revision]
    Fixed, for any bug fixes. [triggers a minor patch]
    Security, in case of vulnerabilities. [triggers a minor patch]
+   Internals impacting hooks.py, for changes that affect developers only. [triggers a minor patch]
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
@@ -46,6 +47,13 @@ October 2025.
 Fixed
 `````
 * Certain job Exceptions would fail with a yaml Exception.
+* Fixed ``deepdiff`` differ to handle plain strings correctly (e.g. when an API typically returning JSON starts
+  returning an error in HTML.
+
+Internals impacting hooks.py
+`````````````````````````````
+* In the Differ class, the value ``text`` of the ``report_kind`` argument in the ``process`` method has been renamed 
+  to ``plain`` for clarity, in alignment with IANA's media type nomenclature.
 
 Internals
 `````````
@@ -53,6 +61,9 @@ Internals
 * Updated run-gemini-cli to fix GitHub error.
 * Fixed pre-commit.ci failing checks on new PRs.
 
+Impact on hooks
+*
+```````````````
 
 Version 3.31.2
 ------------------

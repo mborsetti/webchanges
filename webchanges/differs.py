@@ -104,9 +104,19 @@ AiGoogleDirectives = TypedDict(
     total=False,
 )
 
+ReportKind = Literal['plain', 'markdown', 'html']
+
 
 class DifferBase(metaclass=TrackSubClasses):
-    """The base class for differs."""
+    """The base class for differs.
+
+    A differ generates a textual diff representation of data changes in the textual format requested, which can be
+    either plain, markdown, or html.
+
+    The diff text (before any filtering) is memoized to prevent unneeded resource wastage when running multiple
+    reporters, or running reporters that require multiple formats, such as HTML smtp email (requires text in both html
+    and plain formats).
+    """
 
     __subclasses__: dict[str, type[DifferBase]] = {}
     __anonymous_subclasses__: list[type[DifferBase]] = []
@@ -232,10 +242,10 @@ class DifferBase(metaclass=TrackSubClasses):
         differ_kind: str,
         directives: dict[str, Any],
         job_state: JobState,
-        report_kind: Literal['text', 'markdown', 'html'] = 'text',
+        report_kind: ReportKind = 'plain',
         tz: ZoneInfo | None = None,
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
+    ) -> dict[ReportKind, str]:
         """Process the differ.
 
         :param differ_kind: The name of the differ.
@@ -268,7 +278,7 @@ class DifferBase(metaclass=TrackSubClasses):
                     ', '.join(f'{key}={value}' for key, value in directives.items()) if directives else 'None'
                 )
                 return {
-                    'text': (
+                    'plain': (
                         f'Differ {differ_kind} with directive(s) {directives_text} encountered an '
                         f'error:\n\n{job_state.traceback}'
                     ),
@@ -289,10 +299,10 @@ class DifferBase(metaclass=TrackSubClasses):
     def differ(
         self,
         directives: dict[str, Any],
-        report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        report_kind: ReportKind,
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+    ) -> dict[ReportKind, str]:
         """Generate a formatted diff representation of data changes.
 
         Creates a diff representation in one or more output formats (text, markdown, or HTML).
@@ -431,17 +441,17 @@ class UnifiedDiffer(DifferBase):
     def differ(
         self,
         directives: dict[str, Any],
-        report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        report_kind: ReportKind,
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+    ) -> dict[ReportKind, str]:
         additions_only = directives.get('additions_only') or self.job.additions_only
         deletions_only = directives.get('deletions_only') or self.job.deletions_only
-        out_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
-        if report_kind == 'html' and _unfiltered_diff is not None and 'text' in _unfiltered_diff:
-            diff_text = _unfiltered_diff['text']
+        out_diff: dict[ReportKind, str] = {}
+        if report_kind == 'html' and _unfiltered_diff is not None and 'plain' in _unfiltered_diff:
+            diff_text = _unfiltered_diff['plain']
         else:
-            empty_return: dict[Literal['text', 'markdown', 'html'], str] = {'text': '', 'markdown': '', 'html': ''}
+            empty_return: dict[ReportKind, str] = {'plain': '', 'markdown': '', 'html': ''}
             contextlines = directives.get('context_lines', self.job.contextlines)
             if contextlines is None:
                 contextlines = 0 if additions_only or deletions_only else 3
@@ -509,7 +519,7 @@ class UnifiedDiffer(DifferBase):
 
             out_diff.update(
                 {
-                    'text': diff_text,
+                    'plain': diff_text,
                     'markdown': diff_text,
                 }
             )
@@ -532,12 +542,12 @@ class TableDiffer(DifferBase):
     def differ(
         self,
         directives: dict[str, Any],
-        report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        report_kind: ReportKind,
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
-        out_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
-        if report_kind in {'text', 'markdown'} and _unfiltered_diff is not None and 'html' in _unfiltered_diff:
+    ) -> dict[ReportKind, str]:
+        out_diff: dict[ReportKind, str] = {}
+        if report_kind in {'plain', 'markdown'} and _unfiltered_diff is not None and 'html' in _unfiltered_diff:
             table = _unfiltered_diff['html']
         else:
             tabsize = int(directives.get('tabsize', 8))
@@ -560,11 +570,11 @@ class TableDiffer(DifferBase):
             table = table.replace('<span class="diff_chg"', '<span style="color:orange;background-color:lightyellow"')
             out_diff['html'] = table
 
-        if report_kind in {'text', 'markdown'}:
+        if report_kind in {'plain', 'markdown'}:
             diff_text = self.html2text(table)
             out_diff.update(
                 {
-                    'text': diff_text,
+                    'plain': diff_text,
                     'markdown': diff_text,
                 }
             )
@@ -589,10 +599,10 @@ class CommandDiffer(DifferBase):
     def differ(
         self,
         directives: dict[str, Any],
-        report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        report_kind: ReportKind,
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+    ) -> dict[ReportKind, str]:
         if self.job.monospace:
             head_html = '\n'.join(
                 [
@@ -613,10 +623,10 @@ class CommandDiffer(DifferBase):
                 ]
             )
 
-        out_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
+        out_diff: dict[ReportKind, str] = {}
         command = directives['command']
-        if report_kind == 'html' and _unfiltered_diff is not None and 'text' in _unfiltered_diff:
-            diff_text = ''.join(_unfiltered_diff['text'].splitlines(keepends=True)[2:])
+        if report_kind == 'html' and _unfiltered_diff is not None and 'plain' in _unfiltered_diff:
+            diff_text = ''.join(_unfiltered_diff['plain'].splitlines(keepends=True)[2:])
         else:
             old_data = self.state.old_data
             new_data = self.state.new_data
@@ -656,7 +666,7 @@ class CommandDiffer(DifferBase):
                     f"Job {self.job.index_number}: Command in differ 'command' returned 0 (no report) "
                     f'({self.job.get_location()})'
                 )
-                return {'text': '', 'markdown': '', 'html': ''}
+                return {'plain': '', 'markdown': '', 'html': ''}
             head_text = '\n'.join(
                 [
                     # f"Using command differ: {directives['command']}",
@@ -679,7 +689,7 @@ class CommandDiffer(DifferBase):
                 diff_text = self.html2text(diff)
                 out_diff.update(
                     {
-                        'text': head_text + diff_text,
+                        'plain': head_text + diff_text,
                         'markdown': head_text + diff_text,
                         'html': head_html + diff,
                     }
@@ -688,7 +698,7 @@ class CommandDiffer(DifferBase):
                 diff_text = diff
                 out_diff.update(
                     {
-                        'text': head_text + diff_text,
+                        'plain': head_text + diff_text,
                         'markdown': head_text + diff_text,
                     }
                 )
@@ -774,10 +784,10 @@ class DeepdiffDiffer(DifferBase):
     def differ(  # noqa: C901 mccabe complexity too high
         self,
         directives: dict[str, Any],
-        report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        report_kind: ReportKind,
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+    ) -> dict[ReportKind, str]:
         if isinstance(DeepDiff, str):  # pragma: no cover
             self.raise_import_error('deepdiff', DeepDiff)
             raise RuntimeError  # for type checker
@@ -788,7 +798,7 @@ class DeepdiffDiffer(DifferBase):
 
         def _pretty_deepdiff(
             ddiff: DeepDiff,
-            report_kind: Literal['text', 'markdown', 'html'],
+            report_kind: ReportKind,
             compact: bool,
         ) -> str:
             """Customized version of deepdiff.serialization.SerializationMixin.pretty method, edited to include the
@@ -990,45 +1000,73 @@ class DeepdiffDiffer(DifferBase):
 
             return '\n'.join(result)
 
+        def _serialize_method(
+            mime_type: str | None, data_label: Literal['Old', 'New']
+        ) -> Literal['json', 'yaml', 'xml', 'text'] | None:
+            """Parses the media type (formerly known as MIME type) of the data and determine if it's a known
+            seralization method.
+
+            Uses data from https://www.iana.org/assignments/media-types/media-types.xhtml as well as various internet
+            searches.
+
+            :param mime_type: The media type (formerly known as MIME type) of the data.
+            :param data_label: Either old or new, used for error reporting.
+
+            :returns: Known serialization method or None.
+            """
+            if not mime_type:
+                logger.info(
+                    f"Differ {self.__kind__} data_type for {data_label} data defaulted to 'json' as media type is "
+                    'missing.'
+                )
+                return 'json'
+
+            media_type, subtype = mime_type.split('/', 1)
+            subtype = subtype.removeprefix('x-')  # 'x-' is deprecated per RFC6648 and needs to be removed
+            subtype = subtype.split('.')[-1]  # remove facet name; see RFC6838
+            subtype, subtype_suffix = subtype.split('+', 1) if '+' in subtype else (subtype, None)
+
+            if media_type not in ('text', 'application'):
+                return None
+            if {'yaml', 'yml'} & {subtype, subtype_suffix}:
+                return 'yaml'
+            if 'xml' in (subtype, subtype_suffix):
+                return 'xml'
+            if 'json' in (subtype, subtype_suffix):
+                return 'json'
+            if media_type == 'application':
+                logger.info(
+                    f'Differ {self.__kind__} could not determine known serialization type of {data_label} data from '
+                    f"media type {mime_type}; defaulting to 'json'."
+                )
+                return 'json'
+            logger.info(
+                f'Differ {self.__kind__} could not determine data type of {data_label} data from media '
+                f"type {mime_type}; defaulting to 'text'."
+            )
+            return 'text'
+
         def deserialize_data(
-            data: str | bytes, mime_type: str | None, data_type: str | None, data_label: Literal['Old', 'New']
+            data: str | bytes,
+            media_type: str | None,
+            data_type: Literal['json', 'yaml', 'xml', 'text'] | None,
+            data_label: Literal['Old', 'New'],
         ) -> tuple[Any, dict | None]:
             """Deserializes the stored data.
 
             :param data: The stored data.
-            :param mime_type: The MIME type of the data.
-            :param data_type: The value of the data_type sub-parameter (overrides MIME type)
+            :param mime_type: The media type (formerly MIME type) of the data.
+            :param data_type: The value of the data_type sub-parameter (overrides media type)
             :param data_label: Either old or new, used for error reporting
 
             :returns: The deserialized data, any errors
             """
             if not data:
                 return data, None
-            if data_type is None:
-                if mime_type:
-                    media_subtype = mime_type.split('/')[-1].split('+')[-1].split('x-')[-1]
-                    if media_subtype in ('yaml', 'yml'):
-                        data_type = 'yaml'
-                    elif media_subtype == 'xml':
-                        data_type = 'xml'
-                    elif media_subtype == 'json':
-                        data_type = 'json'
-                    else:
-                        logger.info(
-                            f'Differ {self.__kind__} could not determine data type of {data_label} data from media '
-                            f"type {mime_type}; defaulting to 'json'"
-                        )
-                        data_type = 'json'
-                else:
-                    logger.info(
-                        f"Differ {self.__kind__} data_type for {data_label} data defaulted to 'json' as media type is "
-                        'missing'
-                    )
-                    data_type = 'json'
-            parsed_data: Any = ''
-            if data_type == 'json':
+            deserialize_method = data_type if data_type else _serialize_method(media_type, data_label)
+            if deserialize_method == 'json':
                 try:
-                    parsed_data = jsonlib.loads(data)
+                    return jsonlib.loads(data), None
                 except jsonlib.JSONDecodeError as e:
                     self.state.exception = e
                     self.state.traceback = self.job.format_error(e, traceback.format_exc())
@@ -1038,13 +1076,13 @@ class DeepdiffDiffer(DifferBase):
                     )
                     logger.info(f'Job {self.job.index_number}: {data!r}')
                     return None, {
-                        'text': f'Differ {self.__kind__} ERROR: {data_label} data is invalid JSON\n{e}',
+                        'plain': f'Differ {self.__kind__} ERROR: {data_label} data is invalid JSON\n{e}',
                         'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid JSON**\n{e}',
                         'html': f'Differ {self.__kind__} <b>ERROR: {data_label} data is invalid JSON</b>\n{e}',
                     }
-            elif data_type == 'yaml':
+            if deserialize_method == 'yaml':
                 try:
-                    parsed_data = yaml.safe_load(data)
+                    return yaml.safe_load(data), None
                 except yaml.YAMLError as e:
                     self.state.exception = e
                     self.state.traceback = self.job.format_error(e, traceback.format_exc())
@@ -1054,16 +1092,16 @@ class DeepdiffDiffer(DifferBase):
                     )
                     logger.info(f'Job {self.job.index_number}: {data!r}')
                     return None, {
-                        'text': f'Differ {self.__kind__} ERROR: {data_label} data is invalid YAML\n{e}',
+                        'plain': f'Differ {self.__kind__} ERROR: {data_label} data is invalid YAML\n{e}',
                         'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid YAML**\n{e}',
                         'html': f'Differ {self.__kind__} <b>ERROR: {data_label} data is invalid YAML</b>\n{e}',
                     }
-            elif data_type == 'xml':
+            if deserialize_method == 'xml':
                 if isinstance(xmltodict, str):  # pragma: no cover
                     self.raise_import_error('xmltodict', xmltodict)
                     raise RuntimeError  # for type checker
                 try:
-                    parsed_data = xmltodict.parse(data)
+                    return xmltodict.parse(data), None
                 except ExpatError as e:
                     self.state.exception = e
                     self.state.traceback = self.job.format_error(e, traceback.format_exc())
@@ -1073,11 +1111,17 @@ class DeepdiffDiffer(DifferBase):
                     )
                     logger.info(f'Job {self.job.index_number}: {data!r}')
                     return None, {
-                        'text': f'Differ {self.__kind__} ERROR: {data_label} data is invalid XML\n{e}',
+                        'plain': f'Differ {self.__kind__} ERROR: {data_label} data is invalid XML\n{e}',
                         'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid XML**\n{e}',
                         'html': f'Differ {self.__kind__} <b>ERROR: {data_label} data is invalid XML</b>\n{e}',
                     }
-            return parsed_data, None
+            if deserialize_method == 'text':
+                return data, None
+            return None, {
+                'plain': f'Differ {self.__kind__} ERROR: data_type {data_type} is not supported',
+                'markdown': f'Differ {self.__kind__} **ERROR: data_type {data_type} is not supported**',
+                'html': f'Differ {self.__kind__} <b>ERROR: data_type {data_type} is not supported</b>',
+            }
 
         old_data, err = deserialize_data(
             self.state.old_data,
@@ -1116,7 +1160,7 @@ class DeepdiffDiffer(DifferBase):
         diff_text = _pretty_deepdiff(ddiff, report_kind, compact)
         if not diff_text:
             self.state.verb = 'changed,no_report'
-            return {'text': '', 'markdown': '', 'html': ''}
+            return {'plain': '', 'markdown': '', 'html': ''}
 
         self.job.set_to_monospace()
         if report_kind == 'html':
@@ -1135,7 +1179,7 @@ class DeepdiffDiffer(DifferBase):
             f'+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\n'
             f'{diff_text}'
         )
-        return {'text': text_diff, 'markdown': text_diff}
+        return {'plain': text_diff, 'markdown': text_diff}
 
 
 class ImageDiffer(DifferBase):
@@ -1158,10 +1202,10 @@ class ImageDiffer(DifferBase):
     def differ(  # noqa: C901 mccabe complexity too high
         self,
         directives: dict[str, Any],
-        report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        report_kind: ReportKind,
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+    ) -> dict[ReportKind, str]:
         warnings.warn(
             f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
             f'change in the future. Please report any problems or suggestions at '
@@ -1496,7 +1540,7 @@ class ImageDiffer(DifferBase):
         if old_image == new_image:
             logger.info(f'Job {self.job.index_number}: New image is identical to the old one')
             self.state.verb = 'unchanged'
-            return {'text': '', 'markdown': '', 'html': ''}
+            return {'plain': '', 'markdown': '', 'html': ''}
 
         diff_image, mse_value = compute_diff_image(old_image, new_image)
         if mse_value:
@@ -1508,7 +1552,7 @@ class ImageDiffer(DifferBase):
                 f'considering changes not worthy of a report'
             )
             self.state.verb = 'changed,no_report'
-            return {'text': '', 'markdown': '', 'html': ''}
+            return {'plain': '', 'markdown': '', 'html': ''}
 
         # prepare AI summary
         summary = ''
@@ -1550,7 +1594,7 @@ class ImageDiffer(DifferBase):
         changed_text = 'The image has changed; please see an HTML report for the visualization.'
         if not summary:
             return {
-                'text': changed_text,
+                'plain': changed_text,
                 'markdown': changed_text,
                 'html': '<br>\n'.join(htm),
             }
@@ -1571,7 +1615,7 @@ class ImageDiffer(DifferBase):
         )
         footer = f"Summary by Google Generative AI's model {model_version}{directives_text}."
         return {
-            'text': (
+            'plain': (
                 f'{summary}\n\n\nA visualization of differences is available in {__package__} HTML reports.'
                 f'\n------------\n{footer}'
             ),
@@ -1740,10 +1784,10 @@ class AIGoogleDiffer(DifferBase):
     def differ(
         self,
         directives: AiGoogleDirectives,  # type: ignore[override]
-        report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        report_kind: ReportKind,
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+    ) -> dict[ReportKind, str]:
         logger.info(f'Job {self.job.index_number}: Running the {self.__kind__} differ from hooks.py')
         warnings.warn(
             f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
@@ -1899,7 +1943,7 @@ class AIGoogleDiffer(DifferBase):
         summary, model_version = get_ai_summary(prompt, system_instructions)
         if not summary:
             self.state.verb = 'changed,no_report'
-            return {'text': '', 'markdown': '', 'html': ''}
+            return {'plain': '', 'markdown': '', 'html': ''}
         newline = '\n'  # For Python < 3.12 f-string {} compatibility
         back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
         directives_for_str = {key: value for key, value in directives.items() if key != 'model'}
@@ -1919,8 +1963,8 @@ class AIGoogleDiffer(DifferBase):
             if model_version or directives_text
             else ''
         )
-        temp_unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] = {}
-        for rep_kind in ['text', 'html']:  # markdown is same as text
+        temp_unfiltered_diff: dict[ReportKind, str] = {}
+        for rep_kind in ('plain', 'html'):  # markdown is same as text
             unified_report = DifferBase.process(
                 'unified',
                 directives.get('unified') or {},  # type: ignore[arg-type]
@@ -1930,7 +1974,7 @@ class AIGoogleDiffer(DifferBase):
                 temp_unfiltered_diff,
             )
         return {
-            'text': (f'{summary}\n\n{unified_report["text"]}' + (f'\n------------\n{footer}' if footer else '')),
+            'plain': (f'{summary}\n\n{unified_report["plain"]}' + (f'\n------------\n{footer}' if footer else '')),
             'markdown': (f'{summary}\n\n{unified_report["markdown"]}' + (f'\n* * *\n{footer}' if footer else '')),
             'html': '\n'.join(
                 [
@@ -1955,10 +1999,10 @@ class WdiffDiffer(DifferBase):
     def differ(
         self,
         directives: dict[str, Any],
-        report_kind: Literal['text', 'markdown', 'html'],
-        _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+        report_kind: ReportKind,
+        _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[Literal['text', 'markdown', 'html'], str]:
+    ) -> dict[ReportKind, str]:
         warnings.warn(
             f'Job {self.job.index_number}: Differ {self.__kind__} is WORK IN PROGRESS and has KNOWN bugs which '
             "are being worked on. DO NOT USE AS THE RESULTS WON'T BE CORRECT.",
@@ -2136,7 +2180,7 @@ class WdiffDiffer(DifferBase):
             diff_html = diff_html.replace('\n', '<br>\n')
 
         return {
-            'text': head_text + diff_text,
+            'plain': head_text + diff_text,
             'markdown': head_text + diff_text,
             'html': head_html + diff_html,
         }

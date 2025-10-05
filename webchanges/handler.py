@@ -12,7 +12,7 @@ import traceback
 from typing import TYPE_CHECKING, Any, ContextManager, Iterator, Literal, NamedTuple, TypedDict
 from zoneinfo import ZoneInfo
 
-from webchanges.differs import DifferBase
+from webchanges.differs import DifferBase, ReportKind
 from webchanges.filters import FilterBase
 from webchanges.jobs import NotModifiedError
 from webchanges.reporters import ReporterBase
@@ -67,7 +67,7 @@ class JobState(ContextManager):
     _http_client_used: str | None = None
     error_ignored: bool | str
     exception: Exception | None = None
-    generated_diff: dict[Literal['text', 'markdown', 'html'], str]
+    generated_diff: dict[ReportKind, str]
     history_dic_snapshots: dict[str | bytes, Snapshot]
     new_data: str | bytes = ''
     new_error_data: ErrorData = {}
@@ -89,7 +89,7 @@ class JobState(ContextManager):
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
     traceback: str
     tries: int = 0  # if >1, an error; value is the consecutive number of runs leading to an error
-    unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str]
+    unfiltered_diff: dict[ReportKind, str]
     verb: Verb
 
     def __init__(self, snapshots_db: SsdbStorage, job: JobBase) -> None:
@@ -298,7 +298,7 @@ class JobState(ContextManager):
 
     def get_diff(
         self,
-        report_kind: Literal['text', 'markdown', 'html'] = 'text',
+        report_kind: ReportKind = 'plain',
         differ: dict[str, Any] | None = None,
         differ_defaults: _ConfigDifferDefaults | None = None,
         tz: ZoneInfo | None = None,
