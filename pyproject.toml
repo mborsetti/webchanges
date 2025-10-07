@@ -93,10 +93,11 @@ all = [
 
 
 # -------------------------- setuptools --------------------------
+[tool.setuptools]
 # Called by build
 # See https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
-[tool.setuptools]
-# explicit package listing is required for building in tox -e new-install
+
+# Explicit package listing is required for building in tox -e new-install
 # https://setuptools.pypa.io/en/latest/userguide/package_discovery.html
 packages = ['webchanges', 'webchanges._vendored']
 
@@ -175,7 +176,7 @@ exclude_lines = [
 # Config file documentation at https://mypy.readthedocs.io/en/stable/config_file.html
 
 # Disables import discovery of namespace packages (see PEP 420)
-namespace_packages = false
+namespace_packages = true
 
 # Specifies the Python version used to parse and check the target program.
 # python_version = 3.12
@@ -253,7 +254,7 @@ testpaths = ['tests']
 
 # -------------------------- ruff --------------------------
 [tool.ruff]
-# Config file documentation at https://docs.astral.sh/ruff/configuration/
+# Config file documentation at https://docs.astral.sh/ruff/configuration/ and https://docs.astral.sh/ruff/settings/
 
 # File patterns to omit from formatting and linting, in addition to those specified by exclude.
 extend-exclude = [
