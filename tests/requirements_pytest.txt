@@ -3,7 +3,7 @@
 
 # requires one of ../requirements.txt or ../requirements-free-threaded.txt to also be installed
 
-# aioxmpp  # does not install in aug25 (lxml~=4.0 dependency fails to build)
+# aioxmpp  # does not install in oct-2025 (obsolete lxml~=4.0 dependency fails to build)
 beautifulsoup4
 chump
 coverage
@@ -20,8 +20,8 @@ jsbeautifier
 keyring
 matrix-client
 minidb
-numpy; python_version == '3.13'  # only test latest
-Pillow; python_version == '3.13'  # only test latest
+numpy
+Pillow
 playwright
 psutil
 pushbullet.py
@@ -30,8 +30,8 @@ pypdf[crypto]
 pytest
 pytest-cov
 pytest-playwright
-python-dateutil; python_version == '3.13'  # only test latest
-# pytz  # bug in aioxmpp, which does not install in oct24
+python-dateutil
+# pytz  # bug in aioxmpp, which does not install in oct-2025
 redis
 requests
 tzdata; sys_platform == 'win32'
