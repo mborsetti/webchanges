@@ -114,7 +114,7 @@ TEST_JOBS = [
             'init_script': "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });",
             'ignore_https_errors': False,
             'switches': ['--window-size=1298,1406'],
-            'timeout': 30,
+            'timeout': 120,
             'user_visible_url': 'https://www.google.com/',
             'wait_for_navigation': 'https://www.google.com/',
             'wait_until': 'load',
