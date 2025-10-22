@@ -1,5 +1,5 @@
 .. _changelog:
 
-.. Licensing included from the LICENSE file
+.. Licensing included from the LICENSE.md file
 
-.. include:: ../LICENSE
+.. include:: ../LICENSE.md

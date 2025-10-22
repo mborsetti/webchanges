@@ -16,6 +16,9 @@ defaults:
   run:
     shell: 'bash'
 
+permissions:
+  contents: read
+
 jobs:
   invoke:
     runs-on: 'ubuntu-latest'
@@ -25,6 +28,11 @@ jobs:
       issues: 'write'
       pull-requests: 'write'
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
       - name: 'Mint identity token'
         id: 'mint_identity_token'
         if: |-
@@ -39,7 +47,7 @@ jobs:
 
       - name: 'Run Gemini CLI'
         id: 'run_gemini'
-        uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
+        uses: 'google-github-actions/run-gemini-cli@c110ef5c2b5558cdc63582f82d29ae0a92fbfb27' # v0.1.13
         env:
           TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
           DESCRIPTION: '${{ github.event.pull_request.body || github.event.issue.body }}'

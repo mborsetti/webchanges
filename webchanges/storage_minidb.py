@@ -9,7 +9,7 @@ Code is loaded only:
 Having it into a standalone module allows running the program without requiring minidb package to be installed.
 """
 
-# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+# The code below is subject to the license contained in the LICENSE.md file, which is part of the source code.
 
 from __future__ import annotations
 

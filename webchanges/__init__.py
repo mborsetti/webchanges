@@ -3,7 +3,7 @@ it summarizes (including with Gen AI) what changed ('diff') and displays it and/
 supported services. Can check the output of local commands as well.
 """
 
-# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+# The code below is subject to the license contained in the LICENSE.md file, which is part of the source code.
 
 # The docstring above (__doc__) and the variables below are used in the program and for builds, including in building
 # documentation with Sphinx.

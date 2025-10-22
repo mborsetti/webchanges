@@ -1,6 +1,6 @@
 """Handles all storage: jobs files, config files, hooks file, and cache database engines."""
 
-# The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+# The code below is subject to the license contained in the LICENSE.md file, which is part of the source code.
 
 from __future__ import annotations
 

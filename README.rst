@@ -100,7 +100,7 @@ Schedule
 
 Code
 ====
-|coveralls| |snyk| |issues| |code_style|
+|coveralls| |snyk| |issues| |code_style| |OpenSSF_Scorecard|
 
 The code, issues tracker, and discussions are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 
@@ -119,7 +119,7 @@ License
 =======
 |license|
 
-See the `complete licenses <https://raw.githubusercontent.com/mborsetti/webchanges/refs/heads/main/LICENSE>`__ (released
+See the `complete licenses <https://raw.githubusercontent.com/mborsetti/webchanges/refs/heads/main/LICENSE.md>`__ (released
 under the `MIT License <https://opensource.org/licenses/MIT>`__ but redistributing modified source code, dated 30
 July 2020, from `urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__
 licensed under a `BSD 3-Clause License
@@ -180,3 +180,6 @@ configuration files), see `here <https://webchanges.readthedocs.io/en/stable/upg
 .. |snyk| image:: https://snyk.io/advisor/python/holidays/badge.svg
     :target: https://snyk.io/advisor/python/holidays
     :alt: Snyk Package Health Score
+.. |OpenSSF_Scorecard| image:: https://api.scorecard.dev/projects/github.com/mborsetti/webchanges/badge
+    :target: https://scorecard.dev/viewer/?uri=github.com/mborsetti/webchanges
+    :alt: OpenSSF Scoreard

@@ -127,6 +127,11 @@ repos:
         description: Forbid files which have a UTF-8 Unicode replacement character
         exclude: ^CHANGELOG.rst|^RELEASE.rst
 
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+
   - repo: local
     hooks:
       - id: ruff-check # https://github.com/astral-sh/ruff-pre-commit/blob/main/.pre-commit-hooks.yaml

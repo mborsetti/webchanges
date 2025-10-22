@@ -17,7 +17,7 @@ name = 'webchanges'
 description = 'Web Changes Delivered. AI-Summarized. Totally Anonymous.'
 readme = { file = 'README.rst', content-type = 'text/x-rst' }
 requires-python = '>=3.10'
-license = { file = 'LICENSE' }
+license = { file = 'LICENSE.md' }
 authors = [{ name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com' }]
 maintainers = [
     { name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com' },

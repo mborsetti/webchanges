@@ -468,18 +468,18 @@ code is appropriately copyrighted/licensed:
    `urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020
    licensed under a `BSD 3-Clause License
    <https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__. See the
-   complete license `here <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__.
+   complete license `here <https://github.com/mborsetti/webchanges/blob/main/LICENSE.md>`__.
 
 (2) Each file with code contains this remark at the top:
 
 ::
 
-   # The code below is subject to the license contained in the LICENSE file, which is part of the source code.
+   # The code below is subject to the license contained in the LICENSE.md file, which is part of the source code.
 
 Note: There is no requirement anywhere in law to spam the entire 61-line, 465 words license text on Every. Single.
 File. In. Every. Single. Directory; the above notice is amply sufficient.
 
-(3) The `license file <https://github.com/mborsetti/webchanges/blob/main/LICENSE>`__ reads:
+(3) The `license file <https://github.com/mborsetti/webchanges/blob/main/LICENSE.md>`__ reads:
 
 ::
 
