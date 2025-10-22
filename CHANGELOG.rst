@@ -50,20 +50,21 @@ Added
 
 Fixed
 `````
-* Certain job Exceptions would fail with a yaml Exception.
-* Fixed ``deepdiff`` differ to handle plain strings correctly (e.g. when an API typically returning JSON starts
-  returning an error in HTML.
+* Certain job Exceptions would raise a yaml Exception instead of an Exception message.
+* Fixed ``deepdiff`` differ to handle text strings correctly (e.g. when an API typically returning JSON starts
+  returning an error in HTML).
 
-Internals impacting hooks.py
-`````````````````````````````
-* In the Differ class, the value ``text`` of the ``report_kind`` argument in the ``process`` method has been renamed 
-  to ``plain`` for clarity, in alignment with IANA's media type nomenclature.
+Internals (impacting hooks.py)
+``````````````````````````````
+* In the ``Differ`` Class' ``process`` method, the ``report_kind``'s value ``text`` has been renamed ``plain`` for 
+  clarity and in alignment with IANA's media type nomenclature for different types of text.
 
-Internals
-`````````
-* Removed non-unique elements in pyproject.toml's classifiers,
-* Updated run-gemini-cli to fix GitHub error.
-* Fixed pre-commit.ci failing checks on new PRs.
+Internals (other)
+`````````````````
+* Enabled additional ``ruff check`` linters and improved code.
+* Removed non-unique elements in pyproject.toml's classifiers.
+* Updated ``run-gemini-cli`` to fix GitHub error.
+* Fixed pre-commit failing checks on new PRs.
 
 Impact on hooks
 ```````````````
