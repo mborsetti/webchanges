@@ -2,6 +2,8 @@
 
 To test Redis, set an environment variable REDIS_URI with the URI to the Redis server.  E.g.:
 $ export REDIS_URI=redis://localhost:6379
+or if using https://cloud.redis.io/#/databases
+$ export REDIS_URI=redis://default:password@redis-1234.c123.us-west1-1.gce.redns.redis-cloud.com:12345
 """
 
 from __future__ import annotations
@@ -81,8 +83,6 @@ def prepare_storage_test(
 
     if hasattr(ssdb_storage, 'flushdb'):
         ssdb_storage.flushdb()
-    if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)
 
     if jobs_file is None:
         jobs_file = data_path.joinpath('jobs-time.yaml')

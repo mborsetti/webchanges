@@ -1794,7 +1794,7 @@ class SsdbRedisStorage(SsdbStorage):
         del self.db
 
     def get_guids(self) -> list[str]:
-        return [guid.decode() for guid in self.db.keys('guid:*')]
+        return [guid[5:].decode() for guid in self.db.keys('guid:*')]
 
     def load(self, guid: str) -> Snapshot:
         key = self._make_key(guid)
@@ -1817,7 +1817,7 @@ class SsdbRedisStorage(SsdbStorage):
         for i in range(self.db.llen(key)):
             r = self.db.lindex(key, i)
             c = msgpack.unpackb(r)
-            if c['tries'] == 0 or (c['tries'] is None and c['data'] not in history):
+            if (c['tries'] == 0 or c['tries'] is None) and c['data'] not in history:
                 history[c['data']] = c['timestamp']
                 if count is not None and len(history) >= count:
                     break
