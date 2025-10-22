@@ -305,50 +305,54 @@ class UrlwatchCommand:
             pass
 
         if os.name == 'posix':
-            import apt
+            try:
+                import apt
 
-            apt_cache = apt.Cache()
+                apt_cache = apt.Cache()
 
-            def print_version(libs: list[str]) -> None:
-                for lib in libs:
-                    if lib in apt_cache and apt_cache[lib].versions:
-                        ver = apt_cache[lib].versions
-                        print(f'   - {ver[0].package}: {ver[0].version}')
+                def print_version(libs: list[str]) -> None:
+                    for lib in libs:
+                        if lib in apt_cache and apt_cache[lib].versions:
+                            ver = apt_cache[lib].versions
+                            print(f'   - {ver[0].package}: {ver[0].version}')
 
-            installed_packages = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
-            print()
-            print('Installed dpkg dependencies:')
-            for module, apt_dists in (
-                ('jq', ['jq']),
-                # https://github.com/jalan/pdftotext#os-dependencies
-                ('pdftotext', ['libpoppler-cpp-dev']),
-                # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
-                (
-                    'Pillow',
-                    [
-                        'libjpeg-dev',
-                        'zlib-dev',
-                        'zlib1g-dev',
-                        'libtiff-dev',
-                        'libfreetype-dev',
-                        'littlecms-dev',
-                        'libwebp-dev',
-                        'tcl/tk-dev',
-                        'openjpeg-dev',
-                        'libimagequant-dev',
-                        'libraqm-dev',
-                        'libxcb-dev',
-                        'libxcb1-dev',
-                    ],
-                ),
-                ('playwright', ['google-chrome-stable']),
-                # https://tesseract-ocr.github.io/tessdoc/Installation.html
-                ('pytesseract', ['tesseract-ocr']),
-            ):
-                if module in installed_packages:
-                    importlib.metadata.distribution(module)
-                    print(f'• {module}')
-                    print_version(apt_dists)
+                installed_packages = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
+                print()
+                print('Installed dpkg dependencies:')
+                for module, apt_dists in (
+                    ('jq', ['jq']),
+                    # https://github.com/jalan/pdftotext#os-dependencies
+                    ('pdftotext', ['libpoppler-cpp-dev']),
+                    # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
+                    (
+                        'Pillow',
+                        [
+                            'libjpeg-dev',
+                            'zlib-dev',
+                            'zlib1g-dev',
+                            'libtiff-dev',
+                            'libfreetype-dev',
+                            'littlecms-dev',
+                            'libwebp-dev',
+                            'tcl/tk-dev',
+                            'openjpeg-dev',
+                            'libimagequant-dev',
+                            'libraqm-dev',
+                            'libxcb-dev',
+                            'libxcb1-dev',
+                        ],
+                    ),
+                    ('playwright', ['google-chrome-stable']),
+                    # https://tesseract-ocr.github.io/tessdoc/Installation.html
+                    ('pytesseract', ['tesseract-ocr']),
+                ):
+                    if module in installed_packages:
+                        importlib.metadata.distribution(module)
+                        print(f'• {module}')
+                        print_version(apt_dists)
+            except ImportError:
+                print('Library dependencies cannot be printed as python3-apt is not installed')
+                print("Run 'sudo apt-get install python3-apt' to install.")
         return 0
 
     def list_jobs(self, regex: bool | str) -> None:

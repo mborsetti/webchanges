@@ -81,6 +81,8 @@ def prepare_storage_test(
 
     if hasattr(ssdb_storage, 'flushdb'):
         ssdb_storage.flushdb()
+    if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
+        ssdb_storage._copy_temp_to_permanent(delete=True)
 
     if jobs_file is None:
         jobs_file = data_path.joinpath('jobs-time.yaml')

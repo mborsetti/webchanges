@@ -127,7 +127,7 @@ TEST_JOBS = [
             'name': 'testing POST url job without use_browser',
             'data': {'fieldname': 'fieldvalue'},
         },
-        '  "json": {\n    "fieldname": "fieldvalue"\n  },',
+        '"json":{"fieldname":"fieldvalue"}',
     ),
     (
         {
@@ -136,7 +136,7 @@ TEST_JOBS = [
             'use_browser': True,
             'data': {'fieldname': 'fieldvalue'},
         },
-        '"data": "fieldname=fieldvalue"',
+        '"data":"fieldname=fieldvalue"',
     ),
     (
         {
