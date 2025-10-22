@@ -72,7 +72,7 @@ jobs:
 
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-        uses: actions/checkout@@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
 
       # Install uv per https://github.com/astral-sh/setup-uv
       # Docs at https://docs.astral.sh/uv/guides/integration/github
@@ -197,7 +197,7 @@ jobs:
 
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-        uses: actions/checkout@@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
 
       # Install uv per https://github.com/astral-sh/setup-uv
       # Docs at https://docs.astral.sh/uv/guides/integration/github
@@ -297,7 +297,7 @@ jobs:
 #    steps:
 #      # Checks out a copy of the repository per https://github.com/actions/checkout
 #      - name: Check out repo
-#        uses: actions/checkout@@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
+#        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
 #
 #      # Build Python and packages per https://github.com/actions/setup-python
 #      - name: Set up Python ${{ matrix.python-version }}
@@ -397,7 +397,7 @@ jobs:
           egress-policy: audit
 
       - name: Check out repo
-        uses: actions/checkout@@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
 
       # Install uv per https://github.com/astral-sh/setup-uv
       # Docs at https://docs.astral.sh/uv/guides/integration/github
