@@ -31,7 +31,7 @@ jobs:
       matrix:
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
         # RCs need to be specified fully, e.g. '3.13.0-rc.3'
-        python-version: ['3.13', '3.12', '3.11', '3.10']
+        python-version: ['3.14', '3.13', '3.12', '3.11', '3.10']
         os: [ubuntu-latest]
         disable-gil: [false]
         # 29-oct-24 lxml does not build for free-threaded even with libxml2 and libxslt1 development packages
@@ -91,6 +91,7 @@ jobs:
         if: "${{ !matrix.disable-gil }}"
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           # cache: 'pip'
           # cache-dependency-path: |
           #   requirements.txt
@@ -172,9 +173,8 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
-        # RCs need to be specified fully, e.g. '3.13.0-rc.3'
-        python-version: ['3.13', '3.12', '3.11', '3.10']
-#        python-version: ['3.12']
+        # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-preleleases: true in setop-python
+        python-version: ['3.14', '3.13', '3.12', '3.11', '3.10']
         os: [macos-latest]
 
     env:
@@ -210,6 +210,7 @@ jobs:
         uses: actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           # cache: 'pip'
           # cache-dependency-path: |
           #   requirements.txt
@@ -293,6 +294,7 @@ jobs:
 #        uses: actions/setup-python@main
 #        with:
 #          python-version: ${{ matrix.python-version }}
+#          allow-prereleases: true
 #          cache: 'pip'
 #          cache-dependency-path: |
 #            requirements.txt

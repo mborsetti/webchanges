@@ -36,13 +36,17 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
 
 Version 3.31.3rc0
 ------------------
-2025-09-24
+Unreleased
 
 Reminder
 ````````
 Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.10 was
 released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24 
 October 2025.
+
+Added
+`````
+* Support for Python 3.14
 
 Fixed
 `````
@@ -62,7 +66,6 @@ Internals
 * Fixed pre-commit.ci failing checks on new PRs.
 
 Impact on hooks
-*
 ```````````````
 
 Version 3.31.2
