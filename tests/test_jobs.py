@@ -73,7 +73,7 @@ TEST_JOBS = [
             'encoding': 'ascii',
             'headers': {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/118.0.0.0 Safari/537.36'
+                'Chrome/141.0.0.0 Safari/537.36'
             },
             'ignore_cached': True,
             'ignore_connection_errors': False,
@@ -114,7 +114,7 @@ TEST_JOBS = [
             'init_script': "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });",
             'ignore_https_errors': False,
             'switches': ['--window-size=1298,1406'],
-            'timeout': 15,
+            'timeout': 30,
             'user_visible_url': 'https://www.google.com/',
             'wait_for_navigation': 'https://www.google.com/',
             'wait_until': 'load',
