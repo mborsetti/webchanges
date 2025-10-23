@@ -226,7 +226,7 @@ Example ``hooks.py`` file:
    class LenDiffer(DifferBase):
        """Custom differ to show difference in length of the data.
 
-       Needs to be selected manually, i.e. add the directive ``differ: hooks_differ`` the job. E.g.:
+       Needs to be selected manually, i.e. add the directive ``differ: hooks_lendiffer`` the job. E.g.:
 
        .. code-block:: yaml
 
@@ -242,22 +242,23 @@ Example ``hooks.py`` file:
        def differ(
            self,
            subdiffer: dict[str, Any],
-           report_kind: Literal['text', 'markdown', 'html'],
-           _unfiltered_diff: dict[Literal['text', 'markdown', 'html'], str] | None = None,
+           report_kind: Literal['plain', 'markdown', 'html'],
+           _unfiltered_diff: dict[Literal['plain', 'markdown', 'html'], str] | None = None,
            tz: str | None = None,
-       ) -> dict[Literal['text', 'markdown', 'html'], str]:
+       ) -> dict[Literal['plain', 'markdown', 'html'], str]:
            len_diff = len(self.state.new_data) - len(self.state.old_data)
            diff_text = f'Length of data has changed by {len_diff:+,}'
+           """:returns: A dict with at least the value of 'report_kind' key populated."""
            return {
-               'text': diff_text,
+               'plain': diff_text,
                'markdown': diff_text,
                'html': diff_text,
            }
 
 
    class CustomTextFileReporter(TextReporter):
-       """Custom reporter that writes the text-only report to a file. Insert the filename in config.py
-       as a filename key to the text reporter.
+       """Custom reporter that writes the text-only report to a file. Insert the filename in config.py as a filename 
+       key to the text reporter.
 
        Needs to enabled in the config.yaml file:
 

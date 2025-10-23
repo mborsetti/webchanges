@@ -6,7 +6,7 @@ October 2025.
 
 Added
 `````
-* Support for Python 3.14
+* Support for Python 3.14.
 
 Fixed
 `````
@@ -20,5 +20,6 @@ Internals (impacting hooks.py)
 
 Internals (other)
 `````````````````
+* Implemented testing for Python 3.14.
 * Implemented OpenSSF Scorecard and improved code security.
 * Enabled additional ``ruff check`` linters and improved code quality.

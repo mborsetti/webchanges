@@ -34,9 +34,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.31.4rc0
+Version 3.31.4
 ------------------
-Unreleased
+2025-10-25
 
 Reminder
 ````````
@@ -46,7 +46,7 @@ October 2025.
 
 Added
 `````
-* Support for Python 3.14
+* Support for Python 3.14.
 
 Fixed
 `````
@@ -60,6 +60,7 @@ Internals (impacting hooks.py)
 
 Internals (other)
 `````````````````
+* Implemented testing for Python 3.14.
 * Implemented OpenSSF Scorecard and improved code security.
 * Enabled additional ``ruff check`` linters and improved code quality.
 
