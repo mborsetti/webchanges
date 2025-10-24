@@ -439,7 +439,7 @@ jobs:
 #          password: ${{ secrets.pypi_password }}
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@5434409c2b6457c050f109d68b2547fcbf1db07b # master
+        uses: softprops/action-gh-release@aa05f9d77940d1a6b7a495c3264de51fabbf36d9 # master
         with:
           body_path: RELEASE.rst
           draft: false
