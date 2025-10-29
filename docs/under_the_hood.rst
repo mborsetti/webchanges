@@ -25,27 +25,34 @@ searching for the DEBUG log messages having the text ``max_workers``.
 
 Use of conditional requests (timestamp, ETag)
 ---------------------------------------------
-Once a website (``url``) has been checked once, any subsequent checks will be made as a conditional request by setting
-the HTTP headers ``If-Modified-Since`` and, if an ETag was returned, the ``If-None-Match``. This is also true for jobs
-where ``use_browser`` is set to ``true`` (i.e. using Google Chrome).
+:program:`webchanges` uses `RFC 7232 <https://datatracker.ietf.org/doc/html/rfc7232>`__ conditional requests to 
+efficiently check for website updates. After the first check of a ``url`` job, subsequent requests include special 
+HTTP headers:
 
-The conditional request is an optimization to speed up execution: if there are no changes to the resource, the server
-doesn't need to send it but instead just sends a 304 HTTP response code which :program:`webchanges` understands.
+*   ``If-Modified-Since``: Uses the timestamp of the last check.
+*   ``If-None-Match``: Uses a unique identifier (ETag) provided by the server from the previous check.
+
+This mechanism applies to all ``url`` jobs, including those that use a browser (``use_browser: true``).
+
+This is a performance optimization. If the content hasn't changed, the server responds with a ``304 Not Modified`` 
+status code and no content, speeding up execution and reducing bandwidth usage. :program:`webchanges` understands this 
+response and knows that the content is unchanged.
 
 In the extremely rare cases where the web server does not correctly process conditional requests (e.g. Google Flights),
 it can be turned off with the ``no_conditional_request: true`` :ref:`directive <no_conditional_request>`.
 
 Details
 ^^^^^^^
-With the ``If-Modified-Since`` request HTTP header the server sends back the requested resource, with a 200 status, only
-if it has been last modified after the given date. If the resource has not been modified since, the response is a 304
-without any body; the ``Last-Modified`` response header of a previous request contains the date of last modification.
+The ``If-Modified-Since`` header tells the server to send the resource only if it has been modified after the specified
+date. If not, the server sends a ``304`` response without the content. The ``Last-Modified`` header from the server's
+previous response provides this date.
 
-With the ``If-None-Match`` request HTTP header, for ``GET`` and ``HEAD`` methods, the server will return the requested
-resource, with a 200 status, only if it doesn't have an ETag matching the given ones. For other methods, the request
-will be processed only if the eventually existing resource's ETag doesn't match any of the values listed. When the
-condition fails for ``GET`` and ``HEAD`` methods, then the server must return HTTP status code 304 (Not Modified). The
-comparison with the stored ETag uses the weak comparison algorithm, meaning two files are considered identical if the
-content is equivalent — they don't have to be identical byte by byte. For example, two pages that differ by their
-creation date in the footer would still be considered identical. When used in combination with ``If-Modified-Since``,
-``If-None-Match`` has precedence (if the server supports it).
+The ``If-None-Match`` header works similarly, but with ETags. For ``GET`` and ``HEAD`` requests, the server sends the
+full resource only if the ETag doesn't match. Otherwise, it returns a ``304`` status.
+
+:program:`webchanges` accepts "weak comparison" for ETags. This means that content may be considered identical by a
+server if it's semantically equivalent, even if not byte-for-byte the same. For instance, a page that only changes its
+footer timestamp to the current time could be considered unchanged by the server if nothing else but the time diplayed
+is modified between visits.
+
+When both headers are used, ``If-None-Match`` takes precedence if the server supports it.
