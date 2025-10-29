@@ -49,12 +49,12 @@ if httpx is not None:
     except ImportError:  # pragma: no cover
         h2 = None  # type: ignore[assignment]
 
-logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from webchanges.main import Urlwatch
     from webchanges.reporters import _ConfigReportersList
     from webchanges.storage import _ConfigReportEmail, _ConfigReportEmailSmtp, _ConfigReportTelegram, _ConfigReportXmpp
+
+logger = logging.getLogger(__name__)
 
 
 class UrlwatchCommand:
@@ -96,8 +96,7 @@ class UrlwatchCommand:
         # Similar code to BaseTextualFileStorage.edit()
         for hooks_file in self.urlwatch_config.hooks_files:
             logger.debug(f'Edit file {hooks_file}')
-            # Python 3.9: hooks_edit = self.urlwatch_config.hooks.with_stem(self.urlwatch_config.hooks.stem + '_edit')
-            hooks_edit = hooks_file.parent.joinpath(hooks_file.stem + '_edit' + ''.join(hooks_file.suffixes))
+            hooks_edit = hooks_file.with_stem(hooks_file.stem + '_edit')
             if hooks_file.exists():
                 shutil.copy(hooks_file, hooks_edit)
             # elif self.urlwatch_config.hooks_py_example is not None and os.path.exists(
@@ -386,8 +385,9 @@ class UrlwatchCommand:
         print('\n   '.join(jobs_files))
 
     def _find_job(self, query: str | int) -> JobBase:
-        """Finds the job based on a query, which is matched to the job index (also negative) or a job location
-        (i.e. the url/user_visible_url or command).
+        """Finds the job based on a query.
+
+        It is matched to the job index (also negative) or a job location (i.e. the url/user_visible_url or command).
 
         :param query: The query.
         :return: The matching JobBase.
@@ -415,8 +415,9 @@ class UrlwatchCommand:
             raise ValueError(f'Job index {index} out of range (found {len(self.urlwatcher.jobs)} jobs).') from e
 
     def _find_job_with_defaults(self, query: str | int) -> JobBase:
-        """Returns the job with defaults based on job_id, which could match an index or match a location
-        (url/user_visible_url or command). Accepts negative numbers.
+        """Returns the job with defaults based on job_id.
+
+        This could match an index or a location (url/user_visible_url or command). Accepts negative numbers.
 
         :param query: The query.
         :return: The matching JobBase with defaults.
@@ -426,8 +427,9 @@ class UrlwatchCommand:
         return job.with_defaults(self.urlwatcher.config_storage.config)
 
     def test_job(self, job_id: bool | str | int) -> None:
-        """Tests the running of a single job outputting the filtered text to --test-reporter (default is stdout). If
-        job_id is True, don't run any jobs but load config, jobs and hook files to trigger any syntax errors.
+        """Tests the running of a single job outputting the filtered text to --test-reporter (default is stdout).
+
+        If job_id is True, don't run any jobs but load config, jobs and hook files to trigger any syntax errors.
 
         :param job_id: The job_id or True.
 
@@ -511,8 +513,9 @@ class UrlwatchCommand:
         return
 
     def test_differ(self, arg_test_differ: list[str]) -> int:
-        """Runs diffs for a job on all the saved snapshots and outputs the result to stdout or the reporter selected
-        with --test-reporter.
+        """Runs diffs for a job on all the saved snapshots.
+
+        Outputs the result to stdout or the reporter selected  with --test-reporter.
 
         :param arg_test_differ: Either the job_id or a list containing [job_id, max_diffs]
         :return: 1 if error, 0 if successful.
@@ -652,13 +655,14 @@ class UrlwatchCommand:
                 jobs: Iterable[JobBase],
                 max_workers: int | None = None,
             ) -> Iterator[str]:
-                """Modified worker.job_runner that yields error text for jobs who fail with an exception or yield no
-                data.
+                """Modified worker.job_runner.
+
+                Yields error text for jobs who fail with an exception or return no data.
 
                 :param stack: The context manager.
                 :param jobs: The jobs to run.
                 :param max_workers: The number of maximum workers for ThreadPoolExecutor.
-                :return: error text for jobs who fail with an exception or yield no data.
+                :return: error text for jobs who fail with an exception or return no data.
                 """
                 executor = ThreadPoolExecutor(max_workers=max_workers)
 
@@ -795,21 +799,45 @@ class UrlwatchCommand:
 
             :return: The datetime object.
             """
-            try:
-                timestamp = float(timespec)
-                return datetime.fromtimestamp(timestamp, tz_info)
-            except ValueError:
+            # --- 1. Try parsing as a numeric timestamp ---
+            # This is the fastest check and should come first.
+            if timespec.isnumeric() or (timespec.startswith('-') and timespec[1:].isnumeric()):
                 try:
-                    from dateutil import parser as dateutil_parser
+                    timestamp = float(timespec)
+                    return datetime.fromtimestamp(timestamp, tz=tz_info)
+                except (ValueError, TypeError):
+                    # Pass to the next method if it's not a valid float (e.g., "123a")
+                    pass
 
+            # --- 2. Try parsing as ISO 8601 format ---
+            # datetime.fromisoformat is very efficient for standard formats.
+            try:
+                dt = datetime.fromisoformat(timespec)
+                # If the parsed datetime is naive (no timezone), apply the provided one.
+                if dt.tzinfo is None:
+                    return dt.replace(tzinfo=tz_info)
+                return dt
+            except ValueError:
+                # Pass to the next method if it's not a valid ISO string.
+                pass
+
+            # --- 3. Try parsing with the flexible but slower dateutil library ---
+            try:
+                from dateutil import parser as dateutil_parser
+
+                try:
+                    # Set a default datetime to provide context and timezone for ambiguous strings like "Sunday at 4pm".
                     default_dt_with_tz = datetime.now(tz_info).replace(second=0, microsecond=0)
-                    return dateutil_parser.parse(timespec, default=default_dt_with_tz)  # type: ignore[no-any-return] # bug!
-                    # return dateutil_parser.parse(timespec)
-                except ImportError:
-                    dt = datetime.fromisoformat(timespec)
-                    if not dt.tzinfo:
-                        dt = dt.replace(tzinfo=tz_info)
-                    return dt
+                    return dateutil_parser.parse(timespec, default=default_dt_with_tz)  # type: ignore[no-any-return]  # bug
+                except (ValueError, OverflowError):
+                    # Pass to the next method if datetutil cannot parse.
+                    pass
+            except ImportError:
+                # Pass to the next method if datetutil is not installed.
+                pass
+
+            # --- 4. If all parsing attempts fail ---
+            raise ValueError(f'Cannot parse "{timespec}" into a date/time.')
 
         tz = self.urlwatcher.report.config['report']['tz']
         tz_info = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine

@@ -709,7 +709,7 @@ A Telegram `group <https://telegram.org/tour/groups>`__ is the standard method u
 :program:`webchanges`. To create one, from your Telegram app chat up `BotFather
 <https://core.telegram.org/bots#6-botfather>`__ (New Message, Search, “BotFather”),
 then say ``/newbot`` and follow the instructions. Eventually it will tell you the bot's unique authentication token
-(along the lines of ``110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw``); add it to your configuration file (run
+(along the lines of ``123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh``); add it to your configuration file (run
 ``webchanges --edit-config``) as below, and save the file.
 
 .. code:: yaml
@@ -718,7 +718,7 @@ then say ``/newbot`` and follow the instructions. Eventually it will tell you th
      tz: null  # or whatever you want it to be
      telegram:
        enabled: true  # don't forget to set this to true! :)
-       bot_token: "110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"  # replace with your bot's token
+       bot_token: "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh"  # replace with your bot's token
        chat_id: ""  # empty for now
 
 Next click on the link of your chat bot (starts with \https://t.me/) and, on the new screen, click on start (which will

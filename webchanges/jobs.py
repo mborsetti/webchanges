@@ -19,8 +19,9 @@ import tempfile
 import textwrap
 import time
 import warnings
+from contextlib import ExitStack
 from ftplib import FTP
-from http.client import responses as response_names
+from http.client import responses as http_response_names
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping, Sequence
 from urllib.parse import SplitResult, SplitResultBytes, parse_qsl, quote, urlencode, urlparse, urlsplit
@@ -109,7 +110,7 @@ class BrowserResponseError(Exception):
         if self.status_code:
             return (
                 f'{self.__class__.__name__}: Received response HTTP {self.status_code} '
-                f'{response_names.get(self.status_code, "")}'
+                f'{http_response_names.get(self.status_code, "")}'
                 + (f' with content "{self.args[0]}"' if self.args[0] else '')
             )
         return str(self.args[0])
@@ -578,9 +579,10 @@ class JobBase(metaclass=TrackSubClasses):
         if proxy is None:
             if os.getenv((scheme + '_proxy').upper()):
                 proxy = os.getenv((scheme + '_proxy').upper())
-            logger.debug(
-                f'Job {self.index_number}: Setting proxy from environment variable {(scheme + "_proxy").upper()}'
-            )
+            if proxy:
+                logger.debug(
+                    f'Job {self.index_number}: Using proxy from environment variable {(scheme + "_proxy").upper()}'
+                )
         return proxy
 
 
@@ -790,12 +792,16 @@ class UrlJob(UrlJobBase):
             timeout=timeout,
             follow_redirects=(not self.no_redirects),
         )
-        response = client.request(
-            method=self.method,  # type: ignore[arg-type]
-            url=self.url,
-            data=self.data,  # type: ignore[arg-type]
-            params=self.params,
-        )
+        try:
+            response = client.request(
+                method=self.method,  # type: ignore[arg-type]
+                url=self.url,
+                data=self.data,  # type: ignore[arg-type]
+                params=self.params,
+            )
+        except httpx.HTTPError as e:
+            logger.info(f'Job {self.index_number}: httpx error: {e}')
+            raise
         logger.debug(f'Job {self.index_number}: Response headers: {response.headers}')
 
         if 400 <= response.status_code < 600:
@@ -1394,7 +1400,10 @@ class BrowserJob(UrlJobBase):
                 'username': str(proxy_split.username),
                 'password': str(proxy_split.password),
             }
-            logger.debug(f'Job {self.index_number}: Proxy: {proxy}')
+            proxy_for_logging = proxy.copy()
+            if proxy_for_logging['password']:
+                proxy_for_logging['password'] = '*****'  # noqa: S105 possible hardcoded password
+            logger.debug(f'Job {self.index_number}: Proxy: {proxy_for_logging}')
         else:
             proxy = None
 
@@ -1436,20 +1445,23 @@ class BrowserJob(UrlJobBase):
         )
 
         # launch browser
-        with sync_playwright() as p:
+        with ExitStack() as stack:
+            p = stack.enter_context(sync_playwright())
             executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
             channel = None if executable_path else 'chrome'
             browser_name = executable_path or 'Chrome'
             no_viewport = False if not self.switches else any('--window-size' in switch for switch in self.switches)
             if not self.user_data_dir:
-                browser = p.chromium.launch(
-                    executable_path=executable_path,
-                    channel=channel,
-                    args=args,
-                    ignore_default_args=ignore_default_args,
-                    timeout=timeout,
-                    headless=headless,
-                    proxy=proxy,  # type: ignore[arg-type]
+                browser = stack.enter_context(
+                    p.chromium.launch(
+                        executable_path=executable_path,
+                        channel=channel,
+                        args=args,
+                        ignore_default_args=ignore_default_args,
+                        timeout=timeout,
+                        headless=headless,
+                        proxy=proxy,  # type: ignore[arg-type]
+                    )
                 )
                 browser_version = browser.version
                 user_agent = headers.pop(
@@ -1457,11 +1469,13 @@ class BrowserJob(UrlJobBase):
                     f'Mozilla/5.0 ({self.get_user_agent_platform()}) AppleWebKit/537.36 (KHTML, like Gecko) '
                     f'Chrome/{browser_version.split(".", maxsplit=1)[0]}.0.0.0 Safari/537.36',
                 )
-                context = browser.new_context(
-                    no_viewport=no_viewport,
-                    ignore_https_errors=self.ignore_https_errors,
-                    user_agent=user_agent,  # will be detected if in headers
-                    extra_http_headers=dict(headers),
+                context = stack.enter_context(
+                    browser.new_context(
+                        no_viewport=no_viewport,
+                        ignore_https_errors=self.ignore_https_errors,
+                        user_agent=user_agent,  # will be detected if in headers
+                        extra_http_headers=dict(headers),
+                    )
                 )
                 logger.info(
                     f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name} browser'
@@ -1471,18 +1485,20 @@ class BrowserJob(UrlJobBase):
             else:
                 user_agent = headers.pop('User-Agent', '')
 
-                context = p.chromium.launch_persistent_context(
-                    user_data_dir=self.user_data_dir,
-                    channel=channel,
-                    executable_path=executable_path,
-                    args=args,
-                    ignore_default_args=ignore_default_args,
-                    headless=headless,
-                    proxy=proxy,  # type: ignore[arg-type]
-                    no_viewport=no_viewport,
-                    ignore_https_errors=self.ignore_https_errors,
-                    extra_http_headers=dict(headers),
-                    user_agent=user_agent,  # will be detected if in headers
+                context = stack.enter_context(
+                    p.chromium.launch_persistent_context(
+                        user_data_dir=self.user_data_dir,
+                        channel=channel,
+                        executable_path=executable_path,
+                        args=args,
+                        ignore_default_args=ignore_default_args,
+                        headless=headless,
+                        proxy=proxy,  # type: ignore[arg-type]
+                        no_viewport=no_viewport,
+                        ignore_https_errors=self.ignore_https_errors,
+                        extra_http_headers=dict(headers),
+                        user_agent=user_agent,  # will be detected if in headers
+                    )
                 )
                 browser_version = ''
                 logger.info(
@@ -1551,12 +1567,10 @@ class BrowserJob(UrlJobBase):
                     )
                 except PlaywrightError as e:
                     logger.info(f'Job {self.index_number}: Website initialization page returned error {e}')
-                    context.close()
                     raise e
 
                 if not response:
-                    context.close()
-                    raise BrowserResponseError(('No response received from browser',), None)
+                    raise BrowserResponseError(('No response received from browser on initialization',), None)
 
                 if self.initialization_js:
                     logger.info(f"Job {self.index_number}: Running init script '{self.initialization_js}'")
@@ -1569,7 +1583,6 @@ class BrowserJob(UrlJobBase):
                 try:
                     new_url = url.format(**init_url_params)
                 except KeyError as e:
-                    context.close()
                     raise ValueError(  # noqa: B904
                         f"Job {job_state.job.index_number}: Directive 'initialization_url' did not find key"
                         f" {e} to substitute in 'url'."
@@ -1622,7 +1635,6 @@ class BrowserJob(UrlJobBase):
                 if isinstance(self.block_elements, str):
                     self.block_elements = self.block_elements.split(',')
                 if not isinstance(self.block_elements, list):
-                    context.close()
                     raise TypeError(
                         f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
                         f'( {self.get_indexed_location()} )'
@@ -1645,7 +1657,6 @@ class BrowserJob(UrlJobBase):
                 ]
                 for element in self.block_elements:
                     if element not in playwright_request_resource_types:
-                        context.close()
                         raise ValueError(
                             f"Unknown '{element}' resource type in 'block_elements' ( {self.get_indexed_location()} )"
                         )
@@ -1689,8 +1700,7 @@ class BrowserJob(UrlJobBase):
                     )
 
                 if not response:
-                    context.close()
-                    raise BrowserResponseError(('No response received from browser',), None)
+                    raise BrowserResponseError(('No response received from browser on navigation',), None)
 
                 if response.ok:
                     if self.wait_for_url:
@@ -1704,7 +1714,6 @@ class BrowserJob(UrlJobBase):
                         elif isinstance(self.wait_for_url, dict):
                             page.wait_for_url(**self.wait_for_url)
                         else:
-                            context.close()
                             raise ValueError(
                                 f"Job {job_state.job.index_number}: Directive 'wait_for_url' can only be a string or a "
                                 f'dictionary; found a {type(self.wait_for_url.__name__)} '
@@ -1720,7 +1729,6 @@ class BrowserJob(UrlJobBase):
                             elif isinstance(selector, dict):
                                 page.wait_for_selector(**selector)
                             else:
-                                context.close()
                                 raise ValueError(
                                     f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a "
                                     f'string or a dictionary, or a list of these; found a '
@@ -1733,7 +1741,6 @@ class BrowserJob(UrlJobBase):
                         elif isinstance(self.wait_for_function, dict):
                             page.wait_for_function(**self.wait_for_function)
                         else:
-                            context.close()
                             raise ValueError(
                                 f"Job {job_state.job.index_number}: Directive 'wait_for_function' can only be a string "
                                 f'or a dictionary; found a {type(self.wait_for_function).__name__}'
@@ -1746,7 +1753,6 @@ class BrowserJob(UrlJobBase):
                         ):
                             page.wait_for_timeout(self.wait_for_timeout * 1000)
                         else:
-                            context.close()
                             raise ValueError(
                                 f"Job {job_state.job.index_number}: Directive 'wait_for_timeout' can only be a number; "
                                 f'found a {type(self.wait_for_timeout).__name__}'
@@ -1754,7 +1760,6 @@ class BrowserJob(UrlJobBase):
                             )
 
                 # if response.status and 400 <= response.status < 600:
-                #     context.close()
                 #     raise BrowserResponseError((response.status_text,), response.status)
                 if not response.ok:
                     # logger.info(
@@ -1767,7 +1772,6 @@ class BrowserJob(UrlJobBase):
                         body = page.text_content('body')
                         if body is not None:
                             message = f'{message}\n{body.strip()}' if message else body.strip()
-                    context.close()
                     raise BrowserResponseError((message,), response.status)
 
                 # extract content
@@ -1805,7 +1809,6 @@ class BrowserJob(UrlJobBase):
                     if title:
                         self.name = html.unescape(title.group(1))[:60]
 
-                context.close()
                 return content, etag, mime_type
 
             except PlaywrightError as e:
@@ -1837,7 +1840,6 @@ class BrowserJob(UrlJobBase):
                         logger.info(f'Job {self.index_number}: Page HTML content saved at {html_filename}')
                     except PlaywrightError:
                         Path(html_filename).unlink()
-                context.close()
                 raise BrowserResponseError(e.args, None) from None
 
     def format_error(self, exception: Exception, tb: str) -> str:

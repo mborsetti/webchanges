@@ -1,19 +1,18 @@
-"""
-Extension to Sphinx that generates a hierarchical list of classes using the contents of the ``__kind__`` attribute.
-"""
+"""Extension to Sphinx that generates a hierarchical list of classes using the contents of the ``__kind__``
+attribute."""
 
 from __future__ import annotations
 
 import importlib
-from typing import TYPE_CHECKING, Iterator, TypeVar
+from typing import TYPE_CHECKING
 
 from docutils.nodes import literal_block
 from docutils.parsers.rst import Directive
 
 if TYPE_CHECKING:
-    from sphinx.application import Sphinx
+    from typing import Iterator
 
-T = TypeVar('T')
+    from sphinx.application import Sphinx
 
 
 def patch_subclasses(klass: type) -> None:

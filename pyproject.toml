@@ -16,7 +16,7 @@ dynamic = ['version', 'dependencies']
 name = 'webchanges'
 description = 'Web Changes Delivered. AI-Summarized. Totally Anonymous.'
 readme = { file = 'README.rst', content-type = 'text/x-rst' }
-requires-python = '>=3.10'
+requires-python = '>=3.11'
 license = { file = 'LICENSE.md' }
 authors = [{ name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com' }]
 maintainers = [
@@ -36,7 +36,6 @@ classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
     'Programming Language :: Python :: 3.13',
@@ -289,7 +288,7 @@ select = [
     "INT",  # flake8-gettext
     "ISC",  # flake8-implicit-str-concat
     "LOG",  # flake8-logging
-    # "G",    # flake8-logging-format  # TODO
+    # "G",    # flake8-logging-format  # Prefer f-string to lazy `%` formatting and OK with '+'
     "PIE",  # flake8-pie
     "PYI",  # flake8-pyi
     "PT",   # flake8-pytest-style
@@ -300,9 +299,9 @@ select = [
     "TID",  # flake8-tidy-imports
     "TD",   # flake8-todos
     "TC",   # flake8-type-checking
-    # "ARG",  # flake8-unused-arguments  # TODO
+    # "ARG",  # flake8-unused-arguments  # Code loses clarity
     "PTH",  # flake8-use-pathlib
-    # "FLY",  # flynt   # TODO
+    "FLY",  # flynt
     "I",    # isort
     "C90",  # mccabe 
     "N",    # pep8-naming
@@ -319,13 +318,17 @@ select = [
 ]
 
 ignore = [
-    "PT011",  # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
-    "PT030",  # pytest.warns({warning}) is too broad, set the match parameter or use a more specific warning
-    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
-    "SIM105", # Use contextlib.suppress({exception}) instead of try-except-pass
-    "SIM115", # Use a context manager for opening files
-    "TD002",  #	Missing author in TODO
-    "TD003",  # Missing issue link for this TODO
+    "FLY002",  # Consider f-string instead of string join
+    # "G003",    # Logging statement uses `+`"
+    # "G004",    # Logging statement uses f-string (Prefer f-string to lazy `%` formatting)
+    "PLC0415", # `import` should be at the top-level of a file
+    "PT011",   # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
+    "PT030",   # pytest.warns({warning}) is too broad, set the match parameter or use a more specific warning
+    "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
+    "SIM105",  # Use contextlib.suppress({exception}) instead of try-except-pass
+    "SIM115",  # Use a context manager for opening files
+    "TD002",   #	Missing author in TODO
+    "TD003",   # Missing issue link for this TODO
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.

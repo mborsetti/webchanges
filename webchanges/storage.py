@@ -621,8 +621,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
     filename: list[Path]  # type: ignore[assignment]
 
     def __init__(self, filename: list[Path]) -> None:
-        """
-        Class for jobs textual files storage.
+        """Class for jobs textual files storage.
 
         :param filename: The filenames of the jobs file.
         """
@@ -1094,15 +1093,33 @@ class SsdbStorage(BaseFileStorage, ABC):
 
     @abstractmethod
     def clean(self, guid: str, keep_entries: int = 1) -> int:
-        pass
+        """Removes the entries for guid except the latest n keep_entries.
+
+        :param guid: The guid.
+        :param keep_entries: The number of most recent entries to keep.
+
+        :returns: Number of records deleted.
+        """
 
     @abstractmethod
     def move(self, guid: str, new_guid: str) -> int:
-        pass
+        """Replace uuid in records matching the 'guid' with the 'new_guid' value.
+
+        If there are existing records with 'new_guid', they will not be overwritten and the job histories will be
+        merged.
+
+        :returns: Number of records searched for replacement.
+        """
 
     @abstractmethod
     def rollback(self, timestamp: float) -> int | None:
-        pass
+        """Rolls back the database to timestamp.
+
+        :param timestamp: The timestamp.
+
+        :returns: Number of records deleted.
+        :raises: NotImplementedError for those classes where this method is not implemented.
+        """
 
     def backup(self) -> Iterator[tuple[str, str | bytes, float, int, str, str, ErrorData]]:
         """Return the most recent entry for each 'guid'.
@@ -1246,6 +1263,13 @@ class SsdbDirStorage(SsdbStorage):
         return 0
 
     def move(self, guid: str, new_guid: str) -> int:
+        """Moves the data from guid to new_guid.
+
+        :param guid: The guid.
+        :param new_guid: The new guid.
+
+        :returns: Number of records moved.
+        """
         if guid == new_guid:
             return 0
         old_filepath = Path(self._get_filename(guid))
@@ -1908,6 +1932,10 @@ class SsdbRedisStorage(SsdbStorage):
         return self.db.llen(new_key)  # type: ignore[no-any-return] # bug!
 
     def rollback(self, timestamp: float) -> None:
+        """Rolls back the database to timestamp.
+
+        :raises: NotImplementedError: This function is not implemented for 'redis' database engine.
+        """
         raise NotImplementedError("Rolling back the database is not supported by 'redis' database engine")
 
     def flushdb(self) -> None:

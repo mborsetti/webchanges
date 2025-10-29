@@ -226,8 +226,8 @@ class JobState(ContextManager):
                 self.new_timestamp = time.time()
                 data, self.new_etag, mime_type = self.job.retrieve(self, headless)
                 logger.debug(
-                    f'Job {self.job.index_number}: Retrieved data '
-                    f'{{data=data, etag=self.new_etag, mime_type=mime_type}}'
+                    f'Job {self.job.index_number}: Retrieved data={data!r} | etag={self.new_etag} | '
+                    f'mime_type={mime_type}'
                 )
 
             except Exception as e:

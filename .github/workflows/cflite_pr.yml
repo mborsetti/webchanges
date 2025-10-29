@@ -21,9 +21,14 @@ jobs:
                 # - undefined
                 # - memory
         steps:
+            - name: Harden the runner (Audit all outbound calls)
+              uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+              with:
+                egress-policy: audit
+
             - name: Build Fuzzers (${{ matrix.sanitizer }})
               id: build
-              uses: google/clusterfuzzlite/actions/build_fuzzers@v1
+              uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
               with:
                   language: c++ # Change this to the language you are fuzzing.
                   github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -36,7 +41,7 @@ jobs:
                   # storage-repo-branch-coverage: gh-pages  # Optional. Defaults to "gh-pages".
             - name: Run Fuzzers (${{ matrix.sanitizer }})
               id: run
-              uses: google/clusterfuzzlite/actions/run_fuzzers@v1
+              uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   fuzz-seconds: 600

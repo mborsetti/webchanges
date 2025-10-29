@@ -67,7 +67,7 @@ if visual:
 py_latest_only = cast(
     'Callable[[Callable], Callable]',
     pytest.mark.skipif(
-        sys.version_info < (3, 13),
+        sys.version_info < (3, 14),
         reason='Time consuming; testing latest version only',
     ),
 )
@@ -224,8 +224,8 @@ def test_edit_fail(capsys: pytest.CaptureFixture[str]) -> None:
         os.environ['EDITOR'] = editor
     else:
         os.unsetenv('EDITOR')
-        del os.environ['EDITOR']  # Python 3.9: jobs_edit = jobs_file.with_stem(jobs_file.stem + '_edit')
-    jobs_edit = jobs_file.parent.joinpath(jobs_file.stem + '_edit' + ''.join(jobs_file.suffixes))
+        del os.environ['EDITOR']
+    jobs_edit = jobs_file.with_stem(jobs_file.stem + '_edit')
     jobs_edit.unlink()
     assert pytest_wrapped_e.value.args[0] == (
         'pytest: reading from stdin while output is captured!  Consider using `-s`.'
@@ -253,8 +253,8 @@ def test_edit_config_fail(capsys: pytest.CaptureFixture[str]) -> None:
         os.environ['EDITOR'] = editor
     else:
         os.unsetenv('EDITOR')
-        del os.environ['EDITOR']  # Python 3.9: config_edit = config_file.with_stem(config_file.stem + '_edit')
-    config_edit = config_file.parent.joinpath(config_file.stem + '_edit' + ''.join(config_file.suffixes))
+        del os.environ['EDITOR']
+    config_edit = config_file.with_stem(config_file.stem + '_edit')
     config_edit.unlink()
     assert pytest_wrapped_e.value.args[0] == (
         'pytest: reading from stdin while output is captured!  Consider using `-s`.'
@@ -971,7 +971,7 @@ def test_rollback_database(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
     with pytest.raises(ValueError) as pytest_wrapped_ve:
         urlwatch_command_common.handle_actions()
     command_config.rollback_database = None
-    assert pytest_wrapped_ve.value.args[0] == 'Unknown string format: %s'
+    assert pytest_wrapped_ve.value.args[0] == 'Cannot parse "Thisisjunk" into a date/time.'
 
 
 def test_check_telegram_chats(capsys: pytest.CaptureFixture[str]) -> None:

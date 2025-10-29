@@ -149,25 +149,25 @@ def test_jobs(job: JobBase) -> None:
             if (
                 filter_kind == 'beautify' or (filter_kind == 'html2text' and subfilter.get('method') == 'bs4')
             ) and not bs4_is_installed:
-                pytest.skip(f"Skipping {job.url} since 'beautifulsoup4' package is not installed")
+                pytest.skip("'beautifulsoup4' not installed")
             if (
                 subfilter.get('method') == 'bs4' and subfilter.get('parser') == 'html5lib'
             ) and not html5lib_is_installed:
-                pytest.skip(f"Skipping {job.url} since 'html5lib' package is not installed")
+                pytest.skip("'html5lib' not installed")
             if filter_kind == 'ascii85':
                 data = b'\xc9\x89\xa3'
             elif filter_kind == 'base64':
                 data = b'i\xb7\x1d'
             elif filter_kind == 'ical2text' and not vobject_is_installed:
-                pytest.skip(f"Skipping {job.url} since 'vobject' package is not installed")
+                pytest.skip("'vobject' not installed")
             elif filter_kind == 'ocr' and not pytesseract_is_installed:
-                pytest.skip(f"Skipping {job.url} since 'pytesseract' package is not installed")
+                pytest.skip("'pytesseract' not installed")
             elif filter_kind == 'jq' and not jq_is_installed:
-                pytest.skip(f"Skipping {job.url} since 'jq' package is not installed")
+                pytest.skip("'jq' not installed")
             elif filter_kind == 'pdf2text' and not pdftotext_is_installed:
-                pytest.skip(f"Skipping {job.url} since 'pdftotext' package is not installed")
+                pytest.skip("'pdftotext' not installed")
             elif filter_kind == 'beautify' and not cssbeautifier_is_installed:
-                pytest.skip(f"Skipping {job.url} since 'cssbeautifier' package is not installed")
+                pytest.skip("'cssbeautifier' not installed")
 
             data, _ = FilterBase.process(filter_kind, subfilter, job_state, data, '')
             if filter_kind in {'pdf2text', 'shellpipe'}:  # fix for macOS or OS-specific end of line

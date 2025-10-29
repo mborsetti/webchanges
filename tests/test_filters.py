@@ -80,7 +80,7 @@ def test_filters(test_name: str, test_data: dict[str, str]) -> None:
     for filter_kind, subfilter in FilterBase.normalize_filter_list(filter_spec):
         logger.info(f'filter kind: {filter_kind}, subfilter: {subfilter}')
         if filter_kind == 'html2text' and subfilter.get('method') == 'bs4' and not bs4_is_installed:
-            pytest.skip(f"Skipping {test_name} since 'beautifulsoup4' package is not installed")
+            pytest.skip("'beautifulsoup4' not installed")
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         if filtercls is None:
             raise ValueError('Unknown filter kind: {filter_kind}:{subfilter}')
@@ -393,9 +393,9 @@ def test_filter_exceptions() -> None:
     assert e.value.args[0][: len(expected)] == expected
 
 
+# @pytest.mark.xfail('Not working due to an html2text bug')
 def test_html2text_roundtrip() -> None:
-    pytest.xfail('Not working due to an html2text bug')
-    html = '1 | <a href="https://www.example.com">1</a><br><strong>2 | <a href="https://www.example.com">2</a></strong>'
+    html = '1 | <a href="https://www.example.com">1</a><br><strong>2 |<a href="https://www.example.com">2</a></strong>'
     data, _ = Html2TextFilter(job_state).filter(html, 'text/plain', {})  # type: ignore[arg-type]
     html2_lines = [
         mark_to_html(line).replace('style="font-family:inherit" rel="noopener" target="_blank" ', '')

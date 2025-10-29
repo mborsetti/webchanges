@@ -33,6 +33,7 @@ except ImportError:
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
 aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
+# pushbullet.py not maintained, breaks at Python 3.13. See https://pypi.org/project/pushbullet.py/
 pushbullet_testing_broken = sys.version_info >= (3, 13)
 
 
@@ -166,7 +167,7 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
             )
         case 'xmpp':
             if not aioxmpp_is_installed:
-                pytest.skip(f"Skipping {reporter} since 'aioxmpp' package is not installed")
+                pytest.skip("'aioxmpp' not installed")
             elif NoKeyringError is not None:
                 with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
                     test_report.finish_one(reporter, check_enabled=False)
@@ -190,7 +191,7 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                 assert reporter in str(pytest_wrapped_e.value).lower()
         case 'matrix':
             if not matrix_client_is_installed:
-                pytest.skip(f"Skipping {reporter} since 'matrix' package is not installed")
+                pytest.skip("'matrix' not installed")
             with pytest.raises(MatrixError) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)
             assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '

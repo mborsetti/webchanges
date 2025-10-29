@@ -80,8 +80,9 @@ class TrackSubClasses(type):
     job_states: list[JobState]
 
     def sorted_by_kind(cls: TrackSubClasses) -> list[TrackSubClasses]:
-        """Generates a list of all members of a class sorted by the value of their __kind__ attribute. Useful for
-        documentation.
+        """Generates a list of all members of a class sorted by the value of their __kind__ attribute.
+
+        Useful for documentation.
 
         :param cls: The class.
         :return: The sorted list of class members.
@@ -89,6 +90,12 @@ class TrackSubClasses(type):
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
     def __init__(cls, name: str, bases: tuple[type, ...], namespace: dict) -> None:
+        """_summary_. # TODO.
+
+        :param name: _description_.  # TODO.
+        :param bases: _description_.  # TODO.
+        :param namespace: _description_.  # TODO.
+        """
         for base in bases:
             if base is object:
                 continue
@@ -361,8 +368,10 @@ def dur_text(duration: float) -> str:
 
 
 def file_ownership_checks(filename: Path) -> list[str]:
-    """Check security of file and its directory, i.e. that they belong to the current UID or root and only the owner
-    can write to them. Return list of errors if any. Linux only.
+    """Check security of file and its directory.
+
+    Ensures that they belong to the current UID or root and only the owner can write to them. Return list of errors if
+    any. Linux only.
 
     :returns: List of errors encountered (if any).
     """

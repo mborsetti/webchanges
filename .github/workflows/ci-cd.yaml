@@ -30,15 +30,15 @@ jobs:
     strategy:
       matrix:
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
-        # RCs need to be specified fully, e.g. '3.13.0-rc.3'
-        python-version: ['3.14', '3.13', '3.12', '3.11', '3.10']
+        # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-preleleases: true in setop-python
+        python-version: ['3.14', '3.13', '3.12', '3.11']
         os: [ubuntu-latest]
         disable-gil: [false]
         # 29-oct-24 lxml does not build for free-threaded even with libxml2 and libxslt1 development packages
         # 23-nov-24 cryptography doesn't build for free-threaded
-#        include:
-#          # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
-#          - { os: ubuntu-latest, python-version: '3.13', disable-gil: true }
+        include:
+          # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
+          - { os: ubuntu-latest, python-version: '3.14', disable-gil: true }
 
     # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
     # If you are using GitHub-hosted runners, you must use an Ubuntu runner
@@ -82,7 +82,7 @@ jobs:
           enable-cache: true
 
       - name: Restore uv cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: /tmp/.uv-cache
           key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
@@ -97,10 +97,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-          # cache: 'pip'
-          # cache-dependency-path: |
-          #   requirements.txt
-          #   tests/requirements_pytest.txt
 
       # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
       - name: Set up Python ${{ matrix.python-version }} (free-threaded)
@@ -114,13 +110,9 @@ jobs:
         run: |
           echo "PYTHON_GIL=0" >> $GITHUB_ENV
 
-#      - name: Upgrade pip etc.
-#        run: |
-#          pip install --upgrade pip setuptools wheel
-# 
-#      - name: Install build dependencies for Python 3.10 for wheel-less lxml (Linux)
+#      - name: Install build dependencies for wheel-less lxml (Linux) in latest Python version
 #        # https://lxml.de/installation.html#installation
-#        if: matrix.python-version == '3.10.0-beta.4' && runner.os == 'Linux'
+#        if: matrix.python-version == '3.15' && runner.os == 'Linux'
 #        run: |
 #          sudo apt-get -y update
 #          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
@@ -128,7 +120,7 @@ jobs:
 
       - name: Install pdf2text and ocr dependencies (Linux Python latest)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.13' && runner.os == 'Linux'
+        if: matrix.python-version == '3.14' && runner.os == 'Linux'
         # https://github.com/jalan/pdftotext#os-dependencies
         run: |
           sudo apt-get -y update
@@ -171,6 +163,7 @@ jobs:
   test_macos:
     # No redis (only works on ubuntu)
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
+    # matrix.os is defined in strategy.
     runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run
     # needs: [pre-commit]
@@ -179,13 +172,18 @@ jobs:
       matrix:
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
         # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-preleleases: true in setop-python
-        python-version: ['3.14', '3.13', '3.12', '3.11', '3.10']
+        python-version: ['3.14', '3.13', '3.12', '3.11']
         os: [macos-latest]
-
+        disable-gil: [false]
+        # 29-oct-24 lxml does not build for free-threaded even with libxml2 and libxslt1 development packages
+        # 23-nov-24 cryptography doesn't build for free-threaded
+        include:
+          # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
+          - { os: ubuntu-latest, python-version: '3.14', disable-gil: true }
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-#      REDIS_URI: redis://localhost:6379  # no redis running
+#      REDIS_URI: redis://localhost:6379  # redis only available for Ubuntu
       UV_SYSTEM_PYTHON: 1  # for uv, turns on --system by default
       UV_CACHE_DIR: /tmp/.uv-cache  # for uv's persistent cache
 
@@ -207,7 +205,7 @@ jobs:
           enable-cache: true
 
       - name: Restore uv cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: /tmp/.uv-cache
           key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
@@ -221,24 +219,28 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-          # cache: 'pip'
-          # cache-dependency-path: |
-          #   requirements.txt
-          #   tests/requirements_pytest.txt
 
-#      - name: Upgrade pip etc.
-#        run: |
-#          pip install --upgrade pip setuptools wheel
-#
-#      - name: Install wheel-less lxml for Python 3.10
+      # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
+      - name: Set up Python ${{ matrix.python-version }} (free-threaded)
+        uses: deadsnakes/action@250fabcd68c32794474092d3dbe7db84f1c0826a # main
+        if: "${{ matrix.disable-gil }}"
+        with:
+          python-version: ${{ matrix.python-version }}
+          nogil: ${{ matrix.disable-gil }}
+      - name: Set PYTHON_GIL
+        if: '${{ matrix.disable-gil }}'
+        run: |
+          echo "PYTHON_GIL=0" >> $GITHUB_ENV
+
+#      - name: Install wheel-less lxml for latest Python
 #        # https://lxml.de/installation.html#installation
-#        if: matrix.python-version == '3.10.0-beta.4'
+#        if: matrix.python-version == '3.15'
 #        run: |
 #          STATIC_DEPS=true sudo -H pip install lxml
 
       - name: Install pdf2text and ocr dependencies (Python latest)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.13'
+        if: matrix.python-version == '3.14'
         run: |
           brew install poppler tesseract
           uv pip install --system --upgrade pdftotext pytesseract
@@ -271,13 +273,13 @@ jobs:
       - name: Minimize uv cache
         run: uv cache prune --ci
 
-# NOTES FROM 15-Apr-2024:
+# NOTES FROM 15-Apr-2024 on Windows testing:
 # No need to install poppler, tesseract etc. (tests will skip)
 # However, pytest would simply crash at collecting (Error: Process completed with exit code 1) so no good.
 # Was doing the same on 02-Sep-2023
 
 #  test_windows:
-#    # No redis (only works on ubuntu), only run on latest python-version
+#    # No redis (only works on Ubuntu), only run on latest python-version
 #    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
 #    runs-on: ${{ matrix.os }}
 #    # Identifies any jobs that must complete successfully before this job will run
@@ -375,7 +377,7 @@ jobs:
         egress-policy: audit
 
     - name: Coveralls parallel finished
-      uses: coverallsapp/github-action@main
+      uses: coverallsapp/github-action@e988b39f49526ccb8bd19453bd2198bf4156bb7f # main
       with:
         github-token: ${{ secrets.github_token }}
         parallel-finished: true
@@ -407,7 +409,7 @@ jobs:
           enable-cache: true
 
       - name: Restore uv cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: /tmp/.uv-cache
           key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
@@ -418,8 +420,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@bba65e51ff35d50c6dbaaacd8a4681db13aa7cb4 # main
         with:
-          python-version: '3.13'
-          # cache: 'pip'
+          python-version: '3.14'
 
       # Install pip dependencies
       - name: Install dependencies
@@ -434,9 +435,7 @@ jobs:
       # PyPI publish GitHub Action from https://github.com/pypa/gh-action-pypi-publish
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
-#        with:
-#          user: __token__
-#          password: ${{ secrets.pypi_password }}
+
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@5434409c2b6457c050f109d68b2547fcbf1db07b # master

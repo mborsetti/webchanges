@@ -34,6 +34,21 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.32.0.rc0
+------------------
+Unreleased
+
+⚠ Breaking Changes
+```````````````````
+* Removed support for Python 3.10. As a reminder, older Python versions are supported for 3 years after being obsoleted
+  by a new major release.
+
+Internals
+`````````
+* Implemented testing for Python 3.14t (GIL-lock-free).
+* Additional code security improvements.
+
+
 Version 3.31.4
 ------------------
 2025-10-25

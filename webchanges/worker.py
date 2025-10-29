@@ -201,8 +201,11 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
 
 def get_virt_mem() -> int:
-    """Return the amount of virtual memory available, i.e. the memory that can be given instantly to processes
-    without the system going into swap. Expressed in bytes.
+    """Return the amount of virtual memory available.
+
+    This is the memory that can be given instantly to processes without the system going into swap.
+
+    :returns: The amount of virtual memory available in bytes.
     """
     if isinstance(psutil, str):
         raise ImportError(
