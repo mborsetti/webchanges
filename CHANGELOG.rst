@@ -3,10 +3,11 @@ Changelog
 =========
 
 This changelog mostly follows '`keep a changelog <https://keepachangelog.com/en/1.0.0/>`__'. Release numbering mostly
-follows `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__
-(``<major>.<minor>.<patch>``). Release date is UTC. Major backward incompatible (breaking) changes will be introduced
-in major versions with advance notice in the Deprecations section. Documentation updates are ongoing and mostly
-unlisted here.
+follows the logic of `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__
+(``<major>.<minor>.<patch>``) and the syntax of Python's `Packaging 
+<https://packaging.python.org/en/latest/discussions/versioning/>`__. Release date is UTC. Major backward incompatible
+(breaking) changes will be introduced in major versions with advance notice in the Deprecations section. Documentation
+updates are ongoing and mostly unlisted here.
 
 **Development**
 
@@ -34,14 +35,19 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.32.0.rc0
-------------------
+Version 3.32.0.dev0
+-------------------
 Unreleased
 
 ⚠ Breaking Changes
 ```````````````````
 * Removed support for Python 3.10. As a reminder, older Python versions are supported for 3 years after being obsoleted
   by a new major release.
+
+Fixed
+`````
+* Fixed regression in error handling leading to interpreting errors as empty responses causing diffs to be be sent out.
+  Reported in #`104 <https://github.com/mborsetti/webchanges/issues/104>`__.
 
 Internals
 `````````
@@ -114,7 +120,7 @@ October 2025.
 Fixed
 `````
 * Fixed UnboundLocalError when using new ``utf-8`` sub-directive within the ``smtp`` emailer (``email`` report).
-  Reported in #`104 <https://github.com/mborsetti/webchanges/issues/110>`__.
+  Reported in #`110 <https://github.com/mborsetti/webchanges/issues/110>`__.
 
 Internals
 `````````
