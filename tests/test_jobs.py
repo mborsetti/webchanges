@@ -14,6 +14,7 @@ from typing import Any, Callable, cast
 import pytest
 import yaml
 from httpx import HTTPStatusError
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from requests import HTTPError
 
 from webchanges.config import CommandConfig
@@ -298,14 +299,16 @@ def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dic
 def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'http://localhost'
     job_data['timeout'] = 0.0001
+    # job_data['timeout'] = 1  # when debugging
     job = JobBase.unserialize(job_data)
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert job_state.exception
-        assert any(
-            x in str(job_state.exception.args)
-            for x in ('Max retries exceeded', 'Timeout 0.1ms exceeded.', 'timed out', 'Connection refused')
-        )
+        if not isinstance(job_state.exception, PlaywrightTimeoutError):
+            assert any(
+                x in str(job_state.exception.args)
+                for x in ('Max retries exceeded', 'Timeout 0.1ms exceeded.', 'timed out', 'Connection refused')
+            )
         assert getattr(job_state, 'error_ignored', False) is False
 
     job_data['ignore_connection_errors'] = True

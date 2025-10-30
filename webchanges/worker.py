@@ -92,16 +92,13 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             if job_state.exception is not None:
                 # Oops, we have captured an error (which could also be 304 or a Playwright timeout)
                 if job_state.error_ignored:
-                    # We captured an error to ignore
+                    # We captured an error but are ignoring it
                     logger.info(
-                        f'Job {job_state.job.index_number}: Error while executing job was ignored (e.g. due to job '
-                        f'config or browser timing out)'
+                        f'Job {job_state.job.index_number}: Job resulted in an error that is ignored due to directives'
                     )
                 elif isinstance(job_state.exception, NotModifiedError):
                     # We captured a 304 Not Modified
-                    logger.info(
-                        f'Job {job_state.job.index_number}: Job has not changed (HTTP 304 response or same strong ETag)'
-                    )
+                    logger.info(f'Job {job_state.job.index_number}: Job has not changed (HTTP 304 response)')
                     if job_state.tries > 0:
                         job_state.tries = 0
                         job_state.save()
@@ -112,15 +109,15 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 elif job_state.tries < max_tries:
                     # We're not reporting the error yet because we haven't yet hit 'max_tries'
                     logger.debug(
-                        f'Job {job_state.job.index_number}: Error suppressed as cumulative number of '
+                        f'Job {job_state.job.index_number}: Job error suppressed as cumulative number of '
                         f'failures ({job_state.tries}) does not exceed max_tries={max_tries}'
                     )
                     job_state.save()
                 else:
                     # Reporting the error
                     logger.debug(
-                        f'Job {job_state.job.index_number}: Flagged as error as max_tries={max_tries} has been '
-                        f'met or exceeded ({job_state.tries}'
+                        f'Job {job_state.job.index_number}: Job error flagged as error as max_tries={max_tries} has '
+                        f'been met or exceeded ({job_state.tries}'
                     )
                     job_state.save()
                     if job_state.new_error_data == job_state.old_error_data:

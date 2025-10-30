@@ -98,12 +98,11 @@ class BrowserResponseError(Exception):
     received.
     """
 
-    def __init__(self, args: tuple[Any, ...], status_code: int | None) -> None:
+    def __init__(self, args: tuple[Any, ...], status_code: int | None = None) -> None:
         """:param args: Tuple with the underlying error args, typically a string with the error text.
         :param status_code: The HTTP status code received.
         """
-        Exception.__init__(self)
-        self.args = args
+        Exception.__init__(self, *args)
         self.status_code = status_code
 
     def __str__(self) -> str:
@@ -158,7 +157,7 @@ class JobBase(metaclass=TrackSubClasses):
     ignore_connection_errors: bool | None = None
     ignore_default_args: bool | str | list[str] | None = None
     ignore_dh_key_too_small: bool | None = None
-    ignore_http_error_codes: int | str | list[str] | None = None
+    ignore_http_error_codes: list[int | str] | int | str | None = None
     ignore_https_errors: bool | None = None
     ignore_timeout_errors: bool | None = None
     ignore_too_many_redirects: bool | None = None
@@ -186,7 +185,7 @@ class JobBase(metaclass=TrackSubClasses):
     stderr: str | None = None  # urlwatch backwards compatibility for ShellJob (not used)
     suppress_repeated_errors: bool | None = None
     switches: list[str] | None = None
-    timeout: int | float | None = None
+    timeout: float | None = None
     tz: str | None = None  # added by with_defaults, taken from reporter configuration
     user_data_dir: str | None = None
     user_visible_url: str | None = None
@@ -194,7 +193,7 @@ class JobBase(metaclass=TrackSubClasses):
     wait_for_function: str | dict[str, Any] | None = None  # Playwright
     wait_for_navigation: str | tuple[str, ...] | None = None
     wait_for_selector: str | dict[str, Any] | list[str | dict[str, Any]] | None = None  # Playwright
-    wait_for_timeout: int | float | None = None  # Playwright
+    wait_for_timeout: float | None = None  # Playwright
     wait_for_url: str | dict[str, Any] | None = None  # Playwright
     wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None
 
@@ -546,7 +545,7 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return tb
 
-    def ignore_error(self, exception: Exception) -> bool | str:
+    def ignore_error(self, exception: Exception) -> bool:
         """Determine whether the error of the job should be ignored.
 
         :param exception: The exception.
@@ -710,6 +709,25 @@ class UrlJobBase(Job):
                 headers['If-Modified-Since'] = email.utils.formatdate(job_state.old_timestamp)
         return headers
 
+    def _ignore_http_error_code(self, status_code: int) -> bool:
+        """Checks if an HTTP error status code should be ignored based on the job's ignore_http_error_codes directive.
+
+        :param status_code: The HTTP status code.
+        :returns: True if the error should be ignored, False otherwise.
+        """
+        if not self.ignore_http_error_codes:
+            return False
+
+        if isinstance(self.ignore_http_error_codes, int):
+            return status_code == self.ignore_http_error_codes
+
+        if isinstance(self.ignore_http_error_codes, str):
+            ignored_codes = {s.strip().lower() for s in self.ignore_http_error_codes.split(',')}
+        else:  # list
+            ignored_codes = {str(s).strip().lower() for s in self.ignore_http_error_codes}
+
+        return str(status_code) in ignored_codes or f'{status_code // 100}xx' in ignored_codes
+
 
 class UrlJob(UrlJobBase):
     """Retrieve a URL from a web server."""
@@ -833,6 +851,7 @@ class UrlJob(UrlJobBase):
             raise httpx.HTTPStatusError(http_error_msg, request=response.request, response=response)
 
         if response.status_code == 304:
+            logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
             raise NotModifiedError(response.status_code)
 
         # Save ETag from response to be used as If-None-Match header in future requests
@@ -954,6 +973,7 @@ class UrlJob(UrlJobBase):
             raise requests.HTTPError(http_error_msg, response=response)
 
         if response.status_code == 304:
+            logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
             raise NotModifiedError(response.status_code)
 
         # Save ETag from response to be used as If-None-Match header in future requests
@@ -1084,7 +1104,7 @@ class UrlJob(UrlJobBase):
         # cookiejar (called by requests) expects strings or bytes-like objects; PyYAML will try to guess int etc.
         if self.timeout is None:
             # default timeout
-            timeout: int | float | None = 60.0
+            timeout: float | None = 60.0
         elif self.timeout == 0:
             # never timeout
             timeout = None
@@ -1200,15 +1220,7 @@ class UrlJob(UrlJobBase):
             if self.ignore_too_many_redirects and isinstance(exception, httpx.TooManyRedirects):
                 return True
             if self.ignore_http_error_codes and isinstance(exception, httpx.HTTPStatusError):
-                status_code = exception.response.status_code
-                ignored_codes: list[str] = []
-                if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
-                    return True
-                if isinstance(self.ignore_http_error_codes, str):
-                    ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
-                elif isinstance(self.ignore_http_error_codes, list):
-                    ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
-                return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
+                return self._ignore_http_error_code(exception.response.status_code)
         elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
             if self.ignore_connection_errors and isinstance(exception, requests.exceptions.ConnectionError):
                 return True
@@ -1221,15 +1233,7 @@ class UrlJob(UrlJobBase):
                 and isinstance(exception, requests.exceptions.HTTPError)
                 and exception.response is not None
             ):
-                status_code = exception.response.status_code
-                ignored_codes = []
-                if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
-                    return True
-                if isinstance(self.ignore_http_error_codes, str):
-                    ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
-                elif isinstance(self.ignore_http_error_codes, list):
-                    ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
-                return str(status_code) in ignored_codes or f'{(status_code // 100)}xx' in ignored_codes
+                return self._ignore_http_error_code(exception.response.status_code)
         return False
 
 
@@ -1570,7 +1574,7 @@ class BrowserJob(UrlJobBase):
                     raise e
 
                 if not response:
-                    raise BrowserResponseError(('No response received from browser on initialization',), None)
+                    raise BrowserResponseError(('No response received from browser on initialization',))
 
                 if self.initialization_js:
                     logger.info(f"Job {self.index_number}: Running init script '{self.initialization_js}'")
@@ -1680,15 +1684,6 @@ class BrowserJob(UrlJobBase):
             logger.debug(f'Job {self.index_number}: User agent {user_agent}')
             logger.debug(f'Job {self.index_number}: Extra headers {headers}')
 
-            # def handle_response(response: Response) -> None:
-            #     """TODO: Handler function to detect if a 304 is returned."""
-            #     logger.debug(f'Job {self.index_number}: Intercepted response with {response.status} status')
-            #     if response.status == 304 and response.url == url:
-            #         # context.close()
-            #         raise NotModifiedError(response.status)
-            #
-            # page.on('response', handle_response)
-
             try:
                 if response_handler is not None:
                     response_handler(page)
@@ -1700,7 +1695,11 @@ class BrowserJob(UrlJobBase):
                     )
 
                 if not response:
-                    raise BrowserResponseError(('No response received from browser on navigation',), None)
+                    raise BrowserResponseError(('No response received from browser on navigation',))
+
+                if response.status == 304:
+                    logger.debug(f'Job {self.index_number}: Intercepted response with {response.status} status')
+                    raise NotModifiedError(response.status)
 
                 if response.ok:
                     if self.wait_for_url:
@@ -1840,7 +1839,7 @@ class BrowserJob(UrlJobBase):
                         logger.info(f'Job {self.index_number}: Page HTML content saved at {html_filename}')
                     except PlaywrightError:
                         Path(html_filename).unlink()
-                raise BrowserResponseError(e.args, None) from None
+                raise
 
     def format_error(self, exception: Exception, tb: str) -> str:
         """Format the error of the job if one is encountered.
@@ -1855,117 +1854,110 @@ class BrowserJob(UrlJobBase):
             return exception_str
         return exception_str
 
-    def ignore_error(self, exception: Exception) -> bool | str:
+    def ignore_error(self, exception: Exception) -> bool:
         """Determine whether the error of the job should be ignored.
 
         :param exception: The exception.
-        :returns: True or the string with the number of the HTTPError code if the error should be ignored,
-           False otherwise.
+        :returns: True if the error should be ignored, False otherwise.
         """
         # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
         chromium_connection_errors = [  # range 100-199 Connection related errors
-            'CONNECTION_CLOSED',
-            'CONNECTION_RESET',
-            'CONNECTION_REFUSED',
-            'CONNECTION_ABORTED',
-            'CONNECTION_FAILED',
-            'NAME_NOT_RESOLVED',
-            'INTERNET_DISCONNECTED',
-            'SSL_PROTOCOL_ERROR',
-            'ADDRESS_INVALID',
-            'ADDRESS_UNREACHABLE',
-            'SSL_CLIENT_AUTH_CERT_NEEDED',
-            'TUNNEL_CONNECTION_FAILED',
-            'NO_SSL_VERSIONS_ENABLED',
-            'SSL_VERSION_OR_CIPHER_MISMATCH',
-            'SSL_RENEGOTIATION_REQUESTED',
-            'PROXY_AUTH_UNSUPPORTED',
-            'CERT_ERROR_IN_SSL_RENEGOTIATION',
-            'BAD_SSL_CLIENT_AUTH_CERT',
-            'CONNECTION_TIMED_OUT',
-            'HOST_RESOLVER_QUEUE_TOO_LARGE',
-            'SOCKS_CONNECTION_FAILED',
-            'SOCKS_CONNECTION_HOST_UNREACHABLE',
-            'ALPN_NEGOTIATION_FAILED',
-            'SSL_NO_RENEGOTIATION',
-            'WINSOCK_UNEXPECTED_WRITTEN_BYTES',
-            'SSL_DECOMPRESSION_FAILURE_ALERT',
-            'SSL_BAD_RECORD_MAC_ALERT',
-            'PROXY_AUTH_REQUESTED',
-            'PROXY_CONNECTION_FAILED',
-            'MANDATORY_PROXY_CONFIGURATION_FAILED',
-            'PRECONNECT_MAX_SOCKET_LIMIT',
-            'SSL_CLIENT_AUTH_PRIVATE_KEY_ACCESS_DENIED',
-            'SSL_CLIENT_AUTH_CERT_NO_PRIVATE_KEY',
-            'PROXY_CERTIFICATE_INVALID',
-            'NAME_RESOLUTION_FAILED',
-            'NETWORK_ACCESS_DENIED',
-            'TEMPORARILY_THROTTLED',
-            'HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT',
-            'SSL_CLIENT_AUTH_SIGNATURE_FAILED',
-            'MSG_TOO_BIG',
-            'WS_PROTOCOL_ERROR',
-            'ADDRESS_IN_USE',
-            'SSL_HANDSHAKE_NOT_COMPLETED',
-            'SSL_BAD_PEER_PUBLIC_KEY',
-            'SSL_PINNED_KEY_NOT_IN_CERT_CHAIN',
-            'CLIENT_AUTH_CERT_TYPE_UNSUPPORTED',
-            'SSL_DECRYPT_ERROR_ALERT',
-            'WS_THROTTLE_QUEUE_TOO_LARGE',
-            'SSL_SERVER_CERT_CHANGED',
-            'SSL_UNRECOGNIZED_NAME_ALERT',
-            'SOCKET_SET_RECEIVE_BUFFER_SIZE_ERROR',
-            'SOCKET_SET_SEND_BUFFER_SIZE_ERROR',
-            'SOCKET_RECEIVE_BUFFER_SIZE_UNCHANGEABLE',
-            'SOCKET_SEND_BUFFER_SIZE_UNCHANGEABLE',
-            'SSL_CLIENT_AUTH_CERT_BAD_FORMAT',
-            'ICANN_NAME_COLLISION',
-            'SSL_SERVER_CERT_BAD_FORMAT',
-            'CT_STH_PARSING_FAILED',
-            'CT_STH_INCOMPLETE',
-            'UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH',
-            'CT_CONSISTENCY_PROOF_PARSING_FAILED',
-            'SSL_OBSOLETE_CIPHER',
-            'WS_UPGRADE',
-            'READ_IF_READY_NOT_IMPLEMENTED',
-            'NO_BUFFER_SPACE',
-            'SSL_CLIENT_AUTH_NO_COMMON_ALGORITHMS',
-            'EARLY_DATA_REJECTED',
-            'WRONG_VERSION_ON_EARLY_DATA',
-            'TLS13_DOWNGRADE_DETECTED',
-            'SSL_KEY_USAGE_INCOMPATIBLE',
-            'INVALID_ECH_CONFIG_LIST',
+            'net::ERR_CONNECTION_CLOSED',
+            'net::ERR_CONNECTION_RESET',
+            'net::ERR_CONNECTION_REFUSED',
+            'net::ERR_CONNECTION_ABORTED',
+            'net::ERR_CONNECTION_FAILED',
+            'net::ERR_NAME_NOT_RESOLVED',
+            'net::ERR_INTERNET_DISCONNECTED',
+            'net::ERR_SSL_PROTOCOL_ERROR',
+            'net::ERR_ADDRESS_INVALID',
+            'net::ERR_ADDRESS_UNREACHABLE',
+            'net::ERR_SSL_CLIENT_AUTH_CERT_NEEDED',
+            'net::ERR_TUNNEL_CONNECTION_FAILED',
+            'net::ERR_NO_SSL_VERSIONS_ENABLED',
+            'net::ERR_SSL_VERSION_OR_CIPHER_MISMATCH',
+            'net::ERR_SSL_RENEGOTIATION_REQUESTED',
+            'net::ERR_PROXY_AUTH_UNSUPPORTED',
+            'net::ERR_CERT_ERROR_IN_SSL_RENEGOTIATION',
+            'net::ERR_BAD_SSL_CLIENT_AUTH_CERT',
+            'net::ERR_CONNECTION_TIMED_OUT',
+            'net::ERR_HOST_RESOLVER_QUEUE_TOO_LARGE',
+            'net::ERR_SOCKS_CONNECTION_FAILED',
+            'net::ERR_SOCKS_CONNECTION_HOST_UNREACHABLE',
+            'net::ERR_ALPN_NEGOTIATION_FAILED',
+            'net::ERR_SSL_NO_RENEGOTIATION',
+            'net::ERR_WINSOCK_UNEXPECTED_WRITTEN_BYTES',
+            'net::ERR_SSL_DECOMPRESSION_FAILURE_ALERT',
+            'net::ERR_SSL_BAD_RECORD_MAC_ALERT',
+            'net::ERR_PROXY_AUTH_REQUESTED',
+            'net::ERR_PROXY_CONNECTION_FAILED',
+            'net::ERR_MANDATORY_PROXY_CONFIGURATION_FAILED',
+            'net::ERR_PRECONNECT_MAX_SOCKET_LIMIT',
+            'net::ERR_SSL_CLIENT_AUTH_PRIVATE_KEY_ACCESS_DENIED',
+            'net::ERR_SSL_CLIENT_AUTH_CERT_NO_PRIVATE_KEY',
+            'net::ERR_PROXY_CERTIFICATE_INVALID',
+            'net::ERR_NAME_RESOLUTION_FAILED',
+            'net::ERR_NETWORK_ACCESS_DENIED',
+            'net::ERR_TEMPORARILY_THROTTLED',
+            'net::ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT',
+            'net::ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED',
+            'net::ERR_MSG_TOO_BIG',
+            'net::ERR_WS_PROTOCOL_ERROR',
+            'net::ERR_ADDRESS_IN_USE',
+            'net::ERR_SSL_HANDSHAKE_NOT_COMPLETED',
+            'net::ERR_SSL_BAD_PEER_PUBLIC_KEY',
+            'net::ERR_SSL_PINNED_KEY_NOT_IN_CERT_CHAIN',
+            'net::ERR_CLIENT_AUTH_CERT_TYPE_UNSUPPORTED',
+            'net::ERR_SSL_DECRYPT_ERROR_ALERT',
+            'net::ERR_WS_THROTTLE_QUEUE_TOO_LARGE',
+            'net::ERR_SSL_SERVER_CERT_CHANGED',
+            'net::ERR_SSL_UNRECOGNIZED_NAME_ALERT',
+            'net::ERR_SOCKET_SET_RECEIVE_BUFFER_SIZE_ERROR',
+            'net::ERR_SOCKET_SET_SEND_BUFFER_SIZE_ERROR',
+            'net::ERR_SOCKET_RECEIVE_BUFFER_SIZE_UNCHANGEABLE',
+            'net::ERR_SOCKET_SEND_BUFFER_SIZE_UNCHANGEABLE',
+            'net::ERR_SSL_CLIENT_AUTH_CERT_BAD_FORMAT',
+            'net::ERR_ICANN_NAME_COLLISION',
+            'net::ERR_SSL_SERVER_CERT_BAD_FORMAT',
+            'net::ERR_CT_STH_PARSING_FAILED',
+            'net::ERR_CT_STH_INCOMPLETE',
+            'net::ERR_UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH',
+            'net::ERR_CT_CONSISTENCY_PROOF_PARSING_FAILED',
+            'net::ERR_SSL_OBSOLETE_CIPHER',
+            'net::ERR_WS_UPGRADE',
+            'net::ERR_READ_IF_READY_NOT_IMPLEMENTED',
+            'net::ERR_NO_BUFFER_SPACE',
+            'net::ERR_SSL_CLIENT_AUTH_NO_COMMON_ALGORITHMS',
+            'net::ERR_EARLY_DATA_REJECTED',
+            'net::ERR_WRONG_VERSION_ON_EARLY_DATA',
+            'net::ERR_TLS13_DOWNGRADE_DETECTED',
+            'net::ERR_SSL_KEY_USAGE_INCOMPATIBLE',
+            'net::ERR_INVALID_ECH_CONFIG_LIST',
         ]
 
         from playwright.async_api import Error as PlaywrightError
         from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
         if isinstance(exception, (BrowserResponseError, PlaywrightError)):
+            chromium_error = str(exception.args[0]).split()[0]
             if self.ignore_connection_errors and (
-                isinstance(exception, (BrowserResponseError, PlaywrightError))
-                or any(str(exception.args[0]).split()[0] == f'net::ERR_{error}' for error in chromium_connection_errors)
+                isinstance(exception, PlaywrightTimeoutError) or chromium_error in chromium_connection_errors
             ):
                 return True
             if self.ignore_timeout_errors and (
-                isinstance(exception, PlaywrightTimeoutError)
-                or str(exception.args[0].split()[0]) == 'net::ERR_TIMED_OUT'
+                isinstance(exception, PlaywrightTimeoutError) or chromium_error == 'net::ERR_TIMED_OUT'
             ):
                 return True
-            if self.ignore_too_many_redirects and str(exception.args[0].split()[0]) == 'net::ERR_TOO_MANY_REDIRECTS':
+            if self.ignore_too_many_redirects and chromium_error == 'net::ERR_TOO_MANY_REDIRECTS':
                 return True
 
-        if isinstance(exception, BrowserResponseError) and self.ignore_http_error_codes:
-            status_code = exception.status_code
-            ignored_codes: list[str] = []
-            if isinstance(self.ignore_http_error_codes, int) and self.ignore_http_error_codes == status_code:
-                return True
-            if isinstance(self.ignore_http_error_codes, str):
-                ignored_codes = [s.strip().lower() for s in self.ignore_http_error_codes.split(',')]
-            elif isinstance(self.ignore_http_error_codes, list):
-                ignored_codes = [str(s).strip().lower() for s in self.ignore_http_error_codes]
-            if isinstance(status_code, int):
-                return str(status_code) in ignored_codes or f'{(status_code // 100) in ignored_codes}xx'
-            return str(status_code)
+        if (
+            isinstance(exception, BrowserResponseError)
+            and self.ignore_http_error_codes
+            and exception.status_code is not None
+        ):
+            return self._ignore_http_error_code(exception.status_code)
+
         return False
 
 

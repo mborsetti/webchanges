@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -65,7 +66,7 @@ class JobState(ContextManager):
     """The JobState class, which contains run information about a job."""
 
     _http_client_used: str | None = None
-    error_ignored: bool | str
+    error_ignored: bool
     exception: Exception | None = None
     generated_diff: dict[ReportKind, str]
     history_dic_snapshots: dict[str | bytes, Snapshot]
@@ -145,12 +146,13 @@ class JobState(ContextManager):
         return None
 
     @staticmethod
-    def debugger_attached() -> bool:
-        """Checks if the code is currently running within an external debugger (e.g. IDE).
+    def debugging_session() -> bool:
+        """Checks if the code is currently running within an external debugger (e.g. IDE) and *NOT* in a testing
+        environment.
 
-        :returns: True if an external debugger is attached, False otherwise.
+        :returns: True if an external debugger is attached and it's not a pytest session, False otherwise.
         """
-        return sys.breakpointhook.__module__ != 'sys'
+        return sys.breakpointhook.__module__ != 'sys' and 'PYTEST_CURRENT_TEST' not in os.environ
 
     def added_data(self) -> dict[str, bool | str | Exception | float | None]:
         """Returns a dict with the data added in the processing of the job."""
@@ -212,85 +214,139 @@ class JobState(ContextManager):
 
         if self.exception and not isinstance(self.exception, NotModifiedError):
             self.new_timestamp = time.time()
-            self.new_error_data = {
-                'type': type(self.exception).__name__,
-                'message': str(self.exception),
-            }
+            self.new_error_data = {'type': type(self.exception).__name__, 'message': str(self.exception)}
             logger.info(f'{self.job.get_indexed_location()} ended processing due to exception: {self.exception}')
             return self
 
         try:
-            try:
-                self.load()
+            #     try:
+            #         self.load()
 
-                self.new_timestamp = time.time()
-                data, self.new_etag, mime_type = self.job.retrieve(self, headless)
-                logger.debug(
-                    f'Job {self.job.index_number}: Retrieved data={data!r} | etag={self.new_etag} | '
-                    f'mime_type={mime_type}'
-                )
+            #         self.new_timestamp = time.time()
+            #         data, self.new_etag, mime_type = self.job.retrieve(self, headless)
+            #         logger.debug(
+            #             f'Job {self.job.index_number}: Retrieved data={data!r} | etag={self.new_etag} | '
+            #             f'mime_type={mime_type}'
+            #         )
 
-            except Exception as e:
-                # # Job has a chance to format and ignore its error
-                if self.debugger_attached() and not isinstance(e, NotModifiedError):
-                    logger.warning('Running in a debugger: exception not to be ignored')
-                    raise
-                self.new_timestamp = time.time()
-                self.error_ignored = self.job.ignore_error(e)
-                if not self.error_ignored:
-                    self.exception = e
-                    if not isinstance(e, NotModifiedError):
-                        self.traceback = self.job.format_error(e, traceback.format_exc())
-                        self.tries += 1
-                        self.new_error_data = {
-                            'type': e.__class__.__name__,
-                            'message': str(e),
-                        }
-                        logger.info(
-                            f'Job {self.job.index_number}: Job ended with error; incrementing cumulative error runs to '
-                            f'{self.tries}'
-                        )
+            #     except NotModifiedError as e:
+            #         # HTTP 304 response has been received
+            #         self.exception = e
+            #         self.error_ignored = False
 
-            else:
-                # Apply automatic filters first
-                filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
+            #     except Exception as e:
+            #         # Job has a chance to format and ignore its error
+            #         if self.debugging_session():
+            #             logger.warning('Running in a debugger: exception not to be ignored')
+            #             raise
+            #         self.new_timestamp = time.time()
+            #         self.error_ignored = self.job.ignore_error(e)
+            #         if not self.error_ignored:
+            #             self.exception = e
+            #             self.traceback = self.job.format_error(e, traceback.format_exc())
+            #             self.tries += 1
+            #             self.new_error_data = {'type': e.__class__.__name__, 'message': str(e)}
+            #             logger.info(
+            #                 f'Job {self.job.index_number}: Job ended with error; incrementing cumulative error runs '
+            #                 f'to {self.tries}'
+            #             )
 
-                # Apply any specified filters
-                for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):
-                    filtered_data, mime_type = FilterBase.process(
-                        filter_kind, subfilter, self, filtered_data, mime_type
-                    )
+            #     else:
+            #         # Apply automatic filters first
+            #         filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
 
-                self.new_data = filtered_data
-                self.new_mime_type = mime_type
+            #         # Apply any specified filters
+            #         for filter_kind, subfilter in FilterBase.normalize_filter_list(
+            #             self.job.filters, self.job.index_number
+            #         ):
+            #             filtered_data, mime_type = FilterBase.process(
+            #                 filter_kind, subfilter, self, filtered_data, mime_type
+            #             )
 
+            #         self.new_data = filtered_data
+            #         self.new_mime_type = mime_type
+
+            # except Exception as e:
+            #     # Processing error of job failed its chance to handle error
+            #     if self.debugging_session():
+            #         logger.warning('Running in a debugger: raising the exception instead of processing it')
+            #         raise
+            #     self.new_timestamp = time.time()
+            #     self.exception = e
+            #     if self.job.__class__.__module__ == 'hooks':
+            #         logger.info('Job is hooks: including traceback in error message')
+            #         self.traceback = ''.join(traceback.format_exception(e)).rstrip()
+            #     elif isinstance(e, subprocess.CalledProcessError):
+            #         self.traceback = (
+            #             f'subprocess.CalledProcessError: Command returned non-zero exit status {e.returncode}.\n\n'
+            #             f'{e.stderr}'
+            #         )
+            #     else:
+            #         self.traceback = ''.join(traceback.format_exception_only(e, show_group=True)).rstrip()
+            #     self.error_ignored = False
+            #     self.tries += 1
+            #     self.new_error_data = {
+            #         'type': '.'.join(filter(None, [getattr(e, '__module__', None), e.__class__.__name__])),
+            #         'message': str(e),
+            #     }
+            #     logger.info(
+            #         f'Job {self.job.index_number}: Job ended with error (internal handling failed); incrementing '
+            #         f'cumulative error runs to {self.tries}'
+            #     )
+            self.load()
+
+            self.new_timestamp = time.time()
+            data, self.new_etag, mime_type = self.job.retrieve(self, headless)
+            logger.debug(
+                f'Job {self.job.index_number}: Retrieved data={data!r} | etag={self.new_etag} | mime_type={mime_type}'
+            )
+
+            # Apply automatic filters first
+            filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
+
+            # Apply any specified filters
+            for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):
+                filtered_data, mime_type = FilterBase.process(filter_kind, subfilter, self, filtered_data, mime_type)
+
+            self.new_data = filtered_data
+            self.new_mime_type = mime_type
+
+        except NotModifiedError as e:
+            # HTTP 304 response has been received
+            self.exception = e
+            self.error_ignored = False
         except Exception as e:
             # Processing error of job failed its chance to handle error
-            if self.debugger_attached():
-                logger.warning('Running in a debugger: raising the exception instead of processing it')
+            # Job has a chance to format and ignore its error
+            if self.debugging_session():
+                logger.warning('Running in a debugging session: raising the exception instead of processing it')
                 raise
-            self.new_timestamp = time.time()
             self.exception = e
-            if self.job.__class__.__module__ == 'hooks':
-                logger.info('Job is hooks: including traceback in error message')
-                self.traceback = ''.join(traceback.format_exception(e)).rstrip()
-            elif isinstance(e, subprocess.CalledProcessError):
-                self.traceback = (
-                    f'subprocess.CalledProcessError: Command returned non-zero exit status {e.returncode}.\n\n'
-                    f'{e.stderr}'
+            self.error_ignored = self.job.ignore_error(e)
+            if not self.error_ignored:
+                self.new_timestamp = time.time()
+                # Check for specific exception types to provide more detailed tracebacks
+                if self.job.__class__.__module__ == 'hooks':
+                    logger.info('Job is from hooks.py: including full traceback in error message')
+                    self.traceback = ''.join(traceback.format_exception(e)).rstrip()
+                elif isinstance(e, subprocess.CalledProcessError):
+                    self.traceback = (
+                        f'subprocess.CalledProcessError: Command returned non-zero exit status {e.returncode}.\n\n'
+                        + '\n'.join(filter(None, (e.stderr, e.stdout)))
+                    )
+                else:
+                    # Generic traceback for other exceptions
+                    self.traceback = self.job.format_error(e, traceback.format_exc())
+
+                self.tries += 1
+                self.new_error_data = {
+                    'type': '.'.join(filter(None, [getattr(e, '__module__', None), e.__class__.__name__])),
+                    'message': str(e),
+                }
+                logger.info(
+                    f'Job {self.job.index_number}: Job ended with an error; incrementing cumulative error runs to '
+                    f'{self.tries}'
                 )
-            else:
-                self.traceback = ''.join(traceback.format_exception_only(e, show_group=True)).rstrip()
-            self.error_ignored = False
-            self.tries += 1
-            self.new_error_data = {
-                'type': '.'.join(filter(None, [getattr(e, '__module__', None), e.__class__.__name__])),
-                'message': str(e),
-            }
-            logger.info(
-                f'Job {self.job.index_number}: Job ended with error (internal handling failed); incrementing '
-                f'cumulative error runs to {self.tries}'
-            )
 
         logger.debug(f'Job {self.job.index_number}: Processed as {self.added_data()}')
         logger.info(f'{self.job.get_indexed_location()} ended processing')
