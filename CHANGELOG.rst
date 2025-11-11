@@ -53,6 +53,7 @@ Internals
 `````````
 * Implemented testing for Python 3.14t (GIL-lock-free).
 * Additional code security improvements.
+* Removed Gemini Github Actions workflows (trial)
 
 
 Version 3.31.4
