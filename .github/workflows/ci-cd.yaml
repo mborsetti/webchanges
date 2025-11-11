@@ -72,12 +72,12 @@ jobs:
 
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       # Install uv per https://github.com/astral-sh/setup-uv
       # Docs at https://docs.astral.sh/uv/guides/integration/github
       - name: Install uv
-        uses: astral-sh/setup-uv@2ddd2b9cb38ad8efd50337e8ab201519a34c9f24 # main
+        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
         with:
           enable-cache: true
 
@@ -92,7 +92,7 @@ jobs:
 
       # Build Python and packages per https://github.com/actions/setup-python
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@cfd55ca82492758d853442341ad4d8010466803a # main
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         if: "${{ !matrix.disable-gil }}"
         with:
           python-version: ${{ matrix.python-version }}
@@ -100,7 +100,7 @@ jobs:
 
       # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
       - name: Set up Python ${{ matrix.python-version }} (free-threaded)
-        uses: deadsnakes/action@250fabcd68c32794474092d3dbe7db84f1c0826a # main
+        uses: deadsnakes/action@e640ac8743173a67cca4d7d77cd837e514bf98e8 # v3.2.0
         if: "${{ matrix.disable-gil }}"
         with:
           python-version: ${{ matrix.python-version }}
@@ -195,12 +195,12 @@ jobs:
 
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       # Install uv per https://github.com/astral-sh/setup-uv
       # Docs at https://docs.astral.sh/uv/guides/integration/github
       - name: Install uv
-        uses: astral-sh/setup-uv@2ddd2b9cb38ad8efd50337e8ab201519a34c9f24 # main
+        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
         with:
           enable-cache: true
 
@@ -215,14 +215,14 @@ jobs:
 
       # Build Python and packages per https://github.com/actions/setup-python
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@cfd55ca82492758d853442341ad4d8010466803a # main
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
 
       # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
       - name: Set up Python ${{ matrix.python-version }} (free-threaded)
-        uses: deadsnakes/action@250fabcd68c32794474092d3dbe7db84f1c0826a # main
+        uses: deadsnakes/action@e640ac8743173a67cca4d7d77cd837e514bf98e8 # v3.2.0
         if: "${{ matrix.disable-gil }}"
         with:
           python-version: ${{ matrix.python-version }}
@@ -299,11 +299,11 @@ jobs:
 #    steps:
 #      # Checks out a copy of the repository per https://github.com/actions/checkout
 #      - name: Check out repo
-#        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
+#        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 #
 #      # Build Python and packages per https://github.com/actions/setup-python
 #      - name: Set up Python ${{ matrix.python-version }}
-#        uses: actions/setup-python@cfd55ca82492758d853442341ad4d8010466803a # main
+#        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
 #        with:
 #          python-version: ${{ matrix.python-version }}
 #          allow-prereleases: true
@@ -377,7 +377,7 @@ jobs:
         egress-policy: audit
 
     - name: Coveralls parallel finished
-      uses: coverallsapp/github-action@e988b39f49526ccb8bd19453bd2198bf4156bb7f # main
+      uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
       with:
         github-token: ${{ secrets.github_token }}
         parallel-finished: true
@@ -399,12 +399,12 @@ jobs:
           egress-policy: audit
 
       - name: Check out repo
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # main
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       # Install uv per https://github.com/astral-sh/setup-uv
       # Docs at https://docs.astral.sh/uv/guides/integration/github
       - name: Install uv
-        uses: astral-sh/setup-uv@2ddd2b9cb38ad8efd50337e8ab201519a34c9f24 # main
+        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
         with:
           enable-cache: true
 
@@ -418,7 +418,7 @@ jobs:
             uv-${{ runner.os }}
 
       - name: Set up Python
-        uses: actions/setup-python@cfd55ca82492758d853442341ad4d8010466803a # main
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           python-version: '3.14'
 
