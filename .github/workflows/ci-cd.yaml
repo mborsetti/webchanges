@@ -126,13 +126,20 @@ jobs:
         run: |
           uv pip install --system --upgrade coveralls -r tests/requirements_pytest.txt
 
+      - name: Run tests (GIL)
+        if: ${{ ! endsWith(matrix.python-version, 't') }}
+        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
+        run: >
+          python -m pytest -v --cov=./ --cov-report=term --browser chromium --browser-channel chrome tests/
+
       - name: Install all other dependencies (free-threaded)
         if:  ${{ endsWith(matrix.python-version, 't') }}
         run: |
           export PYTHON_GIL=0
           uv pip install --system --upgrade coveralls -r tests/requirements_pytest_free-threaded.txt
 
-      - name: Run tests
+      - name: Run tests (free-threaded)
+        if: ${{ endsWith(matrix.python-version, 't') }}
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
           python -m pytest -v --cov=./ --cov-report=term tests/
