@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 import pytest
 import yaml
 from httpx import HTTPStatusError
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from requests import HTTPError
 
 from webchanges.config import CommandConfig
@@ -33,6 +32,12 @@ from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsSt
 
 if TYPE_CHECKING:
     import pytest_mock
+
+playwright_is_installed = importlib.util.find_spec('playwright') is not None
+if playwright_is_installed:
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+else:
+    PlaywrightTimeoutError = Exception  # type: ignore[assignment,misc]
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -56,13 +61,15 @@ def is_connected() -> bool:
 connection_required = cast(
     'Callable[[Callable], Callable]', pytest.mark.skipif(not is_connected(), reason='no Internet connection')
 )
-
 py_latest_only = cast(
     'Callable[[Callable], Callable]',
     pytest.mark.skipif(
         sys.version_info < (3, 14),
         reason='Time consuming; testing latest version only',
     ),
+)
+playwright_required = cast(
+    'Callable[[Callable], Callable]', pytest.mark.skipif(not playwright_is_installed, reason='Playwright not installed')
 )
 
 TEST_JOBS = [
@@ -340,11 +347,14 @@ def test_run_job(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     job = JobBase.unserialize(input_job)
-    with JobState(ssdb_storage, job) as job_state:
-        data, _, _ = job.retrieve(job_state)
-        if job.filters == [{'pdf2text': {}}]:
-            assert isinstance(data, bytes)
-        assert output in data  # type: ignore[operator]
+    if job.use_browser and not playwright_is_installed:
+        pytest.skip('Playwright not installed')
+    else:
+        with JobState(ssdb_storage, job) as job_state:
+            data, _, _ = job.retrieve(job_state)
+            if job.filters == [{'pdf2text': {}}]:
+                assert isinstance(data, bytes)
+            assert output in data  # type: ignore[operator]
 
 
 @connection_required  # type: ignore[misc]
@@ -380,9 +390,12 @@ def test_run_ftp_job() -> None:
 def test_check_etag(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
-    with JobState(ssdb_storage, job) as job_state:
-        _, etag, _ = job.retrieve(job_state)
-        assert etag
+    if job.use_browser and not playwright_is_installed:
+        pytest.skip('Playwright not installed')
+    else:
+        with JobState(ssdb_storage, job) as job_state:
+            _, etag, _ = job.retrieve(job_state)
+            assert etag
 
 
 @connection_required  # type: ignore[misc]
@@ -397,20 +410,23 @@ def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dic
         pytest.skip('Capturing of 304 cannot be implemented in Chrome')  # last tested with Chromium 89
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
-    with JobState(ssdb_storage, job) as job_state:
-        if 'check__etag_304_etag' not in doctest_namespace:
-            job.index_number = 1
-            _, etag, _ = job.retrieve(job_state)
-            doctest_namespace['check_etag_304_etag'] = etag
-            doctest_namespace['check_etag_304_timestamp'] = job_state.old_timestamp
+    if job.use_browser and not playwright_is_installed:
+        pytest.skip('Playwright not installed')
+    else:
+        with JobState(ssdb_storage, job) as job_state:
+            if 'check__etag_304_etag' not in doctest_namespace:
+                job.index_number = 1
+                _, etag, _ = job.retrieve(job_state)
+                doctest_namespace['check_etag_304_etag'] = etag
+                doctest_namespace['check_etag_304_timestamp'] = job_state.old_timestamp
 
-        job_state.old_etag = doctest_namespace['check_etag_304_etag']
-        job_state.old_timestamp = doctest_namespace['check_etag_304_timestamp']
-        job.index_number = 2
-        with pytest.raises(NotModifiedError) as pytest_wrapped_e:
-            job.retrieve(job_state)
+            job_state.old_etag = doctest_namespace['check_etag_304_etag']
+            job_state.old_timestamp = doctest_namespace['check_etag_304_timestamp']
+            job.index_number = 2
+            with pytest.raises(NotModifiedError) as pytest_wrapped_e:
+                job.retrieve(job_state)
 
-        assert str(pytest_wrapped_e.value) == '304'
+            assert str(pytest_wrapped_e.value) == '304'
 
 
 @connection_required  # type: ignore[misc]
@@ -424,25 +440,28 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
     job_data['timeout'] = 0.0001
     # job_data['timeout'] = 1  # when debugging
     job = JobBase.unserialize(job_data)
-    with JobState(ssdb_storage, job) as job_state:
-        job_state.process()
-        assert job_state.exception
-        if not isinstance(job_state.exception, PlaywrightTimeoutError):
-            assert any(
-                x in str(job_state.exception.args)
-                for x in ('Max retries exceeded', 'Timeout 0.1ms exceeded.', 'timed out', 'Connection refused')
-            )
-        assert getattr(job_state, 'error_ignored', False) is False
+    if job.use_browser and not playwright_is_installed:
+        pytest.skip('Playwright not installed')
+    else:
+        with JobState(ssdb_storage, job) as job_state:
+            job_state.process()
+            assert job_state.exception
+            if not isinstance(job_state.exception, PlaywrightTimeoutError):
+                assert any(
+                    x in str(job_state.exception.args)
+                    for x in ('Max retries exceeded', 'Timeout 0.1ms exceeded.', 'timed out', 'Connection refused')
+                )
+            assert getattr(job_state, 'error_ignored', False) is False
 
-    job_data['ignore_connection_errors'] = True
-    job = JobBase.unserialize(job_data)
-    with JobState(ssdb_storage, job) as job_state:
-        job_state.process()
-        assert job_state.error_ignored is True
-        # also check that it's using the correct HTTP client library
-        if not job_data.get('use_browser'):
-            assert job_state._http_client_used == job_data.get('http_client', 'HTTPX')
-    job_data['ignore_connection_errors'] = None
+        job_data['ignore_connection_errors'] = True
+        job = JobBase.unserialize(job_data)
+        with JobState(ssdb_storage, job) as job_state:
+            job_state.process()
+            assert job_state.error_ignored is True
+            # also check that it's using the correct HTTP client library
+            if not job_data.get('use_browser'):
+                assert job_state._http_client_used == job_data.get('http_client', 'HTTPX')
+        job_data['ignore_connection_errors'] = None
 
 
 @connection_required  # type: ignore[misc]
@@ -456,21 +475,24 @@ def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
     job_data['http_proxy'] = 'http://notworking:ever@localhost:8080'
     job_data['timeout'] = 0.0001
     job = JobBase.unserialize(job_data)
-    with JobState(ssdb_storage, job) as job_state:
-        job_state.process()
-        if job_state.exception and not isinstance(job_state.exception, BrowserResponseError):
-            assert job_state.exception
-            assert any(
-                x in str(job_state.exception.args)
-                for x in (
-                    'Max retries exceeded',
-                    'Read timed out',
-                    'Timeout 0.1ms exceeded.',
-                    'timed out',
-                    'Connection refused',
+    if job.use_browser and not playwright_is_installed:
+        pytest.skip('Playwright not installed')
+    else:
+        with JobState(ssdb_storage, job) as job_state:
+            job_state.process()
+            if job_state.exception and not isinstance(job_state.exception, BrowserResponseError):
+                assert job_state.exception
+                assert any(
+                    x in str(job_state.exception.args)
+                    for x in (
+                        'Max retries exceeded',
+                        'Read timed out',
+                        'Timeout 0.1ms exceeded.',
+                        'timed out',
+                        'Connection refused',
+                    )
                 )
-            )
-        assert job_state.error_ignored is False
+            assert job_state.error_ignored is False
 
 
 @connection_required  # type: ignore[misc]
@@ -487,38 +509,42 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
     job_data['http_proxy'] = None
     job_data['timeout'] = 30
     job = JobBase.unserialize(job_data)
-    with JobState(ssdb_storage, job) as job_state:
-        job_state.process()
-        if isinstance(job_state.exception, (HTTPStatusError, HTTPError)):
-            assert job_state.exception.args[0].lower() == (
-                "418 client error: i'm a teapot for url: https://www.google.com/teapot\n[](https://www.google.com/)\n"
-                '**418.** i’m a teapot.\nthe requested entity body is short and stout. '  # noqa: RUF001
-                'tip me over and pour me out.'
-            )
-        elif isinstance(job_state.exception, BrowserResponseError):
-            assert job_state.exception.status_code == 418
-            assert job_state.exception.args[0] == (
-                '418. I’m a teapot. The requested entity body is short and stout. '  # noqa: RUF001
-                'Tip me over and pour me out.'
-            )
-        elif job_state.exception:
-            pytest.fail(
-                f'418 Teapot raised Exception type {type(job_state.exception)} (incorrect):\n{job_state.traceback}'
-            )
-        else:
-            pytest.fail('No exception raised with 418 Teapot')
-        assert job_state.error_ignored is False
+    if job.use_browser and not playwright_is_installed:
+        pytest.skip('Playwright not installed')
+    else:
+        with JobState(ssdb_storage, job) as job_state:
+            job_state.process()
+            if isinstance(job_state.exception, (HTTPStatusError, HTTPError)):
+                assert job_state.exception.args[0].lower() == (
+                    "418 client error: i'm a teapot for url: https://www.google.com/teapot\n[](https://www.google.com/)\n"
+                    '**418.** i’m a teapot.\nthe requested entity body is short and stout. '  # noqa: RUF001
+                    'tip me over and pour me out.'
+                )
+            elif isinstance(job_state.exception, BrowserResponseError):
+                assert job_state.exception.status_code == 418
+                assert job_state.exception.args[0] == (
+                    '418. I’m a teapot. The requested entity body is short and stout. '  # noqa: RUF001
+                    'Tip me over and pour me out.'
+                )
+            elif job_state.exception:
+                pytest.fail(
+                    f'418 Teapot raised Exception type {type(job_state.exception)} (incorrect):\n{job_state.traceback}'
+                )
+            else:
+                pytest.fail('No exception raised with 418 Teapot')
+            assert job_state.error_ignored is False
 
-    job_data['ignore_http_error_codes'] = [418]
-    job = JobBase.unserialize(job_data)
-    with JobState(ssdb_storage, job) as job_state:
-        job_state.process()
-        assert job_state.error_ignored is True
-    job_data['ignore_http_error_codes'] = None
+        job_data['ignore_http_error_codes'] = [418]
+        job = JobBase.unserialize(job_data)
+        with JobState(ssdb_storage, job) as job_state:
+            job_state.process()
+            assert job_state.error_ignored is True
+        job_data['ignore_http_error_codes'] = None
 
 
 @py_latest_only
 @connection_required
+@playwright_required
 def test_stress_use_browser() -> None:
     jobs_file = data_path.joinpath('jobs-use_browser.yaml')
     config_file = data_path.joinpath('config.yaml')
@@ -658,6 +684,7 @@ def test_ignore_error() -> None:
     assert job.ignore_error(Exception()) is False
 
 
+@playwright_required
 def test_browser_switches_not_str_or_list() -> None:
     job_data = {
         'url': 'https://www.example.com',
@@ -670,6 +697,7 @@ def test_browser_switches_not_str_or_list() -> None:
         assert isinstance(job_state.exception, TypeError)
 
 
+# @playwright_required
 # def test_browser_block_elements_not_str_or_list():
 #     job_data = {
 #         'url': 'https://www.example.com',
@@ -682,6 +710,7 @@ def test_browser_switches_not_str_or_list() -> None:
 #         assert isinstance(job_state.exception, TypeError)
 #
 #
+# @playwright_required
 # def test_browser_block_elements_invalid():
 #     job_data = {
 #         'url': 'https://www.example.com',
