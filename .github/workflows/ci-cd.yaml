@@ -96,7 +96,7 @@ jobs:
 
 #      - name: Install build dependencies for wheel-less lxml (Linux) in latest Python version
 #        # https://lxml.de/installation.html#installation
-#        if: matrix.python-version == '3.15' && runner.os == 'Linux'
+#        if: ${{ matrix.python-version == '3.15' && runner.os == 'Linux' }}
 #        run: |
 #          sudo apt-get -y update
 #          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
@@ -104,7 +104,7 @@ jobs:
 
       - name: Install redis, pdf2text and ocr dependencies (Linux w/latest Python)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.14' && runner.os == 'Linux'
+        if: ${{ matrix.python-version == '3.14' && runner.os == 'Linux' }}
         # https://github.com/jalan/pdftotext#os-dependencies
         run: |
           sudo apt-get update
@@ -114,21 +114,21 @@ jobs:
 
       - name: Install pdf2text and ocr dependencies (macOS w/latest Python)
         # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.14' && runner.os == 'macOS'
+        if: ${{  matrix.python-version == '3.14' && runner.os == 'macOS' }}
         run: |
           brew update
           brew install poppler tesseract
           uv pip install --system --upgrade pdftotext pytesseract
 
       - name: Install all other dependencies (GIL)
-        # if: ! endsWith(matrix.python-version, 't')
+        if: ${{ ! endsWith(matrix.python-version, 't') }}
         run: |
           uv pip install --system --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
-      # - name: Install all other dependencies (free-threaded)
-      #   if: endsWith(matrix.python-version, 't')
-      #   run: |
-      #     uv pip install --system --upgrade coveralls -r requirements-free-threaded.txt -r tests/requirements_pytest.txt
+      - name: Install all other dependencies (free-threaded)
+        if:  ${{ endsWith(matrix.python-version, 't') }}
+        run: |
+          uv pip install --system --upgrade coveralls -r requirements-free-threaded.txt -r tests/requirements_pytest.txt
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
