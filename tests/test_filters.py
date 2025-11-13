@@ -378,19 +378,22 @@ def test_filter_exceptions() -> None:
     expected = "The 'ocr' filter needs bytes input (is it the first filter?). (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
-    filtercls = FilterBase.__subclasses__.get('jq')
-    with pytest.raises(ValueError) as e:
-        # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/json', {})  # type: ignore[misc]
-    expected = "The 'jq' filter needs a query. (Job 0: "
-    assert e.value.args[0][: len(expected)] == expected
+    if importlib.util.find_spec('jq') is not None:
+        filtercls = FilterBase.__subclasses__.get('jq')
+        with pytest.raises(ValueError) as e:
+            # noinspection PyTypeChecker
+            filtercls(job_state).filter('a', 'text/json', {})  # type: ignore[misc]
+        expected = "The 'jq' filter needs a query. (Job 0: "
+        assert e.value.args[0][: len(expected)] == expected
 
-    filtercls = FilterBase.__subclasses__.get('jq')
-    with pytest.raises(ValueError) as e:
-        # noinspection PyTypeChecker
-        filtercls(job_state).filter('{""""""}', 'text/json', {'query': 'any'})  # type: ignore[misc]
-    expected = "The 'jq' filter needs valid JSON. (Job 0: "
-    assert e.value.args[0][: len(expected)] == expected
+        filtercls = FilterBase.__subclasses__.get('jq')
+        with pytest.raises(ValueError) as e:
+            # noinspection PyTypeChecker
+            filtercls(job_state).filter('{""""""}', 'text/json', {'query': 'any'})  # type: ignore[misc]
+        expected = "The 'jq' filter needs valid JSON. (Job 0: "
+        assert e.value.args[0][: len(expected)] == expected
+    else:
+        pytest.xfail('jq not installed')
 
 
 # @pytest.mark.xfail('Not working due to an html2text bug')

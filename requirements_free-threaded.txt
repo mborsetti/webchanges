@@ -3,9 +3,10 @@ cssselect
 h2
 html2text
 httpx
+lxml
 markdown2
 msgpack
 platformdirs
 pyyaml
 tzdata; sys_platform == 'win32'
-zstandard
+zstandard; python_version < '3.14'

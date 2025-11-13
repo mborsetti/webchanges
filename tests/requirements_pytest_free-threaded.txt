@@ -15,7 +15,7 @@ flake8
 h2
 html5lib
 httpx
-jq; sys_platform != 'win32'
+# jq; sys_platform != 'win32'  # does not work free-threaded
 jsbeautifier
 keyring
 matrix-client
