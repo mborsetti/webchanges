@@ -83,7 +83,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install redis-server python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
           export REDIS_URI="redis://localhost:6379"
-          uv pip install --system --upgrade pdftotext pytesseract
+          uv pip install --upgrade pdftotext pytesseract
 
       - name: Install pdf2text and ocr dependencies (macOS w/latest Python)
         # do full install and testing of pdf2text and ocr only on latest Python version
@@ -91,12 +91,40 @@ jobs:
         run: |
           brew update
           brew install poppler tesseract
-          uv pip install --system --upgrade pdftotext pytesseract
+          uv pip install --upgrade pdftotext pytesseract
+
+      - name: Install pdf2text and ocr dependencies (Windows w/latest Python)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: ${{  matrix.python-version == '3.14' && runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          # Download Poppler binaries
+          $popplerUrl = "https://github.com/oschwartz10612/poppler-windows/releases/download/v25.07.0-0/Release-25.07.0-0.zip" # Replace with the latest version
+          $popplerZipPath = "$env:TEMP\poppler.zip"
+          Invoke-WebRequest -Uri $popplerUrl -OutFile $popplerZipPath
+          # Extract Poppler
+          Expand-Archive -LiteralPath $popplerZipPath -DestinationPath "C:\poppler"
+          # Add Poppler's bin directory to PATH
+          $env:Path += ";C:\poppler\poppler-25.07.0-0\bin" # Adjust path based on extracted folder name
+          echo "C:\poppler\poppler-25.07.0-0\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+          # Download Tesseract installer
+          $tesseractInstallerUrl = "https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.5.0.20241111.exe" # Replace with the latest version
+          $tesseractInstallerPath = "$env:TEMP\tesseract-ocr-setup.exe"
+          Invoke-WebRequest -Uri $tesseractInstallerUrl -OutFile $tesseractInstallerPath
+          # Run the installer silently
+          Start-Process -FilePath $tesseractInstallerPath -ArgumentList "/S /D=C:\Program Files\Tesseract-OCR" -Wait -NoNewWindow
+          # Add Tesseract to PATH
+          $env:Path += ";C:\Program Files\Tesseract-OCR"
+          echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+          # Install Python packages
+          uv pip install --upgrade pdftotext pytesseract
 
       - name: Install all other dependencies (GIL)
         if: ${{ ! endsWith(matrix.python-version, 't') }}
         run: |
-          uv pip install --system --upgrade coveralls -r tests/requirements_pytest.txt
+          uv pip install --upgrade coveralls -r tests/requirements_pytest.txt
 
       - name: Run tests (GIL)
         if: ${{ ! endsWith(matrix.python-version, 't') }}
@@ -107,7 +135,7 @@ jobs:
       - name: Install all other dependencies (free-threaded)
         if:  ${{ endsWith(matrix.python-version, 't') }}
         run: |
-          uv pip install --system --upgrade coveralls -r tests/requirements_pytest_free-threaded.txt
+          uv pip install --upgrade coveralls -r tests/requirements_pytest_free-threaded.txt
 
       - name: Run tests (free-threaded)
         if: ${{ endsWith(matrix.python-version, 't') }}
@@ -274,7 +302,7 @@ jobs:
       # Install pip dependencies
       - name: Install dependencies
         run: |
-          uv pip install --system --upgrade build
+          uv pip install --upgrade build
 
       # build https://pypa-build.readthedocs.io/en/latest/
       - name: Build dist
