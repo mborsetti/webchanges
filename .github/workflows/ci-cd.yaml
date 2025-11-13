@@ -20,8 +20,8 @@ env:
 
 jobs:
   # Set the job key. The key is displayed as the job name when a job name is not provided.
-  test_ubuntu:
-    name: "Test ${{ matrix.python-version }}${{ matrix.disable-gil && 't' || '' }} on ${{ matrix.os }}"
+  test:
+    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
     # matrix.os is defined in strategy.
     runs-on: ${{ matrix.os }}
     # Identifies any jobs that must complete successfully before this job will run.
@@ -31,36 +31,31 @@ jobs:
       matrix:
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
         # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-preleleases: true in setop-python
-        python-version: ['3.14', '3.13', '3.12', '3.11']
-        os: [ubuntu-latest]
-        disable-gil: [false]
+        python-version: ['3.14t', '3.14', '3.13', '3.12', '3.11']
+        os: ['ubuntu-latest', 'macos-latest']
         # 29-oct-24 lxml does not build for free-threaded even with libxml2 and libxslt1 development packages
         # 23-nov-24 cryptography doesn't build for free-threaded
-        include:
-          # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
-          - { os: ubuntu-latest, python-version: '3.14', disable-gil: true }
 
-    # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
-    # If you are using GitHub-hosted runners, you must use an Ubuntu runner
-    services:
-      # Label used to access the service container
-      redis:
-        # Docker Hub image
-        image: redis
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          # Maps port 6379 on service container to the host
-          - 6379:6379
+    # # Set up Redis per https://docs.github.com/en/actions/guides/creating-redis-service-containers
+    # # If you are using GitHub-hosted runners, you must use an Ubuntu runner
+    # services:
+    #   # Label used to access the service container
+    #   redis:
+    #     # Docker Hub image
+    #     image: redis
+    #     # Set health checks to wait until redis has started
+    #     options: >-
+    #       --health-cmd "redis-cli ping"
+    #       --health-interval 10s
+    #       --health-timeout 5s
+    #       --health-retries 5
+    #     ports:
+    #       # Maps port 6379 on service container to the host
+    #       - 6379:6379
 
     env:
       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-      REDIS_URI: redis://localhost:6379
       UV_SYSTEM_PYTHON: 1  # for uv, turns on --system by default
       UV_CACHE_DIR: /tmp/.uv-cache  # for uv's persistent cache
 
@@ -74,11 +69,12 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      # Install uv per https://github.com/astral-sh/setup-uv
+      # Install uv and Python per https://github.com/astral-sh/setup-uv
       # Docs at https://docs.astral.sh/uv/guides/integration/github
-      - name: Install uv
+      - name: Install Pyton using uv
         uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: true
 
       - name: Restore uv cache
@@ -90,25 +86,13 @@ jobs:
             uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
             uv-${{ runner.os }}
 
-      # Build Python and packages per https://github.com/actions/setup-python
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        if: "${{ !matrix.disable-gil }}"
-        with:
-          python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
+      # # Build Python and packages per https://github.com/actions/setup-python
+      # - name: Set up Python ${{ matrix.python-version }}
+      #   uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      #   with:
+      #     python-version: ${{ matrix.python-version }}
+      #     allow-prereleases: true
 
-      # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
-      - name: Set up Python ${{ matrix.python-version }} (free-threaded)
-        uses: deadsnakes/action@e640ac8743173a67cca4d7d77cd837e514bf98e8 # v3.2.0
-        if: "${{ matrix.disable-gil }}"
-        with:
-          python-version: ${{ matrix.python-version }}
-          nogil: ${{ matrix.disable-gil }}
-      - name: Set PYTHON_GIL
-        if: '${{ matrix.disable-gil }}'
-        run: |
-          echo "PYTHON_GIL=0" >> $GITHUB_ENV
 
 #      - name: Install build dependencies for wheel-less lxml (Linux) in latest Python version
 #        # https://lxml.de/installation.html#installation
@@ -118,32 +102,34 @@ jobs:
 #          sudo apt-get -y install libxml2-dev libxslt-dev python3-dev
 #          CFLAGS="-O0" uv pip install --system lxml
 
-      - name: Install pdf2text and ocr dependencies (Linux Python latest)
+      - name: Install redis, pdf2text and ocr dependencies (Linux w/latest Python)
         # do full install and testing of pdf2text and ocr only on latest Python version
         if: matrix.python-version == '3.14' && runner.os == 'Linux'
         # https://github.com/jalan/pdftotext#os-dependencies
         run: |
-          sudo apt-get -y update
-          sudo apt-get -y install python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
+          sudo apt-get update
+          sudo apt-get install redis-server python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
+          export REDIS_URI="redis://localhost:6379"
+          uv pip install --system --upgrade pdftotext pytesseract
+
+      - name: Install pdf2text and ocr dependencies (macOS w/latest Python)
+        # do full install and testing of pdf2text and ocr only on latest Python version
+        if: matrix.python-version == '3.14' && runner.os == 'macOS'
+        run: |
+          brew update
+          brew install poppler tesseract
           uv pip install --system --upgrade pdftotext pytesseract
 
       - name: Install all other dependencies (GIL)
-        if: "${{ !matrix.disable-gil }}"
+        if: ! endsWith(matrix.python-version, 't')
         run: |
           uv pip install --system --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
       - name: Install all other dependencies (free-threaded)
-        if: "${{ matrix.disable-gil }}"
+        if: endsWith(matrix.python-version, 't')
         run: |
           uv pip install --system --upgrade coveralls -r requirements-free-threaded.txt -r tests/requirements_pytest.txt
 
-#      - name: Install all other dependencies (py12)
-#        if: matrix.python-version == '3.12'
-#        run: |
-#          uv pip install --system --upgrade --no-deps playwright >=1.37 greenlet==3.0 pyee==11.0
-#          uv pip install --system --upgrade coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
-#          uv pip install --system --upgrade --no-deps pyee==11.0
-
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
@@ -160,118 +146,114 @@ jobs:
       - name: Minimize uv cache
         run: uv cache prune --ci
 
-  test_macos:
-    # No redis (only works on ubuntu)
-    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
-    # matrix.os is defined in strategy.
-    runs-on: ${{ matrix.os }}
-    # Identifies any jobs that must complete successfully before this job will run
-    # needs: [pre-commit]
-    # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
-    strategy:
-      matrix:
-        # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
-        # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-preleleases: true in setop-python
-        python-version: ['3.14', '3.13', '3.12', '3.11']
-        os: [macos-latest]
-        disable-gil: [false]
-        # 29-oct-24 lxml does not build for free-threaded even with libxml2 and libxslt1 development packages
-        # 23-nov-24 cryptography doesn't build for free-threaded
-        include:
-          # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
-          - { os: ubuntu-latest, python-version: '3.14', disable-gil: true }
-    env:
-      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
-      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-#      REDIS_URI: redis://localhost:6379  # redis only available for Ubuntu
-      UV_SYSTEM_PYTHON: 1  # for uv, turns on --system by default
-      UV_CACHE_DIR: /tmp/.uv-cache  # for uv's persistent cache
+#   test_macos:
+#     # No redis (only works on ubuntu)
+#     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
+#     # matrix.os is defined in strategy.
+#     runs-on: ${{ matrix.os }}
+#     # Identifies any jobs that must complete successfully before this job will run
+#     # needs: [pre-commit]
+#     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
+#     strategy:
+#       matrix:
+#         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+#         # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-preleleases: true in setop-python
+#         python-version: ['3.14t', '3.14', '3.13', '3.12', '3.11']
+#         os: [macos-latest]
+#         # disable-gil: [false]
+#         # # 29-oct-24 lxml does not build for free-threaded even with libxml2 and libxslt1 development packages
+#         # # 23-nov-24 cryptography doesn't build for free-threaded
+#         # include:
+#         #   # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
+#         #   - { os: ubuntu-latest, python-version: '3.14', disable-gil: true }
+#     env:
+#       commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
+#       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
+# #      REDIS_URI: redis://localhost:6379  # redis only available for Ubuntu
+#       UV_SYSTEM_PYTHON: 1  # for uv, turns on --system by default
+#       UV_CACHE_DIR: /tmp/.uv-cache  # for uv's persistent cache
 
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
-        with:
-          egress-policy: audit
+#     steps:
+#       - name: Harden the runner (Audit all outbound calls)
+#         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+#         with:
+#           egress-policy: audit
 
-      # Checks out a copy of the repository per https://github.com/actions/checkout
-      - name: Check out repo
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+#       # Checks out a copy of the repository per https://github.com/actions/checkout
+#       - name: Check out repo
+#         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      # Install uv per https://github.com/astral-sh/setup-uv
-      # Docs at https://docs.astral.sh/uv/guides/integration/github
-      - name: Install uv
-        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
-        with:
-          enable-cache: true
+#       # Install uv per https://github.com/astral-sh/setup-uv
+#       # Docs at https://docs.astral.sh/uv/guides/integration/github
+#       - name: Install Python using uv
+#         uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7.1.3
+#         with:
+#           python-version: ${{ matrix.python-version }}
+#           enable-cache: true
 
-      - name: Restore uv cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: /tmp/.uv-cache
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-            uv-${{ runner.os }}
+#       - name: Restore uv cache
+#         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+#         with:
+#           path: /tmp/.uv-cache
+#           key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+#           restore-keys: |
+#             uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+#             uv-${{ runner.os }}
 
-      # Build Python and packages per https://github.com/actions/setup-python
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with:
-          python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
+#       # # Build Python and packages per https://github.com/actions/setup-python
+#       # - name: Set up Python ${{ matrix.python-version }}
+#       #   uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+#       #   with:
+#       #     python-version: ${{ matrix.python-version }}
+#       #     allow-prereleases: true
 
-      # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
-      - name: Set up Python ${{ matrix.python-version }} (free-threaded)
-        uses: deadsnakes/action@e640ac8743173a67cca4d7d77cd837e514bf98e8 # v3.2.0
-        if: "${{ matrix.disable-gil }}"
-        with:
-          python-version: ${{ matrix.python-version }}
-          nogil: ${{ matrix.disable-gil }}
-      - name: Set PYTHON_GIL
-        if: '${{ matrix.disable-gil }}'
-        run: |
-          echo "PYTHON_GIL=0" >> $GITHUB_ENV
+# #      - name: Install wheel-less lxml for latest Python
+# #        # https://lxml.de/installation.html#installation
+# #        if: matrix.python-version == '3.15'
+# #        run: |
+# #          STATIC_DEPS=true sudo -H pip install lxml
 
-#      - name: Install wheel-less lxml for latest Python
-#        # https://lxml.de/installation.html#installation
-#        if: matrix.python-version == '3.15'
-#        run: |
-#          STATIC_DEPS=true sudo -H pip install lxml
+#       - name: Install pdf2text and ocr dependencies (Python latest)
+#         # do full install and testing of pdf2text and ocr only on latest Python version
+#         if: matrix.python-version == '3.14'
+#         run: |
+#           brew update
+#           brew install poppler tesseract
+#           uv pip install --system --upgrade pdftotext pytesseract
 
-      - name: Install pdf2text and ocr dependencies (Python latest)
-        # do full install and testing of pdf2text and ocr only on latest Python version
-        if: matrix.python-version == '3.14'
-        run: |
-          brew install poppler tesseract
-          uv pip install --system --upgrade pdftotext pytesseract
+#       - name: Install all other dependencies (GIL)
+#         if: ! endsWith(matrix.python-version, 't')
+#         run: |
+#           uv pip install --system --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
 
-      - name: Install all other dependencies
-#        if: matrix.python-version < '3.12'
-        run: |
-          uv pip install --system --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
+#       - name: Install all other dependencies (free-threaded)
+#         if: endsWith(matrix.python-version, 't')
+#         run: |
+#           uv pip install --system --upgrade coveralls -r requirements-free-threaded.txt -r tests/requirements_pytest.txt
 
-#      - name: Install all other dependencies (py12)
-#        if: matrix.python-version == '3.12'
-#        run: |
-#          uv pip install --system --upgrade --no-deps playwright >=1.37 greenlet==3.0 pyee==11.0
-#          uv pip install --system --upgrade coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
-#          uv pip install --system --upgrade --no-deps pyee==11.0
 
-      - name: Run tests
-        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
-        run: >
-          python -m pytest -v --cov=./ --cov-report=term tests/
+# #      - name: Install all other dependencies (py12)
+# #        if: matrix.python-version == '3.12'
+# #        run: |
+# #          uv pip install --system --upgrade --no-deps playwright >=1.37 greenlet==3.0 pyee==11.0
+# #          uv pip install --system --upgrade coveralls -r requirements.txt -r tests/requirements_pytest_312.txt
+# #          uv pip install --system --upgrade --no-deps pyee==11.0
 
-      - name: Upload coverage data to coveralls.io (parallel)
-        run: coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
-          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
-          COVERALLS_PARALLEL: true
-        continue-on-error: true
+#       - name: Run tests
+#         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
+#         run: >
+#           python -m pytest -v --cov=./ --cov-report=term tests/
 
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+#       - name: Upload coverage data to coveralls.io (parallel)
+#         run: coveralls --service=github
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.github_token }}
+#           COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
+#           COVERALLS_PARALLEL: true
+#         continue-on-error: true
+
+#       - name: Minimize uv cache
+#         run: uv cache prune --ci
 
 # NOTES FROM 15-Apr-2024 on Windows testing:
 # No need to install poppler, tesseract etc. (tests will skip)
@@ -367,7 +349,8 @@ jobs:
   coveralls:
     name: Completion -> coveralls.io
 #    needs: [test_ubuntu, test_macos, test_windows]
-    needs: [test_ubuntu, test_macos]
+    # needs: [test_ubuntu, test_macos]
+    needs: [test]
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -388,7 +371,8 @@ jobs:
       contents: write  # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write  # IMPORTANT: this permission is mandatory for create GitHub release
 #    needs: [test_ubuntu, test_macos, test_windows]
-    needs: [test_ubuntu, test_macos]
+    # needs: [test_ubuntu, test_macos]
+    needs: [test]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
