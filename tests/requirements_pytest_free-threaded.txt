@@ -1,7 +1,8 @@
 # pip requirements for pytest (testing)
 # EXCLUDES requirements for testing 'ocr' and 'pdf2text' filters as they require OS-specific installs
 
-# requires one of ../requirements.txt or ../requirements_free-threaded.txt to also be installed
+# requires ../requirements_free-threaded.txt to also be installed
+-r ../requirements_free-threaded.txt
 
 # aioxmpp  # does not install in oct-2025 (obsolete lxml~=4.0 dependency fails to build)
 beautifulsoup4
@@ -21,16 +22,16 @@ keyring
 matrix-client
 minidb
 numpy
-Pillow
+pillow
 # playwright  # does not work free-threaded nov-2025 
 psutil
 pushbullet.py
-Pygments
+pygments
 pypdf[crypto]
 pytest
 pytest-cov
 pytest-mock
-pytest-playwright
+# pytest-playwright  # see playwright
 python-dateutil
 # pytz  # bug in aioxmpp, which does not install in oct-2025
 redis

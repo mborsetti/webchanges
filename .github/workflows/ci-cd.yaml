@@ -124,13 +124,13 @@ jobs:
       - name: Install all other dependencies (GIL)
         if: ${{ ! endsWith(matrix.python-version, 't') }}
         run: |
-          uv pip install --system --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
+          uv pip install --system --upgrade coveralls -r tests/requirements_pytest.txt
 
       - name: Install all other dependencies (free-threaded)
         if:  ${{ endsWith(matrix.python-version, 't') }}
         run: |
           export PYTHON_GIL=0
-          uv pip install --system --upgrade coveralls -r requirements_free-threaded.txt -r tests/requirements_pytest_free-threaded.txt
+          uv pip install --system --upgrade coveralls -r tests/requirements_pytest_free-threaded.txt
 
       - name: Run tests
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
