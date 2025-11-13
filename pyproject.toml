@@ -242,7 +242,7 @@ report_level = 'WARNING'
 # log_auto_indent = true
 # Enable log display during test run (aka "live logging" https://docs.pytest.org/en/stable/logging.html#live-logs)
 # log_cli = true
-minversion = '9.0.1'
+minversion = '8.4.2'
 testpaths = ['tests']
 
 # pytest-playwright
