@@ -37,7 +37,7 @@ from webchanges.util import TrackSubClasses
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib
+    import json as jsonlib  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -93,9 +93,20 @@ class NotModifiedError(Exception):
     """
 
 
+class TransientHTTPError(Exception):
+    """Raised when one of these HTTP response status codes is received:
+
+    - 429 Too Many Requests
+    - 500 Internal Server Error
+    - 502 Bad Gateway
+    - 503 Service Unavailable
+    - 504 Gateway Timeout
+    """
+
+
 class BrowserResponseError(Exception):
     """Raised by 'url' jobs with 'use_browser: true' (i.e. using Playwright) when an HTTP error response status code is
-    received.
+    received and is not one of the other Exceptions.
     """
 
     def __init__(self, args: tuple[Any, ...], status_code: int | None = None) -> None:
@@ -848,6 +859,10 @@ class UrlJob(UrlJobBase):
                     error_message = parser.handle(html_text).strip()
                 http_error_msg += f'\n{error_message}'
 
+            if response.status_code in (429, 500, 502, 503, 504):
+                logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
+                raise TransientHTTPError(http_error_msg)
+
             raise httpx.HTTPStatusError(http_error_msg, request=response.request, response=response)
 
         if response.status_code == 304:
@@ -969,6 +984,10 @@ class UrlJob(UrlJobBase):
                     parser.ignore_images = True
                     error_message = parser.handle(html_text).strip()
                 http_error_msg += f'\n{error_message}'
+
+            if response.status_code in (429, 500, 502, 503, 504):
+                logger.debug(f'Job {self.index_number}: Response error is transient.')
+                raise TransientHTTPError(http_error_msg)
 
             raise requests.HTTPError(http_error_msg, response=response)
 
@@ -1278,6 +1297,83 @@ class BrowserJob(UrlJobBase):
     proxy_username: str = ''
     proxy_password: str = ''
 
+    # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
+    chromium_connection_errors = (  # range 100-199 Connection related errors
+        'net::ERR_CONNECTION_CLOSED',  # 100
+        'net::ERR_CONNECTION_RESET',  # 101
+        'net::ERR_CONNECTION_REFUSED',  # 102
+        'net::ERR_CONNECTION_ABORTED',  # 103
+        'net::ERR_CONNECTION_FAILED',  # 104
+        'net::ERR_NAME_NOT_RESOLVED',  # 105
+        'net::ERR_INTERNET_DISCONNECTED',  # 106
+        'net::ERR_SSL_PROTOCOL_ERROR',  # 107
+        'net::ERR_ADDRESS_INVALID',  # 108
+        'net::ERR_ADDRESS_UNREACHABLE',  # 109
+        'net::ERR_SSL_CLIENT_AUTH_CERT_NEEDED',  # 110
+        'net::ERR_TUNNEL_CONNECTION_FAILED',  # 111
+        'net::ERR_NO_SSL_VERSIONS_ENABLED',  # 112
+        'net::ERR_SSL_VERSION_OR_CIPHER_MISMATCH',  # 113
+        'net::ERR_SSL_RENEGOTIATION_REQUESTED',  # 114
+        'net::ERR_PROXY_AUTH_UNSUPPORTED',  # 115
+        'net::ERR_CERT_ERROR_IN_SSL_RENEGOTIATION',  # 116
+        'net::ERR_BAD_SSL_CLIENT_AUTH_CERT',  # 117
+        'net::ERR_CONNECTION_TIMED_OUT',  # 118
+        'net::ERR_HOST_RESOLVER_QUEUE_TOO_LARGE',  # 119
+        'net::ERR_SOCKS_CONNECTION_FAILED',  # 120
+        'net::ERR_SOCKS_CONNECTION_HOST_UNREACHABLE',  # 121
+        'net::ERR_ALPN_NEGOTIATION_FAILED',  # 122
+        'net::ERR_SSL_NO_RENEGOTIATION',  # 123
+        'net::ERR_WINSOCK_UNEXPECTED_WRITTEN_BYTES',  # 124
+        'net::ERR_SSL_DECOMPRESSION_FAILURE_ALERT',  # 125
+        'net::ERR_SSL_BAD_RECORD_MAC_ALERT',  # 126
+        'net::ERR_PROXY_AUTH_REQUESTED',  # 127
+        'net::ERR_PROXY_CONNECTION_FAILED',  # 130
+        'net::ERR_MANDATORY_PROXY_CONFIGURATION_FAILED',  # 131
+        'net::ERR_PRECONNECT_MAX_SOCKET_LIMIT',  # 133
+        'net::ERR_SSL_CLIENT_AUTH_PRIVATE_KEY_ACCESS_DENIED',  # 134
+        'net::ERR_SSL_CLIENT_AUTH_CERT_NO_PRIVATE_KEY',  # 135
+        'net::ERR_PROXY_CERTIFICATE_INVALID',  # 136
+        'net::ERR_NAME_RESOLUTION_FAILED',  # 137
+        'net::ERR_NETWORK_ACCESS_DENIED',  # 138
+        'net::ERR_TEMPORARILY_THROTTLED',  # 139
+        'net::ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED',  # 141
+        'net::ERR_MSG_TOO_BIG',  # 142
+        'net::ERR_WS_PROTOCOL_ERROR',  # 145
+        'net::ERR_ADDRESS_IN_USE',  # 147
+        'net::ERR_SSL_PINNED_KEY_NOT_IN_CERT_CHAIN',  # 150
+        'net::ERR_CLIENT_AUTH_CERT_TYPE_UNSUPPORTED',  # 151
+        'net::ERR_SSL_DECRYPT_ERROR_ALERT',  # 153
+        'net::ERR_WS_THROTTLE_QUEUE_TOO_LARGE',  # 154
+        'net::ERR_SSL_SERVER_CERT_CHANGED',  # 156
+        'net::ERR_SSL_UNRECOGNIZED_NAME_ALERT',  # 159
+        'net::ERR_SOCKET_SET_RECEIVE_BUFFER_SIZE_ERROR',  # 160
+        'net::ERR_SOCKET_SET_SEND_BUFFER_SIZE_ERROR',  # 161
+        'net::ERR_SOCKET_RECEIVE_BUFFER_SIZE_UNCHANGEABLE',  # 162
+        'net::ERR_SOCKET_SEND_BUFFER_SIZE_UNCHANGEABLE',  # 163
+        'net::ERR_SSL_CLIENT_AUTH_CERT_BAD_FORMAT',  # 164
+        'net::ERR_ICANN_NAME_COLLISION',  # 166
+        'net::ERR_SSL_SERVER_CERT_BAD_FORMAT',  # 167
+        'net::ERR_CT_STH_PARSING_FAILED',  # 168
+        'net::ERR_CT_STH_INCOMPLETE',  # 169
+        'net::ERR_UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH',  # 170
+        'net::ERR_CT_CONSISTENCY_PROOF_PARSING_FAILED',  # 171
+        'net::ERR_SSL_OBSOLETE_CIPHER',  # 172
+        'net::ERR_WS_UPGRADE',  # 173
+        'net::ERR_READ_IF_READY_NOT_IMPLEMENTED',  # 174
+        'net::ERR_NO_BUFFER_SPACE',  # 176
+        'net::ERR_SSL_CLIENT_AUTH_NO_COMMON_ALGORITHMS',  # 177
+        'net::ERR_EARLY_DATA_REJECTED',  # 178
+        'net::ERR_WRONG_VERSION_ON_EARLY_DATA',  # 179
+        'net::ERR_TLS13_DOWNGRADE_DETECTED',  # 180
+        'net::ERR_SSL_KEY_USAGE_INCOMPATIBLE',  # 181
+        'net::ERR_INVALID_ECH_CONFIG_LIST',  # 182
+        'net::ERR_ECH_NOT_NEGOTIATED'  # 183
+        'net::ERR_ECH_FALLBACK_CERTIFICATE_INVALID',  # 184
+        'net::ERR_PROXY_UNABLE_TO_CONNECT_TO_DESTINATION'  # 186
+        'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_REQUEST'  # 187
+        'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_RESPONSE',  # 188
+    )
+
     if TYPE_CHECKING:
         try:
             from playwright.sync_api import Page, Response
@@ -1343,6 +1439,8 @@ class BrowserJob(UrlJobBase):
             from playwright._repo_version import version as playwright_version
             from playwright.sync_api import Error as PlaywrightError
             from playwright.sync_api import Route, sync_playwright
+            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
         except ImportError:  # pragma: no cover
             raise ImportError(
                 f"Python package 'playwright' is not installed; cannot run jobs with the 'use_browser: true' "
@@ -1758,19 +1856,22 @@ class BrowserJob(UrlJobBase):
                                 f' ( {self.get_indexed_location()} ).'
                             )
 
-                # if response.status and 400 <= response.status < 600:
-                #     raise BrowserResponseError((response.status_text,), response.status)
-                if not response.ok:
-                    # logger.info(
-                    #     f'Job {self.index_number}: Received response HTTP {response.status} {response.status_text} '
-                    #     f'from {response.url}'
-                    # )
-                    # logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
+                else:
+                    logger.info(
+                        f'Job {self.index_number}: Received response HTTP {response.status} {response.status_text} '
+                        f'from {response.url}'
+                    )
+                    logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
                     message = response.status_text
                     if response.status != 404:
                         body = page.text_content('body')
                         if body is not None:
                             message = f'{message}\n{body.strip()}' if message else body.strip()
+
+                    if response.status in (429, 500, 502, 503, 504):
+                        logger.debug(f'Job {self.index_number}: Response error is transient.')
+                        raise TransientHTTPError(message)
+
                     raise BrowserResponseError((message,), response.status)
 
                 # extract content
@@ -1812,6 +1913,10 @@ class BrowserJob(UrlJobBase):
 
             except PlaywrightError as e:
                 logger.info(f'Job {self.index_number}: Browser returned error {e}\n({url})')
+                chromium_error = str(e.args[0]).split()[0]
+                if isinstance(e, PlaywrightTimeoutError) or chromium_error in self.chromium_connection_errors:
+                    logger.debug(f'Job {self.index_number}: Browser error {chromium_error} is transient')
+                    raise TransientHTTPError(chromium_error) from e
                 if logger.root.level <= 20:  # logging.INFO
                     screenshot_filename = tempfile.NamedTemporaryFile(
                         prefix=f'{__project_name__}_screenshot_{self.index_number}_', suffix='.png', delete=False
@@ -1860,88 +1965,13 @@ class BrowserJob(UrlJobBase):
         :param exception: The exception.
         :returns: True if the error should be ignored, False otherwise.
         """
-        # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
-        chromium_connection_errors = [  # range 100-199 Connection related errors
-            'net::ERR_CONNECTION_CLOSED',
-            'net::ERR_CONNECTION_RESET',
-            'net::ERR_CONNECTION_REFUSED',
-            'net::ERR_CONNECTION_ABORTED',
-            'net::ERR_CONNECTION_FAILED',
-            'net::ERR_NAME_NOT_RESOLVED',
-            'net::ERR_INTERNET_DISCONNECTED',
-            'net::ERR_SSL_PROTOCOL_ERROR',
-            'net::ERR_ADDRESS_INVALID',
-            'net::ERR_ADDRESS_UNREACHABLE',
-            'net::ERR_SSL_CLIENT_AUTH_CERT_NEEDED',
-            'net::ERR_TUNNEL_CONNECTION_FAILED',
-            'net::ERR_NO_SSL_VERSIONS_ENABLED',
-            'net::ERR_SSL_VERSION_OR_CIPHER_MISMATCH',
-            'net::ERR_SSL_RENEGOTIATION_REQUESTED',
-            'net::ERR_PROXY_AUTH_UNSUPPORTED',
-            'net::ERR_CERT_ERROR_IN_SSL_RENEGOTIATION',
-            'net::ERR_BAD_SSL_CLIENT_AUTH_CERT',
-            'net::ERR_CONNECTION_TIMED_OUT',
-            'net::ERR_HOST_RESOLVER_QUEUE_TOO_LARGE',
-            'net::ERR_SOCKS_CONNECTION_FAILED',
-            'net::ERR_SOCKS_CONNECTION_HOST_UNREACHABLE',
-            'net::ERR_ALPN_NEGOTIATION_FAILED',
-            'net::ERR_SSL_NO_RENEGOTIATION',
-            'net::ERR_WINSOCK_UNEXPECTED_WRITTEN_BYTES',
-            'net::ERR_SSL_DECOMPRESSION_FAILURE_ALERT',
-            'net::ERR_SSL_BAD_RECORD_MAC_ALERT',
-            'net::ERR_PROXY_AUTH_REQUESTED',
-            'net::ERR_PROXY_CONNECTION_FAILED',
-            'net::ERR_MANDATORY_PROXY_CONFIGURATION_FAILED',
-            'net::ERR_PRECONNECT_MAX_SOCKET_LIMIT',
-            'net::ERR_SSL_CLIENT_AUTH_PRIVATE_KEY_ACCESS_DENIED',
-            'net::ERR_SSL_CLIENT_AUTH_CERT_NO_PRIVATE_KEY',
-            'net::ERR_PROXY_CERTIFICATE_INVALID',
-            'net::ERR_NAME_RESOLUTION_FAILED',
-            'net::ERR_NETWORK_ACCESS_DENIED',
-            'net::ERR_TEMPORARILY_THROTTLED',
-            'net::ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT',
-            'net::ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED',
-            'net::ERR_MSG_TOO_BIG',
-            'net::ERR_WS_PROTOCOL_ERROR',
-            'net::ERR_ADDRESS_IN_USE',
-            'net::ERR_SSL_HANDSHAKE_NOT_COMPLETED',
-            'net::ERR_SSL_BAD_PEER_PUBLIC_KEY',
-            'net::ERR_SSL_PINNED_KEY_NOT_IN_CERT_CHAIN',
-            'net::ERR_CLIENT_AUTH_CERT_TYPE_UNSUPPORTED',
-            'net::ERR_SSL_DECRYPT_ERROR_ALERT',
-            'net::ERR_WS_THROTTLE_QUEUE_TOO_LARGE',
-            'net::ERR_SSL_SERVER_CERT_CHANGED',
-            'net::ERR_SSL_UNRECOGNIZED_NAME_ALERT',
-            'net::ERR_SOCKET_SET_RECEIVE_BUFFER_SIZE_ERROR',
-            'net::ERR_SOCKET_SET_SEND_BUFFER_SIZE_ERROR',
-            'net::ERR_SOCKET_RECEIVE_BUFFER_SIZE_UNCHANGEABLE',
-            'net::ERR_SOCKET_SEND_BUFFER_SIZE_UNCHANGEABLE',
-            'net::ERR_SSL_CLIENT_AUTH_CERT_BAD_FORMAT',
-            'net::ERR_ICANN_NAME_COLLISION',
-            'net::ERR_SSL_SERVER_CERT_BAD_FORMAT',
-            'net::ERR_CT_STH_PARSING_FAILED',
-            'net::ERR_CT_STH_INCOMPLETE',
-            'net::ERR_UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH',
-            'net::ERR_CT_CONSISTENCY_PROOF_PARSING_FAILED',
-            'net::ERR_SSL_OBSOLETE_CIPHER',
-            'net::ERR_WS_UPGRADE',
-            'net::ERR_READ_IF_READY_NOT_IMPLEMENTED',
-            'net::ERR_NO_BUFFER_SPACE',
-            'net::ERR_SSL_CLIENT_AUTH_NO_COMMON_ALGORITHMS',
-            'net::ERR_EARLY_DATA_REJECTED',
-            'net::ERR_WRONG_VERSION_ON_EARLY_DATA',
-            'net::ERR_TLS13_DOWNGRADE_DETECTED',
-            'net::ERR_SSL_KEY_USAGE_INCOMPATIBLE',
-            'net::ERR_INVALID_ECH_CONFIG_LIST',
-        ]
-
-        from playwright.async_api import Error as PlaywrightError
-        from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+        from playwright.sync_api import Error as PlaywrightError
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
         if isinstance(exception, (BrowserResponseError, PlaywrightError)):
             chromium_error = str(exception.args[0]).split()[0]
             if self.ignore_connection_errors and (
-                isinstance(exception, PlaywrightTimeoutError) or chromium_error in chromium_connection_errors
+                isinstance(exception, PlaywrightTimeoutError) or chromium_error in self.chromium_connection_errors
             ):
                 return True
             if self.ignore_timeout_errors and (

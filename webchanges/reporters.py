@@ -74,7 +74,7 @@ if TYPE_CHECKING:
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib
+    import json as jsonlib  # type: ignore[no-redef]
 
 try:
     import httpx
@@ -119,7 +119,7 @@ if sys.platform == 'win32':
     try:
         from colorama import AnsiToWin32
     except ImportError as e:  # pragma: no cover
-        AnsiToWin32 = str(e)  # type: ignore[misc,assignment]
+        AnsiToWin32 = str(e)
 
 logger = logging.getLogger(__name__)
 

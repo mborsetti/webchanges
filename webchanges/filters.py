@@ -36,7 +36,7 @@ from webchanges.util import TrackSubClasses
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib
+    import json as jsonlib  # type: ignore[no-redef]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:

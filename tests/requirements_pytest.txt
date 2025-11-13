@@ -29,6 +29,7 @@ Pygments
 pypdf[crypto]
 pytest
 pytest-cov
+pytest-mock
 pytest-playwright
 python-dateutil
 # pytz  # bug in aioxmpp, which does not install in oct-2025

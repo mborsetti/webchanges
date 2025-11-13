@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Iterable
 
 from webchanges.command import UrlwatchCommand
 from webchanges.handler import JobState
-from webchanges.jobs import NotModifiedError
+from webchanges.jobs import NotModifiedError, TransientHTTPError
 
 try:
     import psutil
@@ -119,6 +119,15 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         f'Job {job_state.job.index_number}: Job error flagged as error as max_tries={max_tries} has '
                         f'been met or exceeded ({job_state.tries}'
                     )
+                    if isinstance(job_state.exception, TransientHTTPError):
+                        # We captured a transient error
+                        logger.info(
+                            f'Job {job_state.job.index_number}: Job has received an HTTP response status code of a '
+                            'typically transient nature'
+                        )
+                        job_state.new_data = job_state.old_data
+                        job_state.new_etag = job_state.old_etag
+                        job_state.new_mime_type = job_state.old_mime_type
                     job_state.save()
                     if job_state.new_error_data == job_state.old_error_data:
                         urlwatcher.report.error_same_error(job_state)

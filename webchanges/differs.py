@@ -70,7 +70,7 @@ except ImportError as e:  # pragma: no cover
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib
+    import json as jsonlib  # type: ignore[no-redef]
 
 try:
     import xmltodict
@@ -1969,7 +1969,7 @@ class AIGoogleDiffer(DifferBase):
                 'unified',
                 directives.get('unified') or {},  # type: ignore[arg-type]
                 self.state,
-                rep_kind,  # type: ignore[arg-type]
+                rep_kind,
                 tz,
                 temp_unfiltered_diff,
             )

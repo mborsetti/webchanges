@@ -239,11 +239,14 @@ report_level = 'WARNING'
 # Testing framework
 # Config file documentation at https://docs.pytest.org/en/stable/reference/reference.html#ini-options-ref
 
-log_auto_indent = true
+# log_auto_indent = true
 # Enable log display during test run (aka "live logging" https://docs.pytest.org/en/stable/logging.html#live-logs)
-log_cli = true
-minversion = '8.4.1'
+# log_cli = true
+minversion = '9.0.1'
 testpaths = ['tests']
+
+# pytest-playwright
+addopts = ["--browser", "chromium", "--browser-channel", "chrome"]
 
 # Adds pytest-cov functionality (see https://pytest-cov.readthedocs.io/en/latest/config.html)
 # Note: --cov moved to .github/workflows/ci-cd.yaml and tox.ini due to interference with PyCharm breakpoints (see
@@ -257,10 +260,7 @@ testpaths = ['tests']
 # Config file documentation at https://docs.astral.sh/ruff/configuration/ and https://docs.astral.sh/ruff/settings/
 
 # File patterns to omit from formatting and linting, in addition to those specified by exclude.
-extend-exclude = [
-    "webchanges/storage_minidb.py",
-    "webchanges/_vendored",
-]
+extend-exclude = ["webchanges/storage_minidb.py", "webchanges/_vendored"]
 
 # By default, Ruff will discover files matching *.py, *.pyi, *.ipynb, or pyproject.toml.
 # Include additional files
@@ -276,29 +276,29 @@ line-length = 120
 # By default, Ruff enables Flake8's F rules, along with a subset of the E rules
 # Enable rules not enabled by default, and ignore specific rules.
 select = [
-    "ANN",  # flake8-annotations
-    "S",    # flake8-bandit
-    "BLE",  # flake8-blind-except
-    "B",    # flake8-bugbear
-    "A",    # flake8-builtin
-    "C4",   # flake8-comprehensions
-    "DTZ",  # flake8-datetimez
+    "ANN", # flake8-annotations
+    "S",   # flake8-bandit
+    "BLE", # flake8-blind-except
+    "B",   # flake8-bugbear
+    "A",   # flake8-builtin
+    "C4",  # flake8-comprehensions
+    "DTZ", # flake8-datetimez
     # "EM",   # flake8-errmsg  # TODO
-    "FA",   # flake8-future-annotations
-    "INT",  # flake8-gettext
-    "ISC",  # flake8-implicit-str-concat
-    "LOG",  # flake8-logging
+    "FA",  # flake8-future-annotations
+    "INT", # flake8-gettext
+    "ISC", # flake8-implicit-str-concat
+    "LOG", # flake8-logging
     # "G",    # flake8-logging-format  # Prefer f-string to lazy `%` formatting and OK with '+'
-    "PIE",  # flake8-pie
-    "PYI",  # flake8-pyi
-    "PT",   # flake8-pytest-style
-    "Q",    # flake8-quotes
-    "RSE",  # flake8-raise
-    "RET",  # flake8-return
-    "SIM",  # flake8-simplify
-    "TID",  # flake8-tidy-imports
-    "TD",   # flake8-todos
-    "TC",   # flake8-type-checking
+    "PIE", # flake8-pie
+    "PYI", # flake8-pyi
+    "PT",  # flake8-pytest-style
+    "Q",   # flake8-quotes
+    "RSE", # flake8-raise
+    "RET", # flake8-return
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+    "TD",  # flake8-todos
+    "TC",  # flake8-type-checking
     # "ARG",  # flake8-unused-arguments  # Code loses clarity
     "PTH",  # flake8-use-pathlib
     "FLY",  # flynt
@@ -310,7 +310,7 @@ select = [
     "W",    # pycodestyle warnings
     # "DOC",  # pydoclint  # TODO
     # "D",    # pydocstyle  # TODO
-    "F",    # Pyflakes
+    "F", # Pyflakes
     # "PL",   # Pylint  # TODO
     "FURB", # refurb 
     "RUF",  # Ruff-specific rules
@@ -318,7 +318,7 @@ select = [
 ]
 
 ignore = [
-    "FLY002",  # Consider f-string instead of string join
+    "FLY002", # Consider f-string instead of string join
     # "G003",    # Logging statement uses `+`"
     # "G004",    # Logging statement uses f-string (Prefer f-string to lazy `%` formatting)
     "PLC0415", # `import` should be at the top-level of a file
@@ -339,7 +339,7 @@ unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.flake8-annotations]
-allow-star-arg-any = true  # TODO
+allow-star-arg-any = true # TODO
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"
@@ -350,7 +350,7 @@ max-complexity = 30
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
-    "S101",  # Use of `assert` detected
+    "S101", # Use of `assert` detected
 ]
 
 [tool.ruff.lint.pydoclint]

@@ -195,7 +195,7 @@ def test_keep_latest(database_engine: SsdbStorage) -> None:
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
-            time.sleep(0.0001)
+            time.sleep(0.0003)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
             ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]

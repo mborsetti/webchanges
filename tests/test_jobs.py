@@ -9,35 +9,35 @@ import socket
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
 import yaml
 from httpx import HTTPStatusError
-from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from requests import HTTPError
 
 from webchanges.config import CommandConfig
 from webchanges.handler import JobState
-from webchanges.jobs import BrowserJob, BrowserResponseError, JobBase, NotModifiedError, ShellJob, UrlJob
+from webchanges.jobs import (
+    BrowserJob,
+    BrowserResponseError,
+    JobBase,
+    NotModifiedError,
+    ShellJob,
+    TransientHTTPError,
+    UrlJob,
+)
 from webchanges.main import Urlwatch
+from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
 
-# from webchanges.reporters import ReporterBase
-from webchanges.storage import DEFAULT_CONFIG, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
+if TYPE_CHECKING:
+    import pytest_mock
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
 ssdb_file = ':memory:'
 ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
-
-
-class UrlwatchTest:
-    """A mock Urlwatch class for testing."""
-
-    class ConfigStorage:
-        """A mock config_storage class for testing."""
-
-        config = DEFAULT_CONFIG
 
 
 def is_connected() -> bool:
@@ -183,6 +183,129 @@ def new_command_config(config_file: Path, jobs_file: Path, hooks_file: Path) -> 
         hooks_def_file=hooks_file,
         ssdb_file=ssdb_file,  # type: ignore[arg-type]
     )
+
+
+def test_check_429_transient_error(mocker: pytest_mock.MockerFixture) -> None:
+    """Check for 429 Too Many Requests response, which should raise a TransientError."""
+    job = JobBase.unserialize({'url': 'https://www.google.com/'})
+
+    # Process the job for the first time
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+
+        # Create a mock response object
+        mock_response = mocker.Mock()
+        mock_response.status_code = 429
+        mock_response.reason_phrase = 'Too Many Requests'
+        mock_response.url = 'https://example.com/too-many-requests'
+        mock_response.request = mocker.Mock()
+        mock_response.text = 'Rate limit exceeded'
+        mock_response.history = []
+        mock_response.headers = {'Content-Type': 'text/plain'}
+
+        # Mock the httpx client's request method to return our mock response
+        mocker.patch('httpx.Client.request', return_value=mock_response)
+
+        job_state.save()
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+        job_state.load()
+
+        job_state.process()
+
+    # 4. Assert that a TransientError was raised and handled
+    assert isinstance(job_state.exception, TransientHTTPError)
+    assert '429 Client Error: Too Many Requests' in str(job_state.exception)
+    assert job_state.error_ignored is False
+    assert job_state.new_data == job_state.old_data
+
+
+def test_check_429_transient_error_requests(mocker: pytest_mock.MockerFixture) -> None:
+    """Check for 429 Too Many Requests response, which should raise a TransientError."""
+    job = JobBase.unserialize({'url': 'https://www.google.com/', 'http_client': 'requests'})
+
+    # Process the job for the first time
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+
+        ###########################################################################################################
+        # Create a mock response object
+        mock_response = mocker.Mock()
+        mock_response.status_code = 429
+        mock_response.reason = 'Too Many Requests'
+        mock_response.url = 'https://example.com/too-many-requests'
+        mock_response.request = mocker.Mock()
+        mock_response.text = 'Rate limit exceeded'
+        mock_response.history = []
+        mock_response.headers = {'Content-Type': 'text/plain'}
+
+        # Mock the requests client's request method to return our mock response
+        mocker.patch('requests.request', return_value=mock_response)
+
+        job_state.save()
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+        job_state.load()
+
+        job_state.process()
+
+    # 4. Assert that a TransientError was raised and handled
+    assert isinstance(job_state.exception, TransientHTTPError)
+    assert '429 Client Error: Too Many Requests' in str(job_state.exception)
+    assert job_state.error_ignored is False
+    assert job_state.new_data == job_state.old_data
+
+
+# TODO: Failing with Error
+# 'It looks like you are using Playwright Sync API inside the asyncio loop.\nPlease use the Async API instead.'
+# def test_check_transient_errors_browser(page: Page) -> None:
+#     """Check for 429 Too Many Requests response and for a 'net::ERR_CONNECTION_CLOSED' browser error, both of which
+#     should raise a TransientError."""
+#     job = JobBase.unserialize({'url': 'https://www.google.com/', 'use_browser': True})
+
+#     # Process the job for the first time
+#     with JobState(ssdb_storage, job) as job_state:
+#         job_state.process()
+
+#         ###########################################################################################################
+#         # Create a mock response object
+#         page.route(
+#             job.url,
+#             lambda route: route.fulfill(
+#                 status=429,
+#                 ok=False,
+#                 content_type='text/html',
+#                 status_text='Too Many Requests',
+#                 url=job.url,
+#                 headers={'Content-Type': 'text/plain'},
+#                 body='',
+#             ),
+#         )
+
+#         job_state.save()
+#         ssdb_storage._copy_temp_to_permanent(delete=True)
+#         job_state.load()
+
+#         job_state.process()
+
+#         # 4. Assert that a TransientError was raised and handled
+#         assert isinstance(job_state.exception, TransientError)
+#         assert '429 Client Error: Too Many Requests' in str(job_state.exception)
+#         assert job_state.error_ignored is False
+#         assert job_state.new_data == job_state.old_data
+
+#         # 5. Create a mock response object
+#         page.route(job.url, lambda route: route.abort('connectionclosed'))
+
+#         job_state.save()
+#         ssdb_storage._copy_temp_to_permanent(delete=True)
+#         job_state.load()
+
+#         job_state.process()
+
+#         # 6. Assert that a TransientError was raised and handled
+#         assert isinstance(job_state.exception, TransientError)
+#         assert 'net::ERR_CONNECTION_CLOSED' in str(job_state.exception)
+#         assert job_state.error_ignored is False
+#         assert job_state.new_data == job_state.old_data
 
 
 def test_kind() -> None:
@@ -629,26 +752,26 @@ def test_differ_name_not_str_dict_raises_valueerror() -> None:
     ]
 
 
-def test_suppress_repeated_errors(capsys: pytest.CaptureFixture) -> None:
-    pass
-    # jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
-    # config_file = data_path.joinpath('config.yaml')
-    # hooks_file = Path('')
+# def test_suppress_repeated_errors(capsys: pytest.CaptureFixture) -> None:
+#     pass
+#     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
+#     config_file = data_path.joinpath('config.yaml')
+#     hooks_file = Path('')
 
-    # config_storage = YamlConfigStorage(config_file)
-    # config_storage.load()
-    # jobs_storage = YamlJobsStorage([jobs_file])
-    # urlwatch_config = new_command_config(config_file, jobs_file, hooks_file)
-    # urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
-    # urlwatcher.jobs[0].suppress_repeated_errors = True
-    # urlwatcher.run_jobs()
-    # urlwatcher.close()
-    # ssdb_storage._copy_temp_to_permanent(delete=True)
-    # history = ssdb_storage.get_history_snapshots(urlwatcher.jobs[0].get_guid())
-    # assert len(history) == 1
-    # urlwatcher.run_jobs()
-    # ssdb_storage._copy_temp_to_permanent()
-    # history = ssdb_storage.get_history_snapshots(urlwatcher.jobs[0].get_guid())
-    # print()
-    # assert len(history) == 2
-    # assert capsys.readouterr().out == 'TEST\n'
+#     config_storage = YamlConfigStorage(config_file)
+#     config_storage.load()
+#     jobs_storage = YamlJobsStorage([jobs_file])
+#     urlwatch_config = new_command_config(config_file, jobs_file, hooks_file)
+#     urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
+#     urlwatcher.jobs[0].suppress_repeated_errors = True
+#     urlwatcher.run_jobs()
+#     urlwatcher.close()
+#     ssdb_storage._copy_temp_to_permanent(delete=True)
+#     history = ssdb_storage.get_history_snapshots(urlwatcher.jobs[0].get_guid())
+#     assert len(history) == 1
+#     urlwatcher.run_jobs()
+#     ssdb_storage._copy_temp_to_permanent()
+#     history = ssdb_storage.get_history_snapshots(urlwatcher.jobs[0].get_guid())
+#     print()
+#     assert len(history) == 2
+#     assert capsys.readouterr().out == 'TEST\n'
