@@ -15,14 +15,14 @@ flake8
 h2
 html5lib
 httpx
-# jq; sys_platform != 'win32'  # does not work free-threaded
+# jq; sys_platform != 'win32'  # does not work free-threaded nov-2025
 jsbeautifier
 keyring
 matrix-client
 minidb
 numpy
 Pillow
-playwright
+# playwright  # does not work free-threaded nov-2025 
 psutil
 pushbullet.py
 Pygments
