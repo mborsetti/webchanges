@@ -164,6 +164,7 @@ class JobBase(metaclass=TrackSubClasses):
     guid: str = ''
     headers = Headers(encoding='utf-8')
     http_client: Literal['httpx', 'requests'] | None = None
+    http_credentials: str | None = None  # Playwright
     ignore_cached: bool | None = None
     ignore_connection_errors: bool | None = None
     ignore_default_args: bool | str | list[str] | None = None
@@ -1270,6 +1271,7 @@ class BrowserJob(UrlJobBase):
         'data_as_json',
         'evaluate',
         'headers',
+        'http_credentials',
         'ignore_default_args',  # Playwright
         'ignore_https_errors',
         'init_script',  # Playwright,
@@ -1438,15 +1440,15 @@ class BrowserJob(UrlJobBase):
         try:
             from playwright._repo_version import version as playwright_version
             from playwright.sync_api import Error as PlaywrightError
-            from playwright.sync_api import Route, sync_playwright
+            from playwright.sync_api import HttpCredentials, ProxySettings, Route, sync_playwright
             from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
         except ImportError:  # pragma: no cover
             raise ImportError(
                 f"Python package 'playwright' is not installed; cannot run jobs with the 'use_browser: true' "
                 f"directive. Please install dependencies with 'pip install webchanges[use_browser]' and run again. "
                 f'({job_state.job.get_indexed_location()})'
             ) from None
+
         try:
             import psutil
         except ImportError:  # pragma: no cover
@@ -1490,10 +1492,24 @@ class BrowserJob(UrlJobBase):
 
         headers = self.get_headers(job_state, user_agent=None)
 
+        if self.http_credentials:
+            if not isinstance(self.http_credentials, str):
+                raise ValueError(
+                    f"Job {job_state.job.index_number}: Directive 'http_credentials' needs to be a string in the "
+                    f'format username:password; found a {type(self.http_credentials).__name__}.'
+                )
+            creds_split: SplitResult | SplitResultBytes = urlsplit(self.http_credentials)
+            http_credentials: HttpCredentials | None = {
+                'username': str(creds_split.username or ''),
+                'password': str(creds_split.password or ''),
+            }
+        else:
+            http_credentials = None
+
         proxy_str = self.get_proxy()
         if proxy_str is not None:
             proxy_split: SplitResult | SplitResultBytes = urlsplit(proxy_str)
-            proxy = {
+            proxy: ProxySettings | None = {
                 'server': (
                     f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
                     if proxy_split.port
@@ -1502,9 +1518,9 @@ class BrowserJob(UrlJobBase):
                 'username': str(proxy_split.username),
                 'password': str(proxy_split.password),
             }
-            proxy_for_logging = proxy.copy()
+            proxy_for_logging = proxy.copy()  # type: ignore[union-attr]
             if proxy_for_logging['password']:
-                proxy_for_logging['password'] = '*****'  # noqa: S105 possible hardcoded password
+                proxy_for_logging['password'] = '*******'  # noqa: S105 possible hardcoded password
             logger.debug(f'Job {self.index_number}: Proxy: {proxy_for_logging}')
         else:
             proxy = None
@@ -1577,6 +1593,7 @@ class BrowserJob(UrlJobBase):
                         ignore_https_errors=self.ignore_https_errors,
                         user_agent=user_agent,  # will be detected if in headers
                         extra_http_headers=dict(headers),
+                        http_credentials=http_credentials,
                     )
                 )
                 logger.info(

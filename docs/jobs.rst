@@ -679,6 +679,26 @@ Supported `resources <https://playwright.dev/docs/api/class-request#request-reso
 .. versionadded:: 3.19
 
 
+.. _http_credentials:
+
+http_credentials
+^^^^^^^^^^^^^^^^
+Credentials for HTTP authentication.
+
+A string in the format of 'username:password'.  For example, if the username is Adam and the password is Eve, use
+``http_credentials: 'Adam:eve'``.
+
+.. code-block:: yaml
+
+   name: This website requires authentication
+   note: It's just a test
+   url: https://www.example.com
+   use_browser: true
+   http_credentials: 'user:password'
+
+.. versionadded:: 3.32
+
+
 .. _ignore_default_args:
 
 ignore_default_args
