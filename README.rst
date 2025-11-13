@@ -22,6 +22,8 @@ For the best experience, use the current version of `Python <https://www.python.
 older Python versions for 3 years after they're replaced by a newer one; we just ask that you use the most up-to-date
 bug and security fix release from that older version.
 
+While **webchanges** supports free-threated Python, certain optional dependencies may not.
+
 For Generative AI summaries (BETA), you need a free `API Key from Google Cloud AI Studio
 <https://aistudio.google.com/app/apikey>`__ (see `here
 <https://webchanges.readthedocs.io/en/stable/differs.html#ai-google>`__).

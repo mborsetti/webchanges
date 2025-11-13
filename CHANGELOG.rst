@@ -44,6 +44,11 @@ Unreleased
 * Removed support for Python 3.10. As a reminder, older Python versions are supported for 3 years after being obsoleted
   by a new major release.
 
+Added
+`````
+* Support for Python 3.14t (free-threaded, GIL-free). Please note that while **webchanges** now supports free-threaded 
+  Python, certain optional dependencies do not (currently, these are ``playwright`` and ``jq``).
+
 Fixed
 `````
 * Fixed regression in error handling leading to interpreting errors as empty responses causing diffs to be be sent out.
