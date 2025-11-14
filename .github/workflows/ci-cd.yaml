@@ -104,7 +104,7 @@ jobs:
 
       # Free-threaded from https://github.com/actions/setup-python/issues/771#issuecomment-2439954031
       - name: Set up Python ${{ matrix.python-version }} (free-threaded)
-        uses: deadsnakes/action@250fabcd68c32794474092d3dbe7db84f1c0826a # main
+        uses: deadsnakes/action@c744390b027c152c6e9259633244cadc8f9a160c # main
         if: "${{ matrix.disable-gil }}"
         with:
           python-version: ${{ matrix.python-version }}
