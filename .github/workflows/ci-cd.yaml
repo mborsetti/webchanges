@@ -102,7 +102,7 @@ jobs:
           # 1. install miniconda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
           $condaInstallerUrl = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
           $condaInstallerPath = "$env:TEMP\Miniconda3-setup.exe"
-          installDir = "$env:TEMP\Miniconda3"
+          $installDir = "$env:TEMP\Miniconda3"
           Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath
           # Run the installer silently
           Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /S /D=$installDir" -Wait -NoNewWindow
