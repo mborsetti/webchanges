@@ -103,9 +103,9 @@ jobs:
           $condaInstallerUrl = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
           $condaInstallerPath = "$env:TEMP\Miniconda3-setup.exe"
           $installDir = "$env:TEMP\Miniconda3"
-          Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath
+          Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath -Debug
           # Run the installer silently
-          Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /S /D=$installDir" -Wait -NoNewWindow
+          Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /D=$installDir" -Wait -NoNewWindow -Debug
           Remove-Item -Path $condaInstallerPath
           # 2. install Poppler using conda
           Start-Process -FilePath "$installDir\conda.exe" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
