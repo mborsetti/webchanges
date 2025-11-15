@@ -106,7 +106,7 @@ jobs:
           # Run the installer silently
           Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /S /D=$env:TEMP\Miniconda3" -Wait -NoNewWindow
           # 2. install Poppler using conda
-          Start-Process -FilePath "$env:TEMP\Miniconda3\conda" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
+          Start-Process -FilePath "$env:TEMP\Miniconda3\conda.exe" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
 
           # Install Tesseract
           # See https://github.com/UB-Mannheim/tesseract/wiki
