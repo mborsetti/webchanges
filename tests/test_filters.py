@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib.util
 import logging
 import os
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -123,7 +122,8 @@ def test_providing_unknown_subfilter_raises_valueerror() -> None:
     assert err_msg.endswith(('re, text are supported.', 'text, re are supported.'))
 
 
-@pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')  # type: ignore[misc]
+# @pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')
+#   # type: ignore[misc]
 def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     # https://github.com/thp/urlwatch/issues/541
 
@@ -134,7 +134,7 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     os.environ['INHERITED_FROM'] = 'parent-process'
     job_state.job = UrlJob(url='test')
     if os.name != 'nt':
-        command = 'bash -c "echo $INHERITED_FROM/$URLWATCH_JOB_NAME"'
+        command = 'bash -c "cat; echo $INHERITED_FROM/$URLWATCH_JOB_NAME"'
     else:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('execute')
@@ -152,7 +152,8 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
 
 
-@pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')  # type: ignore[misc]
+# @pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')
+#   # type: ignore[misc]
 def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     # https://github.com/thp/urlwatch/issues/541
     # if os.getenv('GITHUB_ACTIONS') and sys.version_info[0:2] == (3, 6) and sys.platform == 'linux':
@@ -166,7 +167,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     os.environ['INHERITED_FROM'] = 'parent-process'
     job_state.job = UrlJob(url='test')
     if os.name != 'nt':
-        command = 'echo $INHERITED_FROM/$URLWATCH_JOB_NAME'
+        command = 'cat; echo $INHERITED_FROM/$URLWATCH_JOB_NAME'
     else:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('shellpipe')
