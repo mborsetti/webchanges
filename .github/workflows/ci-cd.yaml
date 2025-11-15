@@ -109,9 +109,8 @@ jobs:
           $env:Path += ";C:\poppler\poppler-25.11.0-0\bin" # Adjust path based on extracted folder name
           echo "C:\poppler\poppler-25.11.0-0\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
           # Set these paths for building pdftotext
-          $env:POPPLER_PATH = "C:\poppler\poppler-25.11.0-0"
-          $env:CPLUS_INCLUDE_PATH = "$env:POPPLER_PATH\include"
-          $env:LIBRARY_PATH = "$env:POPPLER_PATH\lib"
+          $env:INCLUDE = "C:\poppler\poppler-25.11.0-0\include;$env:INCLUDE"
+          $env:LIB = "C:\poppler\poppler-25.11.0-0\lib;$env:LIB"
 
           # Download Tesseract installer
           # See https://github.com/UB-Mannheim/tesseract/wiki
@@ -125,7 +124,6 @@ jobs:
           echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Append
 
           # Install Python packages
-          uv pip install --upgrade pkg-config
           uv pip install --upgrade pdftotext pytesseract
 
       - name: Install all other dependencies (GIL)
