@@ -93,26 +93,22 @@ jobs:
           brew install poppler tesseract
           uv pip install --upgrade pdftotext pytesseract
 
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f # v3.2.0
+        if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
+        with:
+          auto-update-conda: true
+          python-version: 3.9
+
       - name: Install pdf2text and ocr dependencies (Windows w/latest Python)
         # Do full install and testing of pdf2text and ocr only on latest Python version
         if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
         shell: pwsh
         run: |
-          # Download Poppler binaries
-          # See https://github.com/oschwartz10612/poppler-windows/releases
-          $popplerUrl = "https://github.com/oschwartz10612/poppler-windows/releases/download/v25.11.0-0/Release-25.11.0-0.zip" # Replace with the latest version
-          $popplerZipPath = "$env:TEMP\poppler.zip"
-          Invoke-WebRequest -Uri $popplerUrl -OutFile $popplerZipPath
-          # Extract Poppler
-          Expand-Archive -LiteralPath $popplerZipPath -DestinationPath "C:\poppler"
-          # Add Poppler's bin directory to PATH
-          $env:Path += ";C:\poppler\poppler-25.11.0-0\bin" # Adjust path based on extracted folder name
-          echo "C:\poppler\poppler-25.11.0-0\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-          # Set these paths for building pdftotext
-          $env:INCLUDE = "C:\poppler\poppler-25.11.0-0\include;$env:INCLUDE"
-          $env:LIB = "C:\poppler\poppler-25.11.0-0\lib;$env:LIB"
+          # Install Poppler
+          conda install -c conda-forge poppler --yes
 
-          # Download Tesseract installer
+          # Install Tesseract
           # See https://github.com/UB-Mannheim/tesseract/wiki
           $tesseractInstallerUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe" # Replace with the latest version
           $tesseractInstallerPath = "$env:TEMP\tesseract-ocr-setup.exe"
