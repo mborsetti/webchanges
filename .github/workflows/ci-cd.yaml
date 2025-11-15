@@ -76,7 +76,7 @@ jobs:
             uv-${{ runner.os }}
 
       - name: Install redis, pdf2text and ocr dependencies (Linux w/latest Python)
-        # do full install and testing of pdf2text and ocr only on latest Python version
+        # Do full install and testing of pdf2text and ocr only on latest Python version
         if: ${{ matrix.python-version == '3.14' && runner.os == 'Linux' }}
         # https://github.com/jalan/pdftotext#os-dependencies
         run: |
@@ -86,30 +86,32 @@ jobs:
           uv pip install --upgrade pdftotext pytesseract
 
       - name: Install pdf2text and ocr dependencies (macOS w/latest Python)
-        # do full install and testing of pdf2text and ocr only on latest Python version
-        if: ${{  matrix.python-version == '3.14' && runner.os == 'macOS' }}
+        # Do full install and testing of pdf2text and ocr only on latest Python version
+        if: ${{ matrix.python-version == '3.14' && runner.os == 'macOS' }}
         run: |
           brew update
           brew install poppler tesseract
           uv pip install --upgrade pdftotext pytesseract
 
       - name: Install pdf2text and ocr dependencies (Windows w/latest Python)
-        # do full install and testing of pdf2text and ocr only on latest Python version
-        if: ${{  matrix.python-version == '3.14' && runner.os == 'Windows' }}
+        # Do full install and testing of pdf2text and ocr only on latest Python version
+        if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
         shell: pwsh
         run: |
           # Download Poppler binaries
-          $popplerUrl = "https://github.com/oschwartz10612/poppler-windows/releases/download/v25.07.0-0/Release-25.07.0-0.zip" # Replace with the latest version
+          # See https://github.com/oschwartz10612/poppler-windows/releases
+          $popplerUrl = "https://github.com/oschwartz10612/poppler-windows/releases/download/v25.11.0-0/Release-25.11.0-0.zip" # Replace with the latest version
           $popplerZipPath = "$env:TEMP\poppler.zip"
           Invoke-WebRequest -Uri $popplerUrl -OutFile $popplerZipPath
           # Extract Poppler
           Expand-Archive -LiteralPath $popplerZipPath -DestinationPath "C:\poppler"
           # Add Poppler's bin directory to PATH
-          $env:Path += ";C:\poppler\poppler-25.07.0-0\bin" # Adjust path based on extracted folder name
-          echo "C:\poppler\poppler-25.07.0-0\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          $env:Path += ";C:\poppler\poppler-25.11.0-0\bin" # Adjust path based on extracted folder name
+          echo "C:\poppler\poppler-25.11.0-0\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
           # Download Tesseract installer
-          $tesseractInstallerUrl = "https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.5.0.20241111.exe" # Replace with the latest version
+          # See https://github.com/UB-Mannheim/tesseract/wiki
+          $tesseractInstallerUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe" # Replace with the latest version
           $tesseractInstallerPath = "$env:TEMP\tesseract-ocr-setup.exe"
           Invoke-WebRequest -Uri $tesseractInstallerUrl -OutFile $tesseractInstallerPath
           # Run the installer silently

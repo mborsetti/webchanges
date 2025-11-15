@@ -72,7 +72,7 @@ playwright_required = cast(
     'Callable[[Callable], Callable]', pytest.mark.skipif(not playwright_is_installed, reason='Playwright not installed')
 )
 
-TEST_JOBS = [
+TEST_JOBS: list[tuple[dict[str, Any], str | bytes]] = [
     (
         {
             'url': 'https://www.google.com/',
@@ -166,12 +166,16 @@ TEST_JOBS = [
         'test echo command',
     ),
 ]
-TEST_ALL_URL_JOBS: list[dict[str, str | bool]] = [
+ALL_JOB_TYPES: list[dict[str, str | bool]] = [
     {},
     {'use_browser': True},
 ]
 if importlib.util.find_spec('requests') is not None:
-    TEST_ALL_URL_JOBS.append({'http_client': 'requests'})
+    ALL_JOB_TYPES.append({'http_client': 'requests'})
+
+
+def job_type_str(v: dict[str, Any]) -> str:
+    return 'BrowserJob' if v.get('use_browser') else f'UrlJob-{v.get("http_client", "httpx")}'
 
 
 def new_command_config(config_file: Path, jobs_file: Path, hooks_file: Path) -> CommandConfig:
@@ -339,7 +343,7 @@ def test__dict_deep__merge() -> None:
 @pytest.mark.parametrize(  # type: ignore[misc]
     ('input_job', 'output'),
     TEST_JOBS,
-    ids=(f'{type(JobBase.unserialize(v[0])).__name__}: {v[1]}' for v in TEST_JOBS),  # type: ignore[arg-type]
+    ids=(f'{job_type_str(v[0])}: {v[1]!r}' for v in TEST_JOBS),  # type: ignore[arg-type]
 )
 def test_run_job(
     input_job: dict[str, str | dict[str, str] | bool | int],
@@ -384,8 +388,8 @@ def test_run_ftp_job() -> None:
 @connection_required  # type: ignore[misc]
 @pytest.mark.parametrize(  # type: ignore[arg-type,misc]
     'job_data',
-    TEST_ALL_URL_JOBS,
-    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
+    ALL_JOB_TYPES,
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
 )
 def test_check_etag(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
@@ -401,8 +405,8 @@ def test_check_etag(job_data: dict[str, Any]) -> None:
 @connection_required  # type: ignore[misc]
 @pytest.mark.parametrize(  # type: ignore[arg-type,misc]
     'job_data',
-    TEST_ALL_URL_JOBS,
-    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
+    ALL_JOB_TYPES,
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
 )
 def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dict) -> None:
     """Check for 304 Not Modified response."""
@@ -432,13 +436,11 @@ def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dic
 @connection_required  # type: ignore[misc]
 @pytest.mark.parametrize(  # type: ignore[arg-type,misc]
     'job_data',
-    TEST_ALL_URL_JOBS,
-    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
+    ALL_JOB_TYPES,
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
 )
 def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
-    job_data['url'] = 'http://localhost'
-    job_data['timeout'] = 0.0001
-    # job_data['timeout'] = 1  # when debugging
+    job_data['url'] = 'http://localhost:9999'
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
@@ -446,11 +448,15 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
         with JobState(ssdb_storage, job) as job_state:
             job_state.process()
             assert job_state.exception
-            if not isinstance(job_state.exception, PlaywrightTimeoutError):
-                assert any(
-                    x in str(job_state.exception.args)
-                    for x in ('Max retries exceeded', 'Timeout 0.1ms exceeded.', 'timed out', 'Connection refused')
+            assert any(
+                x in str(job_state.exception.args)
+                for x in (
+                    'Max retries exceeded',
+                    'Connection refused',
+                    'No connection could be made',
+                    'net::ERR_CONNECTION_REFUSED',
                 )
+            )
             assert getattr(job_state, 'error_ignored', False) is False
 
         job_data['ignore_connection_errors'] = True
@@ -467,39 +473,28 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
 @connection_required  # type: ignore[misc]
 @pytest.mark.parametrize(  # type: ignore[arg-type,misc]
     'job_data',
-    TEST_ALL_URL_JOBS,
-    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
+    ALL_JOB_TYPES,
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
 )
 def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@localhost:8080'
-    job_data['timeout'] = 0.0001
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
     else:
         with JobState(ssdb_storage, job) as job_state:
             job_state.process()
-            if job_state.exception and not isinstance(job_state.exception, BrowserResponseError):
-                assert job_state.exception
-                assert any(
-                    x in str(job_state.exception.args)
-                    for x in (
-                        'Max retries exceeded',
-                        'Read timed out',
-                        'Timeout 0.1ms exceeded.',
-                        'timed out',
-                        'Connection refused',
-                    )
-                )
+            assert job_state.exception
+            assert any(x in str(job_state.exception.args) for x in ('Max retries exceeded', 'Connection refused'))
             assert job_state.error_ignored is False
 
 
 @connection_required  # type: ignore[misc]
 @pytest.mark.parametrize(  # type: ignore[arg-type,misc]
     'job_data',
-    TEST_ALL_URL_JOBS,
-    ids=('BrowserJob' if v.get('use_browser') else 'UrlJob' for v in TEST_ALL_URL_JOBS),  # type: ignore[attr-defined]
+    ALL_JOB_TYPES,
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
 )
 def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any]) -> None:
     # if job_data.get('use_browser'):

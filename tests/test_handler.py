@@ -41,7 +41,7 @@ def cleanup(request: pytest.FixtureRequest) -> None:
 
     def finalizer() -> None:
         """Cleanup once we are finished."""
-        ssdb_storage.delete_all()
+        ssdb_storage.close()
 
     request.addfinalizer(finalizer)
 
@@ -138,7 +138,7 @@ def test_disabled_job() -> None:
         assert len(urlwatcher.report.job_states) == 1
         assert urlwatcher.report.job_states[0].new_data == 'enabled job\n'
     finally:
-        ssdb_storage.delete_all()
+        ssdb_storage.close()
 
 
 def test_load_hooks_py() -> None:
@@ -167,7 +167,7 @@ def test_run_watcher_sqlite3() -> None:
         urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
         urlwatcher.run_jobs()
     finally:
-        ssdb_storage.delete_all()
+        ssdb_storage.close()
 
 
 @minidb_required  # type: ignore[misc]
@@ -230,7 +230,7 @@ def test_number_of_tries_in_cache_is_increased_sqlite3() -> None:
         assert snapshot.tries == 2
         assert urlwatcher.report.job_states[-1].verb == 'repeated_error'
     finally:
-        ssdb_storage.delete_all()
+        ssdb_storage.close()
 
 
 def test_report_error_when_out_of_tries_sqlite3() -> None:
@@ -248,7 +248,7 @@ def test_report_error_when_out_of_tries_sqlite3() -> None:
         report = urlwatcher.report
         assert report.job_states[-1].verb == 'repeated_error'
     finally:
-        ssdb_storage.delete_all()
+        ssdb_storage.close()
 
 
 def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
@@ -275,7 +275,7 @@ def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
         snapshot = ssdb_storage.load(guid)
         assert snapshot.tries == 0
     finally:
-        ssdb_storage.delete_all()
+        ssdb_storage.close()
 
 
 @minidb_required  # type: ignore[misc]

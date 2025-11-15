@@ -85,7 +85,7 @@ def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_fil
 
 
 @pytest.fixture  # type: ignore[misc]
-def urlwatch_command() -> UrlwatchCommand:
+def urlwatch_command() -> Generator[UrlwatchCommand, None, None]:
     config_storage = YamlConfigStorage(config_file)
     config_storage.load()
     urlwatcher = Urlwatch(
@@ -101,7 +101,11 @@ def urlwatch_command() -> UrlwatchCommand:
         ssdb_storage=SsdbSQLite3Storage(':memory:'),  # type: ignore[arg-type]
         jobs_storage=YamlJobsStorage([jobs_file]),
     )  # main.py
-    return UrlwatchCommand(urlwatcher)
+    yield UrlwatchCommand(urlwatcher)
+    try:
+        urlwatcher.close()
+    except:  # noqa: S110,E722
+        pass
 
 
 # Set up classes

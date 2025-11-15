@@ -15,7 +15,7 @@ import string
 import sys
 from io import BytesIO
 from pathlib import Path
-from typing import Callable, cast
+from typing import Callable, Generator, cast
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -109,14 +109,15 @@ def generate_random_string(length: int = 39) -> str:
 
 
 @pytest.fixture  # type: ignore[misc]
-def job_state() -> JobState:
+def job_state() -> Generator[JobState, None, None]:
     """Get a JobState object for testing."""
     ssdb_file = ':memory:'
     ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
     job_state = JobState(ssdb_storage, ShellJob(command=''))
     job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
     job_state.new_timestamp = 1605147837.511478
-    return job_state
+    yield job_state
+    ssdb_storage.close()
 
 
 # def test_no_differ_name_raises_valueerror() -> None:
