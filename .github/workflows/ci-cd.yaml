@@ -98,14 +98,17 @@ jobs:
         if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
         shell: pwsh
         run: |
+          # Set the preference variable to display Debug messages
+          $VerbosePreference = "Continue"
+
           # Install Poppler
           # 1. install miniconda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
           $condaInstallerUrl = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
           $condaInstallerPath = "$env:TEMP\Miniconda3-setup.exe"
           $installDir = "$env:TEMP\Miniconda3"
-          Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath -Debug
+          Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath
           # Run the installer silently
-          Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /D=$installDir" -Wait -NoNewWindow -Debug
+          Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /D=$installDir" -Wait -NoNewWindow
           Remove-Item -Path $condaInstallerPath
           # 2. install Poppler using conda
           Start-Process -FilePath "$installDir\conda.exe" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
