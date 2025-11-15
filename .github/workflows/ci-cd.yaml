@@ -102,11 +102,13 @@ jobs:
           # 1. install miniconda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
           $condaInstallerUrl = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
           $condaInstallerPath = "$env:TEMP\Miniconda3-setup.exe"
+          installDir = "$env:TEMP\Miniconda3"
           Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath
           # Run the installer silently
-          Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /S /D=$env:TEMP\Miniconda3" -Wait -NoNewWindow
+          Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /S /D=$installDir" -Wait -NoNewWindow
+          Remove-Item -Path $condaInstallerPath
           # 2. install Poppler using conda
-          Start-Process -FilePath "$env:TEMP\Miniconda3\conda.exe" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
+          Start-Process -FilePath "$installDir\conda.exe" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
 
           # Install Tesseract
           # See https://github.com/UB-Mannheim/tesseract/wiki
@@ -115,6 +117,7 @@ jobs:
           Invoke-WebRequest -Uri $tesseractInstallerUrl -OutFile $tesseractInstallerPath
           # Run the installer silently
           Start-Process -FilePath $tesseractInstallerPath -ArgumentList "/S /D=C:\Program Files\Tesseract-OCR" -Wait -NoNewWindow
+          Remove-Item -Path $tesseractInstallerPath
           # Add Tesseract to PATH
           $env:Path += ";C:\Program Files\Tesseract-OCR"
           echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Append
