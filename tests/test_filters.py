@@ -122,8 +122,6 @@ def test_providing_unknown_subfilter_raises_valueerror() -> None:
     assert err_msg.endswith(('re, text are supported.', 'text, re are supported.'))
 
 
-# @pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')
-#   # type: ignore[misc]
 def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     # https://github.com/thp/urlwatch/issues/541
 
@@ -155,8 +153,6 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
 
 
-# @pytest.mark.skipif(sys.platform == 'darwin', reason='Often leads to Process completed with exit code 141 on macOS')
-#   # type: ignore[misc]
 def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     # https://github.com/thp/urlwatch/issues/541
     # if os.getenv('GITHUB_ACTIONS') and sys.version_info[0:2] == (3, 6) and sys.platform == 'linux':
@@ -403,7 +399,6 @@ def test_filter_exceptions() -> None:
         pytest.xfail('jq not installed')
 
 
-# @pytest.mark.xfail('Not working due to an html2text bug')
 def test_html2text_roundtrip() -> None:
     html = '1 | <a href="https://www.example.com">1</a><br><strong>2 |<a href="https://www.example.com">2</a></strong>'
     data, _ = Html2TextFilter(job_state).filter(html, 'text/plain', {})  # type: ignore[arg-type]

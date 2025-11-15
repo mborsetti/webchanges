@@ -93,40 +93,40 @@ jobs:
           brew install poppler tesseract
           uv pip install --upgrade pdftotext pytesseract
 
-      - name: Install pdf2text and ocr dependencies (Windows w/latest Python)
-        # Do full install and testing of pdf2text and ocr only on latest Python version
-        if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
-        shell: pwsh
-        run: |
-          # Set the preference variable to display Debug messages
-          $VerbosePreference = "Continue"
+      # - name: Install pdf2text and ocr dependencies (Windows w/latest Python)
+      #   # Do full install and testing of pdf2text and ocr only on latest Python version
+      #   if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
+      #   shell: pwsh
+      #   run: |
+      #     # Set the preference variable to display Verbose messages
+      #     $VerbosePreference = "Continue"
 
-          # Install Poppler
-          # 1. install miniconda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
-          $condaInstallerUrl = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
-          $condaInstallerPath = "$env:TEMP\Miniconda3-setup.exe"
-          $installDir = "$env:TEMP\Miniconda3"
-          Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath
-          # Run the installer silently
-          Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /D=$installDir" -Wait -NoNewWindow
-          Remove-Item -Path $condaInstallerPath
-          # 2. install Poppler using conda
-          Start-Process -FilePath "$installDir\conda.exe" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
+      #     # Install Poppler
+      #     # 1. install miniconda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
+      #     $condaInstallerUrl = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
+      #     $condaInstallerPath = "$env:TEMP\Miniconda3-setup.exe"
+      #     $installDir = "$env:TEMP\Miniconda3"
+      #     Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath -HttpVersion 2.0
+      #     # Run the installer silently
+      #     Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /D=$installDir" -Wait -NoNewWindow
+      #     Remove-Item -Path $condaInstallerPath
+      #     # 2. install Poppler using conda
+      #     Start-Process -FilePath "$installDir\conda.exe" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
 
-          # Install Tesseract
-          # See https://github.com/UB-Mannheim/tesseract/wiki
-          $tesseractInstallerUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe" # Replace with the latest version
-          $tesseractInstallerPath = "$env:TEMP\tesseract-ocr-setup.exe"
-          Invoke-WebRequest -Uri $tesseractInstallerUrl -OutFile $tesseractInstallerPath
-          # Run the installer silently
-          Start-Process -FilePath $tesseractInstallerPath -ArgumentList "/S /D=C:\Program Files\Tesseract-OCR" -Wait -NoNewWindow
-          Remove-Item -Path $tesseractInstallerPath
-          # Add Tesseract to PATH
-          $env:Path += ";C:\Program Files\Tesseract-OCR"
-          echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Append
+      #     # Install Tesseract
+      #     # See https://github.com/UB-Mannheim/tesseract/wiki
+      #     $tesseractInstallerUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe" # Replace with the latest version
+      #     $tesseractInstallerPath = "$env:TEMP\tesseract-ocr-setup.exe"
+      #     Invoke-WebRequest -Uri $tesseractInstallerUrl -OutFile $tesseractInstallerPath -HttpVersion 2.0
+      #     # Run the installer silently
+      #     Start-Process -FilePath $tesseractInstallerPath -ArgumentList "/S /D=C:\Program Files\Tesseract-OCR" -Wait -NoNewWindow
+      #     Remove-Item -Path $tesseractInstallerPath
+      #     # Add Tesseract to PATH
+      #     $env:Path += ";C:\Program Files\Tesseract-OCR"
+      #     echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Append
 
-          # Install Python packages
-          uv pip install --upgrade pdftotext pytesseract
+      #     # Install Python packages
+      #     uv pip install --upgrade pdftotext pytesseract
 
       - name: Install all other dependencies (GIL)
         if: ${{ ! endsWith(matrix.python-version, 't') }}

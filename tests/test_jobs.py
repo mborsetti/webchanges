@@ -450,12 +450,7 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
             assert job_state.exception
             assert any(
                 x in str(job_state.exception.args)
-                for x in (
-                    'Max retries exceeded',
-                    'Connection refused',
-                    'No connection could be made',
-                    'net::ERR_CONNECTION_REFUSED',
-                )
+                for x in ('Connection refused', 'No connection could be made', 'net::ERR_CONNECTION_REFUSED')
             )
             assert getattr(job_state, 'error_ignored', False) is False
 
@@ -486,7 +481,10 @@ def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
         with JobState(ssdb_storage, job) as job_state:
             job_state.process()
             assert job_state.exception
-            assert any(x in str(job_state.exception.args) for x in ('Max retries exceeded', 'Connection refused'))
+            assert any(
+                x in str(job_state.exception.args)
+                for x in ('Connection refused', 'No connection could be made', 'ERR_PROXY_CONNECTION_FAILED ')
+            )
             assert job_state.error_ignored is False
 
 

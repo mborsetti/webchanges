@@ -1986,7 +1986,10 @@ class BrowserJob(UrlJobBase):
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
         if isinstance(exception, (BrowserResponseError, PlaywrightError)):
-            chromium_error = str(exception.args[0]).split()[0]
+            try:
+                chromium_error = str(exception.args[0]).split()[1]
+            except IndexError:
+                chromium_error = str(exception.args[0])
             if self.ignore_connection_errors and (
                 isinstance(exception, PlaywrightTimeoutError) or chromium_error in self.chromium_connection_errors
             ):
