@@ -76,6 +76,7 @@ jobs:
             uv-${{ runner.os }}
 
       - name: Install redis, pdf2text and ocr dependencies (Linux w/latest Python)
+        # Redis easily installable on Unbuntu
         # Do full install and testing of pdf2text and ocr only on latest Python version
         if: ${{ matrix.python-version == '3.14' && runner.os == 'Linux' }}
         # https://github.com/jalan/pdftotext#os-dependencies
@@ -161,96 +162,8 @@ jobs:
       - name: Minimize uv cache
         run: uv cache prune --ci
 
-#  test_windows:
-#    # No redis (only works on Ubuntu), only run on latest python-version
-#    name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
-#    runs-on: ${{ matrix.os }}
-#    # Identifies any jobs that must complete successfully before this job will run
-#    # needs: [pre-commit]
-#    # A strategy creates a build matrix for your jobs. You can define different variations to run each job in
-#    strategy:
-#      matrix:
-#        # Python versions at https://github.com/actions/python-versions/releases
-#        python-version: ['3.12']
-#        os: [windows-latest]
-#
-#    env:
-#      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
-#      TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
-#      REDIS_URI: redis://localhost:6379
-#
-#    steps:
-#      # Checks out a copy of the repository per https://github.com/actions/checkout
-#      - name: Check out repo
-#        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-#
-#      # Build Python and packages per https://github.com/actions/setup-python
-#      - name: Set up Python ${{ matrix.python-version }}
-#        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-#        with:
-#          python-version: ${{ matrix.python-version }}
-#          allow-prereleases: true
-#          cache: 'pip'
-#          cache-dependency-path: |
-#            requirements.txt
-#            tests/requirements_pytest.txt
-#
-#      - name: Upgrade pip etc.
-#        run: |
-#          pip install --upgrade pip setuptools wheel
-#
-##      ISSUE WITH THE BELOW:
-##      Hangs at start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
-##      - name: Install pdf2text and ocr dependencies (Python 3.11)
-##        # do full install and testing of pdf2text and ocr only on latest Python version
-##        if: matrix.python-version == '3.11'
-##        run: |
-##          cd %temp%
-##          dir
-##          rem # install conda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
-##          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
-##          powershell Get-FileHash Miniconda3-latest-Windows-x86_64.exe -Algorithm SHA256
-##          echo hash should match the one at https://docs.conda.io/projects/miniconda/en/latest/
-##          rem # below, /S = silent mode
-##          start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
-##          del Miniconda3-latest-Windows-x86_64.exe /f
-##          call "%temp%\Miniconda3\conda" install -y -c conda-forge poppler
-##          rem # *** get latest tesseract filename from https://digi.bib.uni-mannheim.de/tesseract/?C=M;O=D
-##          set TESSERACT=tesseract-ocr-w64-setup-5.3.1.20230401.exe
-##          curl https://digi.bib.uni-mannheim.de/tesseract/%TESSERACT% -O
-##          start /wait "" %TESSERACT% /S
-##          del %TESSERACT% /f
-##          pip install --upgrade keyring pdftotext Pillow pytesseract
-##        shell: cmd
-#
-#      - name: Install all other dependencies
-##        if: matrix.python-version <= '3.11'
-#        run: |
-#          pip install --upgrade coveralls -r requirements.txt -r tests/requirements_pytest.txt
-#
-##      - name: Install all other dependencies (Python 3.12)
-##        if: matrix.python-version > '3.11'
-##        run: |
-##          pip install --upgrade greenlet==3.0.0a1 coveralls -r requirements.txt -r tests/requirements_pytest.txt
-#
-#      - name: Run tests
-#        # workaround for Windows fatal exception: access violation
-#        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
-#        run: >
-#          python -m pytest -v --cov=./ --cov-report=term tests/ -p no:faulthandler
-#
-#      - name: Upload coverage data to coveralls.io (parallel)
-#        run: coveralls --service=github
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.github_token }}
-#          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
-#          COVERALLS_PARALLEL: true
-#        continue-on-error: true
-
   coveralls:
     name: Completion -> coveralls.io
-#    needs: [test_ubuntu, test_macos, test_windows]
-    # needs: [test_ubuntu, test_macos]
     needs: [test]
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -271,8 +184,6 @@ jobs:
     permissions:
       contents: write  # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write  # IMPORTANT: this permission is mandatory for create GitHub release
-#    needs: [test_ubuntu, test_macos, test_windows]
-    # needs: [test_ubuntu, test_macos]
     needs: [test]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
