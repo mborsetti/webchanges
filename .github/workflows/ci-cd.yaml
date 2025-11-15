@@ -98,7 +98,7 @@ jobs:
         if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
         with:
           auto-update-conda: true
-          python-version: 3.9
+          python-version: ${{ matrix.python-version }}
 
       - name: Install pdf2text and ocr dependencies (Windows w/latest Python)
         # Do full install and testing of pdf2text and ocr only on latest Python version
