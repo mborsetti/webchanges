@@ -99,12 +99,12 @@ jobs:
         shell: pwsh
         run: |
           # Install Poppler
-          # 1. install conda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
+          # 1. install miniconda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
           $condaInstallerUrl = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
           $condaInstallerPath = "$env:TEMP\Miniconda3-setup.exe"
           Invoke-WebRequest -Uri $condaInstallerUrl -OutFile $condaInstallerPath
           # Run the installer silently
-          Start-Process -FilePath $popplerInstallerPath -ArgumentList "/RegisterPython=0 /S /D=$env:TEMP\Miniconda3" -Wait -NoNewWindow
+          Start-Process -FilePath $condaInstallerPath -ArgumentList "/RegisterPython=0 /S /D=$env:TEMP\Miniconda3" -Wait -NoNewWindow
           # 2. install Poppler using conda
           Start-Process -FilePath "$env:TEMP\Miniconda3\conda" -ArgumentList "install -c conda-forge poppler --yes" -Wait -NoNewWindow
 
