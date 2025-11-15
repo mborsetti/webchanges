@@ -93,20 +93,18 @@ jobs:
           brew install poppler tesseract
           uv pip install --upgrade pdftotext pytesseract
 
-      - name: Set up Miniconda
-        uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f # v3.2.0
-        if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
-        with:
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-
       - name: Install pdf2text and ocr dependencies (Windows w/latest Python)
         # Do full install and testing of pdf2text and ocr only on latest Python version
         if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
         shell: pwsh
         run: |
           # Install Poppler
-          conda install -c conda-forge poppler --yes
+          # First install conda per https://conda.io/projects/conda/en/stable/user-guide/install/windows.html
+          curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -O
+          rem # below, /S = silent mode
+          start /wait "" Miniconda3-latest-Windows-x86_64.exe /RegisterPython=0 /D=%temp%\Miniconda3
+          del Miniconda3-latest-Windows-x86_64.exe /f
+          call "%temp%\Miniconda3\conda" install -c conda-forge poppler --yes
 
           # Install Tesseract
           # See https://github.com/UB-Mannheim/tesseract/wiki

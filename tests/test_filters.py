@@ -147,9 +147,9 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
 
     # Check that the inherited value and the job name are set properly
     if os.name != 'nt':
-        assert str(data).rstrip('"') == 'parent-process/test'
-    else:
         assert str(data).rstrip('"') == 'input-stringparent-process/test\n'
+    else:
+        assert str(data).rstrip('"') == 'parent-process/test'
 
     # Check that the outside variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
@@ -183,9 +183,9 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
 
     # Check that the inherited value and the job name are set properly
     if os.name != 'nt':
-        assert str(data).rstrip('"') == 'parent-process/test'
-    else:
         assert str(data).rstrip('"') == 'input-stringparent-process/test\n'
+    else:
+        assert str(data).rstrip('"') == 'parent-process/test'
 
     # Check that the outside variable wasn't overwritten by the filter
     assert os.environ['URLWATCH_JOB_NAME'] == 'should-not-be-overwritten'
