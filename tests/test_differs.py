@@ -29,14 +29,14 @@ py_latest_only = cast(
     'Callable[[Callable], Callable]',
     pytest.mark.skipif(
         sys.version_info < (3, 14),
-        reason='Time consuming; testing latest version only',
+        reason='Latest python only (time consuming)',
     ),
 )
 py_no_github = cast(
     'Callable[[Callable], Callable]',
     pytest.mark.skipif(
         os.getenv('GITHUB_ACTIONS') is not None,
-        reason='Google AI API call not placed from GitHub Actions',
+        reason='GitHub Actions (no Google AI API calls)',
     ),
 )
 # py_nt_only = cast(
@@ -490,7 +490,7 @@ def test_command_error(job_state: JobState) -> None:
     job_state.job.differ = {'command': command}  # test with no differ name
     job_state.get_diff()
     assert isinstance(job_state.exception, RuntimeError)
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         command = command.replace("'", "\\'")
     assert str(job_state.exception) == (f"Job 0: External differ '{{'command': '{command}'}}' returned '' ()")
 

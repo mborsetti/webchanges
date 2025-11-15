@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -131,7 +132,7 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     # See if the execute process can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job_state.job = UrlJob(url='test')
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         command = 'bash -c "cat; echo $INHERITED_FROM/$URLWATCH_JOB_NAME"'
     else:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
@@ -144,7 +145,7 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
     )
 
     # Check that the inherited value and the job name are set properly
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         assert str(data).rstrip('"') == 'input-stringparent-process/test\n'
     else:
         assert str(data).rstrip('"') == 'parent-process/test\n'
@@ -165,7 +166,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     # See if the shellpipe process can use a variable from the outside
     os.environ['INHERITED_FROM'] = 'parent-process'
     job_state.job = UrlJob(url='test')
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         command = 'cat; echo $INHERITED_FROM/$URLWATCH_JOB_NAME'
     else:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
@@ -178,7 +179,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
     )
 
     # Check that the inherited value and the job name are set properly
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         assert str(data).rstrip('"') == 'input-stringparent-process/test\n'
     else:
         assert str(data).rstrip('"') == 'parent-process/test\n'
@@ -396,7 +397,7 @@ def test_filter_exceptions() -> None:
         expected = "The 'jq' filter needs valid JSON. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
     else:
-        pytest.xfail('jq not installed')
+        pytest.skip("'jq' not installed")
 
 
 def test_html2text_roundtrip() -> None:

@@ -67,12 +67,12 @@ else:
 
 def test_all_database_engines() -> None:
     if not os.getenv('REDIS_URI') or importlib.util.find_spec('redis') is None:
-        pytest.mark.xfail(
+        pytest.mark.skip(
             'Cannot test the SsdbRedisStorage class. The REDIS_URI environment variable is not set or '
             "the 'redis' package is not installed"
         )
     if importlib.util.find_spec('minidb') is None:
-        pytest.mark.xfail("Cannot test the SsdbMiniDBStorage class. The 'minidb' package is not installed")
+        pytest.mark.skip("Cannot test the SsdbMiniDBStorage class. The 'minidb' package is not installed")
 
 
 def prepare_storage_test(
@@ -158,12 +158,12 @@ def test_check_for_shell_job() -> None:
     """Test if a job is a shell job."""
     jobs_file = data_path.joinpath('jobs-is_shell_job.yaml')
     # TODO: The below generates PermissionError: [Errno 1] Operation not permitted when run by GitHub Actions in macOS
-    # if os.name != 'nt':
+    # if sys.platform != 'win32':
     #     os.chown(jobs_file, 65534, 65534)
     jobs_storage = YamlJobsStorage([jobs_file])
     jobs_storage.load_secure()
     # jobs = jobs_storage.load_secure()
-    # if os.name != 'nt':
+    # if sys.platform != 'win32':
     #     assert len(jobs) == 1
 
 

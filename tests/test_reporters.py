@@ -204,8 +204,8 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                 or err_msg == "Invalid URL '': No scheme supplied. Perhaps you meant https://?"
             )
         case 'run_command':
-            if os.getenv('GITHUB_ACTIONS'):
-                pytest.skip('Test triggers exit code 141 in GitHub Actions')
+            # if os.getenv('GITHUB_ACTIONS'):
+            #     pytest.skip('GitHub Actions Test triggers exit code 141 in ')
             with pytest.raises(ValueError) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)
             assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'

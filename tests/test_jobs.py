@@ -65,7 +65,7 @@ py_latest_only = cast(
     'Callable[[Callable], Callable]',
     pytest.mark.skipif(
         sys.version_info < (3, 14),
-        reason='Time consuming; testing latest version only',
+        reason='Latest python only (time consuming)',
     ),
 )
 playwright_required = cast(

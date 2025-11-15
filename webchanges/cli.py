@@ -24,9 +24,14 @@ from webchanges import __copyright__, __docs_url__, __min_python_version__, __pr
 from webchanges.config import CommandConfig
 from webchanges.util import file_ownership_checks, get_new_version_number, import_module_from_source
 
-# Ignore signal SIGPIPE ("broken pipe") for stdout (see https://github.com/thp/urlwatch/issues/77)
-if os.name != 'nt':  # Windows does not have signal.SIGPIPE
+# Restore the default system behavior for the SIGPIPE signal, which is ignored by Python by default.
+# This prevents a BrokenPipeError when piping output to a command like `less` that may close the pipe before reading all
+# of the output.
+try:
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # type: ignore[attr-defined]  # not defined in Windows
+except AttributeError:
+    pass
+
 
 logger = logging.getLogger(__name__)
 
@@ -376,7 +381,7 @@ def main() -> None:  # pragma: no cover
     python_version_warning()
 
     # Path where the config, jobs and hooks files are located
-    if os.name != 'nt':
+    if sys.platform != 'win32':
         config_path = platformdirs.user_config_path(__project_name__)  # typically ~/.config/{__project_name__}
     else:
         config_path = platformdirs.user_documents_path().joinpath(__project_name__)
