@@ -15,10 +15,10 @@ Fixed
 
 Internals
 `````````
-* Implemented testing for Windows (in addition to Linux and macOS)
+* Implemented testing for Windows (in addition to Linux and macOS).
 * Implemented testing for Python 3.14t (free threading / GIL-free).
 * Additional code security improvements.
-* Removed Gemini Github Actions workflows (beta trial)
+* Removed Gemini Github Actions workflows (beta trial).
 * In URL jobs, the ``TransientHTTPError`` Exception will be raised when a transient HTTP error is detected, paving the
   way for a new ``ignore_transient_error`` directive (not yet implemented) requested in #`119
   <https://github.com/mborsetti/webchanges/issues/119>`__.

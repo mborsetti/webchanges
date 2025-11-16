@@ -603,7 +603,7 @@ Sub-directives
 
 .. warning:: the Python package used for this reporter, ``pushbullet`` (`homepage 
    <https://github.com/richard-better/pushbullet.py>`__), has not been maintained since 2022 and is not being tested
-   with Python 3.12 (Windows) or 3.12 (Linux, macOS) and higher due to issues.
+   on Windows or with Python 3.12 (Linux, macOS) and higher due to failures.
 
 
 .. _pushover:
