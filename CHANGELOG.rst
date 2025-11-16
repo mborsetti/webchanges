@@ -57,7 +57,7 @@ Fixed
 Internals
 `````````
 * Implemented testing for Windows (in addition to Linux and macOS)
-* Implemented testing for Python 3.14t (GIL-lock-free).
+* Implemented testing for Python 3.14t (free threading / GIL-free).
 * Additional code security improvements.
 * Removed Gemini Github Actions workflows (beta trial)
 * In URL jobs, the ``TransientHTTPError`` Exception will be raised when a transient HTTP error is detected, paving the

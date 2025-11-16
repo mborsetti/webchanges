@@ -33,8 +33,8 @@ except ImportError:
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
 aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
-# pushbullet.py not maintained, breaks at Python 3.13. See https://pypi.org/project/pushbullet.py/
-pushbullet_testing_broken = sys.version_info >= (3, 13)
+# pushbullet.py not maintained, breaks at Python 3.12 or 3.13. See https://pypi.org/project/pushbullet.py/
+pushbullet_broken = sys.version_info >= (3, 13) or sys.platform == 'win32'
 
 
 ALL_REPORTERS = [
@@ -185,7 +185,7 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                 test_report.finish_one(reporter, check_enabled=False)
             assert reporter in str(pytest_wrapped_e.value).lower()
         case 'pushbullet':
-            if not pushbullet_testing_broken:
+            if not pushbullet_broken:
                 with pytest.raises(RuntimeError) as pytest_wrapped_e:
                     test_report.finish_one(reporter, check_enabled=False)
                 assert reporter in str(pytest_wrapped_e.value).lower()
