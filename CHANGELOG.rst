@@ -35,9 +35,18 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.32.0
+Version 3.32.1
 -------------------
 Unreleased
+
+Changes
+```````
+* Improved logging for the ``evaluate`` directive in URL Jobs with ``browser: true``.
+
+
+Version 3.32.0
+-------------------
+2025-11-16
 
 ⚠ Breaking Changes
 ```````````````````

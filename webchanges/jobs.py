@@ -1578,6 +1578,7 @@ class BrowserJob(UrlJobBase):
                         ignore_default_args=ignore_default_args,
                         timeout=timeout,
                         headless=headless,
+                        devtools=not headless and logger.getEffectiveLevel() <= 10,
                         proxy=proxy,  # type: ignore[arg-type]
                     )
                 )
@@ -1895,7 +1896,13 @@ class BrowserJob(UrlJobBase):
                 if content_handler is not None:
                     return content_handler(page)
                 if self.evaluate is not None:
-                    content = page.evaluate(self.evaluate)
+                    try:
+                        content = page.evaluate(self.evaluate)
+                    except PlaywrightError:
+                        logger.error(
+                            f'Job {self.index_number}: Received browser error when trying to evaluate {self.evaluate}'
+                        )
+                        raise
                     if isinstance(content, str):
                         mime_type = 'text/plain'
                     elif isinstance(content, bytes):
