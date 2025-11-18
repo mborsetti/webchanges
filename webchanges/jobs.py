@@ -384,6 +384,10 @@ class JobBase(metaclass=TrackSubClasses):
             job.headers = Headers({k: str(v) for k, v in (job.headers or {}).items()}, encoding='utf-8')
         if isinstance(job.cookies, dict):
             job.cookies = {k: str(v) for k, v in job.cookies.items()} if job.cookies is not None else None
+
+        # Add GUID
+        job.guid = job.get_guid()
+
         return job
 
     def to_dict(self) -> dict:
@@ -525,13 +529,21 @@ class JobBase(metaclass=TrackSubClasses):
         location = self.get_location()
         return hashlib.sha256(location.encode(), usedforsecurity=False).hexdigest()
 
+    @staticmethod
+    def make_guid(name: str) -> str:
+        """Calculate the GUID from a string (currently a simple SHA1).
+
+        :returns: the GUID.
+        """
+        return hashlib.sha1(name.encode(), usedforsecurity=False).hexdigest()
+
     def get_guid(self) -> str:
         """Calculate the GUID, currently a simple SHA1 hash of the location (URL or command).
 
         :returns: the GUID.
         """
         location = self.get_location()
-        return hashlib.sha1(location.encode(), usedforsecurity=False).hexdigest()
+        return self.make_guid(location)
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.

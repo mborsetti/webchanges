@@ -981,7 +981,6 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     )
                 # We add GUID here to speed things up and to allow hooks to programmatically change job.url and/or
                 # job.user_visible_url
-                job.guid = job.get_guid()
                 jobs.append(job)
                 jobs_by_guid[job.guid].append(job)
         except yaml.scanner.ScannerError as e:

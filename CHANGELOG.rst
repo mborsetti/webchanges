@@ -42,6 +42,7 @@ Unreleased
 Changes
 ```````
 * Improved logging for the ``evaluate`` directive in URL Jobs with ``browser: true``.
+* ``--dump-history JOB`` command line argument will now match any job, even one that is not in the ``--jobs`` file.
 
 
 Version 3.32.0

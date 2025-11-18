@@ -597,7 +597,12 @@ class UrlwatchCommand:
         :param job_id: The Job ID.
         :return: An argument to be used in sys.exit.
         """
-        job = self._find_job_with_defaults(job_id)
+        try:
+            job = self._find_job_with_defaults(job_id)
+        except ValueError:
+            print(f"No Job found matching '{job_id}'. Searching database using calculated GUID.")
+            job = JobBase.unserialize({'url': job_id})
+
         history_data = self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid)
 
         title = f'History for {job.get_indexed_location()}'
