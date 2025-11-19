@@ -172,7 +172,9 @@ CAPTCHAs, browser fingerprinting, etc. that might block your monitoring.
    requests <conditional_requests>` for those extremely rare websites that don't handle it (e.g. Google Flights).
 
 .. tip:: If a job fails, you can run in verbose (``-v``) mode to save in the temporary folder a screenshot, a full
-   page image, and the HTML contents at the moment of failure (see log for filenames) to aid in debugging.
+   page image, and the HTML contents at the moment of failure (see log for filenames) to aid in debugging.  If you have
+   a screen, you can run in ``--no-headless`` and very verbose (``vv``) and the browser will open with `Chrome DevTools
+   <https://developer.chrome.com/docs/devtools>`__ enabled.
 
 Internally, this type of job has the attribute ``kind: browser``.
 
