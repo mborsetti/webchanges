@@ -265,6 +265,40 @@ def test_check_429_transient_error_requests(mocker: pytest_mock.MockerFixture) -
     assert job_state.new_data == job_state.old_data
 
 
+def test_check_429_ignore_4xx(mocker: pytest_mock.MockerFixture) -> None:
+    """Check for 429 Too Many Requests response, which should raise a TransientError."""
+    job = JobBase.unserialize({'url': 'https://www.google.com/', 'ignore_http_error_codes': '4xx, 5xx'})
+
+    # Process the job for the first time
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+
+        # Create a mock response object
+        mock_response = mocker.Mock()
+        mock_response.status_code = 429
+        mock_response.reason_phrase = 'Too Many Requests'
+        mock_response.url = 'https://example.com/too-many-requests'
+        mock_response.request = mocker.Mock()
+        mock_response.text = 'Rate limit exceeded'
+        mock_response.history = []
+        mock_response.headers = {'Content-Type': 'text/plain'}
+
+        # Mock the httpx client's request method to return our mock response
+        mocker.patch('httpx.Client.request', return_value=mock_response)
+
+        job_state.save()
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+        job_state.load()
+
+        job_state.process()
+
+    # 4. Assert that a TransientError was raised and handled
+    assert isinstance(job_state.exception, TransientHTTPError)
+    assert '429 Client Error: Too Many Requests' in str(job_state.exception)
+    assert job_state.error_ignored is True
+    assert job_state.new_data == job_state.old_data
+
+
 # TODO: Failing with Error
 # 'It looks like you are using Playwright Sync API inside the asyncio loop.\nPlease use the Async API instead.'
 # def test_check_transient_errors_browser(page: Page) -> None:

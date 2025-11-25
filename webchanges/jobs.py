@@ -94,7 +94,7 @@ class NotModifiedError(Exception):
 
 
 class TransientHTTPError(Exception):
-    """Raised when one of these HTTP response status codes is received:
+    """Raised by subclasses of UrlJobBase when one of these HTTP response status codes is received:
 
     - 429 Too Many Requests
     - 500 Internal Server Error
@@ -102,6 +102,23 @@ class TransientHTTPError(Exception):
     - 503 Service Unavailable
     - 504 Gateway Timeout
     """
+
+    status_code: int
+
+    def __init__(self, *args: object, status_code: int) -> None:
+        super().__init__(*args)
+        self.status_code = status_code
+
+
+class TransientBrowserError(Exception):
+    """Raised by BrowserJob when a transient error is returned by the browser, either as a PlaywrightTimeoutError or
+    as a browser error listed in the 100-199 Connection related errors.
+
+    The args[0] will contain the string 'PlaywrightTimeoutError' or the text of the browser error.
+    """
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
 
 
 class BrowserResponseError(Exception):
@@ -874,7 +891,7 @@ class UrlJob(UrlJobBase):
 
             if response.status_code in (429, 500, 502, 503, 504):
                 logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
-                raise TransientHTTPError(http_error_msg)
+                raise TransientHTTPError(http_error_msg, status_code=response.status_code)
 
             raise httpx.HTTPStatusError(http_error_msg, request=response.request, response=response)
 
@@ -1000,7 +1017,7 @@ class UrlJob(UrlJobBase):
 
             if response.status_code in (429, 500, 502, 503, 504):
                 logger.debug(f'Job {self.index_number}: Response error is transient.')
-                raise TransientHTTPError(http_error_msg)
+                raise TransientHTTPError(http_error_msg, status_code=response.status_code)
 
             raise requests.HTTPError(http_error_msg, response=response)
 
@@ -1244,28 +1261,42 @@ class UrlJob(UrlJobBase):
         :param exception: The exception.
         :returns: True if the error should be ignored, False otherwise.
         """
-        if httpx and isinstance(exception, httpx.HTTPError):
-            if self.ignore_timeout_errors and isinstance(exception, httpx.TimeoutException):
+        if httpx and isinstance(exception, (httpx.HTTPError, TransientHTTPError)):
+            if self.ignore_timeout_errors and (
+                isinstance(exception, httpx.TimeoutException)
+                or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
+            ):
                 return True
-            if self.ignore_connection_errors and isinstance(exception, httpx.TransportError):
+            if self.ignore_connection_errors and isinstance(exception, (httpx.TransportError, TransientHTTPError)):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, httpx.TooManyRedirects):
                 return True
-            if self.ignore_http_error_codes and isinstance(exception, httpx.HTTPStatusError):
-                return self._ignore_http_error_code(exception.response.status_code)
-        elif not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException):
-            if self.ignore_connection_errors and isinstance(exception, requests.exceptions.ConnectionError):
+            if self.ignore_http_error_codes:
+                if isinstance(exception, httpx.HTTPStatusError):
+                    return self._ignore_http_error_code(exception.response.status_code)
+                if isinstance(exception, TransientHTTPError):
+                    return self._ignore_http_error_code(exception.status_code)
+
+        elif not isinstance(requests, str) and isinstance(
+            exception, (requests.exceptions.RequestException, TransientHTTPError)
+        ):
+            if self.ignore_timeout_errors and (
+                isinstance(exception, requests.exceptions.Timeout)
+                or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
+            ):
                 return True
-            if self.ignore_timeout_errors and isinstance(exception, requests.exceptions.Timeout):
+            if self.ignore_connection_errors and (
+                isinstance(exception, (requests.exceptions.ConnectionError, TransientHTTPError))
+            ):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, requests.exceptions.TooManyRedirects):
                 return True
-            if (
-                self.ignore_http_error_codes
-                and isinstance(exception, requests.exceptions.HTTPError)
-                and exception.response is not None
-            ):
-                return self._ignore_http_error_code(exception.response.status_code)
+            if self.ignore_http_error_codes:
+                if isinstance(exception, requests.exceptions.HTTPError) and exception.response is not None:
+                    return self._ignore_http_error_code(exception.response.status_code)
+                if isinstance(exception, TransientHTTPError):
+                    return self._ignore_http_error_code(exception.status_code)
+
         return False
 
 
@@ -1900,7 +1931,7 @@ class BrowserJob(UrlJobBase):
 
                     if response.status in (429, 500, 502, 503, 504):
                         logger.debug(f'Job {self.index_number}: Response error is transient.')
-                        raise TransientHTTPError(message)
+                        raise TransientHTTPError(message, status_code=response.status)
 
                     raise BrowserResponseError((message,), response.status)
 
@@ -1949,10 +1980,13 @@ class BrowserJob(UrlJobBase):
 
             except PlaywrightError as e:
                 logger.info(f'Job {self.index_number}: Browser returned error {e}\n({url})')
+                if isinstance(e, PlaywrightTimeoutError):
+                    logger.debug(f'Job {self.index_number}: PlaywrightTimeoutError is transient')
+                    raise TransientBrowserError('PlaywrightTimeoutError') from e
                 chromium_error = str(e.args[0]).split()[0]
-                if isinstance(e, PlaywrightTimeoutError) or chromium_error in self.chromium_connection_errors:
+                if chromium_error in self.chromium_connection_errors:
                     logger.debug(f'Job {self.index_number}: Browser error {chromium_error} is transient')
-                    raise TransientHTTPError(chromium_error) from e
+                    raise TransientBrowserError(chromium_error) from e
                 if logger.root.level <= 20:  # logging.INFO
                     screenshot_filename = tempfile.NamedTemporaryFile(
                         prefix=f'{__project_name__}_screenshot_{self.index_number}_', suffix='.png', delete=False
@@ -2002,27 +2036,26 @@ class BrowserJob(UrlJobBase):
         :returns: True if the error should be ignored, False otherwise.
         """
         from playwright.sync_api import Error as PlaywrightError
-        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
-        if isinstance(exception, (BrowserResponseError, PlaywrightError)):
-            try:
-                chromium_error = str(exception.args[0]).split()[1]
-            except IndexError:
-                chromium_error = str(exception.args[0])
-            if self.ignore_connection_errors and (
-                isinstance(exception, PlaywrightTimeoutError) or chromium_error in self.chromium_connection_errors
-            ):
-                return True
-            if self.ignore_timeout_errors and (
-                isinstance(exception, PlaywrightTimeoutError) or chromium_error == 'net::ERR_TIMED_OUT'
-            ):
-                return True
-            if self.ignore_too_many_redirects and chromium_error == 'net::ERR_TOO_MANY_REDIRECTS':
-                return True
-
+        if self.ignore_connection_errors and (
+            isinstance(exception, (PlaywrightError, TransientHTTPError, TransientBrowserError))
+        ):
+            return True
         if (
-            isinstance(exception, BrowserResponseError)
-            and self.ignore_http_error_codes
+            self.ignore_timeout_errors
+            and isinstance(exception, TransientBrowserError)
+            and any(x in exception.args[0] for x in ('PlaywrightTimeoutError', 'net::ERR_TIMED_OUT'))
+        ):
+            return True
+        if (
+            self.ignore_too_many_redirects
+            and isinstance(exception, TransientBrowserError)
+            and exception.args[0] == 'net::ERR_TOO_MANY_REDIRECTS'
+        ):
+            return True
+        if (
+            self.ignore_http_error_codes
+            and isinstance(exception, BrowserResponseError)
             and exception.status_code is not None
         ):
             return self._ignore_http_error_code(exception.status_code)

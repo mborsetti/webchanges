@@ -122,8 +122,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     if isinstance(job_state.exception, TransientHTTPError):
                         # We captured a transient error
                         logger.info(
-                            f'Job {job_state.job.index_number}: Job has received an HTTP response status code of a '
-                            'typically transient nature'
+                            f'Job {job_state.job.index_number}: Job has received an HTTP response of a typically '
+                            'transient nature'
                         )
                         job_state.new_data = job_state.old_data
                         job_state.new_etag = job_state.old_etag

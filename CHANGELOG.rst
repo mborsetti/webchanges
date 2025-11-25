@@ -44,6 +44,10 @@ Changes
 * Improved logging for the ``evaluate`` directive in URL Jobs with ``browser: true``.
 * ``--dump-history JOB`` command line argument will now match any job, even one that is not in the ``--jobs`` file.
 
+Fixed
+`````
+* Regression ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
+
 
 Version 3.32.0
 -------------------
