@@ -280,11 +280,12 @@ class UrlwatchCommand:
 
             with sync_playwright() as p:
                 try:
-                    browser = p.chromium.launch(channel='chrome')
                     print()
                     print('Playwright browser:')
+                    browser = p.chromium.launch(channel='chrome')
                     print(f'• Name: {browser.browser_type.name}')
                     print(f'• Version: {browser.version}')
+                    print(f'• Executable: {browser.browser_type.executable_path}')
                     if psutil:
                         browser.new_page()
                         try:
@@ -304,6 +305,8 @@ class UrlwatchCommand:
             pass
 
         if os.name == 'posix':
+            print()
+            print('Installed dpkg dependencies:')
             try:
                 import apt  # ty:ignore[unresolved-import]
 
@@ -316,8 +319,6 @@ class UrlwatchCommand:
                             print(f'   - {ver[0].package}: {ver[0].version}')
 
                 installed_packages = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
-                print()
-                print('Installed dpkg dependencies:')
                 for module, apt_dists in (
                     ('jq', ['jq']),
                     # https://github.com/jalan/pdftotext#os-dependencies
@@ -350,8 +351,9 @@ class UrlwatchCommand:
                         print(f'• {module}')
                         print_version(apt_dists)
             except ImportError:
-                print('Library dependencies cannot be printed as python3-apt is not installed')
+                print('Dependencies cannot be printed as python3-apt is not installed.')
                 print("Run 'sudo apt-get install python3-apt' to install.")
+        print()
         return 0
 
     def list_jobs(self, regex: bool | str) -> None:

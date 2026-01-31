@@ -161,7 +161,7 @@ you are interested in, add the directive ``use_browser: true`` to the job:
      pre-install the latest version of Chrome at any time by running ``webchanges --install-chrome``.
 
 When using ``use_browser: true``, you do not need to set any headers in the configuration file or job unless the site
-you're monitoring has special requirements.
+your monitoring has special requirements.
 
 While we implement measures to minimize website detection of headless Chrome, passing basic detection tests `here
 <https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html>`__, some sites use advanced
@@ -173,7 +173,7 @@ CAPTCHAs, browser fingerprinting, etc. that might block your monitoring.
 
 .. tip:: If a job fails, you can run in verbose (``-v``) mode to save in the temporary folder a screenshot, a full
    page image, and the HTML contents at the moment of failure (see log for filenames) to aid in debugging.  If you have
-   a screen, you can run in ``--no-headless`` and very verbose (``vv``) and the browser will open with `Chrome DevTools
+   a screen, you can run in ``--no-headless`` and very verbose (``vv``), and the browser will open with `Chrome DevTools
    <https://developer.chrome.com/docs/devtools>`__ enabled.
 
 Internally, this type of job has the attribute ``kind: browser``.
