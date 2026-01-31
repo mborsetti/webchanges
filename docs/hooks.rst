@@ -137,7 +137,7 @@ Example ``hooks.py`` file:
        .. code-block:: yaml
 
           url: example.com/hooks/len
-          filter:
+          filters:
             - hooks_case: lower
        """
 
@@ -174,7 +174,7 @@ Example ``hooks.py`` file:
        .. code-block:: yaml
 
           url: example.com/hooks/indent
-          filter:
+          filters:
             - hooks_indent: 4
        """
 

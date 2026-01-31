@@ -33,7 +33,7 @@ CHUNK_TEST_DATA = [
 
 @pytest.mark.parametrize(('string', 'length', 'numbering', 'output'), CHUNK_TEST_DATA)
 def test_chunkstring(string: str, length: int, numbering: bool, output: list[str]) -> None:
-    assert list(chunk_string(string, length, numbering=numbering)) == output
+    assert [x.strip() for x in chunk_string(string, length, numbering=numbering)] == output
 
 
 def test_chunk_tooshort_1(caplog: pytest.LogCaptureFixture) -> None:

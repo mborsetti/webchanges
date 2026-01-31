@@ -1,5 +1,5 @@
 # <test-name>:
-#   filter: <specs-of-a-single-filter-as-string-or-mapping>
+#   filters: <specs-of-a-single-filter-as-string-or-mapping>
 #   data: |
 #       Input data as block scalar (string).
 #       Use the literal style (starts with "|") for better readability.
@@ -10,14 +10,14 @@
 #   expected_result: |
 #       <Expected filtered data>
 element_by_tag:
-    filter:
+    filters:
       - element-by-tag: body
     data: |
         <html><head></head><body>foo</body></html>
     expected_result: |-
         <body>foo</body>
 element_by_tag_nested:
-    filter:
+    filters:
       - element-by-tag: div
     data: |
         <html><head></head><body>
@@ -27,7 +27,7 @@ element_by_tag_nested:
     expected_result: |-
         <div>foo</div><div>bar</div>
 element_by_id:
-    filter:
+    filters:
       - element-by-id: bar
     data: |
         <html><head></head><body>
@@ -37,7 +37,7 @@ element_by_id:
     expected_result: |-
         <div id="bar">asdf <span>bar</span> hoho</div>
 element_by_class:
-    filter:
+    filters:
       - element-by-class: foo
     data: |
         <html><head></head><body>
@@ -47,7 +47,7 @@ element_by_class:
     expected_result: |-
         <div class="foo">foo</div>
 xpath_elements:
-    filter:
+    filters:
       - xpath: //div | //*[@id="bar"]
     data: |
         <html><head></head><body>
@@ -58,7 +58,7 @@ xpath_elements:
         <div>foo</div>
         <div id="bar">bar</div>
 xpath_text:
-    filter:
+    filters:
       - xpath: //div[1]/text() | //div[2]/@id
     data: |
         <html><head></head><body>
@@ -69,7 +69,7 @@ xpath_text:
         foo
         bar
 xpath_exclude:
-    filter:
+    filters:
       - xpath:
           path: //div
           exclude: //*[@class='excl'] | //*/@class
@@ -83,7 +83,7 @@ xpath_exclude:
         <div>foo</div>
         <div id="bar">bar</div>
 xpath_xml_namespaces:
-    filter:
+    filters:
       - xpath:
           path: //item | //f:item
           method: xml
@@ -115,7 +115,7 @@ xpath_xml_namespaces:
         <data>xyz</data>
         </f:item>
 css:
-    filter:
+    filters:
       - css: div
     data: |
         <html><head></head><body>
@@ -126,7 +126,7 @@ css:
         <div>foo</div>
         <div>bar</div>
 css_exclude:
-    filter:
+    filters:
       - css:
           selector: div
           exclude: '.excl, #bar'
@@ -139,7 +139,7 @@ css_exclude:
     expected_result: |-
         <div class="foo">foo</div>
 css_xml_namespaces:
-    filter:
+    filters:
       - css:
           selector: item, f|item
           method: xml
@@ -171,7 +171,7 @@ css_xml_namespaces:
         <data>xyz</data>
         </f:item>
 keep_lines_containing:
-    filter:
+    filters:
       - keep_lines_containing: blue
     data: |
         The rose is red;
@@ -181,7 +181,7 @@ keep_lines_containing:
     expected_result: |-
         the violet's blue.
 keep_lines_containing_with_comma:
-    filter:
+    filters:
       - keep_lines_containing:
           re: \054
     data: |
@@ -192,7 +192,7 @@ keep_lines_containing_with_comma:
     expected_result: |-
         Sugar is sweet,
 json_format:
-    filter:
+    filters:
       - format-json:
     data: |
         {"field1": {"f1.1": "value"},"field2": "value"}
@@ -203,8 +203,8 @@ json_format:
             },
             "field2": "value"
         }
-json_format_subfilter:
-    filter:
+json_format_subfilters:
+    filters:
       - format-json: 2
     data: |
         {"field1": {"f1.1": "value"},"field2": "value"}
@@ -216,12 +216,12 @@ json_format_subfilter:
           "field2": "value"
         }
 sha1:
-    filter:
+    filters:
       - sha1sum:
     data: 1234567890abcdefg
     expected_result: 8417680c09644df743d7cea1366fbe13a31b2d5e
 hexdump:
-    filter:
+    filters:
       - hexdump:
     data: |-
         Hello world!
@@ -230,7 +230,7 @@ hexdump:
         48 65 6c 6c 6f 20 77 6f 72 6c 64 21 0a e4 bd a0  Hello world!....
         e5 a5 bd ef bc 8c e4 b8 96 e7 95 8c ef bc 81     ...............
 sort:
-    filter:
+    filters:
       - sort:
     data: |-
         The rose is red;
@@ -243,7 +243,7 @@ sort:
         The rose is red;
         the violet's blue.
 sort_paragraphs:
-    filter:
+    filters:
       - sort:
           separator: "\n\n"
     data: |-
@@ -269,20 +269,20 @@ sort_paragraphs:
         Chimpanzee is a species of great ape native
         to the forest and savannah of tropical Africa.
 sort_separator_reverse:
-  filter:
+  filters:
     - sort:
         separator: '%'
         reverse: true
   data: '3%2%4%1'
   expected_result: '4%3%2%1'
 sort_reverse:
-  filter:
+  filters:
     - sort:
         reverse: true
   data: "a\nc\nb"
   expected_result: "c\nb\na"
 reverse_lines:
-  filter:
+  filters:
     - reverse
   data: |-
       A
@@ -295,18 +295,18 @@ reverse_lines:
       C
       A
 reverse_separator_dict:
-  filter:
+  filters:
     - reverse:
         separator: '|'
   data: '1|5|3|4|2'
   expected_result: '2|4|3|5|1'
 reverse_separator_str:
-  filter:
+  filters:
     - reverse: '%'
   data: 'Hello%World'
   expected_result: 'World%Hello'
 reverse_separator_paragraph:
-  filter:
+  filters:
     - reverse: "\n\n"
   data: |-
     A paragraph.
@@ -327,7 +327,7 @@ reverse_separator_paragraph:
 
     A paragraph.
 re_sub_multiline:
-  filter:
+  filters:
     - re.sub: '(?m)^jQuery.*'
   data: |-
     One Line
@@ -338,7 +338,7 @@ re_sub_multiline:
 
     Another Line
 re_findall:
-  filter:
+  filters:
     - re.findall: '-[a-z][a-z][a-z]-'
   data: |-
     Some-abc-things-def-on-ghi-this-line-and
@@ -350,7 +350,7 @@ re_findall:
     -jkl-
     -mno-
 re_findall_repl:
-  filter:
+  filters:
     - re.findall:
         pattern: '-([a-z])([a-z])([a-z])-'
         repl: '\3\2\1'
@@ -364,14 +364,14 @@ re_findall_repl:
     lkj
     onm
 html2text:
-  filter:
+  filters:
     - html2text:
   data: |-
     <html><body>This is some <a href="local_link">text</a></body></html>
   expected_result: |-
     This is some [text](https://testfakejob.com/local_link)
 html2text_bs4:
-  filter:
+  filters:
     - html2text:
         method: bs4
         parser: html.parser
@@ -380,7 +380,7 @@ html2text_bs4:
   expected_result: |-
     This is some text
 html2text_strip_tags:
-  filter:
+  filters:
     - html2text:
         method: bs4
         parser: html.parser
@@ -389,7 +389,7 @@ html2text_strip_tags:
   expected_result: |-
     This is some text
 deprecated_grep:
-  filter:
+  filters:
     - grep: blue
   data: |
       The rose is red;
@@ -399,7 +399,7 @@ deprecated_grep:
   expected_result: |-
       the violet's blue.
 deprecated_grepi:
-  filter:
+  filters:
     - grepi: blue
   data: |
       The rose is red;
@@ -411,7 +411,7 @@ deprecated_grepi:
       Sugar is sweet,
       and so are you.
 strip_with_chars:
-  filter:
+  filters:
     - strip:
         chars: .
   data: |-
@@ -421,7 +421,7 @@ strip_with_chars:
       line1.
       .line2
 rstrip_with_chars:
-  filter:
+  filters:
     - strip:
         chars: .
         side: right
@@ -432,7 +432,7 @@ rstrip_with_chars:
       .line1.
       .line2
 lstrip_with_chars:
-  filter:
+  filters:
     - strip:
         chars: .
         side: left
@@ -443,7 +443,7 @@ lstrip_with_chars:
       line1.
       .line2.
 strip_each_line_with_chars:
-  filter:
+  filters:
     - strip:
         splitlines: true
         chars: .
@@ -454,7 +454,7 @@ strip_each_line_with_chars:
       line1
       line2
 rstrip_each_line_with_chars:
-  filter:
+  filters:
     - strip:
         splitlines: true
         chars: .
@@ -466,7 +466,7 @@ rstrip_each_line_with_chars:
       .line1
       .line2
 lstrip_each_line_with_chars:
-  filter:
+  filters:
     - strip:
         splitlines: true
         chars: .
@@ -478,7 +478,7 @@ lstrip_each_line_with_chars:
       line1.
       line2.
 absolute_links:
-  filter:
+  filters:
     - absolute_links:
   data: |
       <html><body>
@@ -495,7 +495,7 @@ absolute_links:
       <a href="https://example.com/test.html">4</a>
       </body></html>
 beautify_absolute_links:
-  filter:
+  filters:
     - beautify:
         absolute_links: true
   data: |

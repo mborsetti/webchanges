@@ -186,7 +186,8 @@ If you encounter any problems or have any suggestions please open an issue `here
    .. code-block:: yaml
 
       url: https://example.com/
-      filter: html2text
+      filters:
+        - html2text
 
    no longer works in the latest version of :program:`urlwatch`, and therefore in :program:`webchanges`, as all filters
    must be specified as sub-directives like this:
@@ -194,7 +195,7 @@ If you encounter any problems or have any suggestions please open an issue `here
    .. code-block:: yaml
 
       url: https://example.com/
-      filter:
+      filters:
         - html2text:
 
 

@@ -618,7 +618,7 @@ Monitor a URL of an image directly, and see if the image changes:
 .. code-block:: yaml
 
    url: https://sources.example.net/productimage.jpg
-   filter:
+   filters:
      - ascii85
    differ:
      name: image
@@ -630,7 +630,7 @@ Extract an image URL from an HTML <img> tag and monitor if this URL changes:
 .. code-block:: yaml
 
    url: https://www.example.net/productpage.html
-   filter:
+   filters:
      - xpath: //div[@class="image"]/img/@src
    differ:
      name: image

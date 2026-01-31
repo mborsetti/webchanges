@@ -3,7 +3,7 @@ command: job1
 ---
 name: This job is a shelljob (shellpipe)
 url: job2
-filter:
+filters:
   - shellpipe: anything
 ---
 name: This job is a shelljob (differ command)
