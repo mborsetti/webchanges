@@ -171,6 +171,12 @@ repos:
         args: ['--help', '>', 'cli_help.txt']
         language: system
         pass_filenames: false
+      # - id: argparse-manpage
+      #   name: update unix manpage file
+      #   entry: argparse-manpage
+      #   args: ['--pyfile', 'get_parser.py', '--function', 'get_parser', '>','webchanges.1']
+      #   language: system
+      #   pass_filenames: false
 
       # - id: doc8  # https://github.com/pycqa/doc8
       #   name: check for style in rst documentation (doc8)

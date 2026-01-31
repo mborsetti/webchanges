@@ -217,10 +217,10 @@ jobs:
         with:
           python-version: '3.14'
 
-      # Install pip dependencies
-      - name: Install dependencies
-        run: |
-          uv pip install --upgrade build
+      # # Install pip dependencies
+      # - name: Install dependencies
+      #   run: |
+      #     uv pip install --upgrade build
 
       # build https://docs.astral.sh/uv/concepts/projects/build/
       - name: Build dist

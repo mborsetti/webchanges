@@ -80,6 +80,7 @@ class CommandConfig(BaseConfig):
     ) -> None:
         """Command line arguments configuration; the arguments are stored as class attributes.
 
+        :param args: The args from the command line.
         :param config_path: The path of the configuration directory.
         :param config_file: The path of the configuration file.
         :param jobs_def_file: The glob of the jobs file(s).
@@ -366,8 +367,6 @@ class CommandConfig(BaseConfig):
             metavar='JOB',
         )
 
-        # # workaround for avoiding triggering error when invoked by pytest
-        # if parser.prog != '_jb_pytest_runner.py' and not os.getenv('CI'):
         args = parser.parse_args(cmdline_args)
 
         for arg in vars(args):

@@ -6,9 +6,9 @@
 
 [build-system]
 # Minimum requirements for the build system to execute.
-requires = ['setuptools'] # PEP 508 specifications.
+requires = ['argparse-manpage[setuptools]'] # PEP 508 specifications.
 # Setuptools specification
-build-backend = "setuptools.build_meta"
+build-backend = 'setuptools.build_meta'
 
 [project]
 # See https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
@@ -111,6 +111,10 @@ dependencies = { file = 'requirements.txt' }
 [tool.setuptools.package-data]
 'webchanges' = ['py.typed']
 
+# -------------------------- manpages --------------------------
+# https://github.com/praiskup/argparse-manpage/blob/main/README.md
+[tool.build_manpages]
+manpages = ['man/webchanges.1:function=get_parser:pyfile=get_parser']
 
 # -------------------------- coverage --------------------------
 [tool.coverage.run]
@@ -195,7 +199,7 @@ minversion = '9.0.2'
 testpaths = ['tests']
 
 # pytest-playwright
-# addopts = ["--browser", "chromium", "--browser-channel", "chrome"]
+# addopts = ['--browser', 'chromium', '--browser-channel', 'chrome']
 
 # Adds pytest-cov functionality (see https://pytest-cov.readthedocs.io/en/latest/config.html)
 # Note: --cov moved to .github/workflows/ci-cd.yaml and tox.ini due to interference with PyCharm breakpoints (see
@@ -209,7 +213,7 @@ testpaths = ['tests']
 # Config file documentation at https://docs.astral.sh/ruff/configuration/ and https://docs.astral.sh/ruff/settings/
 
 # File patterns to omit from formatting and linting, in addition to those specified by exclude.
-extend-exclude = ["webchanges/storage_minidb.py", "webchanges/_vendored"]
+extend-exclude = ['webchanges/storage_minidb.py', 'webchanges/_vendored']
 
 # By default, Ruff will discover files matching *.py, *.pyi, *.ipynb, or pyproject.toml.
 # Include additional files
@@ -219,87 +223,87 @@ extend-exclude = ["webchanges/storage_minidb.py", "webchanges/_vendored"]
 line-length = 120
 
 # Target Python version
-# target-version = "py311"  # Commented out to infer from [project] requires-python
+# target-version = 'py311'  # Commented out to infer from [project] requires-python
 
 [tool.ruff.lint]
 # By default, Ruff enables Flake8's F rules, along with a subset of the E rules
 # Enable rules not enabled by default, and ignore specific rules.
 select = [
-    "ANN", # flake8-annotations
-    "S",   # flake8-bandit
-    "BLE", # flake8-blind-except
-    "B",   # flake8-bugbear
-    "A",   # flake8-builtin
-    "C4",  # flake8-comprehensions
-    "DTZ", # flake8-datetimez
-    # "EM",   # flake8-errmsg  # TODO
-    "FA",  # flake8-future-annotations
-    "INT", # flake8-gettext
-    "ISC", # flake8-implicit-str-concat
-    "LOG", # flake8-logging
-    # "G",    # flake8-logging-format  # Prefer f-string to lazy `%` formatting and OK with '+'
-    "PIE", # flake8-pie
-    "PYI", # flake8-pyi
-    "PT",  # flake8-pytest-style
-    "Q",   # flake8-quotes
-    "RSE", # flake8-raise
-    "RET", # flake8-return
-    "SIM", # flake8-simplify
-    "TID", # flake8-tidy-imports
-    "TD",  # flake8-todos
-    "TC",  # flake8-type-checking
-    # "ARG",  # flake8-unused-arguments  # Code loses clarity
-    "PTH",  # flake8-use-pathlib
-    "FLY",  # flynt
-    "I",    # isort
-    "C90",  # mccabe 
-    "N",    # pep8-naming
-    "PERF", # Perflint
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    # "DOC",  # pydoclint  # TODO
-    # "D",    # pydocstyle  # TODO
-    "F", # Pyflakes
-    # "PL",   # Pylint  # TODO
-    "FURB", # refurb 
-    "RUF",  # Ruff-specific rules
-    # "TRY",  # tryceratops  # TODO
+    'ANN', # flake8-annotations
+    'S',   # flake8-bandit
+    'BLE', # flake8-blind-except
+    'B',   # flake8-bugbear
+    'A',   # flake8-builtin
+    'C4',  # flake8-comprehensions
+    'DTZ', # flake8-datetimez
+    # 'EM',   # flake8-errmsg  # TODO
+    'FA',  # flake8-future-annotations
+    'INT', # flake8-gettext
+    'ISC', # flake8-implicit-str-concat
+    'LOG', # flake8-logging
+    # 'G',    # flake8-logging-format  # Prefer f-string to lazy `%` formatting and OK with '+'
+    'PIE', # flake8-pie
+    'PYI', # flake8-pyi
+    'PT',  # flake8-pytest-style
+    'Q',   # flake8-quotes
+    'RSE', # flake8-raise
+    'RET', # flake8-return
+    'SIM', # flake8-simplify
+    'TID', # flake8-tidy-imports
+    'TD',  # flake8-todos
+    'TC',  # flake8-type-checking
+    # 'ARG',  # flake8-unused-arguments  # Code loses clarity
+    'PTH',  # flake8-use-pathlib
+    'FLY',  # flynt
+    'I',    # isort
+    'C90',  # mccabe 
+    'N',    # pep8-naming
+    'PERF', # Perflint
+    'E',    # pycodestyle errors
+    'W',    # pycodestyle warnings
+    # 'DOC',  # pydoclint  # TODO
+    # 'D',    # pydocstyle  # TODO
+    'F', # Pyflakes
+    # 'PL',   # Pylint  # TODO
+    'FURB', # refurb 
+    'RUF',  # Ruff-specific rules
+    # 'TRY',  # tryceratops  # TODO
 ]
 
 ignore = [
-    "FLY002", # Consider f-string instead of string join
-    # "G003",    # Logging statement uses `+`"
-    # "G004",    # Logging statement uses f-string (Prefer f-string to lazy `%` formatting)
-    "PLC0415", # `import` should be at the top-level of a file
-    "PT011",   # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
-    "PT030",   # pytest.warns({warning}) is too broad, set the match parameter or use a more specific warning
-    "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
-    "SIM105",  # Use contextlib.suppress({exception}) instead of try-except-pass
-    "SIM115",  # Use a context manager for opening files
-    "TD002",   #	Missing author in TODO
-    "TD003",   # Missing issue link for this TODO
+    'FLY002', # Consider f-string instead of string join
+    # 'G003',    # Logging statement uses `+`'
+    # 'G004',    # Logging statement uses f-string (Prefer f-string to lazy `%` formatting)
+    'PLC0415', # `import` should be at the top-level of a file
+    'PT011',   # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
+    'PT030',   # pytest.warns({warning}) is too broad, set the match parameter or use a more specific warning
+    'RUF012',  # Mutable class attributes should be annotated with `typing.ClassVar`
+    'SIM105',  # Use contextlib.suppress({exception}) instead of try-except-pass
+    'SIM115',  # Use a context manager for opening files
+    'TD002',   #	Missing author in TODO
+    'TD003',   # Missing issue link for this TODO
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
+fixable = ['ALL']
 unfixable = []
 
 # Allow unused variables when underscore-prefixed.
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
 
 [tool.ruff.lint.flake8-annotations]
 allow-star-arg-any = true # TODO
 
 [tool.ruff.lint.flake8-quotes]
-inline-quotes = "single"
+inline-quotes = 'single'
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds below.
 max-complexity = 30
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = [
-    "S101", # Use of `assert` detected
+'tests/*' = [
+    'S101', # Use of `assert` detected
 ]
 
 [tool.ruff.lint.pydoclint]
@@ -307,7 +311,7 @@ max-complexity = 30
 ignore-one-line-docstrings = true
 
 [tool.ruff.lint.pydocstyle]
-convention = "google"
+convention = 'google'
 
 [tool.ruff.format]
 # Enable the formatter, which is a drop-in replacement for Black.
@@ -317,16 +321,16 @@ convention = "google"
 exclude = []
 
 # Use single quotes for strings.
-quote-style = "single"
+quote-style = 'single'
 
 # Like Black, indent with spaces, rather than tabs.
-indent-style = "space"
+indent-style = 'space'
 
 # Like Black, respect magic trailing commas.
 skip-magic-trailing-comma = false
 
 # Like Black, automatically detect the appropriate line ending.
-line-ending = "auto"
+line-ending = 'auto'
 
 # Enable auto-formatting of code examples in docstrings. Markdown,
 # reStructuredText code/literal blocks and doctests are all supported.
@@ -340,13 +344,13 @@ docstring-code-format = true
 #
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
-docstring-code-line-length = "dynamic"
+docstring-code-line-length = 'dynamic'
 
 # -------------------------- ty --------------------------
 # Config file documentation at https://docs.astral.sh/ty/reference/configuration/
 
 [tool.ty.environment]
-extra-paths = ["./webchanges"]
+extra-paths = ['./webchanges']
 
 [tool.ty.src]
-exclude = ["./webchanges/storage_minidb.py"]
+exclude = ['./webchanges/storage_minidb.py']
