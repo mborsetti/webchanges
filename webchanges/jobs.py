@@ -220,10 +220,10 @@ class JobBase(metaclass=TrackSubClasses):
     user_visible_url: str | None = None
     wait_for: int | str | None = None  # pyppeteer backwards compatibility (deprecated)
     wait_for_function: str | dict[str, Any] | None = None  # Playwright
-    wait_for_navigation: str | tuple[str, ...] | None = None
+    wait_for_navigation: str | tuple[str, ...] | None = None  # DEPRECATED
     wait_for_selector: str | dict[str, Any] | list[str | dict[str, Any]] | None = None  # Playwright
     wait_for_timeout: float | None = None  # Playwright
-    wait_for_url: str | dict[str, Any] | None = None  # Playwright
+    wait_for_url: str | None = None  # Playwright
     wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None
 
     def __init__(self, **kwargs: Any) -> None:
@@ -1337,6 +1337,7 @@ class BrowserJob(UrlJobBase):
         'wait_until',
     )
 
+    use_browser = True
     _playwright: Any = None
     _playwright_browsers: dict = {}
 
@@ -1457,12 +1458,54 @@ class BrowserJob(UrlJobBase):
             platform_string = f'{system_name}; {machine_arch}'
         return platform_string
 
+    def _save_error_files(
+        self,
+        page: Page,
+    ) -> None:
+        """Helper function to save screenshot and html content files after a Playwright Error"""
+        from playwright.sync_api import Error as PlaywrightError
+
+        screenshot_filename = tempfile.NamedTemporaryFile(
+            prefix=f'{__project_name__}_screenshot_{self.index_number}_', suffix='.png', delete=False
+        ).name
+        try:
+            page.screenshot(path=screenshot_filename)
+            logger.info(f'Job {self.index_number}: Screenshot saved at {screenshot_filename}')
+        except PlaywrightError:
+            Path(screenshot_filename).unlink()
+        full_filename = tempfile.NamedTemporaryFile(
+            prefix=f'{__project_name__}_screenshot-full_{self.index_number}_',
+            suffix='.png',
+            delete=False,
+        ).name
+        try:
+            page.screenshot(path=full_filename, full_page=True)
+            logger.info(f'Job {self.index_number}: Full page image saved at {full_filename}')
+        except PlaywrightError:
+            Path(full_filename).unlink()
+        html_filename = tempfile.NamedTemporaryFile(
+            prefix=f'{__project_name__}_content_{self.index_number}_', suffix='.html', delete=False
+        ).name
+        try:
+            Path(html_filename).write_text(page.content())
+            logger.info(f'Job {self.index_number}: Page HTML content saved at {html_filename}')
+        except PlaywrightError:
+            Path(html_filename).unlink()
+
     def retrieve(  # noqa: C901 mccabe complexity too high
         self,
         job_state: JobState,
         headless: bool = True,
-        response_handler: Callable[[Page], Response] | None = None,
+        response_handler: Callable[
+            [Page, str, Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None, str | None], Response
+        ]
+        | None = None,
         content_handler: Callable[[Page], tuple[str | bytes, str, str]] | None = None,
+        return_data: Callable[
+            [Page, str, Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None, str | None],
+            tuple[str | bytes, str, str],
+        ]
+        | None = None,
     ) -> tuple[str | bytes, str, str]:
         """Runs job to retrieve the data, and returns data and ETag.
 
@@ -1542,10 +1585,10 @@ class BrowserJob(UrlJobBase):
                     f"Job {job_state.job.index_number}: Directive 'http_credentials' needs to be a string in the "
                     f'format username:password; found a {type(self.http_credentials).__name__}.'
                 )
-            creds_split: SplitResult | SplitResultBytes = urlsplit(self.http_credentials)
+            creds_split: SplitResult = urlsplit(self.http_credentials)
             http_credentials: HttpCredentials | None = {
-                'username': str(creds_split.username or ''),
-                'password': str(creds_split.password or ''),
+                'username': creds_split.username or '',
+                'password': creds_split.password or '',
             }
         else:
             http_credentials = None
@@ -1578,8 +1621,11 @@ class BrowserJob(UrlJobBase):
                     f'{type(self.switches).__name__} ( {self.get_indexed_location()} ).'
                 )
             args: list[str] | None = [f'--{switch.removeprefix("--")}' for switch in self.switches]
+            if not headless and logger.getEffectiveLevel() <= 10:
+                args += ['--auto-open-devtools-for-tabs']
+
         else:
-            args = None
+            args = ['--auto-open-devtools-for-tabs'] if not headless and logger.getEffectiveLevel() <= 10 else None
 
         if self.ignore_default_args:
             if isinstance(self.ignore_default_args, str):
@@ -1662,16 +1708,22 @@ class BrowserJob(UrlJobBase):
                         ignore_https_errors=self.ignore_https_errors,
                         extra_http_headers=dict(headers),
                         user_agent=user_agent,  # will be detected if in headers
+                        http_credentials=http_credentials,
                     )
                 )
-                browser_version = ''
+                browser_version = context.browser.version
                 logger.info(
                     f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name} browser '
                     f'from user data directory {self.user_data_dir}'
                 )
 
-            if self.init_script:
-                context.add_init_script(self.init_script)
+            # the below to bypass detection; from https://intoli.com/blog/not-possible-to-block-chrome-headless/
+            init_script = self.init_script or (
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined });"
+                'window.chrome = {runtime: {},};'  # This is abbreviated: entire content is huge!!
+                "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5] });"
+            )
+            context.add_init_script(init_script)
 
             # set default timeout
             context.set_default_timeout(timeout)
@@ -1714,12 +1766,6 @@ class BrowserJob(UrlJobBase):
 
             # open a page
             page = context.new_page()
-            # the below to bypass detection; from https://intoli.com/blog/not-possible-to-block-chrome-headless/
-            page.add_init_script(
-                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined });"
-                'window.chrome = {runtime: {},};'  # This is abbreviated: entire content is huge!!
-                "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5] });"
-            )
 
             url = self.url
             if self.initialization_url:
@@ -1731,7 +1777,9 @@ class BrowserJob(UrlJobBase):
                     )
                 except PlaywrightError as e:
                     logger.info(f'Job {self.index_number}: Website initialization page returned error {e}')
-                    raise e
+                    if logger.root.level <= 20:  # logging.INFO
+                        self._save_error_files(page)
+                    raise
 
                 if not response:
                     raise BrowserResponseError(('No response received from browser on initialization',))
@@ -1843,16 +1891,15 @@ class BrowserJob(UrlJobBase):
             logger.info(f'Job {self.index_number}: {browser_name} {browser_version} navigating to {url}')
             logger.debug(f'Job {self.index_number}: User agent {user_agent}')
             logger.debug(f'Job {self.index_number}: Extra headers {headers}')
-
             try:
+                if return_data is not None:
+                    logger.info(f"Job {self.index_number}: Using the 'return_data' Callable")
+                    return return_data(page, url, self.wait_until, self.referer)
                 if response_handler is not None:
-                    response_handler(page)
+                    logger.info(f"Job {self.index_number}: Using the 'response_handler' Callable")
+                    response = response_handler(page, url, self.wait_until, self.referer)
                 else:
-                    response = page.goto(
-                        url,
-                        wait_until=self.wait_until,
-                        referer=self.referer,
-                    )
+                    response = page.goto(url, wait_until=self.wait_until, referer=self.referer)
 
                 if not response:
                     raise BrowserResponseError(('No response received from browser on navigation',))
@@ -1938,6 +1985,7 @@ class BrowserJob(UrlJobBase):
 
                 # extract content
                 if content_handler is not None:
+                    logger.info(f"Job {self.index_number}: Using the 'content_handler' Callable")
                     return content_handler(page)
                 if self.evaluate is not None:
                     try:
@@ -1946,6 +1994,7 @@ class BrowserJob(UrlJobBase):
                         logger.error(
                             f'Job {self.index_number}: Received browser error when trying to evaluate {self.evaluate}'
                         )
+                        logger.debug(page.content())
                         raise
                     if isinstance(content, str):
                         mime_type = 'text/plain'
@@ -1980,7 +2029,7 @@ class BrowserJob(UrlJobBase):
                 return content, etag, mime_type
 
             except PlaywrightError as e:
-                logger.info(f'Job {self.index_number}: Browser returned error {e}\n({url})')
+                logger.error(f'Job {self.index_number}: Browser returned error {e}\n({url})')
                 if isinstance(e, PlaywrightTimeoutError):
                     logger.debug(f'Job {self.index_number}: PlaywrightTimeoutError is transient')
                     raise TransientBrowserError('PlaywrightTimeoutError') from e
@@ -1989,32 +2038,7 @@ class BrowserJob(UrlJobBase):
                     logger.debug(f'Job {self.index_number}: Browser error {chromium_error} is transient')
                     raise TransientBrowserError(chromium_error) from e
                 if logger.root.level <= 20:  # logging.INFO
-                    screenshot_filename = tempfile.NamedTemporaryFile(
-                        prefix=f'{__project_name__}_screenshot_{self.index_number}_', suffix='.png', delete=False
-                    ).name
-                    try:
-                        page.screenshot(path=screenshot_filename)
-                        logger.info(f'Job {self.index_number}: Screenshot saved at {screenshot_filename}')
-                    except PlaywrightError:
-                        Path(screenshot_filename).unlink()
-                    full_filename = tempfile.NamedTemporaryFile(
-                        prefix=f'{__project_name__}_screenshot-full_{self.index_number}_',
-                        suffix='.png',
-                        delete=False,
-                    ).name
-                    try:
-                        page.screenshot(path=full_filename, full_page=True)
-                        logger.info(f'Job {self.index_number}: Full page image saved at {full_filename}')
-                    except PlaywrightError:
-                        Path(full_filename).unlink()
-                    html_filename = tempfile.NamedTemporaryFile(
-                        prefix=f'{__project_name__}_content_{self.index_number}_', suffix='.html', delete=False
-                    ).name
-                    try:
-                        Path(html_filename).write_text(page.content())
-                        logger.info(f'Job {self.index_number}: Page HTML content saved at {html_filename}')
-                    except PlaywrightError:
-                        Path(html_filename).unlink()
+                    self._save_error_files(page)
                 raise
 
     def format_error(self, exception: Exception, tb: str) -> str:
