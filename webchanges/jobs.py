@@ -1668,7 +1668,6 @@ class BrowserJob(UrlJobBase):
                         ignore_default_args=ignore_default_args,
                         timeout=timeout,
                         headless=headless,
-                        devtools=not headless and logger.getEffectiveLevel() <= 10,
                         proxy=proxy,
                     )
                 )
