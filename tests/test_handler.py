@@ -170,13 +170,13 @@ def test_run_watcher_sqlite3() -> None:
         ssdb_storage.close()
 
 
-@minidb_required  # type: ignore[misc]
+@minidb_required
 def test_run_watcher_minidb() -> None:
     jobs_file = data_path.joinpath('jobs.yaml')
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
-    ssdb_storage = SsdbMiniDBStorage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbMiniDBStorage(ssdb_file)
     try:
         urlwatch_config = CommandConfig(
             [],
@@ -278,11 +278,11 @@ def test_reset_tries_to_zero_when_successful_sqlite3() -> None:
         ssdb_storage.close()
 
 
-@minidb_required  # type: ignore[misc]
+@minidb_required
 def prepare_retry_test_minidb() -> tuple[Urlwatch, SsdbMiniDBStorage]:
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
     config_storage = YamlConfigStorage(config_file)
-    ssdb_storage = SsdbMiniDBStorage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbMiniDBStorage(ssdb_file)
     jobs_storage = YamlJobsStorage([jobs_file])
 
     urlwatch_config = CommandConfig(
@@ -298,7 +298,7 @@ def prepare_retry_test_minidb() -> tuple[Urlwatch, SsdbMiniDBStorage]:
     return urlwatcher, ssdb_storage
 
 
-@minidb_required  # type: ignore[misc]
+@minidb_required
 def test_number_of_tries_in_cache_is_increased_minidb() -> None:
     urlwatcher, ssdb_storage = prepare_retry_test_minidb()
     try:
@@ -318,7 +318,7 @@ def test_number_of_tries_in_cache_is_increased_minidb() -> None:
         ssdb_storage.close()
 
 
-@minidb_required  # type: ignore[misc]
+@minidb_required
 def test_report_error_when_out_of_tries_minidb() -> None:
     urlwatcher, ssdb_storage = prepare_retry_test_minidb()
     try:
@@ -335,7 +335,7 @@ def test_report_error_when_out_of_tries_minidb() -> None:
         ssdb_storage.close()
 
 
-@minidb_required  # type: ignore[misc]
+@minidb_required
 def test_reset_tries_to_zero_when_successful_minidb() -> None:
     urlwatcher, ssdb_storage = prepare_retry_test_minidb()
     try:

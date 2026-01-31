@@ -2,7 +2,6 @@ __pycache__/
 /*.egg-info/
 /.github/workflows/.*
 /.idea/
-/.mypy_cache/
 /.pytest_cache/
 /.private/
 /.ruff_cache/
@@ -19,12 +18,11 @@ __pycache__/
 /venv*/
 /webchanges/.*
 /.coverage*
-/.dmypy.json
 /coverage.xml
 /credentials*
 /Dockerfile
-/hooks*.py
 /test_vendored.py
+/ty.toml
 
 # gemini-cli settings
 .gemini/

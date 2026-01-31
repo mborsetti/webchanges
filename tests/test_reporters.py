@@ -13,7 +13,7 @@ import pytest
 try:
     from httpx import UnsupportedProtocol
 except ImportError:
-    from requests.exceptions import MissingSchema as UnsupportedProtocol  # type: ignore[assignment]
+    from requests.exceptions import MissingSchema as UnsupportedProtocol
 
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
@@ -28,7 +28,7 @@ except ImportError:
 try:
     from matrix_client.errors import MatrixError
 except ImportError:
-    MatrixError = Exception
+    MatrixError = Exception  # ty:ignore[invalid-assignment]
 
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
@@ -144,7 +144,7 @@ def test_smtp_password() -> None:
         assert smtp_have_password('fdsfdsfdsafdsf', '') is False
 
 
-@pytest.mark.parametrize('reporter', ALL_REPORTERS)  # type: ignore[misc]
+@pytest.mark.parametrize('reporter', ALL_REPORTERS)
 def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
     test_report = build_test_report()
     match reporter:

@@ -37,7 +37,7 @@ from webchanges.util import TrackSubClasses
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib  # type: ignore[no-redef]
+    import json as jsonlib
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -352,7 +352,7 @@ class JobBase(metaclass=TrackSubClasses):
         if 'kind' in data:
             # Used for hooks.py.
             try:
-                job_subclass: JobBase = cls.__subclasses__[data['kind']]  # type: ignore[assignment]
+                job_subclass: JobBase = cls.__subclasses__[data['kind']]
             except KeyError:
                 raise ValueError(
                     f"Error in jobs file: Job directive 'kind: {data['kind']}' does not match any known job kinds:\n"
@@ -361,7 +361,7 @@ class JobBase(metaclass=TrackSubClasses):
         else:
             # Auto-detect the job subclass based on required directives.
             matched_subclasses: list[JobBase] = [
-                subclass  # type: ignore[misc]
+                subclass
                 for subclass in list(cls.__subclasses__.values())[1:]
                 if all(data.get(required) for required in subclass.__required__)
             ]
@@ -387,7 +387,7 @@ class JobBase(metaclass=TrackSubClasses):
                 )
 
         # Remove extra required directives ("Falsy")
-        other_subclasses: list[JobBase] = list(cls.__subclasses__.values())[1:]  # type: ignore[assignment]
+        other_subclasses: list[JobBase] = list(cls.__subclasses__.values())[1:]
         other_subclasses.remove(job_subclass)
         for other_subclass in other_subclasses:
             for k in other_subclass.__required__:
@@ -506,11 +506,11 @@ class JobBase(metaclass=TrackSubClasses):
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
             if isinstance(self, UrlJob):
-                job_with_defaults._set_defaults(cfg.get(UrlJob.__kind__))  # type: ignore[arg-type]
+                job_with_defaults._set_defaults(cfg.get(UrlJob.__kind__))
             elif isinstance(self, BrowserJob):
-                job_with_defaults._set_defaults(cfg.get(BrowserJob.__kind__))  # type: ignore[arg-type]
+                job_with_defaults._set_defaults(cfg.get(BrowserJob.__kind__))
             elif isinstance(self, ShellJob):
-                job_with_defaults._set_defaults(cfg.get(ShellJob.__kind__))  # type: ignore[arg-type]
+                job_with_defaults._set_defaults(cfg.get(ShellJob.__kind__))
             # all is done last, so that more specific defaults are not overwritten
             job_with_defaults._set_defaults(cfg.get('all'))
 
@@ -676,7 +676,7 @@ class Job(JobBase):
         """
         return self.name or self.get_location()
 
-    def retrieve(  # type: ignore[empty-body]
+    def retrieve(
         self,
         job_state: JobState,
         headless: bool = True,
@@ -687,6 +687,7 @@ class Job(JobBase):
         :param headless: For browser-based jobs, whether headless mode should be used.
         :returns: The data retrieved, the ETag, and the mime_type.
         """
+        raise NotImplementedError
 
 
 CHARSET_RE = re.compile('text/(html|plain); charset=([^;]*)')
@@ -838,7 +839,7 @@ class UrlJob(UrlJobBase):
                 "and thus are not affected by the server's weak DH key"
             )
             context: ssl.SSLContext | str | bool = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            context.set_ciphers('DEFAULT@SECLEVEL=1')  # type: ignore[union-attr]
+            context.set_ciphers('DEFAULT@SECLEVEL=1')
         else:
             context = not self.ssl_no_verify
 
@@ -1561,7 +1562,7 @@ class BrowserJob(UrlJobBase):
                 'username': str(proxy_split.username),
                 'password': str(proxy_split.password),
             }
-            proxy_for_logging = proxy.copy()  # type: ignore[union-attr]
+            proxy_for_logging = proxy.copy()
             if proxy_for_logging['password']:
                 proxy_for_logging['password'] = '*******'  # noqa: S105 possible hardcoded password
             logger.debug(f'Job {self.index_number}: Proxy: {proxy_for_logging}')
@@ -1622,7 +1623,7 @@ class BrowserJob(UrlJobBase):
                         timeout=timeout,
                         headless=headless,
                         devtools=not headless and logger.getEffectiveLevel() <= 10,
-                        proxy=proxy,  # type: ignore[arg-type]
+                        proxy=proxy,
                     )
                 )
                 browser_version = browser.version
@@ -1656,7 +1657,7 @@ class BrowserJob(UrlJobBase):
                         args=args,
                         ignore_default_args=ignore_default_args,
                         headless=headless,
-                        proxy=proxy,  # type: ignore[arg-type]
+                        proxy=proxy,
                         no_viewport=no_viewport,
                         ignore_https_errors=self.ignore_https_errors,
                         extra_http_headers=dict(headers),
@@ -1740,7 +1741,7 @@ class BrowserJob(UrlJobBase):
                     page.evaluate(self.initialization_js)
                     if self.wait_for_url:
                         logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
-                        page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)  # type: ignore[arg-type]
+                        page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)
                 updated_url = page.url
                 init_url_params = dict(parse_qsl(urlparse(updated_url).params))
                 try:

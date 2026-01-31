@@ -36,7 +36,7 @@ from webchanges.util import edit_file, file_ownership_checks
 try:
     from httpx import Headers
 except ImportError:  # pragma: no cover
-    from webchanges._vendored.headers import Headers  # type: ignore[assignment]
+    from webchanges._vendored.headers import Headers
 
 try:
     import redis
@@ -618,7 +618,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
 class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
     """Class for jobs textual files storage."""
 
-    filename: list[Path]  # type: ignore[assignment]
+    filename: list[Path]
 
     def __init__(self, filename: list[Path]) -> None:
         """Class for jobs textual files storage.
@@ -689,7 +689,7 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 class YamlConfigStorage(BaseYamlFileStorage):
     """Class for configuration file (is a YAML textual file)."""
 
-    config: _Config = {}  # type: ignore[typeddict-item]
+    config: _Config = {}
 
     @staticmethod
     def dict_deep_difference(d1: _Config, d2: _Config, ignore_underline_keys: bool = False) -> _Config:
@@ -710,13 +710,13 @@ class YamlConfigStorage(BaseYamlFileStorage):
             """
             for key, value in d1_.copy().items():
                 if ignore_underline_keys and key.startswith('_'):
-                    d1_.pop(key, None)  # type: ignore[misc]
+                    d1_.pop(key, None)
                 elif isinstance(value, dict) and isinstance(d2_.get(key), dict):
-                    _sub_dict_deep_difference(value, d2_[key])  # type: ignore[arg-type,literal-required]
+                    _sub_dict_deep_difference(value, d2_[key])
                     if not len(value):
-                        d1_.pop(key)  # type: ignore[misc]
+                        d1_.pop(key)
                 elif key in d2_:
-                    d1_.pop(key)  # type: ignore[misc]
+                    d1_.pop(key)
             return d1_
 
         return _sub_dict_deep_difference(copy.deepcopy(d1), d2)
@@ -741,10 +741,10 @@ class YamlConfigStorage(BaseYamlFileStorage):
             for key, value in source_.items():
                 if isinstance(value, dict):
                     # get node or create one
-                    node = destination_.setdefault(key, {})  # type: ignore[misc]
-                    _sub_dict_deep_merge(value, node)  # type: ignore[arg-type]
+                    node = destination_.setdefault(key, {})
+                    _sub_dict_deep_merge(value, node)
                 else:
-                    destination_[key] = value  # type: ignore[literal-required]
+                    destination_[key] = value
 
             return destination_
 
@@ -762,11 +762,11 @@ class YamlConfigStorage(BaseYamlFileStorage):
             for key in DEFAULT_CONFIG['job_defaults']:
                 if 'job_defaults' not in config_for_extras:
                     config_for_extras['job_defaults'] = {}
-                config_for_extras['job_defaults'][key] = None  # type: ignore[literal-required]
+                config_for_extras['job_defaults'][key] = None
             for key in DEFAULT_CONFIG['differ_defaults']:
                 if 'differ_defaults' not in config_for_extras:
                     config_for_extras['differ_defaults'] = {}
-                config_for_extras['differ_defaults'][key] = None  # type: ignore[literal-required]
+                config_for_extras['differ_defaults'][key] = None
         if 'hooks' in sys.modules:
             # Remove extra keys in config used in hooks (they are not in DEFAULT_CONFIG)
             for _, obj in inspect.getmembers(
@@ -777,15 +777,15 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         obj.__kind__ not in DEFAULT_CONFIG['job_defaults']
                         or obj.__kind__ not in DEFAULT_CONFIG['job_defaults']
                     ):
-                        config_for_extras['job_defaults'].pop(obj.__kind__, None)  # type: ignore[misc]
+                        config_for_extras['job_defaults'].pop(obj.__kind__, None)
                 elif issubclass(obj, ReporterBase) and obj.__kind__ not in DEFAULT_CONFIG['report']:
-                    config_for_extras['report'].pop(obj.__kind__, None)  # type: ignore[misc]
+                    config_for_extras['report'].pop(obj.__kind__, None)
         if 'slack' in config_for_extras.get('report', {}):
             # Ignore legacy key
-            config_for_extras['report'].pop('slack')  # type: ignore[typeddict-item]
+            config_for_extras['report'].pop('slack')
         extras: _Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG, ignore_underline_keys=True)
         if not extras.get('report'):
-            extras.pop('report', None)  # type: ignore[misc]
+            extras.pop('report', None)
         if extras:
             warnings.warn(
                 f'Found unrecognized directive(s) in the configuration file {self.filename}:\n'
@@ -807,9 +807,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         "Found both 'shell' and 'command' job_defaults in config, a duplicate. Please remove 'shell' "
                         'ones.'
                     )
-                config['job_defaults']['command'] = config['job_defaults'].pop(
-                    'shell'  # type: ignore[typeddict-item]
-                )
+                config['job_defaults']['command'] = config['job_defaults'].pop('shell')
             for key in ('all', 'url', 'browser', 'command'):
                 if key not in config['job_defaults'] or config['job_defaults'][key] is None:
                     config['job_defaults'][key] = {}
@@ -1162,7 +1160,7 @@ class SsdbStorage(BaseFileStorage, ABC):
         :param keep_entries: Number of entries to keep after deletion.
         """
         if hasattr(self, 'clean_all'):
-            count = self.clean_all(keep_entries)
+            count = self.clean_all(keep_entries)  # ty:ignore[call-non-callable]
             if count:
                 print(f'Deleted {count} old snapshots.')
         else:
@@ -1916,7 +1914,7 @@ class SsdbRedisStorage(SsdbStorage):
         key = self._make_key(guid)
         i = self.db.llen(key)
         if self.db.ltrim(key, 0, 0):
-            return i - self.db.llen(key)  # type: ignore[no-any-return] # bug!
+            return i - self.db.llen(key)
 
         return 0
 
@@ -1927,8 +1925,8 @@ class SsdbRedisStorage(SsdbStorage):
         new_key = self._make_key(new_guid)
         # Note if a list with 'new_key' already exists, the data stored there
         # will be overwritten.
-        self.db.rename(key, new_key)  # type: ignore[no-untyped-call]
-        return self.db.llen(new_key)  # type: ignore[no-any-return] # bug!
+        self.db.rename(key, new_key)
+        return self.db.llen(new_key)
 
     def rollback(self, timestamp: float) -> None:
         """Rolls back the database to timestamp.

@@ -61,7 +61,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
         'warning_stream': None,  # Suppress warnings from being printed to stderr
     }
 
-    return docutils.core.publish_doctree(  # type: ignore[no-any-return]
+    return docutils.core.publish_doctree(
         source=text,
         parser=docutils.parsers.rst.Parser(),
         settings_overrides=settings_overrides,
@@ -98,7 +98,7 @@ def load_hooks_from_doc() -> str:
 
 def load_hooks_testdata() -> dict[str, Any]:
     yaml_data = Path(data_path.joinpath('docs_hooks_testdata.yaml')).read_text()
-    return yaml.safe_load(yaml_data)  # type: ignore[no-any-return]
+    return yaml.safe_load(yaml_data)
 
 
 def load_hooks_jobs() -> list[JobBase]:
@@ -144,7 +144,7 @@ def test_flake8_on_hooks_rst(tmp_path: Path) -> None:
     assert report.get_statistics('') == [], 'Flake8 found violations in hooks.py'
 
 
-@pytest.mark.parametrize('job', HOOKS_DOC_JOBS, ids=(v.url for v in HOOKS_DOC_JOBS))  # type: ignore[misc]
+@pytest.mark.parametrize('job', HOOKS_DOC_JOBS, ids=(v.url for v in HOOKS_DOC_JOBS))
 def test_url(job: JobBase) -> None:
     d = testdata[job.url]
     data = d['input']

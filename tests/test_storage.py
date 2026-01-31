@@ -62,7 +62,7 @@ if importlib.util.find_spec('minidb') is not None:
     ssdb_file = ':memory:'
     DATABASE_ENGINES += (SsdbMiniDBStorage(ssdb_file),)
 else:
-    SsdbMiniDBStorage = type(None)  # type: ignore[misc,assignment]
+    SsdbMiniDBStorage = type(None)
 
 
 def test_all_database_engines() -> None:
@@ -76,7 +76,9 @@ def test_all_database_engines() -> None:
 
 
 def prepare_storage_test(
-    ssdb_storage: SsdbStorage, config_args: dict | None = None, jobs_file: Path | None = None
+    ssdb_storage: SsdbStorage,
+    config_args: dict | None = None,
+    jobs_file: Path | None = None,
 ) -> tuple[Urlwatch, SsdbStorage, CommandConfig]:
     """Set up storage."""
     ssdb_file = ssdb_storage.filename
@@ -177,7 +179,7 @@ def test_legacy_slack_keys() -> None:
 
 # @py37_required
 # SsdbSQLite3Storage.keep_latest() requires Python 3.7 to work (returns 0 otherwise).
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -191,14 +193,14 @@ def test_keep_latest(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0003)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -221,7 +223,7 @@ def test_keep_latest(database_engine: SsdbStorage) -> None:
             assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -235,14 +237,14 @@ def test_clean(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -264,7 +266,7 @@ def test_clean(database_engine: SsdbStorage) -> None:
         assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -275,7 +277,7 @@ def test_gc(database_engine: SsdbStorage) -> None:
     # run once
     urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
     ssdb_storage.gc([])
     guid = urlwatcher.jobs[0].get_guid()
@@ -283,7 +285,7 @@ def test_gc(database_engine: SsdbStorage) -> None:
     assert history == {}
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -302,7 +304,7 @@ def test_gc_delete_1_of_2(database_engine: SsdbStorage) -> None:
             time.sleep(0.0001)
         urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
     guid = urlwatcher.jobs[0].get_guid()
     ssdb_storage.gc([guid])
@@ -314,7 +316,7 @@ def test_gc_delete_1_of_2(database_engine: SsdbStorage) -> None:
     assert history == {}
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -340,7 +342,7 @@ def test_gc_delete_2_of_4(database_engine: SsdbStorage) -> None:
             time.sleep(0.0001)
         urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
     guid = urlwatcher.jobs[0].get_guid()
     ssdb_storage.gc([guid], 2)
@@ -352,7 +354,7 @@ def test_gc_delete_2_of_4(database_engine: SsdbStorage) -> None:
     assert history == {}
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -369,7 +371,7 @@ def test_clean_ssdb(database_engine: SsdbStorage) -> None:
                 time.sleep(0.0001)
             urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
@@ -398,7 +400,7 @@ def test_clean_ssdb(database_engine: SsdbStorage) -> None:
         assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -409,7 +411,7 @@ def test_clean_and_delete(database_engine: SsdbStorage) -> None:
     # run once
     urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
     # clean guid
     guid = urlwatcher.jobs[0].get_guid()
@@ -430,7 +432,7 @@ def test_clean_and_delete(database_engine: SsdbStorage) -> None:
         pass
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -444,14 +446,14 @@ def test_clean_all(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -470,7 +472,7 @@ def test_clean_all(database_engine: SsdbStorage) -> None:
             assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -484,14 +486,14 @@ def test_clean_ssdb_no_clean_all(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -510,7 +512,7 @@ def test_clean_ssdb_no_clean_all(database_engine: SsdbStorage) -> None:
         assert timestamp == timestamps[0]
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -524,14 +526,14 @@ def test_delete_latest(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -544,12 +546,12 @@ def test_delete_latest(database_engine: SsdbStorage) -> None:
 
         assert num_del == 1
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 1
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -563,7 +565,7 @@ def test_rollback_ssdb(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         run_time = time.time()
 
         # run twice
@@ -571,7 +573,7 @@ def test_rollback_ssdb(database_engine: SsdbStorage) -> None:
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -584,12 +586,12 @@ def test_rollback_ssdb(database_engine: SsdbStorage) -> None:
 
         assert num_del == 1
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 1
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -601,7 +603,7 @@ def test_restore_and_backup(database_engine: SsdbStorage) -> None:
 
     ssdb_storage.restore((('myguid', 'mydata', 1618105974, 0, '', mime_type, {}),))
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
     entry = ssdb_storage.load('myguid')
     assert entry == Snapshot('mydata', 1618105974, 0, '', mime_type, {})
@@ -611,7 +613,7 @@ def test_restore_and_backup(database_engine: SsdbStorage) -> None:
     assert backup_entry == ('myguid', 'mydata', 1618105974, 0, '', mime_type, {})
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -622,7 +624,7 @@ def test_get_empty_history_and_no_max_snapshots(database_engine: SsdbStorage) ->
     # run once
     urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
     # get rich_history
     guid = urlwatcher.jobs[0].get_guid()
@@ -638,7 +640,7 @@ def test_get_empty_history_and_no_max_snapshots(database_engine: SsdbStorage) ->
     assert rich_history == []
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -652,14 +654,14 @@ def test_clean_and_history_data(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -725,7 +727,7 @@ def test_abstractmethods() -> None:
         filename: Path
 
     filename = Path('test')
-    d = DummyBaseTextualFileStorage(filename)  # type: ignore[abstract]
+    d = DummyBaseTextualFileStorage(filename)
     assert d.load() is None
     assert d.save() is None
     assert d.parse(Path()) is None
@@ -737,7 +739,7 @@ def test_abstractmethods() -> None:
         filename: Path
 
     filename = Path('test')
-    dummy_ssdb = DummySsdbStorage(filename)  # type: ignore[abstract]
+    dummy_ssdb = DummySsdbStorage(filename)
     assert dummy_ssdb.close() is None
     assert dummy_ssdb.get_guids() is None
     assert dummy_ssdb.load('guid') is None

@@ -84,7 +84,7 @@ def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_fil
     )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def urlwatch_command() -> Generator[UrlwatchCommand, None, None]:
     config_storage = YamlConfigStorage(config_file)
     config_storage.load()
@@ -118,7 +118,7 @@ urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_sto
 urlwatch_command_common = UrlwatchCommand(urlwatcher)
 
 
-@pytest.fixture(scope='module', autouse=True)  # type: ignore[misc]
+@pytest.fixture(scope='module', autouse=True)
 def cleanup(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """Cleanup once we are finished."""
     # Setup phase
@@ -716,7 +716,7 @@ def test_modify_urls(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.Mon
     assert sorted(after_file.split()) == sorted(before_file.split())
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -1058,7 +1058,7 @@ def test_check_smtp_login_not_config(capsys: pytest.CaptureFixture[str]) -> None
         {
             'enabled': True,
             'method': 'sendmail',
-            'smtp': {  # type: ignore[typeddict-item]
+            'smtp': {
                 'auth': False,
                 'host': '',
                 'user': '',

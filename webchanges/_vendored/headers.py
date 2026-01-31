@@ -50,7 +50,7 @@ def to_str(value: str | bytes, encoding: str = 'utf-8') -> str:
 
 
 def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:
-    return value if isinstance(match_type_of, str) else value.encode()
+    return value if isinstance(match_type_of, str) else value.encode()  # ty:ignore[invalid-return-type]
 
 
 # from https://github.com/encode/httpx/blob/master/httpx/_models.py
@@ -81,8 +81,8 @@ def _obfuscate_sensitive_headers(
     items: typing.Iterable[tuple[typing.AnyStr, typing.AnyStr]],
 ) -> typing.Iterator[tuple[typing.AnyStr, typing.AnyStr]]:
     for k, v in items:
-        if to_str(k.lower()) in SENSITIVE_HEADERS:
-            v = to_bytes_or_str('[secure]', match_type_of=v)
+        if to_str(k.lower()) in SENSITIVE_HEADERS:  # ty:ignore[no-matching-overload, invalid-argument-type]
+            v = to_bytes_or_str('[secure]', match_type_of=v)  # ty:ignore[invalid-argument-type]
         yield k, v
 
 
@@ -102,8 +102,8 @@ class Headers(typing.MutableMapping[str, str]):
             self._list = list(headers._list)
         elif isinstance(headers, Mapping):
             for k, v in headers.items():
-                bytes_key = _normalize_header_key(k, encoding)
-                bytes_value = _normalize_header_value(v, encoding)
+                bytes_key = _normalize_header_key(k, encoding)  # ty:ignore[invalid-argument-type]
+                bytes_value = _normalize_header_value(v, encoding)  # ty:ignore[invalid-argument-type]
                 self._list.append((bytes_key, bytes_key.lower(), bytes_value))
         elif headers is not None:
             for k, v in headers:

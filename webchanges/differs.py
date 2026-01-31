@@ -70,7 +70,7 @@ except ImportError as e:  # pragma: no cover
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib  # type: ignore[no-redef]
+    import json as jsonlib
 
 try:
     import xmltodict
@@ -258,7 +258,7 @@ class DifferBase(metaclass=TrackSubClasses):
         :returns: The output of the differ or an error message with traceback if it fails.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying differ {differ_kind}, directives {directives}')
-        differcls: type[DifferBase] | None = cls.__subclasses__.get(differ_kind)  # type: ignore[assignment]
+        differcls: type[DifferBase] | None = cls.__subclasses__.get(differ_kind)
         if differcls:
             try:
                 return differcls(job_state).differ(directives, report_kind, _unfiltered_diff, tz)
@@ -522,7 +522,7 @@ class UnifiedDiffer(DifferBase):
                     'plain': diff_text,
                     'markdown': diff_text,
                 }
-            )
+            )  # ty:ignore[no-matching-overload]
 
         if report_kind == 'html':
             out_diff['html'] = '\n'.join(self.unified_diff_to_html(diff_text))
@@ -577,7 +577,7 @@ class TableDiffer(DifferBase):
                     'plain': diff_text,
                     'markdown': diff_text,
                 }
-            )
+            )  # ty:ignore[no-matching-overload]
 
         return out_diff
 
@@ -693,7 +693,7 @@ class CommandDiffer(DifferBase):
                         'markdown': head_text + diff_text,
                         'html': head_html + diff,
                     }
-                )
+                )  # ty:ignore[no-matching-overload]
             else:
                 diff_text = diff
                 out_diff.update(
@@ -701,7 +701,7 @@ class CommandDiffer(DifferBase):
                         'plain': head_text + diff_text,
                         'markdown': head_text + diff_text,
                     }
-                )
+                )  # ty:ignore[no-matching-overload]
 
         if report_kind == 'html' and 'html' not in out_diff:
             if command.startswith('wdiff'):
@@ -923,10 +923,10 @@ class DeepdiffDiffer(DifferBase):
                             )
                             value_list = value_string.splitlines(keepends=True)
                             if len(value_list) < 2:
-                                return value_string  # type: ignore[no-any-return] # bug!
+                                return value_string  # bug!
                             value_string = '\n    ' + '    '.join(value_list)
                             return value_string.rstrip()
-                        return jsonlib.dumps(value, ensure_ascii=False, indent=2)  # type: ignore[no-any-return]
+                        return jsonlib.dumps(value, ensure_ascii=False, indent=2)
                     return str(value)
 
                 type_t1 = type(ddiff.t1).__name__
@@ -965,7 +965,7 @@ class DeepdiffDiffer(DifferBase):
                             )
                             value_list = value_string.splitlines(keepends=True)
                             if len(value_list) < 2:
-                                return value_string  # type: ignore[no-any-return] # bug!
+                                return value_string  # bug!
                             value_string = mark_to_html('\n    ' + '    '.join(value_list))
                             return value_string.rstrip()
                         return mark_to_html(jsonlib.dumps(value, ensure_ascii=False, indent=2))
@@ -1149,7 +1149,7 @@ class DeepdiffDiffer(DifferBase):
             cache_size=500,
             cache_purge_level=0,
             cache_tuning_sample_size=500,
-            default_timezone=tz,
+            default_timezone=tz,  # ty:ignore[invalid-argument-type]
             ignore_order=ignore_order,
             ignore_string_type_changes=True,
             ignore_numeric_type_changes=True,
@@ -1242,7 +1242,7 @@ class ImageDiffer(DifferBase):
             logger.debug('Retrieving image from an ascii85 string')
             return Image.open(BytesIO(base64.a85decode(ascii85)))
 
-        def compute_diff_image(img1: Image.Image, img2: Image.Image) -> tuple[Image.Image, np.float64]:
+        def compute_diff_image(img1: Image.Image, img2: Image.Image) -> tuple[Image.Image, np.float64 | None]:
             """Compute the difference between two images."""
             # Compute the absolute value of the pixel-by-pixel difference between the two images.
             diff_image = ImageChops.difference(img1, img2)
@@ -1783,7 +1783,7 @@ class AIGoogleDiffer(DifferBase):
 
     def differ(
         self,
-        directives: AiGoogleDirectives,  # type: ignore[override]
+        directives: AiGoogleDirectives,
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
@@ -1967,7 +1967,7 @@ class AIGoogleDiffer(DifferBase):
         for rep_kind in ('plain', 'html'):  # markdown is same as text
             unified_report = DifferBase.process(
                 'unified',
-                directives.get('unified') or {},  # type: ignore[arg-type]
+                directives.get('unified') or {},
                 self.state,
                 rep_kind,
                 tz,

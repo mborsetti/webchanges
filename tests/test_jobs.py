@@ -37,7 +37,7 @@ playwright_is_installed = importlib.util.find_spec('playwright') is not None
 if playwright_is_installed:
     from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 else:
-    PlaywrightTimeoutError = Exception  # type: ignore[assignment,misc]
+    PlaywrightTimeoutError = Exception
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -373,11 +373,11 @@ def test__dict_deep__merge() -> None:
     assert JobBase._dict_deep_merge(job, {'a': 1}, {'b': 2}) == {'a': 1, 'b': 2}
 
 
-@connection_required  # type: ignore[misc]
-@pytest.mark.parametrize(  # type: ignore[misc]
+@connection_required
+@pytest.mark.parametrize(
     ('input_job', 'output'),
     TEST_JOBS,
-    ids=(f'{job_type_str(v[0])}: {v[1]!r}' for v in TEST_JOBS),  # type: ignore[arg-type]
+    ids=(f'{job_type_str(v[0])}: {v[1]!r}' for v in TEST_JOBS),
 )
 def test_run_job(
     input_job: dict[str, str | dict[str, str] | bool | int],
@@ -395,8 +395,8 @@ def test_run_job(
             assert output in data  # type: ignore[operator]
 
 
-@connection_required  # type: ignore[misc]
-@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))  # type: ignore[misc]
+@connection_required
+@pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))
 def test_run_ftp_job() -> None:
     job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt', 'timeout': 2})
     with JobState(ssdb_storage, job) as job_state:
@@ -404,8 +404,8 @@ def test_run_ftp_job() -> None:
         assert len(data) == 319
 
 
-# @connection_required  # type: ignore[misc]
-# @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, EOFError, OSError))  # type: ignore[misc]
+# @connection_required
+# @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, EOFError, OSError))
 # def test_run_ftp_job_needs_bytes() -> None:
 #     if os.getenv('GITHUB_ACTIONS'):
 #         pytest.skip('Test website cannot be reached from GitHub Actions')
@@ -419,11 +419,11 @@ def test_run_ftp_job() -> None:
 #         assert len(data) == 1024
 
 
-@connection_required  # type: ignore[misc]
-@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+@connection_required
+@pytest.mark.parametrize(
     'job_data',
     ALL_JOB_TYPES,
-    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
 def test_check_etag(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
@@ -436,11 +436,11 @@ def test_check_etag(job_data: dict[str, Any]) -> None:
             assert etag
 
 
-@connection_required  # type: ignore[misc]
-@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+@connection_required
+@pytest.mark.parametrize(
     'job_data',
     ALL_JOB_TYPES,
-    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
 def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dict) -> None:
     """Check for 304 Not Modified response."""
@@ -467,11 +467,11 @@ def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dic
             assert str(pytest_wrapped_e.value) == '304'
 
 
-@connection_required  # type: ignore[misc]
-@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+@connection_required
+@pytest.mark.parametrize(
     'job_data',
     ALL_JOB_TYPES,
-    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
 def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'http://localhost:9999'
@@ -499,11 +499,11 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
         job_data['ignore_connection_errors'] = None
 
 
-@connection_required  # type: ignore[misc]
-@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+@connection_required
+@pytest.mark.parametrize(
     'job_data',
     ALL_JOB_TYPES,
-    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
 def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
@@ -522,11 +522,11 @@ def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
             assert job_state.error_ignored is False
 
 
-@connection_required  # type: ignore[misc]
-@pytest.mark.parametrize(  # type: ignore[arg-type,misc]
+@connection_required
+@pytest.mark.parametrize(
     'job_data',
     ALL_JOB_TYPES,
-    ids=(job_type_str(v) for v in ALL_JOB_TYPES),  # type: ignore[attr-defined]
+    ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
 def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any]) -> None:
     # if job_data.get('use_browser'):
@@ -681,7 +681,7 @@ def test_shell_job_without_kind() -> None:
 def test_with_defaults() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    config: _Config = {'job_defaults': {'all': {'timeout': 999}}}  # type: ignore[typeddict-item]
+    config: _Config = {'job_defaults': {'all': {'timeout': 999}}}
     job = job.with_defaults(config)
     assert job.timeout == 999
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
@@ -693,7 +693,7 @@ def test_with_defaults_headers() -> None:
     """
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    config: _Config = {  # type: ignore[typeddict-item]
+    config: _Config = {
         'job_defaults': {
             'all': {'headers': {'a': '1', 'b': '2'}},
             'url': {'headers': {'b': '3', 'c': '4'}},

@@ -31,7 +31,7 @@ CHUNK_TEST_DATA = [
 ]
 
 
-@pytest.mark.parametrize(('string', 'length', 'numbering', 'output'), CHUNK_TEST_DATA)  # type: ignore[misc]
+@pytest.mark.parametrize(('string', 'length', 'numbering', 'output'), CHUNK_TEST_DATA)
 def test_chunkstring(string: str, length: int, numbering: bool, output: list[str]) -> None:
     assert list(chunk_string(string, length, numbering=numbering)) == output
 

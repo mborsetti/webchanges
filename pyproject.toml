@@ -171,60 +171,6 @@ exclude_lines = [
 # ignore_errors = true
 
 
-# -------------------------- mypy --------------------------
-[tool.mypy]
-# Static Typing for Python
-# Runs as part of pre-commit
-# Config file documentation at https://mypy.readthedocs.io/en/stable/config_file.html
-
-# Disables import discovery of namespace packages (see PEP 420)
-namespace_packages = true
-
-# Specifies the Python version used to parse and check the target program.
-# python_version = 3.12
-
-# Suppresses error messages about imports that cannot be resolved.
-ignore_missing_imports = true
-
-# Disallows calling functions without type annotations from functions with type annotations.
-disallow_untyped_calls = false
-
-# Disallows defining functions without type annotations or with incomplete type annotations.
-disallow_untyped_defs = true
-
-# Reports an error whenever a function with type annotations is decorated with a decorator without annotations.
-disallow_untyped_decorators = true
-
-# Warns about casting an expression to its inferred type.
-warn_redundant_casts = true
-
-# Warns about unneeded # type: ignore comments.
-# May behave differently in GitHub Actions than it does on Windows.
-# warn_unused_ignores = true
-
-# Shows a warning when returning a value with type Any from a function declared with a non-Any return type.
-warn_return_any = true
-
-# Shows a warning when encountering any code inferred to be unreachable or redundant after performing type analysis.
-warn_unreachable = false
-
-# Enables additional checks that are technically correct but may be impractical in real code.
-extra_checks = true
-
-# Shows documentation link to corresponding error code.
-show_error_code_links = true
-
-# Use visually nicer output in error messages: use soft word wrap, show source code snippets, and show error location
-# markers.
-pretty = true
-
-# Use an SQLite database to store the cache.
-sqlite_cache = true
-
-# Warns about per-module sections in the config file that do not match any files processed when invoking mypy.
-warn_unused_configs = true
-
-
 # -------------------------- rstcheck --------------------------
 [tool.rstcheck]
 # Checks syntax of reStructuredText and code blocks nested within it.
@@ -394,3 +340,12 @@ docstring-code-format = true
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
+
+# -------------------------- ty --------------------------
+# Config file documentation at https://docs.astral.sh/ty/reference/configuration/
+
+[tool.ty.environment]
+extra-paths = ["./webchanges"]
+
+[tool.ty.src]
+exclude = ["./webchanges/storage_minidb.py"]

@@ -108,7 +108,7 @@ def generate_random_string(length: int = 39) -> str:
     return ''.join(random.choice(characters) for _ in range(length))  # noqa: S311 not suitable for security/cryptogr.
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def job_state() -> Generator[JobState, None, None]:
     """Get a JobState object for testing."""
     ssdb_file = ':memory:'
@@ -314,7 +314,7 @@ def test_unified_deletions_only_additions(job_state: JobState) -> None:
         job_state.job.deletions_only = False
 
 
-@pytest.mark.parametrize(('inpt', 'out'), DIFF_TO_HTML_TEST_DATA)  # type: ignore[misc]
+@pytest.mark.parametrize(('inpt', 'out'), DIFF_TO_HTML_TEST_DATA)
 def test_unified_diff_to_html(inpt: str, out: str, job_state: JobState) -> None:
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n' + inpt
@@ -849,9 +849,7 @@ def test_image_base64_and_resize(job_state: JobState) -> None:
     # blow up the second image to trigger resizing
     new_img = Image.open(new_file)
     img_format = new_img.format
-    new_img = new_img.resize(  # type: ignore[assignment]
-        (new_img.width * 2, new_img.height * 2), Image.Resampling.NEAREST
-    )
+    new_img = new_img.resize((new_img.width * 2, new_img.height * 2), Image.Resampling.NEAREST)
     output_stream = BytesIO()
     new_img.save(output_stream, format=img_format)
     job_state.new_data = base64.b64encode(output_stream.getvalue()).decode()
@@ -895,7 +893,7 @@ def test_image_resize(job_state: JobState) -> None:
     # blow up the old image to trigger resizing
     old_img = Image.open(img_file)
     img_format = old_img.format
-    old_img = old_img.resize((old_img.width + 1, old_img.height), Image.Resampling.NEAREST)  # type: ignore[assignment]
+    old_img = old_img.resize((old_img.width + 1, old_img.height), Image.Resampling.NEAREST)
     output_stream = BytesIO()
     old_img.save(output_stream, format=img_format)
     job_state.old_data = base64.b64encode(output_stream.getvalue()).decode()
@@ -1147,7 +1145,7 @@ WDIFF_TEST_DATA = [
 ]
 
 
-@pytest.mark.parametrize(('old_data', 'new_data', 'expected_text', 'expected_html'), WDIFF_TEST_DATA)  # type: ignore[misc]
+@pytest.mark.parametrize(('old_data', 'new_data', 'expected_text', 'expected_html'), WDIFF_TEST_DATA)
 def test_worddiff(old_data: str, new_data: str, expected_text: str, expected_html: str, job_state: JobState) -> None:
     job_state.job.differ = {'name': 'wdiff'}
     job_state.old_data = old_data

@@ -8,9 +8,9 @@ docutils
 docutils-stubs
 flynt
 lxml-stubs
-mypy
 pre-commit
 tox-ini-fmt
+ty
 types-backports
 types-docutils
 types-psutil

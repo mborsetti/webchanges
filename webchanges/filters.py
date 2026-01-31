@@ -36,7 +36,7 @@ from webchanges.util import TrackSubClasses
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib  # type: ignore[no-redef]
+    import json as jsonlib
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -51,17 +51,17 @@ except ImportError as e:  # pragma: has-bs4
 try:
     import cssbeautifier
 except ImportError as e:  # pragma: no cover
-    cssbeautifier = str(e)
+    cssbeautifier = str(e)  # ty:ignore[invalid-assignment]
 
 try:
-    import jq
+    import jq  # ty:ignore[unresolved-import]
 except ImportError as e:  # pragma: has-jq
     jq = str(e)
 
 try:
     import jsbeautifier
 except ImportError as e:  # pragma: no cover
-    jsbeautifier = str(e)
+    jsbeautifier = str(e)  # ty:ignore[invalid-assignment]
 
 try:
     from pypdf import PdfReader
@@ -69,7 +69,7 @@ except ImportError as e:  # pragma: no cover
     PdfReader = str(e)  # type: ignore[assignment,misc]
 
 try:
-    import pdftotext
+    import pdftotext  # ty:ignore[unresolved-import]
 except ImportError as e:  # pragma: has-pdftotext
     pdftotext = str(e)
 
@@ -79,7 +79,7 @@ except ImportError as e:  # pragma: no cover
     Image = str(e)  # type: ignore[assignment]
 
 try:
-    import pytesseract
+    import pytesseract  # ty:ignore[unresolved-import]
 except ImportError as e:  # pragma: has-pytesseract
     pytesseract = str(e)
 
@@ -263,7 +263,7 @@ class FilterBase(metaclass=TrackSubClasses):
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
-        filtercls: type[FilterBase] | None = cls.__subclasses__.get(filter_kind)  # type: ignore[assignment]
+        filtercls: type[FilterBase] | None = cls.__subclasses__.get(filter_kind)
         if filtercls:
             return filtercls(job_state).filter(data, mime_type, subfilter)
         return data, mime_type
@@ -344,15 +344,14 @@ class AutoMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(  # type: ignore[empty-body]
-        self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]
-    ) -> tuple[str | bytes, str]:
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
+        raise NotImplementedError
 
 
 class RegexMatchFilter(FilterBase):
@@ -381,15 +380,14 @@ class RegexMatchFilter(FilterBase):
         logger.debug(f'Matching {self} with {self.job} result: {result}')
         return result
 
-    def filter(  # type: ignore[empty-body]
-        self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]
-    ) -> tuple[str | bytes, str]:
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         """Method used by filter to process data.
 
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
+        raise NotImplementedError
 
 
 class BeautifyFilter(FilterBase):
@@ -460,13 +458,13 @@ class AbsoluteLinksFilter(FilterBase):
         tree = etree.HTML(data)
         elem: etree._Element
         for elem in tree.xpath('//*[@action]'):  # type: ignore[assignment,union-attr]
-            elem.attrib['action'] = urljoin(self.job.url, elem.attrib['action'])  # type: ignore[type-var,assignment]
+            elem.attrib['action'] = urljoin(self.job.url, elem.attrib['action'])
         for elem in tree.xpath('//object[@data]'):  # type: ignore[assignment,union-attr]
-            elem.attrib['data'] = urljoin(self.job.url, elem.attrib['data'])  # type: ignore[type-var,assignment]
+            elem.attrib['data'] = urljoin(self.job.url, elem.attrib['data'])
         for elem in tree.xpath('//*[@href]'):  # type: ignore[assignment,union-attr]
-            elem.attrib['href'] = urljoin(self.job.url, elem.attrib['href'])  # type: ignore[type-var,assignment]
+            elem.attrib['href'] = urljoin(self.job.url, elem.attrib['href'])
         for elem in tree.xpath('//*[@src]'):  # type: ignore[assignment,union-attr]
-            elem.attrib['src'] = urljoin(self.job.url, elem.attrib['src'])  # type: ignore[type-var,assignment]
+            elem.attrib['src'] = urljoin(self.job.url, elem.attrib['src'])
         return etree.tostring(tree, encoding='unicode', method='html'), mime_type
 
 
@@ -716,7 +714,7 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
 
         return (
             '\n'.join(
-                pdftotext.PDF(
+                pdftotext.PDF(  # ty:ignore[possibly-missing-attribute]
                     io.BytesIO(data),
                     password=subfilter.get('password', ''),
                     raw=subfilter.get('method', False),
@@ -1287,7 +1285,7 @@ class LxmlParser:
         if isinstance(element, str):
             return element
 
-        return etree.tostring(element, encoding='unicode', method=method, pretty_print=True, with_tail=False).strip()  # type: ignore[no-any-return] # bug!
+        return etree.tostring(element, encoding='unicode', method=method, pretty_print=True, with_tail=False).strip()
 
     @staticmethod
     def _remove_element(element: etree._Element) -> None:
@@ -1371,19 +1369,11 @@ class LxmlParser:
         try:
             if self.filter_kind == 'css':
                 selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(root)  # type: ignore[assignment]
-                excluded_elems = (
-                    CSSSelector(self.exclude, namespaces=self.namespaces)(root)  # type: ignore[assignment]
-                    if self.exclude
-                    else None
-                )
+                excluded_elems = CSSSelector(self.exclude, namespaces=self.namespaces)(root) if self.exclude else None  # ty:ignore[invalid-assignment]
 
             elif self.filter_kind == 'xpath':
                 selected_elems = root.xpath(self.expression, namespaces=self.namespaces)  # type: ignore[assignment]
-                excluded_elems = (
-                    root.xpath(self.exclude, namespaces=self.namespaces)  # type: ignore[assignment]
-                    if self.exclude
-                    else None
-                )
+                excluded_elems = root.xpath(self.exclude, namespaces=self.namespaces) if self.exclude else None  # ty:ignore[invalid-assignment]
         except (etree.ParserError, etree.XMLSchemaError, etree.XPathError) as e:
             raise ValueError(f'Job {job_index_number} {type(e).__name__}: {e} {self.expression}') from e
         if excluded_elems is not None:
@@ -1647,7 +1637,7 @@ def _pipe_filter(f_cls: FilterBase, data: str | bytes, subfilter: dict[str, Any]
         shell = True
 
     try:
-        return subprocess.run(  # type: ignore[no-any-return]  # noqa: S603 Check for untrusted input
+        return subprocess.run(  # noqa: S603 Check for untrusted input
             command,
             input=data,
             capture_output=True,
@@ -1726,7 +1716,7 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
             self.raise_import_error('pytesseract', self.__kind__, pytesseract)
 
         return (
-            pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip(),
+            pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip(),  # ty:ignore[possibly-missing-attribute]
             'text/plain',
         )
 
@@ -1755,7 +1745,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
         if isinstance(jq, str):
             self.raise_import_error('jq', self.__kind__, jq)
 
-        return jq.text(subfilter['query'], jsondata), 'text/plain'
+        return jq.text(subfilter['query'], jsondata), 'text/plain'  # ty:ignore[possibly-missing-attribute]
         # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59
         # however it aborts execution(!) during testing
         # return '\n'.join(json.dumps(v, ensure_ascii=False) for v in (jq.compile(subfilter['query'], jsondata)))

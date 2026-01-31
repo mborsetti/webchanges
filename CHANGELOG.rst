@@ -48,6 +48,10 @@ Fixed
 `````
 * Regression ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
 
+Internals
+`````````
+* Code type checking is now performed using ``ty`` instead of ``mypy``.
+
 
 Version 3.32.0
 -------------------

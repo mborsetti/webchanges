@@ -74,7 +74,7 @@ if TYPE_CHECKING:
 try:
     import simplejson as jsonlib
 except ImportError:  # pragma: no cover
-    import json as jsonlib  # type: ignore[no-redef]
+    import json as jsonlib
 
 try:
     import httpx
@@ -83,7 +83,7 @@ except ImportError:  # pragma: no cover
     httpx = None  # type: ignore[assignment]
     try:
         import requests
-        from requests import Response  # type: ignore[assignment]
+        from requests import Response
     except ImportError as e:  # pragma: no cover
         raise RuntimeError(
             f"A Python HTTP client package (either 'httpx' or 'requests' is required to run {__project_name__}; "
@@ -96,14 +96,14 @@ if httpx is not None:
         h2 = None  # type: ignore[assignment]
 
 try:
-    import aioxmpp
+    import aioxmpp  # ty:ignore[unresolved-import]
 except ImportError as e:  # pragma: no cover
     aioxmpp = str(e)
 
 try:
     import chump
 except ImportError as e:  # pragma: no cover
-    chump = str(e)
+    chump = str(e)  # ty:ignore[invalid-assignment]
 
 try:
     import keyring
@@ -113,13 +113,13 @@ except ImportError as e:  # pragma: no cover
 try:
     import matrix_client.api
 except ImportError as e:  # pragma: no cover
-    matrix_client = str(e)
+    matrix_client = str(e)  # ty:ignore[invalid-assignment]
 
 if sys.platform == 'win32':
     try:
         from colorama import AnsiToWin32
     except ImportError as e:  # pragma: no cover
-        AnsiToWin32 = str(e)
+        AnsiToWin32 = str(e)  # ty:ignore[invalid-assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +161,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         if httpx:
             self.post_client = httpx.Client(http2=h2 is not None, follow_redirects=True).post
         else:
-            self.post_client = requests.post  # type: ignore[assignment]
+            self.post_client = requests.post
 
     def convert(self, othercls: type[ReporterBase]) -> ReporterBase:
         """Convert self to a different ReporterBase class (object typecasting).
@@ -170,11 +170,9 @@ class ReporterBase(metaclass=TrackSubClasses):
         :returns: The typecasted object.
         """
         if hasattr(othercls, '__kind__'):
-            config: _ConfigReportersList = self.report.config['report'][
-                othercls.__kind__  # type: ignore[literal-required]
-            ]
+            config: _ConfigReportersList = self.report.config['report'][othercls.__kind__]
         else:
-            config = {}  # type: ignore[assignment]
+            config = {}
 
         return othercls(self.report, config, self.job_states, self.duration, self.jobs_files, self.differ_defaults)
 
@@ -182,12 +180,12 @@ class ReporterBase(metaclass=TrackSubClasses):
     def get_base_config(cls, report: Report) -> dict[str, Any]:
         """Gets the configuration of the base of the report (e.g. for stdout, it will be text)"""
         report_class: ReporterBase = cls.mro()[-3]  # type: ignore[assignment]
-        base_config: dict[str, Any] = report.config['report'][report_class.__kind__]  # type: ignore[literal-required]
+        base_config: dict[str, Any] = report.config['report'][report_class.__kind__]
         return base_config
 
     def subject_with_args(self, filtered_job_states: list[JobState], subject: str = '') -> str:
         if not subject:
-            subject = self.config.get('subject', '')  # type: ignore[assignment]
+            subject = self.config.get('subject', '')
         subject_args = {
             'count': len(filtered_job_states),
             'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
@@ -232,12 +230,12 @@ class ReporterBase(metaclass=TrackSubClasses):
            testing)
         """
         subclass = cls.__subclasses__[name]
-        cfg = report.config['report'][name]  # type: ignore[literal-required]
+        cfg = report.config['report'][name]
         differ_config = report.config['differ_defaults']
 
         if cfg.get('enabled', False) or not check_enabled:
             logger.info(f'Submitting with {name} ({subclass})')
-            base_config = subclass.get_base_config(report)  # type: ignore[attr-defined]
+            base_config = subclass.get_base_config(report)
             if base_config.get('separate', False):
                 for job_state in job_states:
                     subclass(report, cfg, [job_state], duration, jobs_files, differ_config=differ_config).submit()
@@ -267,11 +265,11 @@ class ReporterBase(metaclass=TrackSubClasses):
 
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
-            cfg: _ConfigReportersList = report.config['report'].get(name, {})  # type: ignore[assignment]
+            cfg: _ConfigReportersList = report.config['report'].get(name, {})
             if cfg.get('enabled', False):
                 any_enabled = True
                 logger.info(f'Submitting with {name} ({subclass})')
-                base_config = subclass.get_base_config(report)  # type: ignore[attr-defined]
+                base_config = subclass.get_base_config(report)
                 if base_config.get('separate', False):
                     for job_state in job_states:
                         subclass(report, cfg, [job_state], duration, jobs_files, differ_config=differ_config).submit()
@@ -1017,10 +1015,10 @@ class WebServiceReporter(TextReporter):
 
     MAX_LENGTH = 1024
 
-    def web_service_get(self) -> str:
+    def web_service_get(self) -> str | 'chump.User':
         raise NotImplementedError
 
-    def web_service_submit(self, service: str, title: str, body: str) -> None:
+    def web_service_submit(self, service: str | 'chump.User', title: str, body: str) -> None:
         raise NotImplementedError
 
     def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
@@ -1057,7 +1055,7 @@ class PushoverReport(WebServiceReporter):
         app = chump.Application(self.config['app'])
         return app.get_user(self.config['user'])
 
-    def web_service_submit(self, service: 'chump.User', title: str, body: str) -> None:
+    def web_service_submit(self, service: 'chump.User', title: str, body: str) -> None:  # ty:ignore[invalid-method-override]
         sound = self.config['sound']
         # If device is the empty string or not specified at all, use None to send to all devices
         # (see https://github.com/thp/urlwatch/issues/372)
@@ -1070,7 +1068,7 @@ class PushoverReport(WebServiceReporter):
             'emergency': chump.EMERGENCY,
         }.get(self.config['priority'], chump.NORMAL)
         msg = service.create_message(
-            title=title, message=body, html=True, sound=sound, device=device, priority=priority
+            message=body, html=True, title=title, device=device, priority=priority, sound=sound
         )
         msg.send()
 
@@ -1089,7 +1087,7 @@ class PushbulletReport(WebServiceReporter):
         try:
             from pushbullet import Pushbullet
         except ImportError as e:  # pragma: no cover
-            Pushbullet = str(e)  # noqa: N806 variable should be lowercase
+            Pushbullet = str(e)  # noqa: N806 variable should be lowercase  # ty:ignore[invalid-assignment]
 
         if isinstance(Pushbullet, str):
             self.raise_import_error('pushbullet', self.__kind__, Pushbullet)
@@ -1606,14 +1604,14 @@ class XMPP:
         else:
             raise ValueError(f'No password available for {self.sender}')
 
-        jid = aioxmpp.JID.fromstr(self.sender)
-        client = aioxmpp.PresenceManagedClient(jid, aioxmpp.make_security_layer(password))
-        recipient_jid = aioxmpp.JID.fromstr(self.recipient)
+        jid = aioxmpp.JID.fromstr(self.sender)  # ty:ignore[possibly-missing-attribute]
+        client = aioxmpp.PresenceManagedClient(jid, aioxmpp.make_security_layer(password))  # ty:ignore[possibly-missing-attribute]
+        recipient_jid = aioxmpp.JID.fromstr(self.recipient)  # ty:ignore[possibly-missing-attribute]
 
         async with client.connected() as stream:
-            msg = aioxmpp.Message(
+            msg = aioxmpp.Message(  # ty:ignore[possibly-missing-attribute]
                 to=recipient_jid,
-                type_=aioxmpp.MessageType.CHAT,
+                type_=aioxmpp.MessageType.CHAT,  # ty:ignore[possibly-missing-attribute]
             )
             msg.body[None] = chunk
 
@@ -1912,8 +1910,8 @@ class BetweenLinesFilter(FilterBase):
 
     __default_subfilter__ = 'indent'
 
-    @staticmethod
     def filter(
+        self,
         data: str | bytes,
         mime_type: str,
         subfilter: dict[str, Any],

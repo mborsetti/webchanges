@@ -41,7 +41,7 @@ if httpx is not None:
 try:
     from packaging.version import parse as parse_version
 except ImportError:  # pragma: no cover
-    from webchanges._vendored.packaging_version import parse as parse_version  # type: ignore[assignment]
+    from webchanges._vendored.packaging_version import parse as parse_version
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
 
     # __subclasses__ gets redefined from default "Callable[[_TT], list[_TT]]
-    __subclasses__: dict[str, TrackSubClasses]  # type: ignore[assignment]
+    __subclasses__: dict[str, TrackSubClasses]
     __anonymous_subclasses__: list[TrackSubClasses]
     __required__: tuple[str, ...] = ()
     __optional__: tuple[str, ...] = ()
@@ -347,7 +347,7 @@ def get_new_version_number(timeout: float | None = None) -> str | bool:
 
     if r.is_success:
         latest_release: str = r.json()['info']['version']
-        if parse_version(latest_release) > parse_version(__version__):
+        if parse_version(latest_release) > parse_version(__version__):  # ty:ignore[unsupported-operator]
             return latest_release
     else:
         logger.info(f'HTTP error when querying PyPi for latest release: {r}')

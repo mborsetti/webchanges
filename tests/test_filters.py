@@ -49,7 +49,7 @@ TESTDATA = [
 ]
 
 
-@pytest.mark.parametrize(('in_spec', 'out_spec'), TESTDATA, ids=(str(d[0]) for d in TESTDATA))  # type: ignore[misc]
+@pytest.mark.parametrize(('in_spec', 'out_spec'), TESTDATA, ids=(str(d[0]) for d in TESTDATA))
 def test_normalize_filter_list(
     in_spec: str | list[str | dict[str, Any]],
     out_spec: list[tuple[str, dict[str, Any]]],
@@ -68,13 +68,13 @@ class FakeJob(JobBase):
         return ''
 
 
-@pytest.mark.parametrize(('test_name', 'test_data'), FILTER_TESTS, ids=(d[0] for d in FILTER_TESTS))  # type: ignore[misc]
+@pytest.mark.parametrize(('test_name', 'test_data'), FILTER_TESTS, ids=(d[0] for d in FILTER_TESTS))
 def test_filters(test_name: str, test_data: dict[str, str]) -> None:
     """Runs the tests defined in data/filters_testdata.yaml."""
     filter_spec = test_data['filter']
     data = test_data['data']
     expected_result = test_data['expected_result']
-    filter_result = ''
+    filter_result = ()
 
     result = data
     for filter_kind, subfilter in FilterBase.normalize_filter_list(filter_spec):
@@ -89,6 +89,7 @@ def test_filters(test_name: str, test_data: dict[str, str]) -> None:
 
     logger.debug(f'Expected result:\n{expected_result}')
     logger.debug(f'Actual result:\n{filter_result}')
+    assert len(filter_result)
     assert filter_result[0] == expected_result
 
 
@@ -197,7 +198,7 @@ def test_filter_requires_bytes() -> None:
 def test_deprecated_filters() -> None:
     def _warning_message(warning: Warning | str) -> str:
         if isinstance(warning, Warning):
-            return warning.args[0]  # type: ignore[no-any-return]
+            return warning.args[0]
         return warning
 
     filtercls = FilterBase.__subclasses__.get('html2text')
@@ -252,7 +253,7 @@ def test_deprecated_filters() -> None:
 
 def test_filter_exceptions() -> None:
     filtercls = FilterBase.__subclasses__.get('html2text')
-    e: pytest.ExceptionInfo  # mypy
+    e: pytest.ExceptionInfo
     with pytest.raises(NotImplementedError) as e:
         # noinspection PyTypeChecker
         filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 'lynx'})  # type: ignore[misc]
@@ -402,7 +403,7 @@ def test_filter_exceptions() -> None:
 
 def test_html2text_roundtrip() -> None:
     html = '1 | <a href="https://www.example.com">1</a><br><strong>2 |<a href="https://www.example.com">2</a></strong>'
-    data, _ = Html2TextFilter(job_state).filter(html, 'text/plain', {})  # type: ignore[arg-type]
+    data, _ = Html2TextFilter(job_state).filter(html, 'text/plain', {})
     html2_lines = [
         mark_to_html(line).replace('style="font-family:inherit" rel="noopener" target="_blank" ', '')
         for line in str(data).splitlines()

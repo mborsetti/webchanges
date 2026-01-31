@@ -476,10 +476,8 @@ def main() -> None:  # pragma: no cover
     config_storage.load()
 
     # Setup database API
-    database_engine = (
-        command_config.database_engine or config_storage.config.get('database', {}).get('engine') or 'sqlite3'
-    )  # "or 'sqlite3'" is not needed except for a mypy bug; same for the "or 4" below
-    max_snapshots = command_config.max_snapshots or config_storage.config.get('database', {}).get('max_snapshots') or 4
+    database_engine = command_config.database_engine or config_storage.config.get('database', {}).get('engine')
+    max_snapshots = command_config.max_snapshots or config_storage.config.get('database', {}).get('max_snapshots')
     if database_engine == 'sqlite3':
         ssdb_storage: SsdbStorage = SsdbSQLite3Storage(command_config.ssdb_file, max_snapshots)  # storage.py
     elif any(str(command_config.ssdb_file).startswith(prefix) for prefix in ('redis://', 'rediss://')):

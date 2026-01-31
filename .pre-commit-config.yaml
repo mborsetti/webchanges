@@ -158,13 +158,13 @@ repos:
       #   require_serial: true
       #   types: [python]
       #   args: [--fail-on-change]
-      - id: mypy  # https://github.com/python/mypy
-        name: check Python static typing (mypy)
-        entry: dmypy
+      - id: ty 
+        name: check Python static typing (ty)
+        entry: ty
+        args: ['check']
         language: python
-        args: ['run', '--timeout', '1800', '.', '--', '--config-file', 'pyproject.toml', '--cache-fine-grained']
         pass_filenames: false
-        additional_dependencies: [mypy]
+        additional_dependencies: [ty]
       - id: cli-help
         name: update cli_help.txt (used in documentation build)
         entry: webchanges

@@ -29,7 +29,7 @@ from webchanges.jobs import JobBase
 # try:
 #     import simplejson as jsonlib
 # except ImportError:
-#     import json as jsonlib  # type: ignore[no-redef]
+#     import json as jsonlib
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -73,7 +73,7 @@ def parse_rst(text: str) -> docutils.nodes.document:
         'warning_stream': None,  # Suppress warnings from being printed to stderr
     }
 
-    return docutils.core.publish_doctree(  # type: ignore[no-any-return]
+    return docutils.core.publish_doctree(
         source=text,
         parser=docutils.parsers.rst.Parser(),
         settings_overrides=settings_overrides,
@@ -122,14 +122,14 @@ def load_filter_doc_jobs() -> list[JobBase]:
 
 def load_filter_testdata() -> dict[str, dict[str, str]]:
     yaml_data = data_path.joinpath('docs_filters_testdata.yaml').read_text()
-    return yaml.safe_load(yaml_data)  # type: ignore[no-any-return]
+    return yaml.safe_load(yaml_data)
 
 
 FILTER_DOC_JOBS = load_filter_doc_jobs()
 testdata = load_filter_testdata()
 
 
-@pytest.mark.parametrize('job', FILTER_DOC_JOBS, ids=(v.url for v in FILTER_DOC_JOBS))  # type: ignore[misc]
+@pytest.mark.parametrize('job', FILTER_DOC_JOBS, ids=(v.url for v in FILTER_DOC_JOBS))
 def test_jobs(job: JobBase) -> None:
     """Test the yaml code in docs/filters.rst against the source and expected results contained
     in tests/data/docs_filters_testdata.yaml using 'url' as the key.

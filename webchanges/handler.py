@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ContextManager, Iterator, Literal, NamedTuple, TypedDict
+from typing import TYPE_CHECKING, Any, ContextManager, Iterator, Literal, NamedTuple, Self, TypedDict
 from zoneinfo import ZoneInfo
 
 from webchanges.differs import DifferBase, ReportKind
@@ -106,7 +106,7 @@ class JobState(ContextManager):
         self.unfiltered_diff = {}
         self.history_dic_snapshots = {}
 
-    def __enter__(self) -> 'JobState':
+    def __enter__(self) -> Self:
         """Context manager invoked on entry to the body of a with statement to make it possible to factor out standard
         uses of try/finally statements. Calls the main_thread_enter method of the Job.
 
@@ -310,7 +310,7 @@ class JobState(ContextManager):
             for filter_kind, subfilter in FilterBase.normalize_filter_list(
                 self.job.diff_filters, self.job.index_number
             ):
-                _generated_diff, _mime_type = FilterBase.process(  # type: ignore[assignment]
+                _generated_diff, _mime_type = FilterBase.process(
                     filter_kind, subfilter, self, _generated_diff, _mime_type
                 )
         self.generated_diff[report_kind] = str(_generated_diff)
@@ -439,10 +439,7 @@ class Report:
             """Identify jobs to be skipped."""
             # Skip states that are hidden by display config
             config_verbs: set[Verb] = {'new', 'unchanged', 'error'}
-            if any(
-                job_state.verb == verb and not self.config['display'][verb]  # type: ignore[typeddict-item]
-                for verb in config_verbs
-            ):
+            if any(job_state.verb == verb and not self.config['display'][verb] for verb in config_verbs):
                 return True
             # Skip compound states
             if job_state.verb == 'changed,no_report':

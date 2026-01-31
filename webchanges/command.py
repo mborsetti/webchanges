@@ -305,7 +305,7 @@ class UrlwatchCommand:
 
         if os.name == 'posix':
             try:
-                import apt
+                import apt  # ty:ignore[unresolved-import]
 
                 apt_cache = apt.Cache()
 
@@ -562,9 +562,9 @@ class UrlwatchCommand:
                     history_dic_snapshots = {s.data: s for s in history_data[i + 1 : i + 1 + job.compared_versions]}
                     close_matches: list[str] = difflib.get_close_matches(
                         str(job_state.new_data),
-                        history_dic_snapshots.keys(),  # type: ignore[arg-type]
+                        history_dic_snapshots.keys(),
                         n=1,
-                    )
+                    )  # ty:ignore[no-matching-overload]
                     if close_matches:
                         job_state.old_data = close_matches[0]
                         job_state.old_timestamp = history_dic_snapshots[close_matches[0]].timestamp
@@ -833,7 +833,7 @@ class UrlwatchCommand:
                 try:
                     # Set a default datetime to provide context and timezone for ambiguous strings like "Sunday at 4pm".
                     default_dt_with_tz = datetime.now(tz_info).replace(second=0, microsecond=0)
-                    return dateutil_parser.parse(timespec, default=default_dt_with_tz)  # type: ignore[no-any-return]  # bug
+                    return dateutil_parser.parse(timespec, default=default_dt_with_tz)  # bug
                 except (ValueError, OverflowError):
                     # Pass to the next method if datetutil cannot parse.
                     pass
@@ -1066,12 +1066,10 @@ class UrlwatchCommand:
             )
             return 1
 
-        cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][
-            reporter_name  # type: ignore[literal-required]
-        ]
+        cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]
         if job_state:  # we want a full report
             cfg['enabled'] = True
-            self.urlwatcher.config_storage.config['display'][label] = True  # type: ignore[literal-required]
+            self.urlwatcher.config_storage.config['display'][label] = True
             self.urlwatcher.config_storage.config['report']['text']['details'] = True
             self.urlwatcher.config_storage.config['report']['text']['footer'] = True
             self.urlwatcher.config_storage.config['report']['text']['minimal'] = False
