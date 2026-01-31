@@ -71,7 +71,7 @@ class FakeJob(JobBase):
 @pytest.mark.parametrize(('test_name', 'test_data'), FILTER_TESTS, ids=(d[0] for d in FILTER_TESTS))
 def test_filters(test_name: str, test_data: dict[str, str]) -> None:
     """Runs the tests defined in data/filters_testdata.yaml."""
-    filter_spec = test_data['filter']
+    filter_spec = test_data['filters']
     data = test_data['data']
     expected_result = test_data['expected_result']
     filter_result = ()
