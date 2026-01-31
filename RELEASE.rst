@@ -30,3 +30,4 @@ Internals
 `````````
 * Code type checking is now performed using ``ty`` instead of ``mypy``.
 * Improved logging and the saving of snapshots when a browsing error is encountered for URL jobs with ``browser: true``.
+* Use ``uv`` to build PyPi distributable.
