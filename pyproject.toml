@@ -187,7 +187,7 @@ report_level = 'WARNING'
 # Testing framework
 # Config file documentation at https://docs.pytest.org/en/stable/reference/reference.html#ini-options-ref
 
-# log_auto_indent = true
+# log_auto_indent = 2
 # Enable log display during test run (aka "live logging" https://docs.pytest.org/en/stable/logging.html#live-logs)
 # log_cli = true
 minversion = '8.4.2'

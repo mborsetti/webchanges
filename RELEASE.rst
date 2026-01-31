@@ -1,36 +1,32 @@
-⚠ Breaking Changes
-```````````````````
-* Removed support for Python 3.10. As a reminder, older Python versions are supported for 3 years after being obsoleted
-  by a new major release.
-
 Added
 `````
-* Support for Python 3.14t (free-threaded, GIL-free). Please note that while **webchanges** now supports free-threaded 
-  Python, certain optional dependencies do not (currently, these are ``playwright`` and ``jq``).
+* ``ai_google`` differ has new ``thinking_level`` and ``media_resolution`` sub-directives.
+* ``command`` differ has a new ``context_lines`` sub-directive for commands starting with wdiff for backwards 
+  compatibility (but use the built-in ``wdiff`` differ instead).
+
+Changed
+```````
+* ``ai_google`` differ is no longer considered BETA.
+* Improved logging for the ``evaluate`` directive in URL Jobs with ``browser: true``.
+* ``--dump-history JOB`` command line argument will now match any job, even one that is not in the ``--jobs`` file.
 
 Fixed
 `````
-* Fixed regression in error handling leading to interpreting errors as empty responses causing diffs to be be sent out.
-  Reported in #`104 <https://github.com/mborsetti/webchanges/issues/104>`__.
+* Regression: ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many
+  Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
+* ``http_credentials`` directive not being applied to URL jobs with ``browser: true`` and ``user_data_dir``.
+* When running with command line argument ``-vv``, browser pages will open with DevTools open.
+* Problem parsing Playwright exceptions in BrowserJob class retrieve method  (issue #`141 
+  <https://github.com/mborsetti/webchanges/issues/141>`__)..
+
+Internals for ``hooks.py``
+``````````````````````````
+* The BrowserJob class' ``retrieve`` method has been modularized, and exposes ``response_handler`` (a callable which 
+  replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content 
+  extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after 
+  the browser is launched).`
 
 Internals
 `````````
-* Implemented testing for Windows (in addition to Linux and macOS).
-* Implemented testing for Python 3.14t (free threading / GIL-free).
-* Additional code security improvements.
-* Removed Gemini Github Actions workflows (beta trial).
-* In URL jobs, the ``TransientHTTPError`` Exception will be raised when a transient HTTP error is detected, paving the
-  way for a new ``ignore_transient_error`` directive (not yet implemented) requested in #`119
-  <https://github.com/mborsetti/webchanges/issues/119>`__.
-
-  The following HTTP response codes are considered to be transient errors:
-
-    - 429 Too Many Requests
-    - 500 Internal Server Error
-    - 502 Bad Gateway
-    - 503 Service Unavailable
-    - 504 Gateway Timeout
-
-  For jobs with ``browser: true``, browser errors starting with ``net::`` and corresponding to the range 100-199
-  (Connection related errors) are also considered to be transient (full list at
-  https://source.chromium.org/chromium/chromium/src/+/main:net/base/net_error_list.h).
+* Code type checking is now performed using ``ty`` instead of ``mypy``.
+* Improved logging and the saving of snapshots when a browsing error is encountered for URL jobs with ``browser: true``.
