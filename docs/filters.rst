@@ -795,6 +795,8 @@ The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/j
 processor. It is currently available only for Linux (most flavors) and macOS (no Windows) and does not handle Unicode;
 see :ref:`below <filtering_json>` for a cross-platform and Unicode-friendly way of selecting JSON.
 
+Please also note that command line arguments of the standalone ``jq`` program are NOT supported by this library.
+
 .. code-block:: yaml
 
    url: https://example.net/jq-ascii.json
