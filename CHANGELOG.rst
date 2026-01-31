@@ -53,12 +53,22 @@ Changed
 
 Fixed
 `````
-* Regression ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many
+* Regression: ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many
   Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
+* ``http_credentials`` directive not being applied to URL jobs with ``browser: true`` and ``user_data_dir``.
+* When running with command line argument ``-vv``, browser pages will open with DevTools open.
+
+Internals for ``hooks.py``
+``````````````````````````
+* The BrowserJob class' ``retrieve`` method has been modularized, and exposes ``response_handler`` (a callable which 
+  replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content 
+  extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after 
+  the browser is launched).`
 
 Internals
 `````````
 * Code type checking is now performed using ``ty`` instead of ``mypy``.
+* Improved logging and the saving of snapshots when a browsing error is encountered for URL jobs with ``browser: true``.
 
 
 Version 3.32.0

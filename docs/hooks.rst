@@ -292,6 +292,96 @@ Example ``hooks.py`` file:
            Path(self.config['filename']).write_text('\n'.join(super().submit()))
 
 
+    class CustomBrowserJob(BroweserJob):
+       """Custom job that uses the browser to login and then intercepts the response from an API.""""
+
+        __kind__ = 'hooks_custom_browser_job'
+
+        def retrieve(
+            self,
+            job_state: JobState,
+            headless: bool = True,
+            response_handler: Callable[
+                [Page, str, Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None, str | None], Response
+            ]
+            | None = None,
+            content_handler: Callable[[Page], tuple[str | bytes, str, str]] | None = None,
+            return_data: Callable[
+                [Page, str, Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None, str | None],
+                tuple[str | bytes, str, str],
+            ]
+            | None = None,
+        ) -> tuple[str | bytes, str, str]:
+
+            def login_fn(page: Page) -> None:
+                """Helper function to log into the website"""
+                logger.info(f'Job {self.index_number}: Logging into website at {page.url}')
+                page.locator('//input[@name="username"]').click()
+                page.wait_for_timeout(20)
+                page.locator(f'//input[@name="username"]').press_sequentially('username', delay=10)
+                page.wait_for_timeout(20)
+                page.locator(f'//input[@name="password"]').press_sequentially('password', delay=10)
+                page.wait_for_timeout(20)
+                page.keyboard.press('Enter')
+                logger.info('Job {self.index_number}: Entered credentials; waiting for API response')
+
+            logger.info(f'Job {self.index_number}: Using the {self.__kind__} job class from hooks.py')
+            api_url = 'https://www.united.com/api/myTrips/lookup'
+
+            def extract_api_browser(
+                self: BrowserJob,
+                page: Page,
+                url: str,
+                wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None,
+                referer: str | None = None,
+                api_url: str = '',
+                login_fn: Callable[[Page], None] | None = None,
+            ) -> tuple[str | bytes, str, str]:
+                """Generic helper function to extract API response from browser."""
+                from playwright.sync_api import Error as PlaywrightError
+
+                logger.info(f"Job {self.index_number}: Using 'extract_api_browser' from {self.__kind__}")
+
+                try:
+                    with page.expect_response(
+                        lambda response: response.url.startswith(api_url) and response.request.method in ('GET', 'POST')
+                    ) as response_info:
+                        page.goto(url, wait_until=wait_until, referer=referer)
+                        if login_fn:
+                            logger.info(
+                                f"Job {self.index_number}: 'extract_api_browser' using the 'login_fn' Callable from {self.__kind__}"
+                            )
+                            login_fn(page)
+                    response = response_info.value  # waits until it's captured
+                    data = (
+                        response.text(),
+                        response.headers.get('etag', ''),
+                        response.headers['content-type'],
+                    )
+                except PlaywrightError as e:
+                    logger.error(f'Job {self.index_number}: No API response intercepted from {url} ({e.args[0]}')
+                    self._save_error_files(page)
+                    raise
+
+                if data[0].startswith('<!doctype html>\n<html><body><h1>Access Denied'):
+                    logger.error('API returned Access Denied')
+                    page.wait_for_timeout(100000)
+                    raise TransientBrowserError('API returned Access Denied')
+
+                logger.info(f'Job {self.index_number}: {self.__kind__} finished running.')
+                logger.info(f"Job {self.index_number}: f'extract_api_browser' from {self.__kind__} done processing")
+                return data
+
+
+            return super().retrieve(
+                job_state,
+                headless,
+                return_data=lambda page, url, wait_until, referer: extract_api_browser(
+                    self, page, url, wait_until, referer, watch_url, login_fn
+                ),
+            )
+
+
 .. versionchanged:: 3.22
    The definitions of the filter method (of FilterBase and its subclasses) and of the retrieve method (of JobBase and
    its subclasses) have been updated to accommodate the capturing and processing of ``mime_type``:
@@ -307,3 +397,9 @@ Example ``hooks.py`` file:
       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
       """:returns: The data retrieved, the ETag, and the data's media type (fka MIME type) (e.g. HTTP Content-Type)."""
       ...
+
+.. versionchanged:: 3.33
+    The BrowserJob class' ``retrieve`` method has been modularized, and exposes ``response_handler`` (a callable which 
+    replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content 
+    extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after 
+    the browser is launched).
