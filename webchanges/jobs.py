@@ -2032,7 +2032,7 @@ class BrowserJob(UrlJobBase):
                 if isinstance(e, PlaywrightTimeoutError):
                     logger.debug(f'Job {self.index_number}: PlaywrightTimeoutError is transient')
                     raise TransientBrowserError('PlaywrightTimeoutError') from e
-                chromium_error = str(e.args[0]).split()[0]
+                chromium_error = str(e.args[0]).split()[-1]  # error format is 'Page.goto: net:: ...'
                 if chromium_error in self.chromium_connection_errors:
                     logger.debug(f'Job {self.index_number}: Browser error {chromium_error} is transient')
                     raise TransientBrowserError(chromium_error) from e

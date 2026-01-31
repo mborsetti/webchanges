@@ -57,6 +57,8 @@ Fixed
   Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
 * ``http_credentials`` directive not being applied to URL jobs with ``browser: true`` and ``user_data_dir``.
 * When running with command line argument ``-vv``, browser pages will open with DevTools open.
+* Problem parsing Playwright exceptions in BrowserJob class retrieve method  (issue #`141 
+  <https://github.com/mborsetti/webchanges/issues/141>`__)..
 
 Internals for ``hooks.py``
 ``````````````````````````
