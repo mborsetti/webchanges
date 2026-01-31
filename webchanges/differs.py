@@ -95,6 +95,10 @@ AiGoogleDirectives = TypedDict(
         'prompt_ud_context_lines': int,
         'timeout': int,
         'max_output_tokens': int | None,
+        'media_resolution': Literal[
+            'media_resolution_low', 'media_resolution_medium', 'media_resolution_high', 'media_resolution_ultra_high'
+        ],
+        'thinking_level': Literal['low', 'medium', 'high'],
         'temperature': float | None,
         'top_p': float | None,
         'top_k': float | None,
@@ -588,6 +592,7 @@ class CommandDiffer(DifferBase):
     __kind__ = 'command'
 
     __supported_directives__: dict[str, str] = {
+        'context_lines': 'the number of context lines if command starts with wdiff (default: 3)',
         'command': 'The command to execute',
         'is_html': 'Whether the output of the command is HTML',
     }
@@ -679,12 +684,20 @@ class CommandDiffer(DifferBase):
             if self.state.is_markdown():
                 # undo the protection of the link anchor from being split
                 diff = markdown_links_re.sub(lambda x: f'[{urllib.parse.unquote(x.group(1))}]({x.group(2)})', diff)
-            if command.startswith('wdiff') and self.job.contextlines == 0:
-                # remove lines that don't have any changes
-                keeplines = [
-                    line for line in diff.splitlines(keepends=True) if any(x in line for x in ('{+', '+}', '[-', '-]'))
-                ]
-                diff = ''.join(keeplines)
+            if command.startswith('wdiff'):
+                logger.warning(
+                    "Job {self.job.index_number}: Using external wdiff; note that a 'wdiff' differ is now available "
+                    'within webchanges'
+                )
+                if self.job.contextlines == 0:
+                    # remove lines that don't have any changes
+                    keeplines = [
+                        line
+                        for line in diff.splitlines(keepends=True)
+                        if any(x in line for x in ('{+', '+}', '[-', '-]'))
+                    ]
+                    diff = ''.join(keeplines)
+
             if directives.get('is_html'):
                 diff_text = self.html2text(diff)
                 out_diff.update(
@@ -923,7 +936,7 @@ class DeepdiffDiffer(DifferBase):
                             )
                             value_list = value_string.splitlines(keepends=True)
                             if len(value_list) < 2:
-                                return value_string  # bug!
+                                return value_string
                             value_string = '\n    ' + '    '.join(value_list)
                             return value_string.rstrip()
                         return jsonlib.dumps(value, ensure_ascii=False, indent=2)
@@ -965,7 +978,7 @@ class DeepdiffDiffer(DifferBase):
                             )
                             value_list = value_string.splitlines(keepends=True)
                             if len(value_list) < 2:
-                                return value_string  # bug!
+                                return value_string
                             value_string = mark_to_html('\n    ' + '    '.join(value_list))
                             return value_string.rstrip()
                         return mark_to_html(jsonlib.dumps(value, ensure_ascii=False, indent=2))
@@ -1146,14 +1159,14 @@ class DeepdiffDiffer(DifferBase):
         ddiff = DeepDiff(
             old_data,
             new_data,
-            cache_size=500,
             cache_purge_level=0,
+            cache_size=500,
             cache_tuning_sample_size=500,
             default_timezone=tz,  # ty:ignore[invalid-argument-type]
-            ignore_order=ignore_order,
-            ignore_string_type_changes=True,
             ignore_numeric_type_changes=True,
+            ignore_order=ignore_order,
             ignore_string_case=ignore_string_case,
+            ignore_string_type_changes=True,
             significant_digits=significant_digits,
             verbose_level=min(2, max(0, math.ceil(3 - logger.getEffectiveLevel() / 10))),
         )
@@ -1196,7 +1209,7 @@ class ImageDiffer(DifferBase):
             'the minimum mean squared error (MSE) between two images to consider them changed, if numpy in installed '
             '(default: 2.5)'
         ),
-        'ai_google': 'Generative AI summary of changes (BETA)',
+        'ai_google': 'Generative AI summary of changes',
     }
 
     def differ(  # noqa: C901 mccabe complexity too high
@@ -1468,7 +1481,6 @@ class ImageDiffer(DifferBase):
                 '5.  **Grounding:** Your entire analysis must be based solely on the visual information present in '
                 'the two images. Do not make assumptions or introduce any external information.'
             )
-            directives['thinking_budget'] = directives.get('thinking_budget', 24576)
             summary, model_version = AIGoogleDiffer._send_to_model(
                 self.job,
                 system_instructions,
@@ -1656,7 +1668,12 @@ class AIGoogleDiffer(DifferBase):
         'prompt_ud_context_lines': 'the number of context lines for {unified_diff} (default: 9999)',
         'timeout': 'the number of seconds before timing out the API call (default: 300)',
         'max_output_tokens': "the maximum number of tokens returned by the model (default: None, i.e. model's default)",
+        'media_resolution': 'a control of the maximum number of tokens allocated per input image or video frame',
         'temperature': "the model's Temperature parameter (default: 0.0)",
+        'thinking_budget': "only for Gemini 2.5: The model's thinking budget",
+        'thinking_level': (
+            "For Gemini 3, the maximum depth of the model's internal reasoning process before it produces a response"
+        ),
         'top_p': "the model's TopP parameter (default: None, i.e. model's default",
         'top_k': "the model's TopK parameter (default: None, i.e. model's default",
         'tools': "data passed on to the API's 'tools' field (default: None)",
@@ -1716,9 +1733,13 @@ class AIGoogleDiffer(DifferBase):
         }
         if additional_parts:
             data['contents'][0]['parts'].extend(additional_parts)
+        if directives.get('media_resolution'):
+            data['contents'][0]['parts'][0]['mediaResolution'] = {'level': directives['media_resolution']}
         if directives.get('tools'):
             data['tools'] = directives['tools']
-        if directives.get('thinking_budget'):
+        if directives.get('thinking_level'):
+            data['generationConfig'].update({'thinkingConfig': {'thinkingLevel': directives['thinking_level']}})
+        elif directives.get('thinking_budget'):
             data['generationConfig'].update({'thinkingConfig': {'thinkingBudget': directives['thinking_budget']}})
         logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
         model_version = model  # default
@@ -1789,13 +1810,13 @@ class AIGoogleDiffer(DifferBase):
         tz: ZoneInfo | None = None,
     ) -> dict[ReportKind, str]:
         logger.info(f'Job {self.job.index_number}: Running the {self.__kind__} differ from hooks.py')
-        warnings.warn(
-            f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
-            f'change in the future. Please report any problems or suggestions at '
-            f'https://github.com/mborsetti/webchanges/discussions.',
-            RuntimeWarning,
-            stacklevel=1,
-        )
+        # warnings.warn(
+        #     f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
+        #     f'change in the future. Please report any problems or suggestions at '
+        #     f'https://github.com/mborsetti/webchanges/discussions.',
+        #     RuntimeWarning,
+        #     stacklevel=1,
+        # )
 
         def get_ai_summary(prompt: str, system_instructions: str) -> tuple[str, str]:
             """Generate AI summary from unified diff, or an error message, plus the model version."""

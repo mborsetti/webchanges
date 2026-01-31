@@ -35,18 +35,26 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.32.1
+Version 3.33.0
 -------------------
 Unreleased
 
-Changes
+Added
+`````
+* ``ai_google`` differ has new ``thinking_level`` and ``media_resolution`` sub-directives.
+* ``command`` differ has a new ``context_lines`` sub-directive for commands starting with wdiff for backwards 
+  compatibility (but use the built-in ``wdiff`` differ instead).
+
+Changed
 ```````
+* ``ai_google`` differ is no longer considered BETA.
 * Improved logging for the ``evaluate`` directive in URL Jobs with ``browser: true``.
 * ``--dump-history JOB`` command line argument will now match any job, even one that is not in the ``--jobs`` file.
 
 Fixed
 `````
-* Regression ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
+* Regression ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many
+  Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
 
 Internals
 `````````
