@@ -101,7 +101,7 @@ Here is an example configuration that reports using UTC timezone on standard out
        subject: '{count} changes: {jobs}'
        to: 'User <user@example.com>'
        stdout:
-         color: true
+         color: true  # value can also be bright (same as true) or normal
          enabled: true
      markdown:
        minimal: false

@@ -696,7 +696,8 @@ Displays a :ref:`text report <text>` on stdout (the console).
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* ``color``: Uses color (green for additions, red for deletions) (true/false).
+* ``color``: Uses color (green for additions, red for deletions) (true, false, ``bright``, or ``normal``). Default is
+  true, which is equivalent to ``bright``.
 
 
 

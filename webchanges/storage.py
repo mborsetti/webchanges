@@ -86,7 +86,7 @@ _ConfigReportStdout = TypedDict(
     '_ConfigReportStdout',
     {
         'enabled': bool,
-        'color': bool,
+        'color': bool | Literal['normal', 'bright'],
     },
 )
 _ConfigReportBrowser = TypedDict(

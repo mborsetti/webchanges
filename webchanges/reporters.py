@@ -837,10 +837,11 @@ class StdoutReporter(TextReporter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._has_color = sys.stdout.isatty() and self.config['color']
+        self._color_code = '3' if self.config['color'].lower() == 'normal' else '9'
 
     def _incolor(self, color_id: int, s: str) -> str:
         if self._has_color:
-            return f'\033[9{color_id}m{s}\033[0m'
+            return f'\033[{self._color_code}{color_id}m{s}\033[0m'
         return s
 
     def _red(self, s: str) -> str:
