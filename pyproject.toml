@@ -17,7 +17,8 @@ name = 'webchanges'
 description = 'Web Changes Delivered. AI-Summarized. Totally Anonymous.'
 readme = { file = 'README.rst', content-type = 'text/x-rst' }
 requires-python = '>=3.11'
-license = { file = 'LICENSE.md' }
+license = "MIT AND BSD-3-Clause"
+license-files = ['LICENSE.md']
 authors = [{ name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com' }]
 maintainers = [
     { name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com' },
@@ -29,8 +30,6 @@ classifiers = [
     'Intended Audience :: Developers',
     'Intended Audience :: End Users/Desktop',
     'Intended Audience :: System Administrators',
-    'License :: OSI Approved :: BSD License',
-    'License :: OSI Approved :: MIT License',
     'Natural Language :: English',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
@@ -291,6 +290,9 @@ unfixable = []
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
 
+# List of allowed 'confusable' Unicode characters to ignore when enforcing RUF001, RUF002, and RUF003.
+allowed-confusables = ['–', '‘', '’']
+
 [tool.ruff.lint.flake8-annotations]
 allow-star-arg-any = true # TODO
 
@@ -345,6 +347,7 @@ docstring-code-format = true
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = 'dynamic'
+
 
 # -------------------------- ty --------------------------
 # Config file documentation at https://docs.astral.sh/ty/reference/configuration/
