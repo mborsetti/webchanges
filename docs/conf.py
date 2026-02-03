@@ -293,7 +293,7 @@ html_static_path = ['_static']
 htmlhelp_basename = 'testdoc'
 
 
-# The “title” for HTML documentation generated with Sphinx’s own templates.  # noqa: RUF003
+# The “title” for HTML documentation generated with Sphinx’s own templates.
 #
 # html_title = '<project> v<revision> documentation'  # default
 
@@ -309,7 +309,7 @@ htmlhelp_basename = 'testdoc'
 #
 # html_favicon = None  # default
 
-# A ‘Last updated on:’ timestamp is inserted at every page bottom, using the  # noqa: RUF003
+# A ‘Last updated on:’ timestamp is inserted at every page bottom, using the
 #  given strftime() format. The empty # string is equivalent to '%b %d, %Y'
 #  (or a locale-dependent equivalent).
 #

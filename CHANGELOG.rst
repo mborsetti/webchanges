@@ -35,6 +35,15 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.34.0
+-------------------
+
+Added
+``````
+* Filters ``execute`` and ``shellpipe`` now have an ```escape_characters`` sub-directive indicating whether when running
+  in Windows command caracters are escaped (e.g. ``%`` become ``%%``  and ``!`` become ``^!``).
+
+
 Version 3.33.0
 -------------------
 2026-01-31
