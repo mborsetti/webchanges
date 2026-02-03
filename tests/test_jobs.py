@@ -544,14 +544,13 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
             if isinstance(job_state.exception, (HTTPStatusError, HTTPError)):
                 assert job_state.exception.args[0].lower() == (
                     "418 client error: i'm a teapot for url: https://www.google.com/teapot\n[](https://www.google.com/)\n"
-                    '**418.** i’m a teapot.\nthe requested entity body is short and stout. '  # noqa: RUF001
+                    '**418.** i’m a teapot.\nthe requested entity body is short and stout. '
                     'tip me over and pour me out.'
                 )
             elif isinstance(job_state.exception, BrowserResponseError):
                 assert job_state.exception.status_code == 418
                 assert job_state.exception.args[0] == (
-                    '418. I’m a teapot. The requested entity body is short and stout. '  # noqa: RUF001
-                    'Tip me over and pour me out.'
+                    '418. I’m a teapot. The requested entity body is short and stout. Tip me over and pour me out.'
                 )
             elif job_state.exception:
                 pytest.fail(
