@@ -2015,7 +2015,44 @@ class WdiffDiffer(DifferBase):
     __supported_directives__: dict[str, str] = {
         'context_lines': 'the number of context lines (default: 3)',
         'range_info': 'include range information lines (default: true)',
+        'color': 'colorize text output (default: true)',
     }
+
+    @staticmethod
+    def tokenize_markdown(markdown_string: str) -> list[str]:
+        # Escape spaces inside brackets to prevent them being split
+        string = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', markdown_string)
+        # Use split with capturing group to keep the whitespace
+        tokens = re.split(r'(\s+)', string)
+        return [t.replace('\n', '<\\n>') for t in tokens if t]
+        # # Split by tags, keeping the tags in the resulting list
+        # string = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', markdown_string)
+        # string = string.replace('\n', ' <\\n> ')
+        # return string.split(' ')
+
+    @staticmethod
+    def tokenize_html(html_string: str) -> list[str]:
+        # Split by tags, keeping the tags in the resulting list
+        parts = re.split(r'(<[^>]+>)', html_string)
+
+        tokens = []
+        for part in parts:
+            if not part:
+                continue
+            if part.startswith('<') and part.endswith('>'):
+                # Keep tags as a single token
+                tokens.append(part)
+            else:
+                # Split text content by whitespace
+                tokens.extend(re.split(r'(\s+)', part))
+
+        return [t.replace('\n', '<\\n>') for t in tokens if t]
+
+    @staticmethod
+    def tokenize_plain(plain_string: str) -> list[str]:
+        # Split by tags, keeping the tags in the resulting list
+        tokens = re.split(r'(\s+)', plain_string)
+        return [t.replace('\n', '<\\n>') for t in tokens if t]
 
     def differ(
         self,
@@ -2024,38 +2061,46 @@ class WdiffDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
     ) -> dict[ReportKind, str]:
-        warnings.warn(
-            f'Job {self.job.index_number}: Differ {self.__kind__} is WORK IN PROGRESS and has KNOWN bugs which '
-            "are being worked on. DO NOT USE AS THE RESULTS WON'T BE CORRECT.",
-            RuntimeWarning,
-            stacklevel=1,
-        )
         if not isinstance(self.state.old_data, str):
-            raise ValueError
+            raise ValueError("The differ 'wdiff' accepts strings only as input")
         if not isinstance(self.state.new_data, str):
             raise ValueError
 
         # Split the texts into words tokenizing newline
-        if self.state.is_markdown():
-            # Don't split spaces in link text, tokenize space as </s>
-            old_data = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', self.state.old_data)
-            words1 = old_data.replace('\n', ' <\\n> ').split(' ')
-            new_data = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', self.state.new_data)
-            words2 = new_data.replace('\n', ' <\\n> ').split(' ')
+        if 'markdown' in self.state.old_mime_type:
+            a = self.tokenize_markdown(self.state.old_data)
+        elif 'html' in self.state.old_mime_type:
+            a = self.tokenize_html(self.state.old_data)
         else:
-            words1 = self.state.old_data.replace('\n', ' <\\n> ').split(' ')
-            words2 = self.state.new_data.replace('\n', ' <\\n> ').split(' ')
+            a = self.tokenize_plain(self.state.old_data)
+        if 'markdown' in self.state.new_mime_type:
+            b = self.tokenize_markdown(self.state.new_data)
+        elif 'html' in self.state.new_mime_type:
+            b = self.tokenize_html(self.state.new_data)
+        else:
+            b = self.tokenize_plain(self.state.new_data)
 
         # Create a Differ object
         import difflib
 
-        d = difflib.Differ()
-
         # Generate a difference list
-        diff = list(d.compare(words1, words2))
+        diff = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
 
-        add_html = '<span style="background-color:#d1ffd1;color:#082b08;">'
-        rem_html = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
+        if directives.get('color', True):
+            text_rem = '\033[91m'
+            text_rem_end = '\033[0m '
+            text_add = '\033[92m'
+            text_add_end = '\033[0m'
+        else:
+            text_rem = '[-'
+            text_rem_end = '-] '
+            text_add = '{+'
+            text_add_end = '+}'
+
+        html_rem = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
+        html_rem_end = '</span> '
+        html_add = '<span style="background-color:#d1ffd1;color:#082b08;">'
+        html_add_end = '</span>'
 
         head_text = '\n'.join(
             [
@@ -2075,79 +2120,181 @@ class WdiffDiffer(DifferBase):
                 '',
             ]
         )
-        # Process the diff output to make it more wdiff-like
+
         result_text = []
         result_html = []
-        prev_word_text = ''
-        prev_word_html = ''
-        next_text = ''
-        next_html = ''
-        add = False
-        rem = False
 
-        for word_text in [*diff, '  ']:
-            if word_text[0] == '?':  # additional context line
-                continue
-            word_html = word_text
-            pre_text = [next_text] if next_text else []
-            pre_html = [next_html] if next_html else []
-            next_text = ''
-            next_html = ''
+        def append_chunk(tokens: list[str], text_start: str, text_end: str, html_start: str, html_end: str) -> None:
+            # We use an empty string join because tokens now include their own spaces
+            segment = ''.join(tokens)
 
-            if word_text[0] == '+' and not add:  # Beginning of additions
-                if rem:
-                    prev_word_html += '</span>'
-                    rem = False
-                if word_text[2:] == '<\\n>':
-                    next_text = '\033[92m'
-                    next_html = add_html
-                else:
-                    pre_text.append('\033[92m')
-                    pre_html.append(add_html)
-                add = True
-            elif word_text[0] == '-' and not rem:  # Beginning of deletions
-                if add:
-                    prev_word_html += '</span>'
-                    add = False
-                if word_text[2:] == '<\\n>':
-                    next_text = '\033[91m'
-                    next_html = rem_html
-                else:
-                    pre_text.append('\033[91m')
-                    pre_html.append(rem_html)
-                rem = True
-            elif word_text[0] == ' ' and (add or rem):  # Unchanged word
-                if prev_word_text == '<\\n>':
-                    prev_word_text = '\033[0m<\\n>'
-                    prev_word_html = '</span><\\n>'
-                else:
-                    prev_word_text += '\033[0m'
-                    prev_word_html += '</span>'
-                add = False
-                rem = False
-            elif word_text[2:] == '<\\n>':  # New line
-                if add:
-                    word_text = '  \033[0m<\\n>'
-                    word_html = '  </span><\\n>'
-                    add = False
-                elif rem:
-                    word_text = '  \033[0m<\\n>'
-                    word_html = '  </span><\\n>'
-                    rem = False
+            # Handle the newline marker replacement without adding extra spaces
+            parts = segment.split('<\\n>')
+            for i, part in enumerate(parts):
+                if part:
+                    result_text.append(f'{text_start}{part}{text_end}')
+                    result_html.append(f'{html_start}{part}{html_end}')
 
-            result_text.append(prev_word_text)
-            result_html.append(prev_word_html)
-            pre_text.append(word_text[2:])
-            pre_html.append(word_html[2:])
-            prev_word_text = ''.join(pre_text)
-            prev_word_html = ''.join(pre_html)
-        if add or rem:
-            result_text[-1] += '\033[0m'
-            result_html[-1] += '</span>'
+                # If not the last element, it means there was a <\n>
+                if i < len(parts) - 1:
+                    result_text.append('\n')
+                    result_html.append('\n')
+
+        # def append_chunk(tokens: list[str], ansi_color: str | None, html_start: str | None) -> None:
+        #     """
+        #     Appends tokens to results. If style is provided, wraps tokens in style.
+        #     Breaks style application at newlines (<\\n>) to maintain clean output formatting.
+        #     """
+        #     current_line_tokens = []
+
+        #     def flush() -> None:
+        #         if current_line_tokens:
+        #             # Join tokens with space for this segment
+        #             segment = ' '.join(current_line_tokens)
+
+        #             if ansi_color:
+        #                 result_text.append(f'{ansi_color}{segment}{ansi_end}')
+        #                 result_html.append(f'{html_start}{segment}{html_end}')
+        #             else:
+        #                 result_text.append(segment)
+        #                 result_html.append(segment)
+        #             current_line_tokens.clear()
+
+        #     for token in tokens:
+        #         if token == '<\\n>':
+        #             flush()
+        #             # Append newline marker without styling
+        #             result_text.append('<\\n>')
+        #             result_html.append('<\\n>')
+        #         else:
+        #             current_line_tokens.append(token)
+        #     flush()
+
+        # Process the diff opcodes
+        for tag, i1, i2, j1, j2 in diff.get_opcodes():
+            """
+            The tags are strings, with these meanings:
+
+            'replace':  a[i1:i2] should be replaced by b[j1:j2]
+            'delete':   a[i1:i2] should be deleted.
+                        Note that j1==j2 in this case.
+            'insert':   b[j1:j2] should be inserted at a[i1:i1].
+                        Note that i1==i2 in this case.
+            'equal':    a[i1:i2] == b[j1:j2]
+            """
+            if tag == 'equal':
+                append_chunk(a[i1:i2], '', '', '', '')
+            elif tag == 'delete':
+                append_chunk(a[i1:i2], text_rem, text_rem_end, html_rem, html_rem_end)
+            elif tag == 'insert':
+                append_chunk(b[j1:j2], text_add, text_add_end, html_add, html_add_end)
+            elif tag == 'replace':
+                append_chunk(a[i1:i2], text_rem, text_rem_end, html_rem, html_rem_end)
+                append_chunk(b[j1:j2], text_add, text_add_end, html_add, html_add_end)
 
         # rebuild the text from words, replacing the newline token
-        diff_text = ' '.join(result_text[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
-        diff_html = ' '.join(result_html[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
+        diff_text = ''.join(result_text).rstrip(' ')
+        diff_html = ''.join(result_html).rstrip(' ')
+
+        # d = difflib.Differ()
+
+        # # Generate a difference list
+        # diff = list(d.compare(old_tokens, new_tokens))
+
+        # add_html = '<span style="background-color:#d1ffd1;color:#082b08;">'
+        # rem_html = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
+
+        # head_text = '\n'.join(
+        #     [
+        #         # f'Differ: wdiff',
+        #         f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m',
+        #         f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m',
+        #         '',
+        #     ]
+        # )
+        # head_html = '<br>\n'.join(
+        #     [
+        #         '<span style="font-family:monospace;">'
+        #         # 'Differ: wdiff',
+        #         f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
+        #         f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>'
+        #         f'</span>',
+        #         '',
+        #     ]
+        # )
+        # # Process the diff output to make it more wdiff-like
+        # result_text = []
+        # result_html = []
+        # prev_word_text = ''
+        # prev_word_html = ''
+        # next_text = ''
+        # next_html = ''
+        # add = False
+        # rem = False
+
+        # for word_text in [*diff, '  ']:
+        #     if word_text[0] == '?':  # additional context line
+        #         continue
+        #     word_html = word_text
+        #     pre_text = [next_text] if next_text else []
+        #     pre_html = [next_html] if next_html else []
+        #     next_text = ''
+        #     next_html = ''
+
+        #     if word_text[0] == '+' and not add:  # Beginning of additions
+        #         if rem:
+        #             prev_word_html += '</span>'
+        #             rem = False
+        #         if word_text[2:] == '<\\n>':
+        #             next_text = '\033[92m'
+        #             next_html = add_html
+        #         else:
+        #             pre_text.append('\033[92m')
+        #             pre_html.append(add_html)
+        #         add = True
+        #     elif word_text[0] == '-' and not rem:  # Beginning of deletions
+        #         if add:
+        #             prev_word_html += '</span>'
+        #             add = False
+        #         if word_text[2:] == '<\\n>':
+        #             next_text = '\033[91m'
+        #             next_html = rem_html
+        #         else:
+        #             pre_text.append('\033[91m')
+        #             pre_html.append(rem_html)
+        #         rem = True
+        #     elif word_text[0] == ' ' and (add or rem):  # Unchanged word
+        #         if prev_word_text == '<\\n>':
+        #             prev_word_text = '\033[0m<\\n>'
+        #             prev_word_html = '</span><\\n>'
+        #         else:
+        #             prev_word_text += '\033[0m'
+        #             prev_word_html += '</span>'
+        #         add = False
+        #         rem = False
+        #     elif word_text[2:] == '<\\n>':  # New line
+        #         if add:
+        #             word_text = '  \033[0m<\\n>'
+        #             word_html = '  </span><\\n>'
+        #             add = False
+        #         elif rem:
+        #             word_text = '  \033[0m<\\n>'
+        #             word_html = '  </span><\\n>'
+        #             rem = False
+
+        #     result_text.append(prev_word_text)
+        #     result_html.append(prev_word_html)
+        #     pre_text.append(word_text[2:])
+        #     pre_html.append(word_html[2:])
+        #     prev_word_text = ''.join(pre_text)
+        #     prev_word_html = ''.join(pre_html)
+        # if add or rem:
+        #     result_text[-1] += '\033[0m'
+        #     result_html[-1] += '</span>'
+
+        # # rebuild the text from words, replacing the newline token
+        # diff_text = ' '.join(result_text[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
+        # diff_html = ' '.join(result_html[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
 
         # build contextlines
         contextlines = directives.get('context_lines', self.job.contextlines)

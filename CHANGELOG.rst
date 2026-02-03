@@ -42,6 +42,7 @@ Added
 ``````
 * Filters ``execute`` and ``shellpipe`` now have an ```escape_characters`` sub-directive indicating whether when running
   in Windows command caracters are escaped (e.g. ``%`` become ``%%``  and ``!`` become ``^!``).
+* ``wdiff`` filter now handles ``html`` text.
 
 
 Version 3.33.0

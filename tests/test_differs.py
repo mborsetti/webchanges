@@ -1086,72 +1086,171 @@ def test_ai_google_timeout_no_unified_diff(job_state: JobState, caplog: pytest.L
 
 WDIFF_TEST_DATA = [
     (
-        'a',
-        'b',
-        ['\x1b[91ma \x1b[92mb\x1b[0m'],
-        [
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">a</span> '
-            '<span style="background-color:#d1ffd1;color:#082b08;">b</span>'
-        ],
-    ),
-    (
-        'a',
-        '',
-        ['\x1b[91ma \x1b[92m\x1b[0m'],
-        [
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">a</span> '
-            '<span style="background-color:#d1ffd1;color:#082b08;"></span>'
-        ],
-    ),
-    (
-        '',
-        'b',
-        ['\x1b[91m \x1b[92mb\x1b[0m'],
-        [
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"></span> '
-            '<span style="background-color:#d1ffd1;color:#082b08;">b</span>'
-        ],
-    ),
-    (
+        'text/plain',
         'This is very old text\nThis is medium old text\n',
         'This is new text\nThis is newish text\n',
         [
-            'This is \x1b[92mnew \x1b[91mvery old\x1b[0m text ',
-            'This is \x1b[92mnewish \x1b[91mmedium old\x1b[0m text ',
+            'This is [-very old-] {+new+} text',
+            'This is [-medium old-] {+newish+} text',
         ],
         [
-            'This is <span style="background-color:#d1ffd1;color:#082b08;">new</span> '
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
-            'very old</span> text <br>',
-            'This is <span style="background-color:#d1ffd1;color:#082b08;">newish</span> '
-            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">medium old</span> '
-            'text ',
+            'This is \x1b[91mvery old\x1b[0m \x1b[92mnew\x1b[0m text',
+            'This is \x1b[91mmedium old\x1b[0m \x1b[92mnewish\x1b[0m text',
+        ],
+        [
+            'This is <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">very old'
+            '</span> <span style="background-color:#d1ffd1;color:#082b08;">new</span> text<br>',
+            'This is <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">medium old'
+            '</span> <span style="background-color:#d1ffd1;color:#082b08;">newish</span> text<br>',
         ],
     ),
     (
+        'text/plain',
+        'a',
+        'b',
+        ['[-a-] {+b+}'],
+        ['\x1b[91ma\x1b[0m \x1b[92mb\x1b[0m'],
+        [
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">a</span> '
+            '<span style="background-color:#d1ffd1;color:#082b08;">b</span>'
+        ],
+    ),
+    (
+        'text/plain',
+        'a',
+        '',
+        ['[-a-]'],
+        ['\x1b[91ma\x1b[0m'],
+        ['<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">a</span>'],
+    ),
+    (
+        'text/plain',
+        '',
+        'b',
+        ['{+b+}'],
+        ['\x1b[92mb\x1b[0m'],
+        ['<span style="background-color:#d1ffd1;color:#082b08;">b</span>'],
+    ),
+    (
+        'text/plain',
+        'a b',
+        'a  b',
+        ['a[- -] {+  +}b'],
+        ['a\x1b[91m \x1b[0m \x1b[92m  \x1b[0mb'],
+        [
+            'a<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"> </span> '
+            '<span style="background-color:#d1ffd1;color:#082b08;">  </span>b'
+        ],
+    ),
+    (
+        'text/markdown',
         '[link](https://www.a.com)\n',
         '[link](https://www.b.com)\n',
-        ['\x1b[91m[link](https://www.a.com) \x1b[92m[link](https://www.b.com)\x1b[0m '],
+        ['[-[link](https://www.a.com)-] {+[link](https://www.b.com)+}'],
+        ['\x1b[91m[link](https://www.a.com)\x1b[0m \x1b[92m[link](https://www.b.com)\x1b[0m'],
         [
             '<span '
             'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><a '
             'style="font-family:inherit" rel="noopener" target="_blank" '
-            'href="https://www.a.com">link</a></span> <span '
-            'style="background-color:#d1ffd1;color:#082b08;"><a '
-            'style="font-family:inherit" rel="noopener" target="_blank" '
-            'href="https://www.b.com">link</a></span> '
+            'href="https://www.a.com">link</a></span> <span style="background-color:#d1ffd1;color:#082b08;"><a '
+            'style="font-family:inherit" rel="noopener" target="_blank" href="https://www.b.com">link</a></span>'
+        ],
+    ),
+    (
+        'text/html',
+        'Text',
+        '<b>Text</b>',
+        ['{+<b>+}Text{+</b>+}'],
+        ['\x1b[92m<b>\x1b[0mText\x1b[92m</b>\x1b[0m'],
+        [
+            '<span style="background-color:#d1ffd1;color:#082b08;"><b></span>Text'
+            '<span style="background-color:#d1ffd1;color:#082b08;"></b></span>'
+        ],
+    ),
+    (
+        'text/html',
+        '<div>',
+        '<span>',
+        ['[-<div>-] {+<span>+}'],
+        ['\x1b[91m<div>\x1b[0m \x1b[92m<span>\x1b[0m'],
+        [
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><div></span> '
+            '<span style="background-color:#d1ffd1;color:#082b08;"><span></span>'
+        ],
+    ),
+    (
+        'text/html',
+        '<div id="a">',
+        '<div id="b">',
+        ['[-<div id="a">-] {+<div id="b">+}'],
+        ['\x1b[91m<div id="a">\x1b[0m \x1b[92m<div id="b">\x1b[0m'],
+        [
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><div id="a"></span> '
+            '<span style="background-color:#d1ffd1;color:#082b08;"><div id="b"></span>'
+        ],
+    ),
+    (
+        'text/html',
+        '&copy;',
+        '©',
+        ['[-&copy;-] {+©+}'],
+        ['\x1b[91m&copy;\x1b[0m \x1b[92m©\x1b[0m'],
+        [
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">&copy;</span> '
+            '<span style="background-color:#d1ffd1;color:#082b08;">©</span>'
+        ],
+    ),
+    (
+        'text/html',
+        '<br>',
+        '<br/>',
+        ['[-<br>-] {+<br/>+}'],
+        ['\x1b[91m<br>\x1b[0m \x1b[92m<br/>\x1b[0m'],
+        [
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><br></span> '
+            '<span style="background-color:#d1ffd1;color:#082b08;"><br/></span>'
+        ],
+    ),
+    (
+        'text/html',
+        '<!-- old -->',
+        '<!-- new -->',
+        ['[-<!-- old -->-] {+<!-- new -->+}'],
+        ['\x1b[91m<!-- old -->\x1b[0m \x1b[92m<!-- new -->\x1b[0m'],
+        [
+            '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><!-- old --></span> '
+            '<span style="background-color:#d1ffd1;color:#082b08;"><!-- new --></span>'
         ],
     ),
 ]
 
 
-@pytest.mark.parametrize(('old_data', 'new_data', 'expected_text', 'expected_html'), WDIFF_TEST_DATA)
-def test_worddiff(old_data: str, new_data: str, expected_text: str, expected_html: str, job_state: JobState) -> None:
-    job_state.job.differ = {'name': 'wdiff'}
+@pytest.mark.parametrize(
+    ('mime_type', 'old_data', 'new_data', 'expected_text', 'expected_color', 'expected_html'), WDIFF_TEST_DATA
+)
+def test_wdiff(
+    mime_type: str,
+    old_data: str,
+    new_data: str,
+    expected_text: str,
+    expected_color: str,
+    expected_html: str,
+    job_state: JobState,
+) -> None:
     job_state.old_data = old_data
+    job_state.old_mime_type = mime_type
     job_state.new_data = new_data
-    job_state.new_mime_type = 'text/markdown'
+    job_state.new_mime_type = mime_type
+
+    job_state.job.differ = {'name': 'wdiff', 'color': False}
     diff = job_state.get_diff()
     assert diff.splitlines()[2:] == expected_text
+
+    job_state.job.differ = {'name': 'wdiff', 'color': True}
+    job_state.generated_diff = {}
+    job_state.unfiltered_diff = {}
+    diff = job_state.get_diff()
+    assert diff.splitlines()[2:] == expected_color
+
     diff = job_state.get_diff(report_kind='html')
     assert diff.splitlines()[2:] == expected_html
