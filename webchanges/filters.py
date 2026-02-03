@@ -16,6 +16,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import warnings
 from abc import ABC
 from enum import Enum
@@ -1629,11 +1630,17 @@ def _pipe_filter(f_cls: FilterBase, data: str | bytes, subfilter: dict[str, Any]
         }
     )
 
+    if subfilter.get('escape_characters') and sys.platform == 'win32':
+        escaped_command = re.sub(r'([()!^"<>&|])', r'^\1', subfilter['command']).replace('%', '%%')
+        # escaped_command = _windows_escape_cmd(subfilter['command'])
+    else:
+        escaped_command = subfilter['command']
+
     if f_cls.__kind__ == 'execute':
-        command = shlex.split(subfilter['command'])
+        command = shlex.split(escaped_command)
         shell = False
     else:  # 'shellpipe'
-        command = subfilter['command']
+        command = escaped_command
         shell = True
 
     try:
@@ -1661,6 +1668,7 @@ class ExecuteFilter(FilterBase):
 
     __supported_subfilters__: dict[str, str] = {
         'command': 'Command to execute for filtering (required)',
+        'escape_characters': 'Whether to escape characters when running in Windows',
     }
 
     __default_subfilter__ = 'command'
@@ -1678,6 +1686,7 @@ class ShellPipeFilter(FilterBase):
 
     __supported_subfilters__: dict[str, str] = {
         'command': 'Shell command to execute for filtering (required)',
+        'escape_characters': 'Whether to escape characters when running in Windows',
     }
 
     __default_subfilter__ = 'command'
@@ -1772,7 +1781,7 @@ class Base64(FilterBase):
     """Convert bytes data (e.g. images) into a base64 string.
 
     Base64 encoding causes an overhead of 33–37% relative to the size of the original binary data.
-    """  # noqa: RUF002 ambiguous EN DASH
+    """
 
     __kind__ = 'base64'
 

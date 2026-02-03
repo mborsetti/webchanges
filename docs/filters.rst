@@ -545,8 +545,17 @@ If the command generates an error, the output of the error will be in the first 
 .. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
    mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
 
+Optional sub-directives
+```````````````````````
+* ``command`` (default, str): The command to execute.
+* ``escape_characters`` (bool): When running in Windows, escape characters in command (e.g. ``%`` become ``%%`` and
+  ``!`` become ``^!``) (default: false).
+
 .. versionchanged:: 3.8
    Added additional WEBCHANGES_JOB_* environment variables.
+
+.. versionchanged:: 3.34
+   Added ``escape_characters`` sub-directive.
 
 
 
@@ -1432,6 +1441,15 @@ Example:
 
 .. tip:: If running on Windows and are getting ``UnicodeEncodeError``, make sure that you are running Python in UTF-8
    mode as per instructions `here <https://docs.python.org/3/using/windows.html#utf-8-mode>`__.
+
+Optional sub-directives
+```````````````````````
+* ``command`` (default, str): The command to execute.
+* ``escape_characters`` (bool): When running in Windows, escape characters in command (e.g. ``%`` become ``%%`` and
+  ``!`` become ``^!``) (default: false).
+
+.. versionchanged:: 3.34
+   Added ``escape_characters`` sub-directive.
 
 
 
