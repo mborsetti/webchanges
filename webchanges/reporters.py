@@ -1802,6 +1802,9 @@ class GotifyReporter(MarkdownReporter):
 class GitHubIssueReporter(MarkdownReporter):
     """Reporter that submits reports as issues to a GitHub repository."""
 
+    # Contributed by Dmitry Vasiliev (https://github.com/swimmwatch) in
+    # https://github.com/mborsetti/webchanges/issues/105
+
     __kind__ = 'github_issue'
 
     config: _ConfigReportGithubIssue
@@ -1818,7 +1821,7 @@ class GitHubIssueReporter(MarkdownReporter):
 
         title = self.config['title']
         if not title:
-            title = 'WebChanges report'
+            title = 'Webchanges report'
         else:
             dt = now.strftime(format_dt)
             title = title.format(dt=dt)

@@ -354,13 +354,19 @@ If using a Keychain to store the password, you also need to:
    Added ``utf-8`` SMTP configuration sub-directive.
 
 
+
 .. _github_issue:
 
 GitHub Issue
 ------------
-Submits a :ref:`markdown report <markdown>` as an issue to a GitHub repository.
+Submits a :ref:`markdown <markdown>` report as a new issue to a GitHub repository.
 
-To use this reporter, you need to create a `GitHub personal access token <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>`__ with the ``public_repo`` scope for public repositories or the ``repo`` scope for private repositories.
+To use this reporter, you need to create a `GitHub personal access token 
+<https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>`__ 
+with the ``public_repo`` scope for public repositories or the ``repo`` scope for private repositories.
+
+In addition, aGitHub Action implementation of webchanges is available `here
+<https://github.com/swimmwatch/webchanges-action>`__.
 
 .. code-block:: yaml
 
@@ -368,18 +374,18 @@ To use this reporter, you need to create a `GitHub personal access token <https:
      tz: null  # or whatever you want it to be
      github_issue:
        enabled: true  # don't forget to set this to true! :)
-       token: "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
-       owner: "YOUR_GITHUB_USERNAME_OR_ORGANIZATION"
-       repo: "YOUR_GITHUB_REPOSITORY_NAME"
-       title: "[webchanges] Report for {dt}"
+       token: 'YOUR_GITHUB_PERSONAL_ACCESS_TOKEN'
+       owner: 'YOUR_GITHUB_USERNAME_OR_ORGANIZATION'
+       repo: 'YOUR_GITHUB_REPOSITORY_NAME'
+       title: '[webchanges] Report for {dt}''
        labels:
-         - "webchanges"
-         - "bug"
-       format_dt: "%Y-%m-%d %H:%M:%S"
-       format_content: "## Webchanges Report\n\n{content}"
+         - 'webchanges'
+         - 'bug'
+       format_dt: '%Y-%m-%d %H:%M:%S'
+       format_content: '## Webchanges Report\n\n{content}'
        assignees:
-         - "github_username_1"
-         - "github_username_2"
+         - 'github_username_1'
+         - 'github_username_2'
        milestone: 1
 
 Sub-directives
@@ -387,13 +393,15 @@ Sub-directives
 * ``token`` (required): Your GitHub personal access token.
 * ``owner`` (required): The owner of the GitHub repository.
 * ``repo`` (required): The name of the GitHub repository.
-* ``title``: The title of the issue. Use ``{dt}`` for the date and time. Default: ``WebChanges report``.
+* ``title``: The title of the issue. Use ``{dt}`` for the date and time. Default: ``Webchanges report``.
 * ``labels``: A list of labels to add to the issue.
 * ``format_dt``: The format for the date and time in the title. Default: ``%Y-%m-%d %H:%M:%S``.
 * ``format_content``: A template for the issue body. Use ``{content}`` for the report content.
 * ``assignees``: A list of GitHub usernames to assign to the issue.
 * ``milestone``: The number of the milestone to associate with the issue.
 * ``type``: The type of issue to create. This is a GitHub Enterprise feature.
+
+.. versionadded:: 3.34
 
 
 
@@ -532,6 +540,7 @@ notifications to a public Matrix room, as the messages quickly become noisy:
        minimal: true
 
 
+
 .. _ntfy:
 
 ntfy
@@ -566,6 +575,8 @@ Here is a sample configuration:
          new: low
          changed: max
          error: high
+
+.. versionadded:: 3.34
 
 
 

@@ -40,10 +40,13 @@ Version 3.34.0
 
 Added
 ``````
+* Reporter ``github_issue``, which creates a GitHub issue for changes detected. Contributed by `Dmitry Vasiliev 
+  <https://github.com/swimmwatch>`__ in `#105 <https://github.com/mborsetti/webchanges/issues/105>`__.  Used in
+  the GitHub Action ``webchanges-action`` at https://github.com/swimmwatch/webchanges-action.
 * Filters ``execute`` and ``shellpipe`` now have an ```escape_characters`` sub-directive indicating whether when running
   in Windows command caracters are escaped (e.g. ``%`` become ``%%``  and ``!`` become ``^!``).
 * ``wdiff`` filter now handles ``html`` text.
-* ``ntfy`` reporter to support ``ntfy`` <https://ntfy.sh>`__ (pronounced _notify_), an open-source fee simple
+* ``ntfy`` reporter to support `ntfy <https://ntfy.sh>`__ (pronounced _notify_), an open-source fee simple
   HTTP-based [pub-sub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) notification service, for
   upstream compatibility.
 

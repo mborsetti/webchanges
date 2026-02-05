@@ -51,6 +51,11 @@ Running in Docker
 implementation (no browser) `here <https://github.com/yubiuser/webchanges-docker>`__, and one with a browser
 `here <https://github.com/jhedlund/webchanges-docker>`__.
 
+As a GitHub Action
+------------------
+**webchanges** can easily run as a `GitHub Action <https://www.docker.com/>`__! You will find an implementation 
+`here <https://github.com/swimmwatch/webchanges-action>`__.
+
 
 Documentation |readthedocs|
 ===========================

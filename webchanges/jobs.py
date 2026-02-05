@@ -174,6 +174,7 @@ class JobBase(metaclass=TrackSubClasses):
     differ: dict[str, Any] | None = None  # added in 3.21
     diff_filters: str | list[str | dict[str, Any]] | None = None
     diff_tool: str | None = None  # deprecated in 3.21
+    empty_as_transient: bool
     enabled: bool | None = None
     encoding: str | None = None
     evaluate: str | None = None  # Playwright
@@ -698,6 +699,7 @@ class UrlJobBase(Job):
 
     __required__: tuple[str, ...] = ('url',)
     __optional__: tuple[str, ...] = (
+        'empty_as_transient',
         'ignore_connection_errors',
         'ignore_http_error_codes',
         'ignore_timeout_errors',
@@ -1194,6 +1196,11 @@ class UrlJob(UrlJobBase):
                 f"Job {job_state.job.index_number}: http_client '{self.http_client}' is not supported; cannot run job "
                 f'( {self.get_indexed_location()} )'
             )
+
+        # If empty_as_transient is set and no data, then raise transient error
+        if self.empty_as_transient and not data:
+            logger.info(f'Job {self.index_number}: No data received; treating it as a transient error.')
+            raise TransientHTTPError('No data received and empty_is_transient is set', status_code=999)
 
         # If no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
         if not self.name and isinstance(data, str):

@@ -49,6 +49,18 @@ report:
       insecure_password: ''
     sendmail:
       path: sendmail
+  github_issue:
+      enabled: False,
+      token: ''
+      owner: ''
+      repo: ''
+      title: ''
+      labels: []
+      format_dt: ''
+      format_content: ''
+      assignees: []
+      type: ''
+      milestone: ''
   gotify:
     enabled: false
     priority: 0
