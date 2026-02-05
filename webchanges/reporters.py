@@ -165,9 +165,9 @@ class ReporterBase(metaclass=TrackSubClasses):
         else:
             self.footer_job_file = ''
         if httpx:
-            self.post_client = httpx.Client(http2=h2 is not None, follow_redirects=True).post
+            self.http_client = httpx.Client(http2=h2 is not None, follow_redirects=True)
         else:
-            self.post_client = requests.post
+            self.http_client = requests.Session()
 
     def convert(self, othercls: type[ReporterBase]) -> ReporterBase:
         """Convert self to a different ReporterBase class (object typecasting).
@@ -1002,15 +1002,16 @@ class IFTTTReport(TextReporter):
             pretty_name = job_state.job.pretty_name()
             location = job_state.job.get_location()
             print(f'submitting {job_state}')
-            result = self.post_client(
-                webhook_url,
-                json={
-                    'value1': job_state.verb,
-                    'value2': pretty_name,
-                    'value3': location,
-                },
-                timeout=60,
-            )
+            with self.http_client as http_client:
+                result = http_client.post(
+                    webhook_url,
+                    json={
+                        'value1': job_state.verb,
+                        'value2': pretty_name,
+                        'value3': location,
+                    },
+                    timeout=60,
+                )
             if result.status_code != 200:
                 raise RuntimeError(f'IFTTT error: {result.text}')
 
@@ -1137,18 +1138,19 @@ class MailgunReporter(TextReporter):
         subject = self.subject_with_args(filtered_job_states)
 
         logger.info(f"Sending Mailgun request for domain: '{domain}'")
-        result = self.post_client(
-            f'https://api{region}.mailgun.net/v3/{domain}/messages',
-            auth=('api', api_key),
-            data={
-                'from': f'{from_name} <{from_mail}>',
-                'to': to,
-                'subject': subject,
-                'text': body_text,
-                'html': body_html,
-            },
-            timeout=60,
-        )
+        with self.http_client as http_client:
+            result = http_client.post(
+                f'https://api{region}.mailgun.net/v3/{domain}/messages',
+                auth=('api', api_key),
+                data={
+                    'from': f'{from_name} <{from_mail}>',
+                    'to': to,
+                    'subject': subject,
+                    'text': body_text,
+                    'html': body_html,
+                },
+                timeout=60,
+            )
 
         try:
             json_res = result.json()
@@ -1202,7 +1204,8 @@ class TelegramReporter(MarkdownReporter):
             'disable_web_page_preview': True,
             'disable_notification': self.config['silent'],
         }
-        result = self.post_client(f'https://api.telegram.org/bot{bot_token}/sendMessage', data=data, timeout=60)
+        with self.http_client as http_client:
+            result = http_client.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', data=data, timeout=60)
 
         try:
             json_res = result.json()
@@ -1381,7 +1384,8 @@ class DiscordReporter(TextReporter):
 
         logger.info(f'Sending Discord request with post_data: {post_data}')
 
-        result = self.post_client(webhook_url, json=post_data, timeout=60)
+        with self.http_client as http_client:
+            result = http_client.post(webhook_url, json=post_data, timeout=60)
         try:
             if result.status_code in {200, 204}:
                 logger.info('Discord response: ok')
@@ -1435,7 +1439,8 @@ class WebhookReporter(TextReporter):
     def submit_to_webhook(self, webhook_url: str, text: str) -> Response:
         logger.debug(f'Sending request to webhook with text: {text}')
         post_data = self.prepare_post_data(text)
-        result = self.post_client(webhook_url, json=post_data, timeout=60)
+        with self.http_client as http_client:
+            result = http_client.post(webhook_url, json=post_data, timeout=60)
         try:
             if result.status_code in {200, 204}:
                 logger.info('Webhook server response: ok')
@@ -1685,7 +1690,8 @@ class ProwlReporter(TextReporter):
         }
 
         # all set up, add the notification!
-        result = self.post_client(api_add, data=post_data, timeout=60)
+        with self.http_client as http_client:
+            result = http_client.post(api_add, data=post_data, timeout=60)
 
         try:
             if result.status_code in {200, 204}:
@@ -1789,7 +1795,8 @@ class GotifyReporter(MarkdownReporter):
             'priority': self.config['priority'],
             'title': title,
         }
-        self.post_client(url, headers=headers, json=data)
+        with self.http_client as http_client:
+            http_client.post(url, headers=headers, json=data)
 
 
 class GitHubIssueReporter(MarkdownReporter):
@@ -1853,7 +1860,8 @@ class GitHubIssueReporter(MarkdownReporter):
         if milestone:
             issue_data['milestone'] = milestone
 
-        response = self.post_client(url, headers=headers, json=issue_data)
+        with self.http_client as http_client:
+            response = http_client.post(url, headers=headers, json=issue_data)
 
         if response.status_code == HTTPStatus.CREATED:
             logger.info('Issue created successfully.')
@@ -1916,10 +1924,11 @@ class NtfyReporter(TextReporter):
 
             job_headers['Actions'] = f'view, Open URL, "{job_state.job.get_location()}", clear=true'
 
-            if not isinstance(httpx, str):
-                result = self.post_client(topic_url, headers=job_headers, content=content)
+            if httpx:
+                with self.http_client as http_client:
+                    result = http_client.post(topic_url, headers=job_headers, content=content)
             else:
-                result = self.post_client(topic_url, headers=job_headers, data=content.encode() if content else None)  # ty:ignore[invalid-argument-type]
+                result = http_client.post(topic_url, headers=job_headers, data=content.encode() if content else None)
             if result.status_code != 200:
                 raise RuntimeError(f"Failed to publish tp ntfy topic '{topic_url}': {result.text}")
 

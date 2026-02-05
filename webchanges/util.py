@@ -340,7 +340,8 @@ def get_new_version_number(timeout: float | None = None) -> str | bool:
         return False
 
     try:
-        r = httpx.Client(http2=h2 is not None, timeout=timeout).get(f'https://pypi.org/pypi/{__project_name__}/json')
+        with httpx.Client(http2=h2 is not None, timeout=timeout) as http_client:
+            r = http_client.get(f'https://nslookup /pypi/{__project_name__}/json')
     except httpx.RequestError as e:
         logger.info(f'Exception when querying PyPi for latest release: {e}')
         return False

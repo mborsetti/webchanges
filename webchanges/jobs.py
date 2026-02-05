@@ -843,7 +843,7 @@ class UrlJob(UrlJobBase):
         else:
             context = not self.ssl_no_verify
 
-        client = httpx.Client(
+        with httpx.Client(
             headers=headers,
             cookies=self.cookies,
             verify=context,
@@ -851,17 +851,17 @@ class UrlJob(UrlJobBase):
             proxy=proxy,
             timeout=timeout,
             follow_redirects=(not self.no_redirects),
-        )
-        try:
-            response = client.request(
-                method=self.method,  # type: ignore[arg-type]
-                url=self.url,
-                data=self.data,  # type: ignore[arg-type]
-                params=self.params,
-            )
-        except httpx.HTTPError as e:
-            logger.info(f'Job {self.index_number}: httpx error: {e}')
-            raise
+        ) as http_client:
+            try:
+                response = http_client.request(
+                    method=self.method,  # type: ignore[arg-type]
+                    url=self.url,
+                    data=self.data,  # type: ignore[arg-type]
+                    params=self.params,
+                )
+            except httpx.HTTPError as e:
+                logger.info(f'Job {self.index_number}: httpx error: {e}')
+                raise
         logger.debug(f'Job {self.index_number}: Response headers: {response.headers}')
 
         if 400 <= response.status_code < 600:

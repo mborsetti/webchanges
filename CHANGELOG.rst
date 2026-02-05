@@ -47,6 +47,12 @@ Added
   HTTP-based [pub-sub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) notification service, for
   upstream compatibility.
 
+Fixed
+`````
+* Now closing all databases, keep-alive connections, and underlying SSL sockets before exit. Fixes receiving 
+  ``ResourceWarning: unclosed database`` and ``ResourceWarning: <ssl.SSLSocket>`` when environment variable
+  ``PYTHONWARNINGS=all`` is set.
+
 
 Version 3.33.0
 -------------------

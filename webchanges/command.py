@@ -64,9 +64,9 @@ class UrlwatchCommand:
         self.urlwatcher = urlwatcher
         self.urlwatch_config = urlwatcher.urlwatch_config
 
-    @staticmethod
-    def _exit(arg: str | int | None) -> None:
+    def _exit(self, arg: str | int | None) -> None:
         logger.info(f'Exiting with exit code {arg}')
+        self.urlwatcher.close()
         sys.exit(arg)
 
     def jobs_from_joblist(self) -> Iterator[JobBase]:
@@ -984,15 +984,14 @@ class UrlwatchCommand:
             print('You need to set up your bot token first (see documentation).')
             self._exit(1)
 
-        get_client = httpx.Client(http2=h2 is not None).get if httpx else requests.get
+        with httpx.Client(http2=h2 is not None) if httpx else requests.Session() as http_client:
+            info = http_client.get(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
+            if not info['ok']:
+                print(f'Error with token {bot_token}: {info["description"]}.')
+                self._exit(1)
 
-        info = get_client(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
-        if not info['ok']:
-            print(f'Error with token {bot_token}: {info["description"]}.')
-            self._exit(1)
-
-        chats = {}
-        updates = get_client(f'https://api.telegram.org/bot{bot_token}/getUpdates', timeout=60).json()
+            chats = {}
+            updates = http_client.get(f'https://api.telegram.org/bot{bot_token}/getUpdates', timeout=60).json()
         if 'result' in updates:
             for chat_info in updates['result']:
                 chat = chat_info['message']['chat']

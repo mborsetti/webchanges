@@ -1337,7 +1337,6 @@ class ImageDiffer(DifferBase):
                     f'{len(gemini_api_key)}.\n',
                     '',
                 )
-            client = httpx.Client(http2=True, timeout=self.job.timeout)
 
             def _load_image(img_data: tuple[str, Image.Image]) -> dict[str, dict[str, str] | Exception | str]:
                 img_name, image = img_data
@@ -1362,26 +1361,28 @@ class ImageDiffer(DifferBase):
                 }
                 data = {'file': {'display_name': 'TEXT'}}
 
-                try:
-                    response = client.post(
-                        f'https://generativelanguage.googleapis.com/upload/v{api_version}/files?key={gemini_api_key}',
-                        headers=headers,
-                        json=data,
-                    )
-                except httpx.HTTPError as e:
-                    return {'error': e, 'img_name': img_name}
-                upload_url = response.headers['X-Goog-Upload-Url']
+                with httpx.Client(http2=h2 is not None, timeout=self.job.timeout) as http_client:
+                    try:
+                        response = http_client.post(
+                            f'https://generativelanguage.googleapis.com/upload/v{api_version}/files?'
+                            f'key={gemini_api_key}',
+                            headers=headers,
+                            json=data,
+                        )
+                    except httpx.HTTPError as e:
+                        return {'error': e, 'img_name': img_name}
+                    upload_url = response.headers['X-Goog-Upload-Url']
 
-                # Upload the image data
-                headers = {
-                    'Content-Length': str(len(image_data)),
-                    'X-Goog-Upload-Offset': '0',
-                    'X-Goog-Upload-Command': 'upload, finalize',
-                }
-                try:
-                    response = client.post(upload_url, headers=headers, content=image_data)
-                except httpx.HTTPError as e:
-                    return {'error': e, 'img_name': img_name}
+                    # Upload the image data
+                    headers = {
+                        'Content-Length': str(len(image_data)),
+                        'X-Goog-Upload-Offset': '0',
+                        'X-Goog-Upload-Command': 'upload, finalize',
+                    }
+                    try:
+                        response = http_client.post(upload_url, headers=headers, content=image_data)
+                    except httpx.HTTPError as e:
+                        return {'error': e, 'img_name': img_name}
 
                 # Extract file URI from response
                 file_info = response.json()
@@ -1743,62 +1744,63 @@ class AIGoogleDiffer(DifferBase):
             data['generationConfig'].update({'thinkingConfig': {'thinkingBudget': directives['thinking_budget']}})
         logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
         model_version = model  # default
-        try:
-            r = httpx.Client(http2=True).post(
-                f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
-                f'key={gemini_api_key}',
-                json=data,
-                headers={'Content-Type': 'application/json'},
-                timeout=timeout,
-            )
-            if r.is_success:
-                result = r.json()
-                candidate = result['candidates'][0]
-                finish_reason = candidate['finishReason']
-                model_version = result['modelVersion']
-                logger.info(f'Job {job.index_number}: AI generation finished by {finish_reason} using {model_version}')
-                logger.debug(
-                    f'Job {job.index_number}: Used {result["usageMetadata"]["totalTokenCount"]:,} tokens, '
-                    f'{result["usageMetadata"]["totalTokenCount"]:,} of which for the prompt.'
+        with httpx.Client(http2=h2 is not None) as http_client:
+            try:
+                r = http_client.post(
+                    f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
+                    f'key={gemini_api_key}',
+                    json=data,
+                    headers={'Content-Type': 'application/json'},
+                    timeout=timeout,
                 )
-                if 'content' in candidate:
-                    if 'parts' in candidate['content']:
-                        summary: str = candidate['content']['parts'][0]['text'].rstrip()
-                    else:
-                        summary = (
-                            f'## ERROR in summarizing changes using Google AI:\n'
-                            f'Model did not return any candidate output:\n'
-                            f'finishReason={finish_reason}'
-                            f'{jsonlib.dumps(result["usageMetadata"], ensure_ascii=True, indent=2)}'
-                        )
+            except httpx.HTTPError as e:
+                summary = (
+                    f'## ERROR in summarizing changes using Google AI:\n'
+                    f'HTTP client error: {e} when requesting data from {e.request.url.host}'
+                )
+                return summary, model_version
+
+        if r.is_success:
+            result = r.json()
+            candidate = result['candidates'][0]
+            finish_reason = candidate['finishReason']
+            model_version = result['modelVersion']
+            logger.info(f'Job {job.index_number}: AI generation finished by {finish_reason} using {model_version}')
+            logger.debug(
+                f'Job {job.index_number}: Used {result["usageMetadata"]["totalTokenCount"]:,} tokens, '
+                f'{result["usageMetadata"]["totalTokenCount"]:,} of which for the prompt.'
+            )
+            if 'content' in candidate:
+                if 'parts' in candidate['content']:
+                    summary: str = candidate['content']['parts'][0]['text'].rstrip()
                 else:
                     summary = (
                         f'## ERROR in summarizing changes using Google AI:\n'
                         f'Model did not return any candidate output:\n'
-                        f'{jsonlib.dumps(result, ensure_ascii=True, indent=2)}'
+                        f'finishReason={finish_reason}'
+                        f'{jsonlib.dumps(result["usageMetadata"], ensure_ascii=True, indent=2)}'
                     )
-
-            elif r.status_code == 400:
-                summary = (
-                    f'## ERROR in summarizing changes using Google AI:\n'
-                    f'Received error from {r.url.host}: '
-                    f'{r.json().get("error", {}).get("message") or ""}'
-                )
             else:
                 summary = (
                     f'## ERROR in summarizing changes using Google AI:\n'
-                    f'Received error {r.status_code} {r.reason_phrase} from '
-                    f'{r.url.host}'
+                    f'Model did not return any candidate output:\n'
+                    f'{jsonlib.dumps(result, ensure_ascii=True, indent=2)}'
                 )
-                if r.content:
-                    summary += f': {r.json().get("error", {}).get("message") or ""}'
 
-        except httpx.HTTPError as e:
+        elif r.status_code == 400:
             summary = (
                 f'## ERROR in summarizing changes using Google AI:\n'
-                f'HTTP client error: {e} when requesting data from '
-                f'{e.request.url.host}'
+                f'Received error from {r.url.host}: '
+                f'{r.json().get("error", {}).get("message") or ""}'
             )
+        else:
+            summary = (
+                f'## ERROR in summarizing changes using Google AI:\n'
+                f'Received error {r.status_code} {r.reason_phrase} from '
+                f'{r.url.host}'
+            )
+            if r.content:
+                summary += f': {r.json().get("error", {}).get("message") or ""}'
 
         return summary, model_version
 
