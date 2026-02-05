@@ -41,6 +41,7 @@ At the moment, the following reporters are available:
 * :ref:`ifttt`: Send via IFTTT.
 * :ref:`mailgun`: Send via email using the Mailgun service.
 * :ref:`matrix`: Send to a room using the Matrix protocol.
+* :ref:`ntfy`: Send to a ntfy server.
 * :ref:`prowl`: Send via prowlapp.com.
 * :ref:`pushbullet`: Send via Pushbullet.
 * :ref:`pushover`: Send via Pushover.
@@ -529,6 +530,42 @@ notifications to a public Matrix room, as the messages quickly become noisy:
        details: false
        footer: false
        minimal: true
+
+
+.. _ntfy:
+
+ntfy
+----
+Sends a :ref:`text report <text>` to `ntfy <https://ntfy.sh>`__ (pronounced _notify_), an open-source fee simple
+HTTP-based [pub-sub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) notification service. It allows
+you to send notifications to your phone or desktop via scripts from any computer, and/or using a REST API. It's
+infinitely flexible, and [100% free software](https://ntfy.sh/#free-software).
+
+To configure it, you need to provide the topic URL that reports should be sent to.
+
+If the ntfy server requires authentication to publish to the topic, you need to supply an appropriate value for the
+``Authorization`` header, as described in `the ntfy documentation <https://docs.ntfy.sh/publish/#authentication>`__.
+
+ntfy supports assigning a priority to a message. You can specify a default priority for messages sent by
+:program:`webchanges` as well as individual priorities for ``changed`` or ``new`` URLs and ones with an ``error``.
+Names for the different priorities are listed in `the ntfy documentation
+<https://docs.ntfy.sh/publish/#message-priority>`__.
+
+Here is a sample configuration:
+
+.. code-block:: yaml
+
+   report:
+     tz: null  # or whatever you want it to be
+     ntfy:
+       enabled: true  # don't forget to set this to true! :)
+       topic_url: "https://ntfy.sh/webchanges"
+       authorization: "Basic ..."
+       priorities:
+         default: default
+         new: low
+         changed: max
+         error: high
 
 
 

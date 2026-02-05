@@ -73,6 +73,15 @@ report:
     homeserver: ''
     access_token: ''
     room_id: ''
+  ntfy:
+    enabled: false
+    topic_url: ''
+    authorization: null
+    priorities:
+      default: default
+      new: low
+      changed: max
+      error: high
   prowl:
     enabled: false
     api_key: ''

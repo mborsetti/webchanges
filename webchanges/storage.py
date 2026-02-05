@@ -193,6 +193,24 @@ _ConfigReportMatrix = TypedDict(
         'room_id': str,
     },
 )
+_ConfigReportNtfyPriorities = TypedDict(
+    '_ConfigReportNtfyPriorities',
+    {
+        'default': int | str,
+        'new': int | str,
+        'changed': int | str,
+        'error': int | str,
+    },
+)
+_ConfigReportNtfy = TypedDict(
+    '_ConfigReportNtfy',
+    {
+        'enabled': bool,
+        'topic_url': str,
+        'authorization': str | None,
+        'priorities': _ConfigReportNtfyPriorities,
+    },
+)
 _ConfigReportProwl = TypedDict(
     '_ConfigReportProwl',
     {
@@ -273,6 +291,7 @@ _ConfigReport = TypedDict(
         'ifttt': _ConfigReportIfttt,
         'mailgun': _ConfigReportMailgun,
         'matrix': _ConfigReportMatrix,
+        'ntfy': _ConfigReportNtfy,
         'prowl': _ConfigReportProwl,
         'pushbullet': _ConfigReportPushbullet,
         'pushover': _ConfigReportPushover,
@@ -431,6 +450,17 @@ DEFAULT_CONFIG: _Config = {
             'homeserver': '',
             'access_token': '',
             'room_id': '',
+        },
+        'ntfy': {  # uses text
+            'enabled': False,
+            'topic_url': '',
+            'authorization': None,
+            'priorities': {
+                'default': 'default',
+                'new': 'low',
+                'changed': 'max',
+                'error': 'high',
+            },
         },
         'prowl': {  # uses text
             'enabled': False,

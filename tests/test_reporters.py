@@ -195,7 +195,7 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
             with pytest.raises(MatrixError) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)
             assert str(pytest_wrapped_e.value) == 'No scheme in homeserver url '
-        case 'discord' | 'gotify' | 'webhook':
+        case 'discord' | 'gotify' | 'ntfy' | 'webhook':
             with pytest.raises(UnsupportedProtocol) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)
             err_msg = str(pytest_wrapped_e.value)

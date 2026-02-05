@@ -43,6 +43,9 @@ Added
 * Filters ``execute`` and ``shellpipe`` now have an ```escape_characters`` sub-directive indicating whether when running
   in Windows command caracters are escaped (e.g. ``%`` become ``%%``  and ``!`` become ``^!``).
 * ``wdiff`` filter now handles ``html`` text.
+* ``ntfy`` reporter to support ``ntfy`` <https://ntfy.sh>`__ (pronounced _notify_), an open-source fee simple
+  HTTP-based [pub-sub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) notification service, for
+  upstream compatibility.
 
 
 Version 3.33.0

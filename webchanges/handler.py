@@ -55,9 +55,9 @@ Verb = Literal[
     'changed',  # valid data received, and it has changed
     'changed,no_report',  # valid data received, and it has changed, but filtered diff yields no report
     'unchanged',  # valid data received, no changes
-    'error_ended',  # valid data received, no changes from the last data received before an error
+    'unchanged,error_ended',  # valid data received, no changes from the last data received before an error
     'error',  # error, prior state was different (either data or different error)
-    'repeated_error',  # error, same as before
+    'error,repeaded',  # error, same as before
 ]
 ErrorData = TypedDict('ErrorData', {'type': str, 'message': str}, total=False)
 
@@ -350,9 +350,9 @@ class Report:
           • 'changed': valid data received, and it has changed;
           • 'changed,no_report': valid data received, and it has changed, but no report;
           • 'unchanged': valid data received, no changes;
-          • 'error_ended': valid data received, no changes from the last data received before an error;
+          • 'unchanged,error_ended': valid data received, no changes from the last data received before an error;
           • 'error': error, prior state was different (either data or different error);
-          • 'repeated_error': error, same as before;
+          • 'error,repeaded': error, same as before;
         or a custom message such as  'test'.  Ultimately called by job_runner.
 
         :param job_state: The JobState object with the information of the job run.
@@ -399,7 +399,7 @@ class Report:
 
         :param job_state: The JobState object with the information of the job run.
         """
-        self._result('error_ended', job_state)
+        self._result('unchanged,error_ended', job_state)
 
     def error(self, job_state: JobState) -> None:
         """Sets the verb of the job in job_state to 'error'. Called by :py:func:`run_jobs` and tests.
@@ -413,7 +413,7 @@ class Report:
 
         :param job_state: The JobState object with the information of the job run.
         """
-        self._result('repeated_error', job_state)
+        self._result('error,repeaded', job_state)
 
     def custom(
         self,
@@ -438,14 +438,15 @@ class Report:
         def should_skip_job(self: Report, job_state: JobState) -> bool:
             """Identify jobs to be skipped."""
             # Skip states that are hidden by display config
-            config_verbs: set[Verb] = {'new', 'unchanged', 'error'}
-            if any(job_state.verb == verb and not self.config['display'][verb] for verb in config_verbs):
+            if any(
+                job_state.verb == verb and not self.config['display'][verb] for verb in ('new', 'unchanged', 'error')
+            ):
                 return True
             # Skip compound states
             if job_state.verb == 'changed,no_report':
                 return True
-            # Skip repeated_error if suppress_repeated_errors directive in job
-            if job_state.verb == 'repeated_error' and job_state.job.suppress_repeated_errors:
+            # Skip error,repeaded if suppress_repeated_errors directive in job
+            if job_state.verb == 'error,repeaded' and job_state.job.suppress_repeated_errors:
                 return True
             # Skip empty diffs unless empty-diff is configured
             return (

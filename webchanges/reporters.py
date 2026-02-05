@@ -43,6 +43,7 @@ if TYPE_CHECKING:
         _ConfigReportIfttt,
         _ConfigReportMailgun,
         _ConfigReportMatrix,
+        _ConfigReportNtfy,
         _ConfigReportProwl,
         _ConfigReportPushbullet,
         _ConfigReportPushover,
@@ -60,6 +61,7 @@ if TYPE_CHECKING:
         | _ConfigReportIfttt
         | _ConfigReportMailgun
         | _ConfigReportMatrix
+        | _ConfigReportNtfy
         | _ConfigReportProwl
         | _ConfigReportPushbullet
         | _ConfigReportPushover
@@ -90,10 +92,14 @@ except ImportError:  # pragma: no cover
             'neither can be imported.'
         ) from e
 if httpx is not None:
+    from httpx import Headers
+
     try:
         import h2
     except ImportError:  # pragma: no cover
         h2 = None  # type: ignore[assignment]
+else:
+    from webchanges._vendored.headers import Headers
 
 try:
     import aioxmpp  # ty:ignore[unresolved-import]
@@ -423,7 +429,7 @@ class HtmlReporter(ReporterBase):
         if job_state.verb in ('new', 'test'):
             return _format_for_return(str(job_state.new_data))
 
-        if job_state.verb in ('error', 'repeated_error'):
+        if job_state.verb in ('error', 'error,repeaded'):
             htm = f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback)}</pre>'
             if job_state.job.suppress_repeated_errors:
                 htm += (
@@ -432,7 +438,7 @@ class HtmlReporter(ReporterBase):
                 )
             return htm
 
-        if job_state.verb == 'error_ended':
+        if job_state.verb == 'unchanged,error_ended':
             return (
                 f'<div style="color:green;"><i>{job_state.old_error_data.get("type")} fixed; '
                 'content unchanged.</i></div>'
@@ -535,7 +541,7 @@ class TextReporter(ReporterBase):
         :param differ: The type of differ to use.
         :returns: HTML for a single job.
         """
-        if job_state.verb == 'error' or job_state.verb == 'repeated_error':
+        if job_state.verb == 'error' or job_state.verb == 'error,repeaded':
             text = self._red(job_state.traceback) if isinstance(self, StdoutReporter) else job_state.traceback
             if job_state.job.suppress_repeated_errors:
                 text += 'Reminder: No further alerts until the error is resolved or changes.'
@@ -544,7 +550,7 @@ class TextReporter(ReporterBase):
         if job_state.verb == 'unchanged':
             return str(job_state.old_data)
 
-        if job_state.verb == 'error_ended':
+        if job_state.verb == 'unchanged,error_ended':
             return f'{job_state.old_error_data.get("type")} fixed; content unchanged.'
 
         if job_state.verb in ('new', 'test'):
@@ -780,7 +786,7 @@ class MarkdownReporter(ReporterBase):
         :param differ: The type of differ to use.
         :returns: HTML for a single job.
         """
-        if job_state.verb == 'error' or job_state.verb == 'repeated_error':
+        if job_state.verb == 'error' or job_state.verb == 'error,repeaded':
             mark = job_state.traceback
             if job_state.job.suppress_repeated_errors:
                 mark += '_Reminder: No further alerts until the error is resolved or changes._'
@@ -789,7 +795,7 @@ class MarkdownReporter(ReporterBase):
         if job_state.verb == 'unchanged':
             return str(job_state.old_data)
 
-        if job_state.verb == 'error_ended':
+        if job_state.verb == 'unchanged,error_ended':
             return f'_{job_state.old_error_data.get("type")} fixed; content unchanged._'
 
         if job_state.verb == 'unchanged':
@@ -1879,6 +1885,43 @@ class GitHubIssueReporter(MarkdownReporter):
         self._create_issue(content)
 
         return lines
+
+
+class NtfyReporter(TextReporter):
+    """Send messages to a ntfy server."""
+
+    __kind__ = 'ntfy'
+
+    config: _ConfigReportNtfy
+
+    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
+        topic_url = self.config['topic_url']
+        headers = Headers({})
+        config_priorities = self.config.get('priorities', {})
+        if priority := config_priorities.get('default'):
+            headers['Priority'] = str(priority)
+        if authorization := self.config.get('authorization'):
+            headers['Authorization'] = authorization
+
+        for job_state in self.report.get_filtered_job_states(self.job_states):
+            title = f'{__project_name__.upper()} {job_state.verb.upper()}: {job_state.job.pretty_name()}'
+            differ = job_state.job.differ or {}
+            content = self._format_content(job_state, differ)
+
+            job_headers = headers.copy()
+            job_headers['Title'] = title
+
+            if priority := config_priorities.get(job_state.verb.split(',')[0]):
+                job_headers['Priority'] = priority
+
+            job_headers['Actions'] = f'view, Open URL, "{job_state.job.get_location()}", clear=true'
+
+            if not isinstance(httpx, str):
+                result = self.post_client(topic_url, headers=job_headers, content=content)
+            else:
+                result = self.post_client(topic_url, headers=job_headers, data=content.encode() if content else None)  # ty:ignore[invalid-argument-type]
+            if result.status_code != 200:
+                raise RuntimeError(f"Failed to publish tp ntfy topic '{topic_url}': {result.text}")
 
 
 def get_lines_between(
