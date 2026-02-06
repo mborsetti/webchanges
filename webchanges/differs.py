@@ -1076,7 +1076,7 @@ class DeepdiffDiffer(DifferBase):
             """
             if not data:
                 return data, None
-            deserialize_method = data_type if data_type else _serialize_method(media_type, data_label)
+            deserialize_method = data_type or _serialize_method(media_type, data_label)
             if deserialize_method == 'json':
                 try:
                     return jsonlib.loads(data), None
