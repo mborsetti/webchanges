@@ -213,6 +213,8 @@ class JobBase(metaclass=TrackSubClasses):
     retries: int | None = None
     ssl_no_verify: bool | None = None
     stderr: str | None = None  # urlwatch backwards compatibility for ShellJob (not used)
+    suppress_error_ended: bool | None = None
+    suppress_errors: bool | None = None
     suppress_repeated_errors: bool | None = None
     switches: list[str] | None = None
     timeout: float | None = None
@@ -650,6 +652,8 @@ class Job(JobBase):
         'name',
         'no_conditional_request',
         'note',
+        'suppress_error_ended',
+        'suppress_errors',
         'suppress_repeated_errors',
         'user_visible_url',
     )

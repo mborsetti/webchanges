@@ -57,7 +57,7 @@ Verb = Literal[
     'unchanged',  # valid data received, no changes
     'unchanged,error_ended',  # valid data received, no changes from the last data received before an error
     'error',  # error, prior state was different (either data or different error)
-    'error,repeaded',  # error, same as before
+    'error,repeated',  # error, same as before
 ]
 ErrorData = TypedDict('ErrorData', {'type': str, 'message': str}, total=False)
 
@@ -100,7 +100,7 @@ class JobState(ContextManager):
         :param job: A JobBase object with the job information.
         """
         self.snapshots_db = snapshots_db
-        self.job = job
+        self.job: JobBase = job
 
         self.generated_diff = {}
         self.unfiltered_diff = {}
@@ -352,7 +352,7 @@ class Report:
           • 'unchanged': valid data received, no changes;
           • 'unchanged,error_ended': valid data received, no changes from the last data received before an error;
           • 'error': error, prior state was different (either data or different error);
-          • 'error,repeaded': error, same as before;
+          • 'error,repeated': error, same as before;
         or a custom message such as  'test'.  Ultimately called by job_runner.
 
         :param job_state: The JobState object with the information of the job run.
@@ -413,7 +413,7 @@ class Report:
 
         :param job_state: The JobState object with the information of the job run.
         """
-        self._result('error,repeaded', job_state)
+        self._result('error,repeated', job_state)
 
     def custom(
         self,
@@ -435,28 +435,41 @@ class Report:
         :returns: An iterable of JobState objects that have reportable changes per config['display'].
         """
 
-        def should_skip_job(self: Report, job_state: JobState) -> bool:
-            """Identify jobs to be skipped."""
-            # Skip states that are hidden by display config
-            if any(
-                job_state.verb == verb and not self.config['display'][verb] for verb in ('new', 'unchanged', 'error')
-            ):
-                return True
-            # Skip compound states
-            if job_state.verb == 'changed,no_report':
-                return True
-            # Skip error,repeaded if suppress_repeated_errors directive in job
-            if job_state.verb == 'error,repeaded' and job_state.job.suppress_repeated_errors:
-                return True
-            # Skip empty diffs unless empty-diff is configured
-            return (
-                job_state.verb == 'changed'
-                and not self.config['display']['empty-diff']
-                and job_state.get_diff(tz=self.tz, differ_defaults=self.config['differ_defaults']) == ''
-            )
+        def job_is_reportable(self: Report, job_state: JobState) -> bool:
+            """Identify whether the job should generate a report based on its verb, relevant sub-directives, and the
+            reporters configuration."""
+            display_cfg = self.config['display']
+            match job_state.verb:
+                case 'unchanged':
+                    return display_cfg['unchanged']
+                case 'changed':
+                    if not display_cfg['empty-diff']:
+                        diff = job_state.get_diff(tz=self.tz, differ_defaults=self.config['differ_defaults'])
+                        if diff == '':
+                            return False
+                    return True
+                case 'changed,no_report':
+                    # set by differ
+                    return False
+                case e if e.startswith('error'):
+                    if job_state.job.suppress_errors is not None:
+                        return not job_state.job.suppress_errors
+                    return display_cfg['error']
+                case 'error,repeated':
+                    if job_state.job.suppress_repeated_errors is not None:
+                        return job_state.job.suppress_repeated_errors
+                    return display_cfg['error']
+                case 'unchanged,error_ended':
+                    if job_state.job.suppress_errors is not None:
+                        return job_state.job.suppress_errors
+                    return display_cfg['error']
+                case 'new':
+                    return display_cfg['new']
+                case _:
+                    return True
 
         for job_state in job_states:
-            if not should_skip_job(self, job_state):
+            if job_is_reportable(self, job_state):
                 yield job_state
 
     def finish(self, jobs_file: list[Path]) -> None:

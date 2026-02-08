@@ -1132,7 +1132,35 @@ tabular data extracted by the ``pdf2text`` filter.
    Default setting can be overridden by a filter or differ.
 
 
-.. suppress_repeated_errors:
+.. _suppress_error_ended:
+
+suppress_error_ended
+--------------------
+Suppress the notification of when an error condition ends and the same content has returned to be accessible
+(true/false). Defaults to false.
+
+If you set ``suppress_error_ended`` to ``true``, :program:`webchanges` will not send a notification when an error
+condition has terminated as long as the content has not changed.
+
+.. versionadded:: 3.34
+
+
+.. _suppress_errors:
+
+suppress_errors
+--------------------
+Suppress the notification of all errors, including repeated ones (true/false). Defaults to false. Overrides the
+configuration.
+
+If you set ``suppress_errors`` to ``true``, :program:`webchanges` will not send a notification when an error
+condition exists or terminates (and the content has not changed).
+
+Equivalent to the configuration setting :ref:`display: error <configuration_display>`, and overrides it for the job.
+
+.. versionadded:: 3.34
+
+
+.. _suppress_repeated_errors:
 
 suppress_repeated_errors
 ------------------------

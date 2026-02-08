@@ -66,6 +66,7 @@ Added
 * ``ai_google`` differ has new ``thinking_level`` and ``media_resolution`` sub-directives.
 * ``command`` differ has a new ``context_lines`` sub-directive for commands starting with wdiff for backwards 
   compatibility (but use the built-in ``wdiff`` differ instead).
+* Jobs now have ``suppress_error_ended`` and ``suppress_errors`` sub-directives to control error reporting.
 
 Changed
 ```````
