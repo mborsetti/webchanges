@@ -964,29 +964,30 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                             )
                         )
                     )
-                if isinstance(job.filters, str):  # Backwards compatibility
-                    warnings.warn(
-                        '\n   '.join(
-                            (
-                                f"The 'filters' key should contain a list; found a {type(job.data).__name__}",
-                                f'in {job.get_indexed_location()}',
-                                *job_files_for_error(),
-                            )
-                        ),
-                        RuntimeWarning,
-                        stacklevel=1,
-                    )
-                    job.filters = [job.filters]
                 if not isinstance(job.filters, (NoneType, list)):
-                    raise ValueError(
-                        '\n   '.join(
-                            (
-                                f"The 'filters' key needs to contain a list; found a {type(job.filters).__name__} ",
-                                f'in {job.get_indexed_location()}',
-                                *job_files_for_error(),
+                    if isinstance(job.filters, str):  # Backwards compatibility
+                        warnings.warn(
+                            '\n   '.join(
+                                (
+                                    f"The 'filters' key should contain a list; found a {type(job.filters).__name__}",
+                                    f'in {job.get_indexed_location()}',
+                                    *job_files_for_error(),
+                                )
+                            ),
+                            RuntimeWarning,
+                            stacklevel=1,
+                        )
+                        job.filters = [job.filters]
+                    else:
+                        raise ValueError(
+                            '\n   '.join(
+                                (
+                                    f"The 'filters' key needs to contain a list; found a {type(job.filters).__name__} ",
+                                    f'in {job.get_indexed_location()}',
+                                    *job_files_for_error(),
+                                )
                             )
                         )
-                    )
                 if not isinstance(job.headers, (NoneType, dict, Headers)):
                     raise ValueError(
                         '\n   '.join(

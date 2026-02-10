@@ -153,7 +153,8 @@ jobs:
         if: ${{ endsWith(matrix.python-version, 't') }}
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          uv run pytest
+          uv run --no-project
+          pytest
           -v
           --cov=./
           --cov-report=term
