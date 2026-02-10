@@ -52,11 +52,11 @@ jobs:
 
       # Build Python and packages per https://github.com/actions/setup-python
       # Using actions/setup-python can be faster than uv, because GitHub caches the Python versions alongside the runner.
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
+      # - name: Set up Python ${{ matrix.python-version }}
+      #   uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      #   with:
+      #     python-version: ${{ matrix.python-version }}
+      #     allow-prereleases: true
 
       # Install uv per https://github.com/astral-sh/setup-uv/blob/main/README.md
       # and https://docs.astral.sh/uv/guides/integration/github
@@ -120,19 +120,19 @@ jobs:
       #     # Install Python packages
       #     uv pip install --upgrade pdftotext pytesseract
 
-      - name: Install all other dependencies (GIL)
-        if: ${{ ! endsWith(matrix.python-version, 't') }}
-        run: >
-          uv pip install
-          --upgrade
-          coveralls
-          -r tests/requirements_pytest.txt
+      # - name: Install all other dependencies (GIL)
+      #   if: ${{ ! endsWith(matrix.python-version, 't') }}
+      #   run: >
+      #     uv pip install
+      #     --upgrade
+      #     coveralls
+      #     -r tests/requirements_pytest.txt
 
       - name: Run tests (GIL)
         if: ${{ ! endsWith(matrix.python-version, 't') }}
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          uv run --no-project
+          uv run --frozen --with-requirements tests/requirements_pytest.txt
           pytest
           -v
           --cov=./
@@ -141,19 +141,19 @@ jobs:
           --browser-channel chrome
           tests/
 
-      - name: Install all other dependencies (free-threaded)
-        if:  ${{ endsWith(matrix.python-version, 't') }}
-        run: >
-          uv pip install
-          --upgrade
-          coveralls
-          -r tests/requirements_pytest_free-threaded.txt
+      # - name: Install all other dependencies (free-threaded)
+      #   if:  ${{ endsWith(matrix.python-version, 't') }}
+      #   run: >
+      #     uv pip install
+      #     --upgrade
+      #     coveralls
+      #     -r tests/requirements_pytest_free-threaded.txt
 
       - name: Run tests (free-threaded)
         if: ${{ endsWith(matrix.python-version, 't') }}
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          uv run --no-project
+          uv run --frozen  -with-requirements tests/requirements_pytest_free-threaded.txt
           pytest
           -v
           --cov=./

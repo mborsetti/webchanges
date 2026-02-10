@@ -1596,6 +1596,7 @@ class BrowserReporter(HtmlReporter):
 
 
 class XMPP:
+    # TODO: aioxmpp unmaintained, breaks at Python 3.13; move to https://pypi.org/project/slixmpp/
     def __init__(self, sender: str, recipient: str, insecure_password: str | None = None) -> None:
         if isinstance(aioxmpp, str):
             raise ImportError(
