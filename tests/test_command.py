@@ -139,7 +139,7 @@ def test_setup(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     if visual:
         os.environ['VISUAL'] = visual
     try:
-        urlwatcher.close()
+        urlwatcher.ssdb_storage.close()
     finally:
         pass
 
