@@ -58,6 +58,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
 
+      # Install uv per https://github.com/astral-sh/setup-uv/blob/main/README.md
+      # and https://docs.astral.sh/uv/guides/integration/github
+      # Caching is enabled on GitHub-hosted runners
+      - name: Set up uv
+        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41 # v7.2.1
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Install redis, pdf2text and ocr dependencies (Linux w/latest Python)
         # Redis easily installable on Unbuntu
         # Do full install and testing of pdf2text and ocr only on latest Python version
@@ -111,15 +119,6 @@ jobs:
 
       #     # Install Python packages
       #     uv pip install --upgrade pdftotext pytesseract
-
-      # Install uv per https://github.com/astral-sh/setup-uv/blob/main/README.md
-      # and https://docs.astral.sh/uv/guides/integration/github
-      # Caching is enabled on GitHub-hosted runners
-      - name: Set up uv
-        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41 # v7.2.1
-        with:
-          python-version: ${{ matrix.python-version }}
-
 
       - name: Install all other dependencies (GIL)
         if: ${{ ! endsWith(matrix.python-version, 't') }}
