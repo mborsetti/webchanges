@@ -132,7 +132,7 @@ jobs:
         if: ${{ ! endsWith(matrix.python-version, 't') }}
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          uv run --frozen --with-requirements tests/requirements_pytest.txt
+          uv run --with-requirements tests/requirements_pytest.txt
           pytest
           -v
           --cov=./
@@ -153,7 +153,7 @@ jobs:
         if: ${{ endsWith(matrix.python-version, 't') }}
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
         run: >
-          uv run --frozen  -with-requirements tests/requirements_pytest_free-threaded.txt
+          uv run --with-requirements tests/requirements_pytest_free-threaded.txt
           pytest
           -v
           --cov=./
