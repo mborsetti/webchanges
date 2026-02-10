@@ -438,6 +438,7 @@ class Report:
         def job_is_reportable(self: Report, job_state: JobState) -> bool:
             """Identify whether the job should generate a report based on its verb, relevant sub-directives, and the
             reporters configuration."""
+            logger.debug(f'Job {job_state.job.index_number}: Checking if job is reportable ({job_state.verb})')
             display_cfg = self.config['display']
             match job_state.verb:
                 case 'unchanged':

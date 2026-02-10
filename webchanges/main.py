@@ -27,6 +27,12 @@ logger = logging.getLogger(__name__)
 class Urlwatch:
     """The main class."""
 
+    config_storage: YamlConfigStorage
+    ssdb_storage: SsdbStorage
+    jobs_storage: YamlJobsStorage
+    jobs: list[JobBase]
+    report: Report
+
     def __init__(
         self,
         urlwatch_config: CommandConfig,
@@ -102,4 +108,4 @@ class Urlwatch:
     def close(self) -> None:
         """Finalizer. Create reports ands close snapshots database."""
         self.report.finish(jobs_file=self.jobs_storage.filename)
-        self.ssdb_storage.close()
+        # self.ssdb_storage.close()

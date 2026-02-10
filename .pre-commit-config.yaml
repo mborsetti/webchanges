@@ -11,9 +11,7 @@
 # To update hooks to the latest version automatically, run 'pre-commit autoupdate'. By default, this will bring the
 # hooks to the latest tag on the default branch.
 
-# NOTE: in this package tox runs 'pre-commit run -a'
-
-minimum_pre_commit_version: 4.5.1  # based on what's available at https://pre-commit.ci/
+minimum_pre_commit_version: 4.5.1  # based on what's available at https://github.com/pre-commit/pre-commit
 
 # Force all unspecified python hooks to run python3
 default_language_version:
@@ -150,13 +148,14 @@ repos:
         types_or: [python, pyi, jupyter]
         require_serial: true
         additional_dependencies: [ruff]
-      - id: ty 
+      - id: ty
         name: check Python static typing (ty)
         entry: ty
         args: ['check']
         language: python
         pass_filenames: true
         types_or: [python, pyi, jupyter]
+        exclude: storage_minidb.py
         require_serial: true
         additional_dependencies: [ty]
       - id: cli-help

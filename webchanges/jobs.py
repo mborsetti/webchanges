@@ -174,7 +174,7 @@ class JobBase(metaclass=TrackSubClasses):
     differ: dict[str, Any] | None = None  # added in 3.21
     diff_filters: str | list[str | dict[str, Any]] | None = None
     diff_tool: str | None = None  # deprecated in 3.21
-    empty_as_transient: bool
+    empty_as_transient: bool | None = None
     enabled: bool | None = None
     encoding: str | None = None
     evaluate: str | None = None  # Playwright

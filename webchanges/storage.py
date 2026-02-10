@@ -943,10 +943,10 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 if not isinstance(job_data, dict):
                     raise ValueError(
                         '\n   '.join(
-                            [
+                            (
                                 f'Found invalid job data (consisting of the {type(job_data).__name__} {job_data})',
                                 *job_files_for_error(),
-                            ]
+                            )
                         )
                     )
                 job_data['index_number'] = i + 1
@@ -956,55 +956,68 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                 if not isinstance(job.data, (NoneType, str, dict, list)):
                     raise ValueError(
                         '\n   '.join(
-                            [
-                                f"The 'data' key needs to contain a string, a dictionary or a list; found a"
-                                f' {type(job.data).__name__} ',
+                            (
+                                f"The 'data' key needs to contain a string, a dictionary or a list; found a "
+                                f'{type(job.data).__name__}',
                                 f'in {job.get_indexed_location()}',
                                 *job_files_for_error(),
-                            ]
+                            )
                         )
                     )
+                if isinstance(job.filters, str):  # Backwards compatibility
+                    warnings.warn(
+                        '\n   '.join(
+                            (
+                                f"The 'filters' key should contain a list; found a {type(job.data).__name__}",
+                                f'in {job.get_indexed_location()}',
+                                *job_files_for_error(),
+                            )
+                        ),
+                        RuntimeWarning,
+                        stacklevel=1,
+                    )
+                    job.filters = [job.filters]
                 if not isinstance(job.filters, (NoneType, list)):
                     raise ValueError(
                         '\n   '.join(
-                            [
-                                f"The 'filter' key needs to contain a list; found a {type(job.filters).__name__} ",
+                            (
+                                f"The 'filters' key needs to contain a list; found a {type(job.filters).__name__} ",
                                 f'in {job.get_indexed_location()}',
                                 *job_files_for_error(),
-                            ]
+                            )
                         )
                     )
                 if not isinstance(job.headers, (NoneType, dict, Headers)):
                     raise ValueError(
                         '\n   '.join(
-                            [
+                            (
                                 f"The 'headers' key needs to contain a dictionary; found a "
-                                f'{type(job.headers).__name__} ',
+                                f'{type(job.headers).__name__}',
                                 f'in {job.get_indexed_location()})',
                                 *job_files_for_error(),
-                            ]
+                            )
                         )
                     )
                 if not isinstance(job.cookies, (NoneType, dict)):
                     raise ValueError(
                         '\n   '.join(
-                            [
+                            (
                                 f"The 'cookies' key needs to contain a dictionary; found a "
-                                f'{type(job.headers).__name__} ',
+                                f'{type(job.headers).__name__}',
                                 f'in {job.get_indexed_location()})',
                                 *job_files_for_error(),
-                            ]
+                            )
                         )
                     )
                 if not isinstance(job.switches, (NoneType, str, list)):
                     raise ValueError(
                         '\n   '.join(
-                            [
+                            (
                                 f"The 'switches' key needs to contain a string or a list; found a "
-                                f'{type(job.switches).__name__} ',
+                                f'{type(job.switches).__name__}',
                                 f'in {job.get_indexed_location()}',
                                 *job_files_for_error(),
-                            ]
+                            )
                         )
                     )
                 # We add GUID here to speed things up and to allow hooks to programmatically change job.url and/or
@@ -1014,11 +1027,11 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         except yaml.scanner.ScannerError as e:
             raise ValueError(
                 '\n   '.join(
-                    [
+                    (
                         f'YAML parser {e.args[2].replace("here", "")} in line {e.args[3].line + 1}, column'
                         f' {e.args[3].column + 1}',
                         *job_files_for_error(),
-                    ]
+                    )
                 )
             ) from None
 

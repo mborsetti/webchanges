@@ -40,7 +40,8 @@ Display
 In addition to always reporting changes (which is the whole point of the program), :program:`webchanges` by default
 reports newly-added (``new``) pages and errors (``error``).
 
-You can change what is reported in the ``display`` section of the configuration:
+You can change what is reported in the ``display`` section (named from when that's all the program did) of the
+configuration:
 
 .. code:: yaml
 

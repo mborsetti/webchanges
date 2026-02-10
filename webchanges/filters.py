@@ -664,6 +664,18 @@ class PypdfFilter(FilterBase):
         if isinstance(PdfReader, str):
             self.raise_import_error('pypdf', self.__kind__, PdfReader)
 
+        class RenamePypdfFilter(logging.Filter):
+            """Function to rename logging name from '_.utils' to 'pypdf_utils'"""
+
+            def filter(self, record: logging.LogRecord) -> bool:
+                if record.name == 'pypdf._utils':
+                    record.name = 'pypdf_utils'  # Change the displayed name
+                return True
+
+        # Rename logging name from '_.utils' to 'pypdf_utils'
+        logger = logging.getLogger('pypdf._utils')
+        logger.addFilter(RenamePypdfFilter())
+
         password = subfilter.get('password')
         extraction_mode: Literal['plain', 'layout'] = subfilter.get('extraction_mode', 'plain')
 

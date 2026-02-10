@@ -4,7 +4,7 @@ Changelog
 
 This changelog mostly follows '`keep a changelog <https://keepachangelog.com/en/1.0.0/>`__'. Release numbering mostly
 follows the logic of `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__
-(``<major>.<minor>.<patch>``) and the syntax of Python's `Packaging 
+(``<major>.<minor>.<patch>``) and the syntax of Python's `Packaging
 <https://packaging.python.org/en/latest/discussions/versioning/>`__. Release date is UTC. Major backward incompatible
 (breaking) changes will be introduced in major versions with advance notice in the Deprecations section. Documentation
 updates are ongoing and mostly unlisted here.
@@ -35,26 +35,35 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.34.0
+Version 3.34.0rc0
 -------------------
 
 Added
 ``````
-* Reporter ``github_issue``, which creates a GitHub issue for changes detected. Contributed by `Dmitry Vasiliev 
-  <https://github.com/swimmwatch>`__ in `#105 <https://github.com/mborsetti/webchanges/issues/105>`__.  Used in
-  the GitHub Action ``webchanges-action`` at https://github.com/swimmwatch/webchanges-action.
-* Filters ``execute`` and ``shellpipe`` now have an ```escape_characters`` sub-directive indicating whether when running
-  in Windows command caracters are escaped (e.g. ``%`` become ``%%``  and ``!`` become ``^!``).
-* ``wdiff`` filter now handles ``html`` text.
-* ``ntfy`` reporter to support `ntfy <https://ntfy.sh>`__ (pronounced _notify_), an open-source fee simple
-  HTTP-based [pub-sub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) notification service, for
-  upstream compatibility.
+* New reporter ``github_issue`` creates a GitHub issue for changes detected.
+
+  - Kindly contributed by `Dmitry Vasiliev <https://github.com/swimmwatch>`__ in `#105
+    <https://github.com/mborsetti/webchanges/issues/105>`__.
+  - Implemented as a GitHub Action ``webchanges-action`` available `here
+    <https://github.com/swimmwatch/webchanges-action>`__.
+
+* The ``wdiff`` filter now handles ``html`` text.
+* New ``suppress_error_ended`` and ``suppress_errors``` Job sub-directives to control error notifications job-by-job.
+
+  - Suggested by `Marcos Alano <https://github.com/mhalano>`__ in `#101
+    <https://github.com/mborsetti/webchanges/issues/101>`__.
+
+* New ``ntfy`` reporter to support `ntfy <https://ntfy.sh>`__ (pronounced _notify_), an open-source fee simple
+  HTTP-based `pub-sub <https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern>`__ notification service (also
+  for upstream compatibility).
+* Filters ``execute`` and ``shellpipe`` now have an ``escape_characters`` sub-directive to automatically escape Windows
+  command caracters (e.g. ``%`` becomes ``%%``, ``!`` becomes ``^!``, etc.).
 
 Fixed
 `````
-* Now closing all databases, keep-alive connections, and underlying SSL sockets before exit. Fixes receiving 
-  ``ResourceWarning: unclosed database`` and ``ResourceWarning: <ssl.SSLSocket>`` when environment variable
-  ``PYTHONWARNINGS=all`` is set.
+* All databases, keep-alive connections, and underlying SSL sockets are now closed correctly before exit. Fixes the
+  ``ResourceWarning: unclosed database`` and ``ResourceWarning: <ssl.SSLSocket>`` messages when run with environment
+  variable ``PYTHONWARNINGS=all``.
 
 
 Version 3.33.0
@@ -64,7 +73,7 @@ Version 3.33.0
 Added
 `````
 * ``ai_google`` differ has new ``thinking_level`` and ``media_resolution`` sub-directives.
-* ``command`` differ has a new ``context_lines`` sub-directive for commands starting with wdiff for backwards 
+* ``command`` differ has a new ``context_lines`` sub-directive for commands starting with wdiff for backwards
   compatibility (but use the built-in ``wdiff`` differ instead).
 * Jobs now have ``suppress_error_ended`` and ``suppress_errors`` sub-directives to control error reporting.
 
@@ -80,14 +89,14 @@ Fixed
   Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
 * ``http_credentials`` directive not being applied to URL jobs with ``browser: true`` and ``user_data_dir``.
 * When running with command line argument ``-vv``, browser pages will open with DevTools open.
-* Problem parsing Playwright exceptions in BrowserJob class retrieve method  (issue #`141 
+* Problem parsing Playwright exceptions in BrowserJob class retrieve method  (issue #`141
   <https://github.com/mborsetti/webchanges/issues/141>`__)..
 
 Internals for ``hooks.py``
 ``````````````````````````
-* The BrowserJob class' ``retrieve`` method has been modularized, and exposes ``response_handler`` (a callable which 
-  replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content 
-  extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after 
+* The BrowserJob class' ``retrieve`` method has been modularized, and exposes ``response_handler`` (a callable which
+  replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content
+  extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after
   the browser is launched).`
 
 Internals
@@ -108,7 +117,7 @@ Version 3.32.0
 
 Added
 `````
-* Support for Python 3.14t (free-threaded, GIL-free). Please note that while **webchanges** now supports free-threaded 
+* Support for Python 3.14t (free-threaded, GIL-free). Please note that while **webchanges** now supports free-threaded
   Python, certain optional dependencies do not (currently, these are ``playwright`` and ``jq``).
 
 Fixed
@@ -146,7 +155,7 @@ Version 3.31.4
 Reminder
 ````````
 Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.10 was
-released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24 
+released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24
 October 2025.
 
 Added
@@ -160,7 +169,7 @@ Fixed
 
 Internals (impacting hooks.py)
 ``````````````````````````````
-* In the ``Differ`` Class' ``process`` method, the ``report_kind``'s value ``text`` has been renamed ``plain`` for 
+* In the ``Differ`` Class' ``process`` method, the ``report_kind``'s value ``text`` has been renamed ``plain`` for
   clarity and to align with IANA's media type nomenclature for different types of text.
 
 Internals (other)
@@ -177,7 +186,7 @@ Version 3.31.3
 Reminder
 ````````
 Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.10 was
-released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24 
+released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24
 October 2025.
 
 Fixed
@@ -198,7 +207,7 @@ Version 3.31.2
 Reminder
 ````````
 Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.10 was
-released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24 
+released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24
 October 2025.
 
 Fixed
@@ -218,13 +227,13 @@ Version 3.31.1
 Reminder
 ````````
 Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.10 was
-released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24 
+released on 24 October 2022, the codebase will be streamlined by removing support for Python 3.10 on or after 24
 October 2025.
 
 Added
 `````
 * Documented the ``deepdiff`` differ for side-effects when using ``ignore_order: true``.
-* Added the ``utf-8`` configuration sub-directive within the ``smtp`` emailer (``email`` report) to enable turning off 
+* Added the ``utf-8`` configuration sub-directive within the ``smtp`` emailer (``email`` report) to enable turning off
   RFC 6531 Internationalized Email, aka SMTPUTF8 service extension, for backward compatibility with old SMTP servers.
   Requested in #`108 <https://github.com/mborsetti/webchanges/issues/108>`__.
 
@@ -251,7 +260,7 @@ Internals
 * Packages in test environments are now installed with ``uv``.
 * Experimenting with `Gemini CLI GitHub Action <https://github.com/google-github-actions/run-gemini-cli/>`__ to triage
   issues and perform pull request reviews (thanks to Google's generous free-of-charge quotas).
-* Starting to implement lazy loading of packages and modules to improve startup time to execute simple command line 
+* Starting to implement lazy loading of packages and modules to improve startup time to execute simple command line
   arguments.
 
 

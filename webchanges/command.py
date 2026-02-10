@@ -66,7 +66,8 @@ class UrlwatchCommand:
 
     def _exit(self, arg: str | int | None) -> None:
         logger.info(f'Exiting with exit code {arg}')
-        self.urlwatcher.close()
+
+        self.urlwatcher.ssdb_storage.close()
         sys.exit(arg)
 
     def jobs_from_joblist(self) -> Iterator[JobBase]:
@@ -511,7 +512,6 @@ class UrlwatchCommand:
             return
         self.urlwatcher.urlwatch_config.joblist = set(self.urlwatcher.urlwatch_config.joblist).union(new_jobs)
         self.urlwatcher.run_jobs()
-        self.urlwatcher.close()
         return
 
     def test_differ(self, arg_test_differ: list[str]) -> int:
@@ -866,7 +866,6 @@ class UrlwatchCommand:
         count = self.urlwatcher.ssdb_storage.rollback(dt.timestamp())
         if count:
             print(f'Deleted {count} snapshots taken after {timestamp_date}.')
-            self.urlwatcher.ssdb_storage.close()
         else:
             print(f'No snapshots found after {timestamp_date}')
         return 0
@@ -1300,19 +1299,16 @@ class UrlwatchCommand:
             self.urlwatcher.ssdb_storage.gc(
                 [job.guid for job in self.urlwatcher.jobs], self.urlwatch_config.gc_database
             )
-            self.urlwatcher.ssdb_storage.close()
             self._exit(0)
 
         if self.urlwatch_config.clean_database:
             self.urlwatcher.ssdb_storage.clean_ssdb(
                 [job.guid for job in self.urlwatcher.jobs], self.urlwatch_config.clean_database
             )
-            self.urlwatcher.ssdb_storage.close()
             self._exit(0)
 
         if self.urlwatch_config.rollback_database:
             exit_arg = self.rollback_database(self.urlwatch_config.rollback_database)
-            self.urlwatcher.ssdb_storage.close()
             self._exit(exit_arg)
 
         if self.urlwatch_config.delete_snapshot:

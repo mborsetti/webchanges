@@ -361,8 +361,8 @@ GitHub Issue
 ------------
 Submits a :ref:`markdown <markdown>` report as a new issue to a GitHub repository.
 
-To use this reporter, you need to create a `GitHub personal access token 
-<https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>`__ 
+To use this reporter, you need to create a `GitHub personal access token
+<https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens>`__
 with the ``public_repo`` scope for public repositories or the ``repo`` scope for private repositories.
 
 In addition, aGitHub Action implementation of webchanges is available `here
@@ -649,7 +649,7 @@ Sub-directives
 ~~~~~~~~~~~~~~
 * ``api_key``: The API key.
 
-.. warning:: the Python package used for this reporter, ``pushbullet`` (`homepage 
+.. warning:: the Python package used for this reporter, ``pushbullet`` (`homepage
    <https://github.com/richard-better/pushbullet.py>`__), has not been maintained since 2022 and is not being tested
    on Windows or with Python 3.12 (Linux, macOS) and higher due to failures.
 

@@ -52,14 +52,14 @@ Example ``hooks.py`` file:
 
    if TYPE_CHECKING:
        from typing import Any, Callable, Literal
-   
+
        from webchanges.handler import JobState
        from webchanges.jobs import JobBase
        from webchanges.storage import _Config
        from playwright.sync_api import Page, Response
 
    logger = logging.getLogger(__name__)
-   
+
    hooks_custom_login_lock = threading.Lock()
 
 
@@ -261,7 +261,7 @@ Example ``hooks.py`` file:
 
 
    class CustomTextFileReporter(TextReporter):
-       """Custom reporter that writes the text-only report to a file. Insert the filename in config.py as a filename 
+       """Custom reporter that writes the text-only report to a file. Insert the filename in config.py as a filename
        key to the text reporter.
 
        Needs to enabled in the config.yaml file:
@@ -328,7 +328,7 @@ Example ``hooks.py`` file:
                page.wait_for_timeout(20)
                page.keyboard.press('Enter')
                logger.info('Job {self.index_number}: Entered credentials; waiting for API response')
-   
+
                logger.info(f'Job {self.index_number}: Using the {self.__kind__} job class from hooks.py')
 
            def extract_api_browser(
@@ -404,7 +404,7 @@ Example ``hooks.py`` file:
       ...
 
 .. versionchanged:: 3.33
-    The BrowserJob class' ``retrieve`` method has been modularized, and exposes ``response_handler`` (a callable which 
-    replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content 
-    extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after 
+    The BrowserJob class' ``retrieve`` method has been modularized, and exposes ``response_handler`` (a callable which
+    replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content
+    extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after
     the browser is launched).

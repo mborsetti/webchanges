@@ -327,7 +327,7 @@ Model tuning
 * ``thinking_budget`` (int): Only for Gemini 2.5: The model's thinking budget; see `model documentation
   <https://ai.google.dev/gemini-api/docs/thinking#set-budget>`__ (default: unset, effect varies by model as per
   documentation).
-* ``thinking_level`` ('low', 'medium', or 'high'): For Gemini 3 and above, the model's thinking level; see `model 
+* ``thinking_level`` ('low', 'medium', or 'high'): For Gemini 3 and above, the model's thinking level; see `model
   documentation <https://ai.google.dev/gemini-api/docs/gemini-3?thinking=high#thinking_level>`__ (default: unset).
 * ``top_k`` (int of 1 or greater): The model's TopK parameter, i.e. k most likely next tokens to sample from at
   each step. Lower k focuses on higher probability tokens (default: Google's default, which is model-dependent, but
@@ -569,11 +569,11 @@ Optional directives
 
 
 .. note::
-   
+
    When you set ``ignore_order: true``, DeepDiff will treat lists as if they were sets. To compare two
-   sets, it needs to be able to pair up the items and DeepDiff's default strategy is to try and hash the objects in the 
-   list. However, if the items in the list are dictionaries, since they are not hashable in Python, when DeepDiff finds 
-   a dictionary in new_data that has even a tiny difference from its counterpart in old_data, since it can't be sure 
+   sets, it needs to be able to pair up the items and DeepDiff's default strategy is to try and hash the objects in the
+   list. However, if the items in the list are dictionaries, since they are not hashable in Python, when DeepDiff finds
+   a dictionary in new_data that has even a tiny difference from its counterpart in old_data, since it can't be sure
    they are "the same object, but modified", it reports that the entire old dictionary is gone and that the entire new
    dictionary has been added. This will cause the report to show a change for the entire, and potentially large,
    dictionary, not just of the any changed nested value(s).

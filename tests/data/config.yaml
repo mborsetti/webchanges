@@ -50,7 +50,7 @@ report:
     sendmail:
       path: sendmail
   github_issue:
-      enabled: False,
+      enabled: false
       token: ''
       owner: ''
       repo: ''
@@ -137,7 +137,7 @@ job_defaults:
     _note: "These are used for 'url' jobs with 'use_browser: true'."
   command:
     _note: "These are used for 'command' jobs."
-differ_defaults: 
+differ_defaults:
   _note: Default directives that are applied to individual differs.
   unified: {}
   ai_google: {}

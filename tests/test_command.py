@@ -54,16 +54,6 @@ base_hooks_file = config_path.joinpath('hooks_example.py')
 hooks_file = tmp_path.joinpath('hooks_example.py')
 shutil.copyfile(base_hooks_file, hooks_file)
 
-# Set up dummy editor
-editor = os.getenv('EDITOR')
-if sys.platform == 'win32':
-    os.environ['EDITOR'] = 'rundll32'
-else:
-    os.environ['EDITOR'] = 'true'
-visual = os.getenv('VISUAL')
-if visual:
-    del os.environ['VISUAL']
-
 py_latest_only = cast(
     'Callable[[Callable], Callable]',
     pytest.mark.skipif(
@@ -118,21 +108,39 @@ urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_sto
 urlwatch_command_common = UrlwatchCommand(urlwatcher)
 
 
-@pytest.fixture(scope='module', autouse=True)
-def cleanup(request: pytest.FixtureRequest) -> Generator[None, None, None]:
-    """Cleanup once we are finished."""
-    # Setup phase
+@pytest.fixture(autouse=True)
+def remove_database_close(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Do not close database when running these tests."""
+    monkeypatch.setattr('webchanges.storage.SsdbSQLite3Storage.close', lambda _: None)
+    monkeypatch.setattr('webchanges.storage_minidb.SsdbMiniDBStorage.close', lambda _: None)
+    return
 
+
+@pytest.fixture(scope='module', autouse=True)
+def test_setup(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    """Set up dummy editor; close database once we are finished."""
+    # Setup phase
+    # Set up dummy editor
+    editor = os.getenv('EDITOR')
+    if sys.platform == 'win32':
+        os.environ['EDITOR'] = 'rundll32'
+    else:
+        os.environ['EDITOR'] = 'true'
+    visual = os.getenv('VISUAL')
+    if visual:
+        del os.environ['VISUAL']
     yield
 
     # Teardown phase
     if editor:
         os.environ['EDITOR'] = editor
+    else:
+        del os.environ['EDITOR']
     if visual:
         os.environ['VISUAL'] = visual
     try:
         urlwatcher.close()
-    except:  # noqa: S110,E722
+    finally:
         pass
 
 

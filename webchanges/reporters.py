@@ -429,7 +429,7 @@ class HtmlReporter(ReporterBase):
         if job_state.verb in ('new', 'test'):
             return _format_for_return(str(job_state.new_data))
 
-        if job_state.verb in ('error', 'error,repeaded'):
+        if job_state.verb in ('error', 'error,repeated'):
             htm = f'<pre style="white-space:pre-wrap;color:red;">{html.escape(job_state.traceback)}</pre>'
             if job_state.job.suppress_repeated_errors:
                 htm += (
@@ -541,7 +541,7 @@ class TextReporter(ReporterBase):
         :param differ: The type of differ to use.
         :returns: HTML for a single job.
         """
-        if job_state.verb == 'error' or job_state.verb == 'error,repeaded':
+        if job_state.verb == 'error' or job_state.verb == 'error,repeated':
             text = self._red(job_state.traceback) if isinstance(self, StdoutReporter) else job_state.traceback
             if job_state.job.suppress_repeated_errors:
                 text += 'Reminder: No further alerts until the error is resolved or changes.'
@@ -786,7 +786,7 @@ class MarkdownReporter(ReporterBase):
         :param differ: The type of differ to use.
         :returns: HTML for a single job.
         """
-        if job_state.verb == 'error' or job_state.verb == 'error,repeaded':
+        if job_state.verb == 'error' or job_state.verb == 'error,repeated':
             mark = job_state.traceback
             if job_state.job.suppress_repeated_errors:
                 mark += '_Reminder: No further alerts until the error is resolved or changes._'
