@@ -1,33 +1,26 @@
 Added
-`````
-* ``ai_google`` differ has new ``thinking_level`` and ``media_resolution`` sub-directives.
-* ``command`` differ has a new ``context_lines`` sub-directive for commands starting with wdiff for backwards 
-  compatibility (but use the built-in ``wdiff`` differ instead).
+``````
+* New reporter ``github_issue`` creates a GitHub issue for changes detected.
 
-Changed
-```````
-* ``ai_google`` differ is no longer considered BETA.
-* Improved logging for the ``evaluate`` directive in URL Jobs with ``browser: true``.
-* ``--dump-history JOB`` command line argument will now match any job, even one that is not in the ``--jobs`` file.
+  - Kindly contributed by `Dmitry Vasiliev <https://github.com/swimmwatch>`__ in `#105
+    <https://github.com/mborsetti/webchanges/issues/105>`__.
+  - Implemented as a GitHub Action ``webchanges-action`` available `here
+    <https://github.com/swimmwatch/webchanges-action>`__.
+
+* The ``wdiff`` filter now handles ``html`` text.
+* New ``suppress_error_ended`` and ``suppress_errors``` Job sub-directives to control error notifications job-by-job.
+
+  - Suggested by `Marcos Alano <https://github.com/mhalano>`__ in `#101
+    <https://github.com/mborsetti/webchanges/issues/101>`__.
+
+* New ``ntfy`` reporter to support `ntfy <https://ntfy.sh>`__ (pronounced _notify_), an open-source fee simple
+  HTTP-based `pub-sub <https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern>`__ notification service (also
+  for upstream compatibility).
+* Filters ``execute`` and ``shellpipe`` now have an ``escape_characters`` sub-directive to automatically escape Windows
+  command caracters (e.g. ``%`` becomes ``%%``, ``!`` becomes ``^!``, etc.).
 
 Fixed
 `````
-* Regression: ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many
-  Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
-* ``http_credentials`` directive not being applied to URL jobs with ``browser: true`` and ``user_data_dir``.
-* When running with command line argument ``-vv``, browser pages will open with DevTools open.
-* Problem parsing Playwright exceptions in BrowserJob class retrieve method  (issue #`141 
-  <https://github.com/mborsetti/webchanges/issues/141>`__)..
-
-Internals for ``hooks.py``
-``````````````````````````
-* The BrowserJob class' ``retrieve`` method has been modularized, and exposes ``response_handler`` (a callable which 
-  replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content 
-  extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after 
-  the browser is launched).`
-
-Internals
-`````````
-* Code type checking is now performed using ``ty`` instead of ``mypy``.
-* Improved logging and the saving of snapshots when a browsing error is encountered for URL jobs with ``browser: true``.
-* Use ``uv`` to build PyPi distributable.
+* All databases, keep-alive connections, and underlying SSL sockets are now closed correctly before exit. Fixes the
+  ``ResourceWarning: unclosed database`` and ``ResourceWarning: <ssl.SSLSocket>`` messages when run with environment
+  variable ``PYTHONWARNINGS=all``.
