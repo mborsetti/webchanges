@@ -152,13 +152,9 @@ jobs:
       - name: Run tests (free-threaded)
         if: ${{ endsWith(matrix.python-version, 't') }}
         # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
-        run: >
-          uv run --with-requirements tests/requirements_pytest_free-threaded.txt
-          pytest
-          -v
-          --cov=./
-          --cov-report=term
-          tests/
+        run: |
+          apt-get install libxml2-dev libxslt-dev
+          uv run --with-requirements tests/requirements_pytest_free-threaded.txt pytest -v --cov=./ --cov-report=term tests/
 
       - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
