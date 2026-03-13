@@ -10,6 +10,10 @@
 =======
 Filters
 =======
+
+
+Overview
+--------
 Filters can be applied at either of two stages of processing:
 
 * Applied to the downloaded data before storing it and diffing for changes (``filter``).
@@ -127,8 +131,8 @@ Advanced Python programmers can write their own custom filters; see :ref:`hooks`
 
 .. _absolute_links:
 
-absolute_links
---------------
+``absolute_links``
+------------------
 Convert relative URLs of all ``action``, ``href` and ``src`` attribute in any HTML tag, as well the ``data``
 attribute of the ``<object>`` tag, to absolute ones.
 
@@ -153,8 +157,8 @@ attribute of the ``<object>`` tag, to absolute ones.
 
 .. _ascii85:
 
-ascii85
--------
+``ascii85``
+-----------
 Encodes binary data (e.g. image data) to text using `Ascii85 <https://en.wikipedia.org/wiki/Ascii85>`__. Ascii85 is
 more space-efficient than Base64, encoding more bytes into fewer characters. This filter can be useful to monitor
 images in combination with the :ref:`image_diff` differ.
@@ -171,8 +175,8 @@ images in combination with the :ref:`image_diff` differ.
 
 .. _base64:
 
-base64
-------
+``base64``
+----------
 Encodes binary data (e.g. image data) to text using `RFC 4648 <https://datatracker.ietf.org/doc/html/rfc4648.html>`__
 `Base64 <https://en.wikipedia.org/wiki/Base64>`__. This filter can be useful to monitor images in combination with
 the :ref:`image_diff` differ.  Also see :ref:`ascii85`, which is more efficient.
@@ -189,8 +193,8 @@ the :ref:`image_diff` differ.  Also see :ref:`ascii85`, which is more efficient.
 
 .. _beautify:
 
-beautify
---------
+``beautify``
+------------
 This filter uses the `Beautiful Soup <https://pypi.org/project/beautifulsoup4/>`__, `jsbeautifier
 <https://pypi.org/project/jsbeautifier/>`__ and `cssbeautifier <https://pypi.org/project/cssbeautifier/>`__ Python
 packages to reformat the HTML in a document to make it more readable (keeping it as HTML).
@@ -240,8 +244,8 @@ follows:
 
 .. _css:
 
-css
----
+``css``
+-------
 The ``css`` filter extracts HTML or XML content based on a `CSS selector <https://www.w3.org/TR/selectors/>`__. It uses
 the `cssselect <https://pypi.org/project/cssselect/>`__ Python package, which has limitations and extensions as
 explained in its `documentation <https://cssselect.readthedocs.io/en/latest/#supported-selectors>`__. This filter works
@@ -362,8 +366,8 @@ Optional directives
 
 .. _csv2text:
 
-csv2text
---------
+``csv2text``
+------------
 The filter **csv2text** turns *tabular data* formatted as comma separated values (CSV) into a prettier textual
 representation. This is done by supplying a Python `format string
 <https://docs.python.org/3/library/string.html#format-string-syntax>`__ where the csv data is replaced into. If the CSV
@@ -409,8 +413,8 @@ Optional sub-directives
 
 .. _delete_lines_containing:
 
-delete_lines_containing
------------------------
+``delete_lines_containing``
+---------------------------
 This filter is the inverse of ``keep_lines_containing`` above and discards all lines that contain the text specified
 (default) or match the Python `regular expression
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__, keeping the others.
@@ -450,8 +454,8 @@ Optional sub-directives
 
 .. _element-by-…:
 
-element-by-[class|id|style|tag]
--------------------------------
+``element-by-`` [ ``class`` | ``id`` | ``style`` | ``tag`` ]
+------------------------------------------------------------
 The filters **element-by-class**, **element-by-id**, **element-by-style**, and **element-by-tag** allow you to select
 all matching instances of a given HTML element.
 
@@ -505,8 +509,8 @@ To extract ``<div style="something">.../<div>`` from a page:
 
 .. _execute:
 
-execute
----------
+``execute``
+-----------
 The data to be filtered is passed as the input to a command to be run, and the output from the command is used in
 :program:`webchanges`'s next step. All environment variables are preserved and the following ones added:
 
@@ -561,7 +565,7 @@ Optional sub-directives
 
 .. _format-json:
 
-format-json
+``format-json``
 ---------------
 This filter serializes the JSON data to a pretty-printed indented string using Python's `json.dumps
 <https://docs.python.org/3/library/json.html#json.dumps>`__ (or, if installed, the same function from the `simplejson
@@ -590,8 +594,8 @@ Optional sub-directives
 
 .. _format-xml:
 
-format-xml
-----------
+``format-xml``
+--------------
 This filter deserializes an XML object and reformats it. It uses the `lxml <https://lxml.de>`__ Python package's
 etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.tostring>`__ function.
 
@@ -608,7 +612,7 @@ etree.tostring `pretty_print <https://lxml.de/apidoc/lxml.etree.html#lxml.etree.
 
 .. _hexdump:
 
-hexdump
+``hexdump``
 -----------
 This filter displays the contents both in binary and ASCII using the hex dump format.
 
@@ -623,7 +627,7 @@ This filter displays the contents both in binary and ASCII using the hex dump fo
 
 .. _html2text:
 
-html2text
+``html2text``
 -------------
 This filter converts HTML (or XML) to Unicode text.
 
@@ -770,8 +774,8 @@ packages <optional_packages>` as follows:
 
 .. _ical2text:
 
-ical2text
----------
+``ical2text``
+-------------
 This filter reads an iCalendar document and converts it to easy-to read text.
 
 .. code-block:: yaml
@@ -794,8 +798,8 @@ follows:
 
 .. _jq:
 
-jq
---
+``jq``
+------
 
 Linux/macOS ASCII only
 ``````````````````````
@@ -837,8 +841,8 @@ Python programmers on all OSs can use an advanced technique to select only certa
 
 .. _jsontoyaml:
 
-_jsontoyaml
----------------
+``jsontoyaml``
+--------------
 This filter serializes the JSON data to YAML using Python's `PyYAML <https://pyyaml.org/>`__ library with a default
 indent level of 2.
 
@@ -857,8 +861,8 @@ Optional sub-directives
 
 .. _keep_lines_containing:
 
-keep_lines_containing
----------------------
+``keep_lines_containing``
+-------------------------
 This filter keeps only lines that contain the text specified (default) or match the Python `regular
 expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified, discarding the others.
 Note that while this filter emulates Linux's *grep*, it **does not** use the executable *grep*.
@@ -897,8 +901,8 @@ Optional sub-directives
 
 .. _ocr:
 
-ocr
----
+``ocr``
+-------
 This filter extracts text from images using the `Tesseract OCR engine <https://github.com/tesseract-ocr>`_. Any file
 format supported by the `Pillow <https://python-pillow.org>`_ (PIL Fork) Python package is supported.
 
@@ -932,8 +936,8 @@ In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tes
 
 .. _pdf2text:
 
-pdf2text
---------
+``pdf2text``
+------------
 This filter converts a PDF file to plaintext using the `pdftotext
 <https://github.com/jalan/pdftotext/blob/master/README.md#pdftotext>`__ Python library, itself based on the `Poppler
 <https://poppler.freedesktop.org/>`__ library.
@@ -1024,8 +1028,8 @@ In addition, you need to install any of the OS-specific dependencies of Poppler 
 
 .. _pretty-xml:
 
-pretty-xml
-----------
+``pretty-xml``
+--------------
 This filter deserializes an XML object and pretty-prints it. It uses Python's xml.dom.minidom `toprettyxml
 <https://docs.python.org/3/library/xml.dom.minidom.html#xml.dom.minidom.Node.toprettyxml>`__ function.
 
@@ -1042,7 +1046,7 @@ This filter deserializes an XML object and pretty-prints it. It uses Python's xm
 
 .. _pypdf:
 
-pypdf
+``pypdf``
 --------
 This filter converts a PDF file to plaintext using the `pypdf <https://pypi.org/project/pypdf/>`__ Python library.
 
@@ -1146,8 +1150,8 @@ To run jobs with the ``password`` sub-directive, then use the following:
 
 .. _re.findall:
 
-re.findall
-----------
+``re.findall``
+--------------
 This filter extracts, deletes or replaces non-overlapping text using Python `re.findall
 <https://docs.python.org/3/library/re.html#re.findall>`__ `regular expression
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ operation.
@@ -1225,8 +1229,8 @@ Optional sub-directives
 
 .. _re.sub:
 
-re.sub
-------
+``re.sub``
+----------
 This filter deletes or replaces text using Python Python `re.sub
 <https://docs.python.org/3/library/re.html#re.sub>`__ `regular expression
 <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ operation.
@@ -1287,8 +1291,8 @@ Optional sub-directives
 
 .. _remove_repeated:
 
-remove_repeated
----------------
+``remove_repeated``
+-------------------
 This filter compares adjacent items (lines), and the second and succeeding copies of repeated items (lines) are
 removed. Repeated items (lines) must be adjacent in order to be found. Works similarly to Unix's ``uniq``.
 
@@ -1351,8 +1355,8 @@ Optional sub-directives
 
 .. _reverse:
 
-reverse
--------
+``reverse``
+-----------
 
 This filter reverses the order of items (lines) without sorting:
 
@@ -1391,7 +1395,7 @@ Optional sub-directives
 
 .. _sha1sum:
 
-sha1sum
+``sha1sum``
 -----------
 This filter calculates a SHA-1 hash for the contents. Useful to be notified when anything has changed without
 any detail and avoiding saving large snapshots of data.
@@ -1407,8 +1411,8 @@ any detail and avoiding saving large snapshots of data.
 
 .. _shellpipe:
 
-shellpipe
----------
+``shellpipe``
+-------------
 This filter works like :ref:`execute`, except that an intermediate shell process is spawned to run the command. This
 is to allow for certain corner situations (e.g. relying on variables, glob patterns, and other special shell features in
 the command) that the ``execute`` filter cannot handle.
@@ -1455,8 +1459,8 @@ Optional sub-directives
 
 .. _sort:
 
-sort
-----
+``sort``
+--------
 This filter performs a line-based sorting, ignoring cases (i.e. case folding as per Python's `implementation
 <https://docs.python.org/3/library/stdtypes.html#str.casefold>`__).
 
@@ -1500,8 +1504,8 @@ Optional sub-directives
 
 .. _strip:
 
-strip
------
+``strip``
+---------
 This filter removes leading and trailing whitespace or specified characters from a set of characters. Whitespace
 includes the characters space, tab, linefeed, return, formfeed, and vertical tab.
 
@@ -1558,8 +1562,8 @@ Optional sub-directives
 
 .. _xpath:
 
-xpath
------
+``xpath``
+---------
 The ``xpath`` filter extracts HTML or XML content based on a `XPath <https://www.w3.org/TR/xpath-10/>`__ version
 1.0 expression. This filter works very similarly to, and its sub-directives are almost identical to, those of the
 :ref:`css <css>` filter.

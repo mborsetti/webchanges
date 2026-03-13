@@ -66,11 +66,7 @@ try:
 except ImportError as e:  # pragma: no cover
     Image = str(e)  # type: ignore[assignment]
 
-# https://stackoverflow.com/questions/712791
-try:
-    import simplejson as jsonlib
-except ImportError:  # pragma: no cover
-    import json as jsonlib
+import json
 
 try:
     import xmltodict
@@ -526,7 +522,7 @@ class UnifiedDiffer(DifferBase):
                     'plain': diff_text,
                     'markdown': diff_text,
                 }
-            )  # ty:ignore[no-matching-overload]
+            )
 
         if report_kind == 'html':
             out_diff['html'] = '\n'.join(self.unified_diff_to_html(diff_text))
@@ -581,7 +577,7 @@ class TableDiffer(DifferBase):
                     'plain': diff_text,
                     'markdown': diff_text,
                 }
-            )  # ty:ignore[no-matching-overload]
+            )
 
         return out_diff
 
@@ -706,7 +702,7 @@ class CommandDiffer(DifferBase):
                         'markdown': head_text + diff_text,
                         'html': head_html + diff,
                     }
-                )  # ty:ignore[no-matching-overload]
+                )
             else:
                 diff_text = diff
                 out_diff.update(
@@ -714,7 +710,7 @@ class CommandDiffer(DifferBase):
                         'plain': head_text + diff_text,
                         'markdown': head_text + diff_text,
                     }
-                )  # ty:ignore[no-matching-overload]
+                )
 
         if report_kind == 'html' and 'html' not in out_diff:
             if command.startswith('wdiff'):
@@ -939,7 +935,7 @@ class DeepdiffDiffer(DifferBase):
                                 return value_string
                             value_string = '\n    ' + '    '.join(value_list)
                             return value_string.rstrip()
-                        return jsonlib.dumps(value, ensure_ascii=False, indent=2)
+                        return json.dumps(value, ensure_ascii=False, indent=2)
                     return str(value)
 
                 type_t1 = type(ddiff.t1).__name__
@@ -981,7 +977,7 @@ class DeepdiffDiffer(DifferBase):
                                 return value_string
                             value_string = mark_to_html('\n    ' + '    '.join(value_list))
                             return value_string.rstrip()
-                        return mark_to_html(jsonlib.dumps(value, ensure_ascii=False, indent=2))
+                        return mark_to_html(json.dumps(value, ensure_ascii=False, indent=2))
                     return mark_to_html(str(value))
 
                 type_t1 = type(ddiff.t1).__name__
@@ -1079,8 +1075,8 @@ class DeepdiffDiffer(DifferBase):
             deserialize_method = data_type or _serialize_method(media_type, data_label)
             if deserialize_method == 'json':
                 try:
-                    return jsonlib.loads(data), None
-                except jsonlib.JSONDecodeError as e:
+                    return json.loads(data), None
+                except json.JSONDecodeError as e:
                     self.state.exception = e
                     self.state.traceback = self.job.format_error(e, traceback.format_exc())
                     logger.error(
@@ -1778,13 +1774,13 @@ class AIGoogleDiffer(DifferBase):
                         f'## ERROR in summarizing changes using Google AI:\n'
                         f'Model did not return any candidate output:\n'
                         f'finishReason={finish_reason}'
-                        f'{jsonlib.dumps(result["usageMetadata"], ensure_ascii=True, indent=2)}'
+                        f'{json.dumps(result["usageMetadata"], ensure_ascii=True, indent=2)}'
                     )
             else:
                 summary = (
                     f'## ERROR in summarizing changes using Google AI:\n'
                     f'Model did not return any candidate output:\n'
-                    f'{jsonlib.dumps(result, ensure_ascii=True, indent=2)}'
+                    f'{json.dumps(result, ensure_ascii=True, indent=2)}'
                 )
 
         elif r.status_code == 400:

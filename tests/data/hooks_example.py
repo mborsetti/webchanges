@@ -86,7 +86,7 @@ class CustomTextFileReporter(TextReporter):
     __kind__ = 'custom_file'
 
     def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
-        Path(self.config['filename']).write_text('\n'.join(super().submit()))
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # ty:ignore[invalid-key, invalid-argument-type]
 
 
 class CustomHtmlFileReporter(HtmlReporter):
@@ -95,4 +95,4 @@ class CustomHtmlFileReporter(HtmlReporter):
     __kind__ = 'custom_html'
 
     def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
-        Path(self.config['filename']).write_text('\n'.join(super().submit()))
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # ty:ignore[invalid-key, invalid-argument-type]

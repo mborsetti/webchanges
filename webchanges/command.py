@@ -51,7 +51,7 @@ if httpx is not None:
 
 if TYPE_CHECKING:
     from webchanges.main import Urlwatch
-    from webchanges.reporters import _ConfigReportersList
+    from webchanges.reporters._base import _ConfigReportersList
     from webchanges.storage import _ConfigReportEmail, _ConfigReportEmailSmtp, _ConfigReportTelegram, _ConfigReportXmpp
 
 logger = logging.getLogger(__name__)
@@ -73,8 +73,8 @@ class UrlwatchCommand:
     def jobs_from_joblist(self) -> Iterator[JobBase]:
         """Generates the jobs to process from the joblist entered in the CLI."""
         if self.urlwatcher.urlwatch_config.joblist:
-            jobs = {self._find_job(job_entry) for job_entry in self.urlwatcher.urlwatch_config.joblist}
-            enabled_jobs = {job for job in jobs if job.is_enabled()}
+            jobs = [self._find_job(job_entry) for job_entry in self.urlwatcher.urlwatch_config.joblist]
+            enabled_jobs = [job for job in jobs if job.is_enabled()]
             disabled = len(enabled_jobs) - len(jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
             logger.debug(
@@ -82,7 +82,7 @@ class UrlwatchCommand:
                 f'command line: {", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
             )
         else:
-            enabled_jobs = {job for job in self.urlwatcher.jobs if job.is_enabled()}
+            enabled_jobs = [job for job in self.urlwatcher.jobs if job.is_enabled()]
             disabled = len(enabled_jobs) - len(self.urlwatcher.jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
             logger.debug(f'Processing {len(enabled_jobs)} job{"s" if enabled_jobs else ""}{disabled_str}')
@@ -309,7 +309,7 @@ class UrlwatchCommand:
             print()
             print('Installed dpkg dependencies:')
             try:
-                import apt  # ty:ignore[unresolved-import]
+                import apt
 
                 apt_cache = apt.Cache()
 
@@ -501,23 +501,23 @@ class UrlwatchCommand:
 
     def prepare_jobs(self) -> None:
         """Runs jobs that have no history to populate the snapshot database when they're newly added."""
-        new_jobs = set()
+        new_jobs = []
         for idx, job in enumerate(self.urlwatcher.jobs):
             has_history = bool(self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid))
             if not has_history:
                 print(f'Running new {job.get_indexed_location()}.')
-                new_jobs.add(idx + 1)
+                new_jobs.append(idx + 1)
         if not new_jobs and not self.urlwatch_config.joblist:
             print('Found no new jobs to run.')
             return
-        self.urlwatcher.urlwatch_config.joblist = set(self.urlwatcher.urlwatch_config.joblist).union(new_jobs)
+        self.urlwatcher.urlwatch_config.joblist = list(self.urlwatcher.urlwatch_config.joblist) + new_jobs
         self.urlwatcher.run_jobs()
         return
 
     def test_differ(self, arg_test_differ: list[str]) -> int:
         """Runs diffs for a job on all the saved snapshots.
 
-        Outputs the result to stdout or the reporter selected  with --test-reporter.
+        Outputs the result to stdout or the reporter selected with --test-reporter.
 
         :param arg_test_differ: Either the job_id or a list containing [job_id, max_diffs]
         :return: 1 if error, 0 if successful.
@@ -566,7 +566,7 @@ class UrlwatchCommand:
                         str(job_state.new_data),
                         history_dic_snapshots.keys(),
                         n=1,
-                    )  # ty:ignore[no-matching-overload]
+                    )  # ty:ignore[invalid-assignment]
                     if close_matches:
                         job_state.old_data = close_matches[0]
                         job_state.old_timestamp = history_dic_snapshots[close_matches[0]].timestamp
@@ -673,6 +673,7 @@ class UrlwatchCommand:
                 """
                 executor = ThreadPoolExecutor(max_workers=max_workers)
 
+                job_state: JobState
                 for job_state in executor.map(
                     lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
                     (stack.enter_context(JobState(self.urlwatcher.ssdb_storage, job)) for job in jobs),
@@ -706,7 +707,7 @@ class UrlwatchCommand:
 
             with ExitStack() as stack:
                 # This code is from worker.run_jobs, modified to yield from job_runner.
-                from webchanges.worker import get_virt_mem  # avoid circular imports
+                from webchanges.worker import get_virt_mem_mib  # avoid circular imports
 
                 # run non-BrowserJob jobs first
                 jobs_to_run = [job for job in jobs if not job.__is_browser__]
@@ -723,11 +724,12 @@ class UrlwatchCommand:
                 jobs_to_run = [job for job in jobs if job.__is_browser__]
                 if jobs_to_run:
                     gc.collect()
-                    virt_mem = get_virt_mem()
+                    virt_mem = get_virt_mem_mib()  # in MiB
+                    virt_mem = virt_mem * 0.85  # reserve 15% for misc. overhead
                     if self.urlwatch_config.max_workers:
                         max_workers = self.urlwatch_config.max_workers
                     else:
-                        max_workers = max(int(virt_mem / 200e6), 1)
+                        max_workers = max(int(virt_mem / 800), 1)
                         max_workers = min(max_workers, os.cpu_count() or 1)
                     logger.debug(
                         f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with "
@@ -930,7 +932,7 @@ class UrlwatchCommand:
             items2 = [(k, v) for k, v in items if k != 'filter']
             d = dict(items2)
             if filters:
-                d['filter'] = ','.join(filters)
+                d['filter'] = ','.join(filters)  # ty:ignore[invalid-assignment]
 
             job = JobBase.unserialize(d)
             print(f'Adding {job}.')
@@ -1066,7 +1068,7 @@ class UrlwatchCommand:
             )
             return 1
 
-        cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]
+        cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]  # ty:ignore[invalid-key]
         if job_state:  # we want a full report
             cfg['enabled'] = True
             self.urlwatcher.config_storage.config['display'][label] = True

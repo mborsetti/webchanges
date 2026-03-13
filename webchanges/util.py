@@ -16,7 +16,7 @@ import sys
 import textwrap
 from math import floor, log10
 from os import PathLike
-from typing import TYPE_CHECKING, Callable, Iterable, Match
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Match
 
 from markdown2 import Markdown
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import ModuleType
 
-    from webchanges.jobs import JobState
+    from webchanges.handler import JobState
 
 try:
     import httpx
@@ -89,7 +89,13 @@ class TrackSubClasses(type):
         """
         return [item for _, item in sorted((it.__kind__, it) for it in cls.__subclasses__.values() if it.__kind__)]
 
-    def __init__(cls, name: str, bases: tuple[type, ...], namespace: dict) -> None:
+    def __init__(
+        cls,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        **kwargs: Any,
+    ) -> None:
         """_summary_. # TODO.
 
         :param name: _description_.  # TODO.
@@ -129,7 +135,7 @@ class TrackSubClasses(type):
                     anonymous_subclasses.append(cls)
                     break
 
-        super().__init__(name, bases, namespace)
+        super().__init__(name, bases, namespace, **kwargs)
 
 
 def edit_file(filename: str | bytes | PathLike) -> None:
@@ -289,7 +295,7 @@ def linkify(
             proto = 'https'
             href = f'https://{href}'  # no proto specified, use https
 
-        params = f' {extra_params(href).strip()}' if callable(extra_params) else extra_params
+        params = f' {extra_params(href).strip()}' if callable(extra_params) else extra_params  # ty:ignore[call-top-callable]
 
         # clip long urls. max_len is just an approximation
         max_len = 30

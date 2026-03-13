@@ -5,9 +5,13 @@
 
 .. _differs:
 
-==================
+=======
 Differs
-==================
+=======
+
+
+Overview
+--------
 A differ is applied to the filtered data if it has changed from the previous run(s). A differ summarizes the changes in
 the data and produces the content of the report sent to you. The output of the differ can be further filtered using any
 of the filters listed in :ref:`filters` (see :ref:`diff_filters` below).
@@ -57,8 +61,8 @@ Otherwise, the ``differ`` directive is a dictionary, and the ``name`` key contai
 
 .. _unified_diff:
 
-unified
--------
+``unified`` (default)
+---------------------
 This is the default differ used when the ``differ`` job directive is not specified (except, for backward compatibility,
 when in the configration file the ``html`` report has the deprecated ``diff`` key set to ``table``).
 
@@ -175,8 +179,8 @@ Optional directives
 
 .. _ai_google_diff:
 
-ai_google
----------
+``ai_google``
+-------------
 .. versionadded:: 3.21
    as BETA.
 
@@ -206,15 +210,18 @@ text and the other half for the new text. They are also offered with a free tier
    avoid the potential for surprises!
 
 By default, we specify the `Gemini 2.0 Flash <https://ai.google.dev/gemini-api/docs/models/gemini#gemini-2.0-flash>`__
-model (``gemini-2.0-flash``) since it's the latest released model that allows 1,000,000 tokens per minute on the free
-tier, and (if you are on a paid plan) is `cheaper <https://ai.google.dev/gemini-api/docs/pricing>`__ than Gemini 2.5.
-You can find the full list of models `here <https://ai.google.dev/gemini-api/docs/models>`__. To evaluate responses
-between models side-by-side, use the tool `here <https://aistudio.google.com/app/prompts/new_comparison>`__.
+model (``gemini-2.0-flash``) since it's the last released model that allows 1,000,000 tokens per minute on the free
+tier, and (if you are on a paid plan) is `cheaper <https://ai.google.dev/gemini-api/docs/pricing>`__ than Gemini 2.5 or
+Gemini 3. You can find the full list of models `here <https://ai.google.dev/gemini-api/docs/models>`__. To evaluate
+responses between models side-by-side, use the tool `here <https://aistudio.google.com/app/prompts/new_comparison>`__.
 
 .. tip::
-   If you can fit your input within the 250,000 tokens per minute limit on the free tier, or are using a paid tier, we
-   have been having great success with the Gemini 2.5 models (``gemini-2.5-pro``, ``gemini-2.5-flash``,
-   ``gemini-2.5-flash-lite``, which we highly recommend trying.)
+   If you can fit your input within the 250,000 tokens per minute `rate limit
+   <https://ai.google.dev/gemini-api/docs/rate-limits>`__ of the free tier we have been
+   having great success with the `Gemini 2.5 Flash <https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash>`__
+   (``gemini-2.5-flash``) and `Gemini 3 Flash Preview
+   <https://ai.google.dev/gemini-api/docs/models/gemini-3-flash-preview>`__
+   (``gemini-3-flash-preview``) models which we highly recommend trying.
 
 You can change the default model in the :ref:`configuration <configuration>` file as follows:
 
@@ -441,8 +448,8 @@ Prompt
 
 .. _command_diff:
 
-command
--------
+``command``
+-----------
 Call an external differ. The old data and new data are written to a temporary file, and the names of the
 two files are appended to the command. The external program will have to exit with a status of 0 if no differences
 are found, a status of 1 if any differences are found, or any other status to signify an error (mimicking wdiff's
@@ -496,8 +503,8 @@ Optional directives
 
 .. _deepdiff_diff:
 
-deepdiff
---------
+``deepdiff``
+------------
 .. versionadded:: 3.21
 
 Inspects structured data (JSON, YAML, or XML) on an element by element basis and reports which elements have changed,
@@ -598,8 +605,8 @@ follows:
 
 .. _image_diff:
 
-image
------
+``image``
+---------
 .. versionadded:: 3.21
    As BETA.
 
@@ -669,8 +676,8 @@ In addition, you can only run it with a default configuration of :program:webcha
 
 .. _table_diff:
 
-table
------
+``table``
+---------
 Similar to :ref:`unified <unified_diff>`, it performs a line-by-line comparison and reports lines that have been added,
 deleted, or changed. However, this is reported in an HTML table format showing a side by side, line by line comparison
 of text with inter-line and intra-line change highlights produced by Python's `difflib.HtmlDiff
@@ -751,8 +758,8 @@ Optional directives
 
 .. _wdiff_diff:
 
-wdiff
------
+``wdiff``
+---------
 .. versionadded:: 3.24
 
 Performs a word-by-word comparison highlighting words that have been added (:additions:`added`) or deleted

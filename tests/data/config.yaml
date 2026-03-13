@@ -47,6 +47,7 @@ report:
       starttls: true
       auth: true
       insecure_password: ''
+      utf_8: true
     sendmail:
       path: sendmail
   github_issue:

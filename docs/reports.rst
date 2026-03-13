@@ -3,6 +3,10 @@
 =======
 Reports
 =======
+
+
+Overview
+--------
 Reports contain the changes detected (diff) and can be one of the following formats (depending on the :ref:`reporter
 <reporters>` used and, at times, its settings):
 

@@ -3,6 +3,10 @@
 =========
 Reporters
 =========
+
+
+Overview
+--------
 Reporters display or send the :ref:`report <reports>` containing the changes detected.
 
 By default, the ``stdout`` reporter is enabled, and a :ref:`text <text>` report is sent to the standard output
@@ -27,6 +31,7 @@ Each reporter has a directive called ``enabled`` that can be set to true or fals
 
 Tip: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:`tz`
 below to set the time zone to be uses for reporting.
+
 
 .. _reporters-list:
 
@@ -87,6 +92,7 @@ Reporters are based on :ref:`reports <reports>`, as follows, and inherit that re
 .. note::
    Even though the ``email`` reporter is listed under ``text`` for historical reason, it also inherits from the
    ``html`` report when its ``html`` option is set to ``true`` (default).
+
 
 
 .. _tz:
@@ -171,6 +177,7 @@ Sub-directives
    Added sub-directives ``embed``, ``subject`` and ``colored``.
 
 
+
 .. _email:
 
 Email
@@ -219,7 +226,7 @@ low-risk way to run unattended.
          auth: true
          user: throwawayaccount@example.com  # (edit accordingly; don't use your primary account for this!!)
          insecure_password: "this_is_my_secret_password"
-         utf-8: true
+         utf_8: true
 
 
 .. warning::
@@ -246,7 +253,7 @@ SMTP sub-directives
 * ``auth``: Whether authentication via username/password is required (true/false). Default is true.
 * ``user``: The username used to authenticate.
 * ``insecure_password``: The password used to authenticate (if keyring is not used).
-* ``utf-8``: Whether to use RFC 6531 Internationalized Email, aka SMTPUTF8 service extension (true/false). Default is
+* ``utf_8``: Whether to use RFC 6531 Internationalized Email, aka SMTPUTF8 service extension (true/false). Default is
   true.
 
 Amazon Simple Email Service (SES) example
@@ -276,8 +283,7 @@ these directives as follows:
          starttls: true
          auth: true
          insecure_password: "this_is_my_secret_password"  # (edit accordingly)
-         utf-8: true
-
+         utf_8: true
 
 .. _gmail:
 
@@ -323,7 +329,7 @@ Then configure these directives as follows:
          starttls: true
          auth: true
          insecure_password: "this_is_my_secret_password"  # (edit accordingly)
-         utf-8: true
+         utf_8: true
 
 .. _sendmail:
 
@@ -351,7 +357,7 @@ If using a Keychain to store the password, you also need to:
    Can specify multiple "to" email addresses.
 
 .. versionchanged:: 3.31.1
-   Added ``utf-8`` SMTP configuration sub-directive.
+   Added ``utf_8`` SMTP configuration sub-directive (called ``utf-8`` before version 3.34.1).
 
 
 
@@ -654,6 +660,7 @@ Sub-directives
    on Windows or with Python 3.12 (Linux, macOS) and higher due to failures.
 
 
+
 .. _pushover:
 
 Pushover
@@ -688,6 +695,7 @@ Sub-directives
 * ``device``: The device. Default: Null.
 * ``sound``: The sound (string). Default: ``spacealarm``.
 * ``priority``: The priority (string). Default: ``normal``.
+
 
 
 .. _run_command:
@@ -761,8 +769,10 @@ A Telegram `group <https://telegram.org/tour/groups>`__ is the standard method u
 :program:`webchanges`. To create one, from your Telegram app chat up `BotFather
 <https://core.telegram.org/bots#6-botfather>`__ (New Message, Search, “BotFather”),
 then say ``/newbot`` and follow the instructions. Eventually it will tell you the bot's unique authentication token
-(along the lines of ``123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh``); add it to your configuration file (run
-``webchanges --edit-config``) as below, and save the file.
+(along the lines of ``123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh``). This token can be added to the configuration file
+as below or as the value of the environment variable ``TELEGRAM_BOT_TOKEN`` (in which case leave or set the
+``bot_token`` value in the configuration file as ``null``)
+
 
 .. code:: yaml
 
@@ -770,7 +780,7 @@ then say ``/newbot`` and follow the instructions. Eventually it will tell you th
      tz: null  # or whatever you want it to be
      telegram:
        enabled: true  # don't forget to set this to true! :)
-       bot_token: "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh"  # replace with your bot's token
+       bot_token: 123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh  # replace with your bot's token
        chat_id: ""  # empty for now
 
 Next click on the link of your chat bot (starts with \https://t.me/) and, on the new screen, click on start (which will
@@ -836,6 +846,9 @@ Optional sub-directives
 .. versionadded:: 3.7
    ``silent`` sub-directive.
 
+.. versionchanged:: 3.34.1
+   Search for bot token in environment variable ``TELEGRAM_BOT_TOKEN``.
+
 
 
 .. _webhook:
@@ -888,6 +901,7 @@ Sub-directives
 
 .. versionchanged:: 3.0.1
    Renamed from ``slack`` to ``webhook`` and added the ``markdown`` sub-directive.
+
 
 
 .. _xmpp:

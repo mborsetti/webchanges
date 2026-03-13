@@ -25,7 +25,11 @@ __pycache__/
 /ty.toml
 
 # gemini-cli settings
-.gemini/
+/.gemini/
+
+# claude code
+/.claude/
+CLAUDE.md
 
 # GitHub App credentials
 gha-creds-*.json

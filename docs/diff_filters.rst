@@ -3,6 +3,10 @@
 ==================
 Filtering the diff
 ==================
+
+
+Overview
+--------
 All the filters listed in :ref:`filters` can be applied to the differ's output ("diff") before it's sent (see below
 how). In addition to these, two filters are custom-made for the default differ :ref:`unified_diff`:
 

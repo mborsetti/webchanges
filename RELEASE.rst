@@ -1,26 +1,25 @@
-Added
-``````
-* New reporter ``github_issue`` creates a GitHub issue for changes detected.
+⚠ Breaking Changes
+```````````````````
+* Newly added ``utf-8`` sub-directive of ``smtp`` ``email`` reporter is now called ``utf_8`` (with an underscore) due to
+  Python TypedDict class limitation, but will have backward-compatibility for at least 12 months.
 
-  - Kindly contributed by `Dmitry Vasiliev <https://github.com/swimmwatch>`__ in `#105
-    <https://github.com/mborsetti/webchanges/issues/105>`__.
-  - Implemented as a GitHub Action ``webchanges-action`` available `here
-    <https://github.com/swimmwatch/webchanges-action>`__.
-
-* The ``wdiff`` filter now handles ``html`` text.
-* New ``suppress_error_ended`` and ``suppress_errors``` Job sub-directives to control error notifications job-by-job.
-
-  - Suggested by `Marcos Alano <https://github.com/mhalano>`__ in `#101
-    <https://github.com/mborsetti/webchanges/issues/101>`__.
-
-* New ``ntfy`` reporter to support `ntfy <https://ntfy.sh>`__ (pronounced _notify_), an open-source fee simple
-  HTTP-based `pub-sub <https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern>`__ notification service (also
-  for upstream compatibility).
-* Filters ``execute`` and ``shellpipe`` now have an ``escape_characters`` sub-directive to automatically escape Windows
-  command caracters (e.g. ``%`` becomes ``%%``, ``!`` becomes ``^!``, etc.).
+Changed
+```````
+* ``telegram`` reporter will now look for the environment variable ``TELEGRAM_BOT_TOKEN`` if no token is defined in the
+  configuration (i.e. ``bot_token`` is missing or has a ``null`` value).
 
 Fixed
 `````
-* All databases, keep-alive connections, and underlying SSL sockets are now closed correctly before exit. Fixes the
-  ``ResourceWarning: unclosed database`` and ``ResourceWarning: <ssl.SSLSocket>`` messages when run with environment
-  variable ``PYTHONWARNINGS=all``.
+* Regression: Rejecting ``ignore_cached`` job directive  (reported by `Marcos Alano <https://github.com/mhalano>`__
+  in issue `#153 <https://github.com/mborsetti/webchanges/issues/153>`__).
+* Rejecting ``http_credentials`` job directive in certain circumstances with URL jobs with ``browser: true``.
+
+Internals impacting ``hooks.py``
+````````````````````````````````
+* Broken up huge files into smaller, more manageable ones. If you are importing from webchanges, the location of
+  certain classes may have changed.
+
+Internals
+`````````
+* Increased amount of free memory required before running URL jobs with ``use_browser: true`` (i.e. Playwright)
+  in parallel to 800 MiB.

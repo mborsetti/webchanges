@@ -82,7 +82,7 @@ def _obfuscate_sensitive_headers(
 ) -> typing.Iterator[tuple[typing.AnyStr, typing.AnyStr]]:
     for k, v in items:
         if to_str(k.lower()) in SENSITIVE_HEADERS:  # ty:ignore[no-matching-overload, invalid-argument-type]
-            v = to_bytes_or_str('[secure]', match_type_of=v)  # ty:ignore[invalid-argument-type]
+            v = to_bytes_or_str('[secure]', match_type_of=v)
         yield k, v
 
 

@@ -35,8 +35,40 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.34.1
+-------------------
+2026-03-13
+
+⚠ Breaking Changes
+```````````````````
+* Newly added ``utf-8`` sub-directive of ``smtp`` ``email`` reporter is now called ``utf_8`` (with an underscore) due to
+  Python TypedDict class limitation, but will have backward-compatibility for at least 12 months.
+
+Changed
+```````
+* ``telegram`` reporter will now look for the environment variable ``TELEGRAM_BOT_TOKEN`` if no token is defined in the
+  configuration (i.e. ``bot_token`` is missing or has a ``null`` value).
+
+Fixed
+`````
+* Regression: Rejecting ``ignore_cached`` job directive  (reported by `Marcos Alano <https://github.com/mhalano>`__
+  in issue `#153 <https://github.com/mborsetti/webchanges/issues/153>`__).
+* Rejecting ``http_credentials`` job directive in certain circumstances with URL jobs with ``browser: true``.
+
+Internals impacting ``hooks.py``
+````````````````````````````````
+* Broken up huge files into smaller, more manageable ones. If you are importing from webchanges, the location of
+  certain classes may have changed.
+
+Internals
+`````````
+* Increased amount of free memory required before running URL jobs with ``use_browser: true`` (i.e. Playwright)
+  in parallel to 800 MiB.
+
+
 Version 3.34.0
 -------------------
+2026-02-10
 
 Added
 ``````
@@ -86,7 +118,7 @@ Changed
 Fixed
 `````
 * Regression: ``http_ignore_error_codes`` not being applied to ``TransientHTTPError`` Exceptions such as '429 Too Many
-  Requests' (issue #`119 <https://github.com/mborsetti/webchanges/issues/119>`__).
+  Requests' (issue `#119 <https://github.com/mborsetti/webchanges/issues/119>`__).
 * ``http_credentials`` directive not being applied to URL jobs with ``browser: true`` and ``user_data_dir``.
 * When running with command line argument ``-vv``, browser pages will open with DevTools open.
 * Problem parsing Playwright exceptions in BrowserJob class retrieve method  (issue #`141
@@ -360,7 +392,7 @@ Version 3.29.0
 
 ⚠ Breaking Changes
 ``````````````````
-* The differ ``command`` now requires that the ``name: command`` subdirective of ``differ`` be specified.
+* The differ ``command`` now requires that the ``name: command`` sub-directive of ``differ`` be specified.
 
 Changed
 ```````
@@ -1345,7 +1377,8 @@ Freeing space by removing Pyppeteer
 :::::::::::::::::::::::::::::::::::
 You can free up disk space if no other packages use Pyppeteer by, in order:
 
-1) Removing the downloaded Chromium images by deleting the entire *directory* (and its subdirectories) shown by running:
+1) Removing the downloaded Chromium images by deleting the entire *directory* (and its sub-directories) shown by
+   running:
 
 .. code-block:: bash
 

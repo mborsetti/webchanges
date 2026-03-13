@@ -212,7 +212,7 @@ testpaths = ['tests']
 # Config file documentation at https://docs.astral.sh/ruff/configuration/ and https://docs.astral.sh/ruff/settings/
 
 # File patterns to omit from formatting and linting, in addition to those specified by exclude.
-extend-exclude = ['webchanges/storage_minidb.py', 'webchanges/_vendored']
+extend-exclude = ['webchanges/storage_minidb.py', 'webchanges/storage/_minidb.py', 'webchanges/_vendored']
 
 # By default, Ruff will discover files matching *.py, *.pyi, *.ipynb, or pyproject.toml.
 # Include additional files
@@ -255,7 +255,7 @@ select = [
     'PTH',  # flake8-use-pathlib
     'FLY',  # flynt
     'I',    # isort
-    'C90',  # mccabe 
+    'C90',  # mccabe
     'N',    # pep8-naming
     'PERF', # Perflint
     'E',    # pycodestyle errors
@@ -264,7 +264,7 @@ select = [
     # 'D',    # pydocstyle  # TODO
     'F', # Pyflakes
     # 'PL',   # Pylint  # TODO
-    'FURB', # refurb 
+    'FURB', # refurb
     'RUF',  # Ruff-specific rules
     # 'TRY',  # tryceratops  # TODO
 ]
@@ -353,7 +353,4 @@ docstring-code-line-length = 'dynamic'
 # Config file documentation at https://docs.astral.sh/ty/reference/configuration/
 
 [tool.ty.environment]
-extra-paths = ['./webchanges']
-
-[tool.ty.src]
-exclude = ['./webchanges/storage_minidb.py']
+extra-paths = ['webchanges', 'webchanges/storage/_sqlite3.py']

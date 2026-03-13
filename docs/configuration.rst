@@ -3,6 +3,10 @@
 =============
 Configuration
 =============
+
+
+Overview
+--------
 The global configuration for :program:`webchanges` contains basic settings for the generic behavior of
 :program:`webchanges`, including its :ref:`reports <reports>` and :ref:`reporters <reporters>`. It is written in **YAML
 format**, is called ``config.yaml``, and is located in the following directory:
@@ -98,7 +102,7 @@ Here is an example configuration that reports using UTC timezone on standard out
          auth: true
          user: 'username_goes_here'
          insecure_password: 'password_goes_here'
-         utf-8: true
+         utf_8: true
        subject: '{count} changes: {jobs}'
        to: 'User <user@example.com>'
        stdout:

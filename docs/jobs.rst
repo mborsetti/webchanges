@@ -3,6 +3,10 @@
 ****
 Jobs
 ****
+
+
+Overview
+========
 Each job contains the pointer to the source of the data to be monitored (:ref:`URL <url>` or :ref:`command <command>`)
 and related directives, plus eventual directives on transformations (:ref:`filters <filters>`) to apply to the data
 (and/or diff) once retrieved.
@@ -193,9 +197,9 @@ Internally, this type of job has the attribute ``kind: browser``.
    Saves the screenshot, full page image and HTML contents when a job fails while running in verbose mode.
 
 
+
 Required directives
 -------------------
-
 
 .. _ulr:
 
@@ -204,10 +208,10 @@ url
 The URI of the resource to monitor. ``https://``, ``http://``, ``ftp://`` and ``file://`` are supported.
 
 
-Optional directives (all ``url`` jobs)
---------------------------------------
-The following optional directives are available for all ``url`` jobs:
 
+Optional directives for ``url`` jobs
+------------------------------------
+The following optional directives are available for all ``url`` jobs:
 
 .. _use_browser_directive:
 
@@ -217,23 +221,6 @@ Whether to use a Chrome web browser (true/false). Defaults to false.
 
 If true, it renders the URL via a JavaScript-enabled web browser and extracts the HTML after rendering (see
 :ref:`above <use_browser>` for important information).
-
-
-.. _compared_versions:
-
-compared_versions
-^^^^^^^^^^^^^^^^^
-Number of saved snapshots to compare against (int). Defaults to 1.
-
-If set to a number greater than 1, instead of comparing the current data to only the very last snapshot captured, it
-is matched against any of *n* snapshots. This is very useful when a webpage frequently changes between several known
-stable states (e.g. they're doing A/B testing), as changes will be reported only when the content changes to a new
-unknown state, in which case the differences are shown relative to the closest match.
-
-Refer to the command line argument ``--max-snapshots`` to ensure that you are saving the number of snapshots you need
-for this directive to run successfully (default is 4) (see :ref:`here <max-snapshots>`).
-
-.. versionadded:: 3.10.2
 
 
 .. _cookies:
@@ -246,90 +233,6 @@ See examples :ref:`here <cookies>`.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
-
-
-.. _enabled:
-
-enabled
-^^^^^^^
-Convenience setting to disable running the job while leaving it in the jobs file (true/false). Defaults to true.
-
-.. versionadded:: 3.18
-
-
-.. _headers:
-
-headers
-^^^^^^^
-Headers to send along with the request (a dict).
-
-The headers found in a job are merged case-insensitively with the default ones (including those found in ``config
-.yaml``).  In case of conflicts, the header in the job will replace the default one.
-
-See examples :ref:`here <default_headers>`.
-
-Jobs without ``browser: true``
-******************************
-The default headers are:
-
-.. code-block:: yaml
-
-   accept: '*/*'
-   accept-encoding:  # depends on libraries installed; at a minimum 'gzip, deflate'
-   connection: 'keep-alive'
-   user-agent: # set by the HTTP client, e.g. 'python-httpx/0.27.0'
-
-Jobs with ``browser: true``
-***************************
-The default headers are set by the browser.
-
-Note that if the :ref:`referer <referer>` directive if specified, its contents will replace the content of the `Referer
-<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header.
-
-
-.. versionchanged:: 3.0
-   Works for all ``url`` jobs, including those with ``use_browser: true``.
-
-
-.. _http_client:
-
-http_client
-^^^^^^^^^^^
-The Python HTTP client library to be used, either `HTTPX <https://www.python-httpx.org/>`__ or `requests
-<https://requests.readthedocs.io/en/latest/>`__. Defaults to ``HTTPX``.
-
-We use ``HTTPX`` as some web servers will refuse a connection or serve an error if a connection is attempted using an
-earlier version than the newer HTTP/2 network protocol. Use ``http_client: requests`` to use the ``requests``
-library used by default in releases prior to 3.16 (but it only supports up to HTTP/1.1 protocol).
-
-Required packages
-*****************
-To use ``http_client: requests``, you need to have the ``requests`` library installed on your system. If it's not
-installed, you can install this :ref:`additional Python package <optional_packages>` as follows:
-
-.. code-block:: bash
-
-   pip install --upgrade webchanges[requests]
-
-.. versionadded:: 3.16
-
-
-.. _proxy:
-
-proxy
-^^^^^
-Proxy server to use for HTTP requests (a string). If unspecified or null/false, the system environment variable
-``HTTPS_PROXY`` or ``HTTP_PROXY`` (based on the url's scheme), if defined, will be used. Can be one of ``https://``,
-``http://`` or ``socks5://`` protocols.
-
-E.g. ``https://username:password@proxy.com:8080``.
-
-.. versionchanged:: 3.0
-   Works for all ``url`` jobs, including those with ``use_browser: true``.
-
-.. versionchanged:: 3.28
-   Replaces two separate directives, ``http_proxy`` and ``https_proxy``.
-
 
 
 .. _data:
@@ -404,57 +307,47 @@ See example within the directive ':ref:`data`'.
 .. versionadded:: 3.15
 
 
-.. _method:
+.. _encoding:
 
-method
-^^^^^^
-`HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use (a string).
+encoding
+^^^^^^^^
+Override the character encoding from the server or determined programmatically by the HTTP client library (a string).
 
-Must be one of ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``. Defaults to ``GET``
-unless the ``data`` directive, below, is set when it defaults to ``POST``.
-
-.. error:: Setting a method other than ``GET`` with ``use_browser: true`` may result in any 3xx redirections received by
-   the website to be ignored and the job hanging until it times out. This is due to bug `#937719
-   <https://bugs.chromium.org/p/chromium/issues/detail?id=937719>`__ in Chromium. Please take the time to add a star to
-   the bug report so it will be prioritized for a faster fix.
-
-.. versionchanged:: 3.8
-   Works for all ``url`` jobs, including those with ``use_browser: true``.
+See more :ref:`here <overriding_content_encoding>`.
 
 
-.. _no_conditional_request:
+.. _headers:
 
-no_conditional_request
-^^^^^^^^^^^^^^^^^^^^^^^^
-Disable conditional requests (true/false). Defaults to false.
+headers
+^^^^^^^
+Headers to send along with the request (a dict).
 
-In rare cases where a web server does not correctly handle conditional requests (e.g., Google Flights), you can disable
-this feature by setting ``no_conditional_request: true``. This prevents :program:`webchanges` from sending the
-``If-Modified-Since`` and ``If-None-Match`` headers.
+The headers found in a job are merged case-insensitively with the default ones (including those found in ``config
+.yaml``).  In case of conflicts, the header in the job will replace the default one.
 
-Please see :ref:`here  <conditional_requests>` to learn more about how :program:`webchanges` uses conditional requests
-to improve performance and reduce bandwidth usage.
+See examples :ref:`here <default_headers>`.
 
-
-.. _note:
-
-note
-^^^^
-Informational note added under the header in reports (a string, optionally in Markdown). Example:
+Jobs without ``browser: true``
+******************************
+The default headers are:
 
 .. code-block:: yaml
 
-   name: Weather warnings
-   note: If there's a hurricane watch, book a flight to get out of town
-   url: https://example.org/weatherwarnings
+   accept: '*/*'
+   accept-encoding:  # depends on libraries installed; at a minimum 'gzip, deflate'
+   connection: 'keep-alive'
+   user-agent: # set by the HTTP client, e.g. 'python-httpx/0.27.0'
+
+Jobs with ``browser: true``
+***************************
+The default headers are set by the browser.
+
+Note that if the :ref:`referer <referer>` directive if specified, its contents will replace the content of the `Referer
+<https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header.
 
 
-If the string is in Markdown, it will be converted to HTML by an HTML report.
-
-.. versionadded:: 3.2
-
-.. versionchanged:: 3.30
-   Accepts Markdown strings.
+.. versionchanged:: 3.0
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
 .. _ignore_cached:
@@ -521,6 +414,55 @@ See more :ref:`here <ignoring_http_connection_errors>`.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
+.. _method:
+
+method
+^^^^^^
+`HTTP request method <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods>`__ to use (a string).
+
+Must be one of ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``. Defaults to ``GET``
+unless the ``data`` directive, below, is set when it defaults to ``POST``.
+
+.. error:: Setting a method other than ``GET`` with ``use_browser: true`` may result in any 3xx redirections received by
+   the website to be ignored and the job hanging until it times out. This is due to bug `#937719
+   <https://bugs.chromium.org/p/chromium/issues/detail?id=937719>`__ in Chromium. Please take the time to add a star to
+   the bug report so it will be prioritized for a faster fix.
+
+.. versionchanged:: 3.8
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+
+.. _proxy:
+
+proxy
+^^^^^
+Proxy server to use for HTTP requests (a string). If unspecified or null/false, the system environment variable
+``HTTPS_PROXY`` or ``HTTP_PROXY`` (based on the url's scheme), if defined, will be used. Can be one of ``https://``,
+``http://`` or ``socks5://`` protocols.
+
+E.g. ``https://username:password@proxy.com:8080``.
+
+.. versionchanged:: 3.0
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+.. versionchanged:: 3.28
+   Replaces two separate directives, ``http_proxy`` and ``https_proxy``.
+
+
+.. _no_conditional_request:
+
+no_conditional_request
+^^^^^^^^^^^^^^^^^^^^^^^^
+Disable conditional requests (true/false). Defaults to false.
+
+In rare cases where a web server does not correctly handle conditional requests (e.g., Google Flights), you can disable
+this feature by setting ``no_conditional_request: true``. This prevents :program:`webchanges` from sending the
+``If-Modified-Since`` and ``If-None-Match`` headers.
+
+Please see :ref:`here  <conditional_requests>` to learn more about how :program:`webchanges` uses conditional requests
+to improve performance and reduce bandwidth usage.
+
+
 .. _timeout:
 
 timeout
@@ -535,18 +477,32 @@ See example :ref:`here <timeout>`.
 
 
 
-Optional directives (without ``use_browser: true``)
---------------------------------------------------------
+Optional directives for ``url`` jobs without ``use_browser: true``
+------------------------------------------------------------------
 The following directives are available only for ``url`` jobs without ``use_browser: true``:
 
 
-.. _encoding:
+.. _http_client:
 
-encoding
-^^^^^^^^
-Override the character encoding from the server or determined programmatically by the HTTP client library (a string).
+http_client
+^^^^^^^^^^^
+The Python HTTP client library to be used, either `HTTPX <https://www.python-httpx.org/>`__ or `requests
+<https://requests.readthedocs.io/en/latest/>`__. Defaults to ``HTTPX``.
 
-See more :ref:`here <overriding_content_encoding>`.
+We use ``HTTPX`` as some web servers will refuse a connection or serve an error if a connection is attempted using an
+earlier version than the newer HTTP/2 network protocol. Use ``http_client: requests`` to use the ``requests``
+library used by default in releases prior to 3.16 (but it only supports up to HTTP/1.1 protocol).
+
+Required packages
+*****************
+To use ``http_client: requests``, you need to have the ``requests`` library installed on your system. If it's not
+installed, you can install this :ref:`additional Python package <optional_packages>` as follows:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[requests]
+
+.. versionadded:: 3.16
 
 
 .. _ignore_dh_key_too_small:
@@ -647,8 +603,8 @@ See more :ref:`here <ignoring_tls_ssl_errors>`.
 
 
 
-Optional directives (only with ``use_browser: true``)
------------------------------------------------------
+Optional directives for ``url`` jobs with ``use_browser: true``
+---------------------------------------------------------------
 The following directives are available only for ``url`` jobs with ``use_browser: true`` (i.e. using :program:`Chrome`):
 
 .. _block_elements:
@@ -681,14 +637,28 @@ Supported `resources <https://playwright.dev/docs/api/class-request#request-reso
 .. versionadded:: 3.19
 
 
+.. _evaluate:
+
+evaluate
+^^^^^^^^
+Run a JavaScript function in the context of the web page and return the results.
+
+This argument can be a mix of `Serializable
+<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#Description>`__ values
+and Playwright's `JSHandle <https://playwright.dev/python/docs/api/class-jshandle>`__ instances. Handles are
+automatically converted to the value they represent.
+
+
 .. _http_credentials:
 
 http_credentials
 ^^^^^^^^^^^^^^^^
-Credentials for HTTP authentication.
+Credentials for HTTP authentication, to be sent when 401 (Unauthorized) response with ``WWW-Authenticate`` header is
+received.
 
-A string in the format of 'username:password'.  For example, if the username is Adam and the password is Eve, use
-``http_credentials: 'Adam:eve'``.
+A string in the format of ``username:password`` or ``scheme://username:password@host:port``.
+
+For example, if the username is Adam and the password is Eve, use ``http_credentials: Adam:eve``:
 
 .. code-block:: yaml
 
@@ -696,10 +666,20 @@ A string in the format of 'username:password'.  For example, if the username is 
    note: It's just a test
    url: https://www.example.com
    use_browser: true
-   http_credentials: 'user:password'
+   http_credentials: Adam:Eve
+
+To send the username and password only if requested by the server ``https://creation.com``:
+
+.. code-block:: yaml
+
+   # ... same as above
+   http_credentials: https://Adam:Eve@creation.com
+
 
 .. versionadded:: 3.32
 
+.. versionchanged:: 3.34.2
+   Ability to restrain sending http credentials on specific origin (scheme://host:port).
 
 .. _ignore_default_args:
 
@@ -890,6 +870,7 @@ Sub-directives
 .. versionchanged:: 3.31
    This directive can now be a list to wait for multple selectors.
 
+
 .. _wait_for_timeout:
 
 wait_for_timeout
@@ -995,8 +976,8 @@ command
 ^^^^^^^
 The shell command to execute.
 
-Optional directives (for all job types)
-=======================================
+Optional directives for all job types
+=====================================
 These optional directives apply to all job types:
 
 
@@ -1009,6 +990,23 @@ Filter the unified diff output to keep only addition lines (no value required).
 See :ref:`here <additions_only>`.
 
 .. versionadded:: 3.0
+
+
+.. _compared_versions:
+
+compared_versions
+-----------------
+Number of saved snapshots to compare against (int). Defaults to 1.
+
+If set to a number greater than 1, instead of comparing the current data to only the very last snapshot captured, it
+is matched against any of *n* snapshots. This is very useful when a webpage frequently changes between several known
+stable states (e.g. they're doing A/B testing), as changes will be reported only when the content changes to a new
+unknown state, in which case the differences are shown relative to the closest match.
+
+Refer to the command line argument ``--max-snapshots`` to ensure that you are saving the number of snapshots you need
+for this directive to run successfully (default is 4) (see :ref:`here <max-snapshots>`).
+
+.. versionadded:: 3.10.2
 
 
 .. _deletions_only_(jobs):
@@ -1061,6 +1059,15 @@ with:
 .. versionchanged:: 3.0.1
    * Reports now show date/time of diffs generated using ``diff_tool``.
    * Output from ``diff_tool: wdiff`` is colorized in html reports.
+
+
+.. _enabled:
+
+enabled
+-------
+Convenience setting to disable running the job while leaving it in the jobs file (true/false). Defaults to true.
+
+.. versionadded:: 3.18
 
 
 .. _filters_job_directive:
@@ -1130,6 +1137,27 @@ tabular data extracted by the ``pdf2text`` filter.
 
 .. versionchanged:: 3.20
    Default setting can be overridden by a filter or differ.
+
+
+.. _note:
+
+note
+----
+Informational note added under the header in reports (a string, optionally in Markdown). Example:
+
+.. code-block:: yaml
+
+   name: Weather warnings
+   note: If there's a hurricane watch, book a flight to get out of town
+   url: https://example.org/weatherwarnings
+
+
+If the string is in Markdown, it will be converted to HTML by an HTML report.
+
+.. versionadded:: 3.2
+
+.. versionchanged:: 3.30
+   Accepts Markdown strings.
 
 
 .. _suppress_error_ended:

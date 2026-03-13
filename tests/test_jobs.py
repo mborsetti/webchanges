@@ -623,7 +623,7 @@ def test_invalid_directive() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        "Directive 'directive_with_typo' is unrecognized in the following job\n"
+        "Directive 'directive_with_typo' is unrecognized in the following url job\n"
         '   \n'
         '   ---\n'
         '   directive_with_typo: this directive does not exist\n'
@@ -680,7 +680,7 @@ def test_shell_job_without_kind() -> None:
 def test_with_defaults() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    config: _Config = {'job_defaults': {'all': {'timeout': 999}}}
+    config: _Config = {'job_defaults': {'all': {'timeout': 999}}}  # ty:ignore[missing-typed-dict-key]
     job = job.with_defaults(config)
     assert job.timeout == 999
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
@@ -692,7 +692,7 @@ def test_with_defaults_headers() -> None:
     """
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    config: _Config = {
+    config: _Config = {  # ty:ignore[missing-typed-dict-key]
         'job_defaults': {
             'all': {'headers': {'a': '1', 'b': '2'}},
             'url': {'headers': {'b': '3', 'c': '4'}},

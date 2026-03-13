@@ -36,7 +36,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
     :raises IndexError: If any index(es) is/are out of range.
     """
 
-    def insert_delay(jobs: set[JobBase]) -> set[JobBase]:  # pragma: no cover
+    def insert_delay(jobs: list[JobBase]) -> list[JobBase]:
+        # def insert_delay[T: (list, set)](data: T) -> T:  # Python 3.12+
         """TODO Evaluate whether this is necessary; currently not being called. Remove pragma no cover and move import.
 
         Sets a _delay value for URL jobs having the same network location as previous ones. Used to prevent
@@ -171,7 +172,7 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                 job_state.save()
                 urlwatcher.report.new(job_state)
 
-    jobs = set(UrlwatchCommand(urlwatcher).jobs_from_joblist())
+    jobs = list(UrlwatchCommand(urlwatcher).jobs_from_joblist())
 
     jobs = insert_delay(jobs)
 
@@ -191,11 +192,12 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
         jobs_to_run = [job for job in jobs if job.__is_browser__]
         if jobs_to_run:
             gc.collect()
-            virt_mem = get_virt_mem()
+            virt_mem = get_virt_mem_mib()  # in MiB
+            virt_mem = virt_mem * 0.85  # reserve 15% for misc. overhead
             if urlwatcher.urlwatch_config.max_workers:
                 max_workers = urlwatcher.urlwatch_config.max_workers
             else:
-                max_workers = max(int(virt_mem / 400e6), 1)
+                max_workers = max(int(virt_mem / 800), 1)
                 max_workers = min(max_workers, os.cpu_count() or 1)
             logger.debug(
                 f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with {max_workers} "
@@ -206,12 +208,12 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
             logger.debug("Found no jobs that require Chrome (i.e. with 'use_browser: true').")
 
 
-def get_virt_mem() -> int:
+def get_virt_mem_mib() -> float:
     """Return the amount of virtual memory available.
 
     This is the memory that can be given instantly to processes without the system going into swap.
 
-    :returns: The amount of virtual memory available in bytes.
+    :returns: The amount of virtual memory available in MiB (IEC).
     """
     if isinstance(psutil, str):
         raise ImportError(
@@ -219,10 +221,11 @@ def get_virt_mem() -> int:
             f"dependencies with 'pip install webchanges[use_browser]'.\n{psutil}"
         ) from None
     try:
-        virt_mem: int = psutil.virtual_memory().available
+        virt_mem: float = psutil.virtual_memory().available
+        virt_mem /= 1_048_576
         logger.debug(
-            f'Found {virt_mem / 1e6:,.0f} MB of available physical memory (plus '
-            f'{psutil.swap_memory().free / 1e6:,.0f} MB of swap).'
+            f'Found {virt_mem:,.0f} MiB of available physical memory (plus '
+            f'{psutil.swap_memory().free:,.0f} MiB of swap).'
         )
     except psutil.Error as e:  # pragma: no cover
         virt_mem = 0
