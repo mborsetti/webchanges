@@ -140,7 +140,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
 
         :param filename: The filenames of the jobs file.
         """
-        super().__init__(filename)  # type: ignore[arg-type]
+        super().__init__(filename)  # ty:ignore[invalid-argument-type]
         self.filename = filename
 
     def load_secure(self) -> list[JobBase]:
@@ -160,7 +160,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
             if isinstance(job, ShellJob):
                 return True
 
-            for filter_kind, _ in FilterBase.normalize_filter_list(job.filters, job.index_number):
+            for filter_kind, _ in FilterBase.normalize_filter_list(job.filters, job.index_number):  # ty:ignore[invalid-argument-type]
                 if filter_kind == 'shellpipe':
                     return True
 

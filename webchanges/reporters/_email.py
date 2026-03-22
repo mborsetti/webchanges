@@ -23,7 +23,7 @@ class EMailReporter(TextReporter):
 
     config: _ConfigReportEmail
 
-    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         body_text = '\n'.join(super().submit())
 
         if not body_text:
@@ -71,7 +71,7 @@ class MailgunReporter(TextReporter):
 
     config: _ConfigReportMailgun
 
-    def submit(self) -> str | None:  # type: ignore[override]
+    def submit(self) -> str | None:  # ty:ignore[invalid-method-override]
         region = self.config['region']
         domain = self.config['domain']
         api_key = self.config['api_key']

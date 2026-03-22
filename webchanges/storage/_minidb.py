@@ -1,4 +1,4 @@
-# type: ignore
+# ty:ignore
 
 """Legacy minidb cache database.
 

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 try:
     import keyring
 except ImportError as e:  # pragma: no cover
-    keyring = str(e)  # type: ignore[assignment]
+    keyring = str(e)  # ty:ignore[invalid-assignment]
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -91,7 +91,7 @@ class Mailer:
             else:
                 html_body, cid_dict = extract_inline_images(html_body)
                 msg.add_alternative(html_body, subtype='html')
-                payloads: EmailMessage = msg.get_payload()[1]  # type: ignore[assignment,index]
+                payloads: EmailMessage = msg.get_payload()[1]  # ty:ignore[invalid-argument-type, invalid-assignment]
                 for image_cid, image_data in cid_dict.items():
                     payloads.add_related(
                         image_data,

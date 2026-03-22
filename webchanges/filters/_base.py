@@ -7,7 +7,7 @@ from __future__ import annotations
 import itertools
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, Literal
 
 import yaml
 
@@ -19,6 +19,26 @@ if TYPE_CHECKING:
     from webchanges.handler import JobState
 
 logger = logging.getLogger(__name__)
+
+
+FiltersList = Literal[
+    'absolute_links',
+    'ascii85',
+    'base64',
+    'beautify',
+    'format-json',
+    'format-xml',
+    'hexdump',
+    'html2text',
+    'ical2text',
+    'jsontoyaml',
+    'pretty-xml',
+    'remove_repeated',
+    'reverse',
+    'sha1sum',
+    'sort',
+    'strip',
+]
 
 
 class FilterBase(metaclass=TrackSubClasses):

@@ -17,7 +17,7 @@ from webchanges.filters._base import FilterBase
 try:
     from pypdf import PdfReader
 except ImportError as e:  # pragma: no cover
-    PdfReader = str(e)  # type: ignore[assignment,misc]
+    PdfReader = str(e)  # ty:ignore[invalid-assignment]
 
 try:
     import pdftotext  # ty:ignore[unresolved-import]
@@ -27,7 +27,7 @@ except ImportError as e:  # pragma: has-pdftotext
 try:
     from PIL import Image
 except ImportError as e:  # pragma: no cover
-    Image = str(e)  # type: ignore[assignment]
+    Image = str(e)  # ty:ignore[invalid-assignment]
 
 try:
     import pytesseract  # ty:ignore[unresolved-import]
@@ -37,7 +37,7 @@ except ImportError as e:  # pragma: has-pytesseract
 try:
     import vobject.base
 except ImportError as e:  # pragma: no cover
-    vobject = str(e)  # type: ignore[assignment]
+    vobject = str(e)  # ty:ignore[invalid-assignment]
 
 try:
     import jq  # ty:ignore[unresolved-import]

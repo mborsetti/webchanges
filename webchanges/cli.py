@@ -28,7 +28,7 @@ from webchanges.util import file_ownership_checks, get_new_version_number, impor
 # This prevents a BrokenPipeError when piping output to a command like `less` that may close the pipe before reading all
 # of the output.
 try:
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # type: ignore[attr-defined]  # not defined in Windows
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # not defined in Windows  # ty:ignore[unresolved-attribute]
 except AttributeError:
     pass
 

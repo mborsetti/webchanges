@@ -139,7 +139,7 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('execute')
     # noinspection PyTypeChecker
-    data, _ = filtercls(job_state).filter(  # type: ignore[misc]
+    data, _ = filtercls(job_state).filter(  # ty:ignore[call-non-callable]
         'input-string',
         'text/plain',
         {'command': command},
@@ -173,7 +173,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('shellpipe')
     # noinspection PyTypeChecker
-    data, _ = filtercls(job_state).filter(  # type: ignore[misc]
+    data, _ = filtercls(job_state).filter(  # ty:ignore[call-non-callable]
         'input-string',
         'text/plain',
         {'command': command},
@@ -192,7 +192,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
 def test_filter_requires_bytes() -> None:
     filtercls = FilterBase.__subclasses__.get('pdf2text')
     # noinspection PyTypeChecker
-    assert filtercls(job_state).is_bytes_filter_kind('pdf2text') is True  # type: ignore[misc]
+    assert filtercls(job_state).is_bytes_filter_kind('pdf2text') is True  # ty:ignore[call-non-callable]
 
 
 def test_deprecated_filters() -> None:
@@ -203,7 +203,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter(  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter(  # ty:ignore[call-non-callable]
             '<div>a</div>',
             'text/plain',
             {'method': 'pyhtml2text'},
@@ -217,7 +217,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 're'})  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 're'})  # ty:ignore[call-non-callable]
     assert data == 'a'
     assert len(w) == 1
     expected = "Filter html2text's method 're' is deprecated: replace with 'strip_tags' (Job 0: "
@@ -225,7 +225,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('grep')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # ty:ignore[call-non-callable]
     assert data == 'b'
     assert len(w) == 1
     expected = "The 'grep' filter is deprecated; replace with 'keep_lines_containing' + 're' subfilter (Job 0: "
@@ -234,7 +234,7 @@ def test_deprecated_filters() -> None:
     filtercls = FilterBase.__subclasses__.get('grepi')
     with pytest.warns(DeprecationWarning) as w:
         # noinspection PyTypeChecker
-        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # ty:ignore[call-non-callable]
     assert data == 'a'
     assert len(w) == 1
     expected = "The 'grepi' filter is deprecated; replace with 'delete_lines_containing' + 're' subfilter (Job 0: "
@@ -242,7 +242,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('striplines')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter('a  \nb', 'text/plain', {})  # type: ignore[misc]
+        data, _ = filtercls(job_state).filter('a  \nb', 'text/plain', {})  # ty:ignore[call-non-callable]
     assert data == 'a\nb'
     assert len(w) == 1
     expected = (
@@ -256,7 +256,7 @@ def test_filter_exceptions() -> None:
     e: pytest.ExceptionInfo
     with pytest.raises(NotImplementedError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 'lynx'})  # type: ignore[misc]
+        filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 'lynx'})  # ty:ignore[call-non-callable]
     expected = (
         "Filter html2text's method 'lynx' is no longer supported; for similar results, use the filter without "
         'specifying a method. (Job 0:'
@@ -266,14 +266,14 @@ def test_filter_exceptions() -> None:
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 'blabla'})  # type: ignore[misc]
+        filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 'blabla'})  # ty:ignore[call-non-callable]
     expected = "Unknown method blabla for filter 'html2text'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('pdf2text')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('<div>a</div>', 'text/plain', {})  # type: ignore[misc]
+        filtercls(job_state).filter('<div>a</div>', 'text/plain', {})  # ty:ignore[call-non-callable]
     expected = "The 'pdf2text' filter needs bytes input (is it the first filter?). (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
@@ -281,105 +281,105 @@ def test_filter_exceptions() -> None:
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         with pytest.raises(TypeError) as e:
             # noinspection PyTypeChecker
-            filtercls(job_state).filter('a', 'text/plain', {'text': 2})  # type: ignore[misc]
+            filtercls(job_state).filter('a', 'text/plain', {'text': 2})  # ty:ignore[call-non-callable]
         expected = f"The '{filter_kind}' filter requires a string but you provided a int. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
 
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         with pytest.raises(TypeError) as e:
             # noinspection PyTypeChecker
-            filtercls(job_state).filter('a', 'text/plain', {'re': 2})  # type: ignore[misc]
+            filtercls(job_state).filter('a', 'text/plain', {'re': 2})  # ty:ignore[call-non-callable]
         expected = f"The '{filter_kind}' filter requires a string but you provided a int. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
 
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         with pytest.raises(ValueError) as e:
             # noinspection PyTypeChecker
-            filtercls(job_state).filter('a', 'text/plain', {})  # type: ignore[misc]
+            filtercls(job_state).filter('a', 'text/plain', {})  # ty:ignore[call-non-callable]
         expected = f"The '{filter_kind}' filter requires a 'text' or 're' sub-directive. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('strip')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/plain', {'splitlines': True, 'side': 'whatever'})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {'splitlines': True, 'side': 'whatever'})  # ty:ignore[call-non-callable]
     expected = "The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('strip')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/plain', {'side': 'whatever'})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {'side': 'whatever'})  # ty:ignore[call-non-callable]
     expected = "The 'strip' filter's 'side' sub-directive can only be 'right' or 'left'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('element-by-id')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # ty:ignore[call-non-callable]
     expected = "The 'element-by-id' filter needs an id for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('element-by-class')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # ty:ignore[call-non-callable]
     expected = "The 'element-by-class' filter needs a class for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('element-by-style')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # ty:ignore[call-non-callable]
     expected = "The 'element-by-style' filter needs a style for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('element-by-tag')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # ty:ignore[call-non-callable]
     expected = "The 'element-by-tag' filter needs a tag for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/html', {'method': 'any'})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {'method': 'any'})  # ty:ignore[call-non-callable]
     expected = "The 'xpath' filter's method must be 'html' or 'xml', got 'any'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/html', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {})  # ty:ignore[call-non-callable]
     expected = "The 'xpath' filter needs an XPath expression for filtering. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('xpath')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/html', {'path': 'any', 'namespaces': 'whatever'})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/html', {'path': 'any', 'namespaces': 'whatever'})  # ty:ignore[call-non-callable]
     expected = "The 'xpath' filter's namespace prefixes are only supported with 'method: xml'. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('re.sub')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/plain', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {})  # ty:ignore[call-non-callable]
     expected = "The 're.sub' filter needs a pattern. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('execute')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/plain', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {})  # ty:ignore[call-non-callable]
     expected = "The 'execute' filter needs a command. (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
     filtercls = FilterBase.__subclasses__.get('ocr')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter('a', 'text/plain', {})  # type: ignore[misc]
+        filtercls(job_state).filter('a', 'text/plain', {})  # ty:ignore[call-non-callable]
     expected = "The 'ocr' filter needs bytes input (is it the first filter?). (Job 0: "
     assert e.value.args[0][: len(expected)] == expected
 
@@ -387,14 +387,14 @@ def test_filter_exceptions() -> None:
         filtercls = FilterBase.__subclasses__.get('jq')
         with pytest.raises(ValueError) as e:
             # noinspection PyTypeChecker
-            filtercls(job_state).filter('a', 'text/json', {})  # type: ignore[misc]
+            filtercls(job_state).filter('a', 'text/json', {})  # ty:ignore[call-non-callable]
         expected = "The 'jq' filter needs a query. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
 
         filtercls = FilterBase.__subclasses__.get('jq')
         with pytest.raises(ValueError) as e:
             # noinspection PyTypeChecker
-            filtercls(job_state).filter('{""""""}', 'text/json', {'query': 'any'})  # type: ignore[misc]
+            filtercls(job_state).filter('{""""""}', 'text/json', {'query': 'any'})  # ty:ignore[call-non-callable]
         expected = "The 'jq' filter needs valid JSON. (Job 0: "
         assert e.value.args[0][: len(expected)] == expected
     else:

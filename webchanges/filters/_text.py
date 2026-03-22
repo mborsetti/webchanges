@@ -46,12 +46,16 @@ class KeepLinesContainingFilter(FilterBase):
             )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
-                return (
-                    ''.join(
-                        line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line)
-                    ).rstrip(),
-                    mime_type,
-                )
+                try:
+                    return (
+                        ''.join(
+                            line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line)
+                        ).rstrip(),
+                        mime_type,
+                    )
+                except re.error as e:  # FIXIT: Python version 3.13+ change to re.PatternError
+                    e.args = (f'{e.args[0]} (pattern: "{subfilter["pattern"]}")', *e.args[1:])
+                    raise
             raise TypeError(
                 f"The '{self.__kind__}' filter requires a string but you provided a "
                 f'{type(subfilter["re"]).__name__}. ({self.job.get_indexed_location()})'
@@ -120,12 +124,16 @@ class DeleteLinesContainingFilter(FilterBase):
             )
         if 're' in subfilter:
             if isinstance(subfilter['re'], str):
-                return (
-                    ''.join(
-                        line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line) is None
-                    ).rstrip(),
-                    mime_type,
-                )
+                try:
+                    return (
+                        ''.join(
+                            line for line in data.splitlines(keepends=True) if re.search(subfilter['re'], line) is None
+                        ).rstrip(),
+                        mime_type,
+                    )
+                except re.error as e:  # FIXIT: Python version 3.13+ change to re.PatternError
+                    e.args = (f'{e.args[0]} (pattern: "{subfilter["pattern"]}")', *e.args[1:])
+                    raise
             raise TypeError(
                 f"The '{self.__kind__}' filter requires a string but you provided a "
                 f'{type(subfilter["re"]).__name__}. ({self.job.get_indexed_location()})'
@@ -238,7 +246,11 @@ class ReSubFilter(FilterBase):
             raise ValueError(f"The '{self.__kind__}' filter needs a pattern. ({self.job.get_indexed_location()})")
 
         # Default: Replace with empty string if no "repl" value is set
-        return re.sub(subfilter['pattern'], subfilter.get('repl', ''), data), mime_type
+        try:
+            return re.sub(subfilter['pattern'], subfilter.get('repl', ''), data), mime_type
+        except re.error as e:  # FIXIT: Python version 3.13+ change to re.PatternError
+            e.args = (f'{e.args[0]} (pattern: "{subfilter["pattern"]}")', *e.args[1:])
+            raise
 
 
 class RegexFindall(FilterBase):
@@ -260,12 +272,16 @@ class RegexFindall(FilterBase):
             raise ValueError(f"The '{self.__kind__}' filter needs a pattern. ({self.job.get_indexed_location()})")
 
         # Default: Replace with full match if no "repl" value is set
-        return (
-            '\n'.join(
-                [match.expand(subfilter.get('repl', r'\g<0>')) for match in re.finditer(subfilter['pattern'], data)]
-            ),
-            mime_type,
-        )
+        try:
+            return (
+                '\n'.join(
+                    [match.expand(subfilter.get('repl', r'\g<0>')) for match in re.finditer(subfilter['pattern'], data)]
+                ),
+                mime_type,
+            )
+        except re.error as e:  # FIXIT: Python version 3.13+ change to re.PatternError
+            e.args = (f'{e.args[0]} (pattern: "{subfilter["pattern"]}")', *e.args[1:])
+            raise
 
 
 class SortFilter(FilterBase):

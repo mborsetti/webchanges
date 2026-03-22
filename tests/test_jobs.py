@@ -42,7 +42,7 @@ else:
 here = Path(__file__).parent
 data_path = here.joinpath('data')
 ssdb_file = ':memory:'
-ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
 
 
 def is_connected() -> bool:
@@ -192,7 +192,7 @@ def new_command_config(config_file: Path, jobs_file: Path, hooks_file: Path) -> 
         config_file=config_file,
         jobs_def_file=jobs_file,
         hooks_def_file=hooks_file,
-        ssdb_file=ssdb_file,  # type: ignore[arg-type]
+        ssdb_file=ssdb_file,  # ty:ignore[invalid-argument-type]
     )
 
 
@@ -392,7 +392,7 @@ def test_run_job(
             data, _, _ = job.retrieve(job_state)
             if job.filters == [{'pdf2text': {}}]:
                 assert isinstance(data, bytes)
-            assert output in data  # type: ignore[operator]
+            assert output in data  # ty:ignore[unsupported-operator]
 
 
 @connection_required

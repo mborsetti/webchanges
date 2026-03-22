@@ -23,7 +23,7 @@ from webchanges.storage import DEFAULT_CONFIG
 try:
     from keyring.errors import NoKeyringError
 except ImportError:
-    NoKeyringError = None  # type: ignore[misc,assignment]
+    NoKeyringError = None  # ty:ignore[invalid-assignment]
 
 try:
     from matrix_client.errors import MatrixError
@@ -70,7 +70,7 @@ def build_test_report() -> Report:
 
         # Can pass in None for ssdb_storage as we are not going to load or save the job state for testing; also no
         # need to use it as context manager, since no processing is called on the job
-        job_state = JobState(None, job)  # type: ignore[arg-type]
+        job_state = JobState(None, job)  # ty:ignore[invalid-argument-type]
 
         job_state.old_data = old
         job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
@@ -94,7 +94,7 @@ def build_test_report() -> Report:
 
         return job_state
 
-    test_report = Report(UrlwatchTest())  # type: ignore[arg-type]
+    test_report = Report(UrlwatchTest())  # ty:ignore[invalid-argument-type]
     test_report.job_states = []
     test_report.new(build_job('Newly Added', 'https://example.com/new', '', ''))
     test_report.changed(

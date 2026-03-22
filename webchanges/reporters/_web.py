@@ -37,7 +37,7 @@ class IFTTTReport(TextReporter):
 
     config: _ConfigReportIfttt
 
-    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         webhook_url = 'https://maker.ifttt.com/trigger/{event}/with/key/{key}'.format(**self.config)
         for job_state in self.report.get_filtered_job_states(self.job_states):
             pretty_name = job_state.job.pretty_name()
@@ -70,7 +70,7 @@ class WebServiceReporter(TextReporter):
     def web_service_submit(self, service: str | chump.User, title: str, body: str) -> None:
         raise NotImplementedError
 
-    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         text = '\n'.join(super().submit())
 
         if not text:
@@ -163,7 +163,7 @@ class WebhookReporter(TextReporter):
         else:
             self.max_length = default_max_length
 
-    def submit(self) -> Response | None:  # type: ignore[override]
+    def submit(self) -> Response | None:  # ty:ignore[invalid-method-override]
         webhook_url = self.config['webhook_url']
 
         if self.config['markdown']:
@@ -267,7 +267,7 @@ class DiscordReporter(TextReporter):
         if self.config['colored']:
             self.max_length -= 11
 
-    def submit(self) -> Response | None:  # type: ignore[override]
+    def submit(self) -> Response | None:  # ty:ignore[invalid-method-override]
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
@@ -337,7 +337,7 @@ class ProwlReporter(TextReporter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def submit(self) -> None:  # type: ignore[override]
+    def submit(self) -> None:  # ty:ignore[invalid-method-override]
         api_add = 'https://api.prowlapp.com/publicapi/add'
 
         text = '\n'.join(super().submit())
@@ -392,7 +392,7 @@ class NtfyReporter(TextReporter):
 
     config: _ConfigReportNtfy
 
-    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         topic_url = self.config['topic_url']
         headers = Headers({})
         config_priorities = self.config.get('priorities', {})

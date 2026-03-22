@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 try:
     import bs4
 except ImportError as e:  # pragma: has-bs4
-    bs4 = str(e)  # type: ignore[assignment]
+    bs4 = str(e)  # ty:ignore[invalid-assignment]
 
 try:
     import cssbeautifier
@@ -115,13 +115,13 @@ class AbsoluteLinksFilter(FilterBase):
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         tree = etree.HTML(data)
         elem: etree._Element
-        for elem in tree.xpath('//*[@action]'):  # type: ignore[assignment,union-attr]
+        for elem in tree.xpath('//*[@action]'):  # ty:ignore[invalid-assignment, not-iterable]
             elem.attrib['action'] = urljoin(self.job.url, elem.attrib['action'])
-        for elem in tree.xpath('//object[@data]'):  # type: ignore[assignment,union-attr]
+        for elem in tree.xpath('//object[@data]'):  # ty:ignore[invalid-assignment, not-iterable]
             elem.attrib['data'] = urljoin(self.job.url, elem.attrib['data'])
-        for elem in tree.xpath('//*[@href]'):  # type: ignore[assignment,union-attr]
+        for elem in tree.xpath('//*[@href]'):  # ty:ignore[invalid-assignment, not-iterable]
             elem.attrib['href'] = urljoin(self.job.url, elem.attrib['href'])
-        for elem in tree.xpath('//*[@src]'):  # type: ignore[assignment,union-attr]
+        for elem in tree.xpath('//*[@src]'):  # ty:ignore[invalid-assignment, not-iterable]
             elem.attrib['src'] = urljoin(self.job.url, elem.attrib['src'])
         return etree.tostring(tree, encoding='unicode', method='html'), mime_type
 
@@ -538,7 +538,7 @@ class LxmlParser:
         try:
             tree = element.getroottree()
             path = tree.getpath(element)
-            return element is not tree.xpath(path, namespaces=self.namespaces)[0]  # type: ignore[index]
+            return element is not tree.xpath(path, namespaces=self.namespaces)[0]  # ty:ignore[not-subscriptable]
         except (ValueError, IndexError):
             return True
 
@@ -568,11 +568,11 @@ class LxmlParser:
         excluded_elems: list[etree._Element] | None = None
         try:
             if self.filter_kind == 'css':
-                selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(root)  # type: ignore[assignment]
+                selected_elems = CSSSelector(self.expression, namespaces=self.namespaces)(root)  # ty:ignore[invalid-assignment]
                 excluded_elems = CSSSelector(self.exclude, namespaces=self.namespaces)(root) if self.exclude else None  # ty:ignore[invalid-assignment]
 
             elif self.filter_kind == 'xpath':
-                selected_elems = root.xpath(self.expression, namespaces=self.namespaces)  # type: ignore[assignment]
+                selected_elems = root.xpath(self.expression, namespaces=self.namespaces)  # ty:ignore[invalid-assignment]
                 excluded_elems = root.xpath(self.exclude, namespaces=self.namespaces) if self.exclude else None  # ty:ignore[invalid-assignment]
         except (etree.ParserError, etree.XMLSchemaError, etree.XPathError) as e:
             raise ValueError(f'Job {job_index_number} {type(e).__name__}: {e} {self.expression}') from e

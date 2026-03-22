@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 def patch_subclasses(klass: type) -> None:
     """Recursively patch webchanges classes to behave like standard python classes."""
-    klass.__subclasses__ = type.__subclasses__.__get__(klass)  # type: ignore[method-assign]
+    klass.__subclasses__ = type.__subclasses__.__get__(klass)  # ty:ignore[invalid-assignment]
 
     for kls in klass.__subclasses__():
         patch_subclasses(kls)
@@ -28,7 +28,7 @@ def build_tree(klass: type, level: int) -> Iterator[str]:
     for i, kls in enumerate(klass.__subclasses__()):
         branch = '└───' if i + 1 == len(klass.__subclasses__()) else '├───'
         indent = '│   ' * (level - 1)
-        yield ('' if level == 0 else indent + branch) + kls.__kind__  # type: ignore[attr-defined]
+        yield ('' if level == 0 else indent + branch) + kls.__kind__  # ty:ignore[unresolved-attribute]
 
         yield from build_tree(kls, level + 1)
 

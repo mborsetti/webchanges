@@ -20,7 +20,7 @@ from webchanges.jobs import NotModifiedError, TransientHTTPError
 try:
     import psutil
 except ImportError as e:  # pragma: no cover
-    psutil = str(e)  # type: ignore[assignment]
+    psutil = str(e)  # ty:ignore[invalid-assignment]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:

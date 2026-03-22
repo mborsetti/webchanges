@@ -51,7 +51,7 @@ class StdoutReporter(TextReporter):
             return functools.partial(print, file=AnsiToWin32(sys.stdout).stream)
         return print
 
-    def submit(self, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         print_color = self._get_print()
 
         cfg = self.get_base_config(self.report)

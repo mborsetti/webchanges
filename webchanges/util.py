@@ -31,12 +31,12 @@ if TYPE_CHECKING:
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
+    httpx = None  # ty:ignore[invalid-assignment]
 if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # type: ignore[assignment]
+        h2 = None  # ty:ignore[invalid-assignment]
 
 try:
     from packaging.version import parse as parse_version
@@ -168,7 +168,7 @@ def import_module_from_source(module_name: str, source_path: str | bytes | PathL
     source_path = str(source_path)
     loader = importlib.machinery.SourceFileLoader(module_name, source_path)
     spec = importlib.util.spec_from_file_location(module_name, source_path, loader=loader)
-    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    module = importlib.util.module_from_spec(spec)  # ty:ignore[invalid-argument-type]
     sys.modules[module_name] = module
     loader.exec_module(module)
     # try:

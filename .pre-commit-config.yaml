@@ -152,12 +152,11 @@ repos:
         name: check Python static typing (ty)
         entry: ty
         args: ['check']
-        language: python
-        pass_filenames: true
+        language: system
+        pass_filenames: false
         types_or: [python, pyi, jupyter]
-        exclude: storage_minidb.py
         require_serial: true
-        additional_dependencies: [ty]
+        # additional_dependencies: [ty]
       - id: cli-help
         name: update cli_help.txt (used in documentation build)
         entry: webchanges

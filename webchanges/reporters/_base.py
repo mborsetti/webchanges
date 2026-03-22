@@ -61,7 +61,7 @@ try:
     import httpx
     from httpx import Response
 except ImportError:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
+    httpx = None  # ty:ignore[invalid-assignment]
     try:
         import requests
         from requests import Response
@@ -76,7 +76,7 @@ if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # type: ignore[assignment]
+        h2 = None  # ty:ignore[invalid-assignment]
 else:
     from webchanges._vendored.headers import Headers
 
@@ -150,7 +150,7 @@ class ReporterBase(metaclass=TrackSubClasses):
     @classmethod
     def get_base_config(cls, report: Report) -> dict[str, Any]:
         """Gets the configuration of the base of the report (e.g. for stdout, it will be text)"""
-        report_class: ReporterBase = cls.mro()[-3]  # type: ignore[assignment]
+        report_class: ReporterBase = cls.mro()[-3]  # ty:ignore[invalid-assignment]
         base_config: dict[str, Any] = report.config['report'][report_class.__kind__]  # ty:ignore[invalid-key]
         return base_config
 

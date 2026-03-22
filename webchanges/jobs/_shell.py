@@ -51,7 +51,7 @@ class ShellJob(Job):
            a child process.
         """
         logger.info(f'Job {self.index_number}: Running shell command: {self.command}')
-        needs_bytes = FilterBase.filter_chain_needs_bytes(self.filters)
+        needs_bytes = FilterBase.filter_chain_needs_bytes(self.filters)  # ty:ignore[invalid-argument-type]
 
         # deprecations
         if self.stderr:

@@ -15,7 +15,7 @@ from webchanges.storage._ssdb import SsdbStorage
 try:
     import redis
 except ImportError as e:  # pragma: no cover
-    redis = str(e)  # type: ignore[assignment]
+    redis = str(e)  # ty:ignore[invalid-assignment]
 
 if TYPE_CHECKING:
     from pathlib import Path

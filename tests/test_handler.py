@@ -33,7 +33,7 @@ data_path = here.joinpath('data')
 config_file = data_path.joinpath('config.yaml')
 ssdb_file = ':memory:'
 hooks_file = Path()
-ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
 
 
 def cleanup(request: pytest.FixtureRequest) -> None:
@@ -124,11 +124,11 @@ def test_disabled_job() -> None:
         config_file,
         jobs_file,
         hooks_file,
-        ssdb_file,  # type: ignore[arg-type]
+        ssdb_file,  # ty:ignore[invalid-argument-type]
     )
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
-    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     ssdb_storage.delete_all()
     urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
     urlwatcher.report.job_states = []
@@ -154,7 +154,7 @@ def test_run_watcher_sqlite3() -> None:
 
     config_storage = YamlConfigStorage(config_file)
     jobs_storage = YamlJobsStorage([jobs_file])
-    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     try:
         urlwatch_config = CommandConfig(
             [],
@@ -162,7 +162,7 @@ def test_run_watcher_sqlite3() -> None:
             config_file,
             jobs_file,
             hooks_file,
-            ssdb_file,  # type: ignore[arg-type]
+            ssdb_file,  # ty:ignore[invalid-argument-type]
         )
         urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
         urlwatcher.run_jobs()
@@ -184,7 +184,7 @@ def test_run_watcher_minidb() -> None:
             config_file,
             jobs_file,
             hooks_file,
-            ssdb_file,  # type: ignore[arg-type]
+            ssdb_file,  # ty:ignore[invalid-argument-type]
         )
         urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
         urlwatcher.run_jobs()
@@ -196,7 +196,7 @@ def prepare_retry_test_sqlite3() -> tuple[Urlwatch, SsdbSQLite3Storage]:
     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
 
     config_storage = YamlConfigStorage(config_file)
-    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     jobs_storage = YamlJobsStorage([jobs_file])
 
     urlwatch_config = CommandConfig(
@@ -205,7 +205,7 @@ def prepare_retry_test_sqlite3() -> tuple[Urlwatch, SsdbSQLite3Storage]:
         config_file,
         jobs_file,
         hooks_file,
-        ssdb_file,  # type: ignore[arg-type]
+        ssdb_file,  # ty:ignore[invalid-argument-type]
     )
     urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
 
@@ -291,7 +291,7 @@ def prepare_retry_test_minidb() -> tuple[Urlwatch, SsdbMiniDBStorage]:
         config_file,
         jobs_file,
         hooks_file,
-        ssdb_file,  # type: ignore[arg-type]
+        ssdb_file,  # ty:ignore[invalid-argument-type]
     )
     urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
 

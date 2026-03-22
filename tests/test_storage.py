@@ -50,7 +50,7 @@ config_storage = YamlConfigStorage(config_file)
 
 DATABASE_ENGINES: tuple[SsdbStorage, ...] = (
     SsdbDirStorage(tmp_path),
-    SsdbSQLite3Storage(':memory:'),  # type: ignore[arg-type]
+    SsdbSQLite3Storage(':memory:'),  # ty:ignore[invalid-argument-type]
 )
 
 if os.getenv('REDIS_URI') and importlib.util.find_spec('redis') is not None:
@@ -714,7 +714,7 @@ def test_migrate_urlwatch_legacy_db(tmp_path: Path, capsys: pytest.CaptureFixtur
 
 def test_max_snapshots() -> None:
     ssdb_file = ':memory:'
-    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     ssdb_storage.max_snapshots = 0
     ssdb_storage.close()
 

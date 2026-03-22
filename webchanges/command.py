@@ -34,7 +34,7 @@ from webchanges.util import dur_text, edit_file, import_module_from_source
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
+    httpx = None  # ty:ignore[invalid-assignment]
     print("Required package 'httpx' not found; will attempt to run using 'requests'.")
     try:
         import requests
@@ -47,7 +47,7 @@ if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # type: ignore[assignment]
+        h2 = None  # ty:ignore[invalid-assignment]
 
 if TYPE_CHECKING:
     from webchanges.main import Urlwatch
@@ -769,7 +769,7 @@ class UrlwatchCommand:
             if message:
                 # create a dummy job state to run a reporter on
                 job_state = JobState(
-                    None,  # type: ignore[arg-type]
+                    None,  # ty:ignore[invalid-argument-type]
                     JobBase.unserialize({'command': f'{__project_name__} --errors'}),
                 )
                 job_state.traceback = f'{header}\n{message}'
@@ -932,7 +932,7 @@ class UrlwatchCommand:
             items2 = [(k, v) for k, v in items if k != 'filter']
             d = dict(items2)
             if filters:
-                d['filter'] = ','.join(filters)  # ty:ignore[invalid-assignment]
+                d['filter'] = ','.join(filters)
 
             job = JobBase.unserialize(d)
             print(f'Adding {job}.')
@@ -1041,7 +1041,7 @@ class UrlwatchCommand:
 
             # Can pass in None for ssdb_storage, as we are not going to load or save the job state for
             # testing; also no need to use it as context manager, since no processing is called on the job
-            job_state = JobState(None, job)  # type: ignore[arg-type]
+            job_state = JobState(None, job)  # ty:ignore[invalid-argument-type]
 
             job_state.old_data = old
             job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
@@ -1091,7 +1091,7 @@ class UrlwatchCommand:
             report = Report(self.urlwatcher)
 
         if job_state:
-            report.custom(job_state, label)  # type: ignore[arg-type]
+            report.custom(job_state, label)  # ty:ignore[invalid-argument-type]
         else:
             report.new(
                 build_job(

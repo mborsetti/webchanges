@@ -101,7 +101,14 @@ all = [
 
 # Explicit package listing is required for building in tox -e new-install
 # https://setuptools.pypa.io/en/latest/userguide/package_discovery.html
-packages = ['webchanges', 'webchanges._vendored']
+packages = [
+    'webchanges',
+    'webchanges._vendored',
+    'webchanges.filters',
+    'webchanges.jobs',
+    'webchanges.reporters',
+    'webchanges.storage'
+]
 
 [tool.setuptools.dynamic]
 version = { attr = 'webchanges.__version__' }
@@ -353,4 +360,13 @@ docstring-code-line-length = 'dynamic'
 # Config file documentation at https://docs.astral.sh/ty/reference/configuration/
 
 [tool.ty.environment]
-extra-paths = ['webchanges', 'webchanges/storage/_sqlite3.py']
+extra-paths = ['webchanges']
+
+[tool.ty.src]
+exclude = ["./webchanges/.**", "./webchanges/stora_minidb.py"]
+
+[[tool.ty.overrides]]
+include = ["./webchanges/storage/_minidb.py"]
+
+[tool.ty.overrides.rules]
+all = "ignore"

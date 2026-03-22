@@ -70,7 +70,7 @@ def new_command_config(jobs_file: Path = jobs_file, hooks_file: Path = hooks_fil
         config_file=config_file,
         jobs_def_file=jobs_file,
         hooks_def_file=hooks_file,
-        ssdb_file=ssdb_file,  # type: ignore[arg-type]
+        ssdb_file=ssdb_file,  # ty:ignore[invalid-argument-type]
     )
 
 
@@ -85,10 +85,10 @@ def urlwatch_command() -> Generator[UrlwatchCommand, None, None]:
             config_file=config_file,
             jobs_def_file=jobs_file,
             hooks_def_file=hooks_file,
-            ssdb_file=':memory:',  # type: ignore[arg-type]
+            ssdb_file=':memory:',  # ty:ignore[invalid-argument-type]
         ),
         config_storage=config_storage,
-        ssdb_storage=SsdbSQLite3Storage(':memory:'),  # type: ignore[arg-type]
+        ssdb_storage=SsdbSQLite3Storage(':memory:'),  # ty:ignore[invalid-argument-type]
         jobs_storage=YamlJobsStorage([jobs_file]),
     )  # main.py
     yield UrlwatchCommand(urlwatcher)
@@ -102,7 +102,7 @@ def urlwatch_command() -> Generator[UrlwatchCommand, None, None]:
 command_config = new_command_config(jobs_file=jobs_file)
 config_storage = YamlConfigStorage(config_file)
 config_storage.load()
-snapshot_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+snapshot_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
 jobs_storage = YamlJobsStorage([jobs_file])
 urlwatcher = Urlwatch(command_config, config_storage, snapshot_storage, jobs_storage)  # main.py
 urlwatch_command_common = UrlwatchCommand(urlwatcher)
@@ -164,7 +164,7 @@ def test_migration() -> None:
         config_file,
         jobs_file,
         hooks_file,
-        ssdb_file,  # type: ignore[arg-type]
+        ssdb_file,  # ty:ignore[invalid-argument-type]
     )
 
 
@@ -178,7 +178,7 @@ def test_first_run(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
         config_file2,
         jobs_file2,
         hooks_file,
-        ssdb_file,  # type: ignore[arg-type]
+        ssdb_file,  # ty:ignore[invalid-argument-type]
     )
     command_config2.edit = False
     first_run(command_config2)
@@ -192,7 +192,7 @@ def test_load_hooks_file_warning(recwarn: pytest.WarningsRecorder) -> None:
     hooks_file2 = tmp_path.joinpath('hooks_does_not_exist.py')
     load_hooks(hooks_file2, is_default=False)
     assert len(recwarn) == 1
-    message = recwarn.pop(RuntimeWarning).message.args[0]  # type: ignore[union-attr]
+    message = recwarn.pop(RuntimeWarning).message.args[0]  # ty:ignore[unresolved-attribute]
     assert message == f'Hooks file {hooks_file2} not imported because it does not exist or is not a file'
 
 
@@ -763,7 +763,7 @@ def test_modify_urls_move_location(
     # run jobs to save
     urlwatcher2.run_jobs()
     if hasattr(ssdb_storage2, '_copy_temp_to_permanent'):
-        ssdb_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+        ssdb_storage2._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
     # try changing job database location
     command_config2.change_location = old_loc, new_loc
@@ -915,7 +915,7 @@ def test_gc_database(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.Mon
 def test_clean_database(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --clean-database [RETAIN_LIMIT]."""
     command_config.clean_database = True
-    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command_common.handle_actions()
     command_config.clean_database = None
@@ -924,7 +924,7 @@ def test_clean_database(capsys: pytest.CaptureFixture[str]) -> None:
     assert message == ''
 
     # set up storage for testing
-    database_engine = SsdbSQLite3Storage(':memory:')  # type: ignore[arg-type]
+    database_engine = SsdbSQLite3Storage(':memory:')  # ty:ignore[invalid-argument-type]
     urlwatcher2, ssdb_storage2, command_config2 = prepare_storage_test(database_engine)
     urlwatch_command2 = UrlwatchCommand(urlwatcher2)
 
@@ -933,13 +933,13 @@ def test_clean_database(capsys: pytest.CaptureFixture[str]) -> None:
         time.sleep(0.0001)
         urlwatch_command2.urlwatcher.run_jobs()
     if hasattr(ssdb_storage2, '_copy_temp_to_permanent'):
-        ssdb_storage2._copy_temp_to_permanent(delete=True)  # type: ignore[attr-defined]
+        ssdb_storage2._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 
     # clean database with RETAIN_LIMIT=2
     urlwatch_command2.urlwatch_config.clean_database = 2
     urlwatcher2.ssdb_storage.clean_ssdb(
         [job.guid for job in urlwatcher2.jobs],
-        command_config2.clean_database,  # type: ignore[arg-type]
+        command_config2.clean_database,  # ty:ignore[invalid-argument-type]
     )
     urlwatch_command2.urlwatch_config.clean_database = None
     guid = urlwatch_command2.urlwatcher.jobs[0].guid
@@ -949,7 +949,7 @@ def test_clean_database(capsys: pytest.CaptureFixture[str]) -> None:
     urlwatch_command2.urlwatch_config.clean_database = True
     urlwatcher2.ssdb_storage.clean_ssdb(
         [job.guid for job in urlwatcher2.jobs],
-        command_config2.clean_database,  # type: ignore[arg-type]
+        command_config2.clean_database,  # ty:ignore[invalid-argument-type]
     )
     urlwatch_command2.urlwatch_config.clean_database = None
     guid = urlwatch_command2.urlwatcher.jobs[0].guid
@@ -960,7 +960,7 @@ def test_rollback_database(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
     # monkeypatches the "input" function, so that it simulates the user entering "y" in the terminal:
     monkeypatch.setattr('builtins.input', lambda _: 'y')
 
-    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     command_config.rollback_database = '1'
     with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command_common.handle_actions()
@@ -969,7 +969,7 @@ def test_rollback_database(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
     message = capsys.readouterr().out
     assert 'No snapshots found after' in message
 
-    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     command_config.rollback_database = '10am'
     with pytest.raises(SystemExit) as pytest_wrapped_se:
         urlwatch_command_common.handle_actions()
@@ -978,7 +978,7 @@ def test_rollback_database(capsys: pytest.CaptureFixture[str], monkeypatch: pyte
     message = capsys.readouterr().out
     assert 'No snapshots found after' in message
 
-    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    urlwatcher.ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     command_config.rollback_database = 'Thisisjunk'
     with pytest.raises(ValueError) as pytest_wrapped_ve:
         urlwatch_command_common.handle_actions()
@@ -1194,7 +1194,7 @@ def test_locate_storage_file() -> None:
 
 def test_job_states_verb() -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
     urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
@@ -1213,7 +1213,7 @@ def test_job_states_verb() -> None:
 
 def test_job_states_verb_notimestamp_unchanged() -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
     urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
@@ -1249,7 +1249,7 @@ def test_job_states_verb_notimestamp_unchanged() -> None:
 
 def test_job_states_verb_notimestamp_changed() -> None:
     jobs_file = config_path.joinpath('jobs-time.yaml')
-    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     jobs_storage = YamlJobsStorage([jobs_file])
     command_config = new_command_config(jobs_file=jobs_file)
     urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py

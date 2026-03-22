@@ -35,6 +35,15 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.34.2rc0
+-------------------
+2026-03-21
+
+Fixed
+`````
+* Regression: Missing files in PyPi installation.
+
+
 Version 3.34.1
 -------------------
 2026-03-13

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
+    httpx = None  # ty:ignore[invalid-assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -589,7 +589,7 @@ class BrowserJob(UrlJobBase):
 
                 def handle_elements(route: Route) -> None:
                     """Handler function to block elements (a pyee.EventEmitter callback)."""
-                    if route.request.resource_type in self.block_elements:  # type: ignore[operator]
+                    if route.request.resource_type in self.block_elements:  # ty:ignore[unsupported-operator]
                         logger.debug(
                             f'Job {self.index_number}: Intercepted retrieval of resource_type '
                             f"'{route.request.resource_type}' and aborting"

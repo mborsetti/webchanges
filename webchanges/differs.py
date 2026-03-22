@@ -43,35 +43,35 @@ try:
     if TYPE_CHECKING:
         from deepdiff.model import DiffLevel
 except ImportError as e:  # pragma: no cover
-    DeepDiff = str(e)  # type: ignore[assignment,misc]
+    DeepDiff = str(e)  # ty:ignore[invalid-assignment]
 
 
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
+    httpx = None  # ty:ignore[invalid-assignment]
 if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # type: ignore[assignment]
+        h2 = None  # ty:ignore[invalid-assignment]
 
 try:
     import numpy as np
 except ImportError as e:  # pragma: no cover
-    np = str(e)  # type: ignore[assignment]
+    np = str(e)  # ty:ignore[invalid-assignment]
 
 try:
     from PIL import Image, ImageChops, ImageEnhance, ImageStat
 except ImportError as e:  # pragma: no cover
-    Image = str(e)  # type: ignore[assignment]
+    Image = str(e)  # ty:ignore[invalid-assignment]
 
 import json
 
 try:
     import xmltodict
 except ImportError as e:  # pragma: no cover
-    xmltodict = str(e)  # type: ignore[assignment]
+    xmltodict = str(e)  # ty:ignore[invalid-assignment]
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -218,7 +218,7 @@ class DifferBase(metaclass=TrackSubClasses):
                     f"Job {job_index_number}: Differ directive must have a 'name' sub-directive: {differ_spec}."
                 )
 
-        differcls: DifferBase | None = cls.__subclasses__.get(differ_kind, None)  # type: ignore[assignment]
+        differcls: DifferBase | None = cls.__subclasses__.get(differ_kind, None)  # ty:ignore[invalid-assignment]
         if not differcls:
             raise ValueError(f'Job {job_index_number}: No differ named {differ_kind}.')
 
@@ -1340,7 +1340,7 @@ class ImageDiffer(DifferBase):
                 img_byte_arr = BytesIO()
                 image.save(img_byte_arr, format=image.format)
                 image_data = img_byte_arr.getvalue()
-                mime_type = f'image/{image.format.lower()}'  # type: ignore[union-attr]
+                mime_type = f'image/{image.format.lower()}'  # ty:ignore[unresolved-attribute]
 
                 logger.info(
                     f'Job {self.job.index_number}: Loading {img_name} ({image.format}) to Google AI '
@@ -1404,7 +1404,7 @@ class ImageDiffer(DifferBase):
                 ),
             ):
                 if 'error' not in additional_part:
-                    additional_parts.append(additional_part)  # type: ignore[arg-type]
+                    additional_parts.append(additional_part)  # ty:ignore[invalid-argument-type]
                 else:
                     logger.error(
                         f'Job {self.job.index_number}: ai_google for {self.__kind__} HTTP Client error '
@@ -1482,7 +1482,7 @@ class ImageDiffer(DifferBase):
                 self.job,
                 system_instructions,
                 model_prompt,
-                additional_parts=additional_parts,  # type: ignore[arg-type]
+                additional_parts=additional_parts,  # ty:ignore[invalid-argument-type]
                 directives=directives,
             )
 
@@ -1729,9 +1729,9 @@ class AIGoogleDiffer(DifferBase):
             },
         }
         if additional_parts:
-            data['contents'][0]['parts'].extend(additional_parts)
+            data['contents'][0]['parts'].extend(additional_parts)  # ty:ignore[invalid-argument-type]
         if directives.get('media_resolution'):
-            data['contents'][0]['parts'][0]['mediaResolution'] = {'level': directives['media_resolution']}
+            data['contents'][0]['parts'][0]['mediaResolution'] = {'level': directives['media_resolution']}  # ty:ignore[invalid-assignment]
         if directives.get('tools'):
             data['tools'] = directives['tools']
         if directives.get('thinking_level'):

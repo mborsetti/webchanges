@@ -29,21 +29,21 @@ if TYPE_CHECKING:
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
+    httpx = None  # ty:ignore[invalid-assignment]
 
 if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # type: ignore[assignment]
+        h2 = None  # ty:ignore[invalid-assignment]
 
 try:
     import requests
     import urllib3
     import urllib3.exceptions
 except ImportError as e:  # pragma: no cover
-    requests = str(e)  # type: ignore[assignment]
-    urllib3 = str(e)  # type: ignore[assignment]
+    requests = str(e)  # ty:ignore[invalid-assignment]
+    urllib3 = str(e)  # ty:ignore[invalid-assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -123,9 +123,9 @@ class UrlJob(UrlJobBase):
         ) as http_client:
             try:
                 response = http_client.request(
-                    method=self.method,  # type: ignore[arg-type]
+                    method=self.method,  # ty:ignore[invalid-argument-type]
                     url=self.url,
-                    data=self.data,  # type: ignore[arg-type]
+                    data=self.data,  # ty:ignore[invalid-argument-type]
                     params=self.params,
                 )
             except httpx.HTTPError as e:
@@ -178,7 +178,7 @@ class UrlJob(UrlJobBase):
         # Save the media type (fka MIME type)
         mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
-        if FilterBase.filter_chain_needs_bytes(self.filters):
+        if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
             return response.content, etag, mime_type
 
         if self.encoding:
@@ -239,7 +239,7 @@ class UrlJob(UrlJobBase):
                 logger.error('See https://github.com/psf/requests/issues/6443')
 
         response = requests.request(
-            method=self.method,  # type: ignore[arg-type]
+            method=self.method,  # ty:ignore[invalid-argument-type]
             url=self.url,
             params=self.params,
             data=self.data,
@@ -304,7 +304,7 @@ class UrlJob(UrlJobBase):
         # Save the media type (fka MIME type)
         mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
-        if FilterBase.filter_chain_needs_bytes(self.filters):
+        if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
             return response.content, etag, mime_type
 
         if self.encoding:
@@ -357,7 +357,7 @@ class UrlJob(UrlJobBase):
             else:
                 filename = Path(str(urlparse(self.url).path))
 
-            if FilterBase.filter_chain_needs_bytes(self.filters):
+            if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
                 return filename.read_bytes(), '', 'application/octet-stream'
             return filename.read_text(), '', 'text/plain'
 
@@ -372,7 +372,7 @@ class UrlJob(UrlJobBase):
                 str(password),
                 timeout=self.timeout,
             ) as ftp:
-                if FilterBase.filter_chain_needs_bytes(self.filters):
+                if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
                     data_bytes = b''
 
                     def callback_bytes(dt: bytes) -> None:

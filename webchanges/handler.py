@@ -233,7 +233,7 @@ class JobState(ContextManager):
             filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
 
             # Apply any specified filters
-            for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):
+            for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):  # ty:ignore[invalid-argument-type]
                 filtered_data, mime_type = FilterBase.process(filter_kind, subfilter, self, filtered_data, mime_type)
 
             self.new_data = filtered_data

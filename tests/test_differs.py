@@ -112,7 +112,7 @@ def generate_random_string(length: int = 39) -> str:
 def job_state() -> Generator[JobState, None, None]:
     """Get a JobState object for testing."""
     ssdb_file = ':memory:'
-    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # type: ignore[arg-type]
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
     job_state = JobState(ssdb_storage, ShellJob(command=''))
     job_state.old_timestamp = 1605147837.511478  # initial release of webchanges!
     job_state.new_timestamp = 1605147837.511478

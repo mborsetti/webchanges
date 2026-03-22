@@ -36,7 +36,7 @@ except ImportError as e:  # pragma: no cover
 try:
     import keyring
 except ImportError as e:  # pragma: no cover
-    keyring = str(e)  # type: ignore[assignment]
+    keyring = str(e)  # ty:ignore[invalid-assignment]
 
 try:
     import matrix_client.api
@@ -55,7 +55,7 @@ class TelegramReporter(MarkdownReporter):
 
     config: _ConfigReportTelegram
 
-    def submit(self, max_length: int = 4096, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, max_length: int = 4096, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         """Submit report."""
         bot_token = self.config['bot_token'] or os.environ.get('TELEGRAM_BOT_TOKEN')
         if bot_token is None:
@@ -213,7 +213,7 @@ class MatrixReporter(MarkdownReporter):
     config: _ConfigReportMatrix
     MAX_LENGTH = 16384
 
-    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         if isinstance(matrix_client, str):
             self.raise_import_error('matrix_client', self.__kind__, matrix_client)
 
@@ -306,7 +306,7 @@ class XMPPReporter(TextReporter):
     config: _ConfigReportXmpp
     MAX_LENGTH = 262144
 
-    def submit(self) -> None:  # type: ignore[override]
+    def submit(self) -> None:  # ty:ignore[invalid-method-override]
         sender = self.config['sender']
         recipient = self.config['recipient']
 
@@ -331,7 +331,7 @@ class GotifyReporter(MarkdownReporter):
 
     config: _ConfigReportGotify
 
-    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # type: ignore[override]
+    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         body_markdown = '\n'.join(super().submit(self.MAX_LENGTH))
         if not body_markdown:
             logger.debug('Not sending message to gotify server (no changes)')

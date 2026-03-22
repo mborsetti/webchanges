@@ -28,7 +28,7 @@ class RunCommandReporter(TextReporter):
 
     config: _ConfigReportRunCommand
 
-    def submit(self) -> None:  # type: ignore[override]
+    def submit(self) -> None:  # ty:ignore[invalid-method-override]
         if not self.config['command']:
             raise ValueError('Reporter "run_command" needs a command')
 

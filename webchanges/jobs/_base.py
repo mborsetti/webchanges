@@ -24,7 +24,7 @@ try:
     import httpx
 except ImportError:  # pragma: no cover
     print("Required package 'httpx' not found; will attempt to run using 'requests'")
-    httpx = None  # type: ignore[assignment]
+    httpx = None  # ty:ignore[invalid-assignment]
 
 if httpx is not None:
     from httpx import Headers
@@ -32,7 +32,7 @@ if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # type: ignore[assignment]
+        h2 = None  # ty:ignore[invalid-assignment]
 else:
     from webchanges._vendored.headers import Headers
 
@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     import asyncio
     from pathlib import Path
 
+    from webchanges.filters._base import FiltersList
     from webchanges.handler import JobState
     from webchanges.storage import _Config
 
@@ -96,7 +97,7 @@ class JobBase(metaclass=TrackSubClasses):
     enabled: bool | None = None
     encoding: str | None = None  # UrlJobBase
     evaluate: str | None = None  # BrowserJob
-    filters: str | list[str | dict[str, Any]] | None = None
+    filters: FiltersList | list[FiltersList | dict[str, Any]] | None = None
     guid: str = ''
     headers = Headers(encoding='utf-8')  # UrlJobBase
     http_client: Literal['httpx', 'requests'] | None = None  # UrlJob
@@ -578,7 +579,7 @@ class Job(JobBase):
         'user_visible_url',
     )
 
-    def get_location(self) -> str:  # type: ignore[empty-body]
+    def get_location(self) -> str:  # ty:ignore[empty-body]
         """Get the 'location' of the job, i.e. the (user_visible) URL or command.
 
         :returns: The user_visible_url, the URL, or the command of the job.
