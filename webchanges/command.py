@@ -512,6 +512,8 @@ class UrlwatchCommand:
             return
         self.urlwatcher.urlwatch_config.joblist = list(self.urlwatcher.urlwatch_config.joblist) + new_jobs
         self.urlwatcher.run_jobs()
+        if self.urlwatcher.report.config['display']['new']:
+            self.urlwatcher.report.finish(self.urlwatcher.jobs_storage.filename)
         return
 
     def test_differ(self, arg_test_differ: list[str]) -> int:
@@ -1071,7 +1073,7 @@ class UrlwatchCommand:
         cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]  # ty:ignore[invalid-key]
         if job_state:  # we want a full report
             cfg['enabled'] = True
-            self.urlwatcher.config_storage.config['display'][label] = True
+            self.urlwatcher.config_storage.config['display'][label] = True  # ty:ignore[invalid-key]
             self.urlwatcher.config_storage.config['report']['text']['details'] = True
             self.urlwatcher.config_storage.config['report']['text']['footer'] = True
             self.urlwatcher.config_storage.config['report']['text']['minimal'] = False

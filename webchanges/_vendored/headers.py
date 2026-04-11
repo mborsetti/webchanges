@@ -36,11 +36,7 @@ from collections.abc import Mapping
 
 # from https://github.com/encode/httpx/blob/master/httpx/_types.py
 HeaderTypes: typing.TypeAlias = (
-    'Headers'
-    | typing.Mapping[str, str]
-    | typing.Mapping[bytes, bytes]
-    | typing.Sequence[tuple[str, str]]
-    | typing.Sequence[tuple[bytes, bytes]]
+    'Headers | typing.Mapping[str, str] | typing.Mapping[bytes, bytes] | typing.Sequence[tuple[str, str]] | typing.Sequence[tuple[bytes, bytes]]'
 )
 
 

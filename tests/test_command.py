@@ -1070,8 +1070,8 @@ def test_check_smtp_login_not_config(capsys: pytest.CaptureFixture[str]) -> None
                 'auth': False,
                 'host': '',
                 'user': '',
-            },
-        }
+            },  # ty:ignore[missing-typed-dict-key]
+        }  # ty:ignore[invalid-argument-type]
     )
     command_config.smtp_login = True
     with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -1100,7 +1100,7 @@ def test_check_smtp_insecure_password(capsys: pytest.CaptureFixture[str]) -> Non
                 'insecure_password': 'pwd',
                 'port': 587,
                 'starttls': True,
-                'utf-8': True,
+                'utf_8': True,
             },
         }
     )

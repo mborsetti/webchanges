@@ -145,7 +145,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         else:
             config = {}
 
-        return othercls(self.report, config, self.job_states, self.duration, self.jobs_files, self.differ_defaults)
+        return othercls(self.report, config, self.job_states, self.duration, self.jobs_files, self.differ_defaults)  # ty:ignore[invalid-argument-type]
 
     @classmethod
     def get_base_config(cls, report: Report) -> dict[str, Any]:
@@ -236,7 +236,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
         any_enabled = False
         for name, subclass in cls.__subclasses__.items():
-            cfg: _ConfigReportersList = report.config['report'].get(name, {})
+            cfg: _ConfigReportersList = report.config['report'].get(name, {})  # ty:ignore[invalid-assignment]
             if cfg.get('enabled', False):
                 any_enabled = True
                 logger.info(f'Submitting with {name} ({subclass})')

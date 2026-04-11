@@ -44,6 +44,16 @@ Fixed
 * Files missing in PyPi installation.
 
 
+Version NEXT
+-------------------
+Unreleased
+
+Fixed
+`````
+* A report will now be created for jobs initialized with ``--prepare-jobs`` when the configuration setting ``display``
+  > ``new`` is set to ``true``.
+
+
 Version 3.34.1
 -------------------
 2026-03-13

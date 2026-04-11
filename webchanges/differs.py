@@ -1735,9 +1735,9 @@ class AIGoogleDiffer(DifferBase):
         if directives.get('tools'):
             data['tools'] = directives['tools']
         if directives.get('thinking_level'):
-            data['generationConfig'].update({'thinkingConfig': {'thinkingLevel': directives['thinking_level']}})
+            data['generationConfig'].update({'thinkingConfig': {'thinkingLevel': directives['thinking_level']}})  # ty:ignore[no-matching-overload]
         elif directives.get('thinking_budget'):
-            data['generationConfig'].update({'thinkingConfig': {'thinkingBudget': directives['thinking_budget']}})
+            data['generationConfig'].update({'thinkingConfig': {'thinkingBudget': directives['thinking_budget']}})  # ty:ignore[no-matching-overload]
         logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
         model_version = model  # default
         with httpx.Client(http2=h2 is not None) as http_client:
@@ -1806,7 +1806,7 @@ class AIGoogleDiffer(DifferBase):
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
-    ) -> dict[ReportKind, str]:
+    ) -> dict[ReportKind, str]:  # ty:ignore[invalid-method-override]
         logger.info(f'Job {self.job.index_number}: Running the {self.__kind__} differ from hooks.py')
         # warnings.warn(
         #     f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '

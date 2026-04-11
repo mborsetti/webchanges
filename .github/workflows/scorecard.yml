@@ -28,9 +28,8 @@ jobs:
             security-events: write
             # Needed to publish results and get a badge (see publish_results below).
             id-token: write
-            # Uncomment the permissions below if installing in a private repository.
-            # contents: read
-            # actions: read
+            contents: read
+            actions: read
 
         steps:
             - name: Harden the runner (Audit all outbound calls)
@@ -78,6 +77,6 @@ jobs:
             # Upload the results to GitHub's code scanning dashboard (optional).
             # Commenting out will disable upload of results to your repo's Code Scanning dashboard
             - name: 'Upload to code-scanning'
-              uses: github/codeql-action/init@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4.33.0
+              uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
               with:
                   sarif_file: results.sarif

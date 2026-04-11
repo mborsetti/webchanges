@@ -108,18 +108,18 @@ At the moment, the following filters are available:
 
 * To filter and/or edit text:
 
-  - :ref:`keep_lines_containing`: Keep only lines containing specified text or matching a `Python regular expression
-    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`delete_lines_containing`: Delete lines containing specified text or matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
-  - :ref:`re.sub`: Replace or remove text matching a `Python regular expression
+  - :ref:`keep_lines_containing`: Keep only lines containing specified text or matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`re.findall`: Extract, replace or remove all non-overlapping text matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
-  - :ref:`strip`: Strip leading and/or trailing whitespace or specified characters.
-  - :ref:`sort`: Sort lines.
+  - :ref:`re.sub`: Replace or remove text matching a `Python regular expression
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`remove_repeated`: Remove repeated items (lines).
   - :ref:`reverse`: Reverse the order of items (lines).
+  - :ref:`sort`: Sort lines.
+  - :ref:`strip`: Strip leading and/or trailing whitespace or specified characters.
 
 * To run any custom script or program:
 
@@ -415,9 +415,11 @@ Optional sub-directives
 
 ``delete_lines_containing``
 ---------------------------
-This filter is the inverse of ``keep_lines_containing`` above and discards all lines that contain the text specified
-(default) or match the Python `regular expression
-<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__, keeping the others.
+This filter discards all lines that contain the text specified (default) or match the Python `regular
+expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified (with ``re``
+sub-directive), keeping the others.
+
+Note that while this filter emulates Linux's *grep*, it **does not** use the executable *grep*.
 
 Examples:
 
@@ -864,7 +866,9 @@ Optional sub-directives
 ``keep_lines_containing``
 -------------------------
 This filter keeps only lines that contain the text specified (default) or match the Python `regular
-expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified, discarding the others.
+expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__ specified (with ``re``
+sub-directive), discarding the others.
+
 Note that while this filter emulates Linux's *grep*, it **does not** use the executable *grep*.
 
 Examples:

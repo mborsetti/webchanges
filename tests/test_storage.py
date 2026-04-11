@@ -601,7 +601,7 @@ def test_restore_and_backup(database_engine: SsdbStorage) -> None:
 
     mime_type = 'text/plain' if isinstance(database_engine, (SsdbSQLite3Storage, SsdbRedisStorage)) else ''
 
-    ssdb_storage.restore((('myguid', 'mydata', 1618105974, 0, '', mime_type, {}),))
+    ssdb_storage.restore((('myguid', 'mydata', 1618105974, 0, '', mime_type, {}),))  # ty:ignore[invalid-argument-type]
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
         ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
 

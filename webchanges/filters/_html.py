@@ -529,12 +529,12 @@ class LxmlParser:
         if isinstance(element, etree._ElementUnicodeResult):
             parent = element.getparent()
             if (
-                (element.is_tail and parent.tail is None)
-                or (element.is_text and parent.text is None)
-                or (element.is_attribute and parent.attrib.get(element.attrname) is None)
+                (element.is_tail and parent.tail is None)  # ty:ignore[unresolved-attribute]
+                or (element.is_text and parent.text is None)  # ty:ignore[unresolved-attribute]
+                or (element.is_attribute and parent.attrib.get(element.attrname) is None)  # ty:ignore[unresolved-attribute]
             ):
                 return True
-            element = parent
+            element = parent  # ty:ignore[invalid-assignment]
         try:
             tree = element.getroottree()
             path = tree.getpath(element)
