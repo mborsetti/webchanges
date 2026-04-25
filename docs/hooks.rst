@@ -12,6 +12,9 @@ Python programmers can hook their own code to expand :program:`webchanges` with 
 code into a ``hooks.py`` file located in the same directory as the job and configuration files (or as specified in the
 command line using the ``--hooks`` argument). The file will be automatically loaded as a module at startup.
 
+A (very good) AI-generated high-level architectural overview is available on
+`DeepWiki <https://deepwiki.com/mborsetti/webchanges>`__.
+
 An example ``hooks.py`` file to get you started is below.
 
 Smaller code snippets can also be run using the :ref:`execute` filter, for example as used :ref:`here <json_dict>`
@@ -37,13 +40,15 @@ Example ``hooks.py`` file:
 
 .. code-block:: python
 
-   """Example hooks file for webchanges (for Python >= 3.13)."""
+   """Example hooks file for webchanges (for Python >= 3.14)."""
+   from zoneinfo import ZoneInfo
+   from differs import ReportKind
 
    import logging
    import re
    import threading
    from pathlib import Path
-   from typing import TYPE_CHECKING
+   from typing import TYPE_CHECKING, Iterable
 
    from webchanges.differs import DifferBase
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
@@ -72,8 +77,11 @@ Example ``hooks.py`` file:
        built-in ones.
        """
 
-       __kind__ = 'hooks_custom_login'
-       __required__ = ('username', 'password')  # These are added to the ones from the super classes.
+       __kind__ = "hooks_custom_login"
+       __required__ = (
+           "username",
+           "password",
+       )  # These are added to the ones from the super classes.
 
        # IMPORTANT!
        # We want to put all job modifications within the with_defaults function so that --test-filters etc. work
@@ -83,11 +91,15 @@ Example ``hooks.py`` file:
            :param config: The configuration as a dict.
            :returns: A JobBase object.
            """
-           self.filters = ['jsontoyaml']  # applies to all jobs with ``kind: hooks_custom_login``
-           self.differ = {'name': 'deepdiff', 'ignore_order': True, 'compact': True}
+           self.filters = [
+               "jsontoyaml"
+           ]  # applies to all jobs with ``kind: hooks_custom_login``
+           self.differ = {"name": "deepdiff", "ignore_order": True, "compact": True}
            return super().with_defaults(config)
 
-       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
+       def retrieve(
+           self, job_state: JobState, headless: bool = True
+       ) -> tuple[bytes | str, str, str]:
            """Runs job to retrieve the data, and returns data and ETag.
 
            :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -97,9 +109,13 @@ Example ``hooks.py`` file:
            """
            with hooks_custom_login_lock:  # this site doesn't like parallel logins
                ...  # custom code here to actually do the login.
-           additional_headers = {'x-special': 'test'}
-           self.headers.update(additional_headers)  # self.headers always an httpx.Headers object
-           return super().retrieve(job_state)  # uses the existing code to then browse and capture data
+           additional_headers = {"x-special": "test"}
+           self.headers.update(
+               additional_headers
+           )  # self.headers always an httpx.Headers object
+           return super().retrieve(
+               job_state
+           )  # uses the existing code to then browse and capture data
 
 
    class CustomBrowserJob(UrlJobBase):
@@ -109,10 +125,14 @@ Example ``hooks.py`` file:
        built-in ones.
        """
 
-       __kind__ = 'hooks_custom_browser'
-       __is_browser__ = True  # This is required for execution in the correct parallel processing queue.
+       __kind__ = "hooks_custom_browser"
+       __is_browser__ = (
+           True  # This is required for execution in the correct parallel processing queue.
+       )
 
-       def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[bytes | str, str, str]:
+       def retrieve(
+           self, job_state: JobState, headless: bool = True
+       ) -> tuple[bytes | str, str, str]:
            """Runs job to retrieve the data, and returns data and ETag.
 
            :param job_state: The JobState object, to keep track of the state of the retrieval.
@@ -122,9 +142,9 @@ Example ``hooks.py`` file:
            """
            ...  # custom code here to launch browser and capture data.
            return (
-               '<Data captured after browsing to self.url>',
-               '<The Etag (if any) or empty string>',
-               '<The Content-Type (if any) or empty string>',
+               "<Data captured after browsing to self.url>",
+               "<The Etag (if any) or empty string>",
+               "<The Content-Type (if any) or empty string>",
            )
 
 
@@ -136,32 +156,31 @@ Example ``hooks.py`` file:
 
        .. code-block:: yaml
 
-          url: example.com/hooks/len
-          filters:
-            - hooks_case: lower
+       url: example.com/hooks/len
+       filters:
+           - hooks_case: lower
        """
 
-       __kind__ = 'hooks_case'
+       __kind__ = "hooks_case"
 
        __supported_subfilters__: dict[str, str] = {
-           'upper': 'Upper case (default)',
-           'lower': 'Lower case'
+           "upper": "Upper case (default)",
+           "lower": "Lower case",
        }
 
-       __default_subfilter__ = 'upper'
+       __default_subfilter__ = "upper"
 
-       @staticmethod
        def filter(
-           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+           self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]
        ) -> tuple[str | bytes, str]:
            """:returns: The filtered data and its media type (fka MIME type)."""
 
-           if not subfilter or subfilter.get('upper'):
+           if not subfilter or subfilter.get("upper"):
                return data.upper(), mime_type
-           elif subfilter.get('lower'):
+           elif subfilter.get("lower"):
                return data.lower(), mime_type
            else:
-               raise ValueError(f'Unknown case subfilter {subfilter}')
+               raise ValueError(f"Unknown case subfilter {subfilter}")
 
 
    class IndentFilter(FilterBase):
@@ -173,28 +192,27 @@ Example ``hooks.py`` file:
 
        .. code-block:: yaml
 
-          url: example.com/hooks/indent
-          filters:
-            - hooks_indent: 4
+       url: example.com/hooks/indent
+       filters:
+           - hooks_indent: 4
        """
 
-       __kind__ = 'hooks_indent'
+       __kind__ = "hooks_indent"
 
        __supported_subfilters__: dict[str, str] = {
-           'indent': 'Number of spaces to indent (default 8)'
+           "indent": "Number of spaces to indent (default 8)"
        }
 
-       __default_subfilter__ = 'indent'
+       __default_subfilter__ = "indent"
 
-       @staticmethod
        def filter(
-           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+           self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]
        ) -> tuple[str | bytes, str]:
            """:returns: The filtered data and its media type (fka MIME type)."""
 
-           indent = int(subfilter.get('indent', 8))
+           indent = int(subfilter.get("indent", 8))
 
-           return '\n'.join((' ' * indent) + line for line in data.splitlines()), mime_type
+           return "\n".join((" " * indent) + line for line in str(data).splitlines()), mime_type
 
 
    class CustomMatchUrlFilter(AutoMatchFilter):
@@ -202,14 +220,13 @@ Example ``hooks.py`` file:
        An AutoMatchFilter applies automatically to all jobs that exactly match the MATCH properties set.
        """
 
-       MATCH = {'url': 'https://example.org/'}
+       MATCH = {"url": "https://example.org/"}
 
-       @staticmethod
        def filter(
-           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+           self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]
        ) -> tuple[str | bytes, str]:
            """:returns: The filtered data and its media type (fka MIME type)."""
-           return data.replace('foo', 'bar'), mime_type
+           return str(data).replace("foo", "bar"), mime_type
 
 
    class CustomRegexMatchUrlFilter(RegexMatchFilter):
@@ -217,14 +234,13 @@ Example ``hooks.py`` file:
        A RegexMatchFilter applies automatically to all jobs that match the MATCH regex properties set.
        """
 
-       MATCH = {'url': re.compile(r'https://example.org/.*')}
+       MATCH = {"url": re.compile(r"https://example.org/.*")}
 
-       @staticmethod
        def filter(
-           data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+           self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]
        ) -> tuple[str | bytes, str]:
            """:returns: The filtered data and its media type (fka MIME type)."""
-           return data.replace('foo', 'bar'), mime_type
+           return str(data).replace("foo", "bar"), mime_type
 
 
    class LenDiffer(DifferBase):
@@ -234,29 +250,29 @@ Example ``hooks.py`` file:
 
        .. code-block:: yaml
 
-          url: example.com/hooks/len
-          differ: hooks_lendiffer
+       url: example.com/hooks/len
+       differ: hooks_lendiffer
        """
 
-       __kind__ = 'hooks_lendiffer'
+       __kind__ = "hooks_lendiffer"
 
        __no_subdiffer__ = True
-       __supported__report_kinds__ = {'html'}
+       __supported__report_kinds__ = {"html"}
 
        def differ(
            self,
-           subdiffer: dict[str, Any],
-           report_kind: Literal['plain', 'markdown', 'html'],
-           _unfiltered_diff: dict[Literal['plain', 'markdown', 'html'], str] | None = None,
-           tz: str | None = None,
-       ) -> dict[Literal['plain', 'markdown', 'html'], str]:
+           directives: dict[str, Any],
+           report_kind: ReportKind,
+           _unfiltered_diff: dict[ReportKind, str] | None = None,
+           tz: ZoneInfo | None = None,
+       ) -> dict[ReportKind, str]:
            len_diff = len(self.state.new_data) - len(self.state.old_data)
-           diff_text = f'Length of data has changed by {len_diff:+,}'
+           diff_text = f"Length of data has changed by {len_diff:+,}"
            """:returns: A dict with at least the value of 'report_kind' key populated."""
            return {
-               'plain': diff_text,
-               'markdown': diff_text,
-               'html': diff_text,
+               "plain": diff_text,
+               "markdown": diff_text,
+               "html": diff_text,
            }
 
 
@@ -268,15 +284,16 @@ Example ``hooks.py`` file:
 
        .. code-block:: yaml
 
-          report:
-            hooks_save_text_report:
-              enabled: true
+       report:
+           hooks_save_text_report:
+           enabled: true
        """
 
-       __kind__ = 'hooks_save_text_report'
+       __kind__ = "hooks_save_text_report"
 
-       def submit(self) -> None:
-           Path(self.config['filename']).write_text('\n'.join(super().submit()))
+       def submit(self, **kwargs: Any) -> Iterable[str]:
+           Path(self.config["filename"]).write_text("\n".join(super().submit()))  # ty:ignore[invalid-key]
+           return []
 
 
    class CustomHtmlFileReporter(HtmlReporter):
@@ -285,33 +302,45 @@ Example ``hooks.py`` file:
 
        .. code-block:: yaml
 
-          report:
-            hooks_save_html_report:
-              enabled: true
+       report:
+           hooks_save_html_report:
+           enabled: true
        """
 
-       __kind__ = 'hooks_save_html_report'
+       __kind__ = "hooks_save_html_report"
 
-       def submit(self) -> None:
-           Path(self.config['filename']).write_text('\n'.join(super().submit()))
+       def submit(self, **kwargs: Any) -> Iterable[str]:
+           Path(self.config["filename"]).write_text("\n".join(super().submit()))  # ty:ignore[invalid-key]
+           return []
 
 
    class CustomAPIFromBrowserJob(BrowserJob):
        """Custom job that uses the browser to login and then intercepts the response from an API."""
 
-       __kind__ = 'hooks_custom_browser_job'
+       __kind__ = "hooks_custom_browser_job"
 
        def retrieve(
            self,
            job_state: JobState,
            headless: bool = True,
            response_handler: Callable[
-               [Page, str, Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None, str | None], Response
+               [
+                   Page,
+                   str,
+                   Literal["commit", "domcontentloaded", "load", "networkidle"] | None,
+                   str | None,
+               ],
+               Response,
            ]
            | None = None,
            content_handler: Callable[[Page], tuple[str | bytes, str, str]] | None = None,
            return_data: Callable[
-               [Page, str, Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None, str | None],
+               [
+                   Page,
+                   str,
+                   Literal["commit", "domcontentloaded", "load", "networkidle"] | None,
+                   str | None,
+               ],
                tuple[str | bytes, str, str],
            ]
            | None = None,
@@ -319,35 +348,49 @@ Example ``hooks.py`` file:
 
            def login_fn(page: Page) -> None:
                """Helper function to log into the website"""
-               logger.info(f'Job {self.index_number}: Logging into website at {page.url}')
+               logger.info(f"Job {self.index_number}: Logging into website at {page.url}")
                page.locator('//input[@name="username"]').click()
                page.wait_for_timeout(20)
-               page.locator('//input[@name="username"]').press_sequentially('username', delay=10)
+               page.locator('//input[@name="username"]').press_sequentially(
+                   "username", delay=10
+               )
                page.wait_for_timeout(20)
-               page.locator('//input[@name="password"]').press_sequentially('password', delay=10)
+               page.locator('//input[@name="password"]').press_sequentially(
+                   "password", delay=10
+               )
                page.wait_for_timeout(20)
-               page.keyboard.press('Enter')
-               logger.info('Job {self.index_number}: Entered credentials; waiting for API response')
+               page.keyboard.press("Enter")
+               logger.info(
+                   "Job {self.index_number}: Entered credentials; waiting for API response"
+               )
 
-               logger.info(f'Job {self.index_number}: Using the {self.__kind__} job class from hooks.py')
+               logger.info(
+                   f"Job {self.index_number}: Using the {self.__kind__} job class from hooks.py"
+               )
 
            def extract_api_browser(
                self: BrowserJob,
                page: Page,
                url: str,
-               wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None,
+               wait_until: Literal["commit", "domcontentloaded", "load", "networkidle"]
+               | None = None,
                referer: str | None = None,
-               api_url: str = '',
+               api_url: str = "",
                login_fn: Callable[[Page], None] | None = None,
            ) -> tuple[str | bytes, str, str]:
                """Generic helper function to extract API response from browser."""
                from playwright.sync_api import Error as PlaywrightError
 
-               logger.info(f"Job {self.index_number}: Using 'extract_api_browser' from {self.__kind__}")
+               logger.info(
+                   f"Job {self.index_number}: Using 'extract_api_browser' from {self.__kind__}"
+               )
 
                try:
                    with page.expect_response(
-                       lambda response: response.url.startswith(api_url) and response.request.method in ('GET', 'POST')
+                       lambda response: (
+                           response.url.startswith(api_url)
+                           and response.request.method in ("GET", "POST")
+                       )
                    ) as response_info:
                        page.goto(url, wait_until=wait_until, referer=referer)
                        if login_fn:
@@ -359,24 +402,28 @@ Example ``hooks.py`` file:
                    response = response_info.value  # waits until it's captured
                    data = (
                        response.text(),
-                       response.headers.get('etag', ''),
-                       response.headers['content-type'],
+                       response.headers.get("etag", ""),
+                       response.headers["content-type"],
                    )
                except PlaywrightError as e:
-                   logger.error(f'Job {self.index_number}: No API response intercepted from {url} ({e.args[0]}')
+                   logger.error(
+                       f"Job {self.index_number}: No API response intercepted from {url} ({e.args[0]}"
+                   )
                    self._save_error_files(page)
                    raise
 
-               if data[0].startswith('<!doctype html>\n<html><body><h1>Access Denied'):
-                   logger.error('API returned Access Denied')
+               if data[0].startswith("<!doctype html>\n<html><body><h1>Access Denied"):
+                   logger.error("API returned Access Denied")
                    page.wait_for_timeout(100000)
-                   raise TransientBrowserError('API returned Access Denied')
+                   raise TransientBrowserError("API returned Access Denied")
 
-               logger.info(f'Job {self.index_number}: {self.__kind__} finished running.')
-               logger.info(f"Job {self.index_number}: f'extract_api_browser' from {self.__kind__} done processing")
+               logger.info(f"Job {self.index_number}: {self.__kind__} finished running.")
+               logger.info(
+                   f"Job {self.index_number}: f'extract_api_browser' from {self.__kind__} done processing"
+               )
                return data
 
-           api_url = 'https://www.example.com/api/mydata/lookup'
+           api_url = "https://www.example.com/api/mydata/lookup"
 
            return super().retrieve(
                job_state,

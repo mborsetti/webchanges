@@ -38,7 +38,7 @@ Install **webchanges**  with ``uv`` (recommended):
 .. code-block:: bash
 
    uv pip install webchanges
-   
+
 or with ``pip``:
 
 .. code-block:: bash
@@ -53,13 +53,14 @@ implementation (no browser) `here <https://github.com/yubiuser/webchanges-docker
 
 As a GitHub Action
 ------------------
-**webchanges** can easily run as a `GitHub Action <https://www.docker.com/>`__! You will find an implementation 
+**webchanges** can easily run as a `GitHub Action <https://www.docker.com/>`__! You will find an implementation
 `here <https://github.com/swimmwatch/webchanges-action>`__.
 
 
 Documentation |readthedocs|
 ===========================
-The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__.
+The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__.  A (very good) AI-generated
+high-level architectural overview is available on `DeepWiki <https://deepwiki.com/mborsetti/webchanges>`__.
 
 
 Quick Start
@@ -107,7 +108,7 @@ Schedule
 
 Code
 ====
-|coveralls| |snyk| |issues| |code_style| |OpenSSF_Scorecard|
+|coveralls| |issues| |code_style| |OpenSSF_Scorecard|
 
 The code, issues tracker, and discussions are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 
@@ -139,7 +140,7 @@ Compatibility with **urlwatch**
 This project is based on code from `urlwatch 2.21
 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020.
 For upgrading from **urlwatch** to **webchanges** (using the same job and
-configuration files), see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__. 
+configuration files), see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__.
 
 
 .. |support| image:: https://img.shields.io/pypi/pyversions/webchanges.svg
@@ -184,9 +185,9 @@ configuration files), see `here <https://webchanges.readthedocs.io/en/stable/upg
 .. .. |security| image:: https://img.shields.io/badge/security-bandit-green.svg
 ..     :target: https://github.com/PyCQA/bandit
 ..     :alt: Security Status
-.. |snyk| image:: https://snyk.io/advisor/python/holidays/badge.svg
-    :target: https://snyk.io/advisor/python/holidays
-    :alt: Snyk Package Health Score
+.. .. |snyk| image:: https://snyk.io/advisor/python/webchanges/badge.svg
+..     :target: https://security.snyk.io/package/pip/webchanges
+..     :alt: Snyk Package Health Score
 .. |OpenSSF_Scorecard| image:: https://api.scorecard.dev/projects/github.com/mborsetti/webchanges/badge
     :target: https://scorecard.dev/viewer/?uri=github.com/mborsetti/webchanges
     :alt: OpenSSF Scoreard
