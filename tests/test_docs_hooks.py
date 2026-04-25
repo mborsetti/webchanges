@@ -16,18 +16,23 @@ import pytest
 import yaml
 from flake8.api import legacy as flake8
 
-from webchanges.cli import load_hooks
-from webchanges.filters import FilterBase
-from webchanges.handler import JobState
-from webchanges.storage import YamlJobsStorage
+here_path = Path(__file__).resolve().parent
+parent_dir = str(here_path.parent)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+from webchanges.cli import load_hooks  # noqa: E402
+from webchanges.filters import FilterBase  # noqa: E402
+from webchanges.handler import JobState  # noqa: E402
+from webchanges.storage import YamlJobsStorage  # noqa: E402
 
 if TYPE_CHECKING:
     from webchanges.jobs import JobBase
 
 
-here = Path(__file__).parent
-data_path = here.joinpath('data')
-docs_path = here.parent.joinpath('docs')
+data_path = here_path.joinpath('data')
+docs_path = here_path.parent.joinpath('docs')
+
 
 if sys.version_info < (3, 14):
     pytest.skip('hooks.py is written for Python 3.14', allow_module_level=True)
@@ -111,6 +116,7 @@ HOOKS_DOC_JOBS = load_hooks_jobs()
 testdata = load_hooks_testdata()
 
 HOOKS = load_hooks_from_doc()
+HOOKS = f"import sys\n\nif r'{parent_dir}' not in sys.path:\n    sys.path.insert(0, r'{parent_dir}')\n" + HOOKS
 spec = importlib.util.spec_from_loader('hooks', loader=None)
 if spec:
     hooks = importlib.util.module_from_spec(spec)

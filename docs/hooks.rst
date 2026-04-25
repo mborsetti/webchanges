@@ -41,27 +41,22 @@ Example ``hooks.py`` file:
 .. code-block:: python
 
    """Example hooks file for webchanges (for Python >= 3.14)."""
-   from zoneinfo import ZoneInfo
-   from differs import ReportKind
-
    import logging
    import re
    import threading
    from pathlib import Path
-   from typing import TYPE_CHECKING, Iterable
+   from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal
+   from zoneinfo import ZoneInfo
 
-   from webchanges.differs import DifferBase
+   from webchanges.differs import DifferBase, ReportKind
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
-   from webchanges.jobs import BrowserJob, TransientBrowserError, UrlJob, UrlJobBase
+   from webchanges.jobs import BrowserJob, JobBase, TransientBrowserError, UrlJob, UrlJobBase
    from webchanges.reporters import HtmlReporter, TextReporter
 
    if TYPE_CHECKING:
-       from typing import Any, Callable, Literal
-
-       from webchanges.handler import JobState
-       from webchanges.jobs import JobBase
-       from webchanges.storage import _Config
        from playwright.sync_api import Page, Response
+       from webchanges.handler import JobState
+       from webchanges.storage import _Config
 
    logger = logging.getLogger(__name__)
 

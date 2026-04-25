@@ -57,8 +57,8 @@ Added
 * New ``http_version`` job directive to pin the HTTP protocol version (``v1``, ``v2``, ``v2tls``,
   ``v2_prior_knowledge``, ``v3``, ``v3only``) when using the ``httpx`` or ``curl_cffi`` HTTP clients. ``httpx``
   supports ``v1`` and ``v2`` (the latter requires the ``h2`` package); ``curl_cffi`` supports all values.
-* New HTTP client selection logic. While webchanges installs ``httpx``, the program will work in in environments where
-  ``httpx``  has been uninstalled by falling back to ``requests`` or ``curl_cffi``, enabling custom lightweight
+* New HTTP client selection logic. While **webchanges** installs ``httpx``, the program will work in in environments
+  where ``httpx``  has been uninstalled by falling back to ``requests`` or ``curl_cffi``, enabling custom lightweight
   installs.
 * The ``initialization_url`` job directive now works for all ``url`` jobs (not only those with
   ``use_browser: true``). A ``GET`` request is made to the initialization URL within the same session; cookies
@@ -66,6 +66,8 @@ Added
 * The ``use_browser`` job directive now accepts a browser name string in addition to a boolean. Supported values
   any value starting with ``chrome`` or ``msedge`` (e.g. ``chrome``, ``chrome-beta``,  ``msedge-dev``), ``firefox``, or
   ``webkit``, or. ``true`` continues to mean the ``chrome`` channel.
+* A (fairly good) AI-generated high-level architectural overview of **webchanges** is available on `DeepWiki
+   <https://deepwiki.com/mborsetti/webchanges>`__.
 
 Internals
 `````````
@@ -109,7 +111,7 @@ Fixed
 
 Internals impacting ``hooks.py``
 ````````````````````````````````
-* Broken up huge files into smaller, more manageable ones. If you are importing from webchanges, the location of
+* Broken up huge files into smaller, more manageable ones. If you are importing from **webchanges**, the location of
   certain classes may have changed.
 
 Internals
