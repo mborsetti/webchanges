@@ -10,6 +10,7 @@ chump
 coverage
 coverage-conditional-plugin
 cssbeautifier
+curl-cffi
 deepdiff
 docutils
 flake8

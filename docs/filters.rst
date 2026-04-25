@@ -1051,7 +1051,7 @@ This filter deserializes an XML object and pretty-prints it. It uses Python's xm
 .. _pypdf:
 
 ``pypdf``
---------
+---------
 This filter converts a PDF file to plaintext using the `pypdf <https://pypi.org/project/pypdf/>`__ Python library.
 
 This filter *must* be the first filter in a chain of filters, since it consumes binary data.

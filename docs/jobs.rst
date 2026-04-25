@@ -217,10 +217,26 @@ The following optional directives are available for all ``url`` jobs:
 
 use_browser
 ^^^^^^^^^^^
-Whether to use a Chrome web browser (true/false). Defaults to false.
+Whether (and which) web browser to use to fetch the page. Defaults to ``false``.
 
-If true, it renders the URL via a JavaScript-enabled web browser and extracts the HTML after rendering (see
-:ref:`above <use_browser>` for important information).
+Accepted values:
+
+* ``false`` (default) — fetch the page with an HTTP client; no browser is launched.
+* ``true`` — launch Playwright's Chromium using the ``chrome`` channel (equivalent to ``chrome``).
+* A browser name string — one of:
+
+  * ``chrome``, ``chrome-beta``, ``chrome-dev``, ``chrome-canary`` (or any value starting with ``chrome``) —
+    Chromium browser type launched with that channel.
+  * ``msedge``, ``msedge-beta``, ``msedge-dev``, ``msedge-canary`` (or any value starting with ``msedge``) —
+    Chromium browser type launched with that channel.
+  * ``firefox`` — Playwright's Firefox browser.
+  * ``webkit`` — Playwright's WebKit browser.
+
+When truthy, the URL is rendered via the chosen JavaScript-enabled web browser and the HTML is extracted after
+rendering (see :ref:`above <use_browser>` for important information).
+
+.. versionchanged:: 3.35
+   ``use_browser`` now accepts a browser name string in addition to a boolean.
 
 
 .. _cookies:
@@ -414,6 +430,37 @@ See more :ref:`here <ignoring_http_connection_errors>`.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
+.. _initialization_url:
+
+initialization_url
+^^^^^^^^^^^^^^^^^^
+The HTTP client or browser will navigate to ``initialization_url`` before navigating to ``url`` (a string).
+
+This is useful for monitoring subpages on websites that rely on a state established when first landing on their
+"home" page (e.g. session cookies set by the landing page). With HTTP client backends (``httpx``, ``requests``,
+``curl_cffi``), a ``GET`` request is made to ``initialization_url`` within the same session; cookies received are
+automatically carried over to the main request. For browser jobs (``use_browser: true``), Chrome first navigates to
+``initialization_url`` before navigating to ``url``.
+
+If the ``initialization_url`` response redirects to a URL containing ``;``-separated parameters, those parameters can
+be substituted into the main ``url`` using Python's ``str.format()`` syntax. For example, if ``initialization_url``
+redirects to ``https://example.com/landing;token=abc123``, the main URL string
+``https://example.com/data?token={token}`` gets converted to ``https://example.com/data?token=abc123``.
+
+For ``use_browser: true`` jobs, see :ref:`initialization_js` to inject a JavaScript after navigating to
+``initialization_url`` but before navigating to ``url``.
+
+.. code-block:: yaml
+
+   url: https://example.com/dashboard
+   initialization_url: https://example.com/
+
+.. versionadded:: 3.10
+
+.. versionchanged:: 3.35
+   Now works for all ``url`` jobs, not only those with ``use_browser: true``.
+
+
 .. _method:
 
 method
@@ -486,12 +533,22 @@ The following directives are available only for ``url`` jobs without ``use_brows
 
 http_client
 ^^^^^^^^^^^
-The Python HTTP client library to be used, either `HTTPX <https://www.python-httpx.org/>`__ or `requests
-<https://requests.readthedocs.io/en/latest/>`__. Defaults to ``HTTPX``.
+The Python HTTP client library to be used. One of `HTTPX <https://www.python-httpx.org/>`__ (default),
+`requests <https://requests.readthedocs.io/en/latest/>`__, or
+`curl_cffi <https://github.com/lexiforest/curl_cffi>`__.
 
 We use ``HTTPX`` as some web servers will refuse a connection or serve an error if a connection is attempted using an
 earlier version than the newer HTTP/2 network protocol. Use ``http_client: requests`` to use the ``requests``
 library used by default in releases prior to 3.16 (but it only supports up to HTTP/1.1 protocol).
+
+Use ``http_client: curl_cffi`` for sites guarded by Cloudflare, Akamai, or similar bot-walls that fingerprint the
+TLS handshake (JA3) or the HTTP/2 ``SETTINGS`` frame. ``curl_cffi`` wraps libcurl-impersonate, which replays real
+browser TLS fingerprints (Chrome, Firefox, Safari, Edge) at the wire level. The impersonated browser is controlled by
+the :ref:`impersonate <impersonate>` directive (default ``chrome``). This is much lighter than running a full
+headless browser job (``use_browser: true``).
+
+If neither ``HTTPX`` nor ``requests`` is installed, ``curl_cffi`` is used as a last-resort fallback when
+``http_client`` is unset.
 
 Required packages
 *****************
@@ -502,7 +559,47 @@ installed, you can install this :ref:`additional Python package <optional_packag
 
    pip install --upgrade webchanges[requests]
 
+To use ``http_client: curl_cffi``, you need to have the ``curl_cffi`` library installed on your system:
+
+.. code-block:: bash
+
+   pip install --upgrade webchanges[curl_cffi]
+
 .. versionadded:: 3.16
+
+.. versionchanged:: 3.35
+   Added ``curl_cffi`` as a third HTTP client option for browser TLS impersonation.
+
+
+.. _http_version:
+
+http_version
+^^^^^^^^^^^^
+Pins the HTTP protocol version used for the request. One of:
+
+* ``v1`` — HTTP/1.1.
+* ``v2`` — HTTP/2. For ``http_client: httpx`` this requires the ``h2`` package (``pip install h2``); for
+  ``http_client: curl_cffi`` it is supported out of the box.
+* ``v2tls`` — HTTP/2 over TLS, HTTP/1.1 over cleartext (curl_cffi only).
+* ``v2_prior_knowledge`` — HTTP/2 with prior-knowledge upgrade; no HTTP/1.1 fallback (curl_cffi only).
+* ``v3`` — HTTP/3 (QUIC) with fallback to earlier versions (curl_cffi only).
+* ``v3only`` — HTTP/3 only, no fallback (curl_cffi only).
+
+If unset, each backend keeps its default behavior: ``httpx`` negotiates HTTP/2 if ``h2`` is installed else HTTP/1.1;
+``curl_cffi`` uses the version dictated by its libcurl build and the active impersonation profile.
+
+The ``requests`` backend is HTTP/1.1 only and does not accept this directive; setting ``http_version`` together with
+``http_client: requests`` raises an error.
+
+Example:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   http_client: curl_cffi
+   http_version: v3
+
+.. versionadded:: 3.35
 
 
 .. _ignore_dh_key_too_small:
@@ -522,14 +619,70 @@ error and can't get the anyone to fix the security vulnerability on the server.
 .. versionadded:: 3.9.2
 
 
+.. _impersonate:
+
+impersonate
+^^^^^^^^^^^
+The browser TLS fingerprint to impersonate when using ``http_client: curl_cffi``. Defaults to ``chrome``. Ignored
+when any other ``http_client`` is selected.
+
+Accepts any browser target string supported by ``curl_cffi``, such as ``chrome``, ``chrome124``, ``safari17_0``,
+``firefox133``, or ``edge99``. See the `curl_cffi documentation
+<https://curl-cffi.readthedocs.io/en/latest/impersonate/targets.html>`__ for the full list of available profiles.
+
+Example:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   http_client: curl_cffi
+   impersonate: safari17_0
+
+.. versionadded:: 3.35
+
+
+.. _fingerprints:
+
+fingerprints
+^^^^^^^^^^^^
+Advanced low-level TLS/HTTP fingerprint overrides for ``http_client: curl_cffi``. Ignored (with a warning) when any
+other ``http_client`` is selected. Takes a mapping with any combination of the following optional keys:
+
+* ``ja3`` — JA3 TLS fingerprint string.
+* ``akamai`` — Akamai HTTP/2 fingerprint string.
+* ``extra_fp`` — mapping of additional fingerprint overrides (e.g. ``tls_min_version``, ``tls_grease``,
+  ``http2_stream_weight``).
+
+Unknown keys raise a configuration error. See the `curl_cffi customization documentation
+<https://curl-cffi.readthedocs.io/en/latest/impersonate/customize.html>`__ for the full list of supported values and
+their meaning; webchanges forwards each recognized entry verbatim to ``curl_cffi.requests.Session``.
+
+Example:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   http_client: curl_cffi
+   impersonate: chrome124
+   fingerprints:
+     ja3: 771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0
+     extra_fp:
+       tls_grease: true
+
+.. versionadded:: 3.35
+
+
 .. _no_redirects:
 
 no_redirects
 ^^^^^^^^^^^^
 Disables GET, OPTIONS, POST, PUT, PATCH, DELETE, HEAD redirection (true/false). Defaults to false (i.e. redirection
-is enabled) for all methods except HEAD. See more `here
-<https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history>`__. Redirection takes place
-whenever an HTTP status code of 301, 302, 303, 307 or 308 is returned.
+is enabled) for all methods except HEAD. Redirection takes place whenever an HTTP status code of 301, 302, 303, 307 or
+308 is returned.
+
+For ``http_client: requests``, see more information `here
+<https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history>`__; other HTTP clients follow a
+similar logic.
 
 Example:
 
@@ -733,17 +886,7 @@ This could be useful to e.g. emulate logging in when it's done by a JavaScript f
 .. versionadded:: 3.10
 
 
-.. _initialization_url:
-
-initialization_url
-^^^^^^^^^^^^^^^^^^
-The browser will navigate to ``initialization_url`` before navigating to ``url`` (a string).
-
-This could be useful for monitoring subpages on websites that rely on a state established when first landing on their
-"home" page. Also see ``initialization_js`` above. Note that all the ``wait_for_*`` directives apply only after
-navigating to ``url`` and not after ``initialization_url``.
-
-.. versionadded:: 3.10
+See :ref:`initialization_url`.
 
 
 .. _referer:

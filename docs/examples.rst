@@ -279,6 +279,36 @@ or ignore all HTTP errors if you like by using :ref:`ignore_http_error_codes`:
    ignore_http_error_codes: 4xx, 5xx
 
 
+.. _bypassing_bot_walls:
+
+Bypassing Cloudflare, Akamai, and other bot-walls
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Some sites sit behind protections (Cloudflare, Akamai, PerimeterX, etc.) that fingerprint the TLS handshake (JA3) or
+the HTTP/2 ``SETTINGS`` frame and return a ``403 Forbidden`` (or a CAPTCHA challenge page) to anything that doesn't
+look like a real browser at the wire level. Setting :ref:`headers <default_headers>` is not enough in these cases —
+the fingerprint is in the encrypted/binary layer below HTTP.
+
+Use the :ref:`http_client` directive with the ``curl_cffi`` backend to replay a real browser TLS fingerprint via
+libcurl-impersonate. This is much lighter than running a full headless browser job (``use_browser: true``).
+
+.. code-block:: yaml
+
+   url: https://example.com/protected
+   http_client: curl_cffi
+
+The browser profile to impersonate can be tuned with the :ref:`impersonate` directive (defaults to ``chrome``). If a
+specific site rejects the default, try a more recent or different profile such as ``chrome124``, ``safari17_0``, or
+``firefox133``:
+
+.. code-block:: yaml
+
+   url: https://example.com/protected
+   http_client: curl_cffi
+   impersonate: safari17_0
+
+Requires the ``curl_cffi`` optional package (``pip install --upgrade webchanges[curl_cffi]``).
+
+
 Receive short notifications only containing the URL
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you only want to be alerted that there is a change without any information about the change itself, you can use a

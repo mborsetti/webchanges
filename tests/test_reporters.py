@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import os
 import sys
 import traceback
 from smtplib import SMTPAuthenticationError
@@ -221,7 +220,7 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
             if reporter != 'browser':
                 test_report.config['footnote'] = 'Footnote'
                 test_report.finish_one(reporter, check_enabled=False)
-            elif 'PYCHARM_HOSTED' in os.environ:  # browser
+            elif sys.breakpointhook.__module__ != 'sys':  # debug, browser
                 test_report.config['report']['html']['separate'] = True
                 test_report.config['footnote'] = 'Footnote'
                 test_report.finish_one(reporter, check_enabled=False)

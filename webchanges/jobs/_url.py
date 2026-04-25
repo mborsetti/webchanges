@@ -13,8 +13,8 @@ import sys
 import time
 from ftplib import FTP
 from pathlib import Path
-from typing import TYPE_CHECKING, Mapping, Sequence
-from urllib.parse import urlencode, urlparse, urlsplit
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
+from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
 import html2text
 
@@ -45,7 +45,23 @@ except ImportError as e:  # pragma: no cover
     requests = str(e)  # ty:ignore[invalid-assignment]
     urllib3 = str(e)  # ty:ignore[invalid-assignment]
 
+try:
+    from curl_cffi import requests as curl_cffi_requests
+    from curl_cffi.requests import exceptions as curl_cffi_exceptions
+except ImportError as e:  # pragma: no cover
+    curl_cffi_requests = str(e)  # ty:ignore[invalid-assignment]
+    curl_cffi_exceptions = str(e)  # ty:ignore[invalid-assignment]
+
 logger = logging.getLogger(__name__)
+
+# HTTP-version directive mappings.
+# httpx supports only HTTP/1.1 and HTTP/2; curl_cffi (via libcurl) supports the full set.
+_HTTPX_HTTP_VERSIONS: dict[str, tuple[bool, bool]] = {
+    # value -> (http1, http2)
+    'v1': (True, False),
+    'v2': (True, True),
+}
+_CURL_CFFI_HTTP_VERSIONS: tuple[str, ...] = ('v1', 'v2', 'v2tls', 'v2_prior_knowledge', 'v3', 'v3only')
 
 
 class UrlJob(UrlJobBase):
@@ -55,8 +71,12 @@ class UrlJob(UrlJobBase):
 
     __optional__: tuple[str, ...] = (
         'empty_as_transient',
+        'fingerprints',
         'http_client',
+        'http_version',
         'ignore_dh_key_too_small',
+        'impersonate',
+        'initialization_url',
         'no_redirects',
         'retries',
         'ssl_no_verify',
@@ -77,6 +97,26 @@ class UrlJob(UrlJobBase):
         self.url = location
         self.guid = self.get_guid()
 
+    def _resolve_initialization_url(self, final_url: str) -> str:
+        """Resolves the main URL by substituting parameters extracted from the initialization URL's final redirect.
+
+        Mirrors the behavior of ``initialization_url`` in BrowserJob: parses the URL params (;-separated) from the
+        final redirected URL and substitutes them into ``self.url`` via str.format().
+
+        :param final_url: The URL after the initialization request completed (after redirects).
+        :returns: The resolved URL to use for the main request.
+        """
+        init_url_params = dict(parse_qsl(urlparse(final_url).params))
+        try:
+            url = self.url.format(**init_url_params)
+        except KeyError as e:
+            raise ValueError(
+                f"Job {self.index_number}: Directive 'initialization_url' did not find key {e} to substitute in 'url'."
+            ) from None
+        if url != self.url:
+            logger.info(f'Job {self.index_number}: URL updated to {url}')
+        return url
+
     def _retrieve_httpx(
         self,
         headers: (
@@ -89,18 +129,42 @@ class UrlJob(UrlJobBase):
         :return: The data retrieved and the ETag.
         :raises NotModifiedError: If an HTTP 304 response is received.
         """
-        http2: bool = h2 is not None
-        if http2:
-            logger.info(f'Job {self.index_number}: Using the HTTPX HTTP client library with HTTP/2 support')
-        else:
+        http1: bool = True
+        if self.http_version is not None:
+            if self.http_version not in _HTTPX_HTTP_VERSIONS:
+                raise ValueError(
+                    f"Job {self.index_number}: 'http_version: {self.http_version}' is not supported by the httpx "
+                    f"HTTP client; httpx only supports 'v1' and 'v2'. Use 'http_client: curl_cffi' for other "
+                    f'HTTP versions ( {self.get_indexed_location()} ).'
+                )
+            http1, http2 = _HTTPX_HTTP_VERSIONS[self.http_version]
+            if http2 and h2 is None:
+                raise ImportError(
+                    f"Job {self.index_number}: 'http_version: v2' requires the 'h2' package, which is not installed. "
+                    f"Please install it using e.g. 'pip install h2' ( {self.get_indexed_location()} )."
+                )
             logger.info(
-                f'Job {self.index_number}: Using the HTTPX HTTP client library (HTTP/2 support is not available since '
-                f'h2 is not installed)'
+                f'Job {self.index_number}: Using the HTTPX HTTP client library with http_version={self.http_version}'
             )
+        else:
+            http2: bool = h2 is not None
+            if http2:
+                logger.info(f'Job {self.index_number}: Using the HTTPX HTTP client library with HTTP/2 support')
+            else:
+                logger.info(
+                    f'Job {self.index_number}: Using the HTTPX HTTP client library (HTTP/2 support is not available '
+                    f'since h2 is not installed)'
+                )
 
         proxy = self.get_proxy()
         if proxy is not None:
             logger.debug(f'Job {self.index_number}: Proxy: {proxy}')
+
+        if self.fingerprints:
+            logger.warning(
+                f"Job {self.index_number}: 'fingerprints' is only supported with 'http_client: curl_cffi'; "
+                f'ignoring the directive.'
+            )
 
         if self.ignore_dh_key_too_small:
             logger.debug(
@@ -116,15 +180,22 @@ class UrlJob(UrlJobBase):
             headers=headers,
             cookies=self.cookies,
             verify=context,
+            http1=http1,
             http2=http2,
             proxy=proxy,
             timeout=timeout,
             follow_redirects=(not self.no_redirects),
         ) as http_client:
+            url = self.url
+            if self.initialization_url:
+                logger.info(f'Job {self.index_number}: Initializing by navigating to {self.initialization_url}')
+                init_response = http_client.get(self.initialization_url)
+                url = self._resolve_initialization_url(str(init_response.url))
+
             try:
                 response = http_client.request(
                     method=self.method,  # ty:ignore[invalid-argument-type]
-                    url=self.url,
+                    url=url,
                     data=self.data,  # ty:ignore[invalid-argument-type]
                     params=self.params,
                 )
@@ -148,15 +219,19 @@ class UrlJob(UrlJobBase):
                     parsed_json = json.loads(response.text)
                     error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ':'))
                 except json.JSONDecodeError:
-                    html_text = (
-                        response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
-                    )
-                    parser = html2text.HTML2Text()
-                    parser.unicode_snob = True
-                    parser.body_width = 0
-                    parser.single_line_break = True
-                    parser.ignore_images = True
-                    error_message = parser.handle(html_text).strip()
+                    if '<title' in response.text:
+                        html_text = (
+                            response.text.split('<title', maxsplit=1)[0]
+                            + response.text.split('</title>', maxsplit=1)[-1]
+                        )
+                        parser = html2text.HTML2Text()
+                        parser.unicode_snob = True
+                        parser.body_width = 0
+                        parser.single_line_break = True
+                        parser.ignore_images = True
+                        error_message = parser.handle(html_text).strip()
+                    else:
+                        error_message = response.text
                 http_error_msg += f'\n{error_message}'
 
             if response.status_code in (429, 500, 502, 503, 504):
@@ -223,6 +298,12 @@ class UrlJob(UrlJobBase):
             # required to suppress warnings with 'ssl_no_verify: true'
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+        if self.fingerprints:
+            logger.warning(
+                f"Job {self.index_number}: 'fingerprints' is only supported with 'http_client: curl_cffi'; "
+                f'ignoring the directive.'
+            )
+
         if self.ignore_dh_key_too_small:
             # https://stackoverflow.com/questions/38015537
             logger.debug(
@@ -238,18 +319,29 @@ class UrlJob(UrlJobBase):
                 )
                 logger.error('See https://github.com/psf/requests/issues/6443')
 
-        response = requests.request(
-            method=self.method,  # ty:ignore[invalid-argument-type]
-            url=self.url,
-            params=self.params,
-            data=self.data,
-            headers=headers,
-            cookies=self.cookies,
-            timeout=timeout,
-            allow_redirects=(not self.no_redirects),
-            proxies=proxies,
-            verify=(not self.ssl_no_verify),
-        )
+        with requests.Session() as session:
+            if headers:
+                session.headers.update(headers)
+            if self.cookies:
+                session.cookies.update(self.cookies)
+            if proxies:
+                session.proxies.update(proxies)
+            session.verify = not self.ssl_no_verify
+
+            url = self.url
+            if self.initialization_url:
+                logger.info(f'Job {self.index_number}: Initializing by navigating to {self.initialization_url}')
+                init_response = session.get(self.initialization_url, timeout=timeout)
+                url = self._resolve_initialization_url(str(init_response.url))
+
+            response = session.request(
+                method=self.method,  # ty:ignore[invalid-argument-type]
+                url=url,
+                params=self.params,
+                data=self.data,
+                timeout=timeout,
+                allow_redirects=(not self.no_redirects),
+            )
 
         if 400 <= response.status_code < 600:
             # Custom version of request.raise_for_status() to include returned text.
@@ -274,15 +366,19 @@ class UrlJob(UrlJobBase):
                     parsed_json = json.loads(response.text)
                     error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ':'))
                 except json.JSONDecodeError:
-                    html_text = (
-                        response.text.split('<title', maxsplit=1)[0] + response.text.split('</title>', maxsplit=1)[-1]
-                    )
-                    parser = html2text.HTML2Text()
-                    parser.unicode_snob = True
-                    parser.body_width = 0
-                    parser.single_line_break = True
-                    parser.ignore_images = True
-                    error_message = parser.handle(html_text).strip()
+                    if '<title' in response.text:
+                        html_text = (
+                            response.text.split('<title', maxsplit=1)[0]
+                            + response.text.split('</title>', maxsplit=1)[-1]
+                        )
+                        parser = html2text.HTML2Text()
+                        parser.unicode_snob = True
+                        parser.body_width = 0
+                        parser.single_line_break = True
+                        parser.ignore_images = True
+                        error_message = parser.handle(html_text).strip()
+                    else:
+                        error_message = response.text
                 http_error_msg += f'\n{error_message}'
 
             if response.status_code in (429, 500, 502, 503, 504):
@@ -337,8 +433,164 @@ class UrlJob(UrlJobBase):
 
         return data, etag, mime_type
 
-    def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
-        """Runs job to retrieve the data, and returns data and ETag.
+    def _retrieve_curl_cffi(
+        self, headers: Mapping[str, str | bytes] | None, timeout: float | None
+    ) -> tuple[str | bytes, str, str]:
+        """Retrieves the data, Etag, and media type using the curl_cffi library (browser TLS/JA3 impersonation).
+
+        :return: The data retrieved, the ETag and media type.
+        :raises NotModifiedError: If an HTTP 304 response is received.
+        """
+        impersonate = self.impersonate or 'chrome'
+        logger.info(
+            f'Job {self.index_number}: Using the curl_cffi HTTP client library '
+            f'(browser TLS impersonation: {impersonate})'
+        )
+        proxy_str = self.get_proxy()
+        if proxy_str is not None:
+            scheme = urlsplit(self.url).scheme
+            proxies: dict[str, str] | None = {scheme: proxy_str}
+            logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
+        else:
+            proxies = None
+
+        if self.ignore_dh_key_too_small:
+            logger.warning(
+                f'Job {self.index_number}: ignore_dh_key_too_small is not supported with the curl_cffi HTTP client '
+                f'library (TLS ciphers are fixed by the impersonated browser profile); ignoring the directive.'
+            )
+
+        session_kwargs: dict[str, Any] = {
+            'headers': headers,
+            'cookies': self.cookies,
+            'proxies': proxies,
+            'verify': (not self.ssl_no_verify),
+            'timeout': timeout,
+            'impersonate': impersonate,
+        }
+        if self.http_version is not None:
+            if self.http_version not in _CURL_CFFI_HTTP_VERSIONS:
+                raise ValueError(
+                    f"Job {self.index_number}: 'http_version: {self.http_version}' is not a valid value; expected one "
+                    f'of {_CURL_CFFI_HTTP_VERSIONS} ( {self.get_indexed_location()} ).'
+                )
+            session_kwargs['http_version'] = self.http_version
+            logger.info(f'Job {self.index_number}: curl_cffi http_version={self.http_version}')
+
+        if self.fingerprints:
+            allowed_fp_keys = {'ja3', 'akamai', 'extra_fp'}
+            unknown_fp_keys = set(self.fingerprints) - allowed_fp_keys
+            if unknown_fp_keys:
+                raise ValueError(
+                    f"Job {self.index_number}: 'fingerprints' contains unknown key(s) {sorted(unknown_fp_keys)}; "
+                    f'expected any of {sorted(allowed_fp_keys)} ( {self.get_indexed_location()} ).'
+                )
+            for key in allowed_fp_keys:
+                if key in self.fingerprints:
+                    session_kwargs[key] = self.fingerprints[key]
+            logger.info(f'Job {self.index_number}: curl_cffi fingerprints applied: {sorted(self.fingerprints)}')
+
+        with curl_cffi_requests.Session(**session_kwargs) as session:
+            url = self.url
+            if self.initialization_url:
+                logger.info(f'Job {self.index_number}: Initializing by navigating to {self.initialization_url}')
+                init_response = session.get(self.initialization_url)
+                url = self._resolve_initialization_url(str(init_response.url))
+
+            response = session.request(
+                method=self.method,
+                url=url,
+                params=self.params,
+                data=self.data,
+                allow_redirects=(not self.no_redirects),
+            )
+
+        if 400 <= response.status_code < 600:
+            # Custom version of request.raise_for_status() to include returned text.
+            if isinstance(response.reason, bytes):
+                try:
+                    reason = response.reason.decode()
+                except UnicodeDecodeError:
+                    reason = response.reason.decode('iso-8859-1')
+            else:
+                reason = response.reason
+
+            if response.status_code < 500:
+                http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
+            else:
+                http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
+
+            if response.status_code != 404:
+                try:
+                    parsed_json = json.loads(response.text)
+                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ':'))
+                except json.JSONDecodeError:
+                    if '<title' in response.text:
+                        html_text = (
+                            response.text.split('<title', maxsplit=1)[0]
+                            + response.text.split('</title>', maxsplit=1)[-1]
+                        )
+                        parser = html2text.HTML2Text()
+                        parser.unicode_snob = True
+                        parser.body_width = 0
+                        parser.single_line_break = True
+                        parser.ignore_images = True
+                        error_message = parser.handle(html_text).strip()
+                    else:
+                        error_message = response.text
+                http_error_msg += f'\n{error_message}'
+
+            if response.status_code in (429, 500, 502, 503, 504):
+                logger.debug(f'Job {self.index_number}: Response error is transient.')
+                raise TransientHTTPError(http_error_msg, status_code=response.status_code)
+
+            raise curl_cffi_exceptions.HTTPError(http_error_msg, response=response)
+
+        if response.status_code == 304:
+            logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
+            raise NotModifiedError(response.status_code)
+
+        # Save ETag from response to be used as If-None-Match header in future requests
+        if not response.history:  # no redirects
+            etag = response.headers.get('ETag', '')
+        else:
+            logger.info(f'Job {self.index_number}: ETag not captured as response was redirected to {response.url}')
+            etag = ''
+        # Save the media type (fka MIME type)
+        mime_type = response.headers.get('Content-Type', '').split(';')[0]
+
+        if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
+            return response.content, etag, mime_type
+
+        if self.encoding:
+            response.encoding = self.encoding
+        # Note: curl_cffi's Response has no apparent_encoding, so we can't replicate the requests-library
+        # ISO-8859-1 RFC 2616 override here. curl_cffi's encoding detection is libcurl-driven and reliable enough
+        # in practice.
+
+        is_redirect = 300 <= response.status_code < 400 and 'Location' in response.headers
+        if self.no_redirects and is_redirect:
+            new_location = response.headers['Location']
+            if mime_type == 'text/plain':
+                data = f'Redirect {response.status_code} {response.reason} to {new_location}:\n{response.text}'
+            elif mime_type == 'text/html':
+                data = (
+                    f'Redirect <b>{response.status_code} {response.reason}</b> to <a href="{new_location}">'
+                    f'{new_location}</a>:<br>{response.text}'
+                )
+            elif mime_type == 'application/json':
+                data = f'{{"Redirect {response.status_code} {response.reason}":"{new_location}"}}'
+            else:
+                data = f'Redirect {response.status_code} {response.reason} to {new_location}.'
+        else:
+            data = response.text
+
+        return data, etag, mime_type
+
+    def retrieve(  # noqa: C901 mccabe complexity too high
+        self, job_state: JobState, headless: bool = True
+    ) -> tuple[str | bytes, str, str]:
+        """Runs job to retrieve the data, and returns data, ETag and media type.
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
         :param headless: For browser-based jobs, whether headless mode should be used.
@@ -434,7 +686,19 @@ class UrlJob(UrlJobBase):
         logger.debug(f'Job {self.index_number}: Headers: {headers}')
         logger.debug(f'Job {self.index_number}: Cookies: {self.cookies}')
 
-        if self.http_client == 'requests' or not httpx:
+        if self.http_client == 'curl_cffi' or (not self.http_client and not httpx and isinstance(requests, str)):
+            if isinstance(curl_cffi_requests, str):
+                message = f'Job {job_state.job.index_number} cannot be run '
+                if self.http_client == 'curl_cffi':
+                    message += "with 'http_client: curl_cffi' "
+                message += (
+                    f'( {self.get_indexed_location()} ):\n{curl_cffi_requests}\n'
+                    f"Please install module using e.g. 'pip install --upgrade webchanges[curl_cffi]'."
+                )
+                raise ImportError(message)
+            job_state._http_client_used = 'curl_cffi'
+            data, etag, mime_type = self._retrieve_curl_cffi(headers=headers, timeout=timeout)
+        elif self.http_client == 'requests' or not httpx:
             if isinstance(requests, str):
                 message = f'Job {job_state.job.index_number} cannot be run '
                 if self.http_client == 'requests':
@@ -444,6 +708,12 @@ class UrlJob(UrlJobBase):
                     f"Please install module using e.g. 'pip install --upgrade webchanges[requests]'."
                 )
                 raise ImportError(message)
+            if self.http_version is not None:
+                raise ValueError(
+                    f"Job {job_state.job.index_number}: 'http_version' is not supported by the 'requests' HTTP "
+                    f"client (HTTP/1.1 only). Use 'http_client: httpx' or 'http_client: curl_cffi' "
+                    f'( {self.get_indexed_location()} ).'
+                )
             job_state._http_client_used = 'requests'
             data, etag, mime_type = self._retrieve_requests(headers=headers, timeout=timeout)
         elif not self.http_client or self.http_client == 'httpx':
@@ -456,7 +726,7 @@ class UrlJob(UrlJobBase):
                     f"Please install module using e.g. 'pip install --upgrade httpx[http2,zstd]'."
                 )
                 raise ImportError(message)
-            job_state._http_client_used = 'HTTPX'
+            job_state._http_client_used = 'httpx'
             data, etag, mime_type = self._retrieve_httpx(headers=headers, timeout=timeout)
         else:
             raise ValueError(
@@ -495,9 +765,16 @@ class UrlJob(UrlJobBase):
         :returns: A string to display and/or use in reports.
         """
         if (
-            httpx
-            and isinstance(exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError))
-        ) or (not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException)):
+            (
+                httpx
+                and isinstance(exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError))
+            )
+            or (not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException))
+            or (
+                not isinstance(curl_cffi_exceptions, str)
+                and isinstance(exception, curl_cffi_exceptions.RequestException)
+            )
+        ):
             # Instead of a full traceback, just show the error
             exception_str = str(exception).strip()
             if self.proxy and (
@@ -568,6 +845,26 @@ class UrlJob(UrlJobBase):
                 return True
             if self.ignore_http_error_codes:
                 if isinstance(exception, requests.exceptions.HTTPError) and exception.response is not None:
+                    return self._ignore_http_error_code(exception.response.status_code)
+                if isinstance(exception, TransientHTTPError):
+                    return self._ignore_http_error_code(exception.status_code)
+
+        elif not isinstance(curl_cffi_exceptions, str) and isinstance(
+            exception, (curl_cffi_exceptions.RequestException, TransientHTTPError)
+        ):
+            if self.ignore_timeout_errors and (
+                isinstance(exception, curl_cffi_exceptions.Timeout)
+                or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
+            ):
+                return True
+            if self.ignore_connection_errors and (
+                isinstance(exception, (curl_cffi_exceptions.ConnectionError, TransientHTTPError))
+            ):
+                return True
+            if self.ignore_too_many_redirects and isinstance(exception, curl_cffi_exceptions.TooManyRedirects):
+                return True
+            if self.ignore_http_error_codes:
+                if isinstance(exception, curl_cffi_exceptions.HTTPError) and exception.response is not None:
                     return self._ignore_http_error_code(exception.response.status_code)
                 if isinstance(exception, TransientHTTPError):
                     return self._ignore_http_error_code(exception.status_code)

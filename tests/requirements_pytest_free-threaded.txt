@@ -10,6 +10,7 @@ chump
 coverage
 coverage-conditional-plugin
 cssbeautifier
+curl-cffi
 deepdiff
 docutils
 flake8
@@ -23,7 +24,7 @@ matrix-client
 minidb
 numpy
 pillow
-# playwright  # does not work free-threaded nov-2025 
+# playwright  # does not work free-threaded nov-2025
 psutil
 pushbullet.py
 pygments

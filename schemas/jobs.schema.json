@@ -1,0 +1,1362 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Webchanges Jobs Configuration",
+  "description": "JSON Schema for webchanges jobs.yaml configuration file",
+  "type": "object",
+  "oneOf": [{ "required": ["url"] }, { "required": ["command"] }],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the job, used in reports."
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "The URL to check (for URL jobs)."
+    },
+    "command": {
+      "type": "string",
+      "description": "The shell command to execute (for Command jobs)."
+    },
+    "note": {
+      "type": "string",
+      "description": "A note or description for the job."
+    },
+    "user_visible_url": {
+      "type": "string",
+      "description": "The URL or text to display in reports instead of the actual checked URL."
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^(url|browser|command|hooks_.+)$",
+      "description": "Explicitly specify the job kind (usually inferred)."
+    },
+    "method": {
+      "type": "string",
+      "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+      "default": "GET",
+      "description": "HTTP method to use."
+    },
+    "data": {
+      "type": ["string", "object"],
+      "description": "Data to send in the request body (implies POST if not specified)."
+    },
+    "data_as_json": {
+      "type": "boolean",
+      "description": "If true, sends data as JSON and sets Content-Type to application/json."
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Custom HTTP headers."
+    },
+    "encoding": {
+      "type": "string",
+      "description": "Override the response encoding."
+    },
+    "timeout": {
+      "type": ["integer", "number"],
+      "description": "Request timeout in seconds."
+    },
+    "ignore_connection_errors": {
+      "type": "boolean",
+      "description": "If true, connection errors are ignored (no report sent)."
+    },
+    "no_redirects": {
+      "type": "boolean",
+      "description": "If true, do not follow HTTP redirects."
+    },
+    "max_tries": {
+      "type": "integer",
+      "description": "Number of consecutive failures before reporting an error.",
+      "default": 1
+    },
+    "retries": {
+      "type": "integer",
+      "description": "Number of retries for failed requests."
+    },
+    "cookies": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Cookies to send with the request."
+    },
+    "ignore_cached": {
+      "type": "boolean",
+      "description": "If true, skips ETag/Last-Modified caching.",
+      "default": false
+    },
+    "ignore_http_error_codes": {
+      "oneOf": [
+        { "type": "integer" },
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [{ "type": "integer" }, { "type": "string" }]
+          }
+        }
+      ],
+      "description": "HTTP error codes to ignore (e.g. 404, '3xx', '4xx', '5xx')."
+    },
+    "ignore_timeout_errors": {
+      "type": "boolean",
+      "description": "If true, suppresses timeout errors.",
+      "default": false
+    },
+    "ignore_too_many_redirects": {
+      "type": "boolean",
+      "description": "If true, suppresses redirect loop errors.",
+      "default": false
+    },
+    "no_conditional_request": {
+      "type": "boolean",
+      "description": "If true, disables conditional requests (ETag/Last-Modified).",
+      "default": false
+    },
+    "http_client": {
+      "type": "string",
+      "enum": ["httpx", "requests", "curl_cffi"],
+      "description": "HTTP library to use.",
+      "default": "httpx"
+    },
+    "impersonate": {
+      "type": "string",
+      "description": "Browser TLS fingerprint to impersonate when http_client is curl_cffi (e.g. 'chrome', 'chrome124', 'safari17_0', 'firefox133'). Defaults to 'chrome'. Ignored by other HTTP clients.",
+      "default": "chrome"
+    },
+    "ignore_dh_key_too_small": {
+      "type": "boolean",
+      "description": "If true, works around weak DH key errors.",
+      "default": false
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Query parameters for GET/HEAD requests."
+    },
+    "ssl_no_verify": {
+      "type": "boolean",
+      "description": "If true, skips SSL certificate validation.",
+      "default": false
+    },
+    "proxy": {
+      "type": "string",
+      "description": "Proxy URL to use for the request."
+    },
+    "use_browser": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "string", "pattern": "^(chrome|msedge|firefox$|webkit$)" }
+      ],
+      "description": "If true, uses a headless browser (Playwright) via the 'chrome' channel. May also be a browser name: 'firefox', 'webkit', or a value starting with 'chrome' or 'msedge' (e.g. 'chrome-beta', 'msedge-dev').",
+      "default": false
+    },
+    "block_elements": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "document",
+          "stylesheet",
+          "image",
+          "media",
+          "font",
+          "script",
+          "texttrack",
+          "xhr",
+          "fetch",
+          "eventsource",
+          "websocket",
+          "manifest",
+          "other"
+        ]
+      },
+      "description": "Resource types to block from loading (browser jobs)."
+    },
+    "evaluate": {
+      "type": "string",
+      "description": "JavaScript code to execute in the page context (browser jobs)."
+    },
+    "http_credentials": {
+      "type": "string",
+      "description": "HTTP authentication credentials ('username:password' or full URL with credentials)."
+    },
+    "ignore_default_args": {
+      "oneOf": [{ "type": "boolean" }, { "type": "array", "items": { "type": "string" } }],
+      "description": "Override Chrome default arguments (browser jobs).",
+      "default": false
+    },
+    "ignore_https_errors": {
+      "type": "boolean",
+      "description": "If true, suppresses HTTPS certificate errors (browser jobs).",
+      "default": false
+    },
+    "init_script": {
+      "type": "string",
+      "description": "JavaScript code to execute before page navigation (browser jobs)."
+    },
+    "initialization_js": {
+      "type": "string",
+      "description": "JavaScript code to execute after loading initialization_url (browser jobs)."
+    },
+    "initialization_url": {
+      "type": "string",
+      "description": "URL to navigate to before the main URL, establishing session state (cookies). Works for all url jobs."
+    },
+    "referer": {
+      "type": "string",
+      "description": "Referer header value (browser jobs)."
+    },
+    "switches": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Additional Chrome command-line switches (browser jobs)."
+    },
+    "user_data_dir": {
+      "type": "string",
+      "description": "Path to a Chrome user data directory (for persistence/auth with use_browser)."
+    },
+    "wait_for_function": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "expression": { "type": "string" },
+            "timeout": { "type": "number" },
+            "polling": { "oneOf": [{ "type": "string" }, { "type": "number" }] }
+          }
+        }
+      ],
+      "description": "JavaScript expression to wait for (browser jobs)."
+    },
+    "wait_for_selector": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "selector": { "type": "string" },
+            "timeout": { "type": "number" },
+            "state": { "type": "string", "enum": ["attached", "detached", "visible", "hidden"] }
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "properties": {
+                  "selector": { "type": "string" },
+                  "timeout": { "type": "number" },
+                  "state": { "type": "string", "enum": ["attached", "detached", "visible", "hidden"] }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "description": "CSS/XPath selector(s) to wait for (browser jobs)."
+    },
+    "wait_for_timeout": {
+      "type": "number",
+      "description": "Seconds to wait after page load (browser jobs)."
+    },
+    "wait_for_url": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string" },
+            "timeout": { "type": "number" }
+          }
+        }
+      ],
+      "description": "URL pattern or regex to wait for navigation to (browser jobs)."
+    },
+    "wait_until": {
+      "type": "string",
+      "enum": ["load", "domcontentloaded", "networkidle", "commit"],
+      "description": "Navigation completion event to wait for (browser jobs).",
+      "default": "load"
+    },
+    "filters": {
+      "$ref": "#/definitions/filterList",
+      "description": "List of filters to apply to the content."
+    },
+    "filter": {
+      "$ref": "#/definitions/filterList",
+      "description": "Deprecated: use 'filters' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'filters' instead of 'filter'."
+    },
+    "diff_filters": {
+      "$ref": "#/definitions/filterList",
+      "description": "List of filters to apply to the diff result."
+    },
+    "diff_filter": {
+      "$ref": "#/definitions/filterList",
+      "description": "Deprecated: use 'diff_filters' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'diff_filters' instead of 'diff_filter'."
+    },
+    "differ": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["unified", "ai_google", "deepdiff", "table", "wdiff"],
+          "description": "Differ name with default parameters."
+        },
+        {
+          "type": "object",
+          "oneOf": [
+            {
+              "properties": {
+                "name": { "type": "string", "const": "unified" },
+                "context_lines": {
+                  "type": "integer",
+                  "description": "Number of context lines around changes.",
+                  "default": 3
+                },
+                "range_info": {
+                  "type": "boolean",
+                  "description": "Include range information (@@ lines).",
+                  "default": true
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "name": { "type": "string", "const": "ai_google" },
+                "model": {
+                  "type": "string",
+                  "description": "Gemini model code to use.",
+                  "default": "gemini-2.0-flash"
+                },
+                "system_instructions": {
+                  "type": "string",
+                  "description": "System instructions for the AI model."
+                },
+                "prompt": {
+                  "type": "string",
+                  "description": "Prompt template. Supports {old_text}, {new_text}, {unified_diff}, {unified_diff_new}."
+                },
+                "timeout": {
+                  "type": "number",
+                  "description": "Request timeout in seconds.",
+                  "default": 300
+                },
+                "additions_only": {
+                  "type": "boolean",
+                  "description": "Only process additions.",
+                  "default": false
+                },
+                "prompt_ud_context_lines": {
+                  "type": "integer",
+                  "description": "Context lines for unified diff in prompt.",
+                  "default": 999
+                },
+                "temperature": {
+                  "type": "number",
+                  "description": "Sampling temperature (0.0–2.0).",
+                  "default": 0.0
+                },
+                "thinking_budget": {
+                  "type": "integer",
+                  "description": "Thinking budget token count."
+                },
+                "thinking_level": {
+                  "type": "string",
+                  "enum": ["low", "medium", "high"],
+                  "description": "Thinking level."
+                },
+                "top_k": {
+                  "type": "integer",
+                  "description": "Top-K sampling parameter."
+                },
+                "top_p": {
+                  "type": "number",
+                  "description": "Top-P (nucleus) sampling parameter (0.0–1.0)."
+                },
+                "tools": {
+                  "type": "array",
+                  "description": "Tools available to the model."
+                },
+                "unified": {
+                  "type": "object",
+                  "properties": {
+                    "context_lines": { "type": "integer", "default": 3 },
+                    "range_info": { "type": "boolean", "default": true }
+                  },
+                  "additionalProperties": false,
+                  "description": "Nested unified differ settings for prompt generation."
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "name": { "type": "string", "const": "command" },
+                "command": {
+                  "type": "string",
+                  "description": "Command to execute for diffing."
+                },
+                "is_html": {
+                  "type": "boolean",
+                  "description": "If true, the command output is HTML.",
+                  "default": false
+                },
+                "context_lines": {
+                  "type": "integer",
+                  "description": "Number of context lines around changes.",
+                  "default": 3
+                }
+              },
+              "required": ["name", "command"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "name": { "type": "string", "const": "deepdiff" },
+                "data_type": {
+                  "type": "string",
+                  "enum": ["json", "yaml", "xml"],
+                  "description": "Data type to parse (derived from media type if not set)."
+                },
+                "ignore_order": {
+                  "type": "boolean",
+                  "description": "Ignore order of elements.",
+                  "default": false
+                },
+                "ignore_string_case": {
+                  "type": "boolean",
+                  "description": "Ignore string case differences.",
+                  "default": false
+                },
+                "significant_digits": {
+                  "type": "integer",
+                  "description": "Number of significant digits for numeric comparison."
+                },
+                "compact": {
+                  "type": "boolean",
+                  "description": "Use compact output format.",
+                  "default": false
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "name": { "type": "string", "const": "image" },
+                "data_type": {
+                  "type": "string",
+                  "enum": ["url", "filename", "ascii85", "base64"],
+                  "description": "How the image data is provided.",
+                  "default": "url"
+                },
+                "mse_threshold": {
+                  "type": "number",
+                  "description": "Mean squared error threshold for detecting changes.",
+                  "default": 2.5
+                },
+                "ai_google": {
+                  "oneOf": [
+                    { "type": "null" },
+                    { "type": "boolean", "const": true },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "type": "string",
+                          "description": "Gemini model code to use.",
+                          "default": "gemini-2.0-flash"
+                        },
+                        "system_instructions": {
+                          "type": "string",
+                          "description": "System instructions for the AI model."
+                        },
+                        "prompt": {
+                          "type": "string",
+                          "description": "Prompt template. Supports {old_text}, {new_text}, {unified_diff}, {unified_diff_new}."
+                        },
+                        "timeout": {
+                          "type": "number",
+                          "description": "Request timeout in seconds.",
+                          "default": 300
+                        },
+                        "additions_only": {
+                          "type": "boolean",
+                          "description": "Only process additions.",
+                          "default": false
+                        },
+                        "prompt_ud_context_lines": {
+                          "type": "integer",
+                          "description": "Context lines for unified diff in prompt.",
+                          "default": 999
+                        },
+                        "temperature": {
+                          "type": "number",
+                          "description": "Sampling temperature (0.0–2.0).",
+                          "default": 0.0
+                        },
+                        "thinking_budget": {
+                          "type": "integer",
+                          "description": "Thinking budget token count."
+                        },
+                        "thinking_level": {
+                          "type": "string",
+                          "enum": ["low", "medium", "high"],
+                          "description": "Thinking level."
+                        },
+                        "top_k": {
+                          "type": "integer",
+                          "description": "Top-K sampling parameter."
+                        },
+                        "top_p": {
+                          "type": "number",
+                          "description": "Top-P (nucleus) sampling parameter (0.0–1.0)."
+                        },
+                        "tools": {
+                          "type": "array",
+                          "description": "Tools available to the model."
+                        },
+                        "unified": {
+                          "type": "object",
+                          "properties": {
+                            "context_lines": { "type": "integer", "default": 3 },
+                            "range_info": { "type": "boolean", "default": true }
+                          },
+                          "additionalProperties": false,
+                          "description": "Nested unified differ settings for prompt generation."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ],
+                  "description": "AI (Google Gemini) settings for image comparison."
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "name": { "type": "string", "const": "table" },
+                "tabsize": {
+                  "type": "integer",
+                  "description": "Tab stop size.",
+                  "default": 8
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "name": { "type": "string", "const": "wdiff" },
+                "context_lines": {
+                  "type": "integer",
+                  "description": "Number of context lines around changes.",
+                  "default": 3
+                },
+                "range_info": {
+                  "type": "boolean",
+                  "description": "Include range information.",
+                  "default": true
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      ],
+      "description": "Configuration for the comparison engine."
+    },
+    "additions_only": {
+      "type": "boolean",
+      "description": "Report only added lines."
+    },
+    "deletions_only": {
+      "type": "boolean",
+      "description": "Report only deleted lines."
+    },
+    "contextlines": {
+      "type": "integer",
+      "description": "Number of context lines in unified diff. Prefer setting this within the 'differ' block instead."
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "If false, disables the job.",
+      "default": true
+    },
+    "is_markdown": {
+      "type": "boolean",
+      "description": "If true, treats the data as Markdown for rendering in reports.",
+      "default": false
+    },
+    "monospace": {
+      "type": "boolean",
+      "description": "If true, uses monospace font in reports.",
+      "default": false
+    },
+    "suppress_error_ended": {
+      "type": "boolean",
+      "description": "If true, hides notifications when errors resolve.",
+      "default": false
+    },
+    "suppress_errors": {
+      "type": "boolean",
+      "description": "If true, hides all error notifications for this job.",
+      "default": false
+    },
+    "suppress_repeated_errors": {
+      "type": "boolean",
+      "description": "If true, only report the first occurrence of an error."
+    },
+    "compared_versions": {
+      "type": "integer",
+      "description": "Number of versions to keep/compare."
+    },
+    "hook_data": {
+      "description": "Any custom data to be passed to a custom job type defined in hooks.py."
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "kind": { "pattern": "^hooks_.+" }
+    },
+    "required": ["kind"]
+  },
+  "else": {
+    "not": {
+      "required": ["hook_data"]
+    }
+  },
+  "definitions": {
+    "filterList": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "A single filter name (e.g. 'html2text', 'sha1sum')."
+        },
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/filterItem" },
+          "description": "List of filters to apply in order."
+        },
+        {
+          "$ref": "#/definitions/filterItemObject",
+          "description": "A single filter as an object."
+        }
+      ]
+    },
+    "filterItem": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "absolute_links",
+            "ascii85",
+            "base64",
+            "beautify",
+            "format-json",
+            "format-xml",
+            "hexdump",
+            "html2text",
+            "ical2text",
+            "jsontoyaml",
+            "pretty-xml",
+            "remove_repeated",
+            "reverse",
+            "sha1sum",
+            "sort",
+            "strip"
+          ],
+          "description": "A filter name with no parameters (uses defaults)."
+        },
+        { "$ref": "#/definitions/filterItemObject" }
+      ]
+    },
+    "filterItemObject": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^hooks_": {
+          "description": "Custom hooks filter."
+        }
+      },
+      "properties": {
+        "absolute_links": {
+          "type": ["boolean", "null"],
+          "description": "Converts relative URLs to absolute in HTML attributes.",
+          "default": true
+        },
+        "ascii85": {
+          "type": ["boolean", "null"],
+          "description": "Encodes binary data using Ascii85.",
+          "default": true
+        },
+        "base64": {
+          "type": ["boolean", "null"],
+          "description": "Encodes binary data using RFC 4648 Base64.",
+          "default": true
+        },
+        "beautify": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "absolute_links": {
+                  "type": "boolean",
+                  "description": "Convert relative URLs to absolute.",
+                  "default": true
+                },
+                "indent": {
+                  "oneOf": [{ "type": "integer" }, { "type": "string" }],
+                  "description": "Number of spaces or string to use for indentation.",
+                  "default": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Beautifies HTML using BeautifulSoup."
+        },
+        "css": {
+          "oneOf": [
+            { "type": "string", "description": "CSS selector expression." },
+            {
+              "type": "object",
+              "properties": {
+                "selector": {
+                  "type": "string",
+                  "description": "CSS selector expression."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": ["html", "xml"],
+                  "description": "Parser method.",
+                  "default": "html"
+                },
+                "namespaces": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" },
+                  "description": "XML namespace mappings."
+                },
+                "exclude": {
+                  "type": "string",
+                  "description": "CSS selector for elements to remove from the result."
+                },
+                "skip": {
+                  "type": "integer",
+                  "description": "Number of initial matching elements to skip.",
+                  "default": 0
+                },
+                "maxitems": {
+                  "type": "integer",
+                  "description": "Maximum number of matching elements to return."
+                },
+                "sort": {
+                  "type": "boolean",
+                  "description": "Sort the matched elements.",
+                  "default": false
+                }
+              },
+              "required": ["selector"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Selects HTML/XML elements matching a CSS selector."
+        },
+        "csv2text": {
+          "type": "object",
+          "properties": {
+            "format_message": {
+              "type": "string",
+              "description": "Python format string with replacement fields for each column."
+            },
+            "has_header": {
+              "type": "boolean",
+              "description": "Whether the CSV has a header row (auto-detected if not specified)."
+            },
+            "ignore_header": {
+              "type": "boolean",
+              "description": "If true, skip the header row in output.",
+              "default": false
+            }
+          },
+          "required": ["format_message"],
+          "additionalProperties": false,
+          "description": "Converts CSV data to text using a format string."
+        },
+        "delete_lines_containing": {
+          "oneOf": [
+            { "type": "string", "description": "Literal text to match." },
+            {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Literal text to match."
+                },
+                "re": {
+                  "type": "string",
+                  "description": "Regular expression pattern to match."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Removes lines containing the specified text or matching a regex pattern."
+        },
+        "element-by-class": {
+          "type": "string",
+          "description": "Selects HTML elements matching the specified class name."
+        },
+        "element-by-id": {
+          "type": "string",
+          "description": "Selects the HTML element with the specified id."
+        },
+        "element-by-style": {
+          "type": "string",
+          "description": "Selects HTML elements matching the specified style attribute value."
+        },
+        "element-by-tag": {
+          "type": "string",
+          "description": "Selects HTML elements matching the specified tag name."
+        },
+        "execute": {
+          "oneOf": [
+            { "type": "string", "description": "Command to execute." },
+            {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "description": "Command to execute."
+                },
+                "escape_characters": {
+                  "type": "boolean",
+                  "description": "Enable Windows character escaping.",
+                  "default": false
+                }
+              },
+              "required": ["command"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Executes a command, passing data as stdin and using stdout as output."
+        },
+        "format-json": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "indentation": {
+                  "oneOf": [{ "type": "integer" }, { "type": "string" }],
+                  "description": "Number of spaces or string for indentation.",
+                  "default": 4
+                },
+                "sort_keys": {
+                  "type": "boolean",
+                  "description": "Sort object keys alphabetically.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Pretty-prints JSON data."
+        },
+        "format-xml": {
+          "type": ["boolean", "null"],
+          "description": "Pretty-prints XML using lxml.",
+          "default": true
+        },
+        "grep": {
+          "oneOf": [
+            { "type": "string", "description": "Literal text to match." },
+            {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Literal text to match."
+                },
+                "re": {
+                  "type": "string",
+                  "description": "Regular expression pattern to match."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Deprecated: use keep_lines_containing instead.",
+          "deprecated": true
+        },
+        "grepi": {
+          "oneOf": [
+            { "type": "string", "description": "Literal text to match." },
+            {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Literal text to match."
+                },
+                "re": {
+                  "type": "string",
+                  "description": "Regular expression pattern to match."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Deprecated: use delete_lines_containing instead.",
+          "deprecated": true
+        },
+        "hexdump": {
+          "type": ["boolean", "null"],
+          "description": "Displays data as a hex dump.",
+          "default": true
+        },
+        "html2text": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": ["html2text", "bs4", "strip_tags"],
+                  "description": "Conversion method to use.",
+                  "default": "html2text"
+                },
+                "unicode_snob": {
+                  "type": "boolean",
+                  "description": "Use Unicode characters instead of ASCII.",
+                  "default": true
+                },
+                "body_width": {
+                  "type": "integer",
+                  "description": "Character count to wrap lines at (0 for no wrapping).",
+                  "default": 0
+                },
+                "ignore_images": {
+                  "type": "boolean",
+                  "description": "Ignore image tags.",
+                  "default": true
+                },
+                "single_line_break": {
+                  "type": "boolean",
+                  "description": "Use single line breaks instead of double.",
+                  "default": true
+                },
+                "wrap_links": {
+                  "type": "boolean",
+                  "description": "Wrap long links.",
+                  "default": false
+                },
+                "pad_tables": {
+                  "type": "boolean",
+                  "description": "Pad table cells for alignment (html2text method)."
+                },
+                "inline_links": {
+                  "type": "boolean",
+                  "description": "Use inline links instead of reference links."
+                },
+                "protect_links": {
+                  "type": "boolean",
+                  "description": "Protect links from line breaks."
+                },
+                "images_to_alt": {
+                  "type": "boolean",
+                  "description": "Replace images with their alt text."
+                },
+                "images_with_size": {
+                  "type": "boolean",
+                  "description": "Include image size in output."
+                },
+                "ignore_links": {
+                  "type": "boolean",
+                  "description": "Ignore anchor tags."
+                },
+                "ignore_emphasis": {
+                  "type": "boolean",
+                  "description": "Ignore emphasis tags."
+                },
+                "ignore_tables": {
+                  "type": "boolean",
+                  "description": "Ignore table structure."
+                },
+                "decode_errors": {
+                  "type": "string",
+                  "description": "How to handle decode errors."
+                },
+                "parser": {
+                  "type": "string",
+                  "description": "HTML parser to use (for bs4 method).",
+                  "default": "lxml"
+                },
+                "separator": {
+                  "type": "string",
+                  "description": "Separator between elements (for bs4 method).",
+                  "default": ""
+                },
+                "strip": {
+                  "type": "boolean",
+                  "description": "Strip whitespace from text (for bs4 method).",
+                  "default": false
+                }
+              }
+            }
+          ],
+          "description": "Converts HTML to plain text."
+        },
+        "ical2text": {
+          "type": ["boolean", "null"],
+          "description": "Converts iCalendar data to text.",
+          "default": true
+        },
+        "jq": {
+          "type": "string",
+          "description": "Applies a jq filter expression to JSON data."
+        },
+        "jsontoyaml": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "indentation": {
+                  "oneOf": [{ "type": "integer" }, { "type": "string" }],
+                  "description": "Number of spaces or string for indentation.",
+                  "default": 2
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Converts JSON to YAML."
+        },
+        "keep_lines_containing": {
+          "oneOf": [
+            { "type": "string", "description": "Literal text to match." },
+            {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Literal text to match."
+                },
+                "re": {
+                  "type": "string",
+                  "description": "Regular expression pattern to match."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Keeps only lines containing the specified text or matching a regex pattern."
+        },
+        "ocr": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "timeout": {
+                  "type": "integer",
+                  "description": "Timeout in seconds.",
+                  "default": 10
+                },
+                "language": {
+                  "type": "string",
+                  "description": "Language code(s) for OCR (e.g. 'eng', 'fra', 'eng+fra').",
+                  "default": "eng"
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Extracts text from images using OCR (Tesseract)."
+        },
+        "pdf2text": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "password": {
+                  "type": "string",
+                  "description": "Password for encrypted PDFs."
+                },
+                "physical": {
+                  "type": "boolean",
+                  "description": "Attempt to reproduce physical layout.",
+                  "default": true
+                },
+                "raw": {
+                  "type": "boolean",
+                  "description": "Use content stream order instead of layout.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Extracts text from PDF using pdftotext."
+        },
+        "pretty-xml": {
+          "type": ["boolean", "null"],
+          "description": "Pretty-prints XML using Python xml.dom.minidom.",
+          "default": true
+        },
+        "pypdf": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "password": {
+                  "type": "string",
+                  "description": "Password for encrypted PDFs."
+                },
+                "extraction_mode": {
+                  "type": "string",
+                  "enum": ["layout"],
+                  "description": "Experimental layout extraction mode."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Extracts text from PDF using pypdf."
+        },
+        "re.findall": {
+          "oneOf": [
+            { "type": "string", "description": "Regex pattern." },
+            {
+              "type": "object",
+              "properties": {
+                "pattern": {
+                  "type": "string",
+                  "description": "Regex pattern to search for."
+                },
+                "repl": {
+                  "type": "string",
+                  "description": "Replacement string (use \\g<0> for full match, \\g<1> for groups).",
+                  "default": "\\g<0>"
+                }
+              },
+              "required": ["pattern"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Finds all regex matches and replaces content with them."
+        },
+        "re.sub": {
+          "oneOf": [
+            { "type": "string", "description": "Regex pattern to remove." },
+            {
+              "type": "object",
+              "properties": {
+                "pattern": {
+                  "type": "string",
+                  "description": "Regex pattern to search for."
+                },
+                "repl": {
+                  "type": "string",
+                  "description": "Replacement text.",
+                  "default": ""
+                }
+              },
+              "required": ["pattern"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Replaces text matching a regex pattern."
+        },
+        "remove_repeated": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "separator": {
+                  "type": "string",
+                  "description": "Item delimiter.",
+                  "default": "\\n"
+                },
+                "ignore_case": {
+                  "type": "boolean",
+                  "description": "Ignore case when comparing.",
+                  "default": false
+                },
+                "adjacent": {
+                  "type": "boolean",
+                  "description": "Only remove adjacent duplicates.",
+                  "default": true
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Removes duplicate items."
+        },
+        "reverse": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "separator": {
+                  "type": "string",
+                  "description": "Item delimiter.",
+                  "default": "\\n"
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Reverses the order of items."
+        },
+        "sha1sum": {
+          "type": ["boolean", "null"],
+          "description": "Computes the SHA-1 hash of the content.",
+          "default": true
+        },
+        "shellpipe": {
+          "oneOf": [
+            { "type": "string", "description": "Shell command to execute." },
+            {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "description": "Shell command to execute."
+                },
+                "escape_characters": {
+                  "type": "boolean",
+                  "description": "Enable Windows character escaping.",
+                  "default": false
+                }
+              },
+              "required": ["command"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Pipes data through a shell command."
+        },
+        "sort": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "separator": {
+                  "type": "string",
+                  "description": "Item delimiter.",
+                  "default": "\\n"
+                },
+                "reverse": {
+                  "type": "boolean",
+                  "description": "Sort in descending order.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Sorts items."
+        },
+        "strip": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            { "type": "string", "description": "Characters to strip." },
+            {
+              "type": "object",
+              "properties": {
+                "chars": {
+                  "type": "string",
+                  "description": "Characters to remove (default: whitespace)."
+                },
+                "side": {
+                  "type": "string",
+                  "enum": ["left", "right"],
+                  "description": "Strip from one side only."
+                },
+                "splitlines": {
+                  "type": "boolean",
+                  "description": "Apply stripping to each line individually.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Strips leading/trailing whitespace or specified characters."
+        },
+        "xpath": {
+          "oneOf": [
+            { "type": "string", "description": "XPath 1.0 expression." },
+            {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "XPath 1.0 expression."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": ["html", "xml"],
+                  "description": "Parser method.",
+                  "default": "html"
+                },
+                "namespaces": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" },
+                  "description": "XML namespace mappings."
+                },
+                "exclude": {
+                  "type": "string",
+                  "description": "XPath expression for elements to remove from the result."
+                },
+                "skip": {
+                  "type": "integer",
+                  "description": "Number of initial matching elements to skip.",
+                  "default": 0
+                },
+                "maxitems": {
+                  "type": "integer",
+                  "description": "Maximum number of matching elements to return."
+                },
+                "sort": {
+                  "type": "boolean",
+                  "description": "Sort the matched elements.",
+                  "default": false
+                }
+              },
+              "required": ["path"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Selects HTML/XML elements matching an XPath 1.0 expression."
+        }
+      }
+    }
+  }
+}

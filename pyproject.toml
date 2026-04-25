@@ -85,12 +85,13 @@ pushbullet = ['pushbullet.py']
 pushover = ['chump']
 xmpp = ['aioxmpp']
 # other
+curl_cffi = ['curl_cffi']
 redis = ['redis']
 requests = ['requests']
 safe_password = ['keyring']
 # all
 all = [
-    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff_xml,imagediff,matrix,pushbullet,pushover,xmpp,redis,requests,safe_password]',
+    'webchanges[use_browser,beautify,bs4,html5lib,ical2text,jq,ocr,pdf2text,pypdf_crypto,deepdiff_xml,imagediff,matrix,pushbullet,pushover,xmpp,curl_cffi,redis,requests,safe_password]',
 ]
 
 

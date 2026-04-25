@@ -406,12 +406,27 @@ class BrowserJob(UrlJobBase):
         with ExitStack() as stack:
             p = stack.enter_context(sync_playwright())
             executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
-            channel = None if executable_path else 'chrome'
-            browser_name = executable_path or 'Chrome'
+            value = self.use_browser if isinstance(self.use_browser, str) else 'chrome'
+            if value.startswith(('chrome', 'msedge')):
+                browser_type = p.chromium
+                channel = None if executable_path else value
+            elif value == 'firefox':
+                browser_type = p.firefox
+                channel = None
+            elif value == 'webkit':
+                browser_type = p.webkit
+                channel = None
+            else:
+                raise ValueError(
+                    f"Job {job_state.job.index_number}: Directive 'use_browser' value {value!r} must be "
+                    f"'firefox', 'webkit', or start with 'chrome' or 'msedge' "
+                    f'( {self.get_indexed_location()} ).'
+                )
+            browser_name = executable_path or value
             no_viewport = False if not self.switches else any('--window-size' in switch for switch in self.switches)
             if not self.user_data_dir:
                 browser = stack.enter_context(
-                    p.chromium.launch(
+                    browser_type.launch(
                         executable_path=executable_path,
                         channel=channel,
                         args=args,
@@ -422,11 +437,14 @@ class BrowserJob(UrlJobBase):
                     )
                 )
                 browser_version = browser.version
-                user_agent = headers.pop(
-                    'User-Agent',
-                    f'Mozilla/5.0 ({self.get_user_agent_platform()}) AppleWebKit/537.36 (KHTML, like Gecko) '
-                    f'Chrome/{browser_version.split(".", maxsplit=1)[0]}.0.0.0 Safari/537.36',
-                )
+                if browser_type is p.chromium:
+                    default_user_agent = (
+                        f'Mozilla/5.0 ({self.get_user_agent_platform()}) AppleWebKit/537.36 (KHTML, like Gecko) '
+                        f'Chrome/{browser_version.split(".", maxsplit=1)[0]}.0.0.0 Safari/537.36'
+                    )
+                    user_agent = headers.pop('User-Agent', default_user_agent)
+                else:
+                    user_agent = headers.pop('User-Agent', None)
                 context = stack.enter_context(
                     browser.new_context(
                         no_viewport=no_viewport,
@@ -445,7 +463,7 @@ class BrowserJob(UrlJobBase):
                 user_agent = headers.pop('User-Agent', '')
 
                 context = stack.enter_context(
-                    p.chromium.launch_persistent_context(
+                    browser_type.launch_persistent_context(
                         user_data_dir=self.user_data_dir,
                         channel=channel,
                         executable_path=executable_path,
@@ -607,10 +625,10 @@ class BrowserJob(UrlJobBase):
             try:
                 if return_data is not None:
                     logger.info(f"Job {self.index_number}: Using the 'return_data' Callable")
-                    return return_data(page, url, self.wait_until, self.referer)
+                    return return_data(page, url, self.wait_until, self.referer)  # ty:ignore[invalid-argument-type]
                 if response_handler is not None:
                     logger.info(f"Job {self.index_number}: Using the 'response_handler' Callable")
-                    response = response_handler(page, url, self.wait_until, self.referer)
+                    response = response_handler(page, url, self.wait_until, self.referer)  # ty:ignore[invalid-argument-type]
                 else:
                     response = page.goto(url, wait_until=self.wait_until, referer=self.referer)
 

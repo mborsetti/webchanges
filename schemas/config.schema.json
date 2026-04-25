@@ -1,0 +1,380 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "_Config",
+  "type": "object",
+  "required": ["display", "report", "job_defaults", "differ_defaults", "database", "footnote"],
+  "properties": {
+    "display": { "$ref": "#/$defs/_ConfigDisplay" },
+    "report": { "$ref": "#/$defs/_ConfigReport" },
+    "job_defaults": { "$ref": "#/$defs/_ConfigJobDefaults" },
+    "differ_defaults": { "$ref": "#/$defs/_ConfigDifferDefaults" },
+    "database": { "$ref": "#/$defs/_ConfigDatabase" },
+    "footnote": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "_ConfigDisplay": {
+      "type": "object",
+      "required": ["new", "error", "unchanged", "empty-diff"],
+      "properties": {
+        "new": { "type": "boolean" },
+        "error": { "type": "boolean" },
+        "unchanged": { "type": "boolean" },
+        "empty-diff": { "type": "boolean" }
+      }
+    },
+    "_ConfigReportText": {
+      "type": "object",
+      "required": ["line_length", "details", "footer", "minimal", "separate"],
+      "properties": {
+        "line_length": { "type": "integer" },
+        "details": { "type": "boolean" },
+        "footer": { "type": "boolean" },
+        "minimal": { "type": "boolean" },
+        "separate": { "type": "boolean" }
+      }
+    },
+    "_ConfigReportHtml": {
+      "type": "object",
+      "required": ["diff", "footer", "separate", "title"],
+      "properties": {
+        "diff": { "enum": ["unified", "table"] },
+        "footer": { "type": "boolean" },
+        "separate": { "type": "boolean" },
+        "title": { "type": "string" }
+      }
+    },
+    "_ConfigReportMarkdown": {
+      "type": "object",
+      "required": ["details", "footer", "minimal", "separate"],
+      "properties": {
+        "details": { "type": "boolean" },
+        "footer": { "type": "boolean" },
+        "minimal": { "type": "boolean" },
+        "separate": { "type": "boolean" }
+      }
+    },
+    "_ConfigReportStdout": {
+      "type": "object",
+      "required": ["enabled", "color"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "color": {
+          "anyOf": [{ "type": "boolean" }, { "enum": ["normal", "bright"] }]
+        }
+      }
+    },
+    "_ConfigReportBrowser": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "_ConfigReportDiscord": {
+      "type": "object",
+      "required": ["enabled", "webhook_url", "embed", "subject", "colored", "max_message_length"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "webhook_url": { "type": "string" },
+        "embed": { "type": "boolean" },
+        "subject": { "type": "string" },
+        "colored": { "type": "boolean" },
+        "max_message_length": { "type": ["integer", "null"] }
+      }
+    },
+    "_ConfigReportEmailSmtp": {
+      "type": "object",
+      "required": ["host", "user", "port", "starttls", "auth", "insecure_password", "utf-8"],
+      "properties": {
+        "host": { "type": "string" },
+        "user": { "type": "string" },
+        "port": { "type": "integer" },
+        "starttls": { "type": "boolean" },
+        "auth": { "type": "boolean" },
+        "insecure_password": { "type": "string" },
+        "utf-8": { "type": "boolean" }
+      }
+    },
+    "_ConfigReportEmailSendmail": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string" }
+      }
+    },
+    "_ConfigReportEmail": {
+      "type": "object",
+      "required": ["enabled", "html", "to", "from", "subject", "method", "smtp", "sendmail"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "html": { "type": "boolean" },
+        "to": { "type": "string" },
+        "from": { "type": "string" },
+        "subject": { "type": "string" },
+        "method": { "enum": ["sendmail", "smtp"] },
+        "smtp": { "$ref": "#/$defs/_ConfigReportEmailSmtp" },
+        "sendmail": { "$ref": "#/$defs/_ConfigReportEmailSendmail" }
+      }
+    },
+    "_ConfigReportGithubIssue": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "token",
+        "owner",
+        "repo",
+        "title",
+        "labels",
+        "format_dt",
+        "format_content",
+        "assignees",
+        "type",
+        "milestone"
+      ],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "token": { "type": "string" },
+        "owner": { "type": "string" },
+        "repo": { "type": "string" },
+        "title": { "type": "string" },
+        "labels": { "type": "array", "items": { "type": "string" } },
+        "format_dt": { "type": "string" },
+        "format_content": { "type": "string" },
+        "assignees": { "type": "array", "items": { "type": "string" } },
+        "type": { "type": "string" },
+        "milestone": { "type": "string" }
+      }
+    },
+    "_ConfigReportGotify": {
+      "type": "object",
+      "required": ["enabled", "priority", "server_url", "title", "token"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "priority": { "type": "integer" },
+        "server_url": { "type": "string" },
+        "title": { "type": "string" },
+        "token": { "type": "string" }
+      }
+    },
+    "_ConfigReportIfttt": {
+      "type": "object",
+      "required": ["enabled", "key", "event"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "key": { "type": "string" },
+        "event": { "type": "string" }
+      }
+    },
+    "_ConfigReportMailgun": {
+      "type": "object",
+      "required": ["enabled", "region", "api_key", "domain", "from_mail", "from_name", "to", "subject"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "region": { "type": "string" },
+        "api_key": { "type": "string" },
+        "domain": { "type": "string" },
+        "from_mail": { "type": "string" },
+        "from_name": { "type": "string" },
+        "to": { "type": "string" },
+        "subject": { "type": "string" }
+      }
+    },
+    "_ConfigReportMatrix": {
+      "type": "object",
+      "required": ["enabled", "homeserver", "access_token", "room_id"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "homeserver": { "type": "string" },
+        "access_token": { "type": "string" },
+        "room_id": { "type": "string" }
+      }
+    },
+    "_ConfigReportNtfyPriorities": {
+      "type": "object",
+      "required": ["default", "new", "changed", "error"],
+      "properties": {
+        "default": { "type": ["integer", "string"] },
+        "new": { "type": ["integer", "string"] },
+        "changed": { "type": ["integer", "string"] },
+        "error": { "type": ["integer", "string"] }
+      }
+    },
+    "_ConfigReportNtfy": {
+      "type": "object",
+      "required": ["enabled", "topic_url", "authorization", "priorities"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "topic_url": { "type": "string" },
+        "authorization": { "type": ["string", "null"] },
+        "priorities": { "$ref": "#/$defs/_ConfigReportNtfyPriorities" }
+      }
+    },
+    "_ConfigReportProwl": {
+      "type": "object",
+      "required": ["enabled", "api_key", "priority", "application", "subject"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "api_key": { "type": "string" },
+        "priority": { "type": "integer" },
+        "application": { "type": "string" },
+        "subject": { "type": "string" }
+      }
+    },
+    "_ConfigReportPushbullet": {
+      "type": "object",
+      "required": ["enabled", "api_key"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "api_key": { "type": "string" }
+      }
+    },
+    "_ConfigReportPushover": {
+      "type": "object",
+      "required": ["enabled", "app", "device", "sound", "user", "priority"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "app": { "type": "string" },
+        "device": { "type": ["string", "null"] },
+        "sound": { "type": "string" },
+        "user": { "type": "string" },
+        "priority": { "type": "string" }
+      }
+    },
+    "_ConfigReportRunCommand": {
+      "type": "object",
+      "required": ["enabled", "command"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "command": { "type": "string" }
+      }
+    },
+    "_ConfigReportTelegram": {
+      "type": "object",
+      "required": ["enabled", "bot_token", "chat_id", "silent"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "bot_token": { "type": "string" },
+        "chat_id": {
+          "anyOf": [
+            { "type": "string" },
+            { "type": "integer" },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [{ "type": "string" }, { "type": "integer" }]
+              }
+            }
+          ]
+        },
+        "silent": { "type": "boolean" }
+      }
+    },
+    "_ConfigReportWebhook": {
+      "type": "object",
+      "required": ["enabled", "markdown", "webhook_url", "rich_text", "max_message_length"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "markdown": { "type": "boolean" },
+        "webhook_url": { "type": "string" },
+        "rich_text": { "type": ["boolean", "null"] },
+        "max_message_length": { "type": ["integer", "null"] }
+      }
+    },
+    "_ConfigReportXmpp": {
+      "type": "object",
+      "required": ["enabled", "sender", "recipient", "insecure_password"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "sender": { "type": "string" },
+        "recipient": { "type": "string" },
+        "insecure_password": { "type": ["string", "null"] }
+      }
+    },
+    "_ConfigReport": {
+      "type": "object",
+      "required": [
+        "tz",
+        "text",
+        "html",
+        "markdown",
+        "stdout",
+        "browser",
+        "discord",
+        "email",
+        "github_issue",
+        "gotify",
+        "ifttt",
+        "mailgun",
+        "matrix",
+        "ntfy",
+        "prowl",
+        "pushbullet",
+        "pushover",
+        "run_command",
+        "telegram",
+        "webhook",
+        "xmpp"
+      ],
+      "properties": {
+        "tz": { "type": ["string", "null"] },
+        "text": { "$ref": "#/$defs/_ConfigReportText" },
+        "html": { "$ref": "#/$defs/_ConfigReportHtml" },
+        "markdown": { "$ref": "#/$defs/_ConfigReportMarkdown" },
+        "stdout": { "$ref": "#/$defs/_ConfigReportStdout" },
+        "browser": { "$ref": "#/$defs/_ConfigReportBrowser" },
+        "discord": { "$ref": "#/$defs/_ConfigReportDiscord" },
+        "email": { "$ref": "#/$defs/_ConfigReportEmail" },
+        "github_issue": { "$ref": "#/$defs/_ConfigReportGithubIssue" },
+        "gotify": { "$ref": "#/$defs/_ConfigReportGotify" },
+        "ifttt": { "$ref": "#/$defs/_ConfigReportIfttt" },
+        "mailgun": { "$ref": "#/$defs/_ConfigReportMailgun" },
+        "matrix": { "$ref": "#/$defs/_ConfigReportMatrix" },
+        "ntfy": { "$ref": "#/$defs/_ConfigReportNtfy" },
+        "prowl": { "$ref": "#/$defs/_ConfigReportProwl" },
+        "pushbullet": { "$ref": "#/$defs/_ConfigReportPushbullet" },
+        "pushover": { "$ref": "#/$defs/_ConfigReportPushover" },
+        "run_command": { "$ref": "#/$defs/_ConfigReportRunCommand" },
+        "telegram": { "$ref": "#/$defs/_ConfigReportTelegram" },
+        "webhook": { "$ref": "#/$defs/_ConfigReportWebhook" },
+        "xmpp": { "$ref": "#/$defs/_ConfigReportXmpp" }
+      }
+    },
+    "_ConfigJobDefaults": {
+      "type": "object",
+      "description": "Defined with total=False, so properties are optional.",
+      "properties": {
+        "_note": { "type": "string" },
+        "all": { "type": "object" },
+        "url": { "type": "object" },
+        "browser": { "type": "object" },
+        "command": { "type": "object" }
+      }
+    },
+    "_ConfigDifferDefaults": {
+      "type": "object",
+      "description": "Defined with total=False, so properties are optional.",
+      "properties": {
+        "_note": { "type": "string" },
+        "unified": { "type": "object" },
+        "ai_google": { "type": "object" },
+        "command": { "type": "object" },
+        "deepdiff": { "type": "object" },
+        "image": { "type": "object" },
+        "table": { "type": "object" },
+        "wdiff": { "type": "object" }
+      }
+    },
+    "_ConfigDatabase": {
+      "type": "object",
+      "required": ["engine", "max_snapshots"],
+      "properties": {
+        "engine": {
+          "description": "Literal['sqlite3', 'redis', 'minidb', 'textfiles'] | str",
+          "type": "string"
+        },
+        "max_snapshots": { "type": "integer" }
+      }
+    }
+  }
+}

@@ -195,6 +195,7 @@ class UrlwatchCommand:
                 'cryptography',
                 'cssbeautifier',
                 'cssselect',
+                'curl_cffi',
                 'deepdiff',
                 'h2',
                 'html2text',
@@ -715,12 +716,12 @@ class UrlwatchCommand:
                 jobs_to_run = [job for job in jobs if not job.__is_browser__]
                 if jobs_to_run:
                     logger.debug(
-                        "Running jobs that do not require Chrome (without 'use_browser: true') in parallel with "
+                        "Running jobs that do not require a browser (without 'use_browser') in parallel with "
                         "Python's default max_workers."
                     )
                     yield from job_runner(stack, jobs_to_run, self.urlwatch_config.max_workers)
                 else:
-                    logger.debug("Found no jobs that do not require Chrome (i.e. without 'use_browser: true').")
+                    logger.debug("Found no jobs that do not require a browser (i.e. without 'use_browser').")
 
                 # run BrowserJob jobs after
                 jobs_to_run = [job for job in jobs if job.__is_browser__]
@@ -734,12 +735,12 @@ class UrlwatchCommand:
                         max_workers = max(int(virt_mem / 800), 1)
                         max_workers = min(max_workers, os.cpu_count() or 1)
                     logger.debug(
-                        f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with "
+                        f"Running jobs that require a browser (i.e. with 'use_browser') in parallel with "
                         f'{max_workers} max_workers.'
                     )
                     yield from job_runner(stack, jobs_to_run, max_workers)
                 else:
-                    logger.debug("Found no jobs that require Chrome (i.e. with 'use_browser: true').")
+                    logger.debug("Found no jobs that require a browser (i.e. with 'use_browser').")
 
         start = time.perf_counter()
 

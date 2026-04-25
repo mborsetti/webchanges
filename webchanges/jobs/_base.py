@@ -78,7 +78,7 @@ class JobBase(metaclass=TrackSubClasses):
     # __required__ in derived classes
     url: str = ''
     command: str = ''
-    use_browser: bool | None = False
+    use_browser: bool | str | None = False
 
     # __optional__ in derived classes
     _delay: float | None = None  # TODO: WIP experiment
@@ -98,9 +98,11 @@ class JobBase(metaclass=TrackSubClasses):
     encoding: str | None = None  # UrlJobBase
     evaluate: str | None = None  # BrowserJob
     filters: FiltersList | list[FiltersList | dict[str, Any]] | None = None
+    fingerprints: dict[str, str | dict[str, Any]] | None = None  # UrlJob (curl_cffi backend only)
     guid: str = ''
     headers = Headers(encoding='utf-8')  # UrlJobBase
-    http_client: Literal['httpx', 'requests'] | None = None  # UrlJob
+    http_client: Literal['httpx', 'requests', 'curl_cffi'] | None = None  # UrlJob
+    http_version: Literal['v1', 'v2', 'v2tls', 'v2_prior_knowledge', 'v3', 'v3only'] | None = None  # UrlJob
     http_credentials: str | None = None  # BrowserJob
     ignore_cached: bool | None = None  # UrlJobBase
     ignore_connection_errors: bool | None = None  # UrlJobBase
@@ -110,9 +112,10 @@ class JobBase(metaclass=TrackSubClasses):
     ignore_https_errors: bool | None = None  # BrowserJob
     ignore_timeout_errors: bool | None = None  # UrlJobBase
     ignore_too_many_redirects: bool | None = None  # UrlJobBase
+    impersonate: str | None = None  # UrlJob (curl_cffi backend only)
     init_script: str | None = None  # BrowserJob
     initialization_js: str | None = None  # BrowserJob
-    initialization_url: str | None = None  # BrowserJob
+    initialization_url: str | None = None  # UrlJob, BrowserJob
     is_markdown: bool | None = None
     kind: str | None = None  # hooks.py
     loop: asyncio.AbstractEventLoop | None = None

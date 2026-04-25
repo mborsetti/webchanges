@@ -84,12 +84,15 @@ square brackets, like this::
 +-------------------------+-------------------------------------------------------------------------+
 | :underline:`Others`                                                                               |
 +-------------------------+-------------------------------------------------------------------------+
+| ``curl_cffi`` (to use   | * `curl_cffi <https://github.com/lexiforest/curl_cffi>`__               |
+| ``http_client:          |                                                                         |
+| curl_cffi`` in a job)   |                                                                         |
++-------------------------+-------------------------------------------------------------------------+
 | ``redis`` database      | * `redis <https://github.com/andymccurdy/redis-py>`__                   |
 +-------------------------+-------------------------------------------------------------------------+
 | ``requests`` (to use    | * `requests <https://requests.readthedocs.io/>`__                       |
 | ``http_client:          |                                                                         |
 | requests`` in a job)    |                                                                         |
-|                         |                                                                         |
 +-------------------------+-------------------------------------------------------------------------+
 | ``safe_password``       | * `keyring <https://github.com/jaraco/keyring>`__                       |
 | keyring storage         |                                                                         |

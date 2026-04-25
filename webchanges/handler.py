@@ -65,7 +65,7 @@ ErrorData = TypedDict('ErrorData', {'type': str, 'message': str}, total=False)
 class JobState(ContextManager):
     """The JobState class, which contains run information about a job."""
 
-    _http_client_used: str | None = None
+    _http_client_used: Literal['httpx', 'requests', 'curl_cffi', 'playwright'] | None = None
     error_ignored: bool
     exception: Exception | None = None
     generated_diff: dict[ReportKind, str]

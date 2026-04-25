@@ -31,6 +31,8 @@ from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
 
 if TYPE_CHECKING:
+    from unittest.mock import Mock
+
     import pytest_mock
 
 playwright_is_installed = importlib.util.find_spec('playwright') is not None
@@ -38,6 +40,8 @@ if playwright_is_installed:
     from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 else:
     PlaywrightTimeoutError = Exception
+
+curl_cffi_is_installed = importlib.util.find_spec('curl_cffi') is not None
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
@@ -249,8 +253,8 @@ def test_check_429_transient_error_requests(mocker: pytest_mock.MockerFixture) -
         mock_response.history = []
         mock_response.headers = {'Content-Type': 'text/plain'}
 
-        # Mock the requests client's request method to return our mock response
-        mocker.patch('requests.request', return_value=mock_response)
+        # Mock the requests Session's request method to return our mock response
+        mocker.patch('requests.sessions.Session.request', return_value=mock_response)
 
         job_state.save()
         ssdb_storage._copy_temp_to_permanent(delete=True)
@@ -263,6 +267,226 @@ def test_check_429_transient_error_requests(mocker: pytest_mock.MockerFixture) -
     assert '429 Client Error: Too Many Requests' in str(job_state.exception)
     assert job_state.error_ignored is False
     assert job_state.new_data == job_state.old_data
+
+
+@pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
+def test_check_429_transient_error_curl_cffi(mocker: pytest_mock.MockerFixture) -> None:
+    """Check for 429 Too Many Requests response with curl_cffi backend, which should raise a TransientError."""
+    job = JobBase.unserialize({'url': 'https://www.google.com/', 'http_client': 'curl_cffi'})
+
+    # Process the job for the first time
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+
+        ###########################################################################################################
+        # Create a mock response object
+        mock_response = mocker.Mock()
+        mock_response.status_code = 429
+        mock_response.reason = 'Too Many Requests'
+        mock_response.url = 'https://example.com/too-many-requests'
+        mock_response.request = mocker.Mock()
+        mock_response.text = 'Rate limit exceeded'
+        mock_response.history = []
+        mock_response.headers = {'Content-Type': 'text/plain'}
+
+        # Mock the curl_cffi Session's request method to return our mock response
+        mocker.patch('curl_cffi.requests.Session.request', return_value=mock_response)
+
+        job_state.save()
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+        job_state.load()
+
+        job_state.process()
+
+    # 4. Assert that a TransientError was raised and handled
+    assert isinstance(job_state.exception, TransientHTTPError)
+    assert '429 Client Error: Too Many Requests' in str(job_state.exception)
+    assert job_state.error_ignored is False
+    assert job_state.new_data == job_state.old_data
+
+
+@pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
+def test_curl_cffi_impersonate_passthrough(mocker: pytest_mock.MockerFixture) -> None:
+    """Verify the impersonate directive is passed to curl_cffi.requests.Session, defaulting to 'chrome'."""
+    captured: dict[str, object] = {}
+
+    def fake_session(**kwargs: object) -> Mock:
+        captured.update(kwargs)
+        instance = mocker.MagicMock()
+        instance.__enter__ = lambda self: self
+        instance.__exit__ = lambda self, *a: None
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.reason = 'OK'
+        mock_response.url = 'https://example.com/'
+        mock_response.text = 'ok'
+        mock_response.content = b'ok'
+        mock_response.history = []
+        mock_response.headers = {'Content-Type': 'text/plain'}
+        mock_response.encoding = 'utf-8'
+        instance.request.return_value = mock_response
+        return instance
+
+    mocker.patch('curl_cffi.requests.Session', side_effect=fake_session)
+
+    # Default impersonate
+    job = JobBase.unserialize({'url': 'https://example.com/', 'http_client': 'curl_cffi'})
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+    assert captured.get('impersonate') == 'chrome'
+
+    # Explicit impersonate
+    captured.clear()
+    job = JobBase.unserialize({'url': 'https://example.com/', 'http_client': 'curl_cffi', 'impersonate': 'safari17_0'})
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+    assert captured.get('impersonate') == 'safari17_0'
+
+
+def test_httpx_http_version_passthrough(mocker: pytest_mock.MockerFixture) -> None:
+    """Verify http_version=v1 forces http2=False on httpx.Client, and v2 forces http2=True."""
+    captured: dict[str, object] = {}
+
+    def fake_client(**kwargs: object) -> Mock:
+        captured.update(kwargs)
+        instance = mocker.MagicMock()
+        instance.__enter__ = lambda self: self
+        instance.__exit__ = lambda self, *a: None
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.reason_phrase = 'OK'
+        mock_response.url = 'https://example.com/'
+        mock_response.text = 'ok'
+        mock_response.content = b'ok'
+        mock_response.history = []
+        mock_response.is_redirect = False
+        mock_response.headers = {'Content-Type': 'text/plain'}
+        mock_response.encoding = 'utf-8'
+        instance.request.return_value = mock_response
+        return instance
+
+    mocker.patch('httpx.Client', side_effect=fake_client)
+
+    job = JobBase.unserialize({'url': 'https://example.com/', 'http_version': 'v1'})
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+    assert captured.get('http1') is True
+    assert captured.get('http2') is False
+
+    if importlib.util.find_spec('h2') is not None:
+        captured.clear()
+        job = JobBase.unserialize({'url': 'https://example.com/', 'http_version': 'v2'})
+        with JobState(ssdb_storage, job) as job_state:
+            job_state.process()
+        assert captured.get('http2') is True
+
+
+def test_httpx_http_version_invalid() -> None:
+    """http_version=v3 with httpx should raise ValueError at retrieve time."""
+    job = JobBase.unserialize({'url': 'https://example.com/', 'http_version': 'v3'})
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+    assert isinstance(job_state.exception, ValueError)
+    assert 'http_version' in str(job_state.exception)
+
+
+def test_http_version_invalid_with_requests() -> None:
+    """http_version with http_client: requests should raise ValueError at retrieve time."""
+    job = JobBase.unserialize({'url': 'https://example.com/', 'http_client': 'requests', 'http_version': 'v1'})
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+    assert isinstance(job_state.exception, ValueError)
+    assert 'http_version' in str(job_state.exception)
+
+
+@pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
+def test_curl_cffi_http_version_passthrough(mocker: pytest_mock.MockerFixture) -> None:
+    """Verify http_version is forwarded to curl_cffi.requests.Session kwargs."""
+    captured: dict[str, object] = {}
+
+    def fake_session(**kwargs: object) -> Mock:
+        captured.update(kwargs)
+        instance = mocker.MagicMock()
+        instance.__enter__ = lambda self: self
+        instance.__exit__ = lambda self, *a: None
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.reason = 'OK'
+        mock_response.url = 'https://example.com/'
+        mock_response.text = 'ok'
+        mock_response.content = b'ok'
+        mock_response.history = []
+        mock_response.headers = {'Content-Type': 'text/plain'}
+        mock_response.encoding = 'utf-8'
+        instance.request.return_value = mock_response
+        return instance
+
+    mocker.patch('curl_cffi.requests.Session', side_effect=fake_session)
+
+    job = JobBase.unserialize({'url': 'https://example.com/', 'http_client': 'curl_cffi', 'http_version': 'v3'})
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+    assert captured.get('http_version') == 'v3'
+
+
+@pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
+def test_curl_cffi_fingerprints_passthrough(mocker: pytest_mock.MockerFixture) -> None:
+    """Verify the fingerprints directive forwards ja3/akamai/extra_fp to curl_cffi.requests.Session kwargs."""
+    captured: dict[str, object] = {}
+
+    def fake_session(**kwargs: object) -> Mock:
+        captured.update(kwargs)
+        instance = mocker.MagicMock()
+        instance.__enter__ = lambda self: self
+        instance.__exit__ = lambda self, *a: None
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.reason = 'OK'
+        mock_response.url = 'https://example.com/'
+        mock_response.text = 'ok'
+        mock_response.content = b'ok'
+        mock_response.history = []
+        mock_response.headers = {'Content-Type': 'text/plain'}
+        mock_response.encoding = 'utf-8'
+        instance.request.return_value = mock_response
+        return instance
+
+    mocker.patch('curl_cffi.requests.Session', side_effect=fake_session)
+
+    fingerprints = {
+        'ja3': '771,4865-4866,0',
+        'akamai': '1:65536;4:6291456|15663105|0|m,s,a,p',
+        'extra_fp': {'tls_grease': True},
+    }
+    job = JobBase.unserialize(
+        {
+            'url': 'https://example.com/',
+            'http_client': 'curl_cffi',
+            'fingerprints': fingerprints,
+        }
+    )
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+    assert captured.get('ja3') == fingerprints['ja3']
+    assert captured.get('akamai') == fingerprints['akamai']
+    assert captured.get('extra_fp') == fingerprints['extra_fp']
+
+
+@pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
+def test_curl_cffi_fingerprints_unknown_key(mocker: pytest_mock.MockerFixture) -> None:
+    """Unknown fingerprints keys should raise ValueError."""
+    mocker.patch('curl_cffi.requests.Session', side_effect=AssertionError('should not be called'))
+    job = JobBase.unserialize(
+        {
+            'url': 'https://example.com/',
+            'http_client': 'curl_cffi',
+            'fingerprints': {'bogus': 'x'},
+        }
+    )
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+    assert isinstance(job_state.exception, ValueError)
+    assert 'fingerprints' in str(job_state.exception)
 
 
 def test_check_429_ignore_4xx(mocker: pytest_mock.MockerFixture) -> None:
@@ -495,7 +719,7 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
             assert job_state.error_ignored is True
             # also check that it's using the correct HTTP client library
             if not job_data.get('use_browser'):
-                assert job_state._http_client_used == job_data.get('http_client', 'HTTPX')
+                assert job_state._http_client_used == job_data.get('http_client', 'httpx')
         job_data['ignore_connection_errors'] = None
 
 
@@ -669,6 +893,24 @@ def test_browser_job_without_kind() -> None:
     job_data = {'url': 'https://www.example.com', 'use_browser': True}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, BrowserJob)
+
+
+@pytest.mark.parametrize('value', ['chrome', 'chrome-beta', 'msedge', 'msedge-dev', 'firefox', 'webkit'])
+def test_browser_job_use_browser_string(value: str) -> None:
+    job_data = {'url': 'https://www.example.com', 'use_browser': value}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, BrowserJob)
+    assert job.use_browser == value
+
+
+def test_browser_job_use_browser_invalid_string() -> None:
+    if not playwright_is_installed:
+        pytest.skip('Playwright not installed')
+    job_data = {'url': 'https://www.example.com', 'use_browser': 'safari'}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, BrowserJob)
+    with JobState(ssdb_storage, job) as job_state, pytest.raises(ValueError, match="'use_browser' value 'safari'"):
+        job.retrieve(job_state)
 
 
 def test_shell_job_without_kind() -> None:
