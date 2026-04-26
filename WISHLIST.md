@@ -1,13 +1,8 @@
-- [ ] Remove reliance on ``hashlib.sha1``, which may not be available in FIPS builds
-- [ ] Save data type (MIME?) in database
-- [ ] Enable saving of data in bytes (e.g. images and pdf documents)
-- [ ] ``--test`` should check for validity of filter and differ entries
+- [ ] Remove sole reliance on ``hashlib.sha1``, which may not be available in FIPS builds
 - [ ] Fix linkify for links with ampersands
 - [ ] Improve testing coverage
-- [ ] Get GitHub Actions to work for Windows testing
 - [ ] Create a downloadable Windows executable
 - [ ] Smart "just works for the web" philosophy automatically applies correct filters for monitoring webpages
-- [ ] Figure out what to do with `--add JOB` and `--delete JOB`
 - [ ] Simplify main legacy Urlwatcher class
 - [ ] Resolve TODOs
   - [ ] Can/should defusedxml be used?

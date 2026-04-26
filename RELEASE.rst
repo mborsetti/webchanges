@@ -35,4 +35,5 @@ Changed
 
 Internals
 `````````
-* Improved testing and its coverage (work in progress).
+* Fixed packaging so that the ``webchanges(1)`` man page is actually generated and installed.
+* Improved testing and code coverage (work in progress).

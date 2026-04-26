@@ -77,7 +77,7 @@ Changed
 Internals
 `````````
 * Fixed packaging so that the ``webchanges(1)`` man page is actually generated and installed.
-* Improved testing and its coverage (work in progress).
+* Improved testing and code coverage (work in progress).
 
 Version 3.35.0
 -------------------
