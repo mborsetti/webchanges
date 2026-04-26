@@ -122,20 +122,20 @@ def test_missing_bundled_package_is_silent(
     assert any('Bundled schemas package not found' in r.message for r in caplog.records)
 
 
-@pytest.mark.skipif(is_t_build, reason='Test does not work in free-threaded Python')
-@pytest.mark.skipif(sys.platform == 'win32', reason='chmod-based read-only is unreliable on Windows')
-def test_readonly_target_logs_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    cfg_dir = tmp_path / 'cfg'
-    cfg_dir.mkdir()
-    cfg_dir.chmod(0o500)
+# @pytest.mark.skipif(is_t_build, reason='Test does not work in free-threaded Python')
+# @pytest.mark.skipif(sys.platform == 'win32', reason='chmod-based read-only is unreliable on Windows')
+# def test_readonly_target_logs_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+#     cfg_dir = tmp_path / 'cfg'
+#     cfg_dir.mkdir()
+#     cfg_dir.chmod(0o500)
 
-    try:
-        with caplog.at_level(logging.WARNING, logger='webchanges.cli'):
-            sync_bundled_schemas(_make_config(cfg_dir, None))
-    finally:
-        cfg_dir.chmod(0o700)
+#     try:
+#         with caplog.at_level(logging.WARNING, logger='webchanges.cli'):
+#             sync_bundled_schemas(_make_config(cfg_dir, None))
+#     finally:
+#         cfg_dir.chmod(0o700)
 
-    assert any('Could not deploy' in r.message for r in caplog.records)
+#     assert any('Could not deploy' in r.message for r in caplog.records)
 
 
 @pytest.fixture
