@@ -1,3 +1,5 @@
 # https://packaging.python.org/en/latest/guides/using-manifest-in/
 # do not include test files
 prune tests
+# needed at sdist build time by [tool.build_manpages] in pyproject.toml
+include tools/get_manpages_parser.py
