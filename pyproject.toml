@@ -119,6 +119,7 @@ dependencies = { file = 'requirements.txt' }
 [tool.setuptools.package-data]
 'webchanges' = ['py.typed']
 'webchanges._resources' = ['*.schema.json', '*.schema.sha256']
+'webchanges.tools' = ['get_manpages_parser.py']
 
 # -------------------------- manpages --------------------------
 # https://github.com/praiskup/argparse-manpage/blob/main/README.md
