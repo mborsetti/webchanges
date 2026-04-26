@@ -6,6 +6,7 @@ import hashlib
 import logging
 import os
 import sys
+import sysconfig
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Generator, cast
@@ -29,7 +30,7 @@ from webchanges.cli import (
 )
 from webchanges.config import CommandConfig
 
-is_free_threaded = not getattr(sys, '_is_gil_enabled', lambda: True)()
+is_t_build = sysconfig.get_config_var('Py_GIL_DISABLED') == 1
 
 
 def _make_config(config_dir: Path, jobs_dir: Path | None) -> CommandConfig:
@@ -121,7 +122,7 @@ def test_missing_bundled_package_is_silent(
     assert any('Bundled schemas package not found' in r.message for r in caplog.records)
 
 
-@pytest.mark.skipif(is_free_threaded, reason='Test is not thread-safe for free-threaded Python')
+@pytest.mark.skipif(is_t_build, reason='Test does not work in free-threaded Python')
 @pytest.mark.skipif(sys.platform == 'win32', reason='chmod-based read-only is unreliable on Windows')
 def test_readonly_target_logs_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     cfg_dir = tmp_path / 'cfg'
