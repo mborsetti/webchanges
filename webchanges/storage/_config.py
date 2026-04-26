@@ -188,7 +188,7 @@ class _ConfigReportWebhook(TypedDict):
     enabled: bool
     markdown: bool
     webhook_url: str
-    rich_text: bool | None
+    rich_text: bool
     max_message_length: int | None
 
 
@@ -406,7 +406,7 @@ DEFAULT_CONFIG: _Config = {
             'enabled': False,
             'webhook_url': '',
             'markdown': False,
-            'rich_text': None,
+            'rich_text': False,
             'max_message_length': None,
         },
         'xmpp': {  # uses text

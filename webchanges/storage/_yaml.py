@@ -13,7 +13,7 @@ import warnings
 from collections import defaultdict
 from datetime import datetime, timezone
 from types import NoneType
-from typing import TYPE_CHECKING, Any, Iterable, TextIO
+from typing import TYPE_CHECKING, Any, Sized, TextIO
 
 import yaml
 import yaml.scanner
@@ -28,6 +28,13 @@ try:
     from httpx import Headers
 except ImportError:  # pragma: no cover
     from webchanges._vendored.headers import Headers
+
+
+try:
+    from typeguard import TypeCheckError, check_type  # ty:ignore[unresolved-import]
+except ImportError:
+    from webchanges._vendored.typeguard import TypeCheckError, check_type
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -99,8 +106,17 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         return _sub_dict_deep_merge(source, copy.deepcopy(destination))
 
+    @staticmethod
+    def remove_deprecated_keys(config: _Config) -> _Config:
+        """Remove deprecated keys from config."""
+        if 'slack' in config.get('report', {}):
+            # Ignore legacy key
+            config['report'].pop('slack')  # ty:ignore[invalid-key]
+        return config
+
     def check_for_unrecognized_keys(self, config: _Config) -> None:
-        """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError.
+        """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError. Also cleanup
+        deprecated keys in config.
 
         :param config: The configuration.
         :raises ValueError: If the configuration has keys not in DEFAULT_CONFIG (bad keys, e.g. typos)
@@ -129,9 +145,6 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)
                 elif issubclass(obj, ReporterBase) and obj.__kind__ not in DEFAULT_CONFIG['report']:
                     config_for_extras['report'].pop(obj.__kind__, None)  # ty:ignore[call-non-callable]
-        if 'slack' in config_for_extras.get('report', {}):
-            # Ignore legacy key
-            config_for_extras['report'].pop('slack')  # ty:ignore[invalid-key]
         extras: _Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG, ignore_underline_keys=True)
         if not extras.get('report'):
             extras.pop('report', None)
@@ -176,6 +189,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             if 'utf-8' in config.get('report', {}).get('email', {}).get('smtp', {}):
                 config['report']['email']['smtp']['utf_8'] = config['report']['email']['smtp'].pop('utf-8')
 
+            config = self.remove_deprecated_keys(config)
             self.check_for_unrecognized_keys(config)
 
             # If config is missing keys in DEFAULT_CONFIG, log the missing keys and deep merge DEFAULT_CONFIG
@@ -183,14 +197,21 @@ class YamlConfigStorage(BaseYamlFileStorage):
             if missing:
                 logger.info(
                     f'The configuration file {self.filename} is missing directive(s); using default value for those. '
-                    'Run with -vv for more detalis.'
+                    'Run with -vv or -vvv for more detalis.'
                 )
                 logger.debug(
                     f'The following default values are being used:\n'
                     f'{yaml.safe_dump(missing)}'
                     f'See documentation at {__docs_url__}en/stable/configuration.html'
                 )
-                config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)  # ty:ignore[invalid-argument-type]
+                config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
+
+            # check for correct type
+            try:
+                config_no_remarks = self.remove_remark_keys(config)
+                check_type(config_no_remarks, _Config)
+            except TypeCheckError as exc:
+                raise ValueError(f'Found invalid data in configuration file {self.filename} entry:\n{exc})') from None
 
             # format headers
             for job_defaults_type in ('all', 'url', 'browser'):
@@ -223,8 +244,9 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 f'# Originally written on {datetime.now(timezone.utc).replace(microsecond=0).isoformat()}Z by version'
                 f' {__version__}.\n'
                 f'\n'
+                f'# yaml-language-server: $schema=config.schema.json\n'
             )
-            yaml.safe_dump(self.config, fp, allow_unicode=True, sort_keys=False)
+            yaml.safe_dump(self.config, fp, width=120, allow_unicode=True, sort_keys=False)
 
     @classmethod
     def write_default_config(cls, filename: Path) -> None:
@@ -268,7 +290,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     raise ValueError(
                         '\n   '.join(
                             (
-                                f'Found invalid job data (consisting of the {type(job_data).__name__} {job_data})',
+                                f'Found invalid job data in entry {i + 1} (consisting of the {type(job_data).__name__} '
+                                f'{job_data})',
                                 *job_files_for_error(),
                             )
                         )
@@ -397,7 +420,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             fp = io.StringIO('\n---\n'.join(f.read_text(encoding='utf-8-sig') for f in self.filename if f.is_file()))
             return self._parse(fp, self.filename)
 
-    def save(self, jobs: Iterable[JobBase]) -> None:
+    def save(self, jobs: Sized[JobBase]) -> None:
         """Save jobs to the job YAML file.
 
         :param jobs: An iterable of JobBase objects to be written.
@@ -405,4 +428,8 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         print(f'Saving updated list to {self.filename[0]}.')
 
         with self.filename[0].open('w') as fp:
-            yaml.safe_dump_all([job.serialize() for job in jobs], fp, allow_unicode=True, sort_keys=False)
+            for i, job in enumerate(jobs):
+                if i:
+                    fp.write('---\n')
+                fp.write('# yaml-language-server: $schema=jobs.schema.json\n')
+                yaml.safe_dump(job.serialize(), fp, width=120, allow_unicode=True, sort_keys=False)

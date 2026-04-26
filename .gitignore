@@ -33,3 +33,6 @@ CLAUDE.md
 
 # GitHub App credentials
 gha-creds-*.json
+
+# argparse-manpage generated artifact
+/man/

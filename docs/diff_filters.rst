@@ -34,16 +34,26 @@ additions_only
 --------------
 .. versionadded:: 3.0
 
-The ``additions_only: true`` directive causes the report for that source to contain only lines that are added by the
+The ``additions_only`` directive causes the report for that source to contain only lines that are added by the
 unified diff (no deletions). This is extremely useful for monitoring new content on sites where content gets added at
 the top and old content "scrolls" away.
 
 Because lines that are modified generate both a deleted and an added line by the diff, this filter always displays
 modified lines.
 
-As a safeguard, ``additions_only: true`` will display a warning when the size of the source shrinks by 75% or more,
-as this could be due to changes in where or how the information is published (requiring the job to be reconfigured to
-continue monitoring the relevant information), as well as all lines deleted.
+As a safeguard against silently missing major content removals, deletions are still shown — together with a warning
+— if the new content shrinks to at or below a configurable fraction of the original size (a large drop is often a
+sign that the source moved or restructured and the job needs reconfiguration). The directive accepts:
+
+* ``true`` — enable additions-only filtering with the default safeguard threshold of ``0.25``: deletions are shown
+  when 25% or less of the original content remains (i.e. 75% or more was removed). Equivalent to
+  ``additions_only: 0.25``.
+* a number in the range ``[0, 1]`` — the minimum fraction of the original content that must remain before the
+  safeguard fires. For example, ``0.5`` shows deletions when half or less of the content remains; ``0`` only fires
+  when the source has been completely wiped.
+* ``"disable_safeguard"`` — keep additions-only filtering active but never show deletions, even when all content has
+  been removed.
+* ``false`` — disable additions-only filtering altogether.
 
 Changes consisting exclusively of added empty lines are not reported.
 
@@ -96,7 +106,7 @@ or (text):
    --- @   Sat, 12 Jul 2020 00:00:00 +0000
    +++ @   Sat, 12 Jul 2020 01:00:00 +0000
    /**Comparison type: Additions only**
-   /**Deletions are being shown as 75% or more of the content has been deleted**
+   /**Deletions are being shown as only 25% of the original content remains**
    @@ -1,3 +0,0 @@
    -# Example Domain
    -This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.
@@ -109,6 +119,9 @@ the desired value in the differ directive.
 
 .. versionchanged:: 3.5
    Additions consisting of only empty lines are not reported.
+
+.. versionchanged:: 3.36
+   Accepts a numeric ratio and ``disable_safeguard`` in addition to ``true``.
 
 
 .. _deletions_only:

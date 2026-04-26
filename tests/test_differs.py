@@ -278,7 +278,7 @@ def test_unified_additions_only_75pct_deleted(job_state: JobState) -> None:
     job_state.job.deletions_only = False
     expected = [
         '/**Comparison type: Additions only**',
-        '/**Deletions are being shown as 75% or more of the content has been deleted**',
+        '/**Deletions are being shown as only 25% of the original content remains**',
         '@@ -1,3 +0,0 @@',
         '-a',
         '-b',
@@ -312,6 +312,83 @@ def test_unified_deletions_only_additions(job_state: JobState) -> None:
 
     finally:
         job_state.job.deletions_only = False
+
+
+def test_unified_additions_only_custom_remaining_triggers_warning(job_state: JobState) -> None:
+    """additions_only=0.5 with 50% remaining shows the deletion warning at 50%."""
+    job_state.old_data = 'a\nb\nc\nd\n'
+    job_state.new_data = 'a\nb\n'
+    job_state.job.additions_only = 0.5
+    job_state.job.deletions_only = False
+    diff = job_state.get_diff()
+    assert '/**Comparison type: Additions only**' in diff
+    assert 'only 50% of the original content remains' in diff
+
+
+def test_unified_additions_only_custom_remaining_above_threshold(job_state: JobState) -> None:
+    """additions_only=0.5 with 75% remaining does NOT show deletions."""
+    job_state.old_data = 'a\nb\nc\nd\n'
+    job_state.new_data = 'a\nb\nc\n'
+    job_state.job.additions_only = 0.5
+    job_state.job.deletions_only = False
+    job_state.verb = 'changed'
+    diff = job_state.get_diff()
+    assert 'remains' not in diff
+    assert job_state.verb == 'changed,no_report'
+
+
+def test_unified_additions_only_remaining_zero_only_warns_on_full_wipe(job_state: JobState) -> None:
+    """additions_only=0 warns only when the source is completely wiped."""
+    # Partial deletion: should NOT warn.
+    job_state.old_data = 'a\nb\nc\nd\n'
+    job_state.new_data = 'a\n'
+    job_state.job.additions_only = 0
+    job_state.job.deletions_only = False
+    job_state.verb = 'changed'
+    diff = job_state.get_diff()
+    assert 'remains' not in diff
+    assert job_state.verb == 'changed,no_report'
+
+    # Full wipe: SHOULD warn. Invalidate the memoized diff before re-running.
+    job_state.generated_diff = {}
+    job_state.unfiltered_diff = {}
+    job_state.old_data = 'a\nb\nc\nd\n'
+    job_state.new_data = ''
+    job_state.job.additions_only = 0
+    diff = job_state.get_diff()
+    assert 'only 0% of the original content remains' in diff
+
+
+def test_unified_additions_only_disable_safeguard(job_state: JobState) -> None:
+    """additions_only='disable_safeguard' suppresses the warning even on full wipe."""
+    job_state.old_data = 'a\nb\nc\nd\n'
+    job_state.new_data = ''
+    job_state.job.additions_only = 'disable_safeguard'
+    job_state.job.deletions_only = False
+    job_state.verb = 'changed'
+    diff = job_state.get_diff()
+    assert 'remains' not in diff
+    assert job_state.verb == 'changed,no_report'
+    assert diff == ''
+
+
+def test_resolve_additions_only_helper() -> None:
+    """Direct unit test of the additions_only resolver helper."""
+    from webchanges.differs import _resolve_additions_only
+
+    assert _resolve_additions_only(True) == (True, 0.25)
+    assert _resolve_additions_only(False) == (False, None)
+    assert _resolve_additions_only(None) == (False, None)
+    assert _resolve_additions_only(0) == (True, 0.0)
+    assert _resolve_additions_only(0.5) == (True, 0.5)
+    assert _resolve_additions_only(1) == (True, 1.0)
+    assert _resolve_additions_only('disable_safeguard') == (True, None)
+    with pytest.raises(ValueError, match='disable_safeguard'):
+        _resolve_additions_only('nope')
+    with pytest.raises(ValueError, match=r'\[0, 1\]'):
+        _resolve_additions_only(1.5)
+    with pytest.raises(ValueError, match=r'\[0, 1\]'):
+        _resolve_additions_only(-0.1)
 
 
 @pytest.mark.parametrize(('inpt', 'out'), DIFF_TO_HTML_TEST_DATA)

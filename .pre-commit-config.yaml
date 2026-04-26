@@ -159,10 +159,15 @@ repos:
         # additional_dependencies: [ty]
       - id: cli-help
         name: update cli_help.txt (used in documentation build)
-        entry: webchanges
-        args: ['--help', '>', 'cli_help.txt']
+        entry: cmd /c "set COLUMNS=103 & python -m webchanges.cli --help > docs\cli_help.txt"
         language: system
         pass_filenames: false
+      - id: schema-hashes
+        name: refresh webchanges/_resources/.*.schema.sha256 to match the bundled *.schema.json
+        entry: python tools/update_schema_hashes.py
+        language: system
+        files: ^webchanges/_resources/.*\.schema\.json$
+        pass_filenames: true
       # - id: argparse-manpage
       #   name: update unix manpage file
       #   entry: argparse-manpage

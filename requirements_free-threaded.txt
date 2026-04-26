@@ -8,5 +8,6 @@ markdown2
 msgpack
 platformdirs
 pyyaml
+typing-extensions
 tzdata; sys_platform == 'win32'
 zstandard; python_version < '3.14'

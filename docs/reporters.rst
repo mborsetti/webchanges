@@ -27,7 +27,7 @@ Each reporter has a directive called ``enabled`` that can be set to true or fals
    the :program:`webchanges` folder within your Documents folder (i.e. ``%USERPROFILE%\Documents\webchanges``).
 
 .. note::
-   The ``config.yaml`` file is created at the first run of ``webchanges --edit`` or ``webchanges --edit--config``.
+   The ``config.yaml`` file is created at the first run of ``webchanges --edit-jobs`` or ``webchanges --edit--config``.
 
 Tip: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:`tz`
 below to set the time zone to be uses for reporting.
@@ -148,7 +148,7 @@ paste the URL into the configuration as seen below (see
 
    report:
      tz: null  # or whatever you want it to be
-     webhook:
+     discord:
        enabled: true  # don't forget to set this to true! :)
        webhook_url: https://discordapp.com/api/webhooks/11111XXXXXXXXXXX/BBBBYYYYYYYYYYYYYYYYYYYYYYYyyyYYYYYYYYYYYYYY
        embed: true

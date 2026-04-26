@@ -73,7 +73,7 @@ Initialize
 
    .. code-block:: bash
 
-      webchanges --edit
+      webchanges --edit-jobs
 
 #. Run the following command to change the default `configuration
    <https://webchanges.readthedocs.io/en/stable/configuration.html>`__, e.g. to receive change notifications

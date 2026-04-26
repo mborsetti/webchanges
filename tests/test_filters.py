@@ -57,7 +57,9 @@ def test_normalize_filter_list(
     assert list(FilterBase.normalize_filter_list(in_spec)) == out_spec
 
 
-FILTER_TESTS = list(yaml.safe_load(Path(__file__).parent.joinpath('data/filters_testdata.yaml').read_text()).items())
+FILTERS_TESTDATA = list(
+    yaml.safe_load(Path(__file__).parent.joinpath('data/filters_testdata.yaml').read_text()).items()
+)
 job_state = JobState(SsdbDirStorage(''), JobBase.unserialize({'url': 'https://testfakejob.com/'}))
 
 
@@ -68,7 +70,7 @@ class FakeJob(JobBase):
         return ''
 
 
-@pytest.mark.parametrize(('test_name', 'test_data'), FILTER_TESTS, ids=(d[0] for d in FILTER_TESTS))
+@pytest.mark.parametrize(('test_name', 'test_data'), FILTERS_TESTDATA, ids=(d[0] for d in FILTERS_TESTDATA))
 def test_filters(test_name: str, test_data: dict[str, str]) -> None:
     """Runs the tests defined in data/filters_testdata.yaml."""
     filter_spec = test_data['filters']

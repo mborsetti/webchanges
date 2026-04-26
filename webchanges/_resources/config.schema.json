@@ -1,0 +1,933 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Webchanges Configuration File",
+  "description": "JSON Schema for the webchanges config.yaml configuration file.",
+  "type": "object",
+  "required": ["display", "report", "job_defaults", "differ_defaults", "database", "footnote"],
+  "properties": {
+    "display": {
+      "$ref": "#/$defs/_ConfigDisplay",
+      "description": "Selects which categories of jobs are included in reports (changes are always reported)."
+    },
+    "report": {
+      "$ref": "#/$defs/_ConfigReport",
+      "description": "Settings for report formats (text, html, markdown) and reporters (stdout, email, telegram, etc.)."
+    },
+    "job_defaults": {
+      "$ref": "#/$defs/_ConfigJobDefaults",
+      "description": "Default directives applied to jobs by kind (all, url, browser, command)."
+    },
+    "differ_defaults": {
+      "$ref": "#/$defs/_ConfigDifferDefaults",
+      "description": "Default directives applied to individual differs."
+    },
+    "database": {
+      "$ref": "#/$defs/_ConfigDatabase",
+      "description": "Snapshot database engine and retention settings."
+    },
+    "footnote": {
+      "type": ["string", "null"],
+      "description": "Optional text appended to the footer of every report (text, html and markdown). Set to null to disable.",
+      "default": null
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "_ConfigDisplay": {
+      "title": "Display",
+      "description": "Which job outcomes appear in reports. Changes are always reported.",
+      "type": "object",
+      "required": ["new", "error", "unchanged", "empty-diff"],
+      "properties": {
+        "new": {
+          "type": "boolean",
+          "description": "Report newly-added jobs (jobs that have never produced a snapshot before).",
+          "default": true
+        },
+        "error": {
+          "type": "boolean",
+          "description": "Report jobs that failed with an error.",
+          "default": true
+        },
+        "unchanged": {
+          "type": "boolean",
+          "description": "Report jobs that ran successfully but produced no change.",
+          "default": false
+        },
+        "empty-diff": {
+          "type": "boolean",
+          "description": "Deprecated. Whether to report a 'changed' job whose diff was reduced to an empty string by a diff_filter. Use the additions_only job directive instead.",
+          "default": false,
+          "deprecated": true
+        }
+      }
+    },
+    "_ConfigReportText": {
+      "title": "Text report format",
+      "description": "Settings for the plain-text report (used by stdout, ifttt, mailgun, ntfy, prowl, pushbullet, pushover, run_command, webhook (default), xmpp).",
+      "type": "object",
+      "required": ["line_length", "details", "footer", "minimal", "separate"],
+      "properties": {
+        "line_length": {
+          "type": "integer",
+          "description": "Maximum length of each line in characters. Ignored if 'minimal' is true.",
+          "default": 75
+        },
+        "details": {
+          "type": "boolean",
+          "description": "Include the diff of each job. Ignored if 'minimal' is true.",
+          "default": true
+        },
+        "footer": {
+          "type": "boolean",
+          "description": "Show a footer listing the number of jobs and elapsed time. Ignored if 'minimal' is true.",
+          "default": true
+        },
+        "minimal": {
+          "type": "boolean",
+          "description": "Send an abbreviated report (suppresses details, footer, and line_length).",
+          "default": false
+        },
+        "separate": {
+          "type": "boolean",
+          "description": "Send a separate report for each job instead of a single combined report.",
+          "default": false
+        }
+      }
+    },
+    "_ConfigReportHtml": {
+      "title": "HTML report format",
+      "description": "Settings for the HTML report (used by browser, email with html: true).",
+      "type": "object",
+      "required": ["diff", "footer", "separate", "title"],
+      "properties": {
+        "diff": {
+          "enum": ["unified", "table"],
+          "description": "Deprecated; specify a differ in the job instead.",
+          "default": "unified",
+          "deprecated": true
+        },
+        "footer": {
+          "type": "boolean",
+          "description": "Show a footer listing the number of jobs and elapsed time.",
+          "default": true
+        },
+        "separate": {
+          "type": "boolean",
+          "description": "Send a separate report for each job instead of a single combined report.",
+          "default": false
+        },
+        "title": {
+          "type": "string",
+          "description": "The HTML document title. Use {count} for the number of reports, {jobs} for the title of jobs reported, and {jobs_files} for a space followed by the name(s) of the jobs file(s) (in parentheses, with a leading 'jobs-' stripped) when not using the default jobs.yaml.",
+          "default": "[webchanges] {count} changes{jobs_files}: {jobs}"
+        }
+      }
+    },
+    "_ConfigReportMarkdown": {
+      "title": "Markdown report format",
+      "description": "Settings for the Markdown report (used by gotify, matrix, telegram, webhook with markdown: true).",
+      "type": "object",
+      "required": ["details", "footer", "minimal", "separate"],
+      "properties": {
+        "details": {
+          "type": "boolean",
+          "description": "Include the diff of each job. Ignored if 'minimal' is true.",
+          "default": true
+        },
+        "footer": {
+          "type": "boolean",
+          "description": "Show a footer listing the number of jobs and elapsed time. Ignored if 'minimal' is true.",
+          "default": true
+        },
+        "minimal": {
+          "type": "boolean",
+          "description": "Send an abbreviated report (suppresses details and footer).",
+          "default": false
+        },
+        "separate": {
+          "type": "boolean",
+          "description": "Send a separate report for each job instead of a single combined report.",
+          "default": false
+        }
+      }
+    },
+    "_ConfigReportStdout": {
+      "title": "stdout reporter",
+      "description": "Display a text report on standard output (the console).",
+      "type": "object",
+      "required": ["enabled", "color"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the stdout reporter.",
+          "default": true
+        },
+        "color": {
+          "anyOf": [{ "type": "boolean" }, { "enum": ["normal", "bright"] }],
+          "description": "Use color for additions (green) and deletions (red). true is equivalent to 'bright'; false disables color.",
+          "default": true
+        }
+      }
+    },
+    "_ConfigReportBrowser": {
+      "title": "Browser reporter",
+      "description": "Open the HTML report in the system's default web browser.",
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the browser reporter.",
+          "default": false
+        }
+      }
+    },
+    "_ConfigReportDiscord": {
+      "title": "Discord reporter",
+      "description": "Send the report as a message in a Discord channel via a webhook.",
+      "type": "object",
+      "required": ["enabled", "webhook_url", "embed", "subject", "colored", "max_message_length"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the Discord reporter.",
+          "default": false
+        },
+        "webhook_url": {
+          "type": "string",
+          "description": "The Discord webhook URL (created via Discord server Settings → Integrations → New Webhook).",
+          "default": ""
+        },
+        "embed": {
+          "type": "boolean",
+          "description": "If true, the report is sent as a Discord Embed object; the 'subject' becomes the message text and the report is shown as embedded text.",
+          "default": true
+        },
+        "subject": {
+          "type": "string",
+          "description": "Only used when 'embed' is true; the message that precedes the embedded report. Use {count}, {jobs}, and {jobs_files} placeholders (see html.title for details).",
+          "default": "[webchanges] {count} changes{jobs_files}: {jobs}"
+        },
+        "colored": {
+          "type": "boolean",
+          "description": "If true, embed the report as 'diff' code so Discord applies syntax highlighting (color) to additions and deletions.",
+          "default": true
+        },
+        "max_message_length": {
+          "type": ["integer", "null"],
+          "description": "Maximum length of a message in characters. Defaults to Discord's limit: 2,000, or 4,096 when 'embed' is true.",
+          "default": null
+        }
+      }
+    },
+    "_ConfigReportEmailSmtp": {
+      "title": "SMTP settings",
+      "description": "SMTP server settings used when email.method is 'smtp'.",
+      "type": "object",
+      "required": ["host", "user", "port", "starttls", "auth", "insecure_password", "utf_8"],
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "Address of the SMTP server.",
+          "default": "localhost"
+        },
+        "user": {
+          "type": "string",
+          "description": "Username used to authenticate against the SMTP server.",
+          "default": ""
+        },
+        "port": {
+          "type": "integer",
+          "description": "Port used to communicate with the SMTP server. Common values: 25 (plaintext), 465 (implicit TLS), 587 (STARTTLS).",
+          "default": 587
+        },
+        "starttls": {
+          "type": "boolean",
+          "description": "Whether the server uses STARTTLS encryption.",
+          "default": true
+        },
+        "auth": {
+          "type": "boolean",
+          "description": "Whether the SMTP server requires username/password authentication.",
+          "default": true
+        },
+        "insecure_password": {
+          "type": "string",
+          "description": "Password used to authenticate when not using a keyring. Storing the password in plaintext is insecure; only use a throwaway account dedicated to webchanges.",
+          "default": ""
+        },
+        "utf_8": {
+          "type": "boolean",
+          "description": "Use RFC 6531 Internationalized Email (SMTPUTF8 service extension).",
+          "default": true
+        },
+        "utf-8": {
+          "type": "boolean",
+          "deprecated": true,
+          "description": "DEPRECATED: Replace key with 'utf_8' (underscore)."
+        }
+      }
+    },
+    "_ConfigReportEmailSendmail": {
+      "title": "sendmail settings",
+      "description": "External sendmail program settings used when email.method is 'sendmail' (Linux only).",
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to (or name of) the external sendmail executable.",
+          "default": "sendmail"
+        }
+      }
+    },
+    "_ConfigReportEmail": {
+      "title": "Email reporter",
+      "description": "Send the report via email, using either SMTP or the external sendmail program.",
+      "type": "object",
+      "required": ["enabled", "html", "to", "from", "subject", "method", "smtp", "sendmail"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the email reporter.",
+          "default": false
+        },
+        "html": {
+          "type": "boolean",
+          "description": "If true, the email body includes the HTML report (in addition to the text part).",
+          "default": true
+        },
+        "to": {
+          "type": "string",
+          "description": "Destination email address(es). For multiple recipients, concatenate with commas.",
+          "default": ""
+        },
+        "from": {
+          "type": "string",
+          "description": "Sender's email address. Do not use a primary mailbox; create a throwaway account for webchanges.",
+          "default": ""
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line. Use {count}, {jobs}, and {jobs_files} placeholders (see html.title for details).",
+          "default": "[webchanges] {count} changes{jobs_files}: {jobs}"
+        },
+        "method": {
+          "enum": ["sendmail", "smtp"],
+          "description": "Which delivery method to use.",
+          "default": "smtp"
+        },
+        "smtp": { "$ref": "#/$defs/_ConfigReportEmailSmtp" },
+        "sendmail": { "$ref": "#/$defs/_ConfigReportEmailSendmail" }
+      }
+    },
+    "_ConfigReportGithubIssue": {
+      "title": "GitHub Issue reporter",
+      "description": "Submit the Markdown report as a new issue on a GitHub repository. Requires a personal access token with 'public_repo' (public) or 'repo' (private) scope.",
+      "type": "object",
+      "required": [
+        "enabled",
+        "token",
+        "owner",
+        "repo",
+        "title",
+        "labels",
+        "format_dt",
+        "format_content",
+        "assignees",
+        "type",
+        "milestone"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the GitHub Issue reporter.",
+          "default": false
+        },
+        "token": {
+          "type": "string",
+          "description": "GitHub personal access token.",
+          "default": ""
+        },
+        "owner": {
+          "type": "string",
+          "description": "Owner (user or organization) of the target GitHub repository.",
+          "default": ""
+        },
+        "repo": {
+          "type": "string",
+          "description": "Name of the target GitHub repository.",
+          "default": ""
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the issue. Use {dt} for the date and time.",
+          "default": ""
+        },
+        "labels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Labels to add to the issue.",
+          "default": []
+        },
+        "format_dt": {
+          "type": "string",
+          "description": "strftime format for the {dt} placeholder in 'title'.",
+          "default": ""
+        },
+        "format_content": {
+          "type": "string",
+          "description": "Template for the issue body. Use {content} for the report content.",
+          "default": ""
+        },
+        "assignees": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "GitHub usernames to assign to the issue.",
+          "default": []
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of issue to create (GitHub Enterprise feature).",
+          "default": ""
+        },
+        "milestone": {
+          "type": "string",
+          "description": "Number of the milestone to associate with the issue.",
+          "default": ""
+        }
+      }
+    },
+    "_ConfigReportGotify": {
+      "title": "Gotify reporter",
+      "description": "Send the Markdown report to a Gotify server. Requires an application token created on the Gotify server's Web-UI.",
+      "type": "object",
+      "required": ["enabled", "priority", "server_url", "title", "token"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the Gotify reporter.",
+          "default": false
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Gotify message priority.",
+          "default": 0
+        },
+        "server_url": {
+          "type": "string",
+          "description": "Base URL of the Gotify server.",
+          "default": ""
+        },
+        "title": {
+          "type": "string",
+          "description": "Message title.",
+          "default": ""
+        },
+        "token": {
+          "type": "string",
+          "description": "Gotify application token.",
+          "default": ""
+        }
+      }
+    },
+    "_ConfigReportIfttt": {
+      "title": "IFTTT reporter",
+      "description": "Send the text report as an IFTTT event via the Maker Webhooks service.",
+      "type": "object",
+      "required": ["enabled", "key", "event"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the IFTTT reporter.",
+          "default": false
+        },
+        "key": {
+          "type": "string",
+          "description": "IFTTT Maker Webhooks API key (from https://ifttt.com/maker_webhooks/settings).",
+          "default": ""
+        },
+        "event": {
+          "type": "string",
+          "description": "IFTTT event name to trigger.",
+          "default": ""
+        }
+      }
+    },
+    "_ConfigReportMailgun": {
+      "title": "Mailgun reporter",
+      "description": "Send the text report via email using the Mailgun service.",
+      "type": "object",
+      "required": ["enabled", "region", "api_key", "domain", "from_mail", "from_name", "to", "subject"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the Mailgun reporter.",
+          "default": false
+        },
+        "region": {
+          "type": "string",
+          "description": "Mailgun region code (e.g. 'us', 'eu').",
+          "default": "us"
+        },
+        "api_key": {
+          "type": "string",
+          "description": "Mailgun API key.",
+          "default": ""
+        },
+        "domain": {
+          "type": "string",
+          "description": "Mailgun domain.",
+          "default": ""
+        },
+        "from_mail": {
+          "type": "string",
+          "description": "Sender's email address.",
+          "default": ""
+        },
+        "from_name": {
+          "type": "string",
+          "description": "Sender's display name.",
+          "default": ""
+        },
+        "to": {
+          "type": "string",
+          "description": "Recipient's email address.",
+          "default": ""
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line. Use {count}, {jobs}, and {jobs_files} placeholders (see html.title for details).",
+          "default": "[webchanges] {count} changes{jobs_files}: {jobs}"
+        }
+      }
+    },
+    "_ConfigReportMatrix": {
+      "title": "Matrix reporter",
+      "description": "Send the report to a room using the Matrix protocol.",
+      "type": "object",
+      "required": ["enabled", "homeserver", "access_token", "room_id"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the Matrix reporter.",
+          "default": false
+        },
+        "homeserver": {
+          "type": "string",
+          "description": "Matrix homeserver URL (e.g. https://matrix.org).",
+          "default": ""
+        },
+        "access_token": {
+          "type": "string",
+          "description": "Bot account access token.",
+          "default": ""
+        },
+        "room_id": {
+          "type": "string",
+          "description": "Internal room ID (e.g. !roomroomroom:matrix.org).",
+          "default": ""
+        }
+      }
+    },
+    "_ConfigReportNtfyPriorities": {
+      "title": "ntfy priorities",
+      "description": "Per-event-kind ntfy message priorities. Each value is either an integer 1-5 or a name ('min', 'low', 'default', 'high', 'max').",
+      "type": "object",
+      "required": ["default", "new", "changed", "error"],
+      "properties": {
+        "default": {
+          "type": ["integer", "string"],
+          "description": "Priority used when no event-specific priority applies. Integer 1-5 or one of: min, low, default, high, max.",
+          "default": "default"
+        },
+        "new": {
+          "type": ["integer", "string"],
+          "description": "Priority for newly-added jobs. Integer 1-5 or one of: min, low, default, high, max.",
+          "default": "low"
+        },
+        "changed": {
+          "type": ["integer", "string"],
+          "description": "Priority for changed jobs. Integer 1-5 or one of: min, low, default, high, max.",
+          "default": "max"
+        },
+        "error": {
+          "type": ["integer", "string"],
+          "description": "Priority for jobs that errored. Integer 1-5 or one of: min, low, default, high, max.",
+          "default": "high"
+        }
+      }
+    },
+    "_ConfigReportNtfy": {
+      "title": "ntfy reporter",
+      "description": "Send the text report to an ntfy server (https://ntfy.sh).",
+      "type": "object",
+      "required": ["enabled", "topic_url", "authorization", "priorities"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the ntfy reporter.",
+          "default": false
+        },
+        "topic_url": {
+          "type": "string",
+          "description": "Topic URL to publish to (e.g. https://ntfy.sh/your-topic).",
+          "default": ""
+        },
+        "authorization": {
+          "type": ["string", "null"],
+          "description": "Optional value for the Authorization header (see https://docs.ntfy.sh/publish/#authentication). null disables authentication.",
+          "default": null
+        },
+        "priorities": { "$ref": "#/$defs/_ConfigReportNtfyPriorities" }
+      }
+    },
+    "_ConfigReportProwl": {
+      "title": "Prowl reporter",
+      "description": "Send the text report via Prowl (iOS push notifications).",
+      "type": "object",
+      "required": ["enabled", "api_key", "priority", "application", "subject"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the Prowl reporter.",
+          "default": false
+        },
+        "api_key": {
+          "type": "string",
+          "description": "Prowl API key (https://www.prowlapp.com/api_settings.php).",
+          "default": ""
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Prowl message priority (-2 to 2).",
+          "default": 0
+        },
+        "application": {
+          "type": "string",
+          "description": "Application name shown as the source of the event in the Prowl app.",
+          "default": ""
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject line; used as the Prowl event name. Use {count}, {jobs}, and {jobs_files} placeholders (see html.title for details).",
+          "default": "[webchanges] {count} changes{jobs_files}: {jobs}"
+        }
+      }
+    },
+    "_ConfigReportPushbullet": {
+      "title": "Pushbullet reporter",
+      "description": "Send the text report via Pushbullet. Note: the underlying 'pushbullet' Python package has not been maintained since 2022.",
+      "type": "object",
+      "required": ["enabled", "api_key"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the Pushbullet reporter.",
+          "default": false
+        },
+        "api_key": {
+          "type": "string",
+          "description": "Pushbullet Access Token (https://www.pushbullet.com/#settings).",
+          "default": ""
+        }
+      }
+    },
+    "_ConfigReportPushover": {
+      "title": "Pushover reporter",
+      "description": "Send the text report via Pushover (https://pushover.net).",
+      "type": "object",
+      "required": ["enabled", "app", "device", "sound", "user", "priority"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the Pushover reporter.",
+          "default": false
+        },
+        "app": {
+          "type": "string",
+          "description": "Pushover application API token.",
+          "default": ""
+        },
+        "device": {
+          "type": ["string", "null"],
+          "description": "Target device name (as listed in the Pushover console). Leave null/omit to send to all of your devices.",
+          "default": null
+        },
+        "sound": {
+          "type": "string",
+          "description": "Pushover notification sound name.",
+          "default": "spacealarm"
+        },
+        "user": {
+          "type": "string",
+          "description": "Pushover user key.",
+          "default": ""
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["lowest", "low", "normal", "high", "emergency"],
+          "description": "Pushover message priority. Any value other than the listed five is mapped to 'normal'.",
+          "default": "normal"
+        }
+      }
+    },
+    "_ConfigReportRunCommand": {
+      "title": "run_command reporter",
+      "description": "Run a local command receiving the text report. Substitutes {count}, {jobs}, and {text} in the command string and exposes the WEBCHANGES_REPORT_CONFIG_JSON and WEBCHANGES_CHANGED_JOBS_JSON environment variables.",
+      "type": "object",
+      "required": ["enabled", "command"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the run_command reporter.",
+          "default": false
+        },
+        "command": {
+          "type": "string",
+          "description": "The shell command to run.",
+          "default": ""
+        }
+      }
+    },
+    "_ConfigReportTelegram": {
+      "title": "Telegram reporter",
+      "description": "Send the Markdown report via Telegram using the Bot API.",
+      "type": "object",
+      "required": ["enabled", "bot_token", "chat_id", "silent"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the Telegram reporter.",
+          "default": false
+        },
+        "bot_token": {
+          "type": "string",
+          "description": "Bot authentication token from BotFather. If null/blank, the TELEGRAM_BOT_TOKEN environment variable is used instead.",
+          "default": ""
+        },
+        "chat_id": {
+          "anyOf": [
+            { "type": "string" },
+            { "type": "integer" },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [{ "type": "string" }, { "type": "integer" }]
+              }
+            }
+          ],
+          "description": "Target chat ID(s). Positive numeric IDs are private groups; negative numeric IDs are public groups; '@channelusername' targets a channel. May be a single value or a list.",
+          "default": ""
+        },
+        "silent": {
+          "type": "boolean",
+          "description": "If true, deliver the notification without sound.",
+          "default": false
+        }
+      }
+    },
+    "_ConfigReportWebhook": {
+      "title": "Webhook reporter",
+      "description": "Send the report to a webhook endpoint (e.g. Slack, Mattermost).",
+      "type": "object",
+      "required": ["enabled", "markdown", "webhook_url", "rich_text", "max_message_length"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the webhook reporter.",
+          "default": false
+        },
+        "markdown": {
+          "type": "boolean",
+          "description": "If true, send the Markdown report instead of plain text.",
+          "default": false
+        },
+        "webhook_url": {
+          "type": "string",
+          "description": "The webhook URL.",
+          "default": ""
+        },
+        "rich_text": {
+          "type": "boolean",
+          "description": "If true, send preformatted rich text (Slack-specific).",
+          "default": false
+        },
+        "max_message_length": {
+          "type": ["integer", "null"],
+          "description": "Maximum length of a message in characters. Default is 40,000.",
+          "default": null
+        }
+      }
+    },
+    "_ConfigReportXmpp": {
+      "title": "XMPP reporter",
+      "description": "Send the text report via the XMPP protocol. Use a dedicated XMPP account, never a primary one.",
+      "type": "object",
+      "required": ["enabled", "sender", "recipient", "insecure_password"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the XMPP reporter.",
+          "default": false
+        },
+        "sender": {
+          "type": "string",
+          "description": "Sender (bot) account JID.",
+          "default": ""
+        },
+        "recipient": {
+          "type": "string",
+          "description": "Recipient JID.",
+          "default": ""
+        },
+        "insecure_password": {
+          "type": ["string", "null"],
+          "description": "Sender password stored in plaintext. Insecure; only use a throwaway account. Ignored if a keyring entry is configured via 'webchanges --xmpp-login'.",
+          "default": ""
+        }
+      }
+    },
+    "_ConfigReport": {
+      "title": "Report and reporter settings",
+      "description": "Container for report-format settings (text, html, markdown) and reporter settings.",
+      "type": "object",
+      "required": [
+        "tz",
+        "text",
+        "html",
+        "markdown",
+        "stdout",
+        "browser",
+        "discord",
+        "email",
+        "github_issue",
+        "gotify",
+        "ifttt",
+        "mailgun",
+        "matrix",
+        "ntfy",
+        "prowl",
+        "pushbullet",
+        "pushover",
+        "run_command",
+        "telegram",
+        "webhook",
+        "xmpp"
+      ],
+      "properties": {
+        "tz": {
+          "type": ["string", "null"],
+          "description": "IANA time zone name (e.g. 'America/Los_Angeles', 'Etc/UTC') used in reports. null/blank uses the system time zone. Ignored by external differs called via the command differ.",
+          "default": null
+        },
+        "text": { "$ref": "#/$defs/_ConfigReportText" },
+        "html": { "$ref": "#/$defs/_ConfigReportHtml" },
+        "markdown": { "$ref": "#/$defs/_ConfigReportMarkdown" },
+        "stdout": { "$ref": "#/$defs/_ConfigReportStdout" },
+        "browser": { "$ref": "#/$defs/_ConfigReportBrowser" },
+        "discord": { "$ref": "#/$defs/_ConfigReportDiscord" },
+        "email": { "$ref": "#/$defs/_ConfigReportEmail" },
+        "github_issue": { "$ref": "#/$defs/_ConfigReportGithubIssue" },
+        "gotify": { "$ref": "#/$defs/_ConfigReportGotify" },
+        "ifttt": { "$ref": "#/$defs/_ConfigReportIfttt" },
+        "mailgun": { "$ref": "#/$defs/_ConfigReportMailgun" },
+        "matrix": { "$ref": "#/$defs/_ConfigReportMatrix" },
+        "ntfy": { "$ref": "#/$defs/_ConfigReportNtfy" },
+        "prowl": { "$ref": "#/$defs/_ConfigReportProwl" },
+        "pushbullet": { "$ref": "#/$defs/_ConfigReportPushbullet" },
+        "pushover": { "$ref": "#/$defs/_ConfigReportPushover" },
+        "run_command": { "$ref": "#/$defs/_ConfigReportRunCommand" },
+        "telegram": { "$ref": "#/$defs/_ConfigReportTelegram" },
+        "webhook": { "$ref": "#/$defs/_ConfigReportWebhook" },
+        "xmpp": { "$ref": "#/$defs/_ConfigReportXmpp" }
+      }
+    },
+    "_ConfigJobDefaults": {
+      "title": "Job defaults",
+      "description": "Default directives applied to jobs by kind. All keys are optional; any directive set under 'url', 'browser', or 'command' overrides the same directive set under 'all' (the 'headers' directive merges header-by-header).",
+      "type": "object",
+      "properties": {
+        "_note": {
+          "type": "string",
+          "description": "Free-form note (ignored by webchanges; keys starting with '_' are not interpreted)."
+        },
+        "all": {
+          "type": "object",
+          "description": "Directives applied to every job, including those defined in hooks.py."
+        },
+        "url": {
+          "type": "object",
+          "description": "Directives applied to 'url' jobs without 'use_browser'."
+        },
+        "browser": {
+          "type": "object",
+          "description": "Directives applied to 'url' jobs with 'use_browser: true'."
+        },
+        "command": {
+          "type": "object",
+          "description": "Directives applied to 'command' jobs."
+        }
+      }
+    },
+    "_ConfigDifferDefaults": {
+      "title": "Differ defaults",
+      "description": "Default directives applied to individual differs. All keys are optional.",
+      "type": "object",
+      "properties": {
+        "_note": {
+          "type": "string",
+          "description": "Free-form note (ignored by webchanges; keys starting with '_' are not interpreted)."
+        },
+        "unified": {
+          "type": "object",
+          "description": "Default directives for the 'unified' differ."
+        },
+        "ai_google": {
+          "type": "object",
+          "description": "Default directives for the 'ai_google' differ (e.g. 'model: gemini-2.0-flash')."
+        },
+        "command": {
+          "type": "object",
+          "description": "Default directives for the 'command' differ."
+        },
+        "deepdiff": {
+          "type": "object",
+          "description": "Default directives for the 'deepdiff' differ."
+        },
+        "image": {
+          "type": "object",
+          "description": "Default directives for the 'image' differ."
+        },
+        "table": {
+          "type": "object",
+          "description": "Default directives for the 'table' differ."
+        },
+        "wdiff": {
+          "type": "object",
+          "description": "Default directives for the 'wdiff' differ."
+        }
+      }
+    },
+    "_ConfigDatabase": {
+      "title": "Database",
+      "description": "Snapshot database engine and retention.",
+      "type": "object",
+      "required": ["engine", "max_snapshots"],
+      "properties": {
+        "engine": {
+          "type": "string",
+          "description": "Snapshot database engine. Use 'sqlite3' (default; indexed and msgpack-compressed), 'textfiles' (one text file per job; loses ETag and MIME type), 'minidb' (deprecated legacy backend), or a 'redis://' / 'rediss://' URI to use a Redis backend. Can be overridden with the --cache-engine command-line argument.",
+          "default": "sqlite3",
+          "pattern": "^(sqlite3|textfiles|minidb|rediss?://.+)$"
+        },
+        "max_snapshots": {
+          "type": "integer",
+          "description": "Maximum number of snapshots to retain (sqlite3 engine only). 0 means retain all snapshots indefinitely. Other engines retain either all snapshots (redis, minidb) or only the latest one (textfiles). Can be overridden with the --max-snapshots command-line argument.",
+          "default": 4
+        }
+      }
+    }
+  }
+}

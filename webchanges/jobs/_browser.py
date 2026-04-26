@@ -455,8 +455,8 @@ class BrowserJob(UrlJobBase):
                     )
                 )
                 logger.info(
-                    f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name} browser'
-                    f' {browser_version}'
+                    f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name.capitalize()} '
+                    f'browser {browser_version}'
                 )
 
             else:
@@ -480,8 +480,8 @@ class BrowserJob(UrlJobBase):
                 )
                 browser_version = context.browser.version
                 logger.info(
-                    f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name} browser '
-                    f'from user data directory {self.user_data_dir}'
+                    f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name.capitalize()} '
+                    f'browser from user data directory {self.user_data_dir}'
                 )
 
             # the below to bypass detection; from https://intoli.com/blog/not-possible-to-block-chrome-headless/
@@ -619,7 +619,7 @@ class BrowserJob(UrlJobBase):
                 page.route('**/*', handler=handle_elements)
 
             # navigate page
-            logger.info(f'Job {self.index_number}: {browser_name} {browser_version} navigating to {url}')
+            logger.info(f'Job {self.index_number}: {browser_name.capitalize()} {browser_version} navigating to {url}')
             logger.debug(f'Job {self.index_number}: User agent {user_agent}')
             logger.debug(f'Job {self.index_number}: Extra headers {headers}')
             try:

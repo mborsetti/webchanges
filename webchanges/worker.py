@@ -30,8 +30,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def run_jobs(urlwatcher: Urlwatch) -> None:
+def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
     """Process (run) jobs in parallel.
+
+    :param urlwatcher: The :py:class:`Urlwatch` orchestrator.
+    :param read_only: If True, skip every ``job_state.save()`` call so the snapshot DB is
+        unchanged. Used by ``--test-reporter`` + joblist to preview a reporter without
+        committing new snapshots.
 
     :raises IndexError: If any index(es) is/are out of range.
     """
@@ -102,7 +107,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     logger.info(f'Job {job_state.job.index_number}: Job has not changed (HTTP 304 response)')
                     if job_state.tries > 0:
                         job_state.tries = 0
-                        job_state.save()
+                        if not read_only:
+                            job_state.save()
                     if job_state.old_error_data and job_state.job.suppress_repeated_errors:
                         urlwatcher.report.unchanged_from_error(job_state)
                     else:
@@ -113,7 +119,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         f'Job {job_state.job.index_number}: Job error suppressed as cumulative number of '
                         f'failures ({job_state.tries}) does not exceed max_tries={max_tries}'
                     )
-                    job_state.save()
+                    if not read_only:
+                        job_state.save()
                 else:
                     # Reporting the error
                     logger.debug(
@@ -129,7 +136,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                         job_state.new_data = job_state.old_data
                         job_state.new_etag = job_state.old_etag
                         job_state.new_mime_type = job_state.old_mime_type
-                    job_state.save()
+                    if not read_only:
+                        job_state.save()
                     if job_state.new_error_data == job_state.old_error_data:
                         urlwatcher.report.error_same_error(job_state)
                     else:
@@ -140,7 +148,8 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
                     # Exactly matches one of the previous snapshots
                     if job_state.tries > 0:
                         job_state.tries = 0
-                        job_state.save()
+                        if not read_only:
+                            job_state.save()
                     if job_state.old_error_data and job_state.job.suppress_repeated_errors:
                         urlwatcher.report.unchanged_from_error(job_state)
                     else:
@@ -164,12 +173,14 @@ def run_jobs(urlwatcher: Urlwatch) -> None:
 
                     # It has different data, so we save it
                     job_state.tries = 0
-                    job_state.save()
+                    if not read_only:
+                        job_state.save()
                     urlwatcher.report.changed(job_state)
             else:
                 # We have never run this job before (there are no snapshots)
                 job_state.tries = 0
-                job_state.save()
+                if not read_only:
+                    job_state.save()
                 urlwatcher.report.new(job_state)
 
     jobs = list(UrlwatchCommand(urlwatcher).jobs_from_joblist())

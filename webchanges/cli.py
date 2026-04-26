@@ -104,7 +104,7 @@ def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> No
             log_level = 'NOTSET'
             # https://playwright.dev/python/docs/debug#verbose-api-logs
             os.environ['DEBUG'] = 'pw:api pytest -s'
-        if verbose >= 2:
+        elif verbose >= 2:
             log_level = 'DEBUG'
             # https://playwright.dev/python/docs/debug#verbose-api-logs
             os.environ['DEBUG'] = 'pw:api pytest -s'
@@ -277,7 +277,7 @@ def first_run(command_config: CommandConfig) -> None:
         )
         print(f'Created default jobs file at {command_config.jobs_files[0]}')
         if not command_config.edit:
-            print(f'> Edit it with {__project_name__} --edit')
+            print(f'> Edit it with {__project_name__} --edit-jobs')
 
 
 def load_hooks(hooks_file: Path, is_default: bool = False) -> None:
@@ -308,6 +308,59 @@ def load_hooks(hooks_file: Path, is_default: bool = False) -> None:
         logger.info(f'Importing into hooks module from {hooks_file}')
         import_module_from_source('hooks', hooks_file)
         logger.info('Finished importing into hooks module')
+
+
+def sync_bundled_schemas(command_config: CommandConfig) -> None:
+    """Deploy bundled JSON schemas next to the user's ``config.yaml`` and ``jobs.yaml``.
+
+    ``config.schema.json`` is written next to the ``--config`` file; ``jobs.schema.json`` next to the first
+    ``--jobs`` file. A sibling ``.*.sha256`` file records the deployed hash so subsequent runs can detect when the
+    bundled schema has changed without re-hashing on every invocation.
+    """
+    from importlib.resources import files as resource_files
+
+    try:
+        schema_root = resource_files('webchanges._resources')
+    except (ModuleNotFoundError, FileNotFoundError):
+        logger.debug('Bundled schemas package not found; skipping schema sync.')
+        return
+
+    targets = [('config.schema', command_config.config_file.parent)]
+    if command_config.jobs_files:
+        targets.append(('jobs.schema', command_config.jobs_files[0].parent))
+
+    for stem, target_dir in targets:
+        bundled_hash_resource = schema_root / f'.{stem}.sha256'
+        try:
+            bundled_hash = bundled_hash_resource.read_text(encoding='utf-8').strip()
+        except (FileNotFoundError, OSError):
+            logger.debug(f'Bundled hash .{stem}.sha256 not available; skipping.')
+            continue
+        if not bundled_hash:
+            logger.debug(f'Bundled hash .{stem}.sha256 is empty; skipping.')
+            continue
+
+        deployed_hash_file = target_dir / f'.{stem}.sha256'
+        try:
+            deployed_hash = deployed_hash_file.read_text(encoding='utf-8').strip() or None
+        except (FileNotFoundError, OSError):
+            deployed_hash = None
+        if deployed_hash == bundled_hash:
+            continue
+
+        try:
+            target_dir.mkdir(parents=True, exist_ok=True)
+            schema_dest = target_dir / f'{stem}.json'
+            tmp_schema = schema_dest.parent / (schema_dest.name + '.tmp')
+            tmp_schema.write_bytes((schema_root / f'{stem}.json').read_bytes())
+            tmp_schema.replace(schema_dest)
+            tmp_hash = deployed_hash_file.parent / (deployed_hash_file.name + '.tmp')
+            tmp_hash.write_text(f'{bundled_hash}\n', encoding='utf-8')
+            tmp_hash.replace(deployed_hash_file)
+        except OSError as e:
+            logger.info(f'Could not deploy {stem}.json to {target_dir}: {e}')
+            continue
+        logger.info(f'Updated {schema_dest} (sha256 {bundled_hash[:12]}…).')
 
 
 def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
@@ -460,6 +513,10 @@ def main() -> None:  # pragma: no cover
         default_path=data_path,
         ext='.db',
     )
+
+    # Deploy bundled JSON schemas next to the user's config.yaml / jobs.yaml so editors can autocomplete and
+    # validate.
+    sync_bundled_schemas(command_config)
 
     # Check for first run
     if command_config.config_file == default_config_file and not Path(command_config.config_file).is_file():

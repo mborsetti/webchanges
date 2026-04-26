@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=..\..\webchanges\_resources\config.schema.json
 display:
   new: true
   error: true
@@ -123,11 +124,13 @@ report:
     enabled: false
     webhook_url: ''
     markdown: false
+    rich_text: false
     max_message_length:
   xmpp:
     enabled: false
     sender: ''
     recipient: ''
+    insecure_password: ''
 job_defaults:
   _note: Default directives that are applied to jobs.
   all:

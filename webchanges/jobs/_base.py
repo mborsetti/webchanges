@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import asyncio  # noqa: TC003 (required for type check)
 import copy
 import email.utils
 import hashlib
@@ -12,12 +13,13 @@ import os
 import re
 import textwrap
 import warnings
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, get_type_hints
 from urllib.parse import urlsplit
 
 import yaml
 
 from webchanges import __user_agent__
+from webchanges.filters._base import FiltersList  # noqa: TC001 (required for type check)
 from webchanges.util import TrackSubClasses
 
 try:
@@ -36,12 +38,15 @@ if httpx is not None:
 else:
     from webchanges._vendored.headers import Headers
 
+try:
+    from typeguard import TypeCheckError, check_type  # ty:ignore[unresolved-import]
+except ImportError:
+    from webchanges._vendored.typeguard import TypeCheckError, check_type
+
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    import asyncio
     from pathlib import Path
 
-    from webchanges.filters._base import FiltersList
     from webchanges.handler import JobState
     from webchanges.storage import _Config
 
@@ -82,7 +87,7 @@ class JobBase(metaclass=TrackSubClasses):
 
     # __optional__ in derived classes
     _delay: float | None = None  # TODO: WIP experiment
-    additions_only: bool | None = None
+    additions_only: bool | float | str | None = None
     block_elements: list[str] | None = None  # BrowserJob
     compared_versions: int | None = None
     contextlines: int | None = None
@@ -238,6 +243,25 @@ class JobBase(metaclass=TrackSubClasses):
         d.pop('index_number', None)
         return d
 
+    def validate(self) -> None:
+        """Checks all instance attributes against class type hints."""
+        # Pulls the annotations defined at the class level
+        hints = get_type_hints(self.__class__)
+
+        for attr_name, expected_type in hints.items():
+            if attr_name.startswith('__'):  # 'attr_name not in dir(self)' test for hooks
+                continue
+
+            current_value = getattr(self, attr_name)
+            # check for correct types
+            try:
+                check_type(current_value, expected_type)
+            except TypeCheckError as exc:
+                raise ValueError(
+                    f"Error in directive '{attr_name}' of job {self.index_number}:\n{exc}\n\n"
+                    f'{yaml.safe_dump(self.serialize())}'
+                ) from None
+
     @classmethod
     def unserialize(cls, data: dict, filenames: list[Path] | None = None) -> 'JobBase':
         """Unserialize a dict with job data (e.g. from the YAML jobs file) into a JobBase type object.
@@ -320,6 +344,9 @@ class JobBase(metaclass=TrackSubClasses):
                     data.pop(k, None)
 
         job = job_subclass.from_dict(data, filenames)
+
+        # Make sure all the types are correct
+        job.validate()
 
         # Format headers and cookies (and turn values into strings to avoid httpx Exception):
         if isinstance(job.headers, dict):

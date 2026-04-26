@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=jobs.schema.json
 name: Invalid url; used in test_handler.py and test_command.py
 url: file://invalid_this_file_does_not_exist
 max_tries: 2

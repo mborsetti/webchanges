@@ -109,8 +109,17 @@ class CommandConfig(BaseConfig):
 
         :returns: The Python arguments parser.
         """
+        width = 79
+        if 'COLUMNS' in os.environ:
+            try:
+                width = int(os.environ['COLUMNS'])
+            except ValueError:
+                pass
         description = '\n'.join(
-            textwrap.wrap(str(doc).replace('\n\n', '--par--').replace('\n', ' ').replace('--par--(', '\n\n'), 79)
+            textwrap.wrap(
+                str(doc).replace('\n\n', '--par--').replace('\n', ' ').replace('--par--(', '\n\n'),
+                width=width,
+            )
         )
 
         parser = argparse.ArgumentParser(
@@ -133,7 +142,7 @@ class CommandConfig(BaseConfig):
             f"Run '{__project_name__} --check-new' to check if a new release is available.",
         )
         parser.add_argument(
-            '-v', '--verbose', action='count', help='show logging output; use -vv for maximum verbosity'
+            '-v', '--verbose', action='count', help='show logging output; use -vv or -vvv for more verbosity'
         )
         parser.add_argument(
             '--log-file',
@@ -145,10 +154,17 @@ class CommandConfig(BaseConfig):
         group = parser.add_argument_group('override file defaults')
         group.add_argument(
             '--jobs',
-            '--urls',
             action='append',
             type=Path,
             help='read job list (URLs/commands) from FILE or files matching a glob pattern',
+            metavar='FILE',
+            dest='jobs_files',
+        )
+        group.add_argument(
+            '--urls',  # Deprecated of --jobs
+            action='append',
+            type=Path,
+            help=argparse.SUPPRESS,
             metavar='FILE',
             dest='jobs_files',
         )
@@ -171,10 +187,17 @@ class CommandConfig(BaseConfig):
         )
         group.add_argument(
             '--database',
-            '--cache',
             default=self.ssdb_file,
             type=Path,
             help='use FILE as snapshots database; FILE can be a redis URI',
+            metavar='FILE',
+            dest='ssdb_file',
+        )
+        group.add_argument(
+            '--cache',  # deprecation of --database
+            default=self.ssdb_file,
+            type=Path,
+            help=argparse.SUPPRESS,
             metavar='FILE',
             dest='ssdb_file',
         )
@@ -192,16 +215,24 @@ class CommandConfig(BaseConfig):
             '--errors',
             nargs='?',
             const='stdout',
-            help='test run all jobs and list those with errors or no data captured; optionally send output to REPORTER',
+            help='test-run enabled jobs and list those with errors or no data captured; optionally send output to '
+            'REPORTER',
             metavar='REPORTER',
         )
         group.add_argument(
             '--test',
-            '--test-filter',
             nargs='?',
             const=True,
-            help='test a JOB (by index or URL/command) and show filtered output; if no JOB, check syntax of config and '
-            'jobs file(s)',
+            help='test a JOB (by index or URL/command) and show filtered output; if no JOB, check config and jobs '
+            'file(s) syntax for errors',
+            metavar='JOB',
+            dest='test_job',
+        )
+        group.add_argument(
+            '--test-filter',  # deprecated --test
+            nargs='?',
+            const=True,
+            help=argparse.SUPPRESS,
             metavar='JOB',
             dest='test_job',
         )
@@ -212,10 +243,17 @@ class CommandConfig(BaseConfig):
         )
         group.add_argument(
             '--test-differ',
-            '--test-diff',
+            nargs='+',
+            help='show diff(s) using existing saved snapshots of a JOB (by index or URL/command); can be combined with '
+            '--test-reporter',
+            metavar='JOB',
+            dest='test_differ',
+        )
+        group.add_argument(
+            '--test-diff',  # deprecated of --test-differ
             '--test-diff-filter',
             nargs='+',
-            help='show diff(s) using existing saved snapshots of a JOB (by index or URL/command)',
+            help=argparse.SUPPRESS,
             metavar='JOB',
             dest='test_differ',
         )
@@ -227,7 +265,7 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--max-workers',
             type=int,
-            help='maximum number of parallel threads (WORKERS)',
+            help='maximum number of parallel threads',
             metavar='WORKERS',
         )
 
@@ -259,9 +297,15 @@ class CommandConfig(BaseConfig):
 
         group = parser.add_argument_group('launch editor ($EDITOR/$VISUAL)')
         group.add_argument(
-            '--edit',
+            '--edit-jobs',
             action='store_true',
-            help='edit job (URL/command) list',
+            help='edit jobs (URL/command) list',
+            dest='edit',
+        )
+        group.add_argument(
+            '--edit',  # deprecated of --edit-jobs
+            action='store_true',
+            help=argparse.SUPPRESS,
         )
         group.add_argument(
             '--edit-config',
@@ -277,7 +321,6 @@ class CommandConfig(BaseConfig):
         group = parser.add_argument_group('database')
         group.add_argument(
             '--gc-database',
-            '--gc-cache',
             nargs='?',
             const=1,
             type=int,
@@ -286,8 +329,15 @@ class CommandConfig(BaseConfig):
             metavar='RETAIN_LIMIT',
         )
         group.add_argument(
+            '--gc-cache',  # deprecated --gc-database
+            nargs='?',
+            const=1,
+            type=int,
+            help=argparse.SUPPRESS,
+            metavar='RETAIN_LIMIT',
+        )
+        group.add_argument(
             '--clean-database',
-            '--clean-cache',
             nargs='?',
             const=1,
             type=int,
@@ -295,10 +345,23 @@ class CommandConfig(BaseConfig):
             metavar='RETAIN_LIMIT',
         )
         group.add_argument(
+            '--clean-cache',  # deprecated --clean-database,
+            nargs='?',
+            const=1,
+            type=int,
+            help=argparse.SUPPRESS,
+            metavar='RETAIN_LIMIT',
+        )
+        group.add_argument(
             '--rollback-database',
-            '--rollback-cache',
             type=str,
-            help='delete changed snapshots added since TIMESTAMP (backup the database before using!)',
+            help='delete changed snapshots added since TIMESTAMP',
+            metavar='TIMESTAMP',
+        )
+        group.add_argument(
+            '--rollback-cache',  # deprecated --rollback-database
+            type=str,
+            help=argparse.SUPPRESS,
             metavar='TIMESTAMP',
         )
         group.add_argument(
@@ -309,7 +372,7 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--prepare-jobs',
             action='store_true',
-            help='run only newly added jobs (without history)',
+            help='run newly added jobs (i.e. those without snapshots)',
         )
         group.add_argument(
             '--change-location',
@@ -357,12 +420,14 @@ class CommandConfig(BaseConfig):
         group = parser.add_argument_group('deprecated')
         group.add_argument(
             '--add',
-            help='add a job (key1=value1,key2=value2,...) [use --edit instead]',
+            # help='add a job (key1=value1,key2=value2,...) [use --edit-jobs instead]',
+            help=argparse.SUPPRESS,
             metavar='JOB',
         )
         group.add_argument(
             '--delete',
-            help='delete a job (by index or URL/command) [use --edit instead]',
+            # help='delete a job (by index or URL/command) [use --edit-jobs instead]',
+            help=argparse.SUPPRESS,
             metavar='JOB',
         )
 

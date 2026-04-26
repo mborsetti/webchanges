@@ -22,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from datetime import datetime, tzinfo
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Iterator
+from typing import TYPE_CHECKING, Iterable, Iterator, TypeGuard
 from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
@@ -369,7 +369,7 @@ class UrlwatchCommand:
             print('List of jobs:')
         for job in self.urlwatcher.jobs:
             if self.urlwatch_config.verbose:
-                job_desc = f'{job.index_number:3}: {job!r}'
+                job_desc = f'{job.index_number:3}: {job!r} guid={job.guid}'
             else:
                 pretty_name = job.pretty_name()
                 location = job.get_location()
@@ -645,11 +645,28 @@ class UrlwatchCommand:
 
         return 0
 
-    def list_error_jobs(self) -> int:
+    @staticmethod
+    def _validate_reporter_name(name: str | None, *, with_help: bool = True) -> TypeGuard[str]:
+        """Return True (narrowing ``name`` to ``str``) if it is a known reporter; otherwise print
+        an error and return False.
+
+        :param name: Reporter name to validate.
+        :param with_help: When True, include the full ``reporter_documentation()`` listing in the
+            error message (used by the ``--test-reporter`` paths). When False, print the shorter
+            ``Invalid reporter X.`` message used by ``--errors``.
+        """
         from webchanges.reporters import ReporterBase
 
-        if self.urlwatch_config.errors not in ReporterBase.__subclasses__:
-            print(f'Invalid reporter {self.urlwatch_config.errors}.')
+        if name is not None and name in ReporterBase.__subclasses__:
+            return True
+        if with_help:
+            print(f'No such reporter: {name}.\n\nSupported reporters:\n{ReporterBase.reporter_documentation()}.\n')
+        else:
+            print(f'Invalid reporter {name}.')
+        return False
+
+    def list_error_jobs(self) -> int:
+        if not self._validate_reporter_name(self.urlwatch_config.errors, with_help=False):
             return 1
 
         def error_jobs_lines(jobs: Iterable[JobBase]) -> Iterator[str]:
@@ -754,11 +771,12 @@ class UrlwatchCommand:
             jobs_files = ['in the concatenation of the jobs files'] + [
                 f'• {file},' for file in self.urlwatch_config.jobs_files
             ]
-        header = '\n   '.join(['Jobs with errors or returning no data (after unmodified filters, if any)', *jobs_files])
+        header_lines = ['Jobs with errors or returning no data (after unmodified filters, if any)', *jobs_files]
+        if self.urlwatch_config.joblist:
+            header_lines.append(f'restricted to jobs: {", ".join(str(j) for j in self.urlwatch_config.joblist)}')
+        header = '\n   '.join(header_lines)
 
-        jobs = {
-            job.with_defaults(self.urlwatcher.config_storage.config) for job in self.urlwatcher.jobs if job.is_enabled()
-        }
+        jobs = set(self.jobs_from_joblist())
         if self.urlwatch_config.errors == 'stdout':
             print(header)
             for line in error_jobs_lines(jobs):
@@ -1036,7 +1054,6 @@ class UrlwatchCommand:
         :param report: A Report class to use for testing (Optional).
         :return: 0 if successful, 1 otherwise.
         """
-        from webchanges.reporters import ReporterBase
 
         def build_job(job_name: str, url: str, old: str, new: str) -> JobState:
             """Builds a pseudo-job for the reporter to run on."""
@@ -1064,11 +1081,7 @@ class UrlwatchCommand:
             return job_state
 
         reporter_name = self.urlwatch_config.test_reporter
-        if reporter_name not in ReporterBase.__subclasses__:
-            print(
-                f'No such reporter: {reporter_name}.\n'
-                f'\nSupported reporters:\n{ReporterBase.reporter_documentation()}.\n'
-            )
+        if not self._validate_reporter_name(reporter_name):
             return 1
 
         cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]  # ty:ignore[invalid-key]
@@ -1134,6 +1147,43 @@ class UrlwatchCommand:
 
         report.finish_one(reporter_name, jobs_file=self.urlwatch_config.jobs_files)
 
+        return 0
+
+    def run_jobs_to_test_reporter(self) -> int:
+        """Run the joblist and route the resulting report to a single reporter only.
+
+        Triggered by ``--test-reporter <name>`` combined with a positional joblist. Acts as a
+        one-shot override of the configured reporters: jobs are fetched, filtered, and diffed
+        against the snapshot DB, but no new snapshots are persisted (read-only). Only the
+        named reporter receives the report.
+
+        :return: Exit code (0 on success, 1 if the reporter name is not recognised).
+        """
+        reporter_name = self.urlwatch_config.test_reporter
+        if not self._validate_reporter_name(reporter_name):
+            return 1
+
+        # Force re-fetch on UrlJobs so filters and diffs run against fresh data; deepcopy in
+        # JobBase.with_defaults preserves the attribute.
+        for job in self.urlwatcher.jobs:
+            if isinstance(job, UrlJob):
+                job.ignore_cached = True
+
+        # Force the chosen reporter on and surface every category so the preview is complete.
+        cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]  # ty:ignore[invalid-key]
+        cfg['enabled'] = True
+        self.urlwatcher.config_storage.config['display']['new'] = True
+        self.urlwatcher.config_storage.config['display']['error'] = True
+        self.urlwatcher.config_storage.config['display']['unchanged'] = True
+        if reporter_name == 'stdout':
+            self.urlwatcher.config_storage.config['report']['stdout']['color'] = False
+
+        self.urlwatcher.run_jobs(read_only=True)
+        self.urlwatcher.report.finish_one(
+            reporter_name,
+            jobs_file=self.urlwatcher.jobs_storage.filename,
+            check_enabled=False,
+        )
         return 0
 
     def check_smtp_login(self) -> None:
@@ -1279,8 +1329,11 @@ class UrlwatchCommand:
         if self.urlwatch_config.add or self.urlwatch_config.delete or self.urlwatch_config.change_location:
             self._exit(self.modify_urls())
 
-        if self.urlwatch_config.test_reporter:
+        if self.urlwatch_config.test_reporter and not self.urlwatch_config.joblist:
             self._exit(self.check_test_reporter())
+
+        if self.urlwatch_config.test_reporter:
+            self._exit(self.run_jobs_to_test_reporter())
 
         if self.urlwatch_config.smtp_login:
             self.check_smtp_login()

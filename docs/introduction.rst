@@ -32,7 +32,7 @@ It can be edited with any text editor or using the following command:
 
 .. code:: bash
 
-   webchanges --edit
+   webchanges --edit-jobs
 
 .. hint::
 

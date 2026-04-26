@@ -1,7 +1,7 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Webchanges Jobs Configuration",
-  "description": "JSON Schema for webchanges jobs.yaml configuration file",
+  "description": "JSON Schema for each job in Webchanges' jobs.yaml configuration file",
   "type": "object",
   "oneOf": [{ "required": ["url"] }, { "required": ["command"] }],
   "properties": {
@@ -144,10 +144,7 @@
       "description": "Proxy URL to use for the request."
     },
     "use_browser": {
-      "oneOf": [
-        { "type": "boolean" },
-        { "type": "string", "pattern": "^(chrome|msedge|firefox$|webkit$)" }
-      ],
+      "oneOf": [{ "type": "boolean" }, { "type": "string", "pattern": "^(chrome|msedge|firefox$|webkit$)" }],
       "description": "If true, uses a headless browser (Playwright) via the 'chrome' channel. May also be a browser name: 'firefox', 'webkit', or a value starting with 'chrome' or 'msedge' (e.g. 'chrome-beta', 'msedge-dev').",
       "default": false
     },
@@ -581,8 +578,12 @@
       "description": "Configuration for the comparison engine."
     },
     "additions_only": {
-      "type": "boolean",
-      "description": "Report only added lines."
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "const": "disable_safeguard" }
+      ],
+      "description": "Report only added lines. Set to true (default safeguard threshold of 0.25 — warn when 25% or less of the original content remains) or to a number in [0, 1] for the minimum fraction of original content that must remain before deletions are shown anyway. Set to \"disable_safeguard\" to keep filtering active but never show deletions even on a full wipe; set to false to disable additions-only filtering entirely."
     },
     "deletions_only": {
       "type": "boolean",

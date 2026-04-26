@@ -11,8 +11,8 @@ Overview
 .. code-block to column ~103 only; beyond has horizontal scroll bar
    1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123
 
-.. include:: ..\cli_help.txt
-   :code:
+.. literalinclude:: cli_help.txt
+   :language: text
 
 
 .. _job_subset:
@@ -134,6 +134,10 @@ You can run all jobs and see those that result in an error or who, after filteri
 :program:`webchanges` with the ``--error`` command line argument. This can help with detecting jobs that may no longer
 be monitoring resources as expected. No snapshots are saved from this run.
 
+To restrict the check to a subset of jobs, append a "joblist" of job index numbers (as per ``--list``) and/or
+URLs/commands to the command line; for example, ``webchanges --errors 2 5 9`` will check only jobs 2, 5 and 9.
+Without a joblist, all enabled jobs are checked.
+
 .. warning::
    Do not use this argument to test newly modified jobs since it does `conditional requests
    <https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests>`__ on websites, and those reporting
@@ -161,6 +165,9 @@ defaulted to 1 (no parallel job execution).
 
 .. versionchanged:: 3.31
    Default ``--max-workers`` to 1 to reduce spurious errors.
+
+.. versionchanged:: 3.36
+   Honor a "joblist" of positional ``JOB(S)`` arguments to restrict the check to a subset of jobs.
 
 
 
@@ -256,12 +263,24 @@ Test a reporter
 ---------------
 You can test a reporter by using the command line argument ``--test-reporter`` followed by the
 :ref:`reporter <reporters>` name; :program:`webchanges` will create a dummy report and send it through the selected
-reporter. This will help in debugging issues, especially when used in conjunction with ``-vv``::
+reporter. This will help in debugging issues, especially when used in conjunction with ``-vv`` or ``-vvv``::
 
    webchanges -vv --test-reporter telegram
 
+When ``--test-reporter`` is followed by one or more job indexes (a positional joblist) it instead overrides the
+configured reporters for that run: the listed jobs are fetched, filtered, and diffed against the snapshot database,
+and the resulting report is sent to the named reporter only — no other reporter (e.g. ``email``) fires. The snapshot
+database is **not** written to (read-only), so this is safe to use to preview what a reporter would emit::
+
+   webchanges --test-reporter stdout 1      # run job 1 and route its report to stdout only
+   webchanges --test-reporter telegram 1 3  # run jobs 1 and 3 and route to telegram only
+
 .. versionchanged:: 3.9
    Can be used in combination with ``--test-differ`` to redirect the output of the diff to a reporter.
+
+.. versionchanged:: NEXT
+   When combined with a positional joblist, ``--test-reporter`` runs those jobs (read-only; no snapshots saved)
+   and routes the report to the named reporter only, overriding the reporters enabled in the configuration.
 
 
 .. _footnote:
@@ -418,10 +437,10 @@ Maximum number of snapshots to save
 
 Log -v/--verbose output to file
 -------------------------------
-Use ``--log-file`` to send the log output from ``-v`` or ``-vv`` to a file:
+Use ``--log-file`` to send the log output from ``-v``, ``-vv``, or ``-vvv`` to a file:
 
 .. code-block:: bash
 
-    webchanges -vv -log-file webchanges.log
+    webchanges -vv --log-file webchanges.log
 
 .. versionadded:: 3.27

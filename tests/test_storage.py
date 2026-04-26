@@ -8,6 +8,7 @@ $ export REDIS_URI=redis://default:password@redis-1234.c123.us-west1-1.gce.redns
 
 from __future__ import annotations
 
+import atexit
 import copy
 import importlib.util
 import os
@@ -20,11 +21,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+import yaml
 
+from tests.conftest import prepare_storage_test
 from webchanges import __docs_url__
-from webchanges.config import CommandConfig
 from webchanges.handler import Snapshot
-from webchanges.main import Urlwatch
 from webchanges.storage import (
     BaseTextualFileStorage,
     SsdbDirStorage,
@@ -39,17 +40,19 @@ from webchanges.util import import_module_from_source
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
 minidb_required = pytest.mark.skipif(not minidb_is_installed, reason="requires 'minidb' package to be installed")
 
-tmp_path = Path(tempfile.mkdtemp())
+# A real on-disk dir is needed at import time because ``DATABASE_ENGINES`` (used by ``@pytest.mark.parametrize``)
+# constructs ``SsdbDirStorage`` against a path. ``atexit`` cleans it up at session end so it doesn't leak.
+_storage_tmp = Path(tempfile.mkdtemp(prefix='wc-storage-tests-'))
+atexit.register(shutil.rmtree, str(_storage_tmp), True)
+tmp_path = _storage_tmp  # back-compat alias for ``test_migrate_urlwatch_legacy_db`` below
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
 config_file = data_path.joinpath('config.yaml')
-hooks_file = Path()
-config_storage = YamlConfigStorage(config_file)
 
 
 DATABASE_ENGINES: tuple[SsdbStorage, ...] = (
-    SsdbDirStorage(tmp_path),
+    SsdbDirStorage(_storage_tmp),
     SsdbSQLite3Storage(':memory:'),  # ty:ignore[invalid-argument-type]
 )
 
@@ -59,8 +62,7 @@ if os.getenv('REDIS_URI') and importlib.util.find_spec('redis') is not None:
 if importlib.util.find_spec('minidb') is not None:
     from webchanges.storage_minidb import SsdbMiniDBStorage
 
-    ssdb_file = ':memory:'
-    DATABASE_ENGINES += (SsdbMiniDBStorage(ssdb_file),)
+    DATABASE_ENGINES += (SsdbMiniDBStorage(':memory:'),)
 else:
     SsdbMiniDBStorage = type(None)
 
@@ -73,35 +75,6 @@ def test_all_database_engines() -> None:
         )
     if importlib.util.find_spec('minidb') is None:
         pytest.mark.skip("Cannot test the SsdbMiniDBStorage class. The 'minidb' package is not installed")
-
-
-def prepare_storage_test(
-    ssdb_storage: SsdbStorage,
-    config_args: dict | None = None,
-    jobs_file: Path | None = None,
-) -> tuple[Urlwatch, SsdbStorage, CommandConfig]:
-    """Set up storage."""
-    ssdb_file = ssdb_storage.filename
-
-    if hasattr(ssdb_storage, 'flushdb'):
-        ssdb_storage.flushdb()
-
-    if jobs_file is None:
-        jobs_file = data_path.joinpath('jobs-time.yaml')
-
-    command_config = CommandConfig([], here, config_file, jobs_file, hooks_file, ssdb_file)
-    if config_args:
-        for k, v in config_args.items():
-            setattr(command_config, k, v)
-
-    jobs_storage = YamlJobsStorage([jobs_file])
-    urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)
-
-    if sys.platform == 'win32':
-        urlwatcher.jobs[0].command = 'echo %time% %random%'
-        urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
-
-    return urlwatcher, ssdb_storage, command_config
 
 
 def test_check_for_unrecognized_keys() -> None:
@@ -175,6 +148,86 @@ def test_legacy_slack_keys() -> None:
     config = config_storage.parse(config_file)
     config['report']['slack'] = {'enabled': False}
     config_storage.check_for_unrecognized_keys(config)
+
+
+def _write_config(tmp_path: Path, overrides: dict) -> Path:
+    """Deep-merge overrides onto the test config.yaml baseline and write to tmp_path/config.yaml."""
+    base = YamlConfigStorage(config_file).parse(config_file)
+    merged = YamlConfigStorage.dict_deep_merge(overrides, copy.deepcopy(base))  # ty:ignore[invalid-argument-type]
+    out = tmp_path / 'config.yaml'
+    out.write_text(yaml.safe_dump(merged), encoding='utf-8')
+    return out
+
+
+_TYPE_ERROR_MATCH = r'^Found invalid data in configuration file .* entry:\n'
+
+
+def test_load_valid_config_passes_type_check(tmp_path: Path) -> None:
+    """A valid config.yaml loads without raising."""
+    cfg = _write_config(tmp_path, {})
+    YamlConfigStorage(cfg).load()
+
+
+def test_load_invalid_bool_raises_value_error(tmp_path: Path) -> None:
+    """A non-bool where bool is expected raises ValueError."""
+    cfg = _write_config(tmp_path, {'display': {'new': 'yes'}})
+    with pytest.raises(ValueError, match=_TYPE_ERROR_MATCH):
+        YamlConfigStorage(cfg).load()
+
+
+def test_load_invalid_literal_raises_value_error(tmp_path: Path) -> None:
+    """A value outside an allowed Literal raises ValueError."""
+    cfg = _write_config(tmp_path, {'database': {'engine': 'postgres'}})
+    with pytest.raises(ValueError, match=_TYPE_ERROR_MATCH):
+        YamlConfigStorage(cfg).load()
+
+
+def test_load_invalid_int_raises_value_error(tmp_path: Path) -> None:
+    """A non-int where int is expected raises ValueError."""
+    cfg = _write_config(tmp_path, {'report': {'text': {'line_length': 'wide'}}})
+    with pytest.raises(ValueError, match=_TYPE_ERROR_MATCH):
+        YamlConfigStorage(cfg).load()
+
+
+def test_load_invalid_nested_dict_raises_value_error(tmp_path: Path) -> None:
+    """A scalar where a nested TypedDict is expected raises ValueError."""
+    base = YamlConfigStorage(config_file).parse(config_file)
+    merged = copy.deepcopy(base)
+    merged['report']['email']['smtp'] = 'localhost'
+    out = tmp_path / 'config.yaml'
+    out.write_text(yaml.safe_dump(merged), encoding='utf-8')
+    with pytest.raises(ValueError, match=_TYPE_ERROR_MATCH):
+        YamlConfigStorage(out).load()
+
+
+def test_remove_remark_keys_strips_underscore_keys() -> None:
+    """remove_remark_keys recursively drops keys starting with '_'."""
+    storage = YamlConfigStorage(config_file)
+    nested = {
+        '_note': 'top level remark',
+        'kept': 1,
+        'inner': {
+            '_note': 'inner remark',
+            'also_kept': [1, 2, 3],
+            'deeper': {'_skip': True, 'real': 'value'},
+        },
+    }
+    cleaned = storage.remove_remark_keys(nested)
+    assert cleaned == {'kept': 1, 'inner': {'also_kept': [1, 2, 3], 'deeper': {'real': 'value'}}}
+
+
+def test_load_remark_keys_do_not_break_type_check(tmp_path: Path) -> None:
+    """User-added '_'-prefixed remark keys must not trigger a type-check failure."""
+    cfg = _write_config(tmp_path, {'job_defaults': {'all': {'_note': 'a remark'}}})
+    YamlConfigStorage(cfg).load()
+
+
+def test_remove_deprecated_keys_strips_slack() -> None:
+    """remove_deprecated_keys drops the legacy 'slack' reporter key."""
+    config = YamlConfigStorage(config_file).parse(config_file)
+    config['report']['slack'] = {'enabled': False}
+    cleaned = YamlConfigStorage.remove_deprecated_keys(config)
+    assert 'slack' not in cleaned['report']
 
 
 # @py37_required

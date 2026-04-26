@@ -1,6 +1,6 @@
 """
 Vendored version of packaging.version.parse() from packaging v24.2 released on 08-Nov-24
-(commit https://github.com/pypa/packaging/commit/d8e3b31b734926ebbcaff654279f6855a73e052f).
+(code https://github.com/pypa/packaging/blob/d8e3b31b734926ebbcaff654279f6855a73e052f/src/packaging/version.py).
 
 Allows us to load this class in case packaging is not installed.
 

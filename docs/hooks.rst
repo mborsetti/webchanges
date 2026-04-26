@@ -356,7 +356,7 @@ Example ``hooks.py`` file:
                page.wait_for_timeout(20)
                page.keyboard.press("Enter")
                logger.info(
-                   "Job {self.index_number}: Entered credentials; waiting for API response"
+                   f"Job {self.index_number}: Entered credentials; waiting for API response"
                )
 
                logger.info(

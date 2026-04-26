@@ -1,7 +1,7 @@
 """
 Vendored version of httpx.Headers class from httpx v0.28.1 released on 06-Dec-24
 https://github.com/encode/httpx/releases/tag/0.28.1.
-(commit https://github.com/encode/httpx/commit/26d48e0634e6ee9cdc0533996db289ce4b430177).
+(code https://github.com/encode/httpx/blob/26d48e0634e6ee9cdc0533996db289ce4b430177/httpx/_models.py).
 
 Allows us to load this class in case httpx is not installed.
 """

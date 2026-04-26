@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=jobs.schema.json
 name: Returns the time (changing output); used in test_storage.py and test_command.py
 note: For Windows, change command to 'echo %time%'
 command: "perl -MTime::HiRes -e 'printf \"%f\n\",Time::HiRes::time()'"

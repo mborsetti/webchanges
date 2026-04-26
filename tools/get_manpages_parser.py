@@ -1,3 +1,5 @@
+# pragma: exclude file
+
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -7,8 +9,9 @@ sys.path.insert(0, str(Path.cwd()))
 from webchanges.config import CommandConfig
 
 
-def get_parser() -> ArgumentParser:
-    """Returns the parser to be used by argparse-manpages
+def get_manpages_parser() -> ArgumentParser:
+    """Returns the parser to be used by argparse-manpage.
+
     https://github.com/praiskup/argparse-manpage/blob/main/README.md
     """
 

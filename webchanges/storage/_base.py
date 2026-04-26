@@ -8,7 +8,7 @@ import logging
 import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping, TypeVar
 
 import yaml
 
@@ -16,6 +16,9 @@ from webchanges import __docs_url__
 from webchanges.filters import FilterBase
 from webchanges.jobs import JobBase, ShellJob
 from webchanges.util import edit_file, file_ownership_checks
+
+# TypeVar that is compatible with TypedDict structures
+T = TypeVar('T', bound=Mapping[str, object])
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +131,18 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         file_edit.unlink(missing_ok=True)
         print('Saved edits in', filename)
         return 0
+
+    def remove_remark_keys(self, _dict: T) -> T:
+        """Recursively removes all keys starting with '_' from a dict.
+
+        :param _dict: The dict.
+        :return: The dict with all keys starting with '_' removed.
+        """
+        return {
+            k: self.remove_remark_keys(v) if isinstance(v, dict) else v  # ty:ignore[invalid-argument-type]
+            for k, v in _dict.items()
+            if not k.startswith('_')
+        }  # ty:ignore[invalid-return-type]
 
 
 class JobsBaseFileStorage(BaseTextualFileStorage, ABC):

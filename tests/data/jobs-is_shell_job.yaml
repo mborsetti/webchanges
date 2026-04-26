@@ -1,15 +1,20 @@
+# yaml-language-server: $schema=jobs.schema.json
 name: This job is a shelljob (command)
 command: job1
 ---
+# yaml-language-server: $schema=jobs.schema.json
 name: This job is a shelljob (shellpipe)
 url: job2
 filters:
   - shellpipe: anything
 ---
+# yaml-language-server: $schema=jobs.schema.json
 name: This job is a shelljob (differ command)
 url: job3
 differ:
+  name: command
   command: anything
 ---
+# yaml-language-server: $schema=jobs.schema.json
 name: This job is *not* a shelljob
 url: job4

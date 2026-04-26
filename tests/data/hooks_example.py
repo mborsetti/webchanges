@@ -86,7 +86,7 @@ class CustomTextFileReporter(TextReporter):
     __kind__ = 'custom_file'
 
     def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
-        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # ty:ignore[invalid-key]
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # type: ignore
 
 
 class CustomHtmlFileReporter(HtmlReporter):

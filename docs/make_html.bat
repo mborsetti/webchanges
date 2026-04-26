@@ -7,7 +7,7 @@ pushd %~dp0
 
 echo. updating cli_help.txt
 pushd ..
-python -m webchanges.cli --help > cli_help.txt
+cmd /c "set COLUMNS=103 & python -m webchanges.cli --help > docs\cli_help.txt"
 popd
 
 if "%SPHINXBUILD%" == "" (

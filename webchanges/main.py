@@ -101,9 +101,14 @@ class Urlwatch:
         self._latest_release = get_new_version_number(timeout)
         return self._latest_release
 
-    def run_jobs(self) -> None:
-        """Run all jobs."""
-        run_jobs(self)
+    def run_jobs(self, read_only: bool = False) -> None:
+        """Run all jobs.
+
+        :param read_only: If True, do not persist new snapshots to the database. Used by
+            ``--test-reporter`` when combined with a joblist so that previewing a reporter
+            does not pollute the snapshot history.
+        """
+        run_jobs(self, read_only=read_only)
 
     def close(self) -> None:
         """Finalizer. Create reports ands close snapshots database."""

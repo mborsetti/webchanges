@@ -17,7 +17,7 @@ from httpx import HTTPStatusError
 from requests import HTTPError
 
 from webchanges.config import CommandConfig
-from webchanges.handler import JobState
+from webchanges.handler import JobState, Snapshot
 from webchanges.jobs import (
     BrowserJob,
     BrowserResponseError,
@@ -45,8 +45,6 @@ curl_cffi_is_installed = importlib.util.find_spec('curl_cffi') is not None
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
-ssdb_file = ':memory:'
-ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
 
 
 def is_connected() -> bool:
@@ -183,24 +181,18 @@ def job_type_str(v: dict[str, Any]) -> str:
 
 
 def new_command_config(config_file: Path, jobs_file: Path, hooks_file: Path) -> CommandConfig:
-    """Create a new command config.
-
-    :param config_file: The location of the config file.
-    :param jobs_file: The location of the jobs file.
-    :param hooks_file: The location of the hooks file.
-    :return: The CommandConfig.
-    """
+    """Create a new command config (in-memory ssdb)."""
     return CommandConfig(
         args=[],
         config_path=here,
         config_file=config_file,
         jobs_def_file=jobs_file,
         hooks_def_file=hooks_file,
-        ssdb_file=ssdb_file,  # ty:ignore[invalid-argument-type]
+        ssdb_file=':memory:',  # ty:ignore[invalid-argument-type]
     )
 
 
-def test_check_429_transient_error(mocker: pytest_mock.MockerFixture) -> None:
+def test_check_429_transient_error(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
     """Check for 429 Too Many Requests response, which should raise a TransientError."""
     job = JobBase.unserialize({'url': 'https://www.google.com/'})
 
@@ -234,7 +226,9 @@ def test_check_429_transient_error(mocker: pytest_mock.MockerFixture) -> None:
     assert job_state.new_data == job_state.old_data
 
 
-def test_check_429_transient_error_requests(mocker: pytest_mock.MockerFixture) -> None:
+def test_check_429_transient_error_requests(
+    ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
+) -> None:
     """Check for 429 Too Many Requests response, which should raise a TransientError."""
     job = JobBase.unserialize({'url': 'https://www.google.com/', 'http_client': 'requests'})
 
@@ -270,7 +264,9 @@ def test_check_429_transient_error_requests(mocker: pytest_mock.MockerFixture) -
 
 
 @pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
-def test_check_429_transient_error_curl_cffi(mocker: pytest_mock.MockerFixture) -> None:
+def test_check_429_transient_error_curl_cffi(
+    ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
+) -> None:
     """Check for 429 Too Many Requests response with curl_cffi backend, which should raise a TransientError."""
     job = JobBase.unserialize({'url': 'https://www.google.com/', 'http_client': 'curl_cffi'})
 
@@ -306,7 +302,7 @@ def test_check_429_transient_error_curl_cffi(mocker: pytest_mock.MockerFixture) 
 
 
 @pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
-def test_curl_cffi_impersonate_passthrough(mocker: pytest_mock.MockerFixture) -> None:
+def test_curl_cffi_impersonate_passthrough(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
     """Verify the impersonate directive is passed to curl_cffi.requests.Session, defaulting to 'chrome'."""
     captured: dict[str, object] = {}
 
@@ -343,7 +339,7 @@ def test_curl_cffi_impersonate_passthrough(mocker: pytest_mock.MockerFixture) ->
     assert captured.get('impersonate') == 'safari17_0'
 
 
-def test_httpx_http_version_passthrough(mocker: pytest_mock.MockerFixture) -> None:
+def test_httpx_http_version_passthrough(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
     """Verify http_version=v1 forces http2=False on httpx.Client, and v2 forces http2=True."""
     captured: dict[str, object] = {}
 
@@ -381,7 +377,7 @@ def test_httpx_http_version_passthrough(mocker: pytest_mock.MockerFixture) -> No
         assert captured.get('http2') is True
 
 
-def test_httpx_http_version_invalid() -> None:
+def test_httpx_http_version_invalid(ssdb_storage: SsdbSQLite3Storage) -> None:
     """http_version=v3 with httpx should raise ValueError at retrieve time."""
     job = JobBase.unserialize({'url': 'https://example.com/', 'http_version': 'v3'})
     with JobState(ssdb_storage, job) as job_state:
@@ -390,7 +386,7 @@ def test_httpx_http_version_invalid() -> None:
     assert 'http_version' in str(job_state.exception)
 
 
-def test_http_version_invalid_with_requests() -> None:
+def test_http_version_invalid_with_requests(ssdb_storage: SsdbSQLite3Storage) -> None:
     """http_version with http_client: requests should raise ValueError at retrieve time."""
     job = JobBase.unserialize({'url': 'https://example.com/', 'http_client': 'requests', 'http_version': 'v1'})
     with JobState(ssdb_storage, job) as job_state:
@@ -400,7 +396,9 @@ def test_http_version_invalid_with_requests() -> None:
 
 
 @pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
-def test_curl_cffi_http_version_passthrough(mocker: pytest_mock.MockerFixture) -> None:
+def test_curl_cffi_http_version_passthrough(
+    ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
+) -> None:
     """Verify http_version is forwarded to curl_cffi.requests.Session kwargs."""
     captured: dict[str, object] = {}
 
@@ -430,7 +428,9 @@ def test_curl_cffi_http_version_passthrough(mocker: pytest_mock.MockerFixture) -
 
 
 @pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
-def test_curl_cffi_fingerprints_passthrough(mocker: pytest_mock.MockerFixture) -> None:
+def test_curl_cffi_fingerprints_passthrough(
+    ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
+) -> None:
     """Verify the fingerprints directive forwards ja3/akamai/extra_fp to curl_cffi.requests.Session kwargs."""
     captured: dict[str, object] = {}
 
@@ -473,7 +473,9 @@ def test_curl_cffi_fingerprints_passthrough(mocker: pytest_mock.MockerFixture) -
 
 
 @pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
-def test_curl_cffi_fingerprints_unknown_key(mocker: pytest_mock.MockerFixture) -> None:
+def test_curl_cffi_fingerprints_unknown_key(
+    ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
+) -> None:
     """Unknown fingerprints keys should raise ValueError."""
     mocker.patch('curl_cffi.requests.Session', side_effect=AssertionError('should not be called'))
     job = JobBase.unserialize(
@@ -489,7 +491,7 @@ def test_curl_cffi_fingerprints_unknown_key(mocker: pytest_mock.MockerFixture) -
     assert 'fingerprints' in str(job_state.exception)
 
 
-def test_check_429_ignore_4xx(mocker: pytest_mock.MockerFixture) -> None:
+def test_check_429_ignore_4xx(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
     """Check for 429 Too Many Requests response, which should raise a TransientError."""
     job = JobBase.unserialize({'url': 'https://www.google.com/', 'ignore_http_error_codes': '4xx, 5xx'})
 
@@ -606,6 +608,7 @@ def test__dict_deep__merge() -> None:
 def test_run_job(
     input_job: dict[str, str | dict[str, str] | bool | int],
     output: str | bytes,
+    ssdb_storage: SsdbSQLite3Storage,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     job = JobBase.unserialize(input_job)
@@ -621,7 +624,7 @@ def test_run_job(
 
 @connection_required
 @pytest.mark.xfail(raises=(ftplib.error_temp, socket.timeout, socket.gaierror))
-def test_run_ftp_job() -> None:
+def test_run_ftp_job(ssdb_storage: SsdbSQLite3Storage) -> None:
     job = JobBase.unserialize({'url': 'ftp://tgftp.nws.noaa.gov/logmsg.txt', 'timeout': 2})
     with JobState(ssdb_storage, job) as job_state:
         data, _, _ = job.retrieve(job_state)
@@ -649,7 +652,7 @@ def test_run_ftp_job() -> None:
     ALL_JOB_TYPES,
     ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
-def test_check_etag(job_data: dict[str, Any]) -> None:
+def test_check_etag(job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Storage) -> None:
     job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
@@ -666,7 +669,9 @@ def test_check_etag(job_data: dict[str, Any]) -> None:
     ALL_JOB_TYPES,
     ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
-def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dict) -> None:
+def test_check_etag_304_request(
+    job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Storage, doctest_namespace: dict
+) -> None:
     """Check for 304 Not Modified response."""
     if job_data.get('use_browser'):
         pytest.skip('Capturing of 304 cannot be implemented in Chrome')  # last tested with Chromium 89
@@ -697,7 +702,7 @@ def test_check_etag_304_request(job_data: dict[str, Any], doctest_namespace: dic
     ALL_JOB_TYPES,
     ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
-def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
+def test_check_ignore_connection_errors(job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Storage) -> None:
     job_data['url'] = 'http://localhost:9999'
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
@@ -729,7 +734,7 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any]) -> None:
     ALL_JOB_TYPES,
     ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
-def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
+def test_check_bad_proxy(job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Storage) -> None:
     job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
     job_data['http_proxy'] = 'http://notworking:ever@localhost:8080'
     job = JobBase.unserialize(job_data)
@@ -752,7 +757,9 @@ def test_check_bad_proxy(job_data: dict[str, Any]) -> None:
     ALL_JOB_TYPES,
     ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
-def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any]) -> None:
+def test_check_ignore_http_error_codes_and_error_message(
+    job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Storage
+) -> None:
     # if job_data.get('use_browser'):
     #     pytest.skip('Cannot debug due to a Playwright or Windows bug')
 
@@ -795,7 +802,7 @@ def test_check_ignore_http_error_codes_and_error_message(job_data: dict[str, Any
 @py_latest_only
 @connection_required
 @playwright_required
-def test_stress_use_browser() -> None:
+def test_stress_use_browser(ssdb_storage: SsdbSQLite3Storage) -> None:
     jobs_file = data_path.joinpath('jobs-use_browser.yaml')
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path()
@@ -813,7 +820,7 @@ def test_stress_use_browser() -> None:
     urlwatcher.run_jobs()
 
 
-def test_shell_exception_and_with_defaults() -> None:
+def test_shell_exception_and_with_defaults(ssdb_storage: SsdbSQLite3Storage) -> None:
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
     with JobState(ssdb_storage, job) as job_state:
@@ -856,6 +863,48 @@ def test_invalid_directive() -> None:
         '\n'
         '   Please check for typos or refer to the documentation.'
     )
+
+
+def test_validate_wrong_type_bool() -> None:
+    job_data = {'url': 'https://www.example.com', 'enabled': 'yes'}
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        JobBase.unserialize(job_data)
+    assert str(pytest_wrapped_e.value).startswith("Error in directive 'enabled' of job")
+
+
+def test_validate_wrong_type_numeric() -> None:
+    job_data = {'url': 'https://www.example.com', 'timeout': 'soon'}
+    with pytest.raises(ValueError, match="Error in directive 'timeout'"):
+        JobBase.unserialize(job_data)
+
+
+def test_validate_wrong_type_list() -> None:
+    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'block_elements': 'div'}
+    with pytest.raises(ValueError, match="Error in directive 'block_elements'"):
+        JobBase.unserialize(job_data)
+
+
+def test_validate_wrong_literal() -> None:
+    job_data = {'url': 'https://www.example.com', 'method': 'BREW'}
+    with pytest.raises(ValueError, match="Error in directive 'method'"):
+        JobBase.unserialize(job_data)
+
+
+def test_validate_accepts_valid_types() -> None:
+    job_data = {'url': 'https://www.example.com', 'enabled': True, 'timeout': 30.0, 'method': 'POST'}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, UrlJob)
+    assert job.enabled is True
+    assert job.timeout == 30.0
+    assert job.method == 'POST'
+
+
+def test_validate_accepts_none_for_nullable() -> None:
+    job_data = {'url': 'https://www.example.com', 'enabled': None, 'timeout': None}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, UrlJob)
+    assert job.enabled is None
+    assert job.timeout is None
 
 
 def test_navigate_directive() -> None:
@@ -903,7 +952,7 @@ def test_browser_job_use_browser_string(value: str) -> None:
     assert job.use_browser == value
 
 
-def test_browser_job_use_browser_invalid_string() -> None:
+def test_browser_job_use_browser_invalid_string(ssdb_storage: SsdbSQLite3Storage) -> None:
     if not playwright_is_installed:
         pytest.skip('Playwright not installed')
     job_data = {'url': 'https://www.example.com', 'use_browser': 'safari'}
@@ -952,17 +1001,15 @@ def test_ignore_error() -> None:
     assert job.ignore_error(Exception()) is False
 
 
-@playwright_required
 def test_browser_switches_not_str_or_list() -> None:
+    """A non-list/None ``switches`` value is rejected by ``JobBase.unserialize`` (3.36.0+ type check)."""
     job_data = {
         'url': 'https://www.example.com',
         'use_browser': True,
         'switches': {'dict key': ''},
     }
-    job = JobBase.unserialize(job_data)
-    with JobState(ssdb_storage, job) as job_state:
-        job_state.process()
-        assert isinstance(job_state.exception, TypeError)
+    with pytest.raises(ValueError, match="Error in directive 'switches'"):
+        JobBase.unserialize(job_data)
 
 
 # @playwright_required
@@ -991,7 +1038,7 @@ def test_browser_switches_not_str_or_list() -> None:
 #         assert isinstance(job_state.exception, ValueError)
 
 
-def test_shell_error() -> None:
+def test_shell_error(ssdb_storage: SsdbSQLite3Storage) -> None:
     job_data = {'command': 'this_command_does_not_exist'}
     job = JobBase.unserialize(job_data)
     with JobState(ssdb_storage, job) as job_state:
@@ -999,7 +1046,7 @@ def test_shell_error() -> None:
         assert isinstance(job_state.exception, subprocess.CalledProcessError)
 
 
-def test_compared_versions() -> None:
+def test_compared_versions(ssdb_storage: SsdbSQLite3Storage) -> None:
     config_file = data_path.joinpath('config.yaml')
     hooks_file = Path()
     jobs_file = data_path.joinpath('jobs-time.yaml')
@@ -1047,6 +1094,112 @@ def test_differ_name_not_str_dict_raises_valueerror() -> None:
         'differ:',
         '- 2',
     ]
+
+
+@pytest.fixture
+def time_jobs_urlwatcher(
+    workspace: Path,
+    loaded_config_storage: YamlConfigStorage,
+) -> Urlwatch:
+    """``Urlwatch`` built from ``jobs-time.yaml`` with the job command set to ``echo TEST``.
+
+    Used by the job-state ``verb`` tests below; gives every test a fresh in-memory ssdb that
+    supports the ``_copy_temp_to_permanent`` lifecycle.
+    """
+    jobs_path = workspace / 'jobs-time.yaml'
+    cmd = CommandConfig(
+        args=[],
+        config_path=workspace,
+        config_file=workspace / 'config.yaml',
+        jobs_def_file=jobs_path,
+        hooks_def_file=workspace / 'hooks_example.py',
+        ssdb_file=':memory:',  # ty:ignore[invalid-argument-type]
+    )
+    storage = SsdbSQLite3Storage(':memory:')  # ty:ignore[invalid-argument-type]
+    urlwatcher = Urlwatch(cmd, loaded_config_storage, storage, YamlJobsStorage([jobs_path]))
+    urlwatcher.jobs[0].command = 'echo TEST'
+    urlwatcher.jobs[0].name = 'echo TEST'
+    return urlwatcher
+
+
+def test_job_states_verb(time_jobs_urlwatcher: Urlwatch) -> None:
+    """First run produces ``new``; second run with no change produces ``unchanged``."""
+    urlwatcher = time_jobs_urlwatcher
+    urlwatcher.run_jobs()
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    assert urlwatcher.report.job_states[-1].verb == 'new'
+
+    urlwatcher.run_jobs()
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+
+def test_job_states_verb_notimestamp_unchanged(time_jobs_urlwatcher: Urlwatch) -> None:
+    """A snapshot with ``timestamp=0`` and a re-run still classifies as ``unchanged``."""
+    urlwatcher = time_jobs_urlwatcher
+    urlwatcher.run_jobs()
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    assert urlwatcher.report.job_states[-1].verb == 'new'
+
+    guid = urlwatcher.ssdb_storage.get_guids()[0]
+    snapshot = urlwatcher.ssdb_storage.load(guid)
+    urlwatcher.ssdb_storage.delete(guid)
+    urlwatcher.ssdb_storage.save(
+        guid=guid,
+        snapshot=Snapshot(
+            data=snapshot.data,
+            timestamp=0,
+            tries=1,
+            etag=snapshot.etag,
+            mime_type=snapshot.mime_type,
+            error_data=snapshot.error_data,
+        ),
+    )
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+
+    urlwatcher.run_jobs()
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+
+def test_job_states_verb_notimestamp_changed(time_jobs_urlwatcher: Urlwatch) -> None:
+    """Multiple snapshot rewrites (no timestamp / 1 try / both) all stay ``unchanged`` for the same data."""
+    urlwatcher = time_jobs_urlwatcher
+    urlwatcher.run_jobs()
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    assert urlwatcher.report.job_states[-1].verb == 'new'
+
+    guid = urlwatcher.jobs[0].guid
+    snapshot = urlwatcher.ssdb_storage.load(guid)
+    urlwatcher.ssdb_storage.delete(guid)
+    urlwatcher.ssdb_storage.save(guid=guid, snapshot=snapshot)
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+
+    urlwatcher.run_jobs()
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+    snapshot = urlwatcher.ssdb_storage.load(guid)
+    urlwatcher.ssdb_storage.delete(guid)
+    urlwatcher.ssdb_storage.save(guid=guid, snapshot=snapshot)
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.run_jobs()
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+    urlwatcher.ssdb_storage.delete(guid)
+    new_snapshot = Snapshot(snapshot.data, 0, snapshot.tries, snapshot.etag, snapshot.mime_type, snapshot.error_data)
+    urlwatcher.ssdb_storage.save(guid=guid, snapshot=new_snapshot)
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.run_jobs()
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+    urlwatcher.ssdb_storage.delete(guid)
+    new_snapshot = Snapshot(snapshot.data, 0, 1, snapshot.etag, snapshot.mime_type, {})
+    urlwatcher.ssdb_storage.save(guid=guid, snapshot=new_snapshot)
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.run_jobs()
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
 
 # def test_suppress_repeated_errors(capsys: pytest.CaptureFixture) -> None:

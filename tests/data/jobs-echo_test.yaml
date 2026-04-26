@@ -1,2 +1,3 @@
+# yaml-language-server: $schema=jobs.schema.json
 command: echo test
 name: Sample webchanges job; used by test_command.py

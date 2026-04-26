@@ -106,6 +106,42 @@ AiGoogleDirectives = TypedDict(
 
 ReportKind = Literal['plain', 'markdown', 'html']
 
+_ADDITIONS_ONLY_DISABLE_SAFEGUARD = 'disable_safeguard'
+_ADDITIONS_ONLY_DEFAULT_REMAINING = 0.25
+
+
+def _resolve_additions_only(value: bool | float | str | None) -> tuple[bool, float | None]:
+    """Resolve the ``additions_only`` directive value.
+
+    Returns a tuple ``(filter_active, safeguard_remaining)``:
+      * ``filter_active`` — whether additions-only filtering is on.
+      * ``safeguard_remaining`` — the minimum fraction of the original content that must remain before deletions are
+        shown anyway as a safeguard. ``None`` means the safeguard is disabled (deletions never shown even when
+        filtering is active).
+
+    Mappings:
+      * ``True`` -> ``(True, 0.25)`` — legacy default.
+      * ``False`` / ``None`` -> ``(False, None)`` — no filtering.
+      * ``"disable_safeguard"`` -> ``(True, None)`` — filter on, safeguard off.
+      * numeric in ``[0, 1]`` -> ``(True, value)``.
+    """
+    if value is None or value is False:
+        return False, None
+    if value is True:
+        return True, _ADDITIONS_ONLY_DEFAULT_REMAINING
+    if isinstance(value, str):
+        if value == _ADDITIONS_ONLY_DISABLE_SAFEGUARD:
+            return True, None
+        raise ValueError(f'additions_only string value must be {_ADDITIONS_ONLY_DISABLE_SAFEGUARD!r}; got {value!r}')
+    if isinstance(value, (int, float)):
+        if not 0 <= value <= 1:
+            raise ValueError(f'additions_only numeric value must be in [0, 1]; got {value!r}')
+        return True, float(value)
+    raise TypeError(
+        f'additions_only must be a boolean, a number in [0, 1], or '
+        f'{_ADDITIONS_ONLY_DISABLE_SAFEGUARD!r}; got {type(value).__name__}'
+    )
+
 
 class DifferBase(metaclass=TrackSubClasses):
     """The base class for differs.
@@ -445,7 +481,8 @@ class UnifiedDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: ZoneInfo | None = None,
     ) -> dict[ReportKind, str]:
-        additions_only = directives.get('additions_only') or self.job.additions_only
+        additions_only_raw = directives.get('additions_only', self.job.additions_only)
+        additions_only, additions_only_remaining = _resolve_additions_only(additions_only_raw)
         deletions_only = directives.get('deletions_only') or self.job.deletions_only
         out_diff: dict[ReportKind, str] = {}
         if report_kind == 'html' and _unfiltered_diff is not None and 'plain' in _unfiltered_diff:
@@ -475,11 +512,12 @@ class UnifiedDiffer(DifferBase):
             diff[1] = diff[1].replace('\t', ' ')
 
             if additions_only:
-                if len(self.state.old_data) and len(self.state.new_data) / len(self.state.old_data) <= 0.25:
+                new_to_old = len(self.state.new_data) / len(self.state.old_data) if len(self.state.old_data) else 1.0
+                if additions_only_remaining is not None and new_to_old <= additions_only_remaining:
                     diff = [
                         *diff[:2],
                         '/**Comparison type: Additions only**',
-                        '/**Deletions are being shown as 75% or more of the content has been deleted**',
+                        f'/**Deletions are being shown as only {new_to_old:.0%} of the original content remains**',
                         *diff[2:],
                     ]
                 else:

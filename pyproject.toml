@@ -104,6 +104,7 @@ all = [
 # https://setuptools.pypa.io/en/latest/userguide/package_discovery.html
 packages = [
     'webchanges',
+    'webchanges._resources',
     'webchanges._vendored',
     'webchanges.filters',
     'webchanges.jobs',
@@ -117,11 +118,16 @@ dependencies = { file = 'requirements.txt' }
 
 [tool.setuptools.package-data]
 'webchanges' = ['py.typed']
+'webchanges._resources' = ['*.schema.json', '*.schema.sha256']
 
 # -------------------------- manpages --------------------------
 # https://github.com/praiskup/argparse-manpage/blob/main/README.md
+# The build hook is wired in setup.py; [tool.setuptools.data-files] below installs the result.
 [tool.build_manpages]
-manpages = ['man/webchanges.1:function=get_parser:pyfile=get_parser']
+manpages = ['man/webchanges.1:function=get_manpages_parser:pyfile=tools/get_manpages_parser.py']
+
+[tool.setuptools.data-files]
+'share/man/man1' = ['man/webchanges.1']
 
 # -------------------------- coverage --------------------------
 [tool.coverage.run]

@@ -12,7 +12,11 @@ and related directives, plus eventual directives on transformations (:ref:`filte
 (and/or diff) once retrieved.
 
 The list of jobs is contained by default in the jobs file ``jobs.yaml``, a :ref:`YAML <yaml_syntax>` text file editable
-with the command ``webchanges --edit`` or using any text editor.
+with the command ``webchanges --edit-jobs`` or using any text editor.
+
+.. versionchanged:: 3.36
+   A JSON Schema ``jobs.schema.json`` is now installed in the same directory as ``--jobs`` to enable editors that
+   pick up schemas from the same directory to provide autocompletion and validation.
 
 **YAML tips**
 
@@ -26,9 +30,10 @@ YAML :ref:`here <yaml_syntax>`.
 
 .. code-block:: yaml
 
-    filters:
-      - html2text:           # a list item; notice 2 spaces before the '-'
-          pad_tables: true   # a directory item; notice 6 spaces before the name
+   # yaml-language-server: $schema=jobs.schema.json
+   filters:
+     - html2text:           # a list item; notice 2 spaces before the '-'
+         pad_tables: true   # a directory item; notice 6 spaces before the name
 
 
 * There must be a space after the ``:`` between the key name and its value. The lack of such space is often the
@@ -36,11 +41,13 @@ YAML :ref:`here <yaml_syntax>`.
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    filters:
      - re.sub: text  # This is correct
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    filters:
      - re.sub:text  # This is INCORRECT; space is required
 
@@ -72,6 +79,7 @@ present) as the job's name.
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: This is a human-readable name/label of the job
    url: https://example.org/
 
@@ -90,15 +98,19 @@ This is the main job type. It retrieves a document from a web server (``https://
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: Example homepage
    url: https://www.example.org/
    ---
+   # yaml-language-server: $schema=jobs.schema.json
    name: Example page 2
    url: https://www.example.org/page2
    ---
+   # yaml-language-server: $schema=jobs.schema.json
    name: Example a local file
    url: file://syslog
    ---
+   # yaml-language-server: $schema=jobs.schema.json
    name: Example of an FTP file (username anonymous if not specified)
    url: ftp://username:password@ftp.example.com/file.txt
 
@@ -110,9 +122,11 @@ This is the main job type. It retrieves a document from a web server (``https://
 
    .. code-block:: yaml
 
+      # yaml-language-server: $schema=jobs.schema.json
       name: Example homepage
       url: https://example.org/
       ---
+      # yaml-language-server: $schema=jobs.schema.json
       name: Example homepage -- again!
       url: https://example.org/#2
 
@@ -134,6 +148,7 @@ you are interested in, add the directive ``use_browser: true`` to the job:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: A page with JavaScript
    url: https://example.org/
    use_browser: true
@@ -169,8 +184,8 @@ your monitoring has special requirements.
 
 While we implement measures to minimize website detection of headless Chrome, passing basic detection tests `here
 <https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html>`__, some sites use advanced
-anti-automation methods such as rate limiting, session initialization (see :ref:initialization_url for handling),
-CAPTCHAs, browser fingerprinting, etc. that might block your monitoring.
+anti-automation methods such as rate limiting, session initialization (see :ref:`initialization_url` and
+:ref:`initialization_js` for handling), CAPTCHAs, browser fingerprinting, etc. that might block your monitoring.
 
 .. tip:: Please see the :ref:`no_conditional_request` directive if you need to turn off the use of :ref:`conditional
    requests <conditional_requests>` for those extremely rare websites that don't handle it (e.g. Google Flights).
@@ -194,7 +209,8 @@ Internally, this type of job has the attribute ``kind: browser``.
    Implemented measures to reduce the chance of detection.
 
 .. versionchanged:: 3.14
-   Saves the screenshot, full page image and HTML contents when a job fails while running in verbose mode.
+   Saves the screenshot, full page image and HTML contents to the temp folder when a job fails while running in verbose
+   mode.
 
 
 
@@ -205,7 +221,8 @@ Required directives
 
 url
 ^^^
-The URI of the resource to monitor. ``https://``, ``http://``, ``ftp://`` and ``file://`` are supported.
+The URI of the resource to monitor. The application layer protocols ``https://``, ``http://``, ``ftp://`` and
+``file://`` are supported.
 
 
 
@@ -277,6 +294,7 @@ For a POST, specifying a dictionary:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    data:
        Element1: Data
@@ -286,6 +304,7 @@ For a POST, specifying a dictionary to be JSON-encoded:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    data:
        Element1: Data
@@ -296,6 +315,7 @@ For a PUT request method with a string :
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    method: PUT
    data: 'Special format data {"Element1": "Data", "Element2": "OtherData"}'
@@ -349,6 +369,7 @@ The default headers are:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    accept: '*/*'
    accept-encoding:  # depends on libraries installed; at a minimum 'gzip, deflate'
    connection: 'keep-alive'
@@ -452,6 +473,7 @@ For ``use_browser: true`` jobs, see :ref:`initialization_js` to inject a JavaScr
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/dashboard
    initialization_url: https://example.com/
 
@@ -595,6 +617,7 @@ Example:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    http_client: curl_cffi
    http_version: v3
@@ -634,6 +657,7 @@ Example:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    http_client: curl_cffi
    impersonate: safari17_0
@@ -661,6 +685,7 @@ Example:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    http_client: curl_cffi
    impersonate: chrome124
@@ -688,6 +713,7 @@ Example:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://donneespubliques.meteofrance.fr/donnees_libres/bulletins/BCM/203001.pdf
    no_redirects: true
    filters:
@@ -721,6 +747,7 @@ Example (equivalent to the URL https://example.com/?Element1=Data&Element2=Other
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    params:
        Element1: Data
@@ -740,6 +767,7 @@ error received when attempting to connect to a misconfigured server.
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://www.example.com/
    retries: 1
    filters:
@@ -772,6 +800,7 @@ Used to speed up loading (typical elements to skip  include ``stylesheet``, ``fo
 .. code-block:: yaml
    :class: strike
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: This is a Javascript site
    note: It's just a test
    url: https://www.example.com
@@ -815,6 +844,7 @@ For example, if the username is Adam and the password is Eve, use ``http_credent
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: This website requires authentication
    note: It's just a test
    url: https://www.example.com
@@ -844,11 +874,12 @@ Defaults to false.
 
 Dangerous option; use with care. However, the following settings at times improves things:
 
-.. code-block: yaml
+.. code-block:: yaml
 
-  ignore_default_args:
-    - --enable-automation
-    - --disable-extensions
+   # yaml-language-server: $schema=jobs.schema.json
+   ignore_default_args:
+     - --enable-automation
+     - --disable-extensions
 
 .. versionadded:: 3.10
 
@@ -977,6 +1008,7 @@ To wait until no spans having "loading" in their class are visible:
 
 .. code-block:: yaml
 
+  # yaml-language-server: $schema=jobs.schema.json
   wait_for_selector:
     selector: //span[contains(@class, "loading")]
     state: hidden
@@ -985,6 +1017,7 @@ To wait until no spans having "loading" in their class are present AND that the 
 
 .. code-block:: yaml
 
+  # yaml-language-server: $schema=jobs.schema.json
   wait_for_selector:
     - selector: //span[contains(@class, "loading")]
       state: detached
@@ -1085,6 +1118,7 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: What is in my home directory?
    command: dir -al ~
 
@@ -1186,15 +1220,17 @@ Replace:
 
 .. code-block:: yaml
 
-    diff_tool: my_command
+   # yaml-language-server: $schema=jobs.schema.json
+   diff_tool: my_command
 
 
 with:
 
 .. code-block:: yaml
 
-    differ:
-      command: my_command
+   # yaml-language-server: $schema=jobs.schema.json
+   differ:
+     command: my_command
 
 .. versionchanged:: 3.21
    *Deprecated* and replaced with differ :ref:`command_diff`.
@@ -1290,6 +1326,7 @@ Informational note added under the header in reports (a string, optionally in Ma
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: Weather warnings
    note: If there's a hurricane watch, book a flight to get out of town
    url: https://example.org/weatherwarnings
