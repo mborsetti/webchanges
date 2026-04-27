@@ -41,18 +41,14 @@ Unreleased
 
 Fixed
 `````
+Fixed
+`````
 * Configuration loading no longer fails with ``NameError: name '_ConfigDisplay' is not defined`` (or similar) when
-  an obsolete version of ``typeguard`` (<4.5) is found in the system.
+  an obsolete version of ``typeguard`` (<4.5) is found installed.
 * ``--edit-jobs``, ``--edit-config``, ``--edit-hooks``, and ``--detailed-versions`` now run without loading the
   configuration, jobs, and hooks files, so a malformed file no longer prevents launching the editor or the version
   listing from being shown.
-* ``--detailed-versions`` now also reports versions of ``html5lib``, ``typing-extensions``, ``xmltodict``, and (on
-  Python < 3.14) ``zstandard`` when ``pip`` is unavailable to enumerate the installed distribution.
-* ``--detailed-versions`` now parses each top-level package's PEP 508 requirement strings via
-  ``packaging.requirements.Requirement``, evaluating environment markers (``python_version``, ``sys_platform``,
-  ``extra``, ...) against the current interpreter. Previously, requirements whose specifier had no leading whitespace
-  (e.g. ``httpx>=0.20``) were silently dropped, and marker-gated requirements were not filtered. Falls back to a regex
-  split when ``packaging`` is unavailable.
+* Improved output of ``--detailed-versions``, especially when ```packaging``` is available.
 
 Internals
 `````````
