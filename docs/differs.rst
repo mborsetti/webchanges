@@ -594,7 +594,7 @@ follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[deepdiff]
+   uv pip install --upgrade webchanges[deepdiff]
 
 .. versionchanged:: 3.30
    Added support for YAML data.
@@ -667,7 +667,7 @@ follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[imagediff]
+   uv pip install --upgrade webchanges[imagediff]
 
 In addition, you can only run it with a default configuration of :program:webchanges:, which installs the
 ``httpx`` HTTP client library; ``requests`` is not supported.

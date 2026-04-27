@@ -35,20 +35,36 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.36.1
+-------------------
+2026-04-27
+
+Fixed
+`````
+* Configuration loading no longer fails with ``NameError: name '_ConfigDisplay' is not defined`` (or similar) when
+  an obsolete version of ``typeguard`` (<4.5) is found in the system.
+
+Internals
+`````````
+* RELEASE documentation is now in Markdown format.
+* Updated vendored ``packaging.version`` (used as a fallback when the optional ``packaging`` dependency is unavailable)
+  from v24.2 to v26.2.
+
+
 Version 3.36.0
 -------------------
-Unreleased
+2026-04-26
 
 Added
 `````
-* Job directives and configuration values are now type-checked when starting **webchanbges**. If a directive has the
-  wrong type (e.g. a string where a boolean is expected), this will be shown at launch with a clear error instead of
-  failing later during execution.
+* Values of job directives and configuration keys are now type-checked when starting **webchanges**. If a value is of
+  the wrong type (e.g. a string where a boolean is expected), this will be shown at launch with a clear error instead
+  of failing later during execution.
 * New JSON Schemas for ``config.yaml`` and ``jobs.yaml`` are deployed next to those files, so editors that consume
   schemas from the same directory can offer autocompletion and validation. ``config.schema.json`` is written next to
   ``--config``, and ``jobs.schema.json`` next to the first ``--jobs`` file.
 
-  - Note that while some editors automatically start using them, others (e.g. VS Code) require the line
+  - Note that while some editors automatically use them, others (e.g. VS Code) require the line
   ``# yaml-language-server: $schema=config.schema.json`` to be inserted at the top of a config file, and the line
   ``# yaml-language-server: $schema=jobs.schema.json`` at the top of a jobs file and repeated after every ``---``
   separator (i.e. each individual job entry starts with it).
@@ -78,6 +94,7 @@ Internals
 `````````
 * Fixed packaging so that the ``webchanges(1)`` man page is actually generated and installed.
 * Improved testing and code coverage (work in progress).
+
 
 Version 3.35.0
 -------------------

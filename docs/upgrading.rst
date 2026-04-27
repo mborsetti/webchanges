@@ -148,7 +148,7 @@ Playwright:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[use_browser]
+   uv pip install --upgrade webchanges[use_browser]
 
 2) (Optional) ensure you have an up-to-date Google Chrome browser:
 

@@ -1,5 +1,5 @@
 """
-Vendored version of typeguard._functions.check_type() from typeguard v4.51 released on 19-Feb-26
+Vendored version of typeguard._functions.check_type() from typeguard v4.5.1 released on 19-Feb-26
 https://github.com/agronholm/typeguard/releases/tag/4.5.1.
 (code https://github.com/agronholm/typeguard/tree/67cae3dc3b3984a1a0e87389937fe118ed6b4328).
 

@@ -15,8 +15,8 @@ The list of jobs is contained by default in the jobs file ``jobs.yaml``, a :ref:
 with the command ``webchanges --edit-jobs`` or using any text editor.
 
 .. versionchanged:: 3.36
-   A JSON Schema ``jobs.schema.json`` is now installed in the same directory as ``--jobs`` to enable editors that
-   pick up schemas from the same directory to provide autocompletion and validation.
+   A JSON Schema ``jobs.schema.json`` is now installed in the same directory as ``--jobs`` to enable editors to provide
+   autocompletion and validation.
 
 **YAML tips**
 
@@ -579,13 +579,13 @@ installed, you can install this :ref:`additional Python package <optional_packag
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[requests]
+   uv pip install --upgrade webchanges[requests]
 
 To use ``http_client: curl_cffi``, you need to have the ``curl_cffi`` library installed on your system:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[curl_cffi]
+   uv pip install --upgrade webchanges[curl_cffi]
 
 .. versionadded:: 3.16
 

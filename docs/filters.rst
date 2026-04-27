@@ -238,7 +238,7 @@ follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[beautify]
+   uv pip install --upgrade webchanges[beautify]
 
 
 
@@ -752,7 +752,7 @@ follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[bs4]
+   uv pip install --upgrade webchanges[bs4]
 
 
 If (and only if) you specify ``parser: html5lib``, then you also need to first install :ref:`additional Python
@@ -760,7 +760,7 @@ packages <optional_packages>` as follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[bs4,html5lib]
+   uv pip install --upgrade webchanges[bs4,html5lib]
 
 
 .. versionchanged:: 3.0
@@ -794,7 +794,7 @@ follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[ical2text]
+   uv pip install --upgrade webchanges[ical2text]
 
 
 
@@ -830,7 +830,7 @@ follows:
 
 .. code-block:: yaml
 
-   pip install --upgrade webchanges[jq]
+   uv pip install --upgrade webchanges[jq]
 
 .. _filtering_json:
 
@@ -932,7 +932,7 @@ follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[ocr]
+   uv pip install --upgrade webchanges[ocr]
 
 In addition, you need to install `Tesseract <https://tesseract-ocr.github.io/tessdoc/Home.html>`__ itself.
 
@@ -1023,7 +1023,7 @@ follows:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[pdf2text]
+   uv pip install --upgrade webchanges[pdf2text]
 
 In addition, you need to install any of the OS-specific dependencies of Poppler (see
 `website <https://github.com/jalan/pdftotext/blob/master/README.md#os-dependencies>`__).
@@ -1138,14 +1138,14 @@ you're not using the ``password`` sub-directive, then use the following:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[pypdf]
+   uv pip install --upgrade webchanges[pypdf]
 
 
 To run jobs with the ``password`` sub-directive, then use the following:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[pypdf_crypto]
+   uv pip install --upgrade webchanges[pypdf_crypto]
 
 
 

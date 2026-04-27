@@ -26,8 +26,8 @@ It can be edited with any text editor or with:
 
 For a summary of the YAML syntax, see :ref:`here <yaml_syntax>`.
 
-Keys starting with an underscore (``_``) are ignored and are used by :program:`webchanges` for writing remarks to a
-file:
+Keys starting with an underscore (``_``) are ignored and are used in :program:`webchanges` for writing remarks in the
+configuration file:
 
 .. code:: yaml
 
@@ -38,8 +38,8 @@ file:
    Keys starting with an underscore (``_``) are ignored.
 
 .. versionchanged:: 3.36
-   A JSON Schema ``config.schema.json`` is now installed in the same directory as ``--config`` to enable editors that
-   pick up schemas from the same directory to provide autocompletion and validation.
+   A JSON Schema ``config.schema.json`` is now installed in the same directory as ``--config`` to enable editors to
+   provide autocompletion and validation.
 
 .. _configuration_display:
 

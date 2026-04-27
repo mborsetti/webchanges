@@ -306,7 +306,7 @@ specific site rejects the default, try a more recent or different profile such a
    http_client: curl_cffi
    impersonate: safari17_0
 
-Requires the ``curl_cffi`` optional package (``pip install --upgrade webchanges[curl_cffi]``).
+Requires the ``curl_cffi`` optional package (``uv pip install --upgrade webchanges[curl_cffi]``).
 
 
 Receive short notifications only containing the URL

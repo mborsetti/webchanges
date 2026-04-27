@@ -30,7 +30,7 @@ Each reporter has a directive called ``enabled`` that can be set to true or fals
    The ``config.yaml`` file is created at the first run of ``webchanges --edit-jobs`` or ``webchanges --edit--config``.
 
 Tip: If you are running :program:`webchanges` on a cloud server on a different timezone (e.g. UTC), see :ref:`tz`
-below to set the time zone to be uses for reporting.
+below to set the time zone to be used for reporting.
 
 
 .. _reporters-list:
@@ -55,7 +55,7 @@ At the moment, the following reporters are available:
 * :ref:`webhook`: Send to an e.g. Slack or Mattermost channel using the service's webhook.
 * :ref:`xmpp`: Send using the Extensible Messaging and Presence Protocol (XMPP).
 
-Programmers can write their own reporter(s) as a :ref:`hook <hooks>`. file.
+Programmers can write their own reporter(s) as a :ref:`hook <hooks>` file.
 
 .. To convert the "webchanges --features" output, use:
    webchanges --features | sed -e 's/^  \* \(.*\) - \(.*\)$/- **\1**: \2/'
@@ -191,7 +191,7 @@ Sub-directives
 * ``to``: The destination email address(es); if sending to more than one recipient, concatenate the addresses with a
   comma (``,``).
 * ``subject``: The subject line. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
-  reported, and {jobs_files} for a space followed by the name of the jobs file(s) used within parenthesis, stripped
+  reported, and ``{jobs_files}`` for a space followed by the name of the jobs file(s) used within parenthesis, stripped
   of preceding ``jobs-``, if not using the default ``jobs.yaml``. Default: ``[webchanges] {count}
   changes:{jobs_files} {jobs}``.
 * ``html``: Whether the email includes HTML (true/false).
@@ -247,7 +247,7 @@ blank.
 
 SMTP sub-directives
 ^^^^^^^^^^^^^^^^^^^
-* ``host``: The address of the SMTP server. Default is 'localhost'
+* ``host``: The address of the SMTP server. Default is ``localhost``.
 * ``port``: The port used to communicate with the server. Default is 587.
 * ``starttls``: Whether the server uses TLS (fka SSL) encryption (true/false). Default is true.
 * ``auth``: Whether authentication via username/password is required (true/false). Default is true.
@@ -258,11 +258,11 @@ SMTP sub-directives
 
 Amazon Simple Email Service (SES) example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-First ensure that you have configured SES as per the `Quick start
-<https://docs.aws.amazon.com/ses/latest/DeveloperGuide/quick-start.html>`__
+First ensure that you have configured SES as per the `quick start guide
+<https://docs.aws.amazon.com/ses/latest/DeveloperGuide/quick-start.html>`__.
 
 Create an email address just for sending mails from :program:`webchanges` and similar programs for security reasons (so
-you can easily recover from a compromised user/password leak from, e.g. from a scan of your jobs file), then configure
+you can easily recover from a compromised user/password leak from, e.g. a scan of your jobs file), then configure
 these directives as follows:
 
 .. code-block:: yaml
@@ -351,7 +351,7 @@ If using a Keychain to store the password, you also need to:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[safe_password]
+   uv pip install --upgrade webchanges[safe_password]
 
 .. versionchanged:: 3.10
    Can specify multiple "to" email addresses.
@@ -649,7 +649,7 @@ To use this report you need to install :ref:`optional packages <optional_package
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[pushbullet]
+   uv pip install --upgrade webchanges[pushbullet]
 
 Sub-directives
 ~~~~~~~~~~~~~~
@@ -686,7 +686,7 @@ To use this report you need to install :ref:`optional packages <optional_package
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[pushover]
+   uv pip install --upgrade webchanges[pushover]
 
 Sub-directives
 ~~~~~~~~~~~~~~
@@ -945,8 +945,8 @@ account that only sends these reports this might be a low-risk way.
 .. warning::
 
   The `aioxmpp <https://pypi.org/project/aioxmpp/>`__ library required by the ``xmpp`` reporter will not install in
-  Python 3.13 (at least on Windows), and the development of the `library <https://codeberg.org/jssfr/aioxmpp>`__ has
-  been halted.
+  Python 3.13 or later (at least on Windows), and the development of the `library
+  <https://codeberg.org/jssfr/aioxmpp>`__ has been halted.
 
 Required packages
 ~~~~~~~~~~~~~~~~~
@@ -954,7 +954,7 @@ To run jobs with this reporter, you need to install :ref:`optional packages <opt
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[xmpp]
+   uv pip install --upgrade webchanges[xmpp]
 
 Optional packages
 ~~~~~~~~~~~~~~~~~
@@ -968,4 +968,4 @@ If using a Keychain to store the password, you also need to:
 
 .. code-block:: bash
 
-   pip install --upgrade webchanges[safe_password]
+   uv pip install --upgrade webchanges[safe_password]

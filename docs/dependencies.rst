@@ -15,8 +15,8 @@ The use of certain features require additional Python packages to work. These op
 :program:`pip` by appending to the name :program:`webchanges` the name of the feature (from the table below) inside
 square brackets, like this::
 
-    pip install --upgrade webchanges[use_browser]
-    pip install --upgrade webchanges[use_browser,redis]
+    uv pip install --upgrade webchanges[use_browser]
+    uv pip install --upgrade webchanges[use_browser,redis]
 
 .. note: also update the list of all possible dependencies in pyproject.tom and show_detailed_versions() in command.py!
 

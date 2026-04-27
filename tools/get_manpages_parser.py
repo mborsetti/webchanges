@@ -1,8 +1,12 @@
-# pragma: exclude file
+from __future__ import annotations
 
 import sys
-from argparse import ArgumentParser
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser
+
 
 sys.path.insert(0, str(Path.cwd()))
 

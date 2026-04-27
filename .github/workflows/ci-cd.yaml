@@ -160,6 +160,18 @@ jobs:
           --cov-report=term
           tests/
 
+      - name: Run storage tests with system typeguard installed (Linux w/latest Python)
+        # Default tests run against the vendored typeguard (since `typeguard` is not a project dependency).
+        # This step installs the upstream `typeguard` package and re-runs the storage/jobs tests so the
+        # dual-import branch in webchanges/storage/_yaml.py and _config.py is also exercised. Catches
+        # forward-reference resolution differences between vendored and upstream typeguard.
+        # Pin to <4.5 to exercise the older `evaluate_forwardref` (the behaviour shipped by current Linux
+        # distro packages); typeguard 4.5+ added a `__forward_module__` fallback that would mask the bug.
+        if: ${{ matrix.python-version == '3.14' && runner.os == 'Linux' }}
+        run: |
+          uv pip install "typeguard<4.5"
+          uv run --no-project pytest -v tests/test_storage.py tests/test_jobs.py
+
       - name: Upload coverage data to coveralls.io (parallel)
         run: coveralls --service=github
         env:
@@ -225,7 +237,7 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # V3.0.0
         with:
-          body_path: RELEASE.rst
+          body_path: RELEASE.md
           draft: false
           prerelease: false
           preserve_order: false

@@ -1,5 +1,3 @@
-# pragma: exclude file
-
 # #!/usr/bin/env python3
 """Rewrite the sibling ``.*.schema.sha256`` for every ``*.schema.json`` passed on the command line.
 

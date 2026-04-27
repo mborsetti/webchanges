@@ -143,7 +143,7 @@ class PypdfFilter(FilterBase):
                 self.raise_import_error(
                     'cryptography',
                     f'password sub-directive of {self.__kind__}',
-                    "Please install with 'pip install --upgrade webchanges[pypdf_crypto]'",
+                    "Please install with 'uv pip install --upgrade webchanges[pypdf_crypto]'",
                 )
 
         reader = PdfReader(io.BytesIO(data), password=password)

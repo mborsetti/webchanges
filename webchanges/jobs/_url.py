@@ -693,7 +693,7 @@ class UrlJob(UrlJobBase):
                     message += "with 'http_client: curl_cffi' "
                 message += (
                     f'( {self.get_indexed_location()} ):\n{curl_cffi_requests}\n'
-                    f"Please install module using e.g. 'pip install --upgrade webchanges[curl_cffi]'."
+                    f"Please install module using e.g. 'uv pip install --upgrade webchanges[curl_cffi]'."
                 )
                 raise ImportError(message)
             job_state._http_client_used = 'curl_cffi'
@@ -705,7 +705,7 @@ class UrlJob(UrlJobBase):
                     message += "with 'http_client: requests "
                 message += (
                     f'( {self.get_indexed_location()} ):\n{requests}\n'
-                    f"Please install module using e.g. 'pip install --upgrade webchanges[requests]'."
+                    f"Please install module using e.g. 'uv pip install --upgrade webchanges[requests]'."
                 )
                 raise ImportError(message)
             if self.http_version is not None:
@@ -723,7 +723,7 @@ class UrlJob(UrlJobBase):
                     message += "with 'http_client: httpx "
                 message += (
                     f'( {self.get_indexed_location()} ):\n{httpx}\n'
-                    f"Please install module using e.g. 'pip install --upgrade httpx[http2,zstd]'."
+                    f"Please install module using e.g. 'uv pip install --upgrade httpx[http2,zstd]'."
                 )
                 raise ImportError(message)
             job_state._http_client_used = 'httpx'

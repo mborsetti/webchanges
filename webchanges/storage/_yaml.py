@@ -22,7 +22,7 @@ from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.jobs import JobBase
 from webchanges.reporters import ReporterBase
 from webchanges.storage._base import BaseYamlFileStorage, JobsBaseFileStorage
-from webchanges.storage._config import DEFAULT_CONFIG, _Config
+from webchanges.storage._config import DEFAULT_CONFIG, _Config, validate_config
 
 try:
     from httpx import Headers
@@ -31,9 +31,9 @@ except ImportError:  # pragma: no cover
 
 
 try:
-    from typeguard import TypeCheckError, check_type  # ty:ignore[unresolved-import]
+    from typeguard import TypeCheckError  # ty:ignore[unresolved-import]
 except ImportError:
-    from webchanges._vendored.typeguard import TypeCheckError, check_type
+    from webchanges._vendored.typeguard import TypeCheckError
 
 
 if TYPE_CHECKING:
@@ -209,7 +209,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             # check for correct type
             try:
                 config_no_remarks = self.remove_remark_keys(config)
-                check_type(config_no_remarks, _Config)
+                validate_config(config_no_remarks)
             except TypeCheckError as exc:
                 raise ValueError(f'Found invalid data in configuration file {self.filename} entry:\n{exc})') from None
 

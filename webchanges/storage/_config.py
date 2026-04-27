@@ -4,9 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, Mapping, TypedDict
 
 from webchanges import __project_name__
+
+try:
+    from typeguard import check_type  # ty:ignore[unresolved-import]
+except ImportError:
+    from webchanges._vendored.typeguard import check_type
 
 # _ConfigDisplay uses functional syntax because 'empty-diff' is not a valid identifier
 _ConfigDisplay = TypedDict(
@@ -254,6 +259,16 @@ class _Config(TypedDict):
     differ_defaults: _ConfigDifferDefaults
     database: _ConfigDatabase
     footnote: str | None
+
+
+def validate_config(config: Mapping[str, Any]) -> None:
+    """Validate ``config`` against the ``_Config`` TypedDict structure.
+
+    Defined in this module so that, with ``from __future__ import annotations`` in effect, typeguard resolves the
+    nested TypedDict forward references (``_ConfigDisplay``, ``_ConfigReport``, …) against this module's globals where
+    they are defined.
+    """
+    check_type(config, _Config)
 
 
 DEFAULT_CONFIG: _Config = {
