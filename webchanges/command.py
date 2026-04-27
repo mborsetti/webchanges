@@ -7,13 +7,9 @@ from __future__ import annotations
 import difflib
 import email.utils
 import gc
-import importlib.metadata
 import logging
 import os
-import platform
 import re
-import shutil
-import sqlite3
 import subprocess
 import sys
 import time
@@ -26,10 +22,10 @@ from typing import TYPE_CHECKING, Iterable, Iterator, TypeGuard
 from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
-from webchanges import __docs_url__, __project_name__, __version__
+from webchanges import __docs_url__, __project_name__
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase, NotModifiedError, UrlJob
-from webchanges.util import dur_text, edit_file, import_module_from_source
+from webchanges.util import dur_text
 
 try:
     import httpx
@@ -89,51 +85,6 @@ class UrlwatchCommand:
         for job in enabled_jobs:
             yield job.with_defaults(self.urlwatcher.config_storage.config)
 
-    def edit_hooks(self) -> int:
-        """Edit hooks file.
-
-        :returns: 0 if edit is successful, 1 otherwise.
-        """
-        # Similar code to BaseTextualFileStorage.edit()
-        for hooks_file in self.urlwatch_config.hooks_files:
-            logger.debug(f'Edit file {hooks_file}')
-            hooks_edit = hooks_file.with_stem(hooks_file.stem + '_edit')
-            if hooks_file.exists():
-                shutil.copy(hooks_file, hooks_edit)
-            # elif self.urlwatch_config.hooks_py_example is not None and os.path.exists(
-            #         self.urlwatch_config.hooks_py_example):
-            #     shutil.copy(self.urlwatch_config.hooks_py_example, hooks_edit, follow_symlinks=False)
-
-            while True:
-                try:
-                    edit_file(hooks_edit)
-                    import_module_from_source('hooks', hooks_edit)
-                    break  # stop if no exception on parser
-                except SystemExit:
-                    raise
-                except Exception as e:  # noqa: BLE001 Do not catch blind exception: `Exception`
-                    print('Parsing failed:')
-                    print('======')
-                    print(e)
-                    print('======')
-                    print()
-                    print(f'The file {hooks_file} was NOT updated.')
-                    user_input = input('Do you want to retry the same edit? (Y/n)')
-                    if not user_input or user_input.lower()[0] == 'y':
-                        continue
-                    hooks_edit.unlink()
-                    print('No changes have been saved.')
-                    return 1
-
-            if hooks_file.is_symlink():
-                hooks_file.write_text(hooks_edit.read_text())
-            else:
-                hooks_edit.replace(hooks_file)
-            hooks_edit.unlink(missing_ok=True)
-            print(f'Saved edits in {hooks_file}.')
-
-        return 0
-
     @staticmethod
     def show_features() -> int:
         """Prints the "features", i.e. a list of job types, filters and reporters.
@@ -159,203 +110,6 @@ class UrlwatchCommand:
         print()
         print(f'Please see full documentation at {__docs_url__}.')
 
-        return 0
-
-    @staticmethod
-    def show_detailed_versions() -> int:
-        """Prints the detailed versions, including of dependencies.
-
-        :return: 0.
-        """
-
-        def dependencies() -> list[str]:
-            try:
-                from pip._internal.metadata import get_default_environment
-
-                env = get_default_environment()
-                dist = None
-                for dist in env.iter_all_distributions():
-                    if dist.canonical_name == __project_name__:
-                        break
-                if dist and dist.canonical_name == __project_name__:
-                    requires_dist = dist.metadata_dict.get('requires_dist', [])
-                    dependencies = [re.split('[ <>=;#^[]', d)[0] for d in requires_dist]
-                    dependencies.extend(('packaging', 'simplejson'))
-                    return sorted(dependencies, key=str.lower)
-            except ImportError:
-                pass
-
-            # default list of all possible dependencies
-            logger.info(f'Found no pip distribution for {__project_name__}; returning all possible dependencies.')
-            return [
-                'aioxmpp',
-                'beautifulsoup4',
-                'chump',
-                'colorama',
-                'cryptography',
-                'cssbeautifier',
-                'cssselect',
-                'curl_cffi',
-                'deepdiff',
-                'h2',
-                'html2text',
-                'httpx',
-                'jq',
-                'jsbeautifier',
-                'keyring',
-                'lxml',
-                'markdown2',
-                'matrix_client',
-                'msgpack',
-                'packaging',
-                'pdftotext',
-                'Pillow',
-                'platformdirs',
-                'playwright',
-                'psutil',
-                'pushbullet.py',
-                'pypdf',
-                'pytesseract',
-                'pyyaml',
-                'redis',
-                'requests',
-                'simplejson',
-                'tzdata',
-                'vobject',
-            ]
-
-        print('Software:')
-        print(f'• {__project_name__}: {__version__}')
-        print(
-            f'• {platform.python_implementation()}: {platform.python_version()} '
-            f'{platform.python_build()} {platform.python_compiler()}'
-        )
-        print(f'• SQLite: {sqlite3.sqlite_version}')
-
-        try:
-            import psutil
-            from psutil._common import bytes2human
-
-            print()
-            print('System:')
-            print(f'• Platform: {platform.platform()}, {platform.machine()}')
-            print(f'• Processor: {platform.processor()}')
-            print(f'• CPUs (logical): {psutil.cpu_count()}')
-            try:
-                virt_mem = psutil.virtual_memory().available
-                print(
-                    f'• Free memory: {bytes2human(virt_mem)} physical plus '
-                    f'{bytes2human(psutil.swap_memory().free)} swap.'
-                )
-            except psutil.Error as e:  # pragma: no cover
-                print(f'• Free memory: Could not read information: {e}')
-            print(
-                f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} "
-                f'({100 - psutil.disk_usage("/").percent:.1f}%)'
-            )
-            executor = ThreadPoolExecutor()
-            print(f'• --max-threads default: {executor._max_workers}')
-        except ImportError:
-            pass
-
-        print()
-        print('Relevant PyPi packages:')
-        for module_name in dependencies():
-            try:
-                mod = importlib.metadata.distribution(module_name)
-            except ModuleNotFoundError:
-                continue
-            print(f'• {module_name}: {mod.version}')
-            # package requirements
-            if mod.requires:
-                for req_name in [i.split()[0] for i in mod.requires]:
-                    try:
-                        req = importlib.metadata.distribution(req_name)
-                    except ModuleNotFoundError:
-                        continue
-                    print(f'  - {req_name}: {req.version}')
-
-        # playwright
-        try:
-            from playwright.sync_api import Error as PlaywrightError
-            from playwright.sync_api import sync_playwright
-
-            with sync_playwright() as p:
-                try:
-                    print()
-                    print('Playwright browser:')
-                    browser = p.chromium.launch(channel='chrome')
-                    print(f'• Name: {browser.browser_type.name}')
-                    print(f'• Version: {browser.version}')
-                    print(f'• Executable: {browser.browser_type.executable_path}')
-                    if psutil:
-                        browser.new_page()
-                        try:
-                            virt_mem = psutil.virtual_memory().available
-                            print(
-                                f'• Free memory with browser loaded: '
-                                f'{bytes2human(virt_mem)} physical plus '
-                                f'{bytes2human(psutil.swap_memory().free)} swap'
-                            )
-                        except psutil.Error:
-                            pass
-                except PlaywrightError as e:
-                    print()
-                    print('Playwright browser:')
-                    print(f'• Error: {e}')
-        except ImportError:
-            pass
-
-        if os.name == 'posix':
-            print()
-            print('Installed dpkg dependencies:')
-            try:
-                import apt
-
-                apt_cache = apt.Cache()
-
-                def print_version(libs: list[str]) -> None:
-                    for lib in libs:
-                        if lib in apt_cache and apt_cache[lib].versions:
-                            ver = apt_cache[lib].versions
-                            print(f'   - {ver[0].package}: {ver[0].version}')
-
-                installed_packages = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
-                for module, apt_dists in (
-                    ('jq', ['jq']),
-                    # https://github.com/jalan/pdftotext#os-dependencies
-                    ('pdftotext', ['libpoppler-cpp-dev']),
-                    # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
-                    (
-                        'Pillow',
-                        [
-                            'libjpeg-dev',
-                            'zlib-dev',
-                            'zlib1g-dev',
-                            'libtiff-dev',
-                            'libfreetype-dev',
-                            'littlecms-dev',
-                            'libwebp-dev',
-                            'tcl/tk-dev',
-                            'openjpeg-dev',
-                            'libimagequant-dev',
-                            'libraqm-dev',
-                            'libxcb-dev',
-                            'libxcb1-dev',
-                        ],
-                    ),
-                    ('playwright', ['google-chrome-stable']),
-                    # https://tesseract-ocr.github.io/tessdoc/Installation.html
-                    ('pytesseract', ['tesseract-ocr']),
-                ):
-                    if module in installed_packages:
-                        importlib.metadata.distribution(module)
-                        print(f'• {module}')
-                        print_version(apt_dists)
-            except ImportError:
-                print('Dependencies cannot be printed as python3-apt is not installed.')
-                print("Run 'sudo apt-get install python3-apt' to install.")
-        print()
         return 0
 
     def list_jobs(self, regex: bool | str) -> None:
@@ -995,9 +749,6 @@ class UrlwatchCommand:
 
         return 0
 
-    def edit_config(self) -> int:
-        return self.urlwatcher.config_storage.edit()
-
     def check_telegram_chats(self) -> None:
         config: _ConfigReportTelegram = self.urlwatcher.config_storage.config['report']['telegram']
 
@@ -1344,15 +1095,6 @@ class UrlwatchCommand:
         if self.urlwatch_config.xmpp_login:
             self.check_xmpp_login()
 
-        if self.urlwatch_config.edit:
-            self._exit(self.urlwatcher.jobs_storage.edit())
-
-        if self.urlwatch_config.edit_config:
-            self._exit(self.edit_config())
-
-        if self.urlwatch_config.edit_hooks:
-            self._exit(self.edit_hooks())
-
         if self.urlwatch_config.gc_database:
             self.urlwatcher.ssdb_storage.gc(
                 [job.guid for job in self.urlwatcher.jobs], self.urlwatch_config.gc_database
@@ -1374,9 +1116,6 @@ class UrlwatchCommand:
 
         if self.urlwatch_config.features:
             self._exit(self.show_features())
-
-        if self.urlwatch_config.detailed_versions:
-            self._exit(self.show_detailed_versions())
 
     def run(self) -> None:  # pragma: no cover
         """The main run logic."""

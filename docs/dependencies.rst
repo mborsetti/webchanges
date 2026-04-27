@@ -18,7 +18,7 @@ square brackets, like this::
     uv pip install --upgrade webchanges[use_browser]
     uv pip install --upgrade webchanges[use_browser,redis]
 
-.. note: also update the list of all possible dependencies in pyproject.tom and show_detailed_versions() in command.py!
+.. note: also update the list of all possible dependencies in pyproject.tom and show_detailed_versions() in cli.py!
 
 +-------------------------+-------------------------------------------------------------------------+
 | Feature                 | Python package(s) installed                                             |

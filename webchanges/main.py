@@ -58,8 +58,7 @@ class Urlwatch:
 
         self.check_directories()
 
-        if not self.urlwatch_config.edit:
-            self.load_jobs()
+        self.load_jobs()
 
     def check_directories(self) -> None:
         """Check whether the configuration and jobs files directories exist. Create them and write default configuration

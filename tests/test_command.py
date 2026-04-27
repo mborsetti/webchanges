@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Callable, cast
 import pytest
 
 from tests.test_storage import DATABASE_ENGINES, prepare_storage_test
-from webchanges import __project_name__, __version__
 from webchanges.command import UrlwatchCommand
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
@@ -70,109 +69,6 @@ def time_jobs_urlwatcher(
     return Urlwatch(cmd, loaded_config_storage, storage, YamlJobsStorage([jobs_path]))
 
 
-# --- Edit actions ---
-
-
-def test_edit(command_config: CommandConfig, urlwatch_command: UrlwatchCommand, dummy_editor: None) -> None:
-    command_config.edit = True
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.run()
-    assert pytest_wrapped_e.value.code == 0
-
-
-def test_edit_using_visual(
-    command_config: CommandConfig,
-    urlwatch_command: UrlwatchCommand,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv('VISUAL', 'rundll32' if sys.platform == 'win32' else 'true')
-    monkeypatch.delenv('EDITOR', raising=False)
-    command_config.edit = True
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.run()
-    assert pytest_wrapped_e.value.code == 0
-
-
-def test_edit_fail(
-    command_config: CommandConfig,
-    urlwatch_command: UrlwatchCommand,
-    jobs_file_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    monkeypatch.setenv('EDITOR', 'does_not_exist_and_should_trigger_an_error')
-    monkeypatch.delenv('VISUAL', raising=False)
-    command_config.edit = True
-    with pytest.raises(OSError) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
-    jobs_edit = jobs_file_path.with_stem(jobs_file_path.stem + '_edit')
-    jobs_edit.unlink(missing_ok=True)
-    assert pytest_wrapped_e.value.args[0] == (
-        'pytest: reading from stdin while output is captured!  Consider using `-s`.'
-    )
-    assert 'Errors in updating file:' in capsys.readouterr().out
-
-
-def test_edit_config(command_config: CommandConfig, urlwatch_command: UrlwatchCommand, dummy_editor: None) -> None:
-    command_config.edit_config = True
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.run()
-    assert pytest_wrapped_e.value.code == 0
-
-
-def test_edit_config_fail(
-    command_config: CommandConfig,
-    urlwatch_command: UrlwatchCommand,
-    config_file_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    monkeypatch.setenv('EDITOR', 'does_not_exist_and_should_trigger_an_error')
-    monkeypatch.delenv('VISUAL', raising=False)
-    command_config.edit_config = True
-    with pytest.raises(OSError) as pytest_wrapped_e:
-        urlwatch_command.run()
-    config_edit = config_file_path.with_stem(config_file_path.stem + '_edit')
-    config_edit.unlink(missing_ok=True)
-    assert pytest_wrapped_e.value.args[0] == (
-        'pytest: reading from stdin while output is captured!  Consider using `-s`.'
-    )
-    assert 'Errors in updating file:' in capsys.readouterr().out
-
-
-def test_edit_hooks(
-    command_config: CommandConfig,
-    urlwatch_command: UrlwatchCommand,
-    dummy_editor: None,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    command_config.edit_hooks = True
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
-    assert pytest_wrapped_e.value.code == 0
-    assert capsys.readouterr().out == f'Saved edits in {urlwatch_command.urlwatch_config.hooks_def_file}.\n'
-
-
-def test_edit_hooks_fail(
-    command_config: CommandConfig,
-    urlwatch_command: UrlwatchCommand,
-    hooks_file_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    monkeypatch.setenv('EDITOR', 'does_not_exist_and_should_trigger_an_error')
-    monkeypatch.delenv('VISUAL', raising=False)
-    command_config.edit_hooks = True
-    with pytest.raises(OSError) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
-    hooks_edit = hooks_file_path.with_stem(hooks_file_path.stem + '_edit')
-    hooks_edit.unlink(missing_ok=True)
-    assert pytest_wrapped_e.value.args[0] == (
-        'pytest: reading from stdin while output is captured!  Consider using `-s`.'
-    )
-    assert 'Parsing failed:' in capsys.readouterr().out
-
-
 # --- Show / version ---
 
 
@@ -187,19 +83,6 @@ def test_show_features_and_verbose(
         urlwatch_command.handle_actions()
     assert pytest_wrapped_e.value.code == 0
     assert '* browser - Retrieve a URL using a real web browser (use_browser: true).' in capsys.readouterr().out
-
-
-def test_show_detailed_versions(
-    command_config: CommandConfig,
-    urlwatch_command: UrlwatchCommand,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    command_config.detailed_versions = True
-    urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
-    assert pytest_wrapped_e.value.code == 0
-    assert f'• {__project_name__}: {__version__}\n' in capsys.readouterr().out
 
 
 # --- List jobs ---

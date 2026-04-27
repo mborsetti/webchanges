@@ -13,7 +13,7 @@ from typing import Generator, cast
 
 import pytest
 
-from webchanges import __min_python_version__
+from webchanges import __min_python_version__, __project_name__, __version__
 from webchanges.cli import (
     _expand_glob_files,
     first_run,
@@ -25,6 +25,7 @@ from webchanges.cli import (
     migrate_from_legacy,
     python_version_warning,
     setup_logger,
+    show_detailed_versions,
     sync_bundled_schemas,
     teardown_logger,
 )
@@ -395,7 +396,17 @@ def test_load_hooks_ownership_warning(tmp_path: Path, monkeypatch: pytest.Monkey
 
 
 def test_handle_unitialized_actions_noop() -> None:
-    cfg = cast('CommandConfig', SimpleNamespace(check_new=False, install_chrome=False))
+    cfg = cast(
+        'CommandConfig',
+        SimpleNamespace(
+            check_new=False,
+            install_chrome=False,
+            detailed_versions=False,
+            edit=False,
+            edit_config=False,
+            edit_hooks=False,
+        ),
+    )
     assert handle_unitialized_actions(cfg) is None
 
 
@@ -403,7 +414,17 @@ def test_handle_unitialized_actions_check_new_new_release(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout: '99.0.0')
-    cfg = cast('CommandConfig', SimpleNamespace(check_new=True, install_chrome=False))
+    cfg = cast(
+        'CommandConfig',
+        SimpleNamespace(
+            check_new=True,
+            install_chrome=False,
+            detailed_versions=False,
+            edit=False,
+            edit_config=False,
+            edit_hooks=False,
+        ),
+    )
     with pytest.raises(SystemExit) as excinfo:
         handle_unitialized_actions(cfg)
     assert excinfo.value.code == 0
@@ -415,7 +436,17 @@ def test_handle_unitialized_actions_check_new_up_to_date(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout: '')
-    cfg = cast('CommandConfig', SimpleNamespace(check_new=True, install_chrome=False))
+    cfg = cast(
+        'CommandConfig',
+        SimpleNamespace(
+            check_new=True,
+            install_chrome=False,
+            detailed_versions=False,
+            edit=False,
+            edit_config=False,
+            edit_hooks=False,
+        ),
+    )
     with pytest.raises(SystemExit) as excinfo:
         handle_unitialized_actions(cfg)
     assert excinfo.value.code == 0
@@ -427,12 +458,144 @@ def test_handle_unitialized_actions_check_new_pypi_error(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout: False)
-    cfg = cast('CommandConfig', SimpleNamespace(check_new=True, install_chrome=False))
+    cfg = cast(
+        'CommandConfig',
+        SimpleNamespace(
+            check_new=True,
+            install_chrome=False,
+            detailed_versions=False,
+            edit=False,
+            edit_config=False,
+            edit_hooks=False,
+        ),
+    )
     with pytest.raises(SystemExit) as excinfo:
         handle_unitialized_actions(cfg)
     assert excinfo.value.code == 1
     out = capsys.readouterr().out
     assert 'Error contacting PyPI' in out
+
+
+def test_show_detailed_versions(capsys: pytest.CaptureFixture[str]) -> None:
+    assert show_detailed_versions() == 0
+    assert f'• {__project_name__}: {__version__}\n' in capsys.readouterr().out
+
+
+def test_handle_unitialized_actions_detailed_versions(capsys: pytest.CaptureFixture[str]) -> None:
+    cfg = cast(
+        'CommandConfig',
+        SimpleNamespace(
+            check_new=False,
+            install_chrome=False,
+            detailed_versions=True,
+            edit=False,
+            edit_config=False,
+            edit_hooks=False,
+        ),
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        handle_unitialized_actions(cfg)
+    assert excinfo.value.code == 0
+    assert f'• {__project_name__}: {__version__}\n' in capsys.readouterr().out
+
+
+# --- Edit actions ---
+
+
+def test_handle_unitialized_actions_edit_jobs(
+    command_config: CommandConfig,
+    dummy_editor: None,
+) -> None:
+    command_config.edit = True
+    with pytest.raises(SystemExit) as excinfo:
+        handle_unitialized_actions(command_config, command_config.config_file)
+    assert excinfo.value.code == 0
+
+
+def test_handle_unitialized_actions_edit_using_visual(
+    command_config: CommandConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv('VISUAL', 'rundll32' if sys.platform == 'win32' else 'true')
+    monkeypatch.delenv('EDITOR', raising=False)
+    command_config.edit = True
+    with pytest.raises(SystemExit) as excinfo:
+        handle_unitialized_actions(command_config, command_config.config_file)
+    assert excinfo.value.code == 0
+
+
+def test_handle_unitialized_actions_edit_jobs_fail(
+    command_config: CommandConfig,
+    jobs_file_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv('EDITOR', 'does_not_exist_and_should_trigger_an_error')
+    monkeypatch.delenv('VISUAL', raising=False)
+    command_config.edit = True
+    with pytest.raises(OSError) as excinfo:
+        handle_unitialized_actions(command_config, command_config.config_file)
+    jobs_edit = jobs_file_path.with_stem(jobs_file_path.stem + '_edit')
+    jobs_edit.unlink(missing_ok=True)
+    assert excinfo.value.args[0] == ('pytest: reading from stdin while output is captured!  Consider using `-s`.')
+    assert 'Errors in updating file:' in capsys.readouterr().out
+
+
+def test_handle_unitialized_actions_edit_config(
+    command_config: CommandConfig,
+    dummy_editor: None,
+) -> None:
+    command_config.edit_config = True
+    with pytest.raises(SystemExit) as excinfo:
+        handle_unitialized_actions(command_config, command_config.config_file)
+    assert excinfo.value.code == 0
+
+
+def test_handle_unitialized_actions_edit_config_fail(
+    command_config: CommandConfig,
+    config_file_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv('EDITOR', 'does_not_exist_and_should_trigger_an_error')
+    monkeypatch.delenv('VISUAL', raising=False)
+    command_config.edit_config = True
+    with pytest.raises(OSError) as excinfo:
+        handle_unitialized_actions(command_config, command_config.config_file)
+    config_edit = config_file_path.with_stem(config_file_path.stem + '_edit')
+    config_edit.unlink(missing_ok=True)
+    assert excinfo.value.args[0] == ('pytest: reading from stdin while output is captured!  Consider using `-s`.')
+    assert 'Errors in updating file:' in capsys.readouterr().out
+
+
+def test_handle_unitialized_actions_edit_hooks(
+    command_config: CommandConfig,
+    hooks_file_path: Path,
+    dummy_editor: None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    command_config.edit_hooks = True
+    with pytest.raises(SystemExit) as excinfo:
+        handle_unitialized_actions(command_config, command_config.config_file)
+    assert excinfo.value.code == 0
+    assert capsys.readouterr().out == f'Saved edits in {hooks_file_path}.\n'
+
+
+def test_handle_unitialized_actions_edit_hooks_fail(
+    command_config: CommandConfig,
+    hooks_file_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv('EDITOR', 'does_not_exist_and_should_trigger_an_error')
+    monkeypatch.delenv('VISUAL', raising=False)
+    command_config.edit_hooks = True
+    with pytest.raises(OSError) as excinfo:
+        handle_unitialized_actions(command_config, command_config.config_file)
+    hooks_edit = hooks_file_path.with_stem(hooks_file_path.stem + '_edit')
+    hooks_edit.unlink(missing_ok=True)
+    assert excinfo.value.args[0] == ('pytest: reading from stdin while output is captured!  Consider using `-s`.')
+    assert 'Parsing failed:' in capsys.readouterr().out
 
 
 def test_python_version_warning(capsys: pytest.CaptureFixture[str]) -> None:

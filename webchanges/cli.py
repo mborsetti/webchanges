@@ -22,7 +22,7 @@ import platformdirs
 
 from webchanges import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
 from webchanges.config import CommandConfig
-from webchanges.util import file_ownership_checks, get_new_version_number, import_module_from_source
+from webchanges.util import edit_file, file_ownership_checks, get_new_version_number, import_module_from_source
 
 # Restore the default system behavior for the SIGPIPE signal, which is ignored by Python by default.
 # This prevents a BrokenPipeError when piping output to a command like `less` that may close the pipe before reading all
@@ -363,9 +363,13 @@ def sync_bundled_schemas(command_config: CommandConfig) -> None:
         logger.info(f'Updated {schema_dest} (sha256 {bundled_hash[:12]}…).')
 
 
-def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
+def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_file: Path | None = None) -> None:
     """Handles CLI actions that do not require all classes etc. to be initialized (and command.py loaded). For speed
     purposes.
+
+    The editor commands (``--edit-jobs``, ``--edit-config``, ``--edit-hooks``) are dispatched here too so that a
+    malformed user file does not block the user from opening it. ``default_config_file`` is the platform default so
+    we can mirror ``main()``'s ``first_run`` gate.
     """
 
     def _exit(arg: str | int | None) -> None:
@@ -417,6 +421,374 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig) -> None:
 
     if urlwatch_config.install_chrome:  # pragma: no cover
         _exit(playwright_install_chrome())
+
+    if urlwatch_config.detailed_versions:
+        _exit(show_detailed_versions())
+
+    if urlwatch_config.edit or urlwatch_config.edit_config or urlwatch_config.edit_hooks:
+        # Resolve paths and run the same first-run / schema-sync setup that main() does, so editing works
+        # identically regardless of which dispatch path runs the command.
+        urlwatch_config.config_file = locate_storage_file(
+            filename=urlwatch_config.config_file,
+            default_path=urlwatch_config.config_path,
+            ext='.yaml',
+            prefix='config',
+        )
+        urlwatch_config.jobs_files = locate_glob_files(
+            filenames=urlwatch_config.jobs_files,
+            default_path=urlwatch_config.config_path,
+            ext='.yaml',
+            prefix='jobs',
+        )
+        urlwatch_config.hooks_files = locate_glob_files(
+            filenames=urlwatch_config.hooks_files,
+            default_path=urlwatch_config.config_path,
+            ext='.py',
+            prefix='hooks',
+        )
+        sync_bundled_schemas(urlwatch_config)
+        if (
+            default_config_file is not None
+            and urlwatch_config.config_file == default_config_file
+            and not Path(urlwatch_config.config_file).is_file()
+        ):
+            first_run(urlwatch_config)
+        if urlwatch_config.edit_hooks:
+            _exit(_edit_hooks_files(urlwatch_config.hooks_files))
+        if urlwatch_config.edit_config:
+            _exit(_edit_config_file(urlwatch_config.config_file))
+        if urlwatch_config.edit:
+            _exit(_edit_jobs_files(urlwatch_config.jobs_files))
+
+
+def _edit_jobs_files(jobs_files: list[Path]) -> int:
+    """Open the jobs file in the user's editor and validate it on save."""
+    from webchanges.storage import YamlJobsStorage
+
+    return YamlJobsStorage(jobs_files).edit()
+
+
+def _edit_config_file(config_file: Path) -> int:
+    """Open the configuration file in the user's editor and validate it on save."""
+    from webchanges.storage import YamlConfigStorage
+
+    return YamlConfigStorage(config_file).edit()
+
+
+def _edit_hooks_files(hooks_files: list[Path]) -> int:
+    """Open each hooks file in the user's editor and validate it on save."""
+    # Mirrors the original logic from UrlwatchCommand.edit_hooks.
+    for hooks_file in hooks_files:
+        logger.debug(f'Edit file {hooks_file}')
+        hooks_edit = hooks_file.with_stem(hooks_file.stem + '_edit')
+        if hooks_file.exists():
+            shutil.copy(hooks_file, hooks_edit)
+
+        while True:
+            try:
+                edit_file(hooks_edit)
+                import_module_from_source('hooks', hooks_edit)
+                break
+            except SystemExit:
+                raise
+            except Exception as e:  # noqa: BLE001 Do not catch blind exception: `Exception`
+                print('Parsing failed:')
+                print('======')
+                print(e)
+                print('======')
+                print()
+                print(f'The file {hooks_file} was NOT updated.')
+                user_input = input('Do you want to retry the same edit? (Y/n)')
+                if not user_input or user_input.lower()[0] == 'y':
+                    continue
+                hooks_edit.unlink()
+                print('No changes have been saved.')
+                return 1
+
+        if hooks_file.is_symlink():
+            hooks_file.write_text(hooks_edit.read_text())
+        else:
+            hooks_edit.replace(hooks_file)
+        hooks_edit.unlink(missing_ok=True)
+        print(f'Saved edits in {hooks_file}.')
+
+    return 0
+
+
+def _print_dist_sub_deps(name: str, raw: list[str]) -> None:
+    """Print sub-dependencies of distribution ``name`` from its PEP 508 requirement strings ``raw``.
+
+    Uses ``packaging.requirements.Requirement`` to honour markers (``python_version``, ``sys_platform``, ``extra``, ...)
+    when available. Falls back to a regex that strips version specifiers but cannot evaluate markers.
+    """
+    import importlib.metadata
+    import re
+
+    try:
+        from packaging.requirements import InvalidRequirement, Requirement
+    except ImportError:
+        # Fallback: requirements without whitespace before the operator (e.g. ``httpx>=0.20``) would otherwise be
+        # treated as invalid distribution names; this regex strips the specifier so the lookup succeeds.
+        for req_name in sorted({re.split('[ <>=;#^[]', i)[0] for i in raw}):
+            try:
+                installed = importlib.metadata.distribution(req_name)
+            except ModuleNotFoundError:
+                continue
+            print(f'  - {req_name}: {installed.version}')
+        return
+
+    # Try every extra the package declares so that, e.g., an ``extra == "crypto"`` dep shows up if the user installed
+    # ``package[crypto]``.
+    try:
+        extras = set(importlib.metadata.metadata(name).get_all('Provides-Extra') or [])
+    except importlib.metadata.PackageNotFoundError:
+        extras = set()
+    envs = [{'extra': e} for e in ('', *extras)]
+    seen: set[str] = set()
+    for line in sorted(raw):
+        try:
+            req = Requirement(line)
+        except InvalidRequirement:
+            continue
+        if req.marker is not None and not any(req.marker.evaluate(env) for env in envs):
+            continue
+        if req.name in seen:
+            continue
+        seen.add(req.name)
+        try:
+            installed = importlib.metadata.distribution(req.name)
+        except ModuleNotFoundError:
+            continue
+        print(f'  - {req.name}: {installed.version}')
+
+
+def show_detailed_versions() -> int:
+    """Prints the detailed versions, including of dependencies.
+
+    :return: 0.
+    """
+    import importlib.metadata
+    import re
+    import sqlite3
+    from concurrent.futures import ThreadPoolExecutor
+
+    def dependencies() -> list[str]:
+        try:
+            from pip._internal.metadata import get_default_environment
+
+            env = get_default_environment()
+            dist = None
+            for dist in env.iter_all_distributions():
+                if dist.canonical_name == __project_name__:
+                    break
+            if dist and dist.canonical_name == __project_name__:
+                requires_dist = dist.metadata_dict.get('requires_dist', [])
+                dependencies = {re.split('[ <>=;#^[]', d)[0] for d in requires_dist}
+                dependencies.update(('httpx', 'packaging', 'simplejson', 'typeguard'))
+                return sorted(dependencies, key=str.lower)
+        except ImportError:
+            pass
+
+        # default list of all possible dependencies
+        logger.info(f'Found no pip distribution for {__project_name__}; returning all possible dependencies.')
+        deps = [
+            'aioxmpp',
+            'beautifulsoup4',
+            'chump',
+            'colorama',
+            'cryptography',
+            'cssbeautifier',
+            'cssselect',
+            'curl_cffi',
+            'deepdiff',
+            'h2',
+            'html2text',
+            'html5lib',
+            'httpx',
+            'jq',
+            'jsbeautifier',
+            'keyring',
+            'lxml',
+            'markdown2',
+            'matrix_client',
+            'msgpack',
+            'packaging',
+            'pdftotext',
+            'Pillow',
+            'platformdirs',
+            'playwright',
+            'psutil',
+            'pushbullet.py',
+            'pypdf',
+            'pytesseract',
+            'pyyaml',
+            'redis',
+            'requests',
+            'simplejson',
+            'typeguard',
+            'typing-extensions',
+            'tzdata',
+            'vobject',
+            'xmltodict',
+        ]
+        if sys.version_info < (3, 14):
+            deps.append('zstandard')
+        return sorted(deps)
+
+    print('Software:')
+    print(f'• {__project_name__}: {__version__}')
+    print(
+        f'• {platform.python_implementation()}: {platform.python_version()} '
+        f'{platform.python_build()} {platform.python_compiler()}'
+    )
+    print(f'• SQLite: {sqlite3.sqlite_version}')
+
+    try:
+        import psutil
+        from psutil._common import bytes2human
+
+        print()
+        print('System:')
+        print(f'• Platform: {platform.platform()}, {platform.machine()}')
+        print(f'• Processor: {platform.processor()}')
+        print(f'• CPUs (logical): {psutil.cpu_count()}')
+        try:
+            virt_mem = psutil.virtual_memory().available
+            print(
+                f'• Free memory: {bytes2human(virt_mem)} physical plus {bytes2human(psutil.swap_memory().free)} swap.'
+            )
+        except psutil.Error as e:  # pragma: no cover
+            print(f'• Free memory: Could not read information: {e}')
+        print(
+            f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} ({100 - psutil.disk_usage('/').percent:.1f}%)"
+        )
+        executor = ThreadPoolExecutor()
+        print(f'• --max-threads default value: {executor._max_workers}')
+    except ImportError:
+        pass
+
+    print()
+    print('Relevant PyPi packages:')
+    for dist_name in dependencies():
+        if dist_name == __project_name__:
+            continue
+        try:
+            mod = importlib.metadata.distribution(dist_name)
+        except ModuleNotFoundError:
+            continue
+        print(f'• {dist_name}: {mod.version}')
+        if mod.requires:
+            _print_dist_sub_deps(dist_name, mod.requires)
+
+    # playwright
+    try:
+        from playwright.sync_api import Error as PlaywrightError
+        from playwright.sync_api import sync_playwright
+
+        if psutil:
+            try:
+                virt_mem_before = psutil.virtual_memory().available
+                swap_mem_before = psutil.swap_memory().free
+            except psutil.Error:
+                pass
+
+        with sync_playwright() as p:
+            try:
+                print()
+                print('Playwright browser:')
+                browser = p.chromium.launch(channel='chrome')
+                print(f'• Name: {browser.browser_type.name}')
+                print(f'• Version: {browser.version}')
+                if psutil:
+                    try:
+                        print(
+                            f'• Free memory before launching browser: '
+                            f'{bytes2human(virt_mem_before)} physical plus '
+                            f'{bytes2human(swap_mem_before)} swap'
+                        )
+                    except NameError:
+                        pass
+                if psutil:
+                    browser.new_page()
+                    try:
+                        virt_mem_loaded = psutil.virtual_memory().available
+                        swap_mem_loaded = psutil.swap_memory().free
+                        print(
+                            f'• Free memory with browser running    : '
+                            f'{bytes2human(virt_mem_loaded)} physical plus '
+                            f'{bytes2human(swap_mem_loaded)} swap'
+                        )
+                    except psutil.Error:
+                        pass
+                    try:
+                        virt_mem = virt_mem_before - virt_mem_loaded
+                        swap_mem = swap_mem_before - swap_mem_loaded
+                        print(
+                            f'• Memory used by launching browser    : '
+                            f'{bytes2human(virt_mem)} physical plus '
+                            f'{bytes2human(swap_mem)} swap'
+                        )
+                    except NameError:
+                        pass
+                print(f'• Executable: {browser.browser_type.executable_path}')
+            except PlaywrightError as e:
+                print()
+                print('Playwright browser:')
+                print(f'• Error: {e}')
+    except ImportError:
+        pass
+
+    if os.name == 'posix':
+        print()
+        print('Installed dpkg dependencies:')
+        try:
+            import apt
+
+            apt_cache = apt.Cache()
+
+            def print_version(libs: list[str]) -> None:
+                for lib in libs:
+                    if lib in apt_cache and apt_cache[lib].versions:
+                        ver = apt_cache[lib].versions
+                        print(f'   - {ver[0].package}: {ver[0].version}')
+
+            installed_packages = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
+            for module, apt_dists in (
+                ('jq', ['jq']),
+                # https://github.com/jalan/pdftotext#os-dependencies
+                ('pdftotext', ['libpoppler-cpp-dev']),
+                # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
+                (
+                    'Pillow',
+                    [
+                        'libjpeg-dev',
+                        'zlib-dev',
+                        'zlib1g-dev',
+                        'libtiff-dev',
+                        'libfreetype-dev',
+                        'littlecms-dev',
+                        'libwebp-dev',
+                        'tcl/tk-dev',
+                        'openjpeg-dev',
+                        'libimagequant-dev',
+                        'libraqm-dev',
+                        'libxcb-dev',
+                        'libxcb1-dev',
+                    ],
+                ),
+                ('playwright', ['google-chrome-stable']),
+                # https://tesseract-ocr.github.io/tessdoc/Installation.html
+                ('pytesseract', ['tesseract-ocr']),
+            ):
+                if module in installed_packages:
+                    importlib.metadata.distribution(module)
+                    print(f'• {module}')
+                    print_version(apt_dists)
+        except ImportError:
+            print('Dependencies cannot be printed as python3-apt is not installed.')
+            print("Run 'sudo apt-get install python3-apt' to install.")
+    print()
+    return 0
 
 
 def main() -> None:  # pragma: no cover
@@ -475,7 +847,7 @@ def main() -> None:  # pragma: no cover
     logger.debug(f'Default data path is {data_path}')
 
     # For speed, run these here
-    handle_unitialized_actions(command_config)
+    handle_unitialized_actions(command_config, default_config_file)
 
     # Only now, after configuring logging, we can load other modules
     from webchanges.command import UrlwatchCommand
