@@ -1,7 +1,7 @@
 """
-Vendored version of typeguard._functions.check_type() from typeguard v4.5.1 released on 19-Feb-26
-https://github.com/agronholm/typeguard/releases/tag/4.5.1.
-(code https://github.com/agronholm/typeguard/tree/67cae3dc3b3984a1a0e87389937fe118ed6b4328).
+Vendored version of typeguard._functions.check_type() from typeguard v4.6.0 released on 26-Jul-26
+https://github.com/agronholm/typeguard/releases/tag/4.6.0.
+(code https://github.com/agronholm/typeguard/tree/9f289c7fca68097542d3bde9d59496ad42e58251).
 
 Allows us to load this function in case typeguard is not installed.
 """
@@ -28,6 +28,7 @@ Allows us to load this function in case typeguard is not installed.
 
 from __future__ import annotations
 
+import builtins
 import collections.abc
 import inspect
 import sys
@@ -38,10 +39,11 @@ from collections import deque
 from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
-from inspect import Parameter, currentframe, isclass, isfunction
+from inspect import Parameter, currentframe, isclass
 from io import BufferedIOBase, IOBase, RawIOBase, TextIOBase
 from itertools import zip_longest
 from textwrap import indent
+from types import UnionType
 from typing import (
     IO,
     AbstractSet,
@@ -55,12 +57,12 @@ from typing import (
     Iterable,
     List,
     NewType,
-    Optional,
     ParamSpec,
     Set,
     TextIO,
     Tuple,
     Type,
+    TypeGuard,
     TypeVar,
     Union,
     cast,
@@ -285,21 +287,9 @@ elif sys.version_info >= (3, 13):
 else:
 
     def evaluate_forwardref(forwardref: ForwardRef, memo: TypeCheckMemo) -> Any:
-        try:
-            return forwardref._evaluate(
-                memo.globals, memo.locals, recursive_guard=frozenset()
-            )
-        except NameError:
-            if sys.version_info < (3, 10):
-                # Try again, with the type substitutions (list -> List etc.) in place
-                new_globals = memo.globals.copy()
-                new_globals.setdefault("Union", Union)
-
-                return forwardref._evaluate(
-                    new_globals, memo.locals or new_globals, recursive_guard=frozenset()
-                )
-
-            raise
+        return forwardref._evaluate(
+            memo.globals, memo.locals, recursive_guard=frozenset()
+        )
 
 def get_type_name(type_: Any) -> str:
     name: str
@@ -402,7 +392,7 @@ TypeCheckerCallable: TypeAlias = Callable[
     [Any, Any, Tuple[Any, ...], TypeCheckMemo], Any
 ]
 TypeCheckLookupCallback: TypeAlias = Callable[
-    [Any, Tuple[Any, ...], Tuple[Any, ...]], Optional[TypeCheckerCallable]
+    [Any, Tuple[Any, ...], Tuple[Any, ...]], TypeCheckerCallable | None
 ]
 
 generic_alias_types: tuple[type, ...] = (
@@ -410,6 +400,14 @@ generic_alias_types: tuple[type, ...] = (
     type(List[Any]),
     types.GenericAlias,
 )
+
+# PEP 661 sentinel type instances (typing_extensions.Sentinel, built-in sentinel in 3.15+)
+try:
+    _sentinel_types: tuple[type, ...] = (typing_extensions.Sentinel,)
+except AttributeError:  # vendored deviation: typing_extensions < 4.14 has no Sentinel
+    _sentinel_types = ()
+if sys.version_info >= (3, 15):
+    _sentinel_types += (builtins.sentinel,)
 
 
 def check_callable(
@@ -713,7 +711,7 @@ def check_uniontype(
     memo: TypeCheckMemo,
 ) -> None:
     if not args:
-        return check_instance(value, types.UnionType, (), memo)
+        return check_instance(value, UnionType, (), memo)
 
     errors: dict[str, TypeCheckError] = {}
     try:
@@ -870,12 +868,10 @@ def check_literal(
         return tuple(retval)
 
     final_args = tuple(get_literal_args(args))
-    try:
-        index = final_args.index(value)
-    except ValueError:
-        pass
-    else:
-        if type(final_args[index]) is type(value):
+    for arg in final_args:
+        # the type check has to come first, as bool is a subclass of int
+        # (so 1 == True) and it short-circuits any non-boolean __eq__ result
+        if type(arg) is type(value) and arg == value:
             return
 
     formatted_args = ", ".join(repr(arg) for arg in final_args)
@@ -908,6 +904,16 @@ def check_none(
 ) -> None:
     if value is not None:
         raise TypeCheckError("is not None")
+
+
+def check_sentinel(
+    value: Any,
+    origin_type: Any,
+    args: tuple[Any, ...],
+    memo: TypeCheckMemo,
+) -> None:
+    if value is not origin_type:
+        raise TypeCheckError(f"is not {origin_type!r}")
 
 
 def check_number(
@@ -1023,11 +1029,11 @@ def check_signature_compatible(subject: type, protocol: type, attrname: str) -> 
         ]
 
         # Remove the "self" parameter from the protocol arguments to match
-        if protocol_type == "instance":
+        if protocol_type == "instance" and protocol_args:
             protocol_args.pop(0)
 
         # Remove the "self" parameter from the subject arguments to match
-        if subject_type == "instance":
+        if subject_type == "instance" and subject_args:
             subject_args.pop(0)
 
         for protocol_arg, subject_arg in zip_longest(protocol_args, subject_args):
@@ -1100,8 +1106,15 @@ def check_protocol(
     memo: TypeCheckMemo,
 ) -> None:
     origin_annotations = typing.get_type_hints(origin_type)
+    checking_class = isclass(value)
     for attrname in sorted(typing_extensions.get_protocol_members(origin_type)):
         if (annotation := origin_annotations.get(attrname)) is not None:
+            if checking_class and typing.get_origin(annotation) is not typing.ClassVar:
+                # a non-ClassVar annotation is an instance attribute (PEP 544) —
+                # a class object isn't expected to have it set, and type
+                # checkers accept that, so don't flag it as missing.
+                continue
+
             try:
                 subject_member = getattr(value, attrname)
             except AttributeError:
@@ -1298,7 +1311,9 @@ origin_type_checkers: dict[
     Tuple: check_tuple,
     type: check_class,
     Type: check_class,
+    TypeGuard: check_typeguard,
     Union: check_union,
+    UnionType: check_uniontype,
     # On some versions of Python, these may simply be re-exports from "typing",
     # but exactly which Python versions is subject to change.
     # It's best to err on the safe side and just always specify these.
@@ -1307,9 +1322,6 @@ origin_type_checkers: dict[
     typing_extensions.Self: check_self,
     typing_extensions.TypeGuard: check_typeguard,
 }
-if sys.version_info >= (3, 10):
-    origin_type_checkers[types.UnionType] = check_uniontype
-    origin_type_checkers[typing.TypeGuard] = check_typeguard
 
 if sys.version_info >= (3, 11):
     origin_type_checkers.update(
@@ -1330,26 +1342,25 @@ def builtin_checker_lookup(
     checker = origin_type_checkers.get(origin_type)
     if checker is not None:
         return checker
-    if is_typeddict(origin_type):
+    elif is_typeddict(origin_type):
         return check_typed_dict
-    if isclass(origin_type) and issubclass(origin_type, Tuple):  # type: ignore[arg-type]
-        return check_tuple
-    if isclass(origin_type) and issubclass(origin_type, IO):
-        return check_io
-    if (
-        isfunction(origin_type)
-        and getattr(origin_type, "__module__", None) == "typing"
-        and getattr(origin_type, "__qualname__", "").startswith("NewType.")
-        and hasattr(origin_type, "__supertype__")
+    elif isclass(origin_type) and issubclass(
+        origin_type,
+        Tuple,  # type: ignore[arg-type]
     ):
-        return check_newtype
-    if isclass(origin_type) and hasattr(origin_type, "__supertype__"):
-        # Python 3.10+ NewType is a class with __supertype__
-        return check_newtype
-    if isinstance(origin_type, TypeVar):
-        return check_typevar
-    if origin_type.__class__ is ParamSpec:
+        # NamedTuple
+        return check_tuple
+    elif getattr(origin_type, "_is_protocol", False):
+        return check_protocol
+    elif isinstance(origin_type, ParamSpec):
         return check_paramspec
+    elif isinstance(origin_type, TypeVar):
+        return check_typevar
+    elif origin_type.__class__ is NewType:
+        return check_newtype
+    elif isinstance(origin_type, _sentinel_types):
+        return check_sentinel
+
     return None
 
 

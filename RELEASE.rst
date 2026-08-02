@@ -1,12 +1,13 @@
 Added
 `````
 * New ``connect_over_cdp`` job directive for browser (``use_browser: true``) jobs: attach to an already-running
-  Chromium browser over the Chrome DevTools Protocol instead of launching a new browser instance (``true`` attaches
-  to the default endpoint ``ws://127.0.0.1:58489/devtools/browser``; a ``ws://`` URL string attaches to that
-  endpoint). Useful to reuse a browser you launched yourself with ``--remote-debugging-port``, to attach to a remote
-  browser, or to share a logged-in session across jobs. All such jobs run on a single dedicated worker thread, so
+  Chromium browser over the Chrome DevTools Protocol instead of using Playwright to launch a new browser instance
+  (``true`` attaches to the default endpoint ``ws://127.0.0.1:58489/devtools/browser``; a ``ws://`` URL string attaches
+  to that endpoint). Allows the monitoring of websites that block other forms of access except for a "real" user's own
+  browser. Can be used with a Chrome browser you launched yourself with ``--remote-debugging-port``, to attach to a
+  remote browser, or to share a logged-in session across jobs. All such jobs run on a single dedicated worker thread, so
   each unique endpoint requires manual browser authorization only once per run, and the connection is cached for the
-  lifetime of the process (set the environment variable ``WEBCHANGES_BROWSER_CDP_CACHE=0`` to disable caching). See
+  lifetime of the run (set the environment variable ``WEBCHANGES_BROWSER_CDP_CACHE=0`` to disable caching). See
   https://webchanges.readthedocs.io/en/stable/jobs.html#connect-over-cdp.
 * New ``empty_as_transient`` job directive for ``url`` jobs (without ``use_browser: true``): when the server returns
   an empty response, it is treated as a transient HTTP error (with the synthetic HTTP response status code 999)
@@ -25,22 +26,22 @@ Added
   ``threshold_to_diff_deeper`` sub-directives to tune when DeepDiff pairs up changed items (or dictionaries) and
   compares them in depth rather than reporting the whole object as replaced. See
   https://webchanges.readthedocs.io/en/stable/differs.html#deepdiff.
-* ``ai_google`` differ: transient Google AI API errors are now retried automatically instead of immediately failing
-  the summary: an HTTP 429 (rate limit) is retried one second after the delay requested by the server (the extra
-  second covers the server truncating its requested delay to whole seconds), and an HTTP 503 (service unavailable)
-  after a fixed 45 seconds, until the cumulative time spent waiting would exceed 244 seconds.
 * New ``same_site_delay`` job directive for ``url`` and browser (``use_browser: true``) jobs: when an earlier job in
   the list already targets the same site (network location), the job waits this many seconds before retrieving its
   URL, staggering requests that could otherwise hit the same site at the same instant and risk being rate-limited or
   blocked. The first job for a given site is never delayed, and jobs without the directive are never delayed. It can
   be set on an individual job or, for all jobs, through ``job_defaults``. See
   https://webchanges.readthedocs.io/en/stable/jobs.html#same-site-delay.
+* ``ai_google`` differ: transient Google AI API errors are now retried automatically instead of immediately failing
+  the summary: an HTTP 429 (rate limit) is retried one second after the delay requested by the server (the extra
+  second covers the server truncating its requested delay to whole seconds), and an HTTP 503 (service unavailable)
+  after a fixed 45 seconds, until the cumulative time spent waiting would exceed 244 seconds.
 * ``command`` jobs: when **webchanges** is run verbosely (``-v``, ``-vv`` or ``-vvv``), the matching verbosity flag
   is now passed on to any Python interpreter invoked by the command, so that the script's own logging shows up
   alongside that of **webchanges** (e.g. when running ``webchanges -vv``, a job with
   ``command: python summarize.py`` is run as ``python summarize.py -vv``). The flag is added at the end of the
   invocation, where the script being run will see it, and a verbosity flag you wrote yourself is never removed or
-  lowered. Note that a Python script which does not accept a ``-v`` argument will now fail when **webchanges** is
+  lowered. Note that a Python script which does not accept a ``-v`` argument may now fail when **webchanges** is
   run verbosely (including with ``--log-file``, which implies ``-v``). See
   https://webchanges.readthedocs.io/en/stable/jobs.html#verbosity-is-passed-on-to-python.
 * New ``version_check`` configuration setting: set its ``enabled`` sub-directive to ``false`` in ``config.yaml`` to
@@ -61,8 +62,6 @@ Changed
 * ``command`` jobs: the command's standard input is now connected to the null device, so a command that unexpectedly
   prompts for input (e.g. Python's ``input()``) reads end-of-file and exits with a reported error instead of hanging
   the run forever waiting for keyboard input that will never arrive.
-* ``--delete-snapshot``: the snapshot listing shown before confirming deletion now includes the human-readable size
-  of each snapshot.
 * ``wdiff`` differ: when diffing Markdown text, bold (``**``) and strikethrough (``~~``) markers are now tokenized
   separately, so a change to a word inside an emphasized phrase no longer reports the unchanged markers as part of
   the change (e.g. ``**one flower**`` becoming ``**two flowers**`` is now reported as
@@ -71,34 +70,35 @@ Changed
   output of ``--check-new``) has been reworked: the answer is now cached on disk for 24 hours, so repeated runs no
   longer query PyPi every time (``--check-new`` still always queries); the most recent answer is reused when PyPi is
   unreachable; the query is now made with the Python standard library and therefore also works when ``httpx`` is not
-  installed; and ``--check-new`` now reports when you are running a pre-release version instead of treating it as
-  the latest release.
+  installed.
+* ``--delete-snapshot``: the snapshot listing shown before confirming deletion now includes the size of each snapshot.
 
 Deprecated
 ``````````
-* The ``empty-diff`` configuration setting (under ``display``), which has long been superseded by the
-  ``additions_only`` job directive, is now formally deprecated: a deprecation warning is issued at startup when it
-  is set to ``true``.
+* The ``empty-diff`` configuration setting (under ``display``) is now formally deprecated: a deprecation warning is
+  issued at startup when it is set to ``true``. It has long been superseded by the ``additions_only`` job directive.
 
 Fixed
 `````
-* ``--test``: the report of a job that ends in an error now contains the full error detail (e.g. for a ``command``
-  job, the failed subprocess's stderr, or a traceback), as reports from a regular run already did; it previously
-  showed only the exception's one-line message (e.g. ``Command '...' returned non-zero exit status 1.``).
 * ``suppress_repeated_errors`` job directive: a job failing repeatedly with the same error was reported on every run
   instead of only the first time, as the check was unreachable code (regression introduced in version 3.34.0).
   Reported by Manu in https://github.com/mborsetti/webchanges/issues/189.
 * ``suppress_error_ended`` job directive: it was never consulted (since its introduction in version 3.34.0), so the
   "error ended" notification was sent even when the directive was set to ``true``.
+* ``--test``: the report of a job that ends in an error now contains the full error detail (e.g. for a ``command``
+  job, the failed subprocess's stderr, or a traceback); it previously showed only the exception's one-line message
+  (e.g. ``Command '...' returned non-zero exit status 1.``).
 
 Internals impacting hooks.py
 ````````````````````````````
 * ``JobBase.unserialize()`` no longer modifies the dict it is given: the backwards-compatibility migrations it
-  applies (e.g. rewriting ``kind: shell`` to ``kind: command``, converting ``diff_tool`` to ``differ``, and removing
-  other job types' required keys) now operate on a copy.
+  applies (e.g. rewriting ``kind: shell`` to ``kind: command``, converting ``diff_tool`` to ``differ`` etc.) now
+  operate on a copy and no longer corrupt the original.
 
 Internals
 `````````
+* Updated vendored ``typeguard`` (used as a fallback for type-checking job directives and configuration keys when the
+  optional ``typeguard`` dependency is unavailable) from v4.5.1 to v4.6.0.
 * The configuration loaded from an empty configuration file (or one without ``job_defaults``) was the shared default
   configuration object itself rather than a copy of it, so a later modification of the loaded configuration (e.g.
   from ``hooks.py``) would silently corrupt the defaults for the rest of the run. The defaults are now deep-copied.
