@@ -53,6 +53,20 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _human_size(num_bytes: int) -> str:
+    """Returns a human-readable size using SI units (e.g. '4.2 kB').
+
+    :parameter num_bytes: The size in bytes.
+    :returns: The formatted string.
+    """
+    size = float(num_bytes)
+    for unit in ('B', 'kB', 'MB'):
+        if size < 1000:
+            return f'{size:,.0f} {unit}' if unit == 'B' else f'{size:,.1f} {unit}'
+        size /= 1000
+    return f'{size:,.1f} GB'
+
+
 class UrlwatchCommand:
     """The class that runs the program after initialization and CLI arguments parsing."""
 
@@ -231,9 +245,9 @@ class UrlwatchCommand:
                         f'• [GUID: {job_state.job.guid}]',
                         f'• [Media type: {job_state.new_mime_type}]' if job_state.new_mime_type else None,
                         f'• [ETag: {job_state.new_etag}]' if job_state.new_etag else None,
-                        f'\nERROR {job_state.new_error_data["type"]}: {job_state.new_error_data["message"]}'
-                        if job_state.new_error_data
-                        else None,
+                        # traceback carries the full detail (e.g. a subprocess's stderr), unlike the terse
+                        # new_error_data, which is what is persisted to the snapshot database.
+                        f'\nERROR {job_state.traceback}' if job_state.new_error_data else None,
                     ),
                 )
             )
@@ -241,7 +255,6 @@ class UrlwatchCommand:
             if self.urlwatch_config.test_reporter is None:
                 self.urlwatch_config.test_reporter = 'stdout'  # default
             report = Report(self.urlwatcher)
-            report.job_states = []  # required
             errorlevel = self.check_test_reporter(
                 job_state,
                 label='test',
@@ -332,7 +345,7 @@ class UrlwatchCommand:
 
                 if self.urlwatch_config.test_reporter is None:
                     self.urlwatch_config.test_reporter = 'stdout'  # default
-                report.job_states = []  # required
+                report.job_states = []  # clear the states appended by the previous snapshot iteration
                 if job_state.new_data == job_state.old_data:
                     label = (
                         f'No change (snapshots {-i:2} vs. {-(i + 1):2}) with '
@@ -445,39 +458,55 @@ class UrlwatchCommand:
                 :param max_workers: The number of maximum workers for ThreadPoolExecutor.
                 :return: error text for jobs who fail with an exception or return no data.
                 """
-                executor = ThreadPoolExecutor(max_workers=max_workers)
+                # Keep in sync with webchanges.worker.job_runner: the CDP cache must be torn down on the owning
+                # worker thread (Playwright's sync API is thread-bound). The finally also runs on early generator
+                # close (GeneratorExit). A no-op for non-CDP runs.
+                from webchanges.jobs import _browser  # local import to keep test monkeypatching effective
 
-                job_state: JobState
-                for job_state in executor.map(
-                    lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
-                    (stack.enter_context(JobState(self.urlwatcher.ssdb_storage, job)) for job in jobs),
-                ):
-                    if not isinstance(job_state.exception, NotModifiedError):
-                        if job_state.exception is None:
-                            if (
-                                len(job_state.new_data.strip()) == 0
-                                if hasattr(job_state, 'new_data')
-                                else len(job_state.old_data.strip()) == 0
-                            ):
-                                if self.urlwatch_config.verbose:
-                                    yield f'{job_state.job.index_number:3}: No data: {job_state.job!r}'
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    try:
+                        job_state: JobState
+                        for job_state in executor.map(
+                            lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
+                            (stack.enter_context(JobState(self.urlwatcher.ssdb_storage, job)) for job in jobs),
+                        ):
+                            if not isinstance(job_state.exception, NotModifiedError):
+                                if job_state.exception is None:
+                                    if (
+                                        len(job_state.new_data.strip()) == 0
+                                        if hasattr(job_state, 'new_data')
+                                        else len(job_state.old_data.strip()) == 0
+                                    ):
+                                        if self.urlwatch_config.verbose:
+                                            yield f'{job_state.job.index_number:3}: No data: {job_state.job!r}'
+                                        else:
+                                            pretty_name = job_state.job.pretty_name()
+                                            location = job_state.job.get_location()
+                                            if pretty_name != location:
+                                                yield (
+                                                    f'{job_state.job.index_number:3}: No data: '
+                                                    f'{pretty_name} ({location})'
+                                                )
+                                            else:
+                                                yield f'{job_state.job.index_number:3}: No data: {pretty_name}'
                                 else:
                                     pretty_name = job_state.job.pretty_name()
                                     location = job_state.job.get_location()
                                     if pretty_name != location:
-                                        yield f'{job_state.job.index_number:3}: No data: {pretty_name} ({location})'
+                                        yield (
+                                            f'{job_state.job.index_number:3}: Error "{job_state.exception}": '
+                                            f'{pretty_name} ({location})'
+                                        )
                                     else:
-                                        yield f'{job_state.job.index_number:3}: No data: {pretty_name}'
-                        else:
-                            pretty_name = job_state.job.pretty_name()
-                            location = job_state.job.get_location()
-                            if pretty_name != location:
-                                yield (
-                                    f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name} '
-                                    f'({location})'
-                                )
-                            else:
-                                yield f'{job_state.job.index_number:3}: Error "{job_state.exception}": {pretty_name})'
+                                        yield (
+                                            f'{job_state.job.index_number:3}: Error "{job_state.exception}": '
+                                            f'{pretty_name})'
+                                        )
+                    finally:
+                        try:
+                            executor.submit(_browser._close_current_thread_cdp_cache).result()
+                        except Exception as e:  # noqa: BLE001  best-effort cleanup
+                            logger.debug(f'Could not tear down CDP cache on worker thread: {e}')
 
             with ExitStack() as stack:
                 # This code is from worker.run_jobs, modified to yield from job_runner.
@@ -494,9 +523,11 @@ class UrlwatchCommand:
                 else:
                     logger.debug("Found no jobs that do not require a browser (i.e. without 'use_browser').")
 
-                # run BrowserJob jobs after
-                jobs_to_run = [job for job in jobs if job.__is_browser__]
-                if jobs_to_run:
+                # run BrowserJob jobs after; CDP-attached jobs are pinned to a single dedicated
+                # worker thread (one manual browser authorization per unique connect_over_cdp URL
+                # per run). For --errors we run them serially after the non-CDP browser jobs.
+                browser_jobs = [job for job in jobs if job.__is_browser__]
+                if browser_jobs:
                     gc.collect()
                     virt_mem = get_virt_mem_mib()  # in MiB
                     virt_mem = virt_mem * 0.85  # reserve 15% for misc. overhead
@@ -505,11 +536,22 @@ class UrlwatchCommand:
                     else:
                         max_workers = max(int(virt_mem / 800), 1)
                         max_workers = min(max_workers, os.cpu_count() or 1)
-                    logger.debug(
-                        f"Running jobs that require a browser (i.e. with 'use_browser') in parallel with "
-                        f'{max_workers} max_workers.'
-                    )
-                    yield from job_runner(stack, jobs_to_run, max_workers)
+
+                    cdp_jobs = [j for j in browser_jobs if getattr(j, 'connect_over_cdp', None)]
+                    non_cdp_browser_jobs = [j for j in browser_jobs if not getattr(j, 'connect_over_cdp', None)]
+
+                    if non_cdp_browser_jobs:
+                        logger.debug(
+                            f"Running {len(non_cdp_browser_jobs)} non-CDP browser job(s) (with 'use_browser') in "
+                            f'parallel with {max_workers} max_workers.'
+                        )
+                        yield from job_runner(stack, non_cdp_browser_jobs, max_workers)
+                    if cdp_jobs:
+                        logger.debug(
+                            f'Running {len(cdp_jobs)} CDP browser job(s) on a single dedicated thread (one manual '
+                            f'browser authorization per unique connect_over_cdp URL per run).'
+                        )
+                        yield from job_runner(stack, cdp_jobs, 1)
                 else:
                     logger.debug("Found no jobs that require a browser (i.e. with 'use_browser').")
 
@@ -525,7 +567,7 @@ class UrlwatchCommand:
             jobs_files = ['in the concatenation of the jobs files'] + [
                 f'• {file},' for file in self.urlwatch_config.jobs_files
             ]
-        header_lines = ['Jobs with errors or returning no data (after unmodified filters, if any)', *jobs_files]
+        header_lines = ['Jobs with errors; warns of jobs returning no data (after unmodified filters)', *jobs_files]
         if self.urlwatch_config.joblist:
             header_lines.append(f'restricted to jobs: {", ".join(str(j) for j in self.urlwatch_config.joblist)}')
         header = '\n   '.join(header_lines)
@@ -658,9 +700,12 @@ class UrlwatchCommand:
         if sys.__stdin__ and sys.__stdin__.isatty():
             print(f'WARNING: About to delete the latest snapshot of\n         {job.get_indexed_location()}:')
             for i, history_job in enumerate(history):
+                data = history_job.data
+                size = len(data) if isinstance(data, bytes) else len(data.encode())
                 print(
                     f'         {i + 1}. {"❌ " if i == 0 else "   "}'
                     f'{email.utils.format_datetime(datetime.fromtimestamp(history_job.timestamp).astimezone(tz_info))}'
+                    f' ({_human_size(size)})'
                     f'{"  ⬅  ABOUT TO BE DELETED!" if i == 0 else ""}'
                 )
             print(

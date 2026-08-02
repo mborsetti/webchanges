@@ -29,7 +29,7 @@ __pycache__/
 
 # claude code
 /.claude/
-CLAUDE.md
+CLAUDE*.md
 
 # GitHub App credentials
 gha-creds-*.json

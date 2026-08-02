@@ -27,8 +27,6 @@ Allows us to load this function in case typeguard is not installed.
 # DEALINGS IN THE SOFTWARE.
 
 from __future__ import annotations
-from dataclasses import dataclass
-from collections import deque
 
 import collections.abc
 import inspect
@@ -36,9 +34,11 @@ import sys
 import types
 import typing
 import warnings
+from collections import deque
 from collections.abc import Mapping, MutableMapping, Sequence
+from dataclasses import dataclass
 from enum import Enum, auto
-from inspect import Parameter, isclass, isfunction, currentframe
+from inspect import Parameter, currentframe, isclass, isfunction
 from io import BufferedIOBase, IOBase, RawIOBase, TextIOBase
 from itertools import zip_longest
 from textwrap import indent
@@ -49,17 +49,22 @@ from typing import (
     Any,
     BinaryIO,
     Callable,
+    Deque,
     Dict,
     ForwardRef,
+    Iterable,
     List,
     NewType,
     Optional,
+    ParamSpec,
     Set,
     TextIO,
     Tuple,
     Type,
     TypeVar,
-    Union, Deque, Iterable, cast, overload, ParamSpec,
+    Union,
+    cast,
+    overload,
 )
 from unittest.mock import Mock
 

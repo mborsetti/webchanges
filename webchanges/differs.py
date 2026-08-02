@@ -15,12 +15,13 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 import traceback
 import urllib.parse
 import warnings
 from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, tzinfo
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, Literal, TypedDict
@@ -32,8 +33,6 @@ import yaml
 from webchanges.util import TrackSubClasses, linkify, mark_to_html
 
 if TYPE_CHECKING:
-    from zoneinfo import ZoneInfo
-
     from webchanges.jobs import JobBase
 
 
@@ -106,8 +105,134 @@ AiGoogleDirectives = TypedDict(
 
 ReportKind = Literal['plain', 'markdown', 'html']
 
+# Retry policy for transient Google Generative AI (Gemini) API responses (429 rate-limit, 503 unavailable).
+AI_GOOGLE_MAX_TOTAL_WAIT = 244  # hard ceiling on the cumulative time spent waiting across all retries (seconds)
+AI_GOOGLE_503_RETRY_WAIT = 45  # 503: fixed wait, since a 503 response carries no retryDelay (seconds)
+AI_GOOGLE_429_RETRY_BUFFER = 1.0  # 429: added to the server-requested delay, which is truncated to whole seconds
+
 _ADDITIONS_ONLY_DISABLE_SAFEGUARD = 'disable_safeguard'
 _ADDITIONS_ONLY_DEFAULT_REMAINING = 0.25
+
+
+def _ai_google_retry_delay(response: httpx.Response) -> float | None:
+    """Extract the retry delay (in seconds) requested by a Google AI 429 response.
+
+    Prefers the structured ``error.details[].retryDelay`` (a ``google.rpc.RetryInfo`` entry, e.g. ``"15s"``);
+    falls back to a ``retry in <n>s`` match in the error message text (e.g. ``"Please retry in 15.606408828s"``).
+
+    Args:
+        response: The httpx response with a 429 status.
+
+    Returns:
+        The requested delay in seconds, or ``None`` if no delay could be parsed.
+    """
+    try:
+        result = response.json()
+    except (json.JSONDecodeError, ValueError):
+        result = None
+
+    error = result.get('error', {}) if isinstance(result, dict) else {}
+
+    # Structured RetryInfo, e.g. {'@type': '...google.rpc.RetryInfo', 'retryDelay': '15s'}.
+    for detail in error.get('details', []) if isinstance(error, dict) else []:
+        if isinstance(detail, dict) and str(detail.get('@type', '')).endswith('RetryInfo'):
+            retry_delay = str(detail.get('retryDelay', '')).rstrip('s')
+            try:
+                delay = float(retry_delay)
+                logger.debug(f'Parsed Google AI retryDelay {detail.get("retryDelay")!r} as {delay}s')
+                return delay
+            except ValueError:
+                logger.debug(f'Could not parse Google AI retryDelay {detail.get("retryDelay")!r}')
+
+    # Fallback: parse the human-readable message, e.g. "... Please retry in 15.606408828s".
+    message = error.get('message', '') if isinstance(error, dict) else ''
+    text = message or response.text
+    match = re.search(r'retry in ([\d.]+)\s*s', text)
+    if match:
+        try:
+            delay = float(match.group(1))
+            logger.debug(f'Parsed Google AI retry delay {delay}s from message text')
+            return delay
+        except ValueError:  # pragma: no cover
+            pass
+
+    logger.debug('No Google AI retry delay found in the response')
+    return None
+
+
+def _ai_google_retry_wait(response: httpx.Response) -> float | None:
+    """Determine how long to wait before retrying a transient Google AI response.
+
+    Args:
+        response: The httpx response to evaluate.
+
+    Returns:
+        The number of seconds to wait before retrying (for a 429, the server-requested delay plus
+        ``AI_GOOGLE_429_RETRY_BUFFER``), or ``None`` if the response is not retryable (i.e. not a 503, nor a 429 with
+        a parseable retry delay).
+    """
+    if response.status_code == 429:
+        delay = _ai_google_retry_delay(response)  # the server-requested delay, or None if not parseable
+        if delay is not None:
+            # RetryInfo truncates the delay to whole seconds (e.g. '59s' for 59.83s), so waiting exactly the parsed
+            # delay can land just before the quota window reopens and draw another 429; pad past it.
+            return delay + AI_GOOGLE_429_RETRY_BUFFER
+        return None
+    if response.status_code == 503:
+        return AI_GOOGLE_503_RETRY_WAIT
+    return None
+
+
+def _ai_google_post_with_retry(
+    http_client: httpx.Client,
+    url: str,
+    *,
+    job: JobBase,
+    **kwargs: Any,
+) -> httpx.Response:
+    """POST to a Google AI endpoint, retrying transient 429/503 responses with the server-requested delay.
+
+    A 429 is retried using the delay the server asks for plus ``AI_GOOGLE_429_RETRY_BUFFER`` (the server truncates
+    the delay to whole seconds); a 503 is retried after a fixed ``AI_GOOGLE_503_RETRY_WAIT``.
+    Retries continue until a non-transient response is received or until the next wait would push the cumulative time
+    spent sleeping past the ``AI_GOOGLE_MAX_TOTAL_WAIT`` ceiling. ``httpx.HTTPError`` exceptions are not caught here and
+    propagate to the caller.
+
+    Args:
+        http_client: The httpx client to use.
+        url: The URL to POST to.
+        job: The job (used for log context).
+        **kwargs: Additional keyword arguments passed to ``http_client.post``.
+
+    Returns:
+        The final httpx response (the first success, or the last response once retrying stops).
+    """
+    total_wait = 0.0
+    while True:
+        response = http_client.post(url, **kwargs)
+        logger.debug(f'Job {job.index_number}: Google AI POST to {response.url.host} returned {response.status_code}')
+        wait = _ai_google_retry_wait(response)
+        if wait is None:
+            if response.status_code in (429, 503):
+                logger.warning(
+                    f'Job {job.index_number}: Google AI returned {response.status_code} but no retry delay could be '
+                    f'determined; not retrying'
+                )
+            break
+        if total_wait + wait > AI_GOOGLE_MAX_TOTAL_WAIT:
+            logger.warning(
+                f'Job {job.index_number}: Google AI returned {response.status_code}; the next retry would wait '
+                f'{wait:.1f}s, exceeding the {AI_GOOGLE_MAX_TOTAL_WAIT}s cumulative ceiling (already waited '
+                f'{total_wait:.1f}s); not retrying'
+            )
+            break
+        total_wait += wait
+        logger.info(
+            f'Job {job.index_number}: Google AI returned {response.status_code}; retrying in {wait:.1f}s '
+            f'(cumulative wait {total_wait:.1f}s of {AI_GOOGLE_MAX_TOTAL_WAIT}s max)'
+        )
+        time.sleep(wait)
+    return response
 
 
 def _resolve_additions_only(value: bool | float | str | None) -> tuple[bool, float | None]:
@@ -154,8 +279,8 @@ class DifferBase(metaclass=TrackSubClasses):
     and plain formats).
     """
 
-    __subclasses__: dict[str, type[DifferBase]] = {}
-    __anonymous_subclasses__: list[type[DifferBase]] = []
+    __subclasses__: dict[str, TrackSubClasses] = {}
+    __anonymous_subclasses__: list[TrackSubClasses] = []
 
     __kind__: str = ''
 
@@ -279,7 +404,7 @@ class DifferBase(metaclass=TrackSubClasses):
         directives: dict[str, Any],
         job_state: JobState,
         report_kind: ReportKind = 'plain',
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
     ) -> dict[ReportKind, str]:
         """Process the differ.
@@ -294,7 +419,7 @@ class DifferBase(metaclass=TrackSubClasses):
         :returns: The output of the differ or an error message with traceback if it fails.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying differ {differ_kind}, directives {directives}')
-        differcls: type[DifferBase] | None = cls.__subclasses__.get(differ_kind)
+        differcls: TrackSubClasses | None = cls.__subclasses__.get(differ_kind)
         if differcls:
             try:
                 return differcls(job_state).differ(directives, report_kind, _unfiltered_diff, tz)
@@ -337,7 +462,7 @@ class DifferBase(metaclass=TrackSubClasses):
         directives: dict[str, Any],
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
         """Generate a formatted diff representation of data changes.
 
@@ -361,7 +486,7 @@ class DifferBase(metaclass=TrackSubClasses):
     @staticmethod
     def make_timestamp(
         timestamp: float,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> str:
         """Format a timestamp as an RFC 5322 compliant datetime string.
 
@@ -479,7 +604,7 @@ class UnifiedDiffer(DifferBase):
         directives: dict[str, Any],
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
         additions_only_raw = directives.get('additions_only', self.job.additions_only)
         additions_only, additions_only_remaining = _resolve_additions_only(additions_only_raw)
@@ -582,7 +707,7 @@ class TableDiffer(DifferBase):
         directives: dict[str, Any],
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
         out_diff: dict[ReportKind, str] = {}
         if report_kind in {'plain', 'markdown'} and _unfiltered_diff is not None and 'html' in _unfiltered_diff:
@@ -640,7 +765,7 @@ class CommandDiffer(DifferBase):
         directives: dict[str, Any],
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
         if self.job.monospace:
             head_html = '\n'.join(
@@ -823,9 +948,25 @@ class DeepdiffDiffer(DifferBase):
         'ignore_order': 'Whether to ignore the order in which the items have appeared (default: false)',
         'ignore_string_case': 'Whether to be case-sensitive or not when comparing strings (default: false)',
         'significant_digits': (
-            'The number of digits AFTER the decimal point to be used in the comparis: ston (default: no limit)'
+            'The number of digits AFTER the decimal point to be used in the comparison (default: no limit)'
         ),
         'compact': 'Whether to output a compact representation that also ignores changes of types (default: false)',
+        'cutoff_distance_for_pairs': (
+            'With ignore_order, two changed items are paired and compared in depth only if their deep distance (0 to '
+            '1) is below this value; otherwise they are reported as one item removed plus one added (default: 1.0, '
+            "i.e. always pair; the deepdiff library's own default is 0.3)"
+        ),
+        'cutoff_intersection_for_pairs': (
+            'With ignore_order, pairing of changed items is attempted only if the intersection distance of the two '
+            'iterables (0 = identical, 1 = nothing in common) is below this value; otherwise each changed item is '
+            "reported in its entirety (default: 1.0, i.e. always attempt pairing; the deepdiff library's own default "
+            'is 0.7)'
+        ),
+        'threshold_to_diff_deeper': (
+            'The fraction (0 to 1) of keys two dictionaries must share for them to be compared key by key instead of '
+            'being reported as one whole new value (default: 0, i.e. always compare key by key; the deepdiff '
+            "library's own default is 0.33)"
+        ),
     }
 
     def differ(  # noqa: C901 mccabe complexity too high
@@ -833,7 +974,7 @@ class DeepdiffDiffer(DifferBase):
         directives: dict[str, Any],
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
         if isinstance(DeepDiff, str):  # pragma: no cover
             self.raise_import_error('deepdiff', DeepDiff)
@@ -1087,10 +1228,11 @@ class DeepdiffDiffer(DifferBase):
                     f"media type {mime_type}; defaulting to 'json'."
                 )
                 return 'json'
-            logger.info(
-                f'Differ {self.__kind__} could not determine data type of {data_label} data from media '
-                f"type {mime_type}; defaulting to 'text'."
-            )
+            if not (media_type == 'text' and subtype == 'plain'):
+                logger.info(
+                    f'Differ {self.__kind__} could not determine data type of {data_label} data from media '
+                    f"type {mime_type}; defaulting to 'text'."
+                )
             return 'text'
 
         def deserialize_data(
@@ -1190,18 +1332,35 @@ class DeepdiffDiffer(DifferBase):
         ignore_string_case = bool(directives.get('ignore_string_case'))
         significant_digits = directives.get('significant_digits')
         compact = bool(directives.get('compact'))
+        # Unlike the deepdiff library's defaults, always pair changed items and compare them in depth: the two
+        # snapshots being compared are near-identical by construction, so reporting the individual nested values that
+        # changed (instead of dumping a whole changed dictionary or list item) is almost always what is wanted.
+        cutoff_distance_for_pairs = directives.get('cutoff_distance_for_pairs', 1.0)
+        cutoff_intersection_for_pairs = directives.get('cutoff_intersection_for_pairs', 1.0)
+        threshold_to_diff_deeper = directives.get('threshold_to_diff_deeper', 0.0)
+        logger.debug(
+            'Job %s: Differ deepdiff using cutoff_distance_for_pairs=%s, cutoff_intersection_for_pairs=%s, '
+            'threshold_to_diff_deeper=%s',
+            self.job.index_number,
+            cutoff_distance_for_pairs,
+            cutoff_intersection_for_pairs,
+            threshold_to_diff_deeper,
+        )
         ddiff = DeepDiff(
             old_data,
             new_data,
             cache_purge_level=0,
             cache_size=500,
             cache_tuning_sample_size=500,
+            cutoff_distance_for_pairs=cutoff_distance_for_pairs,
+            cutoff_intersection_for_pairs=cutoff_intersection_for_pairs,
             default_timezone=tz,  # ty:ignore[invalid-argument-type]
             ignore_numeric_type_changes=True,
             ignore_order=ignore_order,
             ignore_string_case=ignore_string_case,
             ignore_string_type_changes=True,
             significant_digits=significant_digits,
+            threshold_to_diff_deeper=threshold_to_diff_deeper,
             verbose_level=min(2, max(0, math.ceil(3 - logger.getEffectiveLevel() / 10))),
         )
         diff_text = _pretty_deepdiff(ddiff, report_kind, compact)
@@ -1251,7 +1410,7 @@ class ImageDiffer(DifferBase):
         directives: dict[str, Any],
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
         warnings.warn(
             f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
@@ -1366,13 +1525,20 @@ class ImageDiffer(DifferBase):
                     f'incorrect length {len(gemini_api_key)} ({self.job.get_location()})'
                 )
                 return (
-                    f'## ERROR in summarizing changes using Google AI:\n'
-                    f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
-                    f'{len(gemini_api_key)}.\n',
+                    (
+                        f'## ERROR in summarizing changes using Google AI:\n'
+                        f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
+                        f'{len(gemini_api_key)}.\n'
+                    ),
                     '',
                 )
 
             def _load_image(img_data: tuple[str, Image.Image]) -> dict[str, dict[str, str] | Exception | str]:
+                """Upload an image to the Google AI Files API and return its file_data (or an error).
+
+                The resumable-upload POSTs are made through ``_ai_google_post_with_retry``, so transient 429/503
+                responses are retried automatically.
+                """
                 img_name, image = img_data
                 # Convert image to bytes
                 img_byte_arr = BytesIO()
@@ -1397,9 +1563,11 @@ class ImageDiffer(DifferBase):
 
                 with httpx.Client(http2=h2 is not None, timeout=self.job.timeout) as http_client:
                     try:
-                        response = http_client.post(
+                        response = _ai_google_post_with_retry(
+                            http_client,
                             f'https://generativelanguage.googleapis.com/upload/v{api_version}/files?'
                             f'key={gemini_api_key}',
+                            job=self.job,
                             headers=headers,
                             json=data,
                         )
@@ -1414,7 +1582,9 @@ class ImageDiffer(DifferBase):
                         'X-Goog-Upload-Command': 'upload, finalize',
                     }
                     try:
-                        response = http_client.post(upload_url, headers=headers, content=image_data)
+                        response = _ai_google_post_with_retry(
+                            http_client, upload_url, job=self.job, headers=headers, content=image_data
+                        )
                     except httpx.HTTPError as e:
                         return {'error': e, 'img_name': img_name}
 
@@ -1450,8 +1620,10 @@ class ImageDiffer(DifferBase):
                         f'{additional_part["error"]}'
                     )
                     return (
-                        f'HTTP Client error {type(additional_part["error"])} when loading '
-                        f'{additional_part["img_name"]} to Google AI: {additional_part["error"]}',
+                        (
+                            f'HTTP Client error {type(additional_part["error"])} when loading '
+                            f'{additional_part["img_name"]} to Google AI: {additional_part["error"]}'
+                        ),
                         '',
                     )
 
@@ -1609,11 +1781,16 @@ class ImageDiffer(DifferBase):
 
         # Prepare HTML output
         htm = [
-            f'<span style="font-family:monospace">'
-            # f'Differ: {self.__kind__} for {data_type}',
-            f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}{old_data}</span>',
-            f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}{new_data}'
-            '</span>',
+            (
+                f'<span style="font-family:monospace">'
+                # f'Differ: {self.__kind__} for {data_type}',
+                f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}{old_data}'
+                '</span>'
+            ),
+            (
+                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}{new_data}'
+                '</span>'
+            ),
             '</span>',
             'New image:',
         ]
@@ -1631,11 +1808,15 @@ class ImageDiffer(DifferBase):
         htm.extend(
             [
                 'Differences from old (in yellow):',
-                f'<img src="data:image/{(diff_image.format or "").lower()};base64,{encoded_diff}" '
-                'style="max-width: 100%; display: block;">',
+                (
+                    f'<img src="data:image/{(diff_image.format or "").lower()};base64,{encoded_diff}" '
+                    'style="max-width: 100%; display: block;">'
+                ),
                 'Old image:',
-                f'<img src="data:image/{(old_image.format or "").lower()};base64,{encoded_old}" '
-                'style="max-width: 100%; display: block;">',
+                (
+                    f'<img src="data:image/{(old_image.format or "").lower()};base64,{encoded_old}" '
+                    'style="max-width: 100%; display: block;">'
+                ),
             ]
         )
         changed_text = 'The image has changed; please see an HTML report for the visualization.'
@@ -1724,7 +1905,11 @@ class AIGoogleDiffer(DifferBase):
         additional_parts: list[dict[str, str | dict[str, str]]] | None = None,
         directives: AiGoogleDirectives | None = None,
     ) -> tuple[str, str]:
-        """Creates the summary request to the model; returns the summary and the version of the actual model used."""
+        """Creates the summary request to the model; returns the summary and the version of the actual model used.
+
+        Transient API errors (HTTP 429 rate-limit and 503 service-unavailable) are retried automatically via
+        ``_ai_google_post_with_retry`` (up to a cumulative ``AI_GOOGLE_MAX_TOTAL_WAIT`` seconds of waiting).
+        """
         api_version = '1beta'
         if directives is None:
             directives = {}
@@ -1750,9 +1935,11 @@ class AIGoogleDiffer(DifferBase):
                 f'incorrect length {len(gemini_api_key)} ({job.get_location()})'
             )
             return (
-                f'## ERROR in summarizing changes using Google AI:\n'
-                f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
-                f'{len(gemini_api_key)}.',
+                (
+                    f'## ERROR in summarizing changes using Google AI:\n'
+                    f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
+                    f'{len(gemini_api_key)}.'
+                ),
                 '',
             )
 
@@ -1780,9 +1967,11 @@ class AIGoogleDiffer(DifferBase):
         model_version = model  # default
         with httpx.Client(http2=h2 is not None) as http_client:
             try:
-                r = http_client.post(
+                r = _ai_google_post_with_retry(
+                    http_client,
                     f'https://generativelanguage.googleapis.com/v{api_version}/models/{model}:generateContent?'
                     f'key={gemini_api_key}',
+                    job=job,
                     json=data,
                     headers={'Content-Type': 'application/json'},
                     timeout=timeout,
@@ -1834,7 +2023,8 @@ class AIGoogleDiffer(DifferBase):
                 f'{r.url.host}'
             )
             if r.content:
-                summary += f': {r.json().get("error", {}).get("message") or ""}'
+                # summary += f': {r.json().get("error", {}).get("message") or ""}'
+                summary += f': {r.content}'
 
         return summary, model_version
 
@@ -1843,7 +2033,7 @@ class AIGoogleDiffer(DifferBase):
         directives: AiGoogleDirectives,
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:  # ty:ignore[invalid-method-override]
         logger.info(f'Job {self.job.index_number}: Running the {self.__kind__} differ from hooks.py')
         # warnings.warn(
@@ -1872,9 +2062,11 @@ class AIGoogleDiffer(DifferBase):
                     f'incorrect length {len(gemini_api_key)} ({self.job.get_location()})'
                 )
                 return (
-                    f'## ERROR in summarizing changes using Google AI:\n'
-                    f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
-                    f'{len(gemini_api_key)}.\n',
+                    (
+                        f'## ERROR in summarizing changes using Google AI:\n'
+                        f'Environment variable GEMINI_API_KEY not found or is of the incorrect length '
+                        f'{len(gemini_api_key)}.\n'
+                    ),
                     '',
                 )
 
@@ -1928,13 +2120,17 @@ class AIGoogleDiffer(DifferBase):
         if directives.get('additions_only') or self.job.additions_only:
             default_prompt = '\n'.join(
                 (
-                    'You are an expert analyst AI, specializing in the meticulous summarization of change documents. '
-                    'Your task is to summarize the provided unified diff in a clear and concise manner with 100% '
-                    'fidelity. Restrict your analysis and summary *only* to the diff provided. Do not introduce any '
-                    'external information or assumptions.',
+                    (
+                        'You are an expert analyst AI, specializing in the meticulous summarization of change '
+                        'documents. Your task is to summarize the provided unified diff in a clear and concise manner '
+                        'with 100% fidelity. Restrict your analysis and summary *only* to the diff provided. Do not '
+                        'introduce any external information or assumptions.'
+                    ),
                     '',
-                    'Format your summary using Markdown. Use headings, bullet points, and other Markdown elements '
-                    'where appropriate to create a well-structured and easily readable summary.',
+                    (
+                        'Format your summary using Markdown. Use headings, bullet points, and other Markdown elements '
+                        'where appropriate to create a well-structured and easily readable summary.'
+                    ),
                     '',
                     '{unified_diff_new}',
                 )
@@ -1942,48 +2138,66 @@ class AIGoogleDiffer(DifferBase):
         else:
             default_prompt = '\n'.join(
                 (
-                    'You are an expert analyst AI, specializing in the meticulous comparison of documents. Your task '
-                    'is to identify and summarize only the substantive differences between two versions of a text. '
-                    'Your audience is already familiar with the original document and needs a concise summary of the '
-                    'most significant changes in meaning or information.',
+                    (
+                        'You are an expert analyst AI, specializing in the meticulous comparison of documents. Your '
+                        'task is to identify and summarize only the substantive differences between two versions of a '
+                        'text. Your audience is already familiar with the original document and needs a concise '
+                        'summary of the most significant changes in meaning or information.'
+                    ),
                     '',
                     '**Instructions:**',
                     '',
-                    '1.  **Analyze the Texts:** Carefully review the document provided in the `<old_version>` and '
-                    '`</old_version>` tags and the one in the `<new_version>` and `</new_version>` tags.',
+                    (
+                        '1.  **Analyze the Texts:** Carefully review the document provided in the `<old_version>` and '
+                        '`</old_version>` tags and the one in the `<new_version>` and `</new_version>` tags.'
+                    ),
                     '',
-                    '2.  **Identify Substantive Changes:** Compare the two versions to identify all substantive '
-                    'changes. A "substantive change" is defined as any modification that alters the core meaning, '
-                    'intent, instructions, or factual information presented in the text. This includes, but is not '
-                    'limited to:',
+                    (
+                        '2.  **Identify Substantive Changes:** Compare the two versions to identify all substantive '
+                        'changes. A "substantive change" is defined as any modification that alters the core meaning, '
+                        'intent, instructions, or factual information presented in the text. This includes, but is not '
+                        'limited to:'
+                    ),
                     '*   Additions of new concepts, data, or requirements.',
                     '*   Deletions of existing information, arguments, or clauses.',
                     '*   Alterations to definitions, conclusions, instructions, or key takeaways.',
                     '',
-                    '3.  **Exclude Non-Substantive Changes:** You must disregard any changes that are purely cosmetic, '
-                    'typographical, or structural and do not alter the substantive meaning of the document. Explicitly '
-                    'ignore the following:',
+                    (
+                        '3.  **Exclude Non-Substantive Changes:** You must disregard any changes that are purely '
+                        'cosmetic, typographical, or structural and do not alter the substantive meaning of the '
+                        'document. Explicitly ignore the following:'
+                    ),
                     '*   Changes in page numbers, section/chapter numbering, or paragraph numbering.',
                     '*   Corrections of spelling, punctuation, or grammatical errors.',
                     '*   Modifications in formatting, layout, or font.',
                     '*   Rewording or rephrasing that does not change the underlying meaning or intent.',
                     '',
-                    '4.  **Summarize Material Differences:** Create a summary of the identified substantive changes '
-                    'with 100% fidelity. For each change, provide:',
-                    '*   A clear heading identifying the relevant section (e.g., "Section 4: User Guidelines" or '
-                    '"Chapteron Methodology").',
-                    '*   A concise description of the modification, explaining whether it is an addition, deletion, or '
-                    'alteration.',
-                    '*   A brief analysis of how the change impacts the overall message or instructions, if not '
-                    'immediately obvious.',
+                    (
+                        '4.  **Summarize Material Differences:** Create a summary of the identified substantive '
+                        'changes with 100% fidelity. For each change, provide:'
+                    ),
+                    (
+                        '*   A clear heading identifying the relevant section (e.g., "Section 4: User Guidelines" or '
+                        '"Chapteron Methodology").'
+                    ),
+                    (
+                        '*   A concise description of the modification, explaining whether it is an addition, '
+                        'deletion, or alteration.'
+                    ),
+                    (
+                        '*   A brief analysis of how the change impacts the overall message or instructions, if not '
+                        'immediately obvious.'
+                    ),
                     '',
                     '5.  **Output Format:**',
                     '*   Use Markdown for clear and structured presentation (e.g., headings and bullet points).',
                     '*   If no substantive changes are found, state this clearly.',
                     '*   If the changes consist only of additions, summarize the new content.',
                     '',
-                    '6.  **Scope Limitation:** Base your analysis strictly on the provided text excerpts. Do not '
-                    'infer or introduce any external context or information.',
+                    (
+                        '6.  **Scope Limitation:** Base your analysis strictly on the provided text excerpts. Do not '
+                        'infer or introduce any external context or information.'
+                    ),
                     '',
                     '<old_version>',
                     '{old_text}',
@@ -2056,11 +2270,16 @@ class WdiffDiffer(DifferBase):
 
     @staticmethod
     def tokenize_markdown(markdown_string: str) -> list[str]:
-        # Escape spaces inside brackets to prevent them being split
-        string = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', markdown_string)
-        # Use split with capturing group to keep the whitespace
-        tokens = re.split(r'(\s+)', string)
-        return [t.replace('\n', '<\\n>') for t in tokens if t]
+        # Escape spaces and emphasis markers inside brackets to prevent them being split
+        string = re.sub(
+            r'\[(.*?)\]',
+            lambda x: '[' + x.group(1).replace(' ', '</s>').replace('**', '<\\b>').replace('~~', '<\\~>') + ']',
+            markdown_string,
+        )
+        # Use split with capturing group to keep the whitespace and the '**'/'~~' emphasis markers, so that unchanged
+        # markers around a changed word are not reported as part of the change
+        tokens = re.split(r'(\s+|\*\*|~~)', string)
+        return [t.replace('\n', '<\\n>').replace('<\\b>', '**').replace('<\\~>', '~~') for t in tokens if t]
         # # Split by tags, keeping the tags in the resulting list
         # string = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', markdown_string)
         # string = string.replace('\n', ' <\\n> ')
@@ -2095,7 +2314,7 @@ class WdiffDiffer(DifferBase):
         directives: dict[str, Any],
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
         if not isinstance(self.state.old_data, str):
             raise ValueError("The differ 'wdiff' accepts strings only as input")
@@ -2148,11 +2367,15 @@ class WdiffDiffer(DifferBase):
         )
         head_html = '<br>\n'.join(
             [
-                '<span style="font-family:monospace;">'
-                # 'Differ: wdiff',
-                f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
-                f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>'
-                f'</span>',
+                (
+                    '<span style="font-family:monospace;">'
+                    # 'Differ: wdiff',
+                    f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>'
+                ),
+                (
+                    f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>'
+                    f'</span>'
+                ),
                 '',
             ]
         )

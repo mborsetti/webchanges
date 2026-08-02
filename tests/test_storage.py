@@ -27,6 +27,7 @@ from tests.conftest import prepare_storage_test
 from webchanges import __docs_url__
 from webchanges.handler import Snapshot
 from webchanges.storage import (
+    DEFAULT_CONFIG,
     BaseTextualFileStorage,
     SsdbDirStorage,
     SsdbRedisStorage,
@@ -110,7 +111,12 @@ def test_check_for_unrecognized_keys_hooks() -> None:
         f'Check for typos or the hooks.py file (if any); documentation is at {__docs_url__}\n'
     )
     import_module_from_source('hooks', data_path.joinpath('hooks_example.py'))
-    config_storage.check_for_unrecognized_keys(config)
+    config['report']['custom_file'] = {'enabled': False}  # reporter kind defined in hooks_example.py
+    with pytest.warns(RuntimeWarning) as hooks_warning:
+        config_storage.check_for_unrecognized_keys(config)
+    # 'made_up_key' is still unrecognized, but the reporter kind from hooks must not be flagged
+    assert 'made_up_key' in str(hooks_warning.list[0].message)
+    assert 'custom_file' not in str(hooks_warning.list[0].message)
 
 
 def test_empty_config_file() -> None:
@@ -118,6 +124,16 @@ def test_empty_config_file() -> None:
     config_storage = YamlConfigStorage('')
     config_storage.load()
     assert config_storage.config['report']
+
+
+def test_config_is_not_default_config_object() -> None:
+    """The loaded config must be a copy: mutating it must not corrupt the shared DEFAULT_CONFIG."""
+    config_storage = YamlConfigStorage('')
+    config_storage.load()  # empty file, so the config is built from DEFAULT_CONFIG
+    assert config_storage.config == DEFAULT_CONFIG
+    config_storage.config['report']['tz'] = 'THIS_MUST_NOT_LEAK'
+    assert DEFAULT_CONFIG['report']['tz'] != 'THIS_MUST_NOT_LEAK'
+    assert config_storage.config['job_defaults'] is not DEFAULT_CONFIG['job_defaults']
 
 
 def test_jobs_parse() -> None:
@@ -147,7 +163,10 @@ def test_legacy_slack_keys() -> None:
     config_storage = YamlConfigStorage(config_file)
     config = config_storage.parse(config_file)
     config['report']['slack'] = {'enabled': False}
+    # mirror the load() flow: deprecated keys are removed before checking for unrecognized ones
+    config = config_storage.remove_deprecated_keys(config)
     config_storage.check_for_unrecognized_keys(config)
+    assert 'slack' not in config['report']
 
 
 def _write_config(tmp_path: Path, overrides: dict) -> Path:

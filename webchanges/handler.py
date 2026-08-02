@@ -21,6 +21,7 @@ from webchanges.reporters import ReporterBase
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     from concurrent.futures import Future
+    from datetime import tzinfo
     from pathlib import Path
     from types import TracebackType
 
@@ -285,7 +286,7 @@ class JobState(ContextManager):
         report_kind: ReportKind = 'plain',
         differ: dict[str, Any] | None = None,
         differ_defaults: _ConfigDifferDefaults | None = None,
-        tz: ZoneInfo | None = None,
+        tz: tzinfo | None = None,
     ) -> str:
         """Generates the job's diff and applies diff_filters to it (if any). Memoized.
 
@@ -327,12 +328,13 @@ class JobState(ContextManager):
 class Report:
     """The base class for reporting."""
 
-    job_states: list[JobState] = []
     new_release_future: Future[str | bool] | None = None
     start: float = time.perf_counter()
 
     def __init__(self, urlwatch: Urlwatch) -> None:
         """:param urlwatch: The Urlwatch object with the program configuration information."""
+        # instance attribute: a class-level list would be shared (and polluted) across all Report objects
+        self.job_states: list[JobState] = []
         self.config: _Config = urlwatch.config_storage.config
         self.tz = (
             ZoneInfo(self.config['report']['tz'])
@@ -446,7 +448,7 @@ class Report:
                 case 'unchanged':
                     return display_cfg['unchanged']
                 case 'changed':
-                    if not display_cfg['empty-diff']:
+                    if not display_cfg['empty-diff']:  # deprecated; should default to false
                         diff = job_state.get_diff(tz=self.tz, differ_defaults=self.config['differ_defaults'])
                         if diff == '':
                             return False

@@ -285,6 +285,47 @@ You can now run a :program:`webchanges` job defined like this:
    user_data_dir: ~/chrome_user_data_webchanges
 
 
+.. _connect_over_cdp_walkthrough:
+
+Attaching to an already-running browser via CDP
+-----------------------------------------------
+Instead of having :program:`webchanges` launch a new browser for every run, you can attach Playwright to a Chromium
+browser you have already started yourself, using the Chrome DevTools Protocol (CDP). This is useful when:
+
+* You want to reuse a long-lived, already-authenticated session (cookies and local storage stay in the running
+  browser between runs).
+* The browser is running on a different machine or inside a container that exposes a remote debugging port.
+* You want to keep a single browser process across many jobs to amortize startup cost.
+
+To use it:
+
+#. Launch Chrome (or another Chromium build) with the ``--remote-debugging-port`` switch, pointing at a user data
+   directory you control:
+
+   .. code-block:: bash
+
+      chrome.exe --remote-debugging-port=9222 --user-data-dir=~/chrome_user_data_webchanges
+
+#. In another browser tab (or with ``curl``), open ``http://127.0.0.1:9222/json/version`` and copy the value of
+   ``webSocketDebuggerUrl`` — this is the endpoint Playwright will connect to.
+#. Configure the job with :ref:`connect_over_cdp`:
+
+   .. code-block:: yaml
+
+      url: https://example.org/needs-existing-session.html
+      use_browser: true
+      connect_over_cdp: ws://127.0.0.1:9222/devtools/browser/<id-from-step-2>
+
+   Alternatively, ``connect_over_cdp: true`` attaches to the default endpoint
+   ``ws://127.0.0.1:58489/devtools/browser``.
+
+All jobs that use ``connect_over_cdp`` are run on a single dedicated worker thread, so each unique CDP URL only
+requires a manual browser authorization once per run, regardless of how many jobs reference it. The connected
+browser is then cached for the lifetime of the :program:`webchanges` process, so consecutive runs (e.g. ``--test``
+cycles) reuse the same connection. To disable caching (open and close a new CDP connection for every job), set
+the environment variable ``WEBCHANGES_BROWSER_CDP_CACHE=0``.
+
+
 .. _overriding_content_encoding:
 
 Overriding the content encoding

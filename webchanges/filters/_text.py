@@ -7,11 +7,56 @@ from __future__ import annotations
 import logging
 import re
 import warnings
-from typing import Any, Iterator
+from typing import Any, Generator, Iterator, Sequence
 
 from webchanges.filters._base import FilterBase
 
 logger = logging.getLogger(__name__)
+
+
+class BetweenLinesFilter(FilterBase):
+    """Extract the lines between a starting and an ending pattern."""
+
+    __kind__ = 'between'
+
+    __supported_subfilters__ = {
+        'start': 'Regular expression matching the line that starts the block (block-opening line is not kept).',
+        'end': 'Regular expression matching the line that ends the block (block-closing line is not kept).',
+    }
+
+    @staticmethod
+    def get_lines_between(
+        lines: Sequence[str],
+        start_pattern: str | None = None,
+        end_pattern: str | None = None,
+    ) -> Generator[str, None, None]:
+        """Yield lines between start and end patterns."""
+        started = start_pattern is None
+        for line in lines:
+            if not started:
+                if start_pattern and re.search(start_pattern, line):
+                    started = True
+                continue
+            if end_pattern and re.search(end_pattern, line):
+                break
+
+            yield line
+
+    def filter(
+        self,
+        data: str | bytes,
+        mime_type: str,
+        subfilter: dict[str, Any],
+    ) -> tuple[str | bytes, str]:
+        """Filter lines between start and end patterns."""
+        if not isinstance(data, str):
+            raise ValueError(f"The 'between' filter requires text input. ({self.job.get_indexed_location()})")
+
+        start_pattern = subfilter.get('start')
+        end_pattern = subfilter.get('end')
+
+        lines = data.splitlines(keepends=True)
+        return ''.join(self.get_lines_between(lines, start_pattern, end_pattern)), mime_type
 
 
 class KeepLinesContainingFilter(FilterBase):

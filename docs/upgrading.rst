@@ -16,7 +16,9 @@ Upgrading from urlwatch
 
 Introduction
 ------------
-You can easily upgrade to **webchanges** from the current version of **urlwatch** using the same job and
+**webchanges** is more feature-rich than urlwatch (see `here <https://webchanges.readthedocs.io/en/stable/_static/webchanges-vs-urlwatch.html>`__).
+
+You can easily upgrade from the current version of **urlwatch** using the same job and
 configuration files (see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__) and benefit from many
 improvements, including:
 

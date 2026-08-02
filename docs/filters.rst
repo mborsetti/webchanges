@@ -108,6 +108,8 @@ At the moment, the following filters are available:
 
 * To filter and/or edit text:
 
+  - :ref:`between`: Extract the block of lines between a starting and an ending `Python regular expression
+    <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`delete_lines_containing`: Delete lines containing specified text or matching a `Python regular expression
     <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__.
   - :ref:`keep_lines_containing`: Keep only lines containing specified text or matching a `Python regular expression
@@ -239,6 +241,38 @@ follows:
 .. code-block:: bash
 
    uv pip install --upgrade webchanges[beautify]
+
+
+
+.. _between:
+
+``between``
+-----------
+Extract the block of lines that sits between a starting and an ending `Python regular expression
+<https://docs.python.org/3/library/re.html#regular-expression-syntax>`__. The lines that match the ``start`` and
+``end`` patterns are themselves discarded; only the lines in between are kept. Useful for clipping a section out of
+log files, server-status pages, or any text source delimited by recognizable markers.
+
+If ``start`` is omitted, extraction begins at the first line. If ``end`` is omitted, extraction continues to the end
+of the input. If the ``start`` pattern is never matched, the output is empty; if the ``end`` pattern is never matched
+after a successful start, every remaining line is kept.
+
+Example:
+
+.. code-block:: yaml
+
+   url: https://example.com/between.txt
+   filters:
+     - between:
+         start: '^=== BEGIN ==='
+         end: '^=== END ==='
+
+Optional sub-directives
+```````````````````````
+* ``start``: Regular expression matching the line that opens the block (the matching line itself is **not** kept).
+* ``end``: Regular expression matching the line that closes the block (the matching line itself is **not** kept).
+
+.. versionadded:: 3.37
 
 
 

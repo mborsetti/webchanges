@@ -7,7 +7,7 @@ import os
 import tempfile
 import warnings
 from pathlib import Path
-from typing import Callable, cast
+from typing import Callable, Iterator, cast
 
 import pytest
 
@@ -36,14 +36,13 @@ hooks_file = Path()
 ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
 
 
-def cleanup(request: pytest.FixtureRequest) -> None:
-    """Cleanup once we are finished."""
-
-    def finalizer() -> None:
-        """Cleanup once we are finished."""
-        ssdb_storage.close()
-
-    request.addfinalizer(finalizer)
+@pytest.fixture(scope='module', autouse=True)
+def _close_module_ssdb_storage() -> Iterator[None]:
+    """Close the module-level ``ssdb_storage`` once all tests in this module have run, so its sqlite3 connections
+    don't survive to interpreter shutdown and emit ResourceWarnings.
+    """
+    yield
+    ssdb_storage.close()
 
 
 def test_required_classattrs_in_subclasses() -> None:
@@ -137,6 +136,46 @@ def test_disabled_job() -> None:
 
         assert len(urlwatcher.report.job_states) == 1
         assert urlwatcher.report.job_states[0].new_data == 'enabled job\n'
+    finally:
+        ssdb_storage.close()
+
+
+def test_same_site_delay_directive(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``same_site_delay`` delays a URL job only when an earlier job targets the same site and the directive is set."""
+    from webchanges.jobs import _url
+
+    slept: list[float] = []
+    monkeypatch.setattr(_url.time, 'sleep', slept.append)
+
+    jobs_file = data_path.joinpath('jobs-disabled.yaml')
+
+    urlwatch_config = CommandConfig(
+        [],
+        here,
+        config_file,
+        jobs_file,
+        hooks_file,
+        ssdb_file,  # ty:ignore[invalid-argument-type]
+    )
+    config_storage = YamlConfigStorage(config_file)
+    jobs_storage = YamlJobsStorage([jobs_file])
+    ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
+    ssdb_storage.delete_all()
+    urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
+    # All three are file:// URIs, which share the same (empty) network location, so jobs 2 and 3 are same-site
+    # repeats of job 1.
+    urlwatcher.jobs = [
+        UrlJob(url=Path(__file__).as_uri(), same_site_delay=0.5),  # first for this site: never delayed
+        UrlJob(url=config_file.as_uri(), same_site_delay=0.25),  # same site, directive set: delayed 0.25s
+        UrlJob(url=jobs_file.as_uri()),  # same site, no directive: not delayed
+    ]
+    urlwatcher.report.job_states = []
+    try:
+        urlwatcher.run_jobs()
+
+        assert len(urlwatcher.report.job_states) == 3
+        # Only job 2 is a same-site repeat that also sets the directive, so exactly one sleep of its value occurs.
+        assert slept == [0.25]
     finally:
         ssdb_storage.close()
 

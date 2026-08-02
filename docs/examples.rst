@@ -53,6 +53,7 @@ can use compared_versions to do this.
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    compared_versions: 3
 
@@ -66,6 +67,7 @@ runs to know it's still working, you can add a job that monitors the output of t
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: Run date
    command: date
 
@@ -89,6 +91,7 @@ replace ``USERNAME`` with the name of the user (which can be found by navigating
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: USERNAME's Facebook posts
    url: https://m.facebook.com/USERNAME/pages/permalink/?view_type=tab_posts
    filters:
@@ -106,6 +109,7 @@ replace ``USERNAME`` with the name of the user (which can be found by navigating
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: USERNAME's Facebook events
    url: https://m.facebook.com/USERNAME/pages/permalink/?view_type=tab_events
    filters:
@@ -128,6 +132,7 @@ This is an example how to anonymously watch the GitHub "releases" page of a proj
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://github.com/git/git/releases
    filters:
      - xpath:
@@ -139,6 +144,7 @@ If you only want to monitor the latest release and not include pre-releases:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://github.com/Novik/ruTorrent/releases/latest
    filters:
      - xpath: //*[@class="ml-1"]
@@ -158,6 +164,7 @@ This is an example how to anonymously watch the GitLab "tags" page for a given p
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://gitlab.com/gitlab-org/gitlab/-/tags
    filters:
      - xpath: (//a[contains(@class,"item-title ref-name")])[1]
@@ -212,6 +219,7 @@ It is possible to add cookies to HTTP requests for pages that need them. For exa
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    cookies:
      Key: ValueForKey
@@ -227,6 +235,7 @@ to specify it in number of seconds, or set it to 0 to never timeout.
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    timeout: 300
 
@@ -243,6 +252,7 @@ man-in-the-middle (MitM) attacks, never use it outside of local development or t
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    ssl_no_verify: true
 
@@ -260,6 +270,7 @@ directive above instead.
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    ignore_connection_errors: true
 
@@ -268,6 +279,7 @@ Similarly, you might want to ignore some (temporary) HTTP errors on the server s
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    ignore_http_error_codes: 408, 429, 500, 502, 503, 504
 
@@ -275,6 +287,7 @@ or ignore all HTTP errors if you like by using :ref:`ignore_http_error_codes`:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    ignore_http_error_codes: 4xx, 5xx
 
@@ -293,6 +306,7 @@ libcurl-impersonate. This is much lighter than running a full headless browser j
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/protected
    http_client: curl_cffi
 
@@ -302,6 +316,7 @@ specific site rejects the default, try a more recent or different profile such a
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/protected
    http_client: curl_cffi
    impersonate: safari17_0

@@ -70,8 +70,8 @@ if httpx is not None and logger.getEffectiveLevel() == logging.DEBUG:
 class JobBase(metaclass=TrackSubClasses):
     """The base class for Jobs."""
 
-    __subclasses__: dict[str, 'JobBase'] = {}
-    __anonymous_subclasses__: list['JobBase'] = []
+    __subclasses__: dict[str, 'JobBase'] = {}  # ty:ignore[invalid-assignment]
+    __anonymous_subclasses__: list['JobBase'] = []  # ty:ignore[invalid-assignment]
 
     __kind__: str = ''  # The kind name
     __is_browser__: bool = False  # Whether Playwright is being launched (run separately with less parallelism)
@@ -86,11 +86,12 @@ class JobBase(metaclass=TrackSubClasses):
     use_browser: bool | str | None = False
 
     # __optional__ in derived classes
-    _delay: float | None = None  # TODO: WIP experiment
+    _delay: float | None = None  # internal effective delay; set per-run by worker from the same_site_delay directive
     additions_only: bool | float | str | None = None
     block_elements: list[str] | None = None  # BrowserJob
     compared_versions: int | None = None
     contextlines: int | None = None
+    connect_over_cdp: str | bool | None = None  # BrowserJob
     cookies: dict[str, str] | None = None  # UrlJobBase
     data: str | list | dict | None = None  # UrlJobBase
     data_as_json: bool | None = None  # UrlJobBase
@@ -138,8 +139,10 @@ class JobBase(metaclass=TrackSubClasses):
     proxy: str | None = None  # UrlJobBase
     referer: str | None = None  # BrowserJob
     retries: int | None = None  # UrlJob
+    same_site_delay: float | None = None  # UrlJobBase
     ssl_no_verify: bool | None = None  # UrlJob
     stderr: str | None = None  # urlwatch backwards compatibility for ShellJob (not used)
+    stealth: bool | None = None  # BrowserJob
     suppress_error_ended: bool | None = None
     suppress_errors: bool | None = None
     suppress_repeated_errors: bool | None = None
@@ -149,11 +152,11 @@ class JobBase(metaclass=TrackSubClasses):
     user_data_dir: str | None = None  # BrowserJob
     user_visible_url: str | None = None
     wait_for: int | str | None = None  # BrowserJob (DEPRECATED)
-    wait_for_function: str | dict[str, str] | None = None  # BrowserJob
+    wait_for_function: str | dict[str, Any] | None = None  # BrowserJob
     wait_for_navigation: str | tuple[str, ...] | None = None  # BrowserJob (DEPRECATED)
-    wait_for_selector: str | dict[str, str] | list[str | dict[str, str]] | None = None  # BrowserJob
+    wait_for_selector: str | dict[str, Any] | list[str | dict[str, Any]] | None = None  # BrowserJob
     wait_for_timeout: float | None = None  # BrowserJob
-    wait_for_url: str | None = None  # BrowserJob
+    wait_for_url: str | dict[str, Any] | None = None  # BrowserJob
     wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None  # BrowserJob
 
     def __init__(self, **kwargs: Any) -> None:
@@ -266,16 +269,20 @@ class JobBase(metaclass=TrackSubClasses):
     def unserialize(cls, data: dict, filenames: list[Path] | None = None) -> 'JobBase':
         """Unserialize a dict with job data (e.g. from the YAML jobs file) into a JobBase type object.
 
-        :param data: The dict with job data (e.g. from the YAML jobs file).
+        :param data: The dict with job data (e.g. from the YAML jobs file); it is not modified.
         :returns: A JobBase type object.
         """
-        # Backwards compatibility with 'navigate' directive (deprecated)
         if filenames is None:
             filenames = []
+
+        # Work on a shallow copy, as the backwards-compatibility migrations below rewrite and remove keys and the
+        # caller's dict (e.g. one owned by hooks.py code) must not be modified.
+        data = dict(data)
 
         if data.get('kind') == 'shell':
             data['kind'] = 'command'
 
+        # Backwards compatibility with 'navigate' directive (deprecated)
         if data.get('navigate') and not data.get('use_browser'):
             warnings.warn(
                 f"Error in jobs file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: "
@@ -323,7 +330,7 @@ class JobBase(metaclass=TrackSubClasses):
                         True
                     )
                 # noinspection PyUnresolvedReferences
-                job_subclass = sorted(number_matched.items(), key=lambda x: x[1], reverse=True)[0][0]
+                job_subclass = max(number_matched.items(), key=lambda x: x[1])[0]
             else:
                 if len(data) == 1:
                     raise ValueError(
@@ -393,7 +400,7 @@ class JobBase(metaclass=TrackSubClasses):
                 raise ValueError(
                     '\n   '.join(
                         [
-                            f"Directive '{k}' is unrecognized in the following {cls.__kind__} job",
+                            f"Directive '{k}' is unrecognized in the following job of kind '{cls.__kind__}'",
                             *jobs_files,
                             '',
                             '---',
@@ -517,11 +524,11 @@ class JobBase(metaclass=TrackSubClasses):
         return self.make_guid(location)
 
     def retrieve(self, job_state: JobState, headless: bool = True) -> tuple[str | bytes, str, str]:
-        """Runs job to retrieve the data, and returns data and ETag.
+        """Runs job to retrieve the data, and returns the data, ETag, and media type (fka MIME type).
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
         :param headless: For browser-based jobs, whether headless mode should be used.
-        :returns: The data retrieved and the ETag.
+        :returns: A tuple of the data retrieved, the ETag, and the media type.
         """
         raise NotImplementedError
 
@@ -637,11 +644,11 @@ class Job(JobBase):
         job_state: JobState,
         headless: bool = True,
     ) -> tuple[str | bytes, str, str]:
-        """Runs job to retrieve the data, and returns data and ETag.
+        """Runs job to retrieve the data, and returns the data, ETag, and media type (fka MIME type).
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
         :param headless: For browser-based jobs, whether headless mode should be used.
-        :returns: The data retrieved, the ETag, and the mime_type.
+        :returns: A tuple of the data retrieved, the ETag, and the media type.
         """
         raise NotImplementedError
 
@@ -667,6 +674,7 @@ class UrlJobBase(Job):
         'method',
         'params',
         'proxy',
+        'same_site_delay',
         'timeout',
     )
 

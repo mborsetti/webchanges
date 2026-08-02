@@ -1,7 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/mborsetti/webchanges/refs/heads/main/webchanges/_resources/jobs.schema.json",
   "title": "Webchanges Jobs Configuration",
-  "description": "JSON Schema for each job in Webchanges' jobs.yaml configuration file",
+  "description": "JSON Schema for each job in webchanges' jobs.yaml configuration file",
   "type": "object",
   "oneOf": [{ "required": ["url"] }, { "required": ["command"] }],
   "properties": {
@@ -57,6 +58,14 @@
     "timeout": {
       "type": ["integer", "number"],
       "description": "Request timeout in seconds."
+    },
+    "same_site_delay": {
+      "type": ["integer", "number"],
+      "description": "Number of seconds to wait before retrieving the URL when an earlier job in the list already targets the same site (network location). The first (or only) job for a given site is never delayed. Use it to stagger jobs that would otherwise hit the same site at the same instant and get rate-limited or blocked."
+    },
+    "delay": {
+      "type": ["integer", "number"],
+      "description": "Number of seconds to wait before retrieving the URL (e.g. to stagger jobs that hit the same site, or to space out requests to a slow or rate-limited server)."
     },
     "ignore_connection_errors": {
       "type": "boolean",
@@ -170,6 +179,11 @@
       },
       "description": "Resource types to block from loading (browser jobs)."
     },
+    "connect_over_cdp": {
+      "oneOf": [{ "type": "boolean" }, { "type": "string", "format": "uri" }],
+      "description": "Attach Playwright to an already-running Chromium browser via the Chrome DevTools Protocol (browser jobs). 'true' uses the default endpoint ws://127.0.0.1:58489/devtools/browser; a string is used as the CDP WebSocket URL.",
+      "default": false
+    },
     "evaluate": {
       "type": "string",
       "description": "JavaScript code to execute in the page context (browser jobs)."
@@ -180,7 +194,7 @@
     },
     "ignore_default_args": {
       "oneOf": [{ "type": "boolean" }, { "type": "array", "items": { "type": "string" } }],
-      "description": "Override Chrome default arguments (browser jobs).",
+      "description": "Override browser default arguments (browser jobs).",
       "default": false
     },
     "ignore_https_errors": {
@@ -204,14 +218,18 @@
       "type": "string",
       "description": "Referer header value (browser jobs)."
     },
+    "stealth": {
+      "type": "boolean",
+      "description": "Use stealth mode (browser jobs)."
+    },
     "switches": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Additional Chrome command-line switches (browser jobs)."
+      "description": "Additional browser command-line switches (browser jobs)."
     },
     "user_data_dir": {
       "type": "string",
-      "description": "Path to a Chrome user data directory (for persistence/auth with use_browser)."
+      "description": "Path to a browser user data directory (for persistence/auth with use_browser)."
     },
     "wait_for_function": {
       "oneOf": [
@@ -444,6 +462,27 @@
                   "type": "boolean",
                   "description": "Use compact output format.",
                   "default": false
+                },
+                "cutoff_distance_for_pairs": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "With ignore_order, two changed items are paired and compared in depth only if their deep distance is below this value; otherwise they are reported as one item removed plus one added (deepdiff library's own default is 0.3).",
+                  "default": 1.0
+                },
+                "cutoff_intersection_for_pairs": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "With ignore_order, pairing of changed items is attempted only if the intersection distance of the two iterables is below this value; otherwise each changed item is reported in its entirety (deepdiff library's own default is 0.7).",
+                  "default": 1.0
+                },
+                "threshold_to_diff_deeper": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "The fraction of keys two dictionaries must share for them to be compared key by key instead of being reported as one whole new value (deepdiff library's own default is 0.33).",
+                  "default": 0
                 }
               },
               "required": ["name"],
@@ -644,21 +683,9 @@
   },
   "definitions": {
     "filterList": {
-      "oneOf": [
-        {
-          "type": "string",
-          "description": "A single filter name (e.g. 'html2text', 'sha1sum')."
-        },
-        {
-          "type": "array",
-          "items": { "$ref": "#/definitions/filterItem" },
-          "description": "List of filters to apply in order."
-        },
-        {
-          "$ref": "#/definitions/filterItemObject",
-          "description": "A single filter as an object."
-        }
-      ]
+      "type": "array",
+      "items": { "$ref": "#/definitions/filterItem" },
+      "description": "List of filters to apply in order."
     },
     "filterItem": {
       "oneOf": [
@@ -734,6 +761,21 @@
             }
           ],
           "description": "Beautifies HTML using BeautifulSoup."
+        },
+        "between": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "description": "Regular expression matching the line that opens the block (this line is not kept)."
+            },
+            "end": {
+              "type": "string",
+              "description": "Regular expression matching the line that closes the block (this line is not kept)."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Extracts the block of lines between a starting and an ending regular expression."
         },
         "css": {
           "oneOf": [

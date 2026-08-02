@@ -80,4 +80,6 @@ def test_linkify() -> None:
 
 def test_get_new_version_number() -> None:
     version = get_new_version_number(timeout=1)
-    assert not version  # this version should be equal to or higher than the one in PyPi!
+    # '' = running the latest release, True = running a newer-than-released version (e.g. an rc), False = no
+    # version information available; a version string means PyPi has a newer release than this code!
+    assert version in ('', True, False)

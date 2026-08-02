@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import copy
 import importlib.util
 import sys
 import traceback
 from smtplib import SMTPAuthenticationError
+from types import SimpleNamespace
 
 import pytest
 
@@ -42,12 +44,14 @@ ALL_REPORTERS = [
 
 
 class UrlwatchTest:
-    """A mock Urlwatch class for testing."""
+    """A mock Urlwatch class for testing.
 
-    class config_storage:  # noqa: N801 should use CapWords
-        """A mock config_storage class for testing."""
+    Each instance carries its own deep copy of the default configuration, so that a test mutating a report's config
+    can corrupt neither the shared DEFAULT_CONFIG nor the other tests.
+    """
 
-        config = DEFAULT_CONFIG
+    def __init__(self) -> None:
+        self.config_storage = SimpleNamespace(config=copy.deepcopy(DEFAULT_CONFIG))
 
 
 def build_test_report() -> Report:
@@ -131,6 +135,7 @@ def build_test_report() -> Report:
     return test_report
 
 
+@pytest.mark.filterwarnings('ignore::getpass.GetPassWarning')  # headless runs cannot control terminal echo
 def test_smtp_password() -> None:
     if NoKeyringError is not None:
         try:

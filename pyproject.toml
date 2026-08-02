@@ -76,8 +76,9 @@ pdf2text = ['pdftotext']
 pypdf = ['pypdf']
 pypdf_crypto = ['pypdf', 'cryptography']
 # differs
-deepdiff = ['deepdiff']
-deepdiff_xml = ['deepdiff', 'xmltodict']
+# deepdiff >= 8.0 is required for threshold_to_diff_deeper
+deepdiff = ['deepdiff >= 8.0']
+deepdiff_xml = ['deepdiff >= 8.0', 'xmltodict']
 imagediff = ['Pillow']
 # reporters
 matrix = ['matrix_client']
@@ -210,6 +211,14 @@ report_level = 'WARNING'
 # log_cli = true
 minversion = '9.0.2'
 testpaths = ['tests']
+filterwarnings = [
+    # Fail tests that leak sqlite3 connections. Scoped by message so third-party ResourceWarnings (e.g.
+    # asyncio/playwright transports) don't destabilize the suite. The second entry is required because the warning
+    # is emitted during garbage collection: the error raised there is unraisable, and only surfaces as a test
+    # failure through pytest's unraisable-exception plugin (as a PytestUnraisableExceptionWarning).
+    'error:unclosed database:ResourceWarning',
+    'error:(?s).*unclosed database:pytest.PytestUnraisableExceptionWarning',
+]
 
 # pytest-playwright
 # addopts = ['--browser', 'chromium', '--browser-channel', 'chrome']

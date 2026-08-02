@@ -314,6 +314,12 @@ Optional directives
   replaced by a newline (default: see below).
 * ``timeout`` (float): The number of seconds before timing out the API call (default: 300).
 
+.. note::
+   Transient API errors are retried automatically: an HTTP ``429`` (rate limit) is retried one second after the delay
+   the server requests (the extra second covers the server truncating its requested delay to whole seconds), and an
+   HTTP ``503`` (service unavailable) is retried after a fixed 45 seconds. Retries continue until the cumulative time
+   spent waiting would exceed 244 seconds, at which point it gives up.
+
 Data to diff
 ::::::::::::
 
@@ -438,8 +444,9 @@ Prompt
    {unified_diff_new}
 
 
-.. versionchanged::
-   No changes are tracked here prior to v3.33 as the differ was in BETA; please refer to the :ref:`changelog`.
+.. note::
+   No changes are tracked here prior to v3.33 as the differ was in BETA; please refer to the
+   :ref:`Changelog <changelog>`.
 
 .. versionchanged:: 3.33
    Removed the BETA tag.
@@ -573,17 +580,29 @@ Optional directives
   no limit).
 * ``compact`` (true/false): Produce a more compact YAML-style report which also ignores type changes (e.g. "type changed
   from NoneType to str").
+* ``cutoff_distance_for_pairs`` (float, 0 to 1): With ``ignore_order: true``, two changed items are paired and
+  compared in depth only if their `deep distance
+  <https://zepworks.com/deepdiff/current/deep_distance.html>`__ is below this value; otherwise they are reported as
+  one item removed plus one item added (default: 1.0, i.e. always pair; the deepdiff library's own default is 0.3).
+* ``cutoff_intersection_for_pairs`` (float, 0 to 1): With ``ignore_order: true``, pairing of changed items is
+  attempted only if the intersection distance of the two iterables (0 = identical, 1 = nothing in common) is below
+  this value; otherwise each changed item is reported in its entirety (default: 1.0, i.e. always attempt pairing; the
+  deepdiff library's own default is 0.7).
+* ``threshold_to_diff_deeper`` (float, 0 to 1): The fraction of keys two dictionaries must share for them to be
+  compared key by key instead of being reported as one whole new value (default: 0, i.e. always compare key by key;
+  the deepdiff library's own default is 0.33).
 
 
 .. note::
 
-   When you set ``ignore_order: true``, DeepDiff will treat lists as if they were sets. To compare two
-   sets, it needs to be able to pair up the items and DeepDiff's default strategy is to try and hash the objects in the
-   list. However, if the items in the list are dictionaries, since they are not hashable in Python, when DeepDiff finds
-   a dictionary in new_data that has even a tiny difference from its counterpart in old_data, since it can't be sure
-   they are "the same object, but modified", it reports that the entire old dictionary is gone and that the entire new
-   dictionary has been added. This will cause the report to show a change for the entire, and potentially large,
-   dictionary, not just of the any changed nested value(s).
+   Unlike the deepdiff library's own defaults, :program:`webchanges` defaults ``cutoff_distance_for_pairs``,
+   ``cutoff_intersection_for_pairs`` and ``threshold_to_diff_deeper`` to always drill down and report the individual
+   nested values that changed: since the two snapshots being compared come from the same source, they are
+   near-identical by construction, and a changed dictionary in a list is almost always "the same object, but
+   modified" rather than an unrelated one. Doing so requires DeepDiff to run additional comparison passes, which can
+   be slow when the data contains very large lists of changed items; if a run takes too long, set these directives to
+   the deepdiff library's own defaults (0.3, 0.7 and 0.33 respectively) to trade granularity for speed, at the cost
+   of a changed item potentially being reported as its entire old contents replaced by its entire new contents.
 
 
 
@@ -601,6 +620,12 @@ follows:
 
 .. versionchanged:: 3.30.1
    Added ``compact`` sub-directive.
+
+.. versionchanged:: 3.37
+   Changed items in iterables and dictionaries are now always compared in depth, so only the individual nested
+   values that changed are reported instead of the entire before-and-after contents; added the
+   ``cutoff_distance_for_pairs``, ``cutoff_intersection_for_pairs`` and ``threshold_to_diff_deeper`` sub-directives
+   to tune this behavior.
 
 
 .. _image_diff:
@@ -766,6 +791,10 @@ Performs a word-by-word comparison highlighting words that have been added (:add
 (:deletions:`deleted`). Changed words are displayed twice: once marked as "deleted" (:deletions:`deleted`)
 representing the old word(s), and the new word(s) as "added" (:additions:`added`). Line breaks are maintained.
 
+When the data is Markdown, bold (``**``) and strikethrough (``~~``) markers are treated as separate tokens, so a
+change to a word inside an emphasized phrase does not report the unchanged markers as part of the change (e.g.
+``**one flower**`` becoming ``**two flowers**`` is reported as ``**[-one-] {+two+} [-flower-] {+flowers+}**``).
+
 It is similar to `GNU's Wdiff <https://www.gnu.org/software/wdiff/>`__, but requires no external dependency.
 
 When unchanged lines are skipped, they are reported using ``@@``. For example, ``@@ 1...22 @@`` means that lines 1 to
@@ -800,3 +829,7 @@ Optional directives
 * ``context_lines`` (int): The number of context lines on each side of changes to provide surrounding content to
   better understand the changes (default: 3).
 * ``range_info`` (true/false): Include range information lines for unreported lines (default: true).
+
+.. versionchanged:: 3.37
+   Markdown bold (``**``) and strikethrough (``~~``) markers are tokenized separately, so unchanged markers around
+   changed words are no longer reported as part of the change.

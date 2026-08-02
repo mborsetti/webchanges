@@ -182,7 +182,7 @@ class Headers(typing.MutableMapping[str, str]):
         """
         return [(key.decode(self.encoding), value.decode(self.encoding)) for _, key, value in self._list]
 
-    def get(self, key: str, default: typing.Any = None) -> typing.Any:
+    def get(self, key: str, default: typing.Any = None) -> typing.Any:  # ty:ignore[invalid-method-override]
         """
         Return a header value. If multiple occurrences of the header occur
         then concatenate them together with commas.

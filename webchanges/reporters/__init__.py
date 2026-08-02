@@ -18,7 +18,6 @@ from webchanges.reporters._chat import (
     xmpp_set_password,
 )
 from webchanges.reporters._email import EMailReporter, MailgunReporter
-from webchanges.reporters._filter import BetweenLinesFilter, get_lines_between
 from webchanges.reporters._stdout import StdoutReporter
 from webchanges.reporters._system import RunCommandReporter
 from webchanges.reporters._web import (
@@ -36,7 +35,6 @@ from webchanges.reporters._web import (
 
 __all__ = [
     'XMPP',
-    'BetweenLinesFilter',
     'BrowserReporter',
     'DiscordReporter',
     'EMailReporter',
@@ -61,7 +59,6 @@ __all__ = [
     'WebServiceReporter',
     'WebhookReporter',
     'XMPPReporter',
-    'get_lines_between',
     'xmpp_have_password',
     'xmpp_set_password',
 ]

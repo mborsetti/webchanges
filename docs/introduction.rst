@@ -17,6 +17,58 @@ it finds changes. Specifically, every time you run :program:`webchanges`, it:
 #. Saves the output to be used the next time it is run.
 
 
+The pipeline at a glance
+------------------------
+Data flows through five stages: **Job → filters → differ → diff_filters → Report → Reporter**.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 20 20 20 20
+
+   * - 1. :ref:`Job <jobs>`
+     - 2. :ref:`filters <filters>`
+     - 3. :ref:`differ <differs>`
+     - 4. :ref:`diff_filters <diff_filters>`
+     - 5. :ref:`Report <reports>` → :ref:`Reporter <reporters>`
+   * - *Fetch the raw bytes.* Every job declares a single source.
+
+       - ``url:`` (default) — HTTP/FTP/``file://`` via ``httpx``, ``requests``, or ``curl_cffi`` (*kind: url*)
+       - ``url:`` + ``use_browser: true`` — Playwright-driven Chrome/Firefox/WebKit; renders JS (*kind: browser*)
+       - ``command:`` — local shell command output (*kind: command*)
+     - *Transform the fetched bytes* before storing & comparing. Chained, applied in order.
+
+       - Select: ``css``, ``xpath``, ``element-by-{id,class,style,tag}``
+       - To text: ``html2text``, ``csv2text``, ``pypdf``, ``pdf2text``, ``ical2text``, ``ocr``
+       - Reformat: ``beautify``, ``absolute_links``, ``format-json``, ``jsontoyaml``, ``format-xml``,
+         ``pretty-xml``, ``jq``
+       - Edit: ``between``, ``keep_lines_containing``, ``delete_lines_containing``, ``re.sub``, ``re.findall``,
+         ``strip``, ``striplines``, ``sort``, ``reverse``, ``remove_repeated``
+       - Encode/hash: ``sha1sum``, ``sha256sum``, ``hexdump``, ``ascii85``, ``base64``
+       - Escape hatch: ``execute`` (any program), ``shellpipe`` (avoid)
+     - *Compare new vs. previous snapshot* and produce the diff text. **One per job.**
+
+       - ``unified`` — line-by-line, unified format (**default**)
+       - ``table`` — unified-style diff rendered as an HTML table
+       - ``wdiff`` — word-by-word
+       - ``deepdiff`` — structural compare for JSON / XML
+       - ``command`` — pipe to an external diff program
+       - ``ai_google`` — Gen-AI summary (BETA)
+       - ``image`` — overlay visual diff (BETA, pairs with ``ascii85`` filter)
+     - *Post-process the diff text* before it goes into the report. Chained.
+
+       - **Any** filter from stage 2 can be re-used here (e.g. ``delete_lines_containing: "@@"``)
+       - ``additions_only`` — keep only added lines (with a shrink-safeguard threshold; *unified differ only*)
+       - ``deletions_only`` — keep only deleted lines (*unified differ only*)
+     - *All jobs' diffs are bundled into a report* in one of three formats and dispatched.
+
+       - **text** — Unicode plaintext
+       - **html** — colorised, clickable
+       - **markdown** — for chat reporters
+
+       Each reporter inherits one of these three formats.
+
+A more legible version of this flow is `here <_static/introduction_flow.html>`__.
+
 :ref:`Jobs`
 -----------
 Each source of data to be monitored (URL or command) is a "job".
@@ -56,6 +108,7 @@ resources) or ``command`` directive (for the output of a shell command):
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
 
 If you have multiple sources to monitor, i.e. multiple "jobs", separate each with a line of three dashes
@@ -63,6 +116,7 @@ If you have multiple sources to monitor, i.e. multiple "jobs", separate each wit
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    ---
    url: https://example.com/page2
@@ -77,6 +131,7 @@ virtual (`headless`) Google Chrome browser to render the JavaScript. This requir
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/
    use_browser: true
 
@@ -85,6 +140,7 @@ automatically try to use a webpage's title if you don't do so:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    name: Example
    url: https://example.com/
 
@@ -92,6 +148,7 @@ You can enter remarks in your YAML configuration file by using ``#``:
 
 .. code-block:: yaml
 
+   # yaml-language-server: $schema=jobs.schema.json
    # I am monitoring this site because I expect it to change for the better
    name: Sample  # Here I have an end of line remark
    url: https://example.com/
@@ -128,9 +185,10 @@ If all you want to do is monitoring the displayed text and links of a website, t
 
 .. code-block:: yaml
 
-    url: https://example.com/
-    filters:
-      - html2text:  # notice the 2 empty spaces before the hyphen and the colon at the end
+   # yaml-language-server: $schema=jobs.schema.json
+   url: https://example.com/
+   filters:
+     - html2text:  # notice the 2 empty spaces before the hyphen and the colon at the end
 
 Filters can be chained. As an example, after retrieving an HTML document by using the ``url`` directive, you
 can extract a selection with the ``xpath`` filter, convert it to text with ``html2text`` with specific settings, extract
@@ -138,21 +196,22 @@ only lines matching a specific regular expression with ``keep_lines_containing``
 
 .. code-block:: yaml
 
-    name: Sample webchanges job definition
-    url: https://example.com/
-    proxy: http://user:password@example.net:8080
-    max_tries: 2
-    filters:
-      - xpath: //section[@role="main"]
-      - html2text:
-          method: html2text
-          inline_links: false
-          ignore_links: true
-          ignore_images: false
-          pad_tables: true
-      - keep_lines_containing: lines I care about
-      - sort:
-    ---
+   # yaml-language-server: $schema=jobs.schema.json
+   name: Sample webchanges job definition
+   url: https://example.com/
+   proxy: http://user:password@example.net:8080
+   max_tries: 2
+   filters:
+     - xpath: //section[@role="main"]
+     - html2text:
+         method: html2text
+         inline_links: false
+         ignore_links: true
+         ignore_images: false
+         pad_tables: true
+     - keep_lines_containing: lines I care about
+     - sort:
+   ---
 
 Filters are explained :ref:`here <filters>`.
 

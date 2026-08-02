@@ -1,9 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/mborsetti/webchanges/refs/heads/main/webchanges/_resources/config.schema.json",
   "title": "Webchanges Configuration File",
   "description": "JSON Schema for the webchanges config.yaml configuration file.",
   "type": "object",
-  "required": ["display", "report", "job_defaults", "differ_defaults", "database", "footnote"],
+  "required": ["display", "report", "job_defaults", "differ_defaults", "database", "footnote", "version_check"],
   "properties": {
     "display": {
       "$ref": "#/$defs/_ConfigDisplay",
@@ -29,6 +30,10 @@
       "type": ["string", "null"],
       "description": "Optional text appended to the footer of every report (text, html and markdown). Set to null to disable.",
       "default": null
+    },
+    "version_check": {
+      "$ref": "#/$defs/_ConfigVersionCheck",
+      "description": "Settings for the once-a-day check against PyPi for a newer release of webchanges."
     }
   },
   "additionalProperties": false,
@@ -37,7 +42,7 @@
       "title": "Display",
       "description": "Which job outcomes appear in reports. Changes are always reported.",
       "type": "object",
-      "required": ["new", "error", "unchanged", "empty-diff"],
+      "required": ["new", "error", "unchanged"],
       "properties": {
         "new": {
           "type": "boolean",
@@ -55,9 +60,8 @@
           "default": false
         },
         "empty-diff": {
-          "type": "boolean",
-          "description": "Deprecated. Whether to report a 'changed' job whose diff was reduced to an empty string by a diff_filter. Use the additions_only job directive instead.",
-          "default": false,
+          "enum": [false],
+          "description": "Deprecated; use additions_only in the job instead.",
           "deprecated": true
         }
       }
@@ -926,6 +930,19 @@
           "type": "integer",
           "description": "Maximum number of snapshots to retain (sqlite3 engine only). 0 means retain all snapshots indefinitely. Other engines retain either all snapshots (redis, minidb) or only the latest one (textfiles). Can be overridden with the --max-snapshots command-line argument.",
           "default": 4
+        }
+      }
+    },
+    "_ConfigVersionCheck": {
+      "title": "Version Check",
+      "description": "Settings for the once-a-day check against PyPi for a newer release of webchanges.",
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to query PyPi for a newer release. The result is cached on disk for 24 hours, so this hits the network at most once per day. Set to false to disable the check entirely (no network call, no upgrade nudge in reports).",
+          "default": true
         }
       }
     }

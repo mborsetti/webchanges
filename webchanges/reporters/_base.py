@@ -98,8 +98,8 @@ __all__ = [
 class ReporterBase(metaclass=TrackSubClasses):
     """Base class for reporting."""
 
-    __subclasses__: dict[str, type[ReporterBase]] = {}
-    __anonymous_subclasses__: list[type[ReporterBase]] = []
+    __subclasses__: dict[str, TrackSubClasses] = {}
+    __anonymous_subclasses__: list[TrackSubClasses] = []
     __kind__: str = ''
 
     def __init__(
@@ -161,6 +161,8 @@ class ReporterBase(metaclass=TrackSubClasses):
             'count': len(filtered_job_states),
             'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
         }
+        if subject_args['count'] == 1 and '{count}' in subject:
+            subject.replace('changes', 'change')
         if '{jobs_files}' in subject:
             if self.jobs_files and (len(self.jobs_files) > 1 or self.jobs_files[0].stem != 'jobs'):
                 jobs_files = f' ({", ".join(f.stem.removeprefix("jobs-") for f in self.jobs_files)})'
@@ -206,7 +208,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
         if cfg.get('enabled', False) or not check_enabled:
             logger.info(f'Submitting with {name} ({subclass})')
-            base_config = subclass.get_base_config(report)
+            base_config = subclass.get_base_config(report)  # ty:ignore[unresolved-attribute]
             if base_config.get('separate', False):
                 for job_state in job_states:
                     subclass(report, cfg, [job_state], duration, jobs_files, differ_config=differ_config).submit()
@@ -240,7 +242,7 @@ class ReporterBase(metaclass=TrackSubClasses):
             if cfg.get('enabled', False):
                 any_enabled = True
                 logger.info(f'Submitting with {name} ({subclass})')
-                base_config = subclass.get_base_config(report)
+                base_config = subclass.get_base_config(report)  # ty:ignore[unresolved-attribute]
                 if base_config.get('separate', False):
                     for job_state in job_states:
                         subclass(report, cfg, [job_state], duration, jobs_files, differ_config=differ_config).submit()
@@ -358,10 +360,13 @@ class HtmlReporter(ReporterBase):
             and self.report.new_release_future.done()
             and self.report.new_release_future.result()
         ):
-            yield (
-                f'<b>New release version {self.report.new_release_future.result()} is available; we recommend '
-                f'updating.</b>'
-            )
+            if self.report.new_release_future.result() is True:
+                yield ('<small>You are running a pre-release.</small>')
+            else:
+                yield (
+                    f'<b>New release version {self.report.new_release_future.result()} is available; we recommend '
+                    f'updating.</b>'
+                )
         yield '</span>\n</body>\n</html>\n'
 
     @staticmethod
@@ -494,10 +499,13 @@ class TextReporter(ReporterBase):
                 and self.report.new_release_future.done()
                 and self.report.new_release_future.result()
             ):
-                yield (
-                    f'New release version {self.report.new_release_future.result()} is available; we recommend '
-                    f'updating.'
-                )
+                if self.report.new_release_future.result() is True:
+                    yield ('You are running a pre-release.')
+                else:
+                    yield (
+                        f'New release version {self.report.new_release_future.result()} is available; we recommend '
+                        f'updating.'
+                    )
 
     def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
         """Returns the plain text of the report for a job; called by _format_output.
@@ -606,10 +614,13 @@ class MarkdownReporter(ReporterBase):
                 and self.report.new_release_future.done()
                 and self.report.new_release_future.result()
             ):
-                footer += (
-                    f'**New release version {self.report.new_release_future.result()} is available; we recommend '
-                    f'updating.**\n'
-                )
+                if self.report.new_release_future.result() is True:
+                    footer += 'You are running a pre-release.'
+                else:
+                    footer += (
+                        f'**New release version {self.report.new_release_future.result()} is available; we recommend '
+                        f'updating.**\n'
+                    )
         else:
             footer = ''
 

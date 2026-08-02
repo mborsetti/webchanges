@@ -230,14 +230,13 @@ from typing import (
     Callable,
     Literal,
     NamedTuple,
+    Self,
     SupportsInt,
     Tuple,
     TypedDict,
     Union,
+    Unpack,
 )
-
-if typing.TYPE_CHECKING:
-    from typing_extensions import Self, Unpack
 
 if sys.version_info >= (3, 13):  # pragma: no cover
     from warnings import deprecated as _deprecated
@@ -530,7 +529,7 @@ def _validate_pre(value: object, /) -> tuple[Literal["a", "b", "rc"], int] | Non
         letter = normalize_pre(letter)  # ty:ignore[invalid-argument-type]
         if letter in {"a", "b", "rc"} and isinstance(number, int) and number >= 0:
             # checkers can't infer the Literal type here on letter
-            return (letter, number)  # type: ignore[return-value]  # ty:ignore[invalid-return-type]
+            return (letter, number)  # type: ignore[return-value]
     msg = f"pre must be a tuple of ('a'|'b'|'rc', non-negative int), got {value}"
     raise InvalidVersion(msg)
 

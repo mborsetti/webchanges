@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -13,8 +14,33 @@ from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, SsdbStorage, YamlConfigStorage, YamlJobsStorage
 
+if TYPE_CHECKING:
+    from typing import Iterator
+
 _TESTS_DIR = Path(__file__).parent
 _DATA_DIR = _TESTS_DIR / 'data'
+# High-resolution changing-output command for Windows test jobs. cmd's `echo %time% %random%` has only centisecond
+# resolution (and %random% repeats when two cmd spawns share the same seed second), so on a fast machine two
+# consecutive runs can emit identical data, collapsing into a single snapshot; time_ns() cannot collide. It mirrors
+# the perl Time::HiRes command that jobs-time.yaml uses on other platforms.
+WINDOWS_TIME_COMMAND = f'"{sys.executable}" -c "import time; print(time.time_ns())"'
+
+# Captured at import time, before test_command.py's autouse ``_silence_db_close`` fixture can monkeypatch it to a
+# no-op (the patch is still active while other fixtures tear down), so teardowns can always really close the DB.
+_REAL_SSDB_SQLITE3_CLOSE = SsdbSQLite3Storage.close
+
+
+def close_ssdb_storage(storage: SsdbStorage) -> None:
+    """Close ``storage`` for real, bypassing any monkeypatched ``close`` and tolerating already-closed storages."""
+    try:
+        if isinstance(storage, SsdbSQLite3Storage):
+            _REAL_SSDB_SQLITE3_CLOSE(storage)
+        else:
+            storage.close()
+    except AttributeError:
+        pass  # already closed: close() deletes or None-s its connection attributes
+
+
 _WORKSPACE_FILES = (
     'config.yaml',
     'jobs-echo_test.yaml',
@@ -79,8 +105,22 @@ def loaded_config_storage(config_file_path: Path) -> YamlConfigStorage:
 
 
 @pytest.fixture
-def ssdb_storage() -> SsdbSQLite3Storage:
-    return SsdbSQLite3Storage(':memory:')  # ty:ignore[invalid-argument-type]
+def ssdb_storage() -> Iterator[SsdbSQLite3Storage]:
+    storage = SsdbSQLite3Storage(':memory:')  # ty:ignore[invalid-argument-type]
+    yield storage
+    close_ssdb_storage(storage)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def _close_database_engines() -> Iterator[None]:
+    """Close tests.test_storage's module-level ``DATABASE_ENGINES`` (when imported) at session end so that their
+    database connections don't survive to interpreter shutdown and emit ResourceWarnings.
+    """
+    yield
+    test_storage_module = sys.modules.get('tests.test_storage')
+    if test_storage_module is not None:
+        for engine in test_storage_module.DATABASE_ENGINES:
+            close_ssdb_storage(engine)
 
 
 @pytest.fixture
@@ -130,7 +170,7 @@ def prepare_storage_test(
         config_file=config_file,
         jobs_def_file=jobs_file,
         hooks_def_file=Path(),
-        ssdb_file=ssdb_storage.filename,  # ty:ignore[invalid-argument-type]
+        ssdb_file=ssdb_storage.filename,
     )
     if config_args:
         for k, v in config_args.items():
@@ -139,7 +179,7 @@ def prepare_storage_test(
     config_storage.load()
     urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, YamlJobsStorage([jobs_file]))
     if sys.platform == 'win32':
-        urlwatcher.jobs[0].command = 'echo %time% %random%'
+        urlwatcher.jobs[0].command = WINDOWS_TIME_COMMAND
         urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
     return urlwatcher, ssdb_storage, command_config
 

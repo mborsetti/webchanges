@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Any, Literal, Mapping, TypedDict
 
 from webchanges import __project_name__
@@ -252,6 +253,10 @@ class _ConfigDatabase(TypedDict):
     max_snapshots: int
 
 
+class _ConfigVersionCheck(TypedDict):
+    enabled: bool
+
+
 class _Config(TypedDict):
     display: _ConfigDisplay
     report: _ConfigReport
@@ -259,16 +264,26 @@ class _Config(TypedDict):
     differ_defaults: _ConfigDifferDefaults
     database: _ConfigDatabase
     footnote: str | None
+    version_check: _ConfigVersionCheck
 
 
 def validate_config(config: Mapping[str, Any]) -> None:
-    """Validate ``config`` against the ``_Config`` TypedDict structure.
+    """Validate ``config`` against the ``_Config`` TypedDict structure; alert for deprecations.
 
     Defined in this module so that, with ``from __future__ import annotations`` in effect, typeguard resolves the
     nested TypedDict forward references (``_ConfigDisplay``, ``_ConfigReport``, …) against this module's globals where
     they are defined.
     """
     check_type(config, _Config)
+
+    # Deprecations
+    if config['display']['empty-diff'] is True:
+        warnings.warn(
+            "The configuration setting 'display > empty-diff' is deprecated; please set to false and use "
+            "the 'additions_only' job directive instead.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
 
 
 DEFAULT_CONFIG: _Config = {
@@ -453,4 +468,7 @@ DEFAULT_CONFIG: _Config = {
         'max_snapshots': 4,
     },
     'footnote': None,
+    'version_check': {
+        'enabled': True,  # whether to check PyPi once a day for a newer release of webchanges
+    },
 }

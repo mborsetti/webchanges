@@ -1,4 +1,4 @@
-.. _changelog:
+.. _license:
 
 .. Licensing included from the LICENSE.md file
 

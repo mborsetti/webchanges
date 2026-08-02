@@ -11,6 +11,7 @@ import os
 import platform
 import re
 import tempfile
+import threading
 import time
 import warnings
 from contextlib import ExitStack
@@ -30,7 +31,7 @@ from webchanges.jobs._exceptions import (
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     try:
-        from playwright.sync_api import Page, Response
+        from playwright.sync_api import Browser, Page, Playwright, Response
     except ImportError:  # pragma: no cover
         pass
 
@@ -44,6 +45,102 @@ except ImportError:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 
+# --- CDP browser cache (see also: BrowserJob._acquire_cdp_browser) ------------
+# Playwright's sync API is greenlet-bound to its creating thread, so the cache is thread-local. webchanges runs
+# jobs via ThreadPoolExecutor, and CDP jobs are pinned to a single dedicated worker thread (see
+# worker._run_browser_jobs). Because the sync API is thread-bound, the cache MUST be torn down on the worker
+# thread that created it; the job runners (worker.py and command.py) do this by submitting
+# _close_current_thread_cdp_cache onto the owning executor at the end of each run. There is deliberately no
+# atexit handler: an atexit handler runs on the main thread and cannot stop a worker-thread Playwright instance.
+#
+# Disable caching with: WEBCHANGES_BROWSER_CDP_CACHE=0
+
+
+class _CdpCache(threading.local):
+    """Per-thread cache of the sync_playwright instance + CDP-attached browsers."""
+
+    def __init__(self) -> None:
+        self.playwright: Playwright | None = None
+        self.browsers: dict[str, Browser] = {}  # keyed by CDP URL
+
+
+_cdp_cache = _CdpCache()
+
+
+def _close_current_thread_cdp_cache() -> None:
+    """Tear down THIS thread's cached CDP browsers + Playwright instance.
+
+    This MUST run on the worker thread that created the Playwright instance: Playwright's sync API is
+    greenlet/thread-bound, so ``playwright.stop()`` cannot be called from another thread. The job runners
+    (``worker.py`` and ``command.py``) submit this onto the same executor that owns the cache at the end of each
+    run. Reading the thread-local ``_cdp_cache`` resolves to the current thread's view; it is a cheap no-op when
+    this thread has nothing cached (caching disabled, or no CDP jobs ran on this thread).
+    """
+    cache = _cdp_cache
+    for browser in list(cache.browsers.values()):
+        try:
+            browser.close()  # for connect_over_cdp this only disconnects; it does not close the user's browser
+        except Exception:  # noqa: BLE001, S110  best-effort cleanup
+            pass
+    cache.browsers.clear()
+    if cache.playwright is not None:
+        try:
+            cache.playwright.stop()
+        except Exception:  # noqa: BLE001, S110  best-effort cleanup
+            pass
+        cache.playwright = None
+
+
+def _acquire_cdp_browser(
+    cdp_url: str,
+    stack: ExitStack,
+    sync_playwright_fn: Callable[[], Any],
+) -> tuple[Playwright, Browser, bool]:
+    """Return (playwright, browser, from_cache) for a CDP connection.
+
+    When caching is disabled (env WEBCHANGES_BROWSER_CDP_CACHE=0), the Playwright instance is entered into the
+    provided ExitStack so it's torn down at end of retrieve(). When enabled (default), both Playwright and the
+    connected Browser live in the thread-local _cdp_cache and are released by _close_current_thread_cdp_cache at
+    the end of the run (on this same worker thread). A stale cached Browser (is_connected() == False) is dropped
+    and re-established once.
+    """
+    use_cache = os.getenv('WEBCHANGES_BROWSER_CDP_CACHE', '1') != '0'
+
+    if not use_cache:
+        p = stack.enter_context(sync_playwright_fn())
+        browser = p.chromium.connect_over_cdp(
+            cdp_url,
+            timeout=0,
+            is_local=True,
+        )
+        return p, browser, False
+
+    cache = _cdp_cache
+    if cache.playwright is None:
+        cache.playwright = sync_playwright_fn().__enter__()
+
+    browser = cache.browsers.get(cdp_url)
+    if browser is not None:
+        try:
+            if browser.is_connected():
+                return cache.playwright, browser, True
+        except Exception:  # noqa: BLE001, S110  stale handle; fall through to reconnect
+            pass
+        cache.browsers.pop(cdp_url, None)
+        try:
+            browser.close()
+        except Exception:  # noqa: BLE001, S110  best-effort cleanup of stale handle
+            pass
+
+    browser = cache.playwright.chromium.connect_over_cdp(
+        cdp_url,
+        timeout=0,
+        is_local=True,
+    )
+    cache.browsers[cdp_url] = browser
+    return cache.playwright, browser, False
+
+
 class BrowserJob(UrlJobBase):
     """Retrieve a URL using a real web browser (use_browser: true)."""
 
@@ -53,6 +150,7 @@ class BrowserJob(UrlJobBase):
     __required__: tuple[str, ...] = ('use_browser',)
     __optional__: tuple[str, ...] = (
         'block_elements',
+        'connect_over_cdp',
         'evaluate',
         'http_credentials',
         'ignore_default_args',
@@ -74,8 +172,6 @@ class BrowserJob(UrlJobBase):
     )
 
     use_browser = True
-    _playwright: Any = None
-    _playwright_browsers: dict = {}
 
     proxy_username: str = ''
     proxy_password: str = ''
@@ -150,11 +246,15 @@ class BrowserJob(UrlJobBase):
         'net::ERR_TLS13_DOWNGRADE_DETECTED',  # 180
         'net::ERR_SSL_KEY_USAGE_INCOMPATIBLE',  # 181
         'net::ERR_INVALID_ECH_CONFIG_LIST',  # 182
-        'net::ERR_ECH_NOT_NEGOTIATED'  # 183
-        'net::ERR_ECH_FALLBACK_CERTIFICATE_INVALID',  # 184
-        'net::ERR_PROXY_UNABLE_TO_CONNECT_TO_DESTINATION'  # 186
-        'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_REQUEST'  # 187
-        'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_RESPONSE',  # 188
+        (
+            'net::ERR_ECH_NOT_NEGOTIATED'  # 183
+            'net::ERR_ECH_FALLBACK_CERTIFICATE_INVALID'
+        ),  # 184
+        (
+            'net::ERR_PROXY_UNABLE_TO_CONNECT_TO_DESTINATION'  # 186
+            'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_REQUEST'  # 187
+            'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_RESPONSE'
+        ),  # 188
     )
 
     def get_location(self) -> str:
@@ -237,21 +337,32 @@ class BrowserJob(UrlJobBase):
         ]
         | None = None,
     ) -> tuple[str | bytes, str, str]:
-        """Runs job to retrieve the data, and returns data and ETag.
+        """Runs the job in a Playwright-controlled browser and returns the data, ETag, and media type (fka MIME type).
 
         :param job_state: The JobState object, to keep track of the state of the retrieval.
-        :param headless: For browser-based jobs, whether headless mode should be used.
+        :param headless: Whether headless mode should be used.
+        :param response_handler: Optional callable that replaces the built-in ``page.goto()`` navigation. It receives
+           ``(page, url, wait_until, referer)`` and returns the Playwright ``Response``.
+        :param content_handler: Optional callable that replaces the built-in content extraction from the ``Page``. It
+           receives the ``page`` and returns the ``(data, ETag, media type)`` tuple.
+        :param return_data: Optional callable that replaces all built-in functionality after the browser is launched
+           (navigation and content extraction). It receives ``(page, url, wait_until, referer)`` and returns the
+           ``(data, ETag, media type)`` tuple directly.
 
         :raises ValueError: If there is a problem with the value supplied in one of the keys in the configuration file.
         :raises TypeError: If the value provided in one of the directives is not of the correct type.
-        :raises ImportError: If the playwright package is not installed.
-        :raises BrowserResponseError: If a browser error or an HTTP response code between 400 and 599 is received.
-        :returns: The data retrieved and the ETag.
+        :raises ImportError: If the ``playwright`` or ``psutil`` package is not installed.
+        :raises NotModifiedError: If the server returns an HTTP 304 (Not Modified) response.
+        :raises TransientHTTPError: If an HTTP response code of 429, 500, 502, 503, or 504 is received.
+        :raises TransientBrowserError: If a browser timeout or a transient connection error occurs.
+        :raises BrowserResponseError: If no response is received or an HTTP response code between 400 and 599 is
+           received.
+        :returns: A tuple of the data retrieved, the ETag, and the media type.
         """
         job_state._http_client_used = 'playwright'
 
-        if self._delay:  # pragma: no cover  TODO not yet implemented.
-            logger.debug(f'Delaying for {self._delay} seconds (duplicate network location)')
+        if self._delay:
+            logger.debug(f'Job {self.index_number}: Sleeping {self._delay}s (same_site_delay directive)')
             time.sleep(self._delay)
 
         try:
@@ -404,99 +515,118 @@ class BrowserJob(UrlJobBase):
 
         # launch browser
         with ExitStack() as stack:
-            p = stack.enter_context(sync_playwright())
-            executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
-            value = self.use_browser if isinstance(self.use_browser, str) else 'chrome'
-            if value.startswith(('chrome', 'msedge')):
-                browser_type = p.chromium
-                channel = None if executable_path else value
-            elif value == 'firefox':
-                browser_type = p.firefox
-                channel = None
-            elif value == 'webkit':
-                browser_type = p.webkit
-                channel = None
-            else:
-                raise ValueError(
-                    f"Job {job_state.job.index_number}: Directive 'use_browser' value {value!r} must be "
-                    f"'firefox', 'webkit', or start with 'chrome' or 'msedge' "
-                    f'( {self.get_indexed_location()} ).'
-                )
-            browser_name = executable_path or value
-            no_viewport = False if not self.switches else any('--window-size' in switch for switch in self.switches)
-            if not self.user_data_dir:
-                browser = stack.enter_context(
-                    browser_type.launch(
-                        executable_path=executable_path,
-                        channel=channel,
-                        args=args,
-                        ignore_default_args=ignore_default_args,
-                        timeout=timeout,
-                        headless=headless,
-                        proxy=proxy,
-                    )
-                )
-                browser_version = browser.version
-                if browser_type is p.chromium:
-                    default_user_agent = (
-                        f'Mozilla/5.0 ({self.get_user_agent_platform()}) AppleWebKit/537.36 (KHTML, like Gecko) '
-                        f'Chrome/{browser_version.split(".", maxsplit=1)[0]}.0.0.0 Safari/537.36'
-                    )
-                    user_agent = headers.pop('User-Agent', default_user_agent)
+            if self.connect_over_cdp:
+                if isinstance(self.connect_over_cdp, str):
+                    cdp_url = self.connect_over_cdp
                 else:
-                    user_agent = headers.pop('User-Agent', None)
-                context = stack.enter_context(
-                    browser.new_context(
-                        no_viewport=no_viewport,
-                        ignore_https_errors=self.ignore_https_errors,
-                        user_agent=user_agent,  # will be detected if in headers
-                        extra_http_headers=dict(headers),
-                        http_credentials=http_credentials,
-                    )
-                )
+                    cdp_url = 'ws://127.0.0.1:58489/devtools/browser'
+                _p, browser, from_cache = _acquire_cdp_browser(cdp_url, stack, sync_playwright)
+                context = browser.contexts[0]
+                browser_name = browser.browser_type.name
+                browser_version = browser.version
+                user_agent = context.pages[-1].evaluate('navigator.userAgent') if context.pages else None
                 logger.info(
-                    f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name.capitalize()} '
-                    f'browser {browser_version}'
+                    f'Job {self.index_number}: Playwright {playwright_version} '
+                    f'{"reusing cached" if from_cache else "connected via"} CDP to '
+                    f'{browser_name} browser {browser_version}'
                 )
-
             else:
-                user_agent = headers.pop('User-Agent', '')
-
-                context = stack.enter_context(
-                    browser_type.launch_persistent_context(
-                        user_data_dir=self.user_data_dir,
-                        channel=channel,
-                        executable_path=executable_path,
-                        args=args,
-                        ignore_default_args=ignore_default_args,
-                        headless=headless,
-                        proxy=proxy,
-                        no_viewport=no_viewport,
-                        ignore_https_errors=self.ignore_https_errors,
-                        extra_http_headers=dict(headers),
-                        user_agent=user_agent,  # will be detected if in headers
-                        http_credentials=http_credentials,
+                p = stack.enter_context(sync_playwright())
+                executable_path = os.getenv('WEBCHANGES_BROWSER_PATH')
+                value = self.use_browser if isinstance(self.use_browser, str) else 'chrome'
+                if value.startswith(('chrome', 'msedge')):
+                    browser_type = p.chromium
+                    channel = None if executable_path else value
+                elif value == 'firefox':
+                    browser_type = p.firefox
+                    channel = None
+                elif value == 'webkit':
+                    browser_type = p.webkit
+                    channel = None
+                else:
+                    raise ValueError(
+                        f"Job {job_state.job.index_number}: Directive 'use_browser' value {value!r} must be "
+                        f"'firefox', 'webkit', or start with 'chrome' or 'msedge' "
+                        f'( {self.get_indexed_location()} ).'
                     )
-                )
-                browser_version = context.browser.version
-                logger.info(
-                    f'Job {self.index_number}: Playwright {playwright_version} launched {browser_name.capitalize()} '
-                    f'browser from user data directory {self.user_data_dir}'
-                )
+                browser_name = executable_path or value
+                no_viewport = False if not self.switches else any('--window-size' in switch for switch in self.switches)
+                if not self.user_data_dir:
+                    browser = stack.enter_context(
+                        browser_type.launch(
+                            executable_path=executable_path,
+                            channel=channel,
+                            args=args,
+                            ignore_default_args=ignore_default_args,
+                            timeout=timeout,
+                            headless=headless,
+                            proxy=proxy,
+                        )
+                    )
+                    browser_version = browser.version
+                    if browser_type is p.chromium:
+                        default_user_agent = (
+                            f'Mozilla/5.0 ({self.get_user_agent_platform()}) AppleWebKit/537.36 (KHTML, like Gecko) '
+                            f'Chrome/{browser_version.split(".", maxsplit=1)[0]}.0.0.0 Safari/537.36'
+                        )
+                        user_agent = headers.pop('User-Agent', default_user_agent)
+                    else:
+                        user_agent = headers.pop('User-Agent', None)
+                    context = stack.enter_context(
+                        browser.new_context(
+                            no_viewport=no_viewport,
+                            ignore_https_errors=self.ignore_https_errors,
+                            user_agent=user_agent,  # will be detected if in headers
+                            extra_http_headers=dict(headers),
+                            http_credentials=http_credentials,
+                        )
+                    )
+                    logger.info(
+                        f'Job {self.index_number}: Playwright {playwright_version} launched '
+                        f'{browser_name.capitalize()} browser {browser_version}'
+                    )
 
-            # the below to bypass detection; from https://intoli.com/blog/not-possible-to-block-chrome-headless/
-            init_script = self.init_script or (
-                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined });"
-                'window.chrome = {runtime: {},};'  # This is abbreviated: entire content is huge!!
-                "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5] });"
-            )
-            context.add_init_script(init_script)
+                else:
+                    user_agent = headers.pop('User-Agent', '')
+
+                    context = stack.enter_context(
+                        browser_type.launch_persistent_context(
+                            user_data_dir=self.user_data_dir,
+                            channel=channel,
+                            executable_path=executable_path,
+                            args=args,
+                            ignore_default_args=ignore_default_args,
+                            headless=headless,
+                            proxy=proxy,
+                            no_viewport=no_viewport,
+                            ignore_https_errors=self.ignore_https_errors,
+                            extra_http_headers=dict(headers),
+                            user_agent=user_agent,  # will be detected if in headers
+                            http_credentials=http_credentials,
+                        )
+                    )
+                    browser_version = context.browser.version if context.browser else 'unknown'
+                    logger.info(
+                        f'Job {self.index_number}: Playwright {playwright_version} launched '
+                        f'{browser_name.capitalize()} browser from user data directory {self.user_data_dir}'
+                    )
+
+                # the below to bypass detection; from https://intoli.com/blog/not-possible-to-block-chrome-headless/
+                init_script = self.init_script or (
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined });"
+                    'window.chrome = {runtime: {},};'  # This is abbreviated: entire content is huge!!
+                    "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5] });"
+                )
+                context.add_init_script(init_script)
 
             # set default timeout
             context.set_default_timeout(timeout)
 
             # open a page
             page = context.new_page()
+            if self.connect_over_cdp:
+                # context lives in the thread-local CDP cache, so close each retrieve's page explicitly
+                stack.callback(page.close)
 
             url = self.url
             if self.initialization_url:
@@ -504,7 +634,7 @@ class BrowserJob(UrlJobBase):
                 try:
                     response = page.goto(
                         self.initialization_url,
-                        wait_until=self.wait_until,
+                        wait_until=self.wait_until,  # ty:ignore[invalid-argument-type]
                     )
                 except PlaywrightError as e:
                     logger.info(f'Job {self.index_number}: Website initialization page returned error {e}')
@@ -520,7 +650,7 @@ class BrowserJob(UrlJobBase):
                     page.evaluate(self.initialization_js)
                     if self.wait_for_url:
                         logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
-                        page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)
+                        page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)  # ty:ignore[invalid-argument-type]
                 updated_url = page.url
                 init_url_params = dict(parse_qsl(urlparse(updated_url).params))
                 try:
@@ -630,7 +760,7 @@ class BrowserJob(UrlJobBase):
                     logger.info(f"Job {self.index_number}: Using the 'response_handler' Callable")
                     response = response_handler(page, url, self.wait_until, self.referer)  # ty:ignore[invalid-argument-type]
                 else:
-                    response = page.goto(url, wait_until=self.wait_until, referer=self.referer)
+                    response = page.goto(url, wait_until=self.wait_until, referer=self.referer)  # ty:ignore[invalid-argument-type]
 
                 if not response:
                     raise BrowserResponseError(('No response received from browser on navigation',))
@@ -645,7 +775,7 @@ class BrowserJob(UrlJobBase):
                         if isinstance(self.wait_for_url, str):
                             page.wait_for_url(
                                 self.wait_for_url,
-                                wait_until=self.wait_until,
+                                wait_until=self.wait_until,  # ty:ignore[invalid-argument-type]
                                 timeout=timeout,
                             )
                         elif isinstance(self.wait_for_url, dict):

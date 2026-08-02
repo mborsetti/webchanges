@@ -4,18 +4,21 @@ from __future__ import annotations
 
 import ftplib
 import importlib.util
+import logging
 import os
 import socket
 import subprocess
 import sys
+from contextlib import nullcontext
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
 
 import pytest
 import yaml
 from httpx import HTTPStatusError
 from requests import HTTPError
 
+from tests.conftest import close_ssdb_storage
 from webchanges.config import CommandConfig
 from webchanges.handler import JobState, Snapshot
 from webchanges.jobs import (
@@ -27,10 +30,12 @@ from webchanges.jobs import (
     TransientHTTPError,
     UrlJob,
 )
+from webchanges.jobs._shell import _add_python_verbosity, _logger_verbosity
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from unittest.mock import Mock
 
     import pytest_mock
@@ -168,6 +173,8 @@ TEST_JOBS: list[tuple[dict[str, Any], str | bytes]] = [
         'test echo command',
     ),
 ]
+# These dicts are shared by every test parametrized over them: a test must never mutate one in place (copy first,
+# e.g. `job_data = job_data | {...}`), or it pollutes other tests when pytest-randomly reorders the run.
 ALL_JOB_TYPES: list[dict[str, str | bool]] = [
     {},
     {'use_browser': True},
@@ -615,7 +622,12 @@ def test_run_job(
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
     else:
-        with JobState(ssdb_storage, job) as job_state:
+        deprecation_ctx = (
+            pytest.warns(DeprecationWarning, match='wait_for_navigation')
+            if 'wait_for_navigation' in input_job
+            else nullcontext()
+        )
+        with JobState(ssdb_storage, job) as job_state, deprecation_ctx:
             data, _, _ = job.retrieve(job_state)
             if job.filters == [{'pdf2text': {}}]:
                 assert isinstance(data, bytes)
@@ -653,7 +665,7 @@ def test_run_ftp_job(ssdb_storage: SsdbSQLite3Storage) -> None:
     ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
 def test_check_etag(job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Storage) -> None:
-    job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
+    job_data = job_data | {'url': 'https://github.githubassets.com/assets/discussions-1958717f4567.css'}
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
@@ -675,7 +687,7 @@ def test_check_etag_304_request(
     """Check for 304 Not Modified response."""
     if job_data.get('use_browser'):
         pytest.skip('Capturing of 304 cannot be implemented in Chrome')  # last tested with Chromium 89
-    job_data['url'] = 'https://github.githubassets.com/assets/discussions-1958717f4567.css'
+    job_data = job_data | {'url': 'https://github.githubassets.com/assets/discussions-1958717f4567.css'}
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
@@ -703,7 +715,7 @@ def test_check_etag_304_request(
     ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
 def test_check_ignore_connection_errors(job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Storage) -> None:
-    job_data['url'] = 'http://localhost:9999'
+    job_data = job_data | {'url': 'http://localhost:9999'}
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
@@ -725,7 +737,6 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any], ssdb_storage: 
             # also check that it's using the correct HTTP client library
             if not job_data.get('use_browser'):
                 assert job_state._http_client_used == job_data.get('http_client', 'httpx')
-        job_data['ignore_connection_errors'] = None
 
 
 @connection_required
@@ -735,8 +746,10 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any], ssdb_storage: 
     ids=(job_type_str(v) for v in ALL_JOB_TYPES),
 )
 def test_check_bad_proxy(job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Storage) -> None:
-    job_data['url'] = 'http://connectivitycheck.gstatic.com/generate_204'
-    job_data['http_proxy'] = 'http://notworking:ever@localhost:8080'
+    job_data = job_data | {
+        'url': 'http://connectivitycheck.gstatic.com/generate_204',
+        'http_proxy': 'http://notworking:ever@localhost:8080',
+    }
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
@@ -763,9 +776,7 @@ def test_check_ignore_http_error_codes_and_error_message(
     # if job_data.get('use_browser'):
     #     pytest.skip('Cannot debug due to a Playwright or Windows bug')
 
-    job_data['url'] = 'https://www.google.com/teapot'
-    job_data['http_proxy'] = None
-    job_data['timeout'] = 30
+    job_data = job_data | {'url': 'https://www.google.com/teapot', 'timeout': 30}
     job = JobBase.unserialize(job_data)
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
@@ -796,7 +807,6 @@ def test_check_ignore_http_error_codes_and_error_message(
         with JobState(ssdb_storage, job) as job_state:
             job_state.process()
             assert job_state.error_ignored is True
-        job_data['ignore_http_error_codes'] = None
 
 
 @py_latest_only
@@ -854,7 +864,7 @@ def test_invalid_directive() -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         JobBase.unserialize(job_data)
     assert str(pytest_wrapped_e.value) == (
-        "Directive 'directive_with_typo' is unrecognized in the following url job\n"
+        "Directive 'directive_with_typo' is unrecognized in the following job of kind 'url'\n"
         '   \n'
         '   ---\n'
         '   directive_with_typo: this directive does not exist\n'
@@ -968,6 +978,16 @@ def test_shell_job_without_kind() -> None:
     assert isinstance(job, ShellJob)
 
 
+def test_unserialize_leaves_input_dict_unmodified() -> None:
+    """The caller's dict (e.g. one owned by hooks.py code) must not be modified by the backwards-compatibility
+    migrations in unserialize(), which rewrite 'kind', add 'differ' and remove other job types' required keys."""
+    job_data = {'kind': 'shell', 'command': 'echo test', 'diff_tool': 'wdiff', 'url': ''}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, ShellJob)
+    assert job.__kind__ == 'command'
+    assert job_data == {'kind': 'shell', 'command': 'echo test', 'diff_tool': 'wdiff', 'url': ''}
+
+
 def test_with_defaults() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
@@ -1012,6 +1032,201 @@ def test_browser_switches_not_str_or_list() -> None:
         JobBase.unserialize(job_data)
 
 
+def test_browser_connect_over_cdp_bool() -> None:
+    """``connect_over_cdp: true`` is accepted by ``JobBase.unserialize``."""
+    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'connect_over_cdp': True}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, BrowserJob)
+    assert job.connect_over_cdp is True
+
+
+def test_browser_connect_over_cdp_string() -> None:
+    """A CDP WebSocket URL string is accepted by ``JobBase.unserialize``."""
+    job_data = {
+        'url': 'https://www.example.com',
+        'use_browser': True,
+        'connect_over_cdp': 'ws://127.0.0.1:9222',
+    }
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, BrowserJob)
+    assert job.connect_over_cdp == 'ws://127.0.0.1:9222'
+
+
+def test_browser_connect_over_cdp_wrong_type() -> None:
+    """A non-bool/string ``connect_over_cdp`` value is rejected by ``JobBase.unserialize``."""
+    job_data = {
+        'url': 'https://www.example.com',
+        'use_browser': True,
+        'connect_over_cdp': ['ws://127.0.0.1:9222'],
+    }
+    with pytest.raises(ValueError, match="Error in directive 'connect_over_cdp'"):
+        JobBase.unserialize(job_data)
+
+
+# --- CDP cache teardown (connect_over_cdp) ------------------------------------
+# These tests fake the Playwright + Browser objects, so no real browser is needed.
+
+
+@pytest.fixture
+def reset_cdp_cache() -> Iterator[None]:
+    """Reset the thread-local CDP cache before and after a test that populates it."""
+    from webchanges.jobs import _browser
+
+    def _reset() -> None:
+        _browser._cdp_cache.playwright = None
+        _browser._cdp_cache.browsers = {}
+
+    _reset()
+    yield
+    _reset()
+
+
+def test_close_current_thread_cdp_cache(reset_cdp_cache: None) -> None:
+    """The helper closes cached browsers, stops Playwright, and clears the thread-local cache."""
+    from webchanges.jobs import _browser
+
+    closed: list[bool] = []
+    stopped: list[bool] = []
+
+    class FakeBrowser:
+        def close(self) -> None:
+            closed.append(True)
+
+    class FakePlaywright:
+        def stop(self) -> None:
+            stopped.append(True)
+
+    cache = _browser._cdp_cache
+    cache.playwright = FakePlaywright()  # ty:ignore[invalid-assignment]
+    cache.browsers = {'ws://x': FakeBrowser()}  # ty:ignore[invalid-assignment]
+
+    _browser._close_current_thread_cdp_cache()
+
+    assert closed == [True]
+    assert stopped == [True]
+    assert cache.playwright is None
+    assert cache.browsers == {}
+
+
+def test_close_current_thread_cdp_cache_runs_on_owning_thread(reset_cdp_cache: None) -> None:
+    """Teardown must happen on the worker thread that owns the (thread-bound) Playwright instance."""
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    from webchanges.jobs import _browser
+
+    record: dict[str, int] = {}
+
+    class FakeBrowser:
+        def close(self) -> None:
+            record['close_tid'] = threading.get_ident()
+
+    class FakePlaywright:
+        def stop(self) -> None:
+            record['stop_tid'] = threading.get_ident()
+
+    def populate_and_close() -> int:
+        cache = _browser._cdp_cache  # this worker thread's view
+        cache.playwright = FakePlaywright()  # ty:ignore[invalid-assignment]
+        cache.browsers = {'ws://x': FakeBrowser()}  # ty:ignore[invalid-assignment]
+        _browser._close_current_thread_cdp_cache()
+        return threading.get_ident()
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        worker_tid = executor.submit(populate_and_close).result()
+
+    assert record['close_tid'] == worker_tid
+    assert record['stop_tid'] == worker_tid
+    assert worker_tid != threading.get_ident()
+
+
+def test_close_current_thread_cdp_cache_noop(reset_cdp_cache: None) -> None:
+    """With nothing cached the helper is a safe no-op."""
+    from webchanges.jobs import _browser
+
+    _browser._close_current_thread_cdp_cache()  # must not raise
+    assert _browser._cdp_cache.playwright is None
+    assert _browser._cdp_cache.browsers == {}
+
+
+def test_run_jobs_triggers_cdp_cleanup(
+    urlwatcher: Urlwatch, monkeypatch: pytest.MonkeyPatch, reset_cdp_cache: None
+) -> None:
+    """``run_jobs`` runs the CDP cache teardown on an executor worker thread for each job_runner call."""
+    import threading
+
+    from webchanges.jobs import _browser
+
+    calls: list[int] = []
+
+    def spy() -> None:
+        calls.append(threading.get_ident())
+
+    monkeypatch.setattr(_browser, '_close_current_thread_cdp_cache', spy)
+    urlwatcher.run_jobs()
+
+    assert calls, 'CDP cache teardown was never invoked'
+    assert all(tid != threading.get_ident() for tid in calls), 'teardown must run on a worker thread'
+
+
+def test_acquire_cdp_browser_caches_and_releases(reset_cdp_cache: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``_acquire_cdp_browser`` reuses the cached browser; ``_close_current_thread_cdp_cache`` releases it."""
+    from contextlib import ExitStack
+
+    from webchanges.jobs import _browser
+
+    monkeypatch.setenv('WEBCHANGES_BROWSER_CDP_CACHE', '1')
+
+    closed: list[bool] = []
+    stopped: list[bool] = []
+
+    class FakeBrowser:
+        def is_connected(self) -> bool:
+            return True
+
+        def close(self) -> None:
+            closed.append(True)
+
+    class FakeChromium:
+        def connect_over_cdp(self, cdp_url: str, timeout: int = 0, is_local: bool = True) -> FakeBrowser:
+            return FakeBrowser()
+
+    class FakePlaywright:
+        chromium = FakeChromium()
+
+        def stop(self) -> None:
+            stopped.append(True)
+
+    class FakeSyncCM:
+        def __enter__(self) -> FakePlaywright:
+            return FakePlaywright()
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    def fake_sync_playwright() -> FakeSyncCM:
+        return FakeSyncCM()
+
+    cdp_url = 'ws://test'
+    with ExitStack() as stack:
+        p1, b1, from_cache1 = _browser._acquire_cdp_browser(cdp_url, stack, fake_sync_playwright)
+        assert from_cache1 is False
+        assert _browser._cdp_cache.playwright is p1
+        assert _browser._cdp_cache.browsers[cdp_url] is b1
+
+        # second call for the same URL reuses the cached, still-connected browser
+        p2, b2, from_cache2 = _browser._acquire_cdp_browser(cdp_url, stack, fake_sync_playwright)
+        assert from_cache2 is True
+        assert p2 is p1
+        assert b2 is b1
+
+    _browser._close_current_thread_cdp_cache()
+    assert closed == [True]
+    assert stopped == [True]
+    assert _browser._cdp_cache.playwright is None
+    assert _browser._cdp_cache.browsers == {}
+
+
 # @playwright_required
 # def test_browser_block_elements_not_str_or_list():
 #     job_data = {
@@ -1044,6 +1259,113 @@ def test_shell_error(ssdb_storage: SsdbSQLite3Storage) -> None:
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert isinstance(job_state.exception, subprocess.CalledProcessError)
+
+
+@pytest.fixture
+def root_logger_level() -> Iterator[Callable[[int], None]]:
+    """Temporarily set the level of the root logger, restoring it afterwards.
+
+    The root logger's level is how the verbosity (-v) that webchanges is being run with is passed around: cli's
+    setup_logger() sets it from the number of -v's, and _shell's _logger_verbosity() reads it back out.
+    """
+    root = logging.getLogger()
+    saved_level = root.level
+
+    yield root.setLevel
+
+    root.setLevel(saved_level)
+
+
+@pytest.mark.parametrize(
+    ('level', 'verbosity'),
+    [
+        (logging.NOTSET, 3),  # webchanges run with -vvv
+        (logging.DEBUG, 2),  # webchanges run with -vv
+        (logging.INFO, 1),  # webchanges run with -v
+        (logging.WARNING, 0),  # webchanges run without -v
+        (logging.ERROR, 0),
+    ],
+)
+def test_logger_verbosity(level: int, verbosity: int, root_logger_level: Callable[[int], None]) -> None:
+    root_logger_level(level)
+    assert _logger_verbosity() == verbosity
+
+
+@pytest.mark.parametrize(
+    ('command', 'verbosity', 'expected'),
+    [
+        # Not run verbosely (the common case): never touched.
+        ('python foo.py', 0, 'python foo.py'),
+        # Not a Python interpreter: never touched.
+        ('ls -l', 2, 'ls -l'),
+        ('nice python foo.py', 2, 'nice python foo.py'),  # python is not the command being run, nice is
+        # The flag is added at the end, i.e. where the script (and not the interpreter) will see it.
+        ('python foo.py', 2, 'python foo.py -vv'),
+        ('python3 foo.py --arg x', 1, 'python3 foo.py --arg x -v'),
+        ('python -m mymod', 3, 'python -m mymod -vvv'),
+        # The interpreter can be spelled in a number of ways.
+        ('python3.14 foo.py', 1, 'python3.14 foo.py -v'),
+        ('/usr/bin/python3 foo.py', 1, '/usr/bin/python3 foo.py -v'),
+        (r'"C:\Program Files\Python\python.exe" foo.py', 1, r'"C:\Program Files\Python\python.exe" foo.py -v'),
+        # The flag goes before any redirection or pipe, and the file descriptor of a redirection is not an argument.
+        ('python foo.py > out.txt', 2, 'python foo.py -vv > out.txt'),
+        ('python foo.py 2> err.txt', 2, 'python foo.py -vv 2> err.txt'),
+        ('python foo.py 2>&1 | grep x', 2, 'python foo.py -vv 2>&1 | grep x'),
+        ('python foo.py | jq .', 2, 'python foo.py -vv | jq .'),
+        # Every Python invocation in the command line gets the flag, not just the first one.
+        ('python a.py | python b.py', 2, 'python a.py -vv | python b.py -vv'),
+        ('cd /x && python foo.py', 2, 'cd /x && python foo.py -vv'),
+        # An existing flag is raised, but never removed or lowered.
+        ('python foo.py -v', 2, 'python foo.py -vv'),
+        ('python foo.py -v --arg x', 3, 'python foo.py -vvv --arg x'),
+        ('python foo.py -v', 1, 'python foo.py -v'),
+        ('python foo.py -vvv', 2, 'python foo.py -vvv'),
+        ('python foo.py --verbose', 3, 'python foo.py --verbose'),
+        ('python a.py -vvv | python b.py', 1, 'python a.py -vvv | python b.py -v'),
+        # The code string of a -c invocation is opaque: a -v inside it is neither detected nor modified.
+        ('python -c "print(1)"', 2, 'python -c "print(1)" -vv'),
+        ('python -c "x = \'-v\'"', 2, 'python -c "x = \'-v\'" -vv'),
+        ('python -c "print(1)" -v', 2, 'python -c "print(1)" -vv'),
+    ],
+)
+def test_add_python_verbosity(command: str, verbosity: int, expected: str) -> None:
+    assert _add_python_verbosity(command, verbosity) == expected
+
+
+@pytest.mark.parametrize(
+    ('level', 'expected'),
+    [
+        (logging.DEBUG, "['-vv']"),  # webchanges run with -vv
+        (logging.WARNING, '[]'),  # webchanges run without -v
+    ],
+)
+def test_shell_python_command_receives_verbosity(
+    level: int,
+    expected: str,
+    ssdb_storage: SsdbSQLite3Storage,
+    root_logger_level: Callable[[int], None],
+) -> None:
+    """The Python interpreter run by a command job is passed the verbosity webchanges itself is being run with."""
+    root_logger_level(level)
+    job_data = {'command': f'"{sys.executable}" -c "import sys; print(sys.argv[1:])"'}
+    job = JobBase.unserialize(job_data)
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert isinstance(job_state.new_data, str)
+        assert expected in job_state.new_data
+        assert job_state.job.command == job_data['command']  # the job's own command (and therefore its guid) is intact
+
+
+def test_shell_command_stdin_is_null_device(ssdb_storage: SsdbSQLite3Storage) -> None:
+    """A command that prompts for input reads EOF (stdin is the null device) and errors out instead of hanging
+    forever waiting on webchanges' inherited stdin."""
+    job_data = {'command': f'"{sys.executable}" -c "print(input())"'}
+    job = JobBase.unserialize(job_data)
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, subprocess.CalledProcessError)
+        assert 'EOFError' in (job_state.exception.stderr or '')
 
 
 def test_compared_versions(ssdb_storage: SsdbSQLite3Storage) -> None:
@@ -1100,7 +1422,7 @@ def test_differ_name_not_str_dict_raises_valueerror() -> None:
 def time_jobs_urlwatcher(
     workspace: Path,
     loaded_config_storage: YamlConfigStorage,
-) -> Urlwatch:
+) -> Iterator[Urlwatch]:
     """``Urlwatch`` built from ``jobs-time.yaml`` with the job command set to ``echo TEST``.
 
     Used by the job-state ``verb`` tests below; gives every test a fresh in-memory ssdb that
@@ -1119,7 +1441,8 @@ def time_jobs_urlwatcher(
     urlwatcher = Urlwatch(cmd, loaded_config_storage, storage, YamlJobsStorage([jobs_path]))
     urlwatcher.jobs[0].command = 'echo TEST'
     urlwatcher.jobs[0].name = 'echo TEST'
-    return urlwatcher
+    yield urlwatcher
+    close_ssdb_storage(storage)
 
 
 def test_job_states_verb(time_jobs_urlwatcher: Urlwatch) -> None:
@@ -1180,25 +1503,25 @@ def test_job_states_verb_notimestamp_changed(time_jobs_urlwatcher: Urlwatch) -> 
     snapshot = urlwatcher.ssdb_storage.load(guid)
     urlwatcher.ssdb_storage.delete(guid)
     urlwatcher.ssdb_storage.save(guid=guid, snapshot=snapshot)
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
     urlwatcher.ssdb_storage.delete(guid)
     new_snapshot = Snapshot(snapshot.data, 0, snapshot.tries, snapshot.etag, snapshot.mime_type, snapshot.error_data)
     urlwatcher.ssdb_storage.save(guid=guid, snapshot=new_snapshot)
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
     urlwatcher.ssdb_storage.delete(guid)
     new_snapshot = Snapshot(snapshot.data, 0, 1, snapshot.etag, snapshot.mime_type, {})
     urlwatcher.ssdb_storage.save(guid=guid, snapshot=new_snapshot)
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
 

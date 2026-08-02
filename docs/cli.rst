@@ -435,6 +435,8 @@ Maximum number of snapshots to save
     This part of documentation needs your help!
     Please consider :ref:`contributing <contributing>` a pull request to update this.
 
+.. _log_file:
+
 Log -v/--verbose output to file
 -------------------------------
 Use ``--log-file`` to send the log output from ``-v``, ``-vv``, or ``-vvv`` to a file:
@@ -442,5 +444,8 @@ Use ``--log-file`` to send the log output from ``-v``, ``-vv``, or ``-vvv`` to a
 .. code-block:: bash
 
     webchanges -vv --log-file webchanges.log
+
+If no verbosity is specified, ``--log-file`` implies ``-v``; a ``-vv`` or ``-vvv`` given explicitly is honored as is
+(the verbosity is never lowered).
 
 .. versionadded:: 3.27

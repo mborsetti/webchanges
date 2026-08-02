@@ -820,3 +820,14 @@ https://example.org/xpath-items-random-order.html:
     <span class="item">B</span>
     <span class="item">C</span>
     <span class="item">D</span>
+https://example.com/between.txt:
+  input: |
+    preamble noise™
+    === BEGIN ===
+    keep me 1™
+    keep me 2
+    === END ===
+    trailing noise
+  output: |
+    keep me 1™
+    keep me 2

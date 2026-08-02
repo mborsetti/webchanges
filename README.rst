@@ -14,26 +14,35 @@ notifications and AI-powered summaries to your favorite `platform
 <https://webchanges.readthedocs.io/en/stable/introduction.html#reporters>`__.
 
 
+Highlights
+==========
+- **AI-powered change summaries** via Gemini (`ai_google differ
+  <https://webchanges.readthedocs.io/en/stable/differs.html#ai-google-diff>`__, BETA).
+- **Structural diffs for JSON and XML** via the `deepdiff differ
+  <https://webchanges.readthedocs.io/en/stable/differs.html#deepdiff-diff>`__.
+- **Visual diffs for images** via the `image differ
+  <https://webchanges.readthedocs.io/en/stable/differs.html#image-diff>`__ (BETA).
+- **Bypass TLS/JA3 fingerprinting** with the optional `curl_cffi
+  <https://webchanges.readthedocs.io/en/stable/jobs.html#http-client>`__ HTTP client.
+- **JSON-Schema-validated** ``jobs.yaml`` and ``config.yaml`` for editor autocompletion and inline validation.
+
+
 Requirements
 ============
-**webchanges** requires |support|.
-
-For the best experience, use the current version of `Python <https://www.python.org/downloads/>`__. We also support
-older Python versions for 3 years after they're replaced by a newer one; we just ask that you use the most up-to-date
-bug and security fix release from that older version.
-
-While **webchanges** supports free-threated Python, certain optional dependencies may not.
+**webchanges** requires |support|. For the best experience, use the current version of `Python
+<https://www.python.org/downloads/>`__; older Python versions are supported for 3 years after they're replaced. Free-threaded Python is supported, though some
+optional dependencies may not be.
 
 For Generative AI summaries (BETA), you need a free `API Key from Google Cloud AI Studio
 <https://aistudio.google.com/app/apikey>`__ (see `here
-<https://webchanges.readthedocs.io/en/stable/differs.html#ai-google>`__).
+<https://webchanges.readthedocs.io/en/stable/differs.html#ai-google-diff>`__).
 
 
 Installation
 ============
 |pypi_version| |format| |status|
 
-Install **webchanges**  with ``uv`` (recommended):
+Install **webchanges**  with `uv <https://docs.astral.sh/uv/>`__ (recommended):
 
 .. code-block:: bash
 
@@ -45,22 +54,18 @@ or with ``pip``:
 
    pip install webchanges
 
-Running in Docker
+Other ways to run
 -----------------
-**webchanges** can easily run in a `Docker <https://www.docker.com/>`__ container! You will find a minimal
-implementation (no browser) `here <https://github.com/yubiuser/webchanges-docker>`__, and one with a browser
-`here <https://github.com/jhedlund/webchanges-docker>`__.
-
-As a GitHub Action
-------------------
-**webchanges** can easily run as a `GitHub Action <https://www.docker.com/>`__! You will find an implementation
-`here <https://github.com/swimmwatch/webchanges-action>`__.
+- In a `Docker <https://www.docker.com/>`__ container: a minimal implementation (no browser) is `here
+  <https://github.com/yubiuser/webchanges-docker>`__, and one with a browser is `here
+  <https://github.com/jhedlund/webchanges-docker>`__.
+- As a `GitHub Action <https://docs.github.com/en/actions>`__: an implementation is `here
+  <https://github.com/swimmwatch/webchanges-action>`__.
 
 
 Documentation |readthedocs|
 ===========================
-The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__.  A (very good) AI-generated
-high-level architectural overview is available on `DeepWiki <https://deepwiki.com/mborsetti/webchanges>`__.
+The documentation is hosted on `Read the Docs <https://webchanges.readthedocs.io/>`__.
 
 
 Quick Start
@@ -134,13 +139,11 @@ licensed under a `BSD 3-Clause License
 <https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__).
 
 
-Compatibility with **urlwatch**
-===============================
-
-This project is based on code from `urlwatch 2.21
-<https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ dated 30 July 2020.
-For upgrading from **urlwatch** to **webchanges** (using the same job and
-configuration files), see `here <https://webchanges.readthedocs.io/en/stable/upgrading.html>`__.
+Relationship with **urlwatch**
+==============================
+This project is a fork of `urlwatch 2.21
+<https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ and has since added many features;
+see the `comparison <https://webchanges.readthedocs.io/en/stable/_static/webchanges-vs-urlwatch.html>`__.
 
 
 .. |support| image:: https://img.shields.io/pypi/pyversions/webchanges.svg

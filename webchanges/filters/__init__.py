@@ -33,6 +33,7 @@ from webchanges.filters._html import (
 )
 from webchanges.filters._shell import ExecuteFilter, ShellPipeFilter
 from webchanges.filters._text import (
+    BetweenLinesFilter,
     DeleteLinesContainingFilter,
     GrepFilter,
     GrepIFilter,
@@ -53,6 +54,7 @@ __all__ = [
     'AutoMatchFilter',
     'Base64',
     'BeautifyFilter',
+    'BetweenLinesFilter',
     'CSSFilter',
     'Csv2TextFilter',
     'DeleteLinesContainingFilter',

@@ -67,18 +67,26 @@ def migrate_from_legacy(
     :param hooks_file: The new Path to the hooks file.
     :param ssdb_file: The new Path to the snapshot database file.
     """
-    legacy_project_path = Path.home().joinpath(f'.{legacy_package}')
-    leagacy_config_file = legacy_project_path.joinpath(f'{legacy_package}.yaml')
-    legacy_urls_file = legacy_project_path.joinpath('urls.yaml')
-    legacy_hooks_file = legacy_project_path.joinpath('hooks.py')
-    legacy_cache_path = platformdirs.user_cache_path(legacy_package)
-    legacy_cache_file = legacy_cache_path.joinpath('cache.db')
-    for old_file, new_file in zip(
-        (leagacy_config_file, legacy_urls_file, legacy_hooks_file, legacy_cache_file),
-        (config_file, jobs_file, hooks_file, ssdb_file),
-        strict=False,
-    ):
-        if new_file and old_file.is_file() and not new_file.is_file():
+    pairs: list[tuple[Path, Path]] = []
+
+    yaml_dests = [
+        (f'{legacy_package}.yaml', config_file),
+        ('urls.yaml', jobs_file),
+        ('hooks.py', hooks_file),
+    ]
+    if any(dest is not None for _, dest in yaml_dests):
+        legacy_project_path = Path.home() / f'.{legacy_package}'
+        if legacy_project_path.is_dir():
+            pairs.extend((legacy_project_path / name, dest) for name, dest in yaml_dests if dest is not None)
+
+    # cache.db lives under platformdirs.user_cache_path, not under ~/.{legacy_package}. Defer the platformdirs lookup
+    # (which uses SHGetKnownFolderPath via ctypes on Windows) until the destination snapshot DB is known to be missing.
+    if ssdb_file is not None and not ssdb_file.is_file():
+        legacy_cache_file = platformdirs.user_cache_path(legacy_package) / 'cache.db'
+        pairs.append((legacy_cache_file, ssdb_file))
+
+    for old_file, new_file in pairs:
+        if old_file.is_file() and not new_file.is_file():
             new_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(old_file, new_file)
             logger.warning(f"Copied {legacy_package} '{old_file}' file to {__project_name__} '{new_file}'.")
@@ -88,7 +96,11 @@ def migrate_from_legacy(
 def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> None:
     """Set up the logger.
 
-    :param verbose: the verbosity level (1 = INFO, 2 = ERROR, 3 = NOTSET).
+    :param verbose: the verbosity level: 1 (-v) = INFO, 2 (-vv) = DEBUG, 3 or higher (-vvv) = NOTSET (i.e. log
+       everything).  A level of 2 or higher also sets the DEBUG environment variable to capture Playwright's verbose
+       API logs.  None (or 0) leaves the level unset (i.e. WARNING), unless log_file is given (see below).
+    :param log_file: the file to log to.  If given, logging is redirected to it and a verbose of None (or 0) is
+       raised to 1.
     """
     if log_file:
         handlers: tuple[logging.Handler, ...] | None = (logging.FileHandler(log_file),)
@@ -130,7 +142,8 @@ def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> No
 def teardown_logger(verbose: int | None = None) -> None:
     """Clean up logging.
 
-    :param verbose: the verbosity level (1 = INFO, 2 = ERROR).
+    :param verbose: the verbosity level (see :func:`setup_logger`).  At 2 (-vv) or higher, the DEBUG environment
+       variable set by :func:`setup_logger` is removed.
     """
     if verbose is not None and verbose >= 2:
         # https://playwright.dev/python/docs/debug#verbose-api-logs
@@ -379,15 +392,18 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_fi
     def print_new_version() -> int:
         """Will print alert message if a newer version is found on PyPi."""
         print(f'{__project_name__} {__version__}.', end='')
-        new_release = get_new_version_number(timeout=2)
+        new_release = get_new_version_number(timeout=2, force_refresh=True)
+        if new_release == '':
+            print(' You are running the latest release.')
+            return 0
+        if new_release is True:
+            print(' You are running a pre-release.')
+            return 0
         if new_release:
             print(
                 f'\nNew release version {new_release} is available; we recommend updating using e.g. '
-                f"'pip install -U {__project_name__}'."
+                f"'uv pip install -U {__project_name__}'."
             )
-            return 0
-        if new_release == '':
-            print(' You are running the latest release.')
             return 0
         print(' Error contacting PyPI to determine the latest release.')
         return 1
@@ -425,7 +441,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_fi
     if urlwatch_config.detailed_versions:
         _exit(show_detailed_versions())
 
-    if urlwatch_config.edit or urlwatch_config.edit_config or urlwatch_config.edit_hooks:
+    if urlwatch_config.edit or urlwatch_config.edit_config or urlwatch_config.edit_hooks or urlwatch_config.features:
         # Resolve paths and run the same first-run / schema-sync setup that main() does, so editing works
         # identically regardless of which dispatch path runs the command.
         urlwatch_config.config_file = locate_storage_file(
@@ -453,10 +469,18 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_fi
             and not Path(urlwatch_config.config_file).is_file()
         ):
             first_run(urlwatch_config)
+        # --edit-jobs validates the saved file via YamlJobsStorage.parse(), which calls JobBase.unserialize() and
+        # needs custom subclasses defined in hooks.py to be registered. --features enumerates registered
+        # subclasses for display. Both therefore need hooks loaded; the other early actions do not.
+        if urlwatch_config.edit or urlwatch_config.features:
+            for hooks_file in urlwatch_config.hooks_files:
+                load_hooks(hooks_file, is_default=not urlwatch_config.hooks_files_inputted)
         if urlwatch_config.edit_hooks:
             _exit(_edit_hooks_files(urlwatch_config.hooks_files))
         if urlwatch_config.edit_config:
             _exit(_edit_config_file(urlwatch_config.config_file))
+        if urlwatch_config.features:
+            _exit(_show_features())
         if urlwatch_config.edit:
             _exit(_edit_jobs_files(urlwatch_config.jobs_files))
 
@@ -562,6 +586,37 @@ def _print_dist_sub_deps(name: str, raw: list[str]) -> None:
         print(f'  - {req.name}: {installed.version}')
 
 
+def _show_features() -> int:
+    """Prints the 'features', i.e. a list of job types, filters, differs and reporters.
+
+    Mirrors the historical ``UrlwatchCommand.show_features`` output. Hooks must be loaded before calling this so
+    that subclasses defined in the user's ``hooks.py`` show up in the listing.
+
+    :return: 0.
+    """
+    from webchanges.differs import DifferBase
+    from webchanges.filters import FilterBase
+    from webchanges.jobs import JobBase
+    from webchanges.reporters import ReporterBase
+
+    print(f'Please see full documentation at {__docs_url__}.')
+    print()
+    print('Supported jobs:\n')
+    print(JobBase.job_documentation())
+    print('Supported filters:\n')
+    print(FilterBase.filter_documentation())
+    print()
+    print('Supported differs:\n')
+    print(DifferBase.differ_documentation())
+    print()
+    print('Supported reporters:\n')
+    print(ReporterBase.reporter_documentation())
+    print()
+    print(f'Please see full documentation at {__docs_url__}.')
+
+    return 0
+
+
 def show_detailed_versions() -> int:
     """Prints the detailed versions, including of dependencies.
 
@@ -574,7 +629,7 @@ def show_detailed_versions() -> int:
 
     def dependencies() -> list[str]:
         try:
-            from pip._internal.metadata import get_default_environment
+            from pip._internal.metadata import get_default_environment  # ty:ignore[unresolved-import]
 
             env = get_default_environment()
             dist = None
@@ -584,7 +639,7 @@ def show_detailed_versions() -> int:
             if dist and dist.canonical_name == __project_name__:
                 requires_dist = dist.metadata_dict.get('requires_dist', [])
                 dependencies = {re.split('[ <>=;#^[]', d)[0] for d in requires_dist}
-                dependencies.update(('httpx', 'packaging', 'simplejson', 'typeguard'))
+                dependencies.update(('httpx', 'packaging', 'typeguard'))
                 return sorted(dependencies, key=str.lower)
         except ImportError:
             pass
@@ -617,6 +672,7 @@ def show_detailed_versions() -> int:
             'Pillow',
             'platformdirs',
             'playwright',
+            'playwright-stealth',
             'psutil',
             'pushbullet.py',
             'pypdf',
@@ -624,7 +680,6 @@ def show_detailed_versions() -> int:
             'pyyaml',
             'redis',
             'requests',
-            'simplejson',
             'typeguard',
             'typing-extensions',
             'tzdata',
@@ -822,13 +877,6 @@ def main() -> None:  # pragma: no cover
     default_hooks_file = config_path.joinpath('hooks.py')
     default_ssdb_file = data_path.joinpath('snapshots.db')
 
-    # Check for and if found migrate snapshot database file from version <= 3.21, which was called cache.db and located
-    # in user_cache_path
-    migrate_from_legacy('webchanges', ssdb_file=default_ssdb_file)
-
-    # Check for and if found migrate legacy (urlwatch) files
-    migrate_from_legacy('urlwatch', default_config_file, default_jobs_file, default_hooks_file, default_ssdb_file)
-
     # Parse command line arguments
     command_config = CommandConfig(
         sys.argv[1:],
@@ -845,6 +893,18 @@ def main() -> None:  # pragma: no cover
     # log defaults
     logger.debug(f'Default config path is {config_path}')
     logger.debug(f'Default data path is {data_path}')
+
+    # Legacy-file migration is only useful for actions that actually read or write the user's
+    # config / jobs / hooks / snapshot files. Trivial actions that early-exit in
+    # handle_unitialized_actions touch none of them, so skip the stat() / platformdirs work.
+    # If a future trivial action is added to handle_unitialized_actions, add it here too.
+    if not (command_config.check_new or command_config.detailed_versions or command_config.install_chrome):
+        # Check for and if found migrate snapshot database file from version <= 3.21, which was called cache.db
+        # and located in user_cache_path
+        migrate_from_legacy('webchanges', ssdb_file=default_ssdb_file)
+
+        # Check for and if found migrate legacy (urlwatch) files
+        migrate_from_legacy('urlwatch', default_config_file, default_jobs_file, default_hooks_file, default_ssdb_file)
 
     # For speed, run these here
     handle_unitialized_actions(command_config, default_config_file)

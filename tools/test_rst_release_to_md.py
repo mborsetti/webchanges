@@ -69,7 +69,7 @@ def test_real_release_file_converts_cleanly() -> None:
 
 def test_main_writes_then_idempotent(tmp_path: Path) -> None:
     src = tmp_path / 'RELEASE.rst'
-    src.write_text('Added\n`````\n* foo\n', encoding='utf-8')
+    src.write_text('Added\n`````\n* foo\n', encoding='utf-8', newline='\n')
     dst = tmp_path / 'RELEASE.md'
 
     assert main([str(src)]) == 1
@@ -82,9 +82,9 @@ def test_main_writes_then_idempotent(tmp_path: Path) -> None:
 
 def test_main_rewrites_when_md_is_stale(tmp_path: Path) -> None:
     src = tmp_path / 'RELEASE.rst'
-    src.write_text('Added\n`````\n', encoding='utf-8')
+    src.write_text('Added\n`````\n', encoding='utf-8', newline='\n')
     dst = tmp_path / 'RELEASE.md'
-    dst.write_text('stale content\n', encoding='utf-8')
+    dst.write_text('stale content\n', encoding='utf-8', newline='\n')
 
     assert main([str(src)]) == 1
     assert dst.read_text(encoding='utf-8') == '## Added\n'

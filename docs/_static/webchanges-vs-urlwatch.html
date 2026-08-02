@@ -1,0 +1,1192 @@
+<!-- @format -->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>webchanges vs urlwatch: a comparison</title>
+    <meta
+      name="description"
+      content="A 2026 comparison of webchanges and urlwatch built from each project's reference docs. Lead with the four high-value wins for webchanges &mdash; AI diff summaries, structural JSON/XML diffs, image change detection, and TLS/JA3 fingerprint evasion &mdash; then a full directive-level reference." />
+    <meta
+      name="keywords"
+      content="webchanges, urlwatch, webchanges vs urlwatch, AI diff summary, Gemini diff, deepdiff, image change detection, JA3, curl_cffi, Playwright, urlwatch alternative, web change monitoring" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="https://example.com/webchanges-vs-urlwatch.html" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="webchanges vs urlwatch: a comparison" />
+    <meta
+      property="og:description"
+      content="AI diff summaries, structural JSON/XML diffs, image change detection, TLS/JA3 evasion. The high-value reasons to pick webchanges over urlwatch &mdash; with the full reference comparison underneath." />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="webchanges vs urlwatch: a comparison" />
+    <meta
+      name="twitter:description"
+      content="The 4 high-value wins for webchanges &mdash; AI summaries, deepdiff, image differ, JA3 evasion &mdash; with full reference detail." />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Article",
+            "headline": "webchanges vs urlwatch: a comparison",
+            "description": "A 2026 comparison built from each project's reference docs.",
+            "datePublished": "2026-05-09",
+            "dateModified": "2026-05-09",
+            "inLanguage": "en"
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "What is the single biggest reason to choose webchanges over urlwatch?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "webchanges has a typed differ system. The ai_google differ summarizes long diffs via Gemini, deepdiff compares JSON/YAML/XML element by element, and image diffs visual changes &mdash; none of which urlwatch offers natively."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can webchanges scrape sites that block urlwatch?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Often yes. Set http_client: curl_cffi with impersonate: chrome (or safari/firefox/edge). You can also override fingerprints.ja3 and fingerprints.akamai directly. urlwatch uses requests and offers no fingerprinting controls."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is migrating from urlwatch hard?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Usually not. Job and config files are mostly compatible; webchanges auto-migrates the database.  Original files are retained so you can go back if you want."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+
+    <style>
+      :root {
+        --fg: #1a1a1a;
+        --muted: #5b6470;
+        --bg: #ffffff;
+        --soft: #f5f7fa;
+        --line: #e5e7eb;
+        --accent: #0a66c2;
+        --good: #0a8a3a;
+        --bad: #b00020;
+        --warn: #a36500;
+        --chip: #eef2ff;
+        --chip-fg: #1e3a8a;
+        --winbg: linear-gradient(180deg, rgba(10, 138, 58, 0.07), rgba(10, 138, 58, 0.02));
+        --max: 1040px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fg: #e7e9ec;
+          --muted: #9aa3ad;
+          --bg: #0f1115;
+          --soft: #171a20;
+          --line: #262a31;
+          --accent: #5aa9ff;
+          --chip: #1a2540;
+          --chip-fg: #cfe0ff;
+          --winbg: linear-gradient(180deg, rgba(90, 169, 255, 0.08), rgba(90, 169, 255, 0.02));
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.55 -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .skip {
+        position: absolute;
+        left: -9999px;
+      }
+      .skip:focus {
+        left: 8px;
+        top: 8px;
+        background: #000;
+        color: #fff;
+        padding: 8px;
+        z-index: 99;
+      }
+      header,
+      main,
+      footer {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: 24px 20px;
+      }
+      header {
+        padding-top: 32px;
+      }
+      .kicker {
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      h1 {
+        font-size: 2.05rem;
+        line-height: 1.2;
+        margin: 0.25rem 0 0.6rem;
+      }
+      h2 {
+        font-size: 1.4rem;
+        margin: 2rem 0 0.6rem;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 0.3rem;
+      }
+      h3 {
+        font-size: 1.1rem;
+        margin: 1.3rem 0 0.4rem;
+      }
+      p {
+        margin: 0.5rem 0;
+      }
+      .lede {
+        font-size: 1.07rem;
+        color: var(--muted);
+        max-width: 74ch;
+      }
+      .tldr {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        padding: 14px 16px;
+        border-radius: 8px;
+        margin: 18px 0;
+      }
+      .tldr strong {
+        color: var(--accent);
+      }
+      .toc {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 0.92rem;
+      }
+      .toc ol {
+        margin: 0.3rem 0 0.3rem 1.2rem;
+        padding: 0;
+        columns: 2;
+        column-gap: 24px;
+      }
+      @media (max-width: 680px) {
+        .toc ol {
+          columns: 1;
+        }
+      }
+      code,
+      kbd {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 1px 6px;
+        font-size: 0.9em;
+      }
+      pre {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        overflow: auto;
+        font-size: 0.86rem;
+        line-height: 1.45;
+        margin: 0.6rem 0;
+      }
+
+      /* Wins */
+      .wins {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 14px;
+        margin: 0.5rem 0 0;
+      }
+      @media (max-width: 760px) {
+        .wins {
+          grid-template-columns: 1fr;
+        }
+      }
+      .win {
+        background: var(--winbg);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+        min-width: 0;
+        overflow-wrap: break-word;
+      }
+      .win h3 {
+        margin: 0.1rem 0 0.3rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .win h3 .num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.6rem;
+        height: 1.6rem;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 700;
+        flex: 0 0 auto;
+      }
+      .win .why {
+        margin: 0.2rem 0 0.3rem;
+      }
+      .win pre {
+        margin: 0.5rem 0 0;
+      }
+      .chip {
+        background: var(--chip);
+        color: var(--chip-fg);
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+      .gone {
+        color: var(--bad);
+        font-weight: 600;
+      }
+
+      /* Decision */
+      .decide {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin: 0.5rem 0;
+      }
+      @media (max-width: 760px) {
+        .decide {
+          grid-template-columns: 1fr;
+        }
+      }
+      .decide article {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px;
+        background: var(--soft);
+      }
+      .decide h3 {
+        margin-top: 0;
+      }
+
+      /* Reference tables */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0.5rem 0 1rem;
+        font-size: 0.93rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        background: var(--soft);
+      }
+      td.center,
+      th.center {
+        text-align: center;
+        white-space: nowrap;
+      }
+      .yes {
+        color: var(--good);
+        font-weight: 700;
+      }
+      .no {
+        color: var(--bad);
+        font-weight: 700;
+      }
+      .partial {
+        color: var(--warn);
+        font-weight: 700;
+      }
+      ul.tight {
+        margin: 0.3rem 0 0.6rem 1.1rem;
+        padding: 0;
+      }
+      ul.tight li {
+        margin: 0.18rem 0;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+      details {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin: 0.4rem 0;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .badge {
+        display: inline-block;
+        background: var(--accent);
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid var(--line);
+        margin: 24px 0;
+      }
+      .twocol {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+      @media (max-width: 760px) {
+        .twocol {
+          grid-template-columns: 1fr;
+        }
+      }
+      .twocol pre {
+        margin: 0;
+      }
+      .ref-banner {
+        background: var(--soft);
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin: 18px 0 8px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      .only {
+        font-size: 0.78rem;
+        background: rgba(10, 138, 58, 0.12);
+        color: var(--good);
+        border: 1px solid rgba(10, 138, 58, 0.45);
+        padding: 1px 7px;
+        border-radius: 999px;
+        margin-left: 6px;
+        white-space: nowrap;
+      }
+      .only.bad {
+        background: rgba(176, 0, 32, 0.1);
+        color: var(--bad);
+        border-color: rgba(176, 0, 32, 0.45);
+      }
+
+      /* Release-activity callout */
+      .activity {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px;
+        margin: 6px 0 18px;
+      }
+      @media (max-width: 760px) {
+        .activity {
+          grid-template-columns: 1fr;
+        }
+      }
+      .activity .stat {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .activity .num {
+        font-size: 2.6rem;
+        font-weight: 800;
+        line-height: 1;
+        color: var(--good);
+        min-width: 2.2ch;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      .activity .stat.dim .num {
+        color: var(--bad);
+      }
+      .activity .lbl {
+        font-size: 0.95rem;
+        line-height: 1.35;
+      }
+      .activity .lbl strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+      .activity .sub {
+        display: block;
+        color: var(--muted);
+        font-size: 0.82rem;
+        margin-top: 2px;
+      }
+      .activity-cap {
+        font-size: 0.82rem;
+        color: var(--muted);
+        margin: 0 0 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header>
+      <div class="kicker">
+        Updated 9 May 2026 &middot; ~3 min read &middot; built from each project's reference docs
+      </div>
+      <h1>webchanges vs urlwatch: a comparison</h1>
+      <p class="lede">
+        Both tools watch URLs, browser-rendered pages, and shell-command output for changes and notify you. webchanges
+        does everything urlwatch does &mdash; same jobs, filters, and reporter model &mdash; and four high-value things
+        urlwatch can't.
+      </p>
+
+      <div class="tldr" role="note" aria-label="Bottom line">
+        <strong>Bottom line:</strong> Pick <strong>webchanges</strong> if you need any of:
+        <strong>TLS/JA3 fingerprint evasion</strong> for anti-bot sites, <strong>AI-summarized diffs</strong> of long
+        documents, <strong>image change detection</strong>, or <strong>structural JSON/XML diffs</strong> without false
+        positives. Or one of the many other additions, and a tool that is actively developed.
+      </div>
+    </header>
+
+    <main id="main">
+      <h2 id="wins-h">Release activity in the last 12 months</h2>
+      <aside class="activity" aria-label="Release activity in the last 12 months">
+        <div class="stat">
+          <div class="num">12</div>
+          <div class="lbl">
+            <strong>webchanges releases</strong>
+            <span class="sub">in the last 12 months &middot; latest <code>v3.36.1</code> (27 Apr 2026)</span>
+          </div>
+        </div>
+        <div class="stat dim">
+          <div class="num">0</div>
+          <div class="lbl">
+            <strong>urlwatch releases</strong>
+            <span class="sub">in the last 12 months &middot; latest tag 28 Oct 2024</span>
+          </div>
+        </div>
+      </aside>
+      <p class="activity-cap">
+        Source: GitHub releases on
+        <a href="https://github.com/mborsetti/webchanges/releases" rel="noopener">mborsetti/webchanges</a> and tags on
+        <a href="https://github.com/thp/urlwatch/tags" rel="noopener">thp/urlwatch</a>, as of 9 May 2026.
+      </p>
+
+      <section id="wins" aria-labelledby="wins-h">
+        <h2 id="wins-h">The 4 high-value wins</h2>
+        <p>
+          If any of these match what you actually monitor, urlwatch can't keep up. Each is a webchanges feature with no
+          native urlwatch equivalent.
+        </p>
+
+        <div class="wins">
+          <article class="win">
+            <h3><span class="num">1</span>Get past TLS/JA3 fingerprinting <span class="chip">curl_cffi</span></h3>
+            <p class="why">
+              <strong>Why it matters:</strong> Cloudflare, Akamai, DataDome and friends fingerprint the TLS handshake
+              and HTTP/2 settings &mdash; not just User-Agent. urlwatch's stock <code>requests</code> client gets you a
+              403 with no recourse. webchanges routes through <code>curl_cffi</code> with a real browser TLS profile.
+            </p>
+            <p>
+              <strong>How:</strong> Set <code>http_client: curl_cffi</code> and <code>impersonate: chrome</code> (or
+              <code>safari</code> / <code>firefox</code> / <code>edge</code>). Override <code>fingerprints.ja3</code>,
+              <code>fingerprints.akamai</code>, or pin <code>http_version</code> as far as <code>v3only</code>.
+            </p>
+            <pre><code>url: https://hard-to-scrape.example/
+http_client: curl_cffi
+impersonate: chrome
+http_version: v2tls</code></pre>
+          </article>
+
+          <article class="win">
+            <h3><span class="num">2</span>Long diffs &rarr; one paragraph <span class="chip">ai_google</span></h3>
+            <p class="why">
+              <strong>Why it matters:</strong> Watching a 50-page terms-of-service, an RFC draft, a regulatory filing,
+              or a long policy page? webchanges sends you a plain-English summary of the meaningful changes instead of a
+              2,000-line unified diff. urlwatch ships the raw patch and leaves you to read it.
+            </p>
+            <p>
+              <strong>How:</strong> <code>differ: ai_google</code> calls Google Gemini with a prompt template that
+              exposes <code>{old_text}</code>, <code>{new_text}</code>, <code>{unified_diff}</code>. Configurable
+              <code>model</code>, <code>system_instructions</code>, <code>temperature</code>, <code>top_p</code>,
+              <code>thinking_budget</code>. Bring your own free Gemini API key.
+            </p>
+            <pre><code>differ:
+  name: ai_google
+  prompt: 'Summarize material changes by section.\n\n{unified_diff}'</code></pre>
+          </article>
+
+          <article class="win">
+            <h3><span class="num">3</span>Watch images, not just text <span class="chip">image</span></h3>
+            <p class="why">
+              <strong>Why it matters:</strong> Logo swaps, product-photo updates, dashboard screenshots, status-page
+              banners, captcha pages. urlwatch is text-first; if the page is a chart or an image, you're out. webchanges
+              pixel-diffs and ships a yellow overlay showing what moved.
+            </p>
+            <p>
+              <strong>How:</strong> <code>differ: image</code> with <code>data_type: url</code> (or
+              <code>filename</code> / <code>ascii85</code> / <code>base64</code>) and
+              <code>mse_threshold</code> (default 2.5) to tolerate compression noise.
+            </p>
+            <pre><code>url: https://example.com/logo.png
+differ:
+  name: image
+  data_type: url
+  mse_threshold: 5.0</code></pre>
+          </article>
+
+          <article class="win">
+            <h3><span class="num">4</span>JSON/XML diffs that don't cry wolf <span class="chip">deepdiff</span></h3>
+            <p class="why">
+              <strong>Why it matters:</strong> APIs reorder keys. Numeric precision drifts. Whitespace flips. urlwatch
+              text-diffs the serialized form and pings you for noise; you end up chaining <code>format-json</code> +
+              <code>jq</code> + a custom <code>diff_tool</code> and still missing nested changes. webchanges compares
+              the parsed structure element by element.
+            </p>
+            <p>
+              <strong>How:</strong> <code>differ: deepdiff</code> with <code>data_type: json</code> (or
+              <code>yaml</code> / <code>xml</code>), <code>ignore_order</code>, <code>ignore_string_case</code>,
+              <code>significant_digits</code>, <code>compact</code>.
+            </p>
+            <pre><code>differ:
+  name: deepdiff
+  data_type: json
+  ignore_order: true
+  significant_digits: 2</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="use" aria-labelledby="use-h">
+        <h2 id="use-h">Use webchanges if&hellip;</h2>
+        <ul class="tight">
+          <li>Any of the four wins above apply.</li>
+          <li>
+            You need <strong>granular Playwright control</strong>: <code>block_elements</code>, <code>evaluate</code>,
+            chained <code>wait_for_*</code>, persistent <code>user_data_dir</code>, <code>switches</code>,
+            <code>http_credentials</code>.
+          </li>
+          <li>
+            You want <strong>reporters that earn their keep</strong>: <code>github_issue</code> turns each change into a
+            tracked ticket with labels/assignees/milestones; <code>mailgun</code> for transactional email;
+            <code>browser</code> opens the HTML report locally; <code>run_command</code> exposes
+            <code>{count}</code>/<code>{jobs}</code>/<code>{text}</code> plus <code>WEBCHANGES_*_JSON</code> env vars.
+          </li>
+          <li>
+            You want <strong>Telegram with formatting</strong>: bold/italics/strikethrough/links via Markdown, not plain
+            text plus a <code>monospace</code> flag.
+          </li>
+          <li>
+            You want <strong>snapshot retention controls</strong>: <code>max_snapshots</code> caps storage growth and
+            <code>--rollback-database</code> recovers from a bad filter change. urlwatch keeps every snapshot.
+          </li>
+          <li>
+            You want <strong>safer external commands</strong>: the <code>execute</code> filter runs a program without
+            shell interpretation. <code>shellpipe</code> is still available but flagged as a security risk.
+          </li>
+          <li>
+            You want <strong>extra filters</strong> at the edges: <code>ascii85</code>, <code>base64</code>,
+            <code>format-xml</code>, <code>jsontoyaml</code>, <code>pypdf</code>, <code>remove_repeated</code>,
+            <code>absolute_links</code>; renamed <code>keep_lines_containing</code> /
+            <code>delete_lines_containing</code> with <code>text</code>+<code>re</code> modes.
+          </li>
+          <li>You want a <strong>JSON Schema</strong> (<code>config.schema.json</code>) for editor autocomplete.</li>
+          <li>You need <strong>HTTP/2</strong> to access sites.</li>
+        </ul>
+        <p class="meta">
+          Migration is mostly drop-in: <code>jobs.yaml</code> / <code>config.yaml</code> are largely compatible, and the
+          database auto-migrates. Original files are retained so you can go back if you want.
+        </p>
+      </section>
+
+      <hr />
+
+      <section id="reference" aria-labelledby="reference-h">
+        <h2 id="reference-h">Full reference comparison</h2>
+        <p class="ref-banner">Source: each project's official reference docs.</p>
+
+        <h3 id="jobs">Jobs &amp; universal directives</h3>
+        <table aria-label="Universal directives">
+          <thead>
+            <tr>
+              <th>Directive</th>
+              <th class="center">webchanges</th>
+              <th class="center">urlwatch</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <code>name</code>, <code>enabled</code>, <code>kind</code>, <code>user_visible_url</code>,
+                <code>compared_versions</code>, <code>max_tries</code>
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center yes">&check;</td>
+              <td>Common ground.</td>
+            </tr>
+            <tr>
+              <td><code>filter</code> / <code>filters</code>, <code>diff_filter</code> / <code>diff_filters</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center yes">&check;</td>
+              <td>Plural form in webchanges.</td>
+            </tr>
+            <tr>
+              <td><code>differ</code> &mdash; typed differ selector with sub-directives</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>urlwatch only has <code>diff_tool</code> (a custom command).</td>
+            </tr>
+            <tr>
+              <td><code>note</code>, <code>monospace</code>, <code>is_markdown</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>Per-job rendering hints. <span class="only">webchanges-only</span></td>
+            </tr>
+            <tr>
+              <td><code>additions_only</code>, <code>deletions_only</code> at job level</td>
+              <td class="center yes">&check;</td>
+              <td class="center partial">filter-only</td>
+              <td>webchanges promotes them to first-class job options.</td>
+            </tr>
+            <tr>
+              <td><code>tags</code>, <code>treat_new_as_changed</code></td>
+              <td class="center no">&times;</td>
+              <td class="center yes">&check;</td>
+              <td><span class="only bad">urlwatch-only</span></td>
+            </tr>
+            <tr>
+              <td>
+                <code>suppress_errors</code> / <code>suppress_repeated_errors</code> / <code>suppress_error_ended</code>
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center partial">~</td>
+              <td>Finer-grained muting in webchanges.</td>
+            </tr>
+            <tr>
+              <td>
+                Shell job <code>stderr</code> handling
+                (<code>ignore</code>/<code>fail</code>/<code>stdout</code>&hellip;)
+              </td>
+              <td class="center no">&times;</td>
+              <td class="center yes">&check;</td>
+              <td><span class="only bad">urlwatch-only</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="http">HTTP client &amp; fingerprinting</h3>
+        <table aria-label="HTTP client comparison">
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th class="center">webchanges</th>
+              <th class="center">urlwatch</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Selectable client (<code>httpx</code> (HTTP/2), <code>requests</code>, <code>curl_cffi</code>)</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td>
+                <code>http_version</code>: <code>v1</code>, <code>v2</code>, <code>v2tls</code>,
+                <code>v2_prior_knowledge</code>, <code>v3</code>, <code>v3only</code>
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>impersonate</code> (chrome / safari / firefox / edge)</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>fingerprints.ja3</code>, <code>fingerprints.akamai</code>, <code>extra_fp</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td>
+                <code>params</code>, <code>data_as_json</code>, <code>retries</code>, <code>no_redirects</code>,
+                <code>no_conditional_request</code>
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center partial">~</td>
+            </tr>
+            <tr>
+              <td>
+                Common: <code>headers</code>, <code>cookies</code>, <code>data</code>, <code>method</code>,
+                <code>encoding</code>, <code>timeout</code>, <code>ssl_no_verify</code>,
+                <code>http_proxy</code>/<code>https_proxy</code>, <code>ignore_*_errors</code>
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center yes">&check;</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="browser">Browser jobs (Playwright)</h3>
+        <p>
+          Both projects use Playwright and support the same engines (chromium, chrome, firefox, webkit, msedge). The
+          difference is the directive surface, which is much broader for webchanges.
+        </p>
+        <div class="twocol">
+          <article>
+            <h4>webchanges &mdash; <code>use_browser: true</code></h4>
+            <ul class="tight">
+              <li><code>block_elements</code> (skip stylesheets/images/fonts/media/scripts)</li>
+              <li><code>evaluate</code> (run JS, return result)</li>
+              <li>
+                <code>init_script</code>, <code>initialization_url</code>, <code>initialization_js</code> (initialize
+                page before going to the URL with the data)
+              </li>
+              <li>
+                <code>switches</code>, <code>ignore_default_args</code>, <code>user_data_dir</code>(control browser
+                launch)
+              </li>
+              <li><code>http_credentials</code> (log in, including a proxy)</li>
+              <li>
+                <code>ignore_https_errors</code>,
+                <code>referer</code>
+              </li>
+              <li>
+                <code>wait_for_function</code>, <code>wait_for_selector</code> (state / strict / timeout, list-able),
+                <code>wait_for_url</code>, <code>wait_for_timeout</code>, <code>wait_until</code>
+              </li>
+            </ul>
+          </article>
+          <article>
+            <h4>urlwatch &mdash; <code>navigate:</code></h4>
+            <ul class="tight">
+              <li>
+                <code>navigate</code>, <code>wait_until</code>, <code>wait_for</code>, <code>useragent</code>,
+                <code>browser</code>
+              </li>
+            </ul>
+            <p class="meta">Same engine, much smaller knob set.</p>
+          </article>
+        </div>
+
+        <h3 id="filters">Filters</h3>
+        <p>
+          Both share the core (CSS/XPath, html2text, jq, pdf2text, OCR, regex, sort/reverse). Differences is the additional filters offered by webchanges.
+        </p>
+        <ul class="tight">
+          <li>
+            <strong>webchanges-only:</strong> <code>execute</code> (safer than <code>shellpipe</code>),
+            <code>ascii85</code>, <code>base64</code>, <code>format-xml</code>, <code>jsontoyaml</code>,
+            <code>pypdf</code>, <code>remove_repeated</code>, <code>absolute_links</code>, enhanced
+            <code>strip</code> (<code>chars</code>/<code>side</code>/<code>splitlines</code>),
+            <code>format-json</code> with <code>sort_keys</code>, <code>pdf2text</code> with
+            <code>raw</code>/<code>physical</code>.
+          </li>
+          <li>
+            Renamed in webchanges: <code>grep</code> &rarr; <code>keep_lines_containing</code>,
+            <code>grepi</code> &rarr; <code>delete_lines_containing</code> (both accept <code>text</code> or
+            <code>re</code> in webchanges).
+          </li>
+        </ul>
+
+        <h3 id="differs">Differs</h3>
+        <table aria-label="Differ comparison">
+          <thead>
+            <tr>
+              <th>Differ</th>
+              <th>What it produces</th>
+              <th class="center">webchanges</th>
+              <th class="center">urlwatch</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>unified</code></td>
+              <td>Standard line diff (<code>context_lines</code>, <code>range_info</code>)</td>
+              <td class="center yes">&check;</td>
+              <td class="center yes">implicit</td>
+            </tr>
+            <tr>
+              <td><code>table</code></td>
+              <td>HTML side-by-side table (<code>tabsize</code>)</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>wdiff</code></td>
+              <td>Word-level diff with line breaks preserved</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>command</code></td>
+              <td>Pipe to external program (<code>is_html</code>)</td>
+              <td class="center yes">&check;</td>
+              <td class="center yes"><code>diff_tool</code></td>
+            </tr>
+            <tr>
+              <td><code>deepdiff</code></td>
+              <td>Structural JSON/YAML/XML diff</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>image</code></td>
+              <td>Pixel diff with overlay</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>ai_google</code></td>
+              <td>LLM summary via Gemini</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="reporters">Reporters</h3>
+        <table aria-label="Reporter comparison">
+          <thead>
+            <tr>
+              <th>Reporter</th>
+              <th class="center">webchanges</th>
+              <th class="center">urlwatch</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                Common: <code>stdout</code>, <code>email</code> (sendmail/SMTP), <code>mailgun</code>, </code><code>telegram</code>,
+                <code>matrix</code>, <code>gotify</code>, <code>ntfy</code>, <code>pushover</code>,
+                <code>pushbullet</code>, <code>prowl</code>, <code>ifttt</code>, <code>xmpp</code>, <code>discord</code>
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center yes">&check;</td>
+              <td>Both broad.</td>
+            </tr>
+            <tr>
+              <td><code>github_issue</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>Token, owner, repo, labels, assignees, milestone. <span class="only">webchanges-only</span></td>
+            </tr>
+            <tr>
+              <td><code>browser</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>Open HTML report locally. <span class="only">webchanges-only</span></td>
+            </tr>
+            <tr>
+              <td><code>run_command</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center partial">~</td>
+              <td>
+                webchanges substitutes <code>{count}</code>/<code>{jobs}</code>/<code>{text}</code> +
+                <code>WEBCHANGES_*_JSON</code>; urlwatch has a simpler <code>shell</code> reporter.
+              </td>
+            </tr>
+            <tr>
+              <td><code>webhook</code> (unified Slack / Mattermost / custom)</td>
+              <td class="center yes">&check;</td>
+              <td class="center yes"><code>slack</code> + <code>mattermost</code></td>
+              <td>
+                webchanges merges them with <code>markdown</code>, <code>max_message_length</code>,
+                <code>rich_text</code>.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="cli">Command-line interface</h3>
+        <p>
+          Webchanges
+          adds operational tooling for testing, retention, recovery, observability, and packaging.
+        </p>
+        <table aria-label="CLI flag comparison">
+          <thead>
+            <tr>
+              <th>Flag</th>
+              <th>What it does</th>
+              <th class="center">webchanges</th>
+              <th class="center">urlwatch</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--errors [REPORTER]</code></td>
+              <td>
+                Test-run every enabled job and list ones that errored or captured no data; optionally pipe the result
+                to a reporter.
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--list-jobs [REGEX]</code></td>
+              <td>
+                List jobs and their indexes, filtered by an optional regex. urlwatch's <code>--list</code> has no
+                filter.
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center partial">no regex</td>
+            </tr>
+            <tr>
+              <td><code>--test [JOB]</code></td>
+              <td>
+                Run one job and show filtered output. With no JOB, validates the syntax of every config, jobs, and
+                hooks file.
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center partial">JOB required</td>
+            </tr>
+            <tr>
+              <td><code>--test-differ JOB</code></td>
+              <td>
+                Replay the differ against existing saved snapshots; combines with <code>--test-reporter</code> to
+                preview the rendered output.
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center yes"><code>--test-diff-filter</code></td>
+            </tr>
+            <tr>
+              <td><code>--no-headless</code></td>
+              <td>Show the actual browser window for Playwright jobs (debug captchas, redirects, login walls).</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--max-workers N</code></td>
+              <td>Cap the parallel thread pool used to fetch jobs.</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--clean-database [N]</code></td>
+              <td>Trim snapshot history to the latest N per job (default 1).</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--rollback-database TIMESTAMP</code></td>
+              <td>
+                Recovery undo: drop every changed snapshot newer than TIMESTAMP &mdash; the antidote to a bad filter
+                that triggered a wave of false changes.
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--delete-snapshot JOB</code></td>
+              <td>Delete only the most recent snapshot for a job, e.g. to force a re-fetch.</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--gc-database [N]</code></td>
+              <td>Drop snapshots for jobs no longer in the jobs file.</td>
+              <td class="center yes">&check;</td>
+              <td class="center yes"><code>--gc-cache</code></td>
+            </tr>
+            <tr>
+              <td><code>--database-engine</code>, <code>--max-snapshots N</code></td>
+              <td>Override the database engine and retention from the CLI without editing <code>config.yaml</code>.</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--footnote "TEXT"</code></td>
+              <td>Append a custom footer to every rendered report.</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--log-file FILE</code></td>
+              <td>Redirect logs to a file (defaults to verbose when set).</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--check-new</code></td>
+              <td>Query PyPI to see if a newer release of webchanges is available.</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--detailed-versions</code></td>
+              <td>
+                Dump version info for webchanges, Python, SQLite, every dependency, the Playwright browser, and (on
+                Linux) related apt packages &mdash; useful for bug reports.
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--install-chrome</code></td>
+              <td>Install or update the Chrome browser used by Playwright jobs.</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>--tags</code></td>
+              <td>Select jobs to run by tag instead of by index.</td>
+              <td class="center no">&times;</td>
+              <td class="center yes">&check;</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="config">Configuration &amp; database</h3>
+        <ul class="tight">
+          <li>
+            <strong>webchanges</strong> exposes <code>differ_defaults</code> (per-differ defaults),
+            <code>database</code> (engine + <code>max_snapshots</code>), global <code>tz</code>, and
+            <code>footnote</code>. Ships <code>config.schema.json</code> for editor autocompletion. Underscore-prefixed
+            keys (<code>_note:</code>) act as inline comments.
+          </li>
+          <li>
+            Database backends &mdash;  webchanges allows to set <code>max_snapshots</code> to define retention.
+          </li>
+          <li>
+            Default config locations &mdash; webchanges: Linux <code>~/.config/webchanges</code>, macOS
+            <code>~/Library/Preferences/webchanges</code>, Windows <code>%USERPROFILE%\Documents\webchanges</code>.
+          </li>
+        </ul>
+      </section>
+
+      <section id="faq" aria-labelledby="faq-h">
+        <h2 id="faq-h">FAQ</h2>
+        <details open>
+          <summary>What's the single biggest reason to choose webchanges?</summary>
+          <p>
+            The differ system <code>ai_google</code> turns a 2,000-line legal diff into three bullets;
+            <code>deepdiff</code> kills false positives on JSON/XML; <code>image</code> watches pictures. urlwatch has
+            none of these natively.
+          </p>
+        </details>
+        <details>
+          <summary>Can webchanges scrape sites that block urlwatch?</summary>
+          <p>
+            Often, yes. Use <code>http_client: curl_cffi</code> with <code>impersonate: chrome</code> (or
+            <code>safari</code>/<code>firefox</code>/<code>edge</code>) and override <code>fingerprints.ja3</code> /
+            <code>fingerprints.akamai</code> if needed. urlwatch ships with no fingerprinting controls.
+          </p>
+        </details>
+        <details>
+          <summary>Is migrating from urlwatch hard?</summary>
+          <p>
+            Usually not. Job and config files are mostly compatible; the database auto-migrates. Original files are retained so you can go back if you want.
+          </p>
+        </details>
+        <details>
+          <summary>Does webchanges send my pages to Google?</summary>
+          <p>
+            Only if you opt in via the <code>ai_google</code> differ, which needs your own Gemini API key. Otherwise
+            change detection is local.
+          </p>
+        </details>
+      </section>
+
+      <hr />
+
+      <section aria-label="Sources">
+        <h2>Sources (reference docs)</h2>
+        <ul class="tight">
+          <li>
+            <a href="https://webchanges.readthedocs.io/en/stable/jobs.html" rel="noopener"
+              >webchanges &mdash; Jobs &amp; directives</a
+            >
+          </li>
+          <li>
+            <a href="https://webchanges.readthedocs.io/en/stable/filters.html" rel="noopener"
+              >webchanges &mdash; Filters</a
+            >
+          </li>
+          <li>
+            <a href="https://webchanges.readthedocs.io/en/stable/differs.html" rel="noopener"
+              >webchanges &mdash; Differs</a
+            >
+          </li>
+          <li>
+            <a href="https://webchanges.readthedocs.io/en/stable/reporters.html" rel="noopener"
+              >webchanges &mdash; Reporters</a
+            >
+          </li>
+          <li>
+            <a href="https://webchanges.readthedocs.io/en/stable/configuration.html" rel="noopener"
+              >webchanges &mdash; Configuration</a
+            >
+          </li>
+          <li>
+            <a href="https://urlwatch.readthedocs.io/en/latest/jobs.html" rel="noopener">urlwatch &mdash; Jobs</a>
+          </li>
+          <li>
+            <a href="https://urlwatch.readthedocs.io/en/latest/filters.html" rel="noopener">urlwatch &mdash; Filters</a>
+          </li>
+          <li>
+            <a href="https://urlwatch.readthedocs.io/en/latest/reporters.html" rel="noopener"
+              >urlwatch &mdash; Reporters</a
+            >
+          </li>
+          <li>
+            <a href="https://urlwatch.readthedocs.io/en/latest/configuration.html" rel="noopener"
+              >urlwatch &mdash; Configuration</a
+            >
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <p class="meta">
+        Compiled 9 May 2026 from each project's reference documentation. Verify against current release notes before
+        migrating production setups.
+      </p>
+    </footer>
+  </body>
+</html>

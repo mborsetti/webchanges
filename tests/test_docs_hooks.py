@@ -127,10 +127,10 @@ else:
 # TODO: Ensure that this is the version loaded during testing.
 
 
-def test_load_hooks(caplog: pytest.LogCaptureFixture) -> None:
-    """Check the cli.py load of hooks.com"""
-    load_hooks(data_path.joinpath('hooks.does_not_exist.py'))
-    assert caplog.text == '' or 'not imported because' in caplog.text
+def test_load_hooks() -> None:
+    """Check that cli.py load_hooks warns when the hooks file does not exist."""
+    with pytest.warns(RuntimeWarning, match='not imported because'):
+        load_hooks(data_path.joinpath('hooks.does_not_exist.py'))
 
 
 def test_flake8_on_hooks_rst(tmp_path: Path) -> None:

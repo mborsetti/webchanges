@@ -161,7 +161,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
     def replace_none_keys(config: _Config) -> None:
         """Fixes None keys in loaded config that should be empty dicts instead."""
         if 'job_defaults' not in config:
-            config['job_defaults'] = DEFAULT_CONFIG['job_defaults']
+            # deepcopy so that later mutations of the loaded config cannot corrupt the shared DEFAULT_CONFIG
+            config['job_defaults'] = copy.deepcopy(DEFAULT_CONFIG['job_defaults'])
         else:
             if 'shell' in config['job_defaults']:
                 if 'command' in config['job_defaults']:
@@ -169,10 +170,10 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         "Found both 'shell' and 'command' job_defaults in config, a duplicate. Please remove 'shell' "
                         'ones.'
                     )
-                config['job_defaults']['command'] = config['job_defaults'].pop('shell')  # ty:ignore[invalid-key]
+                config['job_defaults']['command'] = config['job_defaults'].pop('shell')
             for key in ('all', 'url', 'browser', 'command'):
                 if key not in config['job_defaults'] or config['job_defaults'][key] is None:
-                    config['job_defaults'][key] = {}  # ty:ignore[invalid-assignment]
+                    config['job_defaults'][key] = {}
 
     def load(self, *args: Any) -> None:
         """Load configuration file from self.filename into self.config, adding missing keys from DEFAULT_CONFIG.
@@ -187,7 +188,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
             # Fix change in key spelling
             if 'utf-8' in config.get('report', {}).get('email', {}).get('smtp', {}):
-                config['report']['email']['smtp']['utf_8'] = config['report']['email']['smtp'].pop('utf-8')
+                config['report']['email']['smtp']['utf_8'] = config['report']['email']['smtp'].pop('utf-8')  # ty:ignore[invalid-key]
 
             config = self.remove_deprecated_keys(config)
             self.check_for_unrecognized_keys(config)
@@ -228,7 +229,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         else:
             logger.warning(f'No directives found in the configuration file {self.filename}; using default directives.')
-            config = DEFAULT_CONFIG
+            # deepcopy so that later mutations of the loaded config cannot corrupt the shared DEFAULT_CONFIG
+            config = copy.deepcopy(DEFAULT_CONFIG)
 
         self.config = config
 
@@ -255,7 +257,8 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param filename: The filename.
         """
         config_storage = cls(filename)
-        config_storage.config = DEFAULT_CONFIG
+        # deepcopy so that later mutations through the instance cannot corrupt the shared DEFAULT_CONFIG
+        config_storage.config = copy.deepcopy(DEFAULT_CONFIG)
         config_storage.save()
 
 
@@ -290,8 +293,10 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     raise ValueError(
                         '\n   '.join(
                             (
-                                f'Found invalid job data in entry {i + 1} (consisting of the {type(job_data).__name__} '
-                                f'{job_data})',
+                                (
+                                    f'Found invalid job data in entry {i + 1} (consisting of the '
+                                    f'{type(job_data).__name__} {job_data})'
+                                ),
                                 *job_files_for_error(),
                             )
                         )
@@ -304,8 +309,10 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     raise ValueError(
                         '\n   '.join(
                             (
-                                f"The 'data' key needs to contain a string, a dictionary or a list; found a "
-                                f'{type(job.data).__name__}',
+                                (
+                                    f"The 'data' key needs to contain a string, a dictionary or a list; found a "
+                                    f'{type(job.data).__name__}'
+                                ),
                                 f'in {job.get_indexed_location()}',
                                 *job_files_for_error(),
                             )
@@ -339,8 +346,10 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     raise ValueError(
                         '\n   '.join(
                             (
-                                f"The 'headers' key needs to contain a dictionary; found a "
-                                f'{type(job.headers).__name__}',
+                                (
+                                    f"The 'headers' key needs to contain a dictionary; found a "
+                                    f'{type(job.headers).__name__}'
+                                ),
                                 f'in {job.get_indexed_location()})',
                                 *job_files_for_error(),
                             )
@@ -350,8 +359,10 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     raise ValueError(
                         '\n   '.join(
                             (
-                                f"The 'cookies' key needs to contain a dictionary; found a "
-                                f'{type(job.headers).__name__}',
+                                (
+                                    f"The 'cookies' key needs to contain a dictionary; found a "
+                                    f'{type(job.headers).__name__}'
+                                ),
                                 f'in {job.get_indexed_location()})',
                                 *job_files_for_error(),
                             )
@@ -361,8 +372,10 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                     raise ValueError(
                         '\n   '.join(
                             (
-                                f"The 'switches' key needs to contain a string or a list; found a "
-                                f'{type(job.switches).__name__}',
+                                (
+                                    f"The 'switches' key needs to contain a string or a list; found a "
+                                    f'{type(job.switches).__name__}'
+                                ),
                                 f'in {job.get_indexed_location()}',
                                 *job_files_for_error(),
                             )
@@ -376,8 +389,10 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             raise ValueError(
                 '\n   '.join(
                     (
-                        f'YAML parser {e.args[2].replace("here", "")} in line {e.args[3].line + 1}, column'
-                        f' {e.args[3].column + 1}',
+                        (
+                            f'YAML parser {e.args[2].replace("here", "")} in line {e.args[3].line + 1}, column'
+                            f' {e.args[3].column + 1}'
+                        ),
                         *job_files_for_error(),
                     )
                 )

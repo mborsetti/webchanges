@@ -6,6 +6,7 @@ from __future__ import annotations
 import getpass
 import importlib.machinery
 import importlib.util
+import json
 import logging
 import os
 import re
@@ -14,11 +15,12 @@ import stat
 import subprocess
 import sys
 import textwrap
+import time
 from math import floor, log10
 from os import PathLike
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Match
 
-from markdown2 import Markdown
+import platformdirs
 
 from webchanges import __project_name__, __version__
 
@@ -28,22 +30,16 @@ if TYPE_CHECKING:
 
     from webchanges.handler import JobState
 
-try:
-    import httpx
-except ImportError:  # pragma: no cover
-    httpx = None  # ty:ignore[invalid-assignment]
-if httpx is not None:
-    try:
-        import h2
-    except ImportError:  # pragma: no cover
-        h2 = None  # ty:ignore[invalid-assignment]
-
-try:
-    from packaging.version import parse as parse_version
-except ImportError:  # pragma: no cover
-    from webchanges._vendored.packaging_version import parse as parse_version
-
 logger = logging.getLogger(__name__)
+
+
+def _parse_version(value: str):  # noqa: ANN202 returns packaging.version.Version (lazy import)
+    """Lazily import packaging's ``parse`` (with vendored fallback) and return the parsed Version."""
+    try:
+        from packaging.version import parse
+    except ImportError:  # pragma: no cover
+        from webchanges._vendored.packaging_version import parse
+    return parse(value)
 
 
 def lazy_import(fullname: str) -> ModuleType | None:
@@ -295,7 +291,7 @@ def linkify(
             proto = 'https'
             href = f'https://{href}'  # no proto specified, use https
 
-        params = f' {extra_params(href).strip()}' if callable(extra_params) else extra_params  # ty:ignore[call-top-callable]
+        params = extra_params if isinstance(extra_params, str) else f' {extra_params(href).strip()}'
 
         # clip long urls. max_len is just an approximation
         max_len = 30
@@ -334,32 +330,114 @@ def linkify(
     return _url_re.sub(make_link, text)
 
 
-def get_new_version_number(timeout: float | None = None) -> str | bool:
-    """Check PyPi for newer version of project.
+_PYPI_CHECK_TTL_SECONDS = 86_400
 
-    :parameter timeout: Timeout in seconds after which empty string is returned.
-    :returns: The new version number if a newer version of project is found on PyPi, empty string otherwise, False if
-      error retrieving the new version number is encountered.
-    """
-    if httpx is None:
-        logger.info('Cannot query PyPi for latest release: HTTPX not installed')
-        return False
 
+def _pypi_cache_path() -> Path:
+    """Return the on-disk cache path for the PyPi version-check result."""
+    return platformdirs.user_data_path(__project_name__, __project_name__.capitalize()) / 'pypi_version_cache.json'
+
+
+def _read_pypi_cache(path: Path) -> tuple[float, str] | None:
+    """Read the cached PyPi version. Returns (checked_at, latest) or None if missing/corrupt."""
     try:
-        with httpx.Client(http2=h2 is not None, timeout=timeout) as http_client:
-            r = http_client.get(f'https://pypi.org/pypi/{__project_name__}/json')
-    except httpx.RequestError as e:
+        data = json.loads(path.read_text())
+        return float(data['checked_at']), str(data['latest'])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _write_pypi_cache(path: Path, latest: str) -> None:
+    """Atomically write the PyPi version cache. Failures are swallowed (cache is best-effort)."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix('.json.tmp')
+        tmp.write_text(json.dumps({'checked_at': time.time(), 'latest': latest}))
+        tmp.replace(path)
+    except OSError as e:
+        logger.info(f'Could not write PyPi version cache: {e}')
+
+
+def _fetch_latest_from_pypi(timeout: float | None) -> str | None:
+    """Query PyPi's Simple JSON API for the latest non-prerelease version.
+
+    Uses the lightweight ``application/vnd.pypi.simple.v1+json`` endpoint via stdlib ``urllib.request`` to avoid
+    pulling in ``httpx`` (and its transitive ``rich``/``pygments`` deps) on every program startup. Pre-releases are
+    filtered out unless they are the only releases available (mirroring PyPi's own ``info.version`` policy).
+    Yanked-version filtering is intentionally skipped: parsing ``files[*].yanked`` would add significant code for a
+    vanishingly rare case.
+
+    :returns: The highest released version string, or ``None`` on any failure.
+    """
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(
+        f'https://pypi.org/simple/{__project_name__}/',
+        headers={'Accept': 'application/vnd.pypi.simple.v1+json'},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 trusted host
+            body = r.read()
+            logger.info(f'Downloaded {len(body):,} bytes from PyPi querying for latest release.')
+    except urllib.error.HTTPError as e:
+        logger.info(f'HTTP error when querying PyPi for latest release: {e}')
+        return None
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
         logger.info(f'Exception when querying PyPi for latest release: {e}')
-        return False
+        return None
+    try:
+        versions: list[str] = json.loads(body)['versions']
+    except (ValueError, KeyError, TypeError) as e:
+        logger.info(f'Unexpected PyPi response when querying for latest release: {e}')
+        return None
+    if not versions:
+        return None
+    parsed = [(_parse_version(v), v) for v in versions]
+    stable = [(p, v) for p, v in parsed if not p.is_prerelease]
+    candidates = stable or parsed
+    return max(candidates, key=lambda pv: pv[0])[1]
 
-    if r.is_success:
-        latest_release: str = r.json()['info']['version']
-        if parse_version(latest_release) > parse_version(__version__):  # ty:ignore[unsupported-operator]
-            return latest_release
+
+def get_new_version_number(
+    timeout: float | None = None, cache_path: Path | None = None, force_refresh: bool = False
+) -> str | bool:
+    """Check PyPi for newer version of project, with a 24h on-disk cache.
+
+    The result is cached at ``cache_path`` (default: a platform-appropriate user data directory) for
+    ``_PYPI_CHECK_TTL_SECONDS`` seconds, so repeated invocations within that window do not hit the network.
+    If PyPi is unreachable but a (possibly expired) cache exists, the cached value is used as a fallback so
+    the upgrade nudge survives outages.
+
+    :parameter timeout: Timeout in seconds for the PyPi request.
+    :parameter cache_path: Optional override for the cache file location (used by tests).
+    :parameter force_refresh: If True, bypass the fresh-cache shortcut and always query PyPi (the cache is
+      still updated on success, and a stale cache is still used as a fallback when PyPi is unreachable).
+    :returns: The new version number if a newer version of project is found on PyPi, empty string if running
+      the latest version, ``False`` if no version information is available (no cache and PyPi unreachable),
+      and ``True`` if running a newer-than-released version.
+    """
+    path = cache_path if cache_path is not None else _pypi_cache_path()
+    cached = _read_pypi_cache(path)
+
+    if not force_refresh and cached is not None and time.time() - cached[0] < _PYPI_CHECK_TTL_SECONDS:
+        latest = cached[1]
     else:
-        logger.info(f'HTTP error when querying PyPi for latest release: {r}')
+        fetched = _fetch_latest_from_pypi(timeout)
+        if fetched is not None:
+            _write_pypi_cache(path, fetched)
+            logger.info(f'Updated {path} cache with release {fetched}.')
+            latest = fetched
+        elif cached is not None:
+            latest = cached[1]
+        else:
+            return False
 
-    return ''
+    if _parse_version(latest) == _parse_version(__version__):
+        return ''
+    if _parse_version(latest) > _parse_version(__version__):
+        return latest
+    return True
 
 
 def dur_text(duration: float) -> str:
@@ -412,6 +490,8 @@ def mark_to_html(text: str, markdown_padded_tables: bool | None = False, extras:
     :param extras: Additional extras for Markdown.
     :return: The text in html format.
     """
+    from markdown2 import Markdown
+
     markdowner_extras = set(extras) if extras else set()
     markdowner_extras.add('strike')  # text marked by double tildes is ~~strikethrough~~
     markdowner_extras.add('target-blank-links')  # <a> tags have rel="noopener" for added security

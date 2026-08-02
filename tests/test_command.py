@@ -10,12 +10,13 @@ import os
 import shutil
 import sys
 import time
-from typing import TYPE_CHECKING, Callable, cast
+from typing import TYPE_CHECKING, Callable, Iterator, cast
 
 import pytest
 
+from tests.conftest import WINDOWS_TIME_COMMAND, close_ssdb_storage
 from tests.test_storage import DATABASE_ENGINES, prepare_storage_test
-from webchanges.command import UrlwatchCommand
+from webchanges.command import UrlwatchCommand, _human_size
 from webchanges.config import CommandConfig
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, SsdbStorage, YamlConfigStorage, YamlJobsStorage
@@ -50,7 +51,7 @@ def _silence_db_close(monkeypatch: pytest.MonkeyPatch) -> None:
 def time_jobs_urlwatcher(
     workspace: Path,
     loaded_config_storage: YamlConfigStorage,
-) -> Urlwatch:
+) -> Iterator[Urlwatch]:
     """``Urlwatch`` configured with ``jobs-time.yaml`` and a fresh in-memory snapshot DB.
 
     The job's command stays at the file default; tests that need a deterministic or platform-portable
@@ -66,23 +67,8 @@ def time_jobs_urlwatcher(
         ssdb_file=':memory:',  # ty:ignore[invalid-argument-type]
     )
     storage = SsdbSQLite3Storage(':memory:')  # ty:ignore[invalid-argument-type]
-    return Urlwatch(cmd, loaded_config_storage, storage, YamlJobsStorage([jobs_path]))
-
-
-# --- Show / version ---
-
-
-def test_show_features_and_verbose(
-    command_config: CommandConfig,
-    urlwatch_command: UrlwatchCommand,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    command_config.features = True
-    command_config.verbose = True
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        urlwatch_command.handle_actions()
-    assert pytest_wrapped_e.value.code == 0
-    assert '* browser - Retrieve a URL using a real web browser (use_browser: true).' in capsys.readouterr().out
+    yield Urlwatch(cmd, loaded_config_storage, storage, YamlJobsStorage([jobs_path]))
+    close_ssdb_storage(storage)
 
 
 # --- List jobs ---
@@ -217,6 +203,23 @@ def test_test_job(
     )
 
 
+def test_test_job_error_includes_detail(
+    command_config: CommandConfig,
+    urlwatch_command: UrlwatchCommand,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The error report of a failed test job carries the full detail (here, the subprocess's stderr) and not just
+    the exception's message."""
+    urlwatch_command.urlwatcher.jobs[0].command = f'"{sys.executable}" -c "import sys; sys.exit(\'boom detail\')"'
+    command_config.test_job = '1'
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    assert pytest_wrapped_e.value.code == 0
+    output = capsys.readouterr().out
+    assert 'ERROR subprocess.CalledProcessError: Command returned non-zero exit status 1.' in output
+    assert 'boom detail' in output
+
+
 def test_test_job_all(
     command_config: CommandConfig,
     urlwatch_command: UrlwatchCommand,
@@ -329,7 +332,7 @@ def test_dump_history(time_jobs_urlwatcher: Urlwatch, capsys: pytest.CaptureFixt
 def test_test_differ_and_joblist(time_jobs_urlwatcher: Urlwatch, capsys: pytest.CaptureFixture[str]) -> None:
     urlwatcher = time_jobs_urlwatcher
     if sys.platform == 'win32':
-        urlwatcher.jobs[0].command = 'echo %time% %random%'
+        urlwatcher.jobs[0].command = WINDOWS_TIME_COMMAND
         urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
     urlwatch_command = UrlwatchCommand(urlwatcher)
 
@@ -416,9 +419,11 @@ def test_list_error_jobs(
     assert pytest_wrapped_e.value.code == 0
     expect = '\n'.join(
         [
-            'Jobs with errors or returning no data (after unmodified filters, if any)',
-            f'   in jobs file '
-            f'{str(urlwatch_command.urlwatch_config.jobs_files[0]) + ":" if urlwatch_command.urlwatch_config.jobs_files else ""}',  # noqa: E501
+            'Jobs with errors; warns of jobs returning no data (after unmodified filters)',
+            (
+                f'   in jobs file '
+                f'{str(urlwatch_command.urlwatch_config.jobs_files[0]) + ":" if urlwatch_command.urlwatch_config.jobs_files else ""}'  # noqa: E501
+            ),
             '--',
             'Checked 1 enabled jobs for errors in',
         ]
@@ -581,7 +586,7 @@ def test_delete_snapshot(
     monkeypatch.setattr('builtins.input', lambda _: 'y')
     urlwatcher = time_jobs_urlwatcher
     if sys.platform == 'win32':
-        urlwatcher.jobs[0].command = 'echo %time% %random%'
+        urlwatcher.jobs[0].command = WINDOWS_TIME_COMMAND
         urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
     urlwatch_command = UrlwatchCommand(urlwatcher)
 
@@ -626,6 +631,16 @@ def test_delete_snapshot(
     assert pytest_wrapped_se.value.code == 1
 
 
+def test_human_size() -> None:
+    """Test the human-readable size formatting used in the --delete-snapshot listing."""
+    assert _human_size(0) == '0 B'
+    assert _human_size(999) == '999 B'
+    assert _human_size(1000) == '1.0 kB'
+    assert _human_size(4200) == '4.2 kB'
+    assert _human_size(1_000_000) == '1.0 MB'
+    assert _human_size(2_500_000_000) == '2.5 GB'
+
+
 def test_gc_database(
     time_jobs_urlwatcher: Urlwatch,
     workspace: Path,
@@ -636,7 +651,7 @@ def test_gc_database(
     monkeypatch.setattr('builtins.input', lambda _: 'y')
     urlwatcher = time_jobs_urlwatcher
     if sys.platform == 'win32':
-        urlwatcher.jobs[0].command = 'echo %time% %random%'
+        urlwatcher.jobs[0].command = WINDOWS_TIME_COMMAND
         urlwatcher.jobs[0].guid = urlwatcher.jobs[0].get_guid()
     guid = urlwatcher.jobs[0].guid
 
@@ -712,6 +727,7 @@ def test_clean_database(
         command_config2.clean_database,  # ty:ignore[invalid-argument-type]
     )
     assert len(ssdb_storage2.get_history_snapshots(guid)) == 1
+    close_ssdb_storage(database_engine)
 
 
 def test_rollback_database(

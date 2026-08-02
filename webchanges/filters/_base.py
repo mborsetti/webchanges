@@ -44,8 +44,8 @@ FiltersList = Literal[
 class FilterBase(metaclass=TrackSubClasses):
     """The base class for filters."""
 
-    __subclasses__: dict[str, type[FilterBase]] = {}
-    __anonymous_subclasses__: list[type[FilterBase]] = []
+    __subclasses__: dict[str, TrackSubClasses] = {}
+    __anonymous_subclasses__: list[TrackSubClasses] = []
 
     __kind__: str = ''
 
@@ -196,7 +196,7 @@ class FilterBase(metaclass=TrackSubClasses):
                 elif subfilter is None:
                     yield filter_kind, {}
                 elif hasattr(filtercls, '__default_subfilter__') and filtercls is not None:
-                    yield filter_kind, {filtercls.__default_subfilter__: subfilter}
+                    yield filter_kind, {str(filtercls.__default_subfilter__): subfilter}
                 else:
                     yield filter_kind, subfilter
 
@@ -213,7 +213,7 @@ class FilterBase(metaclass=TrackSubClasses):
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
         logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
-        filtercls: type[FilterBase] | None = cls.__subclasses__.get(filter_kind)
+        filtercls: TrackSubClasses | None = cls.__subclasses__.get(filter_kind)
         if filtercls:
             return filtercls(job_state).filter(data, mime_type, subfilter)
         return data, mime_type

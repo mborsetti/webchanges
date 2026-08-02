@@ -545,6 +545,29 @@ See example :ref:`here <timeout>`.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 
+.. _same_site_delay:
+
+same_site_delay
+^^^^^^^^^^^^^^^
+Number of seconds to wait before retrieving the URL when an earlier job in the jobs list already targets the same site
+— i.e. the same network location, such as ``www.example.com`` (a number). Defaults to no delay. The first (or only)
+job for a given site is never delayed.
+
+Because :program:`webchanges` runs jobs in parallel, several jobs pointing at the same site can fire at the exact same
+instant, which some servers treat as abuse and respond to by rate-limiting or blocking you. Setting ``same_site_delay``
+staggers them: the first job to a site fetches immediately, and each later job to that *same* site waits the configured
+number of seconds before fetching. Jobs whose site is used only once are unaffected.
+
+Setting it once through the ``job_defaults`` configuration (see :ref:`job_defaults`) applies it to every job, which is
+the easiest way to protect all your sites at once.
+
+.. versionadded:: 3.37
+
+.. versionchanged:: 3.37
+   Makes configurable, and off by default, the previously automatic (random 0.1 to 1.0 second) delaying of jobs
+   sharing a network location.
+
+
 
 Optional directives for ``url`` jobs without ``use_browser: true``
 ------------------------------------------------------------------
@@ -817,6 +840,32 @@ Supported `resources <https://playwright.dev/docs/api/class-request#request-reso
 ``websocket``, ``manifest``, and ``other``.
 
 .. versionadded:: 3.19
+
+
+.. _connect_over_cdp:
+
+connect_over_cdp
+^^^^^^^^^^^^^^^^
+Attach to an already-running Chromium browser via the Chrome DevTools Protocol (CDP) instead of launching a new
+browser instance (boolean or string).
+
+Accepted values:
+
+* ``true`` — Attach to the default CDP endpoint ``ws://127.0.0.1:58489/devtools/browser``.
+* A WebSocket URL string (e.g. ``ws://127.0.0.1:9222``) — Attach to a specific CDP endpoint.
+
+Use this to reuse a browser you've launched yourself (with ``--remote-debugging-port``), to attach to a remote
+browser, or to share a logged-in session across jobs. See :ref:`connect_over_cdp_walkthrough` for a worked example.
+
+All jobs with ``connect_over_cdp`` set are run on a single dedicated worker thread, so each unique CDP URL only
+requires manual browser authorization **once per run**, regardless of how many jobs reference it or the order
+they appear in the jobs file. Non-CDP browser jobs continue to run concurrently on the regular browser-job pool.
+
+By default the connected browser is also cached for the lifetime of the process, so subsequent runs in the same
+process (e.g. ``--test`` cycles) reuse the connection. Set the environment variable
+``WEBCHANGES_BROWSER_CDP_CACHE=0`` to disable caching (a new connection is opened and closed for every job).
+
+.. versionadded:: 3.37.0
 
 
 .. _evaluate:
@@ -1139,10 +1188,41 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
    * Replace ``$USER`` with the username that runs :program:`webchanges` if different than the one you're logged in when
      making the above changes, similarly with ``$(id -g -n)`` for the group.
 
+The command's standard input is connected to the null device, so a command that unexpectedly prompts for input (e.g.
+Python's ``input()``) reads end-of-file and exits with a reported error instead of hanging the run forever waiting for
+keyboard input that will never arrive.
+
 Internally, this type of job has the attribute ``kind: command``.
 
 .. versionchanged:: 3.11
    ``kind`` attribute was renamed from ``shell`` to ``command`` but the former is still recognized.
+
+.. versionchanged:: 3.37
+   The command's standard input is connected to the null device (previously it was inherited from
+   :program:`webchanges`, so a command prompting for input would wait forever).
+
+.. _python_command_verbosity:
+
+Verbosity is passed on to Python
+--------------------------------
+When you run :program:`webchanges` verbosely (``-v``, ``-vv`` or ``-vvv``), the matching verbosity flag is passed on to
+any Python interpreter invoked by the command, so that the script's own logging shows up alongside that of
+:program:`webchanges`. For example, when running ``webchanges -vv``, a job with
+``command: python summarize.py --out report.txt`` is run as ``python summarize.py --out report.txt -vv``.
+
+The flag is added at the *end* of the invocation, i.e. where the script or module being run will see it (it is never
+inserted right after the interpreter, as ``-v`` there is Python's own trace-imports flag). Each command in the command
+line is handled, so ``cd data && python fetch.py`` and both sides of ``python fetch.py | python clean.py`` receive it,
+and it is placed before any pipe or redirection.
+
+A verbosity flag you have written yourself is never removed or lowered: a command already running with e.g. ``-vvv``,
+or with the long form ``--verbose``, is left untouched, while one running with ``-v`` is raised to ``-vv`` when
+:program:`webchanges` is run with ``-vv``. The code string of a ``python -c`` invocation is left alone as well.
+
+.. important:: This means that a Python script which does **not** accept a ``-v`` argument will fail when
+   :program:`webchanges` is run verbosely. Note that :ref:`--log-file <log_file>` implies ``-v``.
+
+.. versionadded:: 3.37
 
 Required directives
 -------------------

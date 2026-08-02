@@ -141,7 +141,7 @@ class UrlJob(UrlJobBase):
             if http2 and h2 is None:
                 raise ImportError(
                     f"Job {self.index_number}: 'http_version: v2' requires the 'h2' package, which is not installed. "
-                    f"Please install it using e.g. 'pip install h2' ( {self.get_indexed_location()} )."
+                    f"Please install it using e.g. 'uv pip install h2' ( {self.get_indexed_location()} )."
                 )
             logger.info(
                 f'Job {self.index_number}: Using the HTTPX HTTP client library with http_version={self.http_version}'
@@ -196,7 +196,8 @@ class UrlJob(UrlJobBase):
                 response = http_client.request(
                     method=self.method,  # ty:ignore[invalid-argument-type]
                     url=url,
-                    data=self.data,  # ty:ignore[invalid-argument-type]
+                    # data is already serialized to str by main_thread_enter; httpx deprecated data= for raw content
+                    content=self.data,
                     params=self.params,
                 )
             except httpx.HTTPError as e:
@@ -597,8 +598,8 @@ class UrlJob(UrlJobBase):
         :returns: The data retrieved, the ETag, and the media type (fka MIME type)
         :raises NotModifiedError: If an HTTP 304 response is received.
         """
-        if self._delay:  # pragma: no cover  TODO not yet implemented.
-            logger.debug(f'Delaying for {self._delay} seconds (duplicate network location)')
+        if self._delay:
+            logger.debug(f'Job {self.index_number}: Sleeping {self._delay}s (same_site_delay directive)')
             time.sleep(self._delay)
 
         if urlparse(self.url).scheme == 'file':

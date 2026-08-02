@@ -94,7 +94,7 @@ def main(paths: list[str]) -> int:
         except FileNotFoundError:
             existing = ''
         if existing != new_content:
-            dst.write_text(new_content, encoding='utf-8')
+            dst.write_text(new_content, encoding='utf-8', newline='\n')
             changed += 1
             print(f'Updated {dst}')
     return 1 if changed else 0

@@ -92,9 +92,16 @@ class Urlwatch:
     def get_new_release_version(self, timeout: float | None = None) -> str | bool:
         """Check PyPi to see if we're running the latest version. Memoized.
 
+        Returns immediately without network access when the user has set ``version_check.enabled: false``
+        in ``config.yaml``.
+
         :returns: Empty string if no higher version is available, otherwise the new version number.
         """
         if self._latest_release is not None:
+            return self._latest_release
+
+        if not self.config_storage.config.get('version_check', {}).get('enabled', True):
+            self._latest_release = ''
             return self._latest_release
 
         self._latest_release = get_new_version_number(timeout)

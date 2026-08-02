@@ -405,6 +405,7 @@ def test_handle_unitialized_actions_noop() -> None:
             edit=False,
             edit_config=False,
             edit_hooks=False,
+            features=False,
         ),
     )
     assert handle_unitialized_actions(cfg) is None
@@ -413,7 +414,7 @@ def test_handle_unitialized_actions_noop() -> None:
 def test_handle_unitialized_actions_check_new_new_release(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout: '99.0.0')
+    monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout, force_refresh: '99.0.0')
     cfg = cast(
         'CommandConfig',
         SimpleNamespace(
@@ -435,7 +436,7 @@ def test_handle_unitialized_actions_check_new_new_release(
 def test_handle_unitialized_actions_check_new_up_to_date(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout: '')
+    monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout, force_refresh: '')
     cfg = cast(
         'CommandConfig',
         SimpleNamespace(
@@ -457,7 +458,7 @@ def test_handle_unitialized_actions_check_new_up_to_date(
 def test_handle_unitialized_actions_check_new_pypi_error(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout: False)
+    monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout, force_refresh: False)
     cfg = cast(
         'CommandConfig',
         SimpleNamespace(
@@ -474,6 +475,28 @@ def test_handle_unitialized_actions_check_new_pypi_error(
     assert excinfo.value.code == 1
     out = capsys.readouterr().out
     assert 'Error contacting PyPI' in out
+
+
+def test_handle_unitialized_actions_check_new_prerelease(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr('webchanges.cli.get_new_version_number', lambda timeout, force_refresh: True)
+    cfg = cast(
+        'CommandConfig',
+        SimpleNamespace(
+            check_new=True,
+            install_chrome=False,
+            detailed_versions=False,
+            edit=False,
+            edit_config=False,
+            edit_hooks=False,
+        ),
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        handle_unitialized_actions(cfg)
+    assert excinfo.value.code == 0
+    out = capsys.readouterr().out
+    assert 'You are running a pre-release.' in out
 
 
 def test_show_detailed_versions(capsys: pytest.CaptureFixture[str]) -> None:
@@ -497,6 +520,17 @@ def test_handle_unitialized_actions_detailed_versions(capsys: pytest.CaptureFixt
         handle_unitialized_actions(cfg)
     assert excinfo.value.code == 0
     assert f'• {__project_name__}: {__version__}\n' in capsys.readouterr().out
+
+
+def test_handle_unitialized_actions_features(
+    command_config: CommandConfig,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    command_config.features = True
+    with pytest.raises(SystemExit) as excinfo:
+        handle_unitialized_actions(command_config, command_config.config_file)
+    assert excinfo.value.code == 0
+    assert '* browser - Retrieve a URL using a real web browser (use_browser: true).' in capsys.readouterr().out
 
 
 # --- Edit actions ---
@@ -656,7 +690,7 @@ def test_load_hooks_missing_default_file_logs_info(
 def test_update_schema_hashes_script(tmp_path: Path) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
     try:
-        import update_schema_hashes  # ty:ignore[unresolved-import]
+        import update_schema_hashes
     finally:
         sys.path.pop(0)
 
