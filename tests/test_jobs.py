@@ -308,6 +308,89 @@ def test_check_429_transient_error_curl_cffi(
     assert job_state.new_data == job_state.old_data
 
 
+def test_empty_as_transient(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
+    """Check that with empty_as_transient an empty response raises a TransientHTTPError (status code 999) and the
+    last non-empty snapshot is preserved, so a later restoration of the same content shows as unchanged."""
+    job = JobBase.unserialize({'url': 'https://www.example.com/', 'empty_as_transient': True})
+
+    # Create a mock response object returning valid content
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.url = 'https://www.example.com/'
+    mock_response.history = []
+    mock_response.headers = {'Content-Type': 'text/plain'}
+    mock_response.text = 'value: 1'
+    mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    # First run: the content is saved as the snapshot
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert job_state.new_data == 'value: 1'
+        job_state.save()
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+
+    # Second run: the empty response is treated as a transient error and the old data is preserved
+    mock_response.text = ''
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TransientHTTPError)
+        assert job_state.exception.status_code == 999
+        assert 'empty_as_transient' in str(job_state.exception)
+        assert job_state.error_ignored is False
+        assert job_state.old_data == 'value: 1'
+        job_state.save()  # on error, save() retains the old data in the snapshot
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+
+    # Third run: the content is restored unchanged, so it matches the last non-empty snapshot (no change to report)
+    mock_response.text = 'value: 1'
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert job_state.new_data == job_state.old_data == 'value: 1'
+
+
+def test_empty_as_transient_error_ignored(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
+    """Check that the transient error raised by empty_as_transient (status code 999) can be silenced with
+    ignore_http_error_codes."""
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'empty_as_transient': True, 'ignore_http_error_codes': 999}
+    )
+
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.url = 'https://www.example.com/'
+    mock_response.history = []
+    mock_response.headers = {'Content-Type': 'text/plain'}
+    mock_response.text = ''
+    mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TransientHTTPError)
+        assert job_state.error_ignored is True
+
+
+def test_empty_response_without_empty_as_transient(
+    ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
+) -> None:
+    """Check that without empty_as_transient an empty response is accepted as valid (empty) content."""
+    job = JobBase.unserialize({'url': 'https://www.example.com/'})
+
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.url = 'https://www.example.com/'
+    mock_response.history = []
+    mock_response.headers = {'Content-Type': 'text/plain'}
+    mock_response.text = ''
+    mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert job_state.new_data == ''
+
+
 @pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')
 def test_curl_cffi_impersonate_passthrough(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
     """Verify the impersonate directive is passed to curl_cffi.requests.Session, defaulting to 'chrome'."""
@@ -1524,28 +1607,3 @@ def test_job_states_verb_notimestamp_changed(time_jobs_urlwatcher: Urlwatch) -> 
     urlwatcher.run_jobs()
     urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
-
-
-# def test_suppress_repeated_errors(capsys: pytest.CaptureFixture) -> None:
-#     pass
-#     jobs_file = data_path.joinpath('jobs-invalid_url.yaml')
-#     config_file = data_path.joinpath('config.yaml')
-#     hooks_file = Path('')
-
-#     config_storage = YamlConfigStorage(config_file)
-#     config_storage.load()
-#     jobs_storage = YamlJobsStorage([jobs_file])
-#     urlwatch_config = new_command_config(config_file, jobs_file, hooks_file)
-#     urlwatcher = Urlwatch(urlwatch_config, config_storage, ssdb_storage, jobs_storage)
-#     urlwatcher.jobs[0].suppress_repeated_errors = True
-#     urlwatcher.run_jobs()
-#     urlwatcher.close()
-#     ssdb_storage._copy_temp_to_permanent(delete=True)
-#     history = ssdb_storage.get_history_snapshots(urlwatcher.jobs[0].get_guid())
-#     assert len(history) == 1
-#     urlwatcher.run_jobs()
-#     ssdb_storage._copy_temp_to_permanent()
-#     history = ssdb_storage.get_history_snapshots(urlwatcher.jobs[0].get_guid())
-#     print()
-#     assert len(history) == 2
-#     assert capsys.readouterr().out == 'TEST\n'

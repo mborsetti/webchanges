@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import copy
 import importlib.util
 import os
 import tempfile
 import warnings
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Callable, Iterator, cast
 
 import pytest
 
 from webchanges.config import CommandConfig
+from webchanges.handler import JobState, Report, Verb
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import DEFAULT_CONFIG, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage
@@ -288,6 +291,42 @@ def test_report_error_when_out_of_tries_sqlite3() -> None:
         assert report.job_states[-1].verb == 'error,repeated'
     finally:
         ssdb_storage.close()
+
+
+@pytest.mark.parametrize(
+    ('verb', 'directives', 'display_error', 'expected'),
+    [
+        ('error', {}, True, True),
+        ('error', {}, False, False),
+        ('error', {'suppress_errors': True}, True, False),
+        ('error', {'suppress_errors': False}, False, True),
+        ('error,repeated', {}, True, True),
+        ('error,repeated', {}, False, False),
+        ('error,repeated', {'suppress_repeated_errors': True}, True, False),  # issue #189
+        ('error,repeated', {'suppress_repeated_errors': False}, True, True),
+        ('error,repeated', {'suppress_errors': True}, True, False),
+        ('error,repeated', {'suppress_errors': False}, False, True),
+        ('unchanged,error_ended', {}, True, True),
+        ('unchanged,error_ended', {}, False, False),
+        ('unchanged,error_ended', {'suppress_error_ended': True}, True, False),
+        ('unchanged,error_ended', {'suppress_errors': True}, True, False),
+        ('unchanged,error_ended', {'suppress_errors': False}, False, True),
+    ],
+)
+def test_job_is_reportable_error_suppression(
+    verb: str, directives: dict[str, bool], display_error: bool, expected: bool
+) -> None:
+    """The get_filtered_job_states() gate honors the suppress_errors, suppress_repeated_errors and
+    suppress_error_ended job directives (issue #189: 'error,repeated' was shadowed by the startswith('error')
+    guard, so suppress_repeated_errors was never consulted).
+    """
+    config = copy.deepcopy(DEFAULT_CONFIG)
+    config['display']['error'] = display_error
+    urlwatch = SimpleNamespace(config_storage=SimpleNamespace(config=config))
+    report = Report(urlwatch)  # ty:ignore[invalid-argument-type]
+    job_state = JobState(ssdb_storage, UrlJob(url='https://example.com/', **directives))
+    job_state.verb = cast('Verb', verb)
+    assert (len(list(report.get_filtered_job_states([job_state]))) == 1) is expected
 
 
 def test_reset_tries_to_zero_when_successful_sqlite3() -> None:

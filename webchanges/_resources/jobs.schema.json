@@ -71,6 +71,11 @@
       "type": "boolean",
       "description": "If true, connection errors are ignored (no report sent)."
     },
+    "empty_as_transient": {
+      "type": "boolean",
+      "description": "If true, an empty response is treated as a transient HTTP error (synthetic status code 999) instead of valid content, preserving the last non-empty snapshot. Combine with max_tries or 'ignore_http_error_codes: 999' to control error reporting. Not for jobs with use_browser.",
+      "default": false
+    },
     "no_redirects": {
       "type": "boolean",
       "description": "If true, do not follow HTTP redirects."

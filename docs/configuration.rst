@@ -305,6 +305,25 @@ If set to ``null`` (the default) or omitted, no footnote is added.
 
 
 
+.. _config_version_check:
+
+Version check
+-------------
+The top-level ``version_check`` directive controls the check made (at most once a day) against PyPi for a newer
+release of :program:`webchanges`, whose result appears in report footers. Set its ``enabled`` sub-directive to
+``false`` to disable the check entirely (no query is ever made):
+
+.. code-block:: yaml
+
+   version_check:
+     enabled: false
+
+The ``--check-new`` command line argument always queries PyPi, regardless of this setting.
+
+.. versionadded:: 3.37
+
+
+
 Omitting configuration directives
 ---------------------------------
 When the ``config.yaml`` file is created, it contains all configuration directives and their default settings. If

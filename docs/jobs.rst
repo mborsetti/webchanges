@@ -574,6 +574,39 @@ Optional directives for ``url`` jobs without ``use_browser: true``
 The following directives are available only for ``url`` jobs without ``use_browser: true``:
 
 
+.. _empty_as_transient:
+
+empty_as_transient
+^^^^^^^^^^^^^^^^^^
+Treat an empty response from the server as a transient HTTP error instead of as valid (empty) content (true/false).
+Defaults to false.
+
+This is useful with flaky websites (or CDNs) that every now and then return an empty page instead of the content
+being monitored. Without this directive, the empty response is saved as the new snapshot, and you receive a change
+report when the content "disappears" as well as another one when it is restored — even if it is restored to the
+exact same content as before.
+
+When this directive is set to true and the server returns no data, the run is handled like a transient HTTP error
+(with the synthetic HTTP response status code 999): the snapshot database retains the last non-empty content and,
+once the site returns data again, any change is computed against that content, so a mere restoration does not
+trigger a change report.
+
+An empty response is still reported as an error (subject to :ref:`max_tries`), so combine this directive with one of
+the following to control error reporting:
+
+* ``max_tries: 3`` (for example), to be notified only if the response is empty for 3 consecutive runs, or
+* ``ignore_http_error_codes: 999``, to never be notified of empty responses (see :ref:`ignore_http_error_codes`).
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   url: https://example.com/flaky
+   empty_as_transient: true
+   ignore_http_error_codes: 999
+
+.. versionadded:: 3.37
+
+
 .. _http_client:
 
 http_client
@@ -865,7 +898,7 @@ By default the connected browser is also cached for the lifetime of the process,
 process (e.g. ``--test`` cycles) reuse the connection. Set the environment variable
 ``WEBCHANGES_BROWSER_CDP_CACHE=0`` to disable caching (a new connection is opened and closed for every job).
 
-.. versionadded:: 3.37.0
+.. versionadded:: 3.37
 
 
 .. _evaluate:

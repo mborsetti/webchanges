@@ -1,5 +1,26 @@
 Added
 `````
+* New ``connect_over_cdp`` job directive for browser (``use_browser: true``) jobs: attach to an already-running
+  Chromium browser over the Chrome DevTools Protocol instead of launching a new browser instance (``true`` attaches
+  to the default endpoint ``ws://127.0.0.1:58489/devtools/browser``; a ``ws://`` URL string attaches to that
+  endpoint). Useful to reuse a browser you launched yourself with ``--remote-debugging-port``, to attach to a remote
+  browser, or to share a logged-in session across jobs. All such jobs run on a single dedicated worker thread, so
+  each unique endpoint requires manual browser authorization only once per run, and the connection is cached for the
+  lifetime of the process (set the environment variable ``WEBCHANGES_BROWSER_CDP_CACHE=0`` to disable caching). See
+  https://webchanges.readthedocs.io/en/stable/jobs.html#connect-over-cdp.
+* New ``empty_as_transient`` job directive for ``url`` jobs (without ``use_browser: true``): when the server returns
+  an empty response, it is treated as a transient HTTP error (with the synthetic HTTP response status code 999)
+  instead of as valid empty content, so the snapshot database retains the last non-empty content and a flaky site
+  that intermittently returns nothing no longer triggers a change report when the content "disappears" and another
+  one when it is restored. Combine with ``max_tries`` to be notified only of persistent empty responses, or with
+  ``ignore_http_error_codes: 999`` to never be notified of them. Suggested by Marcos Alano in
+  https://github.com/mborsetti/webchanges/issues/169. See
+  https://webchanges.readthedocs.io/en/stable/jobs.html#empty-as-transient.
+* New ``between`` filter: extracts the block of lines sitting between a line matching the ``start`` regular
+  expression and one matching the ``end`` regular expression (the two delimiting lines themselves are discarded;
+  omitting ``start`` extracts from the first line, omitting ``end`` to the last). Useful for clipping a section out
+  of log files, server-status pages, or any text delimited by recognizable markers. See
+  https://webchanges.readthedocs.io/en/stable/filters.html#between.
 * ``deepdiff`` differ: new ``cutoff_distance_for_pairs``, ``cutoff_intersection_for_pairs`` and
   ``threshold_to_diff_deeper`` sub-directives to tune when DeepDiff pairs up changed items (or dictionaries) and
   compares them in depth rather than reporting the whole object as replaced. See
@@ -22,6 +43,11 @@ Added
   lowered. Note that a Python script which does not accept a ``-v`` argument will now fail when **webchanges** is
   run verbosely (including with ``--log-file``, which implies ``-v``). See
   https://webchanges.readthedocs.io/en/stable/jobs.html#verbosity-is-passed-on-to-python.
+* New ``version_check`` configuration setting: set its ``enabled`` sub-directive to ``false`` in ``config.yaml`` to
+  disable the check against PyPi for a newer release of **webchanges** whose result appears in report footers
+  (e.g. for air-gapped machines or installations managed by a package manager). The ``--check-new`` command line
+  argument always queries PyPi, regardless of this setting. See
+  https://webchanges.readthedocs.io/en/stable/configuration.html#version-check.
 
 Changed
 ```````
@@ -48,11 +74,22 @@ Changed
   installed; and ``--check-new`` now reports when you are running a pre-release version instead of treating it as
   the latest release.
 
+Deprecated
+``````````
+* The ``empty-diff`` configuration setting (under ``display``), which has long been superseded by the
+  ``additions_only`` job directive, is now formally deprecated: a deprecation warning is issued at startup when it
+  is set to ``true``.
+
 Fixed
 `````
 * ``--test``: the report of a job that ends in an error now contains the full error detail (e.g. for a ``command``
   job, the failed subprocess's stderr, or a traceback), as reports from a regular run already did; it previously
   showed only the exception's one-line message (e.g. ``Command '...' returned non-zero exit status 1.``).
+* ``suppress_repeated_errors`` job directive: a job failing repeatedly with the same error was reported on every run
+  instead of only the first time, as the check was unreachable code (regression introduced in version 3.34.0).
+  Reported by Manu in https://github.com/mborsetti/webchanges/issues/189.
+* ``suppress_error_ended`` job directive: it was never consulted (since its introduction in version 3.34.0), so the
+  "error ended" notification was sent even when the directive was set to ``true``.
 
 Internals impacting hooks.py
 ````````````````````````````

@@ -456,17 +456,21 @@ class Report:
                 case 'changed,no_report':
                     # set by differ
                     return False
-                case e if e.startswith('error'):
+                case 'error':
                     if job_state.job.suppress_errors is not None:
                         return not job_state.job.suppress_errors
                     return display_cfg['error']
                 case 'error,repeated':
-                    if job_state.job.suppress_repeated_errors is not None:
-                        return job_state.job.suppress_repeated_errors
+                    if job_state.job.suppress_errors or job_state.job.suppress_repeated_errors:
+                        return False
+                    if job_state.job.suppress_errors is not None:  # explicitly False: overrides display config
+                        return True
                     return display_cfg['error']
                 case 'unchanged,error_ended':
-                    if job_state.job.suppress_errors is not None:
-                        return job_state.job.suppress_errors
+                    if job_state.job.suppress_errors or job_state.job.suppress_error_ended:
+                        return False
+                    if job_state.job.suppress_errors is not None:  # explicitly False: overrides display config
+                        return True
                     return display_cfg['error']
                 case 'new':
                     return display_cfg['new']

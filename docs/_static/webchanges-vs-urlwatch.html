@@ -707,6 +707,12 @@ differ:
               <td>Finer-grained muting in webchanges.</td>
             </tr>
             <tr>
+              <td><code>same_site_delay</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>Staggers jobs hitting the same site to dodge rate limits. <span class="only">webchanges-only</span></td>
+            </tr>
+            <tr>
               <td>
                 Shell job <code>stderr</code> handling
                 (<code>ignore</code>/<code>fail</code>/<code>stdout</code>&hellip;)
@@ -754,7 +760,7 @@ differ:
             <tr>
               <td>
                 <code>params</code>, <code>data_as_json</code>, <code>retries</code>, <code>no_redirects</code>,
-                <code>no_conditional_request</code>
+                <code>no_conditional_request</code>, <code>empty_as_transient</code>
               </td>
               <td class="center yes">&check;</td>
               <td class="center partial">~</td>
@@ -781,6 +787,7 @@ differ:
             <h4>webchanges &mdash; <code>use_browser: true</code></h4>
             <ul class="tight">
               <li><code>block_elements</code> (skip stylesheets/images/fonts/media/scripts)</li>
+              <li><code>connect_over_cdp</code> (attach to an already-running browser over the DevTools Protocol)</li>
               <li><code>evaluate</code> (run JS, return result)</li>
               <li>
                 <code>init_script</code>, <code>initialization_url</code>, <code>initialization_js</code> (initialize
@@ -820,7 +827,7 @@ differ:
         <ul class="tight">
           <li>
             <strong>webchanges-only:</strong> <code>execute</code> (safer than <code>shellpipe</code>),
-            <code>ascii85</code>, <code>base64</code>, <code>format-xml</code>, <code>jsontoyaml</code>,
+            <code>ascii85</code>, <code>base64</code>, <code>between</code>, <code>format-xml</code>, <code>jsontoyaml</code>,
             <code>pypdf</code>, <code>remove_repeated</code>, <code>absolute_links</code>, enhanced
             <code>strip</code> (<code>chars</code>/<code>side</code>/<code>splitlines</code>),
             <code>format-json</code> with <code>sort_keys</code>, <code>pdf2text</code> with

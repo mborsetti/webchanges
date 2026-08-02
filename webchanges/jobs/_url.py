@@ -738,7 +738,7 @@ class UrlJob(UrlJobBase):
         # If empty_as_transient is set and no data, then raise transient error
         if self.empty_as_transient and not data:
             logger.info(f'Job {self.index_number}: No data received; treating it as a transient error.')
-            raise TransientHTTPError('No data received and empty_is_transient is set', status_code=999)
+            raise TransientHTTPError('No data received and empty_as_transient is set', status_code=999)
 
         # If no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
         if not self.name and isinstance(data, str):
