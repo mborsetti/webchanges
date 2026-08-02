@@ -17,9 +17,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# A Python interpreter, optionally with a version suffix, an extension, and/or a path (e.g. 'python', 'python3',
-# 'python3.14', '/usr/bin/python3', r'C:\Program Files\Python\python.exe').
-PYTHON_RE = re.compile(r'(?:^|[\\/])python3?(?:\.\d+)?(?:\.exe)?$', re.IGNORECASE)
+# A Python interpreter, optionally with a version suffix (incl. free-threaded 't' builds), an extension, and/or a
+# path (e.g. 'python', 'python3', 'python3.14', 'python3.14t', '/usr/bin/python3',
+# r'C:\Program Files\Python\python.exe').
+PYTHON_RE = re.compile(r'(?:^|[\\/])python3?(?:\.\d+t?)?(?:\.exe)?$', re.IGNORECASE)
 # A short-form verbosity flag, e.g. '-v', '-vv', '-vvv'.
 SHORT_VERBOSE_RE = re.compile(r'-(v+)')
 # The long-form verbosity flag.

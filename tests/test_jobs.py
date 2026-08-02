@@ -1305,6 +1305,7 @@ def test_logger_verbosity(level: int, verbosity: int, root_logger_level: Callabl
         ('python -m mymod', 3, 'python -m mymod -vvv'),
         # The interpreter can be spelled in a number of ways.
         ('python3.14 foo.py', 1, 'python3.14 foo.py -v'),
+        ('python3.14t foo.py', 1, 'python3.14t foo.py -v'),  # free-threaded build
         ('/usr/bin/python3 foo.py', 1, '/usr/bin/python3 foo.py -v'),
         (r'"C:\Program Files\Python\python.exe" foo.py', 1, r'"C:\Program Files\Python\python.exe" foo.py -v'),
         # The flag goes before any redirection or pipe, and the file descriptor of a redirection is not an argument.
