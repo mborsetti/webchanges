@@ -37,7 +37,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
 
 Version 3.37.0
 -------------------
-Unreleased
+2026-08-02
 
 Added
 `````
