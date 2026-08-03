@@ -240,16 +240,58 @@ or, if using email, setting separate reports (``separate: true`` in `config.yaml
 forward the reports as needed.
 
 
-Using environment variables in URLs
------------------------------------
-Currently this cannot be done natively.
+.. _environment_variables:
 
-However, as a workaround you can use a job with a :ref:command to invoke e.g. ``curl`` or ``wget`` which in turn reads
-the environment variable. Example:
+Using environment variables
+---------------------------
+The ``!env`` tag inserts the value of environment variables anywhere within a string value of the jobs or
+configuration file. Tag the value with ``!env`` and reference each environment variable as ``${VAR}``, or as
+``${VAR:-default}`` to fall back to ``default`` when ``VAR`` is not set. If a referenced variable is not set and no
+default is given, :program:`webchanges` exits with an error reporting the variable's name and the line it is
+referenced in.
 
 .. code-block:: yaml
 
-   command: wget https://www.example.com/test?resource=$RESOURCE
+   name: !env 'Support for i386 on NVIDIA ${NVIDIA_SERIES:-570} series in Ubuntu'
+   url: !env 'http://archive.ubuntu.com/ubuntu/pool/multiverse/n/nvidia-graphics-drivers-${NVIDIA_SERIES:-570}/#1'
+
+This allows a value shared by multiple jobs to be defined in a single place (the environment). It also allows the
+value to be computed by another program before :program:`webchanges` is invoked, e.g. in a wrapper script:
+
+.. code-block:: bash
+
+   export NVIDIA_SERIES=$(curl -s https://www.example.com/versions | grep -oP '^\d+' | head -1)
+   webchanges
+
+The tag is also useful for keeping secrets out of the YAML files. In a job:
+
+.. code-block:: yaml
+
+   url: https://api.example.com/data
+   headers:
+     Authorization: !env 'Bearer ${API_TOKEN}'
+
+Or in the configuration file:
+
+.. code-block:: yaml
+
+   report:
+     telegram:
+       bot_token: !env '${TELEGRAM_BOT_TOKEN}'
+
+Please note:
+
+* The substituted value is always a string, so the tag cannot be used for boolean or numeric directives such as
+  ``use_browser``.
+* If the variable is used inside ``url`` or ``command``, changing its value changes the job's location and therefore
+  its identity: :program:`webchanges` will treat it as a new job and start its snapshot history afresh.
+* Command line arguments that rewrite the jobs file (``--add``, ``--delete`` and ``--change-location``) save the
+  substituted values, losing the ``!env`` tags; ``--edit`` is safe, as it operates on the raw text.
+* If your editor uses the YAML language server for validation, add ``!env`` to its custom tags setting (e.g. in
+  Visual Studio Code, add ``"yaml.customTags": ["!env scalar"]`` to ``settings.json``) to avoid an unresolved tag
+  warning.
+
+.. versionadded:: 3.38
 
 
 Authenticated requests

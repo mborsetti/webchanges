@@ -64,6 +64,9 @@ YAML :ref:`here <yaml_syntax>`.
 * You can learn more about quoting special characters `here <https://www.yaml.info/learn/quote.html#flow>`__ (the
   library we use supports YAML 1.1, and our examples use "flow scalars"). URLs and XPaths are always safe and don't
   need to be enclosed in quotes.
+* Environment variables: the value of any environment variable can be inserted anywhere within a directive's string
+  value by tagging the value with ``!env`` and referencing the variable as ``${VAR}``; see
+  :ref:`environment_variables`.
 
 For additional information on YAML, see the :ref:`yaml_syntax` page and the references at the bottom of that page.
 
@@ -568,12 +571,6 @@ the easiest way to protect all your sites at once.
    sharing a network location.
 
 
-
-Optional directives for ``url`` jobs without ``use_browser: true``
-------------------------------------------------------------------
-The following directives are available only for ``url`` jobs without ``use_browser: true``:
-
-
 .. _empty_as_transient:
 
 empty_as_transient
@@ -591,6 +588,14 @@ When this directive is set to true and the server returns no data, the run is ha
 once the site returns data again, any change is computed against that content, so a mere restoration does not
 trigger a change report.
 
+For jobs with ``use_browser: true``, an empty response means that the browser received a zero-byte document from
+the server: the check is made on the raw network response, as the rendered page source is never empty (the browser
+always builds a minimal document skeleton). This directive therefore does not detect the related failure mode in
+which the server does return content but the page renders empty, e.g. because client-side JavaScript fails to
+populate it; that case is covered by the :ref:`wait_for_selector` directive, since a wait for an element that never
+appears makes the job fail with a transient timeout error, which likewise preserves the last good snapshot instead
+of saving the empty content.
+
 An empty response is still reported as an error (subject to :ref:`max_tries`), so combine this directive with one of
 the following to control error reporting:
 
@@ -605,6 +610,15 @@ the following to control error reporting:
    ignore_http_error_codes: 999
 
 .. versionadded:: 3.37
+
+.. versionchanged:: 3.38
+   Extended to ``url`` jobs with ``use_browser: true``.
+
+
+
+Optional directives for ``url`` jobs without ``use_browser: true``
+------------------------------------------------------------------
+The following directives are available only for ``url`` jobs without ``use_browser: true``:
 
 
 .. _http_client:

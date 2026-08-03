@@ -16,6 +16,7 @@ from types import NoneType
 from typing import TYPE_CHECKING, Any, Sized, TextIO
 
 import yaml
+import yaml.constructor
 import yaml.scanner
 
 from webchanges import __docs_url__, __project_name__, __version__
@@ -393,6 +394,18 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
                             f'YAML parser {e.args[2].replace("here", "")} in line {e.args[3].line + 1}, column'
                             f' {e.args[3].column + 1}'
                         ),
+                        *job_files_for_error(),
+                    )
+                )
+            ) from None
+        except yaml.constructor.ConstructorError as e:
+            location = (
+                f' in line {e.problem_mark.line + 1}, column {e.problem_mark.column + 1}' if e.problem_mark else ''
+            )
+            raise ValueError(
+                '\n   '.join(
+                    (
+                        f'YAML error: {e.problem}{location}',
                         *job_files_for_error(),
                     )
                 )

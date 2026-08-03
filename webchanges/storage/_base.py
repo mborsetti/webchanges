@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import re
 import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -24,14 +26,54 @@ logger = logging.getLogger(__name__)
 
 
 # Custom YAML constructor for !include
+# TODO: !include is untested — work in progress; do not document yet.
 def yaml_include(loader: yaml.SafeLoader, node: yaml.Node) -> list[Any]:
     file_path = Path(loader.name).parent.joinpath(node.value)
     with file_path.open('r') as f:
         return list(yaml.safe_load_all(f))
 
 
-# Add the custom constructor to the YAML loader
+# Matches ${VAR} and ${VAR:-default} environment variable references in scalars tagged !env
+ENV_TAG_RE = re.compile(r'\$\{(\w+)(?::-([^}]*))?\}')
+
+
+def yaml_env(loader: yaml.SafeLoader, node: yaml.Node) -> str:
+    """Custom YAML constructor for !env: substitute environment variable references in a scalar.
+
+    Each ``${VAR}`` reference is replaced with the value of the environment variable ``VAR``; the bash-style
+    ``${VAR:-default}`` form falls back to ``default`` when ``VAR`` is not set. The result is always a string.
+
+    :param loader: The YAML loader.
+    :param node: The scalar node tagged with !env.
+    :return: The scalar with all environment variable references substituted.
+    :raises yaml.constructor.ConstructorError: If a referenced variable is not set and no default is given.
+    """
+    value = loader.construct_scalar(node)  # ty:ignore[invalid-argument-type]
+
+    def _replace(match: re.Match[str]) -> str:
+        name, default = match.groups()
+        env_value = os.environ.get(name)
+        if env_value is not None:
+            return env_value
+        if default is not None:
+            logger.debug('!env tag: environment variable %s is not set; using its default value', name)
+            return default
+        raise yaml.constructor.ConstructorError(
+            None, None, f"environment variable '{name}' is not set and no default is given", node.start_mark
+        )
+
+    names = [match.group(1) for match in ENV_TAG_RE.finditer(value)]
+    if names:
+        # Log the variable names only: their values may be secrets
+        logger.debug('!env tag: substituting environment variable(s) %s', ', '.join(names))
+    else:
+        logger.warning('!env tag: no ${VAR} reference found in %r', value)
+    return ENV_TAG_RE.sub(_replace, value)
+
+
+# Add the custom constructors to the YAML loader
 yaml.add_constructor('!include', yaml_include, Loader=yaml.SafeLoader)
+yaml.add_constructor('!env', yaml_env, Loader=yaml.SafeLoader)
 
 
 class BaseStorage(ABC):  # noqa:  B024 abstract base class, but it has no abstract methods or properties

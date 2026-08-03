@@ -9,7 +9,7 @@ import os
 import socket
 import subprocess
 import sys
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
 
@@ -1146,6 +1146,14 @@ def test_browser_connect_over_cdp_wrong_type() -> None:
         JobBase.unserialize(job_data)
 
 
+def test_browser_job_empty_as_transient_accepted() -> None:
+    """``empty_as_transient`` is accepted by ``JobBase.unserialize`` for browser jobs (extended in 3.38)."""
+    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'empty_as_transient': True}
+    job = JobBase.unserialize(job_data)
+    assert isinstance(job, BrowserJob)
+    assert job.empty_as_transient is True
+
+
 # --- CDP cache teardown (connect_over_cdp) ------------------------------------
 # These tests fake the Playwright + Browser objects, so no real browser is needed.
 
@@ -1308,6 +1316,141 @@ def test_acquire_cdp_browser_caches_and_releases(reset_cdp_cache: None, monkeypa
     assert stopped == [True]
     assert _browser._cdp_cache.playwright is None
     assert _browser._cdp_cache.browsers == {}
+
+
+# --- empty_as_transient for browser jobs ---------------------------------------
+# These tests fake the Playwright objects (via a patched _acquire_cdp_browser), so no real browser is needed;
+# playwright and psutil must still be importable because BrowserJob.retrieve() imports them up front.
+
+
+class _FakeBrowserResponse:
+    """Minimal fake of a Playwright Response."""
+
+    def __init__(self, body: bytes) -> None:
+        self._body = body
+        self.status = 200
+        self.ok = True
+
+    def body(self) -> bytes:
+        return self._body
+
+    def header_value(self, name: str) -> str | None:
+        return None
+
+
+class _FakeBrowserPage:
+    """Minimal fake of a Playwright Page."""
+
+    # even for a zero-byte response, a real browser synthesizes a document skeleton
+    dom_skeleton = '<html><head></head><body></body></html>'
+
+    def __init__(self, response: _FakeBrowserResponse) -> None:
+        self._response = response
+
+    def goto(self, url: str, wait_until: str | None = None, referer: str | None = None) -> _FakeBrowserResponse:
+        return self._response
+
+    def content(self) -> str:
+        return self.dom_skeleton
+
+    def close(self) -> None:
+        pass
+
+
+class _FakeBrowserContext:
+    """Minimal fake of a Playwright BrowserContext."""
+
+    def __init__(self, page: _FakeBrowserPage) -> None:
+        self._page = page
+        self.pages: list[Any] = []
+
+    def set_default_timeout(self, timeout: float) -> None:
+        pass
+
+    def new_page(self) -> _FakeBrowserPage:
+        return self._page
+
+
+class _FakeCdpBrowser:
+    """Minimal fake of a Playwright Browser attached over CDP."""
+
+    class _FakeBrowserType:
+        name = 'chromium'
+
+    browser_type = _FakeBrowserType()
+    version = '999.0'
+
+    def __init__(self, context: _FakeBrowserContext) -> None:
+        self.contexts = [context]
+
+
+def _make_faked_browser_job(monkeypatch: pytest.MonkeyPatch, body: bytes, job_extra: dict[str, Any]) -> BrowserJob:
+    """Build a connect_over_cdp BrowserJob whose navigation returns a fake response with the given raw body."""
+    from webchanges.jobs import _browser
+
+    browser = _FakeCdpBrowser(_FakeBrowserContext(_FakeBrowserPage(_FakeBrowserResponse(body))))
+
+    def fake_acquire(cdp_url: str, stack: ExitStack, sync_playwright_fn: Callable[[], Any]) -> tuple[Any, Any, bool]:
+        return None, browser, False
+
+    monkeypatch.setattr(_browser, '_acquire_cdp_browser', fake_acquire)
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'use_browser': True, 'connect_over_cdp': True} | job_extra
+    )
+    assert isinstance(job, BrowserJob)
+    return job
+
+
+@playwright_required
+def test_browser_empty_as_transient_empty_body(
+    ssdb_storage: SsdbSQLite3Storage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With empty_as_transient, a zero-byte document raises a TransientHTTPError with the synthetic status 999."""
+    job = _make_faked_browser_job(monkeypatch, b'', {'empty_as_transient': True})
+    with JobState(ssdb_storage, job) as job_state, pytest.raises(TransientHTTPError) as exc_info:
+        job.retrieve(job_state)
+    assert exc_info.value.status_code == 999
+    assert 'empty_as_transient' in str(exc_info.value)
+
+
+@playwright_required
+def test_browser_empty_as_transient_nonempty_body(
+    ssdb_storage: SsdbSQLite3Storage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With empty_as_transient, a non-empty document is retrieved normally."""
+    job = _make_faked_browser_job(monkeypatch, b'<html><body>value: 1</body></html>', {'empty_as_transient': True})
+    with JobState(ssdb_storage, job) as job_state:
+        data, etag, _mime_type = job.retrieve(job_state)
+    assert data == _FakeBrowserPage.dom_skeleton
+    assert etag == ''
+
+
+@playwright_required
+def test_browser_empty_body_without_empty_as_transient(
+    ssdb_storage: SsdbSQLite3Storage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without empty_as_transient, a zero-byte document is retrieved as the (skeleton) rendered page."""
+    job = _make_faked_browser_job(monkeypatch, b'', {})
+    with JobState(ssdb_storage, job) as job_state:
+        data, _etag, _mime_type = job.retrieve(job_state)
+    assert data == _FakeBrowserPage.dom_skeleton
+
+
+@playwright_required
+def test_browser_ignore_error_transient_http_codes() -> None:
+    """In browser jobs, ignore_http_error_codes also silences TransientHTTPError (incl. the synthetic 999 raised
+    by empty_as_transient), fixed in 3.38."""
+    job = JobBase.unserialize({'url': 'https://www.example.com/', 'use_browser': True, 'ignore_http_error_codes': 999})
+    assert job.ignore_error(TransientHTTPError('No data and empty_as_transient is set', status_code=999)) is True
+    assert job.ignore_error(TransientHTTPError('Server Error', status_code=500)) is False
+
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'use_browser': True, 'ignore_http_error_codes': '5xx'}
+    )
+    assert job.ignore_error(TransientHTTPError('Service Unavailable', status_code=503)) is True
+
+    job = JobBase.unserialize({'url': 'https://www.example.com/', 'use_browser': True})
+    assert job.ignore_error(TransientHTTPError('No data and empty_as_transient is set', status_code=999)) is False
 
 
 # @playwright_required

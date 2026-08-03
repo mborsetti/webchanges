@@ -713,6 +713,15 @@ differ:
               <td>Staggers jobs hitting the same site to dodge rate limits. <span class="only">webchanges-only</span></td>
             </tr>
             <tr>
+              <td><code>!env</code> YAML tag</td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>
+                Inserts environment variables (e.g. secrets) into any value of the jobs and configuration files.
+                <span class="only">webchanges-only</span>
+              </td>
+            </tr>
+            <tr>
               <td>
                 Shell job <code>stderr</code> handling
                 (<code>ignore</code>/<code>fail</code>/<code>stdout</code>&hellip;)

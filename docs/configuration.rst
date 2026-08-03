@@ -33,6 +33,9 @@ configuration file:
 
    _note: This is a remark
 
+.. tip:: Credentials and other secrets (e.g. a reporter's token or password) can be kept out of the configuration
+   file by storing them in environment variables and inserting them with the ``!env`` tag; see
+   :ref:`environment_variables`.
 
 .. versionchanged:: 3.11
    Keys starting with an underscore (``_``) are ignored.

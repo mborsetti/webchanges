@@ -70,7 +70,6 @@ class UrlJob(UrlJobBase):
     __kind__ = 'url'
 
     __optional__: tuple[str, ...] = (
-        'empty_as_transient',
         'fingerprints',
         'http_client',
         'http_version',

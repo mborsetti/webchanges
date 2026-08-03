@@ -99,7 +99,7 @@ class JobBase(metaclass=TrackSubClasses):
     differ: dict[str, Any] | None = None  # added in 3.21
     diff_filters: str | list[str | dict[str, Any]] | None = None
     diff_tool: str | None = None  # deprecated in 3.21
-    empty_as_transient: bool | None = None  # UrlJob
+    empty_as_transient: bool | None = None  # UrlJobBase
     enabled: bool | None = None
     encoding: str | None = None  # UrlJobBase
     evaluate: str | None = None  # BrowserJob
@@ -664,6 +664,7 @@ class UrlJobBase(Job):
         'cookies',
         'data',
         'data_as_json',
+        'empty_as_transient',
         'encoding',
         'headers',
         'ignore_cached',

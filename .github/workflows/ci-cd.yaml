@@ -18,14 +18,39 @@ env:
   PYTHONUTF8: 1
 
 jobs:
+  # A release push updates multiple refs pointing to the same commit (e.g. main and the v* tag, pushed together),
+  # and GitHub fires a separate workflow run for each ref. This job detects, for a branch push, whether the commit
+  # is also tagged on the remote; if so the tag's own run covers it and the branch run's test matrix is skipped.
+  check-skip:
+    name: Check for duplicate tag run
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.tagged.outputs.skip }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Check whether this commit is also tagged
+        id: tagged
+        if: github.event_name == 'push' && github.ref_type == 'branch'
+        # git ls-remote lists '<sha> refs/tags/<tag>' plus, for annotated tags, a peeled '<commit sha> ...^{}'
+        # line, so matching the commit SHA at line start covers both lightweight and annotated tags.
+        run: |
+          if git ls-remote --tags "https://github.com/${GITHUB_REPOSITORY}.git" | grep -q "^${GITHUB_SHA}"; then
+            echo "Commit ${GITHUB_SHA} is also tagged; its tag's run covers it, so skipping this branch run."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # Set the job key. The key is displayed as the job name when a job name is not provided.
   test:
     # matrix.* values are defined below in strategy.
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
 
-    # Identifies any jobs that must complete successfully before this job will run.
-    # needs: [pre-commit]
+    needs: [check-skip]
+    if: needs.check-skip.outputs.skip != 'true'
 
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in.
     strategy:
@@ -42,7 +67,7 @@ jobs:
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
@@ -187,7 +212,7 @@ jobs:
     continue-on-error: true
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
       with:
         egress-policy: audit
 
@@ -208,7 +233,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 

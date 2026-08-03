@@ -145,6 +145,62 @@ def test_jobs_parse() -> None:
     assert jobs[0].command == 'perl -MTime::HiRes -e \'printf "%f\n",Time::HiRes::time()\''
 
 
+def test_yaml_env_tag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test the !env tag substituting ${VAR} references (also multiple ones in the same scalar) in a jobs file."""
+    monkeypatch.setenv('WEBCHANGES_TEST_SERIES', '570')
+    jobs_file = tmp_path.joinpath('jobs-env.yaml')
+    jobs_file.write_text(
+        "name: !env 'NVIDIA ${WEBCHANGES_TEST_SERIES} series (${WEBCHANGES_TEST_SERIES})'\n"
+        "url: !env 'https://www.example.com/${WEBCHANGES_TEST_SERIES}/#1'\n"
+    )
+    jobs = YamlJobsStorage([jobs_file]).parse(jobs_file)
+    assert len(jobs) == 1
+    assert jobs[0].name == 'NVIDIA 570 series (570)'
+    assert jobs[0].url == 'https://www.example.com/570/#1'
+
+
+def test_yaml_env_tag_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test the !env tag's ${VAR:-default} fallback, and that a set variable takes priority over its default."""
+    monkeypatch.delenv('WEBCHANGES_TEST_UNSET', raising=False)
+    monkeypatch.setenv('WEBCHANGES_TEST_SET', 'from-env')
+    jobs_file = tmp_path.joinpath('jobs-env-default.yaml')
+    jobs_file.write_text(
+        "name: !env '${WEBCHANGES_TEST_UNSET:-fallback} and ${WEBCHANGES_TEST_SET:-unused}'\n"
+        'url: https://www.example.com/\n'
+    )
+    jobs = YamlJobsStorage([jobs_file]).parse(jobs_file)
+    assert jobs[0].name == 'fallback and from-env'
+
+
+def test_yaml_env_tag_no_reference(tmp_path: Path) -> None:
+    """Test that a !env scalar containing no ${VAR} reference is returned unchanged."""
+    jobs_file = tmp_path.joinpath('jobs-env-noref.yaml')
+    jobs_file.write_text("name: !env 'no reference here'\nurl: https://www.example.com/\n")
+    jobs = YamlJobsStorage([jobs_file]).parse(jobs_file)
+    assert jobs[0].name == 'no reference here'
+
+
+def test_yaml_env_tag_unset(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that a !env reference to an unset variable without a default raises a ValueError naming it."""
+    monkeypatch.delenv('WEBCHANGES_TEST_UNSET', raising=False)
+    jobs_file = tmp_path.joinpath('jobs-env-unset.yaml')
+    jobs_file.write_text("url: !env 'https://www.example.com/${WEBCHANGES_TEST_UNSET}/'\n")
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        YamlJobsStorage([jobs_file]).parse(jobs_file)
+    message = str(pytest_wrapped_e.value)
+    assert "environment variable 'WEBCHANGES_TEST_UNSET' is not set and no default is given" in message
+    assert 'in line 1' in message
+
+
+def test_yaml_env_tag_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test the !env tag in a configuration file (e.g. to keep secrets out of it)."""
+    monkeypatch.setenv('WEBCHANGES_TEST_TOKEN', 'secret-token')
+    cfg = tmp_path.joinpath('config-env.yaml')
+    cfg.write_text("report:\n  telegram:\n    bot_token: !env '${WEBCHANGES_TEST_TOKEN}'\n")
+    config = YamlConfigStorage(cfg).parse(cfg)
+    assert config['report']['telegram']['bot_token'] == 'secret-token'  # noqa: S105 possible hardcoded password
+
+
 def test_check_for_shell_job() -> None:
     """Test if a job is a shell job."""
     jobs_file = data_path.joinpath('jobs-is_shell_job.yaml')

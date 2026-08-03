@@ -353,7 +353,8 @@ class BrowserJob(UrlJobBase):
         :raises TypeError: If the value provided in one of the directives is not of the correct type.
         :raises ImportError: If the ``playwright`` or ``psutil`` package is not installed.
         :raises NotModifiedError: If the server returns an HTTP 304 (Not Modified) response.
-        :raises TransientHTTPError: If an HTTP response code of 429, 500, 502, 503, or 504 is received.
+        :raises TransientHTTPError: If an HTTP response code of 429, 500, 502, 503, or 504 is received, or (with the
+           synthetic status code 999) if ``empty_as_transient`` is set and the server returned a zero-byte document.
         :raises TransientBrowserError: If a browser timeout or a transient connection error occurs.
         :raises BrowserResponseError: If no response is received or an HTTP response code between 400 and 599 is
            received.
@@ -770,6 +771,17 @@ class BrowserJob(UrlJobBase):
                     raise NotModifiedError(response.status)
 
                 if response.ok:
+                    # If empty_as_transient is set and the server sent a zero-byte document, raise a transient error
+                    # before spending time on waits. The check must use the raw network body: the rendered DOM
+                    # (page.content()) is never empty because the browser always synthesizes a document skeleton.
+                    if self.empty_as_transient:
+                        try:
+                            body_len: int | None = len(response.body())
+                        except PlaywrightError:
+                            body_len = None  # raw body unavailable; cannot determine emptiness
+                        if body_len == 0:
+                            logger.info(f'Job {self.index_number}: No data received; treating it as a transient error.')
+                            raise TransientHTTPError('No data received and empty_as_transient is set', status_code=999)
                     if self.wait_for_url:
                         logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
                         if isinstance(self.wait_for_url, str):
@@ -939,11 +951,10 @@ class BrowserJob(UrlJobBase):
             and exception.args[0] == 'net::ERR_TOO_MANY_REDIRECTS'
         ):
             return True
-        if (
-            self.ignore_http_error_codes
-            and isinstance(exception, BrowserResponseError)
-            and exception.status_code is not None
-        ):
-            return self._ignore_http_error_code(exception.status_code)
+        if self.ignore_http_error_codes:
+            if isinstance(exception, BrowserResponseError) and exception.status_code is not None:
+                return self._ignore_http_error_code(exception.status_code)
+            if isinstance(exception, TransientHTTPError):
+                return self._ignore_http_error_code(exception.status_code)
 
         return False

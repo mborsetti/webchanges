@@ -285,7 +285,8 @@ double-quotes:
 
 Note that while YAML allows for aliases (anchors/references) as a way to reuse the same content, each job is a different
 "document" and YAML does not allow anchors/references between documents, even if they are in the same file
-(`reference <https://yaml.org/spec/1.2-old/spec.html#id2800132>`__).
+(`reference <https://yaml.org/spec/1.2-old/spec.html#id2800132>`__). To reuse a value across jobs, define it in an
+environment variable and insert it wherever needed with the ``!env`` tag (see :ref:`environment_variables`).
 
 .. seealso::
 
