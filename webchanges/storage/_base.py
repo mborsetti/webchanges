@@ -10,7 +10,7 @@ import re
 import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Mapping, TypeVar
+from typing import Any, Mapping, TypeVar, cast
 
 import yaml
 
@@ -48,7 +48,9 @@ def yaml_env(loader: yaml.SafeLoader, node: yaml.Node) -> str:
     :return: The scalar with all environment variable references substituted.
     :raises yaml.constructor.ConstructorError: If a referenced variable is not set and no default is given.
     """
-    value = loader.construct_scalar(node)  # ty:ignore[invalid-argument-type]
+    # The registered constructor must accept any Node, but !env is only valid on scalars; construct_scalar raises
+    # ConstructorError at runtime if the node is not a scalar.
+    value = loader.construct_scalar(cast('yaml.ScalarNode', node))
 
     def _replace(match: re.Match[str]) -> str:
         name, default = match.groups()
@@ -180,11 +182,14 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         :param _dict: The dict.
         :return: The dict with all keys starting with '_' removed.
         """
-        return {
-            k: self.remove_remark_keys(v) if isinstance(v, dict) else v  # ty:ignore[invalid-argument-type]
-            for k, v in _dict.items()
-            if not k.startswith('_')
-        }  # ty:ignore[invalid-return-type]
+        return cast(
+            'T',
+            {
+                k: self.remove_remark_keys(cast('dict[str, Any]', v)) if isinstance(v, dict) else v
+                for k, v in _dict.items()
+                if not k.startswith('_')
+            },
+        )
 
 
 class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
@@ -197,7 +202,8 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
 
         :param filename: The filenames of the jobs file.
         """
-        super().__init__(filename)  # ty:ignore[invalid-argument-type]
+        # BaseFileStorage.__init__ only normalizes a single str | Path filename, which does not apply to the
+        # list[Path] held here, so the attribute is set directly without calling it.
         self.filename = filename
 
     def load_secure(self) -> list[JobBase]:
@@ -217,7 +223,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
             if isinstance(job, ShellJob):
                 return True
 
-            for filter_kind, _ in FilterBase.normalize_filter_list(job.filters, job.index_number):  # ty:ignore[invalid-argument-type]
+            for filter_kind, _ in FilterBase.normalize_filter_list(job.filters, job.index_number):
                 if filter_kind == 'shellpipe':
                     return True
 

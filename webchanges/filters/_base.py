@@ -7,7 +7,7 @@ from __future__ import annotations
 import itertools
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Iterator, Literal
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal
 
 import yaml
 
@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# Filters usable as a bare string, i.e. those having no required sub-directive. Keep in sync with the
+# 'filterItem' string enum in webchanges/_resources/jobs.schema.json.
 FiltersList = Literal[
     'absolute_links',
     'ascii85',
@@ -32,12 +34,18 @@ FiltersList = Literal[
     'html2text',
     'ical2text',
     'jsontoyaml',
+    'ocr',
+    'pdf2text',
     'pretty-xml',
+    'pypdf',
+    'remove-duplicate-lines',
     'remove_repeated',
     'reverse',
     'sha1sum',
+    'sha256sum',
     'sort',
     'strip',
+    'striplines',
 ]
 
 
@@ -104,7 +112,7 @@ class FilterBase(metaclass=TrackSubClasses):
     @classmethod
     def normalize_filter_list(
         cls,
-        filter_spec: str | list[str | dict[str, Any]] | None,
+        filter_spec: str | Iterable[str | dict[str, Any]] | None,
         job_index_number: int | None = None,
     ) -> Iterator[tuple[str, dict[str, Any]]]:
         """Generates a list of filters that has been checked for its validity.
@@ -149,7 +157,7 @@ class FilterBase(metaclass=TrackSubClasses):
     @classmethod
     def _internal_normalize_filter_list(
         cls,
-        filter_spec: str | list[str | dict[str, Any]] | None,
+        filter_spec: str | Iterable[str | dict[str, Any]] | None,
         job_index_number: int | None = None,
     ) -> Iterator[tuple[str, dict[str, Any]]]:
         """Generates a list of filters with its default subfilter if not supplied.

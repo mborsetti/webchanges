@@ -35,9 +35,14 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.38.0
+Version 3.38.0rc1
 -------------------
 Unreleased
+
+⚠ Breaking Changes
+``````````````````
+* The ``empty_as_transient`` job directive, introduced a few days earlier in version 3.37.0, has been retired in favor
+  of the new and more extensive ``empty_as_error`` one (see below), whose name is more descriptive.
 
 Added
 `````
@@ -49,21 +54,39 @@ Added
   and to keep secrets such as API tokens out of the YAML files. Suggested by `Marcos Alano
   <https://github.com/mhalano>`__ in `#99 <https://github.com/mborsetti/webchanges/issues/99>`__. See
   :ref:`here <environment_variables>`.
-
-Changed
-```````
-* The ``empty_as_transient`` job directive (introduced in version 3.37.0 for ``url`` jobs without ``use_browser:
-  true``) now also works in jobs with ``use_browser: true``: an empty response is a zero-byte document received from
-  the server. See :ref:`here <empty_as_transient>`.
+* New ``empty_as_error`` job directive: when the server or a command returns an empty response or output consisting
+  only of whitespace, it is treated as a transient error (with the synthetic HTTP response status code 999) instead
+  of as valid empty content, so the snapshot database retains the last non-empty content and a flaky site or command
+  that intermittently returns nothing no longer triggers a change report when the content "disappears" and another
+  one when it is restored. Combine with ``max_tries`` to be notified only of persistent empty responses, or with
+  ``ignore_http_error_codes: 999`` (or, for ``command`` jobs, ``suppress_errors``) to never be notified of them.
+  Suggested by `Marcos Alano <https://github.com/mhalano>`__ in `#169
+  <https://github.com/mborsetti/webchanges/issues/169>`__. See :ref:`here <empty_as_error>`.
 
 Fixed
 `````
 * In jobs with ``use_browser: true``, the ``ignore_http_error_codes`` job directive now also suppresses transient
   HTTP errors (status codes 429, 500, 502, 503, 504, and the synthetic 999); previously it only matched
   non-transient error responses.
+* A job containing both the ``url`` and ``command`` directives is now rejected with an error, as the two are mutually
+  exclusive. Such a job previously was erroneously accepted as a ``command`` one.
+* An HTTP 304 (Not Modified) response received while the job's consecutive-error counter was greater than zero (i.e.
+  the preceding run had failed) overwrote the stored snapshot with empty data, discarding the content and the ETag;
+  the following successful run then reported a spurious change. Only servers that reply 304 to an unconditional
+  request were affected, as :program:`webchanges` strips the conditional request headers while retrying a failed job.
+* A ``headers`` directive set in ``job_defaults`` for one job kind leaked into jobs of a different kind (e.g. headers
+  set under ``job_defaults.url`` were also sent by jobs with ``use_browser: true``).
+* Reports of a transient HTTP error (status codes 429, 500, 502, 503, 504, and the synthetic 999) in ``url`` jobs
+  without ``use_browser: true``, and in ``command`` jobs, contained a full Python traceback instead of just the
+  error message, making a condition of the monitored resource look like a failure of :program:`webchanges`.
+* The bundled ``jobs.schema.json`` JSON Schema, used by editors to validate and autocomplete the jobs file, rejected
+  the ``ocr``, ``pdf2text``, ``pypdf``, ``remove-duplicate-lines``, ``sha256sum`` and ``striplines`` filters when
+  written without sub-directives, flagging valid jobs files as invalid.
 
 Internals
 `````````
+* Updated the vendored copy of ``packaging`` (used as a fallback when the ``packaging`` library is not installed)
+  from v26.2 to v26.3.
 * CI: a release push updates two refs pointing to the same commit (the branch and the version tag, pushed
   atomically), and each ref triggers its own workflow run; the branch run now detects that its commit is also tagged
   on the remote and skips the test matrix, so the release test suite executes only once (in the tag's run).
@@ -86,14 +109,6 @@ Added
   each unique endpoint requires manual browser authorization only once per run, and the connection is cached for the
   lifetime of the run (set the environment variable ``WEBCHANGES_BROWSER_CDP_CACHE=0`` to disable caching). See
   :ref:`here <connect_over_cdp>`.
-* New ``empty_as_transient`` job directive for ``url`` jobs (without ``use_browser: true``): when the server returns
-  an empty response, it is treated as a transient HTTP error (with the synthetic HTTP response status code 999)
-  instead of as valid empty content, so the snapshot database retains the last non-empty content and a flaky site
-  that intermittently returns nothing no longer triggers a change report when the content "disappears" and another
-  one when it is restored. Combine with ``max_tries`` to be notified only of persistent empty responses, or with
-  ``ignore_http_error_codes: 999`` to never be notified of them. Suggested by `Marcos Alano
-  <https://github.com/mhalano>`__ in `#169 <https://github.com/mborsetti/webchanges/issues/169>`__. See
-  :ref:`here <empty_as_transient>`.
 * New ``between`` filter: extracts the block of lines sitting between a line matching the ``start`` regular
   expression and one matching the ``end`` regular expression (the two delimiting lines themselves are discarded;
   omitting ``start`` extracts from the first line, omitting ``end`` to the last). Useful for clipping a section out

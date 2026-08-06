@@ -7,6 +7,7 @@ from __future__ import annotations
 import importlib.util
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 import docutils.core
 import docutils.nodes
@@ -84,8 +85,13 @@ def parse_rst(text: str) -> docutils.nodes.document:
 class YAMLCodeBlockVisitor(docutils.nodes.NodeVisitor):
     """Used in loading yaml code block from rst file."""
 
+    def __init__(self, document: docutils.nodes.document) -> None:
+        """Initialise the visitor."""
+        super().__init__(document)
+        self.jobs: list[Any] = []
+
     def visit_literal_block(self, node: docutils.nodes.literal_block) -> None:
-        self.jobs = []
+        """Extract yaml code blocks."""
         if 'yaml' in node.attributes['classes']:
             self.jobs.append(yaml.safe_load(node.astext()))
         elif node.rawsource.startswith('.. code-block:: yaml'):
@@ -145,7 +151,7 @@ def test_jobs(job: JobBase) -> None:
 
     # noinspection PyTypeChecker
     with JobState(None, job) as job_state:  # ty:ignore[invalid-argument-type]
-        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filters):  # ty:ignore[invalid-argument-type]
+        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filters):
             if (
                 filter_kind == 'beautify' or (filter_kind == 'html2text' and subfilter.get('method') == 'bs4')
             ) and not bs4_is_installed:
@@ -174,7 +180,16 @@ def test_jobs(job: JobBase) -> None:
                 data = data.rstrip()
 
         if job.url == 'https://example.net/execute.html':
-            assert data.splitlines()[:-1] == expected_output_data.splitlines()[:-1]
+            # This job echoes its own index number and JSON, both of which depend on how many jobs precede it in
+            # filters.rst; compare every other line verbatim and the index number against the job itself, so that
+            # adding an example earlier in the file does not fail this test.
+            volatile = ('The job number is', 'The job JSON is')
+            assert isinstance(data, str)
+            lines = data.splitlines()
+            assert [line for line in lines if not line.startswith(volatile)] == [
+                line for line in expected_output_data.splitlines() if not line.startswith(volatile)
+            ]
+            assert f"The job number is '{job.index_number}'" in lines
             # assert jsonlib.loads(data.splitlines()[-1][17:-1]) == jsonlib.loads(
             #     expected_output_data.splitlines()[-1][17:-1]
             # )

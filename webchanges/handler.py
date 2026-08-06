@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from webchanges.differs import DifferBase, ReportKind
 from webchanges.filters import FilterBase
-from webchanges.jobs import NotModifiedError
+from webchanges.jobs import EMPTY_RESPONSE_STATUS_CODE, NotModifiedError, TransientHTTPError
 from webchanges.reporters import ReporterBase
 
 # https://stackoverflow.com/questions/39740632
@@ -230,11 +230,23 @@ class JobState(ContextManager):
                 f'Job {self.job.index_number}: Retrieved data={data!r} | etag={self.new_etag} | mime_type={mime_type}'
             )
 
+            # An empty (or whitespace-only) response is treated as an error when empty_as_error is set, so that the
+            # last non-empty snapshot is retained instead of being overwritten. The check is made here, before
+            # filtering, so that it applies to every job kind including those defined in hooks.py. BrowserJob makes
+            # its own, earlier check against the raw network body, as its rendered page source is never empty.
+            if self.job.empty_as_error:
+                stripped = data.strip() if isinstance(data, (str, bytes)) else data
+                if not stripped:
+                    logger.info('Job %s: No data received; treating it as an error.', self.job.index_number)
+                    raise TransientHTTPError(
+                        'No data received and empty_as_error is set', status_code=EMPTY_RESPONSE_STATUS_CODE
+                    )
+
             # Apply automatic filters first
             filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
 
             # Apply any specified filters
-            for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):  # ty:ignore[invalid-argument-type]
+            for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):
                 filtered_data, mime_type = FilterBase.process(filter_kind, subfilter, self, filtered_data, mime_type)
 
             self.new_data = filtered_data
@@ -244,6 +256,11 @@ class JobState(ContextManager):
             # HTTP 304 response has been received
             self.exception = e
             self.error_ignored = False
+            # Nothing was retrieved, so carry the last snapshot forward: worker.run_jobs saves the job state when a
+            # 304 arrives after a failed run (to reset 'tries'), and save() would otherwise store the empty new_data.
+            self.new_data = self.old_data
+            self.new_etag = self.old_etag
+            self.new_mime_type = self.old_mime_type
         except Exception as e:
             # Processing error of job failed its chance to handle error
             # Job has a chance to format and ignore its error

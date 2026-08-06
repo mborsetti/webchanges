@@ -20,7 +20,7 @@ import html2text
 
 from webchanges.filters import FilterBase
 from webchanges.jobs._base import CHARSET_RE, UrlJobBase
-from webchanges.jobs._exceptions import NotModifiedError, TransientHTTPError
+from webchanges.jobs._exceptions import EMPTY_RESPONSE_STATUS_CODE, NotModifiedError, TransientHTTPError
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -734,10 +734,7 @@ class UrlJob(UrlJobBase):
                 f'( {self.get_indexed_location()} )'
             )
 
-        # If empty_as_transient is set and no data, then raise transient error
-        if self.empty_as_transient and not data:
-            logger.info(f'Job {self.index_number}: No data received; treating it as a transient error.')
-            raise TransientHTTPError('No data received and empty_as_transient is set', status_code=999)
+        # Note: the empty_as_error check is made by JobState.process(), which applies it to every job kind.
 
         # If no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
         if not self.name and isinstance(data, str):
@@ -805,7 +802,7 @@ class UrlJob(UrlJobBase):
             ):
                 exception_str += f'\n\n(Job has proxy {self.proxy})'
             return exception_str
-        return tb
+        return super().format_error(exception, tb)
 
     def ignore_error(self, exception: Exception) -> bool:
         """Determine whether the error of the job should be ignored.
@@ -813,13 +810,23 @@ class UrlJob(UrlJobBase):
         :param exception: The exception.
         :returns: True if the error should be ignored, False otherwise.
         """
+
+        def is_connection_error(exception: Exception, *client_errors: type[BaseException]) -> bool:
+            """Whether the exception is a connection error of the HTTP client, or a transient HTTP response other
+            than the synthetic one of the empty_as_error directive (the server did respond, so an empty response is
+            not a connection problem and must not be silenced by ignore_connection_errors).
+            """
+            if isinstance(exception, TransientHTTPError):
+                return exception.status_code != EMPTY_RESPONSE_STATUS_CODE
+            return isinstance(exception, client_errors)
+
         if httpx and isinstance(exception, (httpx.HTTPError, TransientHTTPError)):
             if self.ignore_timeout_errors and (
                 isinstance(exception, httpx.TimeoutException)
                 or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
             ):
                 return True
-            if self.ignore_connection_errors and isinstance(exception, (httpx.TransportError, TransientHTTPError)):
+            if self.ignore_connection_errors and is_connection_error(exception, httpx.TransportError):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, httpx.TooManyRedirects):
                 return True
@@ -837,9 +844,7 @@ class UrlJob(UrlJobBase):
                 or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
             ):
                 return True
-            if self.ignore_connection_errors and (
-                isinstance(exception, (requests.exceptions.ConnectionError, TransientHTTPError))
-            ):
+            if self.ignore_connection_errors and is_connection_error(exception, requests.exceptions.ConnectionError):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, requests.exceptions.TooManyRedirects):
                 return True
@@ -857,9 +862,7 @@ class UrlJob(UrlJobBase):
                 or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
             ):
                 return True
-            if self.ignore_connection_errors and (
-                isinstance(exception, (curl_cffi_exceptions.ConnectionError, TransientHTTPError))
-            ):
+            if self.ignore_connection_errors and is_connection_error(exception, curl_cffi_exceptions.ConnectionError):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, curl_cffi_exceptions.TooManyRedirects):
                 return True

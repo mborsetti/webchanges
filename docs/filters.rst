@@ -135,7 +135,7 @@ Advanced Python programmers can write their own custom filters; see :ref:`hooks`
 
 ``absolute_links``
 ------------------
-Convert relative URLs of all ``action``, ``href` and ``src`` attribute in any HTML tag, as well the ``data``
+Convert relative URLs of all ``action``, ``href`` and ``src`` attribute in any HTML tag, as well the ``data``
 attribute of the ``<object>`` tag, to absolute ones.
 
 .. note:: This filter is not needed (and could interfere) if you already are using the :ref:`beautify` filter (which has
@@ -1237,7 +1237,6 @@ To extract the first line:
 .. code-block:: yaml
 
    url: https://example.com/regex-firstline.html
-   command: python -c "[print(f'line {n}') for n in range(1, 3)]"
    filters:
      - re.findall: '^.*'
 
@@ -1250,7 +1249,6 @@ plus additional text (``(?!\n.+)``):
 .. code-block:: yaml
 
    url: https://example.com/regex-lastline.html
-   command: python -c "[print(f'line {n}') for n in range(3)]"
    filters:
      - re.findall: '(?m)(^.*$)(?!\n.+)'
 

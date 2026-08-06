@@ -13,7 +13,7 @@ import warnings
 from collections import defaultdict
 from datetime import datetime, timezone
 from types import NoneType
-from typing import TYPE_CHECKING, Any, Sized, TextIO
+from typing import TYPE_CHECKING, Any, Iterable, TextIO, cast
 
 import yaml
 import yaml.constructor
@@ -46,7 +46,8 @@ logger = logging.getLogger(__name__)
 class YamlConfigStorage(BaseYamlFileStorage):
     """Class for configuration file (is a YAML textual file)."""
 
-    config: _Config = {}  # ty:ignore[missing-typed-dict-key]
+    # Empty until load() or write_default_config() populates it; pre-load readers guard with .get().
+    config: _Config = cast('_Config', {})
 
     @staticmethod
     def dict_deep_difference(d1: _Config, d2: _Config, ignore_underline_keys: bool = False) -> _Config:
@@ -58,7 +59,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :return: A dict with all the elements on the first dict that are not in the second.
         """
 
-        def _sub_dict_deep_difference(d1_: _Config, d2_: _Config) -> _Config:
+        def _sub_dict_deep_difference(d1_: dict[str, Any], d2_: dict[str, Any]) -> dict[str, Any]:
             """Recursive sub-function to find elements in the first dict that are not in the second.
 
             :param d1_: The first dict.
@@ -67,16 +68,19 @@ class YamlConfigStorage(BaseYamlFileStorage):
             """
             for key, value in d1_.copy().items():
                 if ignore_underline_keys and key.startswith('_'):
-                    d1_.pop(key, None)  # ty:ignore[call-non-callable]
+                    d1_.pop(key, None)
                 elif isinstance(value, dict) and isinstance(d2_.get(key), dict):
-                    _sub_dict_deep_difference(value, d2_[key])  # ty:ignore[invalid-argument-type, invalid-key]
+                    _sub_dict_deep_difference(value, d2_[key])
                     if not len(value):
-                        d1_.pop(key)  # ty:ignore[call-non-callable]
+                        d1_.pop(key)
                 elif key in d2_:
-                    d1_.pop(key)  # ty:ignore[call-non-callable]
+                    d1_.pop(key)
             return d1_
 
-        return _sub_dict_deep_difference(copy.deepcopy(d1), d2)
+        # The helper works on plain dicts (the result is a partial diff, not a valid _Config); the deepcopy makes
+        # popping required TypedDict keys safe.
+        d1_copy = cast('dict[str, Any]', copy.deepcopy(d1))
+        return cast('_Config', _sub_dict_deep_difference(d1_copy, cast('dict[str, Any]', d2)))
 
     @staticmethod
     def dict_deep_merge(source: _Config, destination: _Config) -> _Config:
@@ -88,7 +92,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         """
         # https://stackoverflow.com/a/20666342
 
-        def _sub_dict_deep_merge(source_: _Config, destination_: _Config) -> _Config:
+        def _sub_dict_deep_merge(source_: dict[str, Any], destination_: dict[str, Any]) -> dict[str, Any]:
             """Recursive sub-function to merges source_ dict into destination_ dict.
 
             :param source_: The first dict.
@@ -98,14 +102,17 @@ class YamlConfigStorage(BaseYamlFileStorage):
             for key, value in source_.items():
                 if isinstance(value, dict):
                     # get node or create one
-                    node = destination_.setdefault(key, {})  # ty:ignore[no-matching-overload]
-                    _sub_dict_deep_merge(value, node)  # ty:ignore[invalid-argument-type]
+                    node = destination_.setdefault(key, {})
+                    _sub_dict_deep_merge(value, node)
                 else:
-                    destination_[key] = value  # ty:ignore[invalid-key]
+                    destination_[key] = value
 
             return destination_
 
-        return _sub_dict_deep_merge(source, copy.deepcopy(destination))
+        # The helper works on plain dicts (source may be a partial diff, not a valid _Config); the deepcopy makes
+        # writing arbitrary TypedDict keys safe.
+        destination_copy = cast('dict[str, Any]', copy.deepcopy(destination))
+        return cast('_Config', _sub_dict_deep_merge(cast('dict[str, Any]', source), destination_copy))
 
     @staticmethod
     def remove_deprecated_keys(config: _Config) -> _Config:
@@ -122,17 +129,19 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param config: The configuration.
         :raises ValueError: If the configuration has keys not in DEFAULT_CONFIG (bad keys, e.g. typos)
         """
-        config_for_extras = copy.deepcopy(config)
+        # Scratch copy of the config, mutated off-schema (None placeholders, hook kinds popped) to diff against
+        # DEFAULT_CONFIG, so typed as a plain dict.
+        config_for_extras = cast('dict[str, Any]', copy.deepcopy(config))
         if 'job_defaults' in config_for_extras:
             # Create missing 'job_defaults' keys from DEFAULT_CONFIG
             for key in DEFAULT_CONFIG['job_defaults']:
                 if 'job_defaults' not in config_for_extras:
                     config_for_extras['job_defaults'] = {}
-                config_for_extras['job_defaults'][key] = None  # ty:ignore[invalid-key]
+                config_for_extras['job_defaults'][key] = None
             for key in DEFAULT_CONFIG['differ_defaults']:
                 if 'differ_defaults' not in config_for_extras:
                     config_for_extras['differ_defaults'] = {}
-                config_for_extras['differ_defaults'][key] = None  # ty:ignore[invalid-key]
+                config_for_extras['differ_defaults'][key] = None
         if 'hooks' in sys.modules:
             # Remove extra keys in config used in hooks (they are not in DEFAULT_CONFIG)
             for _, obj in inspect.getmembers(
@@ -145,8 +154,10 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     ):
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)
                 elif issubclass(obj, ReporterBase) and obj.__kind__ not in DEFAULT_CONFIG['report']:
-                    config_for_extras['report'].pop(obj.__kind__, None)  # ty:ignore[call-non-callable]
-        extras: _Config = self.dict_deep_difference(config_for_extras, DEFAULT_CONFIG, ignore_underline_keys=True)
+                    config_for_extras['report'].pop(obj.__kind__, None)
+        extras: _Config = self.dict_deep_difference(
+            cast('_Config', config_for_extras), DEFAULT_CONFIG, ignore_underline_keys=True
+        )
         if not extras.get('report'):
             extras.pop('report', None)
         if extras:
@@ -171,7 +182,9 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         "Found both 'shell' and 'command' job_defaults in config, a duplicate. Please remove 'shell' "
                         'ones.'
                     )
-                config['job_defaults']['command'] = config['job_defaults'].pop('shell')
+                # 'shell' is a legacy key not in the _ConfigJobDefaults TypedDict, so pop it off a plain-dict view
+                job_defaults = cast('dict[str, Any]', config['job_defaults'])
+                job_defaults['command'] = job_defaults.pop('shell')
             for key in ('all', 'url', 'browser', 'command'):
                 if key not in config['job_defaults'] or config['job_defaults'][key] is None:
                     config['job_defaults'][key] = {}
@@ -448,7 +461,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
             fp = io.StringIO('\n---\n'.join(f.read_text(encoding='utf-8-sig') for f in self.filename if f.is_file()))
             return self._parse(fp, self.filename)
 
-    def save(self, jobs: Sized[JobBase]) -> None:
+    def save(self, jobs: Iterable[JobBase]) -> None:
         """Save jobs to the job YAML file.
 
         :param jobs: An iterable of JobBase objects to be written.

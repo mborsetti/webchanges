@@ -71,9 +71,9 @@
       "type": "boolean",
       "description": "If true, connection errors are ignored (no report sent)."
     },
-    "empty_as_transient": {
+    "empty_as_error": {
       "type": "boolean",
-      "description": "If true, an empty response is treated as a transient HTTP error (synthetic status code 999) instead of valid content, preserving the last non-empty snapshot. Combine with max_tries or 'ignore_http_error_codes: 999' to control error reporting. Works for all url jobs; with use_browser, empty means the server returned a zero-byte document.",
+      "description": "If true, an empty (or whitespace-only) response or command output is treated as an error instead of as valid content, preserving the last non-empty snapshot. Works in all job types; with use_browser, empty means the server returned an empty document (the rendered page is never empty). Combine with max_tries to be notified only of persistent empty responses; in url jobs, 'ignore_http_error_codes: 999' silences them entirely.",
       "default": false
     },
     "no_redirects": {
@@ -707,12 +707,18 @@
             "html2text",
             "ical2text",
             "jsontoyaml",
+            "ocr",
+            "pdf2text",
             "pretty-xml",
+            "pypdf",
+            "remove-duplicate-lines",
             "remove_repeated",
             "reverse",
             "sha1sum",
+            "sha256sum",
             "sort",
-            "strip"
+            "strip",
+            "striplines"
           ],
           "description": "A filter name with no parameters (uses defaults)."
         },

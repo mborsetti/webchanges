@@ -157,7 +157,7 @@ def test_url(job: JobBase) -> None:
     # noinspection PyTypeChecker
     with JobState(None, job) as job_state:  # ty:ignore[invalid-argument-type]
         data, _ = FilterBase.auto_process(job_state, data, '')
-        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filters):  # ty:ignore[invalid-argument-type]
+        for filter_kind, subfilter in FilterBase.normalize_filter_list(job_state.job.filters):
             data, _ = FilterBase.process(filter_kind, subfilter, job_state, data, '')
 
         expected_output_data = d['output']

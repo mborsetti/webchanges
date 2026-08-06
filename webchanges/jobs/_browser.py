@@ -22,6 +22,7 @@ from urllib.parse import SplitResult, SplitResultBytes, parse_qsl, quote, urlenc
 from webchanges import __project_name__
 from webchanges.jobs._base import UrlJobBase
 from webchanges.jobs._exceptions import (
+    EMPTY_RESPONSE_STATUS_CODE,
     BrowserResponseError,
     NotModifiedError,
     TransientBrowserError,
@@ -354,7 +355,7 @@ class BrowserJob(UrlJobBase):
         :raises ImportError: If the ``playwright`` or ``psutil`` package is not installed.
         :raises NotModifiedError: If the server returns an HTTP 304 (Not Modified) response.
         :raises TransientHTTPError: If an HTTP response code of 429, 500, 502, 503, or 504 is received, or (with the
-           synthetic status code 999) if ``empty_as_transient`` is set and the server returned a zero-byte document.
+           synthetic status code 999) if ``empty_as_error`` is set and the server returned an empty document.
         :raises TransientBrowserError: If a browser timeout or a transient connection error occurs.
         :raises BrowserResponseError: If no response is received or an HTTP response code between 400 and 599 is
            received.
@@ -771,17 +772,20 @@ class BrowserJob(UrlJobBase):
                     raise NotModifiedError(response.status)
 
                 if response.ok:
-                    # If empty_as_transient is set and the server sent a zero-byte document, raise a transient error
-                    # before spending time on waits. The check must use the raw network body: the rendered DOM
+                    # If empty_as_error is set and the server sent an empty (or whitespace-only) document, raise the
+                    # error before spending time on waits. The check must use the raw network body: the rendered DOM
                     # (page.content()) is never empty because the browser always synthesizes a document skeleton.
-                    if self.empty_as_transient:
+                    if self.empty_as_error:
                         try:
-                            body_len: int | None = len(response.body())
+                            body_len: int | None = len(response.body().strip())
                         except PlaywrightError:
                             body_len = None  # raw body unavailable; cannot determine emptiness
                         if body_len == 0:
-                            logger.info(f'Job {self.index_number}: No data received; treating it as a transient error.')
-                            raise TransientHTTPError('No data received and empty_as_transient is set', status_code=999)
+                            logger.info(f'Job {self.index_number}: No data received; treating it as an error.')
+                            raise TransientHTTPError(
+                                'No data received and empty_as_error is set',
+                                status_code=EMPTY_RESPONSE_STATUS_CODE,
+                            )
                     if self.wait_for_url:
                         logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
                         if isinstance(self.wait_for_url, str):
@@ -935,10 +939,14 @@ class BrowserJob(UrlJobBase):
         """
         from playwright.sync_api import Error as PlaywrightError
 
-        if self.ignore_connection_errors and (
-            isinstance(exception, (PlaywrightError, TransientHTTPError, TransientBrowserError))
-        ):
-            return True
+        if self.ignore_connection_errors:
+            # A TransientHTTPError carrying the synthetic status code of the empty_as_error directive is excluded:
+            # the server did respond, so an empty response is not a connection problem.
+            if isinstance(exception, TransientHTTPError):
+                if exception.status_code != EMPTY_RESPONSE_STATUS_CODE:
+                    return True
+            elif isinstance(exception, (PlaywrightError, TransientBrowserError)):
+                return True
         if (
             self.ignore_timeout_errors
             and isinstance(exception, TransientBrowserError)

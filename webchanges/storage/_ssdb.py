@@ -9,7 +9,7 @@ import os
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any, Callable, Iterable, Iterator
 
 from webchanges.handler import ErrorData, Snapshot
 from webchanges.storage._base import BaseFileStorage
@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 class SsdbStorage(BaseFileStorage):
     """Base class for snapshots storage."""
+
+    # Bulk cleanup optionally provided by backends (e.g. SQLite3). Annotation only — creates no runtime attribute, so
+    # the hasattr() capability check in clean_ssdb() still works.
+    clean_all: Callable[..., int]
 
     @abstractmethod
     def close(self) -> None:
@@ -137,7 +141,7 @@ class SsdbStorage(BaseFileStorage):
         :param keep_entries: Number of entries to keep after deletion.
         """
         if hasattr(self, 'clean_all'):
-            count = self.clean_all(keep_entries)  # ty:ignore[call-non-callable]
+            count = self.clean_all(keep_entries)
             if count:
                 print(f'Deleted {count} old snapshots.')
         else:

@@ -20,6 +20,7 @@ import yaml
 
 from webchanges import __user_agent__
 from webchanges.filters._base import FiltersList  # noqa: TC001 (required for type check)
+from webchanges.jobs._exceptions import TransientHTTPError
 from webchanges.util import TrackSubClasses
 
 try:
@@ -99,14 +100,14 @@ class JobBase(metaclass=TrackSubClasses):
     differ: dict[str, Any] | None = None  # added in 3.21
     diff_filters: str | list[str | dict[str, Any]] | None = None
     diff_tool: str | None = None  # deprecated in 3.21
-    empty_as_transient: bool | None = None  # UrlJobBase
+    empty_as_error: bool | None = None
     enabled: bool | None = None
     encoding: str | None = None  # UrlJobBase
     evaluate: str | None = None  # BrowserJob
     filters: FiltersList | list[FiltersList | dict[str, Any]] | None = None
     fingerprints: dict[str, str | dict[str, Any]] | None = None  # UrlJob (curl_cffi backend only)
     guid: str = ''
-    headers = Headers(encoding='utf-8')  # UrlJobBase
+    headers = Headers(encoding='utf-8')  # UrlJobBase; shared by all jobs not setting it: never mutate it in place
     http_client: Literal['httpx', 'requests', 'curl_cffi'] | None = None  # UrlJob
     http_version: Literal['v1', 'v2', 'v2tls', 'v2_prior_knowledge', 'v3', 'v3only'] | None = None  # UrlJob
     http_credentials: str | None = None  # BrowserJob
@@ -305,6 +306,14 @@ class JobBase(metaclass=TrackSubClasses):
                 f'{yaml.safe_dump(data)}'
             )
 
+        # 'url' and 'command' each identify a different job kind and are mutually exclusive (as the jobs.schema.json
+        # JSON Schema declares); a job with both used to be silently run as a 'command' one, ignoring the URL.
+        if data.get('url') and data.get('command'):
+            raise ValueError(
+                f"Error in jobs file: Job directives 'url' and 'command' are mutually exclusive (a job monitors "
+                f'either a URL or the output of a command):\n{yaml.safe_dump(data)}'
+            )
+
         if 'kind' in data:
             # Used for hooks.py.
             try:
@@ -446,12 +455,18 @@ class JobBase(metaclass=TrackSubClasses):
             # merge defaults from configuration (including dicts) into Job attributes without overwriting them
             for key, value in defaults.items():
                 if key in self.__optional__:
-                    if getattr(self, key) is None:  # for speed
+                    attribute = getattr(self, key, None)
+                    if attribute is None:  # for speed
                         setattr(self, key, value)
-                    elif isinstance(value, (dict, Headers)) and isinstance(getattr(self, key), (dict, Headers)):
+                    elif isinstance(value, (dict, Headers)) and isinstance(attribute, (dict, Headers)):
+                        # Merge into a copy and assign it, never merge in place: a directive that this job does not
+                        # set itself reads the class attribute (e.g. the shared, mutable JobBase.headers), and
+                        # mutating that would leak these defaults into every other job of the run.
+                        merged = copy.deepcopy(attribute)
                         for subkey, subvalue in value.items():
-                            if hasattr(self, key) and subkey not in getattr(self, key):
-                                getattr(self, key)[subkey] = subvalue
+                            if subkey not in merged:
+                                merged[subkey] = subvalue
+                        setattr(self, key, merged)
                     # elif isinstance(defaults[key], list) and isinstance(getattr(self, key), list):
                     #     setattr(self, key, list(set(getattr(self, key) + defaults[key])))
 
@@ -545,6 +560,11 @@ class JobBase(metaclass=TrackSubClasses):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
+        if isinstance(exception, TransientHTTPError):
+            # Instead of a full traceback, just show the error: it describes a condition of the monitored resource
+            # (e.g. an HTTP 503 response, or no data received) and not a failure of webchanges, so a stack trace
+            # would only be alarming noise.
+            return str(exception).strip()
         return tb
 
     def ignore_error(self, exception: Exception) -> bool:
@@ -599,6 +619,7 @@ class Job(JobBase):
         'differ',
         'diff_filters',
         'diff_tool',  # deprecated in 3.21
+        'empty_as_error',
         'enabled',
         'filters',
         'index_number',
@@ -664,7 +685,6 @@ class UrlJobBase(Job):
         'cookies',
         'data',
         'data_as_json',
-        'empty_as_transient',
         'encoding',
         'headers',
         'ignore_cached',

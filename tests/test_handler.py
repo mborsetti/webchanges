@@ -9,16 +9,19 @@ import tempfile
 import warnings
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Callable, Iterator, cast
+from typing import TYPE_CHECKING, Callable, Iterator, cast
 
 import pytest
 
 from webchanges.config import CommandConfig
-from webchanges.handler import JobState, Report, Verb
+from webchanges.handler import JobState, Report, Snapshot, Verb
 from webchanges.jobs import JobBase, ShellJob, UrlJob
 from webchanges.main import Urlwatch
 from webchanges.storage import DEFAULT_CONFIG, SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage
 from webchanges.util import import_module_from_source
+
+if TYPE_CHECKING:
+    import pytest_mock
 
 minidb_is_installed = importlib.util.find_spec('minidb') is not None
 
@@ -181,6 +184,47 @@ def test_same_site_delay_directive(monkeypatch: pytest.MonkeyPatch) -> None:
         assert slept == [0.25]
     finally:
         ssdb_storage.close()
+
+
+def test_not_modified_after_error_does_not_wipe_snapshot(
+    urlwatcher: Urlwatch, ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
+) -> None:
+    """An HTTP 304 arriving while the error counter is >0 must not overwrite the stored snapshot with empty data.
+
+    ``worker.run_jobs`` saves the job state when a 304 follows a failed run (to reset ``tries``). As nothing was
+    retrieved, the job state must carry the last snapshot forward, or an empty one is stored and the next successful
+    run reports a spurious change.
+    """
+    job = JobBase.unserialize({'url': 'https://www.example.com/'})
+    urlwatcher.jobs = [job]
+
+    # Seed the database as if the previous run had failed (tries=2) over a good snapshot.
+    ssdb_storage.save(
+        guid=job.guid,
+        snapshot=Snapshot(
+            data='value: 1',
+            timestamp=1605147837.0,
+            tries=2,
+            etag='"abc"',
+            mime_type='text/plain',
+            error_data={},
+        ),
+        temporary=False,
+    )
+
+    mock_response = mocker.Mock()
+    mock_response.status_code = 304
+    mock_response.headers = {}
+    mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    urlwatcher.run_jobs()
+    ssdb_storage._copy_temp_to_permanent(delete=True)
+
+    snapshot = ssdb_storage.load(job.guid)
+    assert snapshot.data == 'value: 1'
+    assert snapshot.etag == '"abc"'
+    assert snapshot.mime_type == 'text/plain'
+    assert snapshot.tries == 0
 
 
 def test_load_hooks_py() -> None:

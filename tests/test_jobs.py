@@ -9,6 +9,7 @@ import os
 import socket
 import subprocess
 import sys
+import traceback
 from contextlib import ExitStack, nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
@@ -24,6 +25,7 @@ from webchanges.handler import JobState, Snapshot
 from webchanges.jobs import (
     BrowserJob,
     BrowserResponseError,
+    Job,
     JobBase,
     NotModifiedError,
     ShellJob,
@@ -308,10 +310,10 @@ def test_check_429_transient_error_curl_cffi(
     assert job_state.new_data == job_state.old_data
 
 
-def test_empty_as_transient(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
-    """Check that with empty_as_transient an empty response raises a TransientHTTPError (status code 999) and the
+def test_empty_as_error(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
+    """Check that with empty_as_error an empty response raises a TransientHTTPError (status code 999) and the
     last non-empty snapshot is preserved, so a later restoration of the same content shows as unchanged."""
-    job = JobBase.unserialize({'url': 'https://www.example.com/', 'empty_as_transient': True})
+    job = JobBase.unserialize({'url': 'https://www.example.com/', 'empty_as_error': True})
 
     # Create a mock response object returning valid content
     mock_response = mocker.Mock()
@@ -330,13 +332,13 @@ def test_empty_as_transient(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_moc
         job_state.save()
         ssdb_storage._copy_temp_to_permanent(delete=True)
 
-    # Second run: the empty response is treated as a transient error and the old data is preserved
+    # Second run: the empty response is treated as an error and the old data is preserved
     mock_response.text = ''
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
         assert isinstance(job_state.exception, TransientHTTPError)
         assert job_state.exception.status_code == 999
-        assert 'empty_as_transient' in str(job_state.exception)
+        assert 'empty_as_error' in str(job_state.exception)
         assert job_state.error_ignored is False
         assert job_state.old_data == 'value: 1'
         job_state.save()  # on error, save() retains the old data in the snapshot
@@ -350,11 +352,11 @@ def test_empty_as_transient(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_moc
         assert job_state.new_data == job_state.old_data == 'value: 1'
 
 
-def test_empty_as_transient_error_ignored(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
-    """Check that the transient error raised by empty_as_transient (status code 999) can be silenced with
+def test_empty_as_error_error_ignored(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
+    """Check that the error raised by empty_as_error (status code 999) can be silenced with
     ignore_http_error_codes."""
     job = JobBase.unserialize(
-        {'url': 'https://www.example.com/', 'empty_as_transient': True, 'ignore_http_error_codes': 999}
+        {'url': 'https://www.example.com/', 'empty_as_error': True, 'ignore_http_error_codes': 999}
     )
 
     mock_response = mocker.Mock()
@@ -371,10 +373,54 @@ def test_empty_as_transient_error_ignored(ssdb_storage: SsdbSQLite3Storage, mock
         assert job_state.error_ignored is True
 
 
-def test_empty_response_without_empty_as_transient(
+def test_empty_as_error_not_ignored_by_ignore_connection_errors(
     ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
 ) -> None:
-    """Check that without empty_as_transient an empty response is accepted as valid (empty) content."""
+    """Check that ignore_connection_errors does not silence the error raised by empty_as_error: the server did
+    respond, so an empty response is not a connection problem."""
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'empty_as_error': True, 'ignore_connection_errors': True}
+    )
+
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.url = 'https://www.example.com/'
+    mock_response.history = []
+    mock_response.headers = {'Content-Type': 'text/plain'}
+    mock_response.text = ''
+    mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TransientHTTPError)
+        assert job_state.error_ignored is False
+
+    # ...while a genuine transient HTTP error still is silenced by it.
+    assert job.ignore_error(TransientHTTPError('503 Server Error', status_code=503)) is True
+
+
+def test_empty_as_error_whitespace_only(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
+    """Check that a whitespace-only response counts as empty."""
+    job = JobBase.unserialize({'url': 'https://www.example.com/', 'empty_as_error': True})
+
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.url = 'https://www.example.com/'
+    mock_response.history = []
+    mock_response.headers = {'Content-Type': 'text/plain'}
+    mock_response.text = '   \n\n  '
+    mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TransientHTTPError)
+        assert job_state.exception.status_code == 999
+
+
+def test_empty_response_without_empty_as_error(
+    ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
+) -> None:
+    """Check that without empty_as_error an empty response is accepted as valid (empty) content."""
     job = JobBase.unserialize({'url': 'https://www.example.com/'})
 
     mock_response = mocker.Mock()
@@ -384,6 +430,56 @@ def test_empty_response_without_empty_as_transient(
     mock_response.headers = {'Content-Type': 'text/plain'}
     mock_response.text = ''
     mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert job_state.new_data == ''
+
+
+def test_command_job_empty_as_error(ssdb_storage: SsdbSQLite3Storage) -> None:
+    """Check that empty_as_error works in command jobs: no output raises a TransientHTTPError (status code 999) and
+    the last non-empty snapshot is preserved, so a later restoration of the same output shows as unchanged."""
+    print_job = JobBase.unserialize({'command': f'"{sys.executable}" -c "print(\'value: 1\')"', 'empty_as_error': True})
+    # Same guid (i.e. same snapshot) as print_job, but producing no output at all.
+    silent_job = JobBase.unserialize({'command': 'this is replaced below', 'empty_as_error': True})
+    silent_job.command = f'"{sys.executable}" -c "pass"'
+    silent_job.guid = print_job.guid
+    # ...and one producing whitespace only, which also counts as empty.
+    newline_job = JobBase.unserialize({'command': 'this is replaced below', 'empty_as_error': True})
+    newline_job.command = f'"{sys.executable}" -c "print()"'
+    newline_job.guid = print_job.guid
+
+    # First run: the output is saved as the snapshot
+    with JobState(ssdb_storage, print_job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert job_state.new_data == 'value: 1\n'
+        job_state.save()
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+
+    # Second and third runs: the empty output is treated as an error and the old data is preserved
+    for job in (silent_job, newline_job):
+        with JobState(ssdb_storage, job) as job_state:
+            job_state.process()
+            assert isinstance(job_state.exception, TransientHTTPError)
+            assert job_state.exception.status_code == 999
+            assert 'empty_as_error' in str(job_state.exception)
+            assert job_state.error_ignored is False  # command jobs have no ignore_http_error_codes directive
+            assert job_state.old_data == 'value: 1\n'
+            job_state.save()  # on error, save() retains the old data in the snapshot
+            ssdb_storage._copy_temp_to_permanent(delete=True)
+
+    # Fourth run: the output is restored unchanged, so it matches the last non-empty snapshot (no change to report)
+    with JobState(ssdb_storage, print_job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert job_state.new_data == job_state.old_data == 'value: 1\n'
+
+
+def test_command_job_empty_output_without_empty_as_error(ssdb_storage: SsdbSQLite3Storage) -> None:
+    """Check that without empty_as_error a command producing no output is accepted as valid (empty) content."""
+    job = JobBase.unserialize({'command': f'"{sys.executable}" -c "pass"'})
 
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
@@ -942,6 +1038,25 @@ def test_no_required_directive_plural() -> None:
     )
 
 
+def test_url_and_command_are_mutually_exclusive() -> None:
+    job_data = {'url': 'https://www.example.com', 'command': 'echo test'}
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        JobBase.unserialize(job_data)
+    assert str(pytest_wrapped_e.value) == (
+        f"Error in jobs file: Job directives 'url' and 'command' are mutually exclusive (a job monitors either a URL "
+        f'or the output of a command):\n{yaml.safe_dump(job_data)}'
+    )
+
+    # An explicit 'kind' does not make the combination acceptable.
+    job_data = {'kind': 'command', 'url': 'https://www.example.com', 'command': 'echo test'}
+    with pytest.raises(ValueError, match="'url' and 'command' are mutually exclusive"):
+        JobBase.unserialize(job_data)
+
+    # A falsy value in either directive is not a conflict (it fails the 'no job type' check instead).
+    with pytest.raises(ValueError, match="don't match a job type"):
+        JobBase.unserialize({'url': '', 'command': ''})
+
+
 def test_invalid_directive() -> None:
     job_data = {'url': 'https://www.example.com', 'directive_with_typo': 'this directive does not exist'}
     with pytest.raises(ValueError) as pytest_wrapped_e:
@@ -956,6 +1071,67 @@ def test_invalid_directive() -> None:
         '\n'
         '   Please check for typos or refer to the documentation.'
     )
+
+
+@pytest.mark.parametrize(
+    'job_data',
+    [
+        {'url': 'https://www.example.com/'},
+        {'url': 'https://www.example.com/', 'use_browser': True},
+        {'command': 'echo test'},
+        None,  # a plain Job, i.e. what a job class defined in hooks.py inherits from
+    ],
+    ids=['url', 'browser', 'command', 'base'],
+)
+def test_format_error_transient_http_error_has_no_traceback(job_data: dict[str, Any] | None) -> None:
+    """A TransientHTTPError describes a condition of the monitored resource, not a webchanges failure, so reports
+    show its message rather than a full Python traceback."""
+    job = JobBase.unserialize(job_data) if job_data else Job()
+
+    for exception in (
+        TransientHTTPError('503 Server Error: Service Unavailable for url: https://www.example.com/', status_code=503),
+        TransientHTTPError('No data received and empty_as_error is set', status_code=999),
+    ):
+        try:
+            raise exception
+        except TransientHTTPError as e:
+            formatted = job.format_error(e, traceback.format_exc())
+        assert formatted == str(exception)
+        assert 'Traceback (most recent call last)' not in formatted
+
+
+def test_format_error_other_exception_keeps_traceback() -> None:
+    """Exceptions that are not recognized still fall back to the full traceback, which aids debugging."""
+    for job_data in ({'url': 'https://www.example.com/'}, {'command': 'echo test'}):
+        job = JobBase.unserialize(job_data)
+        try:
+            raise RuntimeError('something unexpected')
+        except RuntimeError as e:
+            formatted = job.format_error(e, traceback.format_exc())
+        assert formatted.startswith('Traceback (most recent call last)')
+        assert 'RuntimeError: something unexpected' in formatted
+
+
+def test_job_defaults_dict_does_not_leak_between_jobs() -> None:
+    """Applying a dict-valued job_default (e.g. headers) must not leak into other jobs.
+
+    A job that doesn't set the directive itself reads the class attribute (``JobBase.headers`` is a shared, mutable
+    ``Headers`` object), so ``_set_defaults`` must merge into a copy rather than in place.
+    """
+    config = cast('_Config', {'job_defaults': {'url': {'headers': {'X-Test': 'from-job-defaults'}}}})
+
+    url_job = JobBase.unserialize({'url': 'https://www.example.com/'})
+    job_with_defaults = url_job.with_defaults(config)
+    assert job_with_defaults.headers['X-Test'] == 'from-job-defaults'  # the default did get applied...
+
+    # ...but only to that job: not to the class attribute, nor to any other job (of any kind).
+    assert 'X-Test' not in JobBase.headers
+    assert 'X-Test' not in url_job.headers
+    assert 'X-Test' not in JobBase.unserialize({'url': 'https://www.example.org/'}).headers
+
+    command_job = JobBase.unserialize({'command': 'echo test'})
+    assert 'X-Test' not in command_job.headers
+    assert command_job.serialize() == {'command': 'echo test'}
 
 
 def test_validate_wrong_type_bool() -> None:
@@ -1146,12 +1322,12 @@ def test_browser_connect_over_cdp_wrong_type() -> None:
         JobBase.unserialize(job_data)
 
 
-def test_browser_job_empty_as_transient_accepted() -> None:
-    """``empty_as_transient`` is accepted by ``JobBase.unserialize`` for browser jobs (extended in 3.38)."""
-    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'empty_as_transient': True}
+def test_browser_job_empty_as_error_accepted() -> None:
+    """``empty_as_error`` is accepted by ``JobBase.unserialize`` for browser jobs (extended in 3.38)."""
+    job_data = {'url': 'https://www.example.com', 'use_browser': True, 'empty_as_error': True}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, BrowserJob)
-    assert job.empty_as_transient is True
+    assert job.empty_as_error is True
 
 
 # --- CDP cache teardown (connect_over_cdp) ------------------------------------
@@ -1318,7 +1494,7 @@ def test_acquire_cdp_browser_caches_and_releases(reset_cdp_cache: None, monkeypa
     assert _browser._cdp_cache.browsers == {}
 
 
-# --- empty_as_transient for browser jobs ---------------------------------------
+# --- empty_as_error for browser jobs -------------------------------------------
 # These tests fake the Playwright objects (via a patched _acquire_cdp_browser), so no real browser is needed;
 # playwright and psutil must still be importable because BrowserJob.retrieve() imports them up front.
 
@@ -1402,23 +1578,24 @@ def _make_faked_browser_job(monkeypatch: pytest.MonkeyPatch, body: bytes, job_ex
 
 
 @playwright_required
-def test_browser_empty_as_transient_empty_body(
-    ssdb_storage: SsdbSQLite3Storage, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize('body', [b'', b'  \n\n '], ids=['zero-byte', 'whitespace-only'])
+def test_browser_empty_as_error_empty_body(
+    ssdb_storage: SsdbSQLite3Storage, monkeypatch: pytest.MonkeyPatch, body: bytes
 ) -> None:
-    """With empty_as_transient, a zero-byte document raises a TransientHTTPError with the synthetic status 999."""
-    job = _make_faked_browser_job(monkeypatch, b'', {'empty_as_transient': True})
+    """With empty_as_error, an empty document raises a TransientHTTPError with the synthetic status 999."""
+    job = _make_faked_browser_job(monkeypatch, body, {'empty_as_error': True})
     with JobState(ssdb_storage, job) as job_state, pytest.raises(TransientHTTPError) as exc_info:
         job.retrieve(job_state)
     assert exc_info.value.status_code == 999
-    assert 'empty_as_transient' in str(exc_info.value)
+    assert 'empty_as_error' in str(exc_info.value)
 
 
 @playwright_required
-def test_browser_empty_as_transient_nonempty_body(
+def test_browser_empty_as_error_nonempty_body(
     ssdb_storage: SsdbSQLite3Storage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """With empty_as_transient, a non-empty document is retrieved normally."""
-    job = _make_faked_browser_job(monkeypatch, b'<html><body>value: 1</body></html>', {'empty_as_transient': True})
+    """With empty_as_error, a non-empty document is retrieved normally."""
+    job = _make_faked_browser_job(monkeypatch, b'<html><body>value: 1</body></html>', {'empty_as_error': True})
     with JobState(ssdb_storage, job) as job_state:
         data, etag, _mime_type = job.retrieve(job_state)
     assert data == _FakeBrowserPage.dom_skeleton
@@ -1426,10 +1603,10 @@ def test_browser_empty_as_transient_nonempty_body(
 
 
 @playwright_required
-def test_browser_empty_body_without_empty_as_transient(
+def test_browser_empty_body_without_empty_as_error(
     ssdb_storage: SsdbSQLite3Storage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Without empty_as_transient, a zero-byte document is retrieved as the (skeleton) rendered page."""
+    """Without empty_as_error, a zero-byte document is retrieved as the (skeleton) rendered page."""
     job = _make_faked_browser_job(monkeypatch, b'', {})
     with JobState(ssdb_storage, job) as job_state:
         data, _etag, _mime_type = job.retrieve(job_state)
@@ -1439,10 +1616,21 @@ def test_browser_empty_body_without_empty_as_transient(
 @playwright_required
 def test_browser_ignore_error_transient_http_codes() -> None:
     """In browser jobs, ignore_http_error_codes also silences TransientHTTPError (incl. the synthetic 999 raised
-    by empty_as_transient), fixed in 3.38."""
+    by empty_as_error), fixed in 3.38."""
     job = JobBase.unserialize({'url': 'https://www.example.com/', 'use_browser': True, 'ignore_http_error_codes': 999})
-    assert job.ignore_error(TransientHTTPError('No data and empty_as_transient is set', status_code=999)) is True
+    assert job.ignore_error(TransientHTTPError('No data and empty_as_error is set', status_code=999)) is True
     assert job.ignore_error(TransientHTTPError('Server Error', status_code=500)) is False
+
+
+@playwright_required
+def test_browser_ignore_connection_errors_does_not_silence_empty() -> None:
+    """In browser jobs, ignore_connection_errors silences genuine transient errors but not the synthetic 999 raised
+    by empty_as_error: the server did respond, so an empty response is not a connection problem."""
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'use_browser': True, 'ignore_connection_errors': True}
+    )
+    assert job.ignore_error(TransientHTTPError('No data and empty_as_error is set', status_code=999)) is False
+    assert job.ignore_error(TransientHTTPError('Server Error', status_code=503)) is True
 
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'use_browser': True, 'ignore_http_error_codes': '5xx'}
@@ -1450,7 +1638,7 @@ def test_browser_ignore_error_transient_http_codes() -> None:
     assert job.ignore_error(TransientHTTPError('Service Unavailable', status_code=503)) is True
 
     job = JobBase.unserialize({'url': 'https://www.example.com/', 'use_browser': True})
-    assert job.ignore_error(TransientHTTPError('No data and empty_as_transient is set', status_code=999)) is False
+    assert job.ignore_error(TransientHTTPError('No data and empty_as_error is set', status_code=999)) is False
 
 
 # @playwright_required

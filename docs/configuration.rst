@@ -170,8 +170,8 @@ config file. The following example will set default headers for all ``url`` jobs
          Upgrade-Insecure-Requests: 1
          User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36
 
-The above config file sets all jobs to use the suppress_repeated_errors option and ``url`` jobs without the ``browser``
-directive to use the specified headers.
+The above config file sets all jobs to use the suppress_repeated_errors option and ``url`` jobs without the
+``use_browser`` directive to use the specified headers.
 
 The possible sub-directives to ``job_defaults`` are:
 

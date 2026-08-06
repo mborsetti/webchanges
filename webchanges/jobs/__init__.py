@@ -12,6 +12,7 @@ from webchanges.jobs._base import (
 )
 from webchanges.jobs._browser import BrowserJob
 from webchanges.jobs._exceptions import (
+    EMPTY_RESPONSE_STATUS_CODE,
     BrowserResponseError,
     NotModifiedError,
     TransientBrowserError,
@@ -22,6 +23,7 @@ from webchanges.jobs._url import UrlJob
 
 __all__ = [
     'CHARSET_RE',
+    'EMPTY_RESPONSE_STATUS_CODE',
     'BrowserJob',
     'BrowserResponseError',
     'Job',

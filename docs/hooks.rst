@@ -287,7 +287,7 @@ Example ``hooks.py`` file:
        __kind__ = "hooks_save_text_report"
 
        def submit(self, **kwargs: Any) -> Iterable[str]:
-           Path(self.config["filename"]).write_text("\n".join(super().submit()))  # ty:ignore[invalid-key]
+           Path(self.config["filename"]).write_text("\n".join(super().submit()))
            return []
 
 
@@ -305,7 +305,7 @@ Example ``hooks.py`` file:
        __kind__ = "hooks_save_html_report"
 
        def submit(self, **kwargs: Any) -> Iterable[str]:
-           Path(self.config["filename"]).write_text("\n".join(super().submit()))  # ty:ignore[invalid-key]
+           Path(self.config["filename"]).write_text("\n".join(super().submit()))
            return []
 
 

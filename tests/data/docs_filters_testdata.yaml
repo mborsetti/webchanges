@@ -360,16 +360,14 @@ https://example.net/pypdf-test.pdf:
 https://example.net/pypdf-test-password.pdf:
   filename: pdf-test-password.pdf
   output: "A password-protected PDF Document that can be turned into plain text. "
+# pypdf's 'layout' extraction mode no longer pads this single-column document with alignment spaces (checked with
+# pypdf 6.14.2), so the expected output below matches its 'plain' mode except for the trailing space.
 https://example.net/pypdf-test-layout.pdf:
   filename: pdf-test.pdf
-  output: >-
-    A PDF         Document                 that can be turned into                              plain
-    te         xt.
+  output: "A PDF Document that can be turned into plain text."
 https://example.net/pypdf-test-monospace.pdf:
   filename: pdf-test.pdf
-  output: >-
-    A PDF         Document                 that can be turned into                              plain
-    te         xt.
+  output: "A PDF Document that can be turned into plain text."
 https://example.net/pypdf-no-multiple-spaces.pdf:
   filename: pdf-test-multiple-spaces.pdf
   output: "This PDF document has lots of multiple\nspaces."
@@ -669,13 +667,15 @@ https://example.org/reverse-paragraphs.txt:
 
     When there are multiple
     paragraphs like this.
+# The 'The job number is' and 'The job JSON is' lines below are not compared verbatim (they depend on how many jobs
+# precede this one in filters.rst); see the special case in tests/test_docs_filters.py.
 https://example.net/execute.html:
   input: TEST
   output: |-
     The data is 'TEST'
     The job location is 'https://example.net/execute.html'
     The job name is 'Test execute filter'
-    The job number is '20'
+    The job number is '21'
     The job JSON is '{"filter": [{"execute": "python -c \"import os, sys; print(f\\\"The data is '{sys.stdin.read()}'\\nThe job location is '{os.getenv('WEBCHANGES_JOB_LOCATION')}'\\nThe job name is '{os.getenv('WEBCHANGES_JOB_NAME')}'\\nThe job number is '{os.getenv('WEBCHANGES_JOB_INDEX_NUMBER')}'\\nThe job JSON is '{os.getenv('WEBCHANGES_JOB_JSON')}'\\\", end='')\""}], "index_number": 58, "name": "Test execute filter", "url": "https://example.net/execute.html"}'
 https://example.net/shellpipe.html:
   input: |

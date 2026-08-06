@@ -361,13 +361,13 @@ headers
 ^^^^^^^
 Headers to send along with the request (a dict).
 
-The headers found in a job are merged case-insensitively with the default ones (including those found in ``config
-.yaml``).  In case of conflicts, the header in the job will replace the default one.
+The headers found in a job are merged case-insensitively with the default ones (including those found in
+``config.yaml``).  In case of conflicts, the header in the job will replace the default one.
 
 See examples :ref:`here <default_headers>`.
 
-Jobs without ``browser: true``
-******************************
+Jobs without ``use_browser: true``
+**********************************
 The default headers are:
 
 .. code-block:: yaml
@@ -378,11 +378,11 @@ The default headers are:
    connection: 'keep-alive'
    user-agent: # set by the HTTP client, e.g. 'python-httpx/0.27.0'
 
-Jobs with ``browser: true``
-***************************
+Jobs with ``use_browser: true``
+*******************************
 The default headers are set by the browser.
 
-Note that if the :ref:`referer <referer>` directive if specified, its contents will replace the content of the `Referer
+Note that if the :ref:`referer <referer>` directive is specified, its contents will replace the content of the `Referer
 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer>`__ header.
 
 
@@ -569,51 +569,6 @@ the easiest way to protect all your sites at once.
 .. versionchanged:: 3.37
    Makes configurable, and off by default, the previously automatic (random 0.1 to 1.0 second) delaying of jobs
    sharing a network location.
-
-
-.. _empty_as_transient:
-
-empty_as_transient
-^^^^^^^^^^^^^^^^^^
-Treat an empty response from the server as a transient HTTP error instead of as valid (empty) content (true/false).
-Defaults to false.
-
-This is useful with flaky websites (or CDNs) that every now and then return an empty page instead of the content
-being monitored. Without this directive, the empty response is saved as the new snapshot, and you receive a change
-report when the content "disappears" as well as another one when it is restored — even if it is restored to the
-exact same content as before.
-
-When this directive is set to true and the server returns no data, the run is handled like a transient HTTP error
-(with the synthetic HTTP response status code 999): the snapshot database retains the last non-empty content and,
-once the site returns data again, any change is computed against that content, so a mere restoration does not
-trigger a change report.
-
-For jobs with ``use_browser: true``, an empty response means that the browser received a zero-byte document from
-the server: the check is made on the raw network response, as the rendered page source is never empty (the browser
-always builds a minimal document skeleton). This directive therefore does not detect the related failure mode in
-which the server does return content but the page renders empty, e.g. because client-side JavaScript fails to
-populate it; that case is covered by the :ref:`wait_for_selector` directive, since a wait for an element that never
-appears makes the job fail with a transient timeout error, which likewise preserves the last good snapshot instead
-of saving the empty content.
-
-An empty response is still reported as an error (subject to :ref:`max_tries`), so combine this directive with one of
-the following to control error reporting:
-
-* ``max_tries: 3`` (for example), to be notified only if the response is empty for 3 consecutive runs, or
-* ``ignore_http_error_codes: 999``, to never be notified of empty responses (see :ref:`ignore_http_error_codes`).
-
-.. code-block:: yaml
-
-   # yaml-language-server: $schema=jobs.schema.json
-   url: https://example.com/flaky
-   empty_as_transient: true
-   ignore_http_error_codes: 999
-
-.. versionadded:: 3.37
-
-.. versionchanged:: 3.38
-   Extended to ``url`` jobs with ``use_browser: true``.
-
 
 
 Optional directives for ``url`` jobs without ``use_browser: true``
@@ -1218,6 +1173,13 @@ in a folder, output of scripts that query external devices (RPi GPIO), and many 
    name: What is in my home directory?
    command: dir -al ~
 
+The ``command`` and :ref:`url <url>` directives are mutually exclusive, as each one defines a different job type: a
+job containing both is rejected with an error.
+
+.. versionchanged:: 3.38
+   A job containing both ``command`` and ``url`` is now rejected; previously it ran as a ``command`` job, silently
+   ignoring the ``url`` directive.
+
 .. _important_note_for_command_jobs:
 
 .. important:: On Linux and macOS systems, due to security reasons, a ``command`` job or a job with a ``command`` differ
@@ -1367,6 +1329,55 @@ with:
    * Output from ``diff_tool: wdiff`` is colorized in html reports.
 
 
+.. _empty_as_error:
+
+empty_as_error
+--------------
+Treat an empty response or command output as an error instead of as valid (empty) content (true/false). Defaults to
+false.
+
+This is useful with flaky websites (or CDNs) that every now and then return an empty page instead of the content
+being monitored, and with commands that occasionally produce no output. Without this directive, the empty response is
+saved as the new snapshot, and you receive a change report when the content "disappears" as well as another one when
+it is restored — even if it is restored to the exact same content as before.
+
+When this directive is set to true and the job returns no data, the run is handled like a transient HTTP error (with
+the synthetic HTTP response status code 999): the snapshot database retains the last non-empty content and, once the
+job returns data again, any change is computed against that content, so a mere restoration does not trigger a change
+report.
+
+A response or output consisting only of whitespace (e.g. a lone newline, which a shell command emits very easily)
+counts as empty.
+
+For jobs with ``use_browser: true``, an empty response means that the browser received an empty document from the
+server: the check is made on the raw network response, as the rendered page source is never empty (the browser always
+builds a minimal document skeleton). This directive therefore does not detect the related failure mode in which the
+server does return content but the page renders empty, e.g. because client-side JavaScript fails to populate it; that
+case is covered by the :ref:`wait_for_selector` directive, since a wait for an element that never appears makes the
+job fail with a transient timeout error, which likewise preserves the last good snapshot instead of saving the empty
+content.
+
+An empty response is still reported as an error (subject to :ref:`max_tries`), so combine this directive with one of
+the following to control error reporting:
+
+* ``max_tries: 3`` (for example), to be notified only if the response is empty for 3 consecutive runs;
+* for ``url`` jobs, ``ignore_http_error_codes: 999``, to never be notified of empty responses (see
+  :ref:`ignore_http_error_codes`);
+* for ``command`` jobs, which have no ``ignore_http_error_codes`` directive, :ref:`suppress_errors` (which suppresses
+  every error of that job, including a command failing outright).
+
+Note that ``ignore_connection_errors`` does **not** silence it, as the server did respond.
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   url: https://example.com/flaky
+   empty_as_error: true
+   ignore_http_error_codes: 999
+
+.. versionadded:: 3.38
+
+
 .. _enabled:
 
 enabled
@@ -1398,8 +1409,8 @@ matching the contents of this directive to the ``__kind__`` variable of the cust
 
 The three built-in job Classes are:
 
-- ``kind: url`` for ``url`` jobs without the ``browser`` directive;
-- ``kind: browser`` for ``url`` jobs with the ``browser: true`` directive;
+- ``kind: url`` for ``url`` jobs without the ``use_browser`` directive;
+- ``kind: browser`` for ``url`` jobs with the ``use_browser: true`` directive;
 - ``kind: command`` for ``command`` jobs (formerly called ``shell``).
 
 

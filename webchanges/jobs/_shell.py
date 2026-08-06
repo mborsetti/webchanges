@@ -255,4 +255,4 @@ class ShellJob(Job):
             )
         if isinstance(exception, FileNotFoundError):
             return f'Error returned by OS: {str(exception).strip()}'
-        return tb
+        return super().format_error(exception, tb)
