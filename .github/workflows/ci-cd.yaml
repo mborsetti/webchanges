@@ -9,7 +9,15 @@
 # The action pins in this file are bumped by Dependabot PRs (weekly, Friday; see .github/dependabot.yml).
 
 name: Test and deploy release
-on: [push, pull_request, workflow_dispatch]
+on:
+  # Pushes run only for the long-lived branches and release tags; any other branch (e.g. Dependabot's) is tested via
+  # its pull_request event instead of twice. Once `branches` filters push, tags only trigger if listed explicitly.
+  # Test any other branch on demand with: gh workflow run ci-cd.yaml --ref <branch>
+  push:
+    branches: [main, unreleased]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
 
 # Least privilege for the GITHUB_TOKEN (the repository default is write); the deploy job raises its own permissions.
 permissions:

@@ -160,6 +160,9 @@ Internals
   in the deploy job, and test jobs time out after 30 minutes.
 * CI: before publishing, the deploy job now checks that the release tag matches both ``__version__`` and the version
   header of the top ``CHANGELOG.rst`` section, and that this section is no longer dated "Unreleased".
+* CI: the test workflow runs on pushes only to the ``main`` and ``unreleased`` branches and to release tags, so that
+  a pull request's branch (e.g. a Dependabot one) is no longer tested twice, once for the push and once for the pull
+  request.
 
 
 Version 3.37.0
