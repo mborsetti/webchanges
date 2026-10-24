@@ -40,10 +40,15 @@ def _silence_db_close(monkeypatch: pytest.MonkeyPatch) -> None:
     invalidate the in-memory SQLite connection used by subsequent assertions in the same test. Replace ``close``
     with a no-op so a single test can drive multiple actions against the same DB.
 
+    Redis is included because ``SsdbRedisStorage.close()`` deletes its connection (``del self.db``) and the instance
+    is shared via ``tests.test_storage.DATABASE_ENGINES``: closing it here would break every Redis test that runs
+    after this one.
+
     Scoped to this file so that ``test_storage.py::test_migrate_urlwatch_legacy_db`` — which legitimately needs
     ``close()`` to release the file lock before unlinking — is not affected.
     """
     monkeypatch.setattr('webchanges.storage.SsdbSQLite3Storage.close', lambda _self: None)
+    monkeypatch.setattr('webchanges.storage.SsdbRedisStorage.close', lambda _self: None)
     monkeypatch.setattr('webchanges.storage_minidb.SsdbMiniDBStorage.close', lambda _self: None, raising=False)
 
 
