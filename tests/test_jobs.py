@@ -49,7 +49,14 @@ if playwright_is_installed:
 else:
     PlaywrightTimeoutError = Exception
 
-curl_cffi_is_installed = importlib.util.find_spec('curl_cffi') is not None
+# Checks that curl_cffi actually imports, not just that it is installed: on Windows free-threaded Python 3.15t its
+# compiled extension fails to load ('DLL load failed while importing _wrapper'), which webchanges handles like a
+# missing package.
+try:
+    importlib.import_module('curl_cffi.requests')
+    curl_cffi_is_installed = True
+except ImportError:
+    curl_cffi_is_installed = False
 
 here = Path(__file__).parent
 data_path = here.joinpath('data')
