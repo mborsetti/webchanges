@@ -117,7 +117,9 @@ These Python packages are installed automatically by :program:`pip` when install
 * `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect);
 * `h2 <https://github.com/python-hyper/h2>`__;
 * `html2text <https://github.com/Alir3z4/html2text>`__;
-* `httpx <https://github.com/encode/httpx>`__;
+* `httpx <https://github.com/encode/httpx>`__ (the HTTP client; if it is removed, :program:`webchanges` uses
+  ``requests`` or, failing that, ``curl_cffi``, except for the :ref:`ai_google <ai_google_diff>` differ, which
+  requires ``httpx``);
 * `lxml <https://lxml.de>`__;
 * `markdown2 <https://github.com/trentm/python-markdown2>`__;
 * `msgpack <https://msgpack.org/>`__;
