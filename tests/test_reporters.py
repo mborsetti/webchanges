@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import importlib.util
+import io
+import smtplib
+import socket
 import sys
 import traceback
 from smtplib import SMTPAuthenticationError
@@ -417,20 +421,42 @@ def test_html_markdown_to_html_extras() -> None:
     assert HtmlReporter.markdown_to_html('snake_case_name', None, {'middle-word-em': True}) == 'snake<em>case</em>name'
 
 
+def _smtp_handshake_transcript(host: str, port: int) -> str:
+    """Return a transcript of a fresh EHLO exchange with an SMTP server, to explain an unexpected mailer failure."""
+    transcript = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(transcript), smtplib.SMTP(host, port, timeout=SMTP_TIMEOUT) as server:
+            server.set_debuglevel(1)
+            code, reply = server.ehlo()
+            transcript.write(
+                f'\nlocal_hostname sent in EHLO: {server.local_hostname!r} (socket.getfqdn(): {socket.getfqdn()!r})\n'
+                f'EHLO reply: {code} {reply!r}\nextensions: {sorted(server.esmtp_features)}\n'
+            )
+    except (OSError, smtplib.SMTPException) as e:
+        transcript.write(f'\nhandshake failed: {type(e).__name__}: {e}\n')
+    return transcript.getvalue()
+
+
 def test_mailer_send() -> None:
     # Amazon SES answers each failed AUTH mechanism with 535 and keeps the connection open, so smtplib raises
     # SMTPAuthenticationError. Gmail (used until 3.38) now drops the connection after the first failed mechanism,
     # which smtplib surfaces as SMTPServerDisconnected.
+    host, port = 'email-smtp.us-east-1.amazonaws.com', 587
     mailer = SMTPMailer(
         smtp_user='test@example.com',
-        smtp_server='email-smtp.us-east-1.amazonaws.com',
-        smtp_port=587,
+        smtp_server=host,
+        smtp_port=port,
         tls=True,
         auth=True,
         insecure_password='password',  # noqa: S106 possible hardcoded password
     )
-    with pytest.raises(SMTPAuthenticationError) as pytest_wrapped_e:
-        mailer.send(msg=None)
+    try:
+        with pytest.raises(SMTPAuthenticationError) as pytest_wrapped_e:
+            mailer.send(msg=None)
+    except smtplib.SMTPException as e:
+        # Any other SMTP error (e.g. 'STARTTLS extension not supported by server') usually means the server rejected
+        # the EHLO greeting; include what it said so that the cause is visible in the CI log
+        pytest.fail(f'{type(e).__name__}: {e}\n{_smtp_handshake_transcript(host, port)}')
     assert pytest_wrapped_e.value.smtp_code == 535
 
 
