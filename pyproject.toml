@@ -70,15 +70,21 @@ beautify = ['beautifulsoup4', 'jsbeautifier', 'cssbeautifier']
 bs4 = ['beautifulsoup4']
 html5lib = ['html5lib']
 ical2text = ['vobject']
-jq = ['jq; os_name != "nt"']
+jq = ['jq']
 ocr = ['pytesseract', 'Pillow']
 pdf2text = ['pdftotext']
 pypdf = ['pypdf']
 pypdf_crypto = ['pypdf', 'cryptography']
 # differs
 # deepdiff >= 8.0 is required for threshold_to_diff_deeper
-deepdiff = ['deepdiff >= 8.0']
-deepdiff_xml = ['deepdiff >= 8.0', 'xmltodict']
+# deepdiff < 9 on Python >= 3.15: deepdiff 9 requires cachebox < 6, and cachebox 5.x has no 3.15 wheels and cannot be
+# built for 3.15 (it uses PyO3 0.27, which supports Python only up to 3.14). Keep in sync with tests/requirements_*.txt
+deepdiff = ['deepdiff >= 8.0; python_version < "3.15"', 'deepdiff >= 8.0, < 9; python_version >= "3.15"']
+deepdiff_xml = [
+    'deepdiff >= 8.0; python_version < "3.15"',
+    'deepdiff >= 8.0, < 9; python_version >= "3.15"',
+    'xmltodict',
+]
 imagediff = ['Pillow']
 # reporters
 matrix = ['matrix_client']

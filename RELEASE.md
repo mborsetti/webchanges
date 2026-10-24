@@ -14,7 +14,9 @@ October 2027.
 
 ## Added
 - Support for Python 3.15, including its free-threaded (GIL-free) build 3.15t. Please note that certain optional
-  dependencies may not yet support free-threaded Python.
+  dependencies may not yet support free-threaded Python. On Python 3.15, the `deepdiff` and `deepdiff_xml`
+  extras install `deepdiff` 8.x, as `deepdiff` 9 requires a version of `cachebox` that cannot be installed on
+  Python 3.15.
 - New `!env` YAML tag: inserts the value of environment variables anywhere within a string value of the jobs or
   configuration file. Reference a variable as `${VAR}`, or as `${VAR:-default}` to fall back to `default` when
   the variable is not set; an unset variable without a default aborts the run with an error reporting the variable's
@@ -55,6 +57,9 @@ October 2027.
   https://webchanges.readthedocs.io/en/stable/jobs.html#markdown-extras.
 
 ## Changed
+- The `jq` filter is now also available on Windows, as the `jq` Python library now publishes packages for it:
+  `webchanges[jq]` installs it on every operating system. See
+  https://webchanges.readthedocs.io/en/stable/filters.html#jq.
 - On Windows, the `stdout` reporter no longer depends on the `colorama` package to display colors: it now enables
   the console's native processing of ANSI escape sequences (supported since Windows 10), and `colorama` has been
   dropped from the installation requirements.
@@ -139,3 +144,4 @@ October 2027.
 - Code modernized for Python 3.12 and newer: PEP 695 syntax for type aliases and generics.
 - CI: removed the ClusterFuzzLite workflow, an unconfigured template (set up for C++, without fuzz targets) that
   failed on every pull request.
+- Testing: the `jq` filter is now also tested on Windows and on free-threaded Python.

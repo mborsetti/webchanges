@@ -46,8 +46,6 @@ square brackets, like this::
 | ``imagediff`` differ    | * `Pillow <https://python-pillow.org>`__                                |
 +-------------------------+-------------------------------------------------------------------------+
 | ``jq`` filter           | * `jq <https://github.com/mwilliamson/jq.py>`__                         |
-|                         | * **Only available for Linux and macOS** (Windows installation is       |
-|                         |   incomplete)                                                           |
 +-------------------------+-------------------------------------------------------------------------+
 | ``ocr`` filter          | * `pytesseract <https://github.com/madmaze/pytesseract>`__              |
 |                         | * Note: requires Tesseract to be **separately installed** [#f4]_        |

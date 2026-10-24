@@ -854,12 +854,14 @@ follows:
 ``jq``
 ------
 
-Linux/macOS ASCII only
-``````````````````````
+ASCII only
+``````````
 
 The ``jq`` filter uses the Python bindings for `jq <https://stedolan.github.io/jq/>`__, a lightweight ASCII JSON
-processor. It is currently available only for Linux (most flavors) and macOS (no Windows) and does not handle Unicode;
-see :ref:`below <filtering_json>` for a cross-platform and Unicode-friendly way of selecting JSON.
+processor. It does not handle Unicode; see :ref:`below <filtering_json>` for a Unicode-friendly way of selecting JSON.
+
+.. versionchanged:: 3.38
+   Available on Windows (previously Linux and macOS only).
 
 Please also note that command line arguments of the standalone ``jq`` program are NOT supported by this library.
 
@@ -885,8 +887,8 @@ follows:
 
 .. _filtering_json:
 
-Filtering JSON on Windows or containing Unicode and without ``jq``
-``````````````````````````````````````````````````````````````````
+Filtering JSON containing Unicode without ``jq``
+````````````````````````````````````````````````
 Python programmers on all OSs can use an advanced technique to select only certain elements of the JSON object; see
 :ref:`json_dict`. This method will preserve Unicode characters.
 
