@@ -246,27 +246,6 @@ def locate_storage_file(
     return filename
 
 
-def locate_storage_files(
-    filename_list: list[Path],
-    default_path: Path,
-    ext: str | None = None,
-    prefix: str | None = None,
-) -> set[Path]:
-    """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
-
-    :param filename_list: The list of filenames.
-    :param default_path: The default directory.
-    :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
-    :param prefix: The prefix, e.g. 'config', to add with a hypen (e.g. 'config-') for searching if first scan fails.
-
-    :returns: The list filenames, either originals or ones with path where found and/or extension.
-    """
-    filenames = set()
-    for filename in filename_list:
-        filenames.add(locate_storage_file(filename, default_path, ext, prefix))
-    return filenames
-
-
 def first_run(command_config: CommandConfig) -> None:
     """Create configuration and jobs files.
 

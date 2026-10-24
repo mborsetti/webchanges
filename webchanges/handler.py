@@ -111,19 +111,10 @@ class JobState(ContextManager):
         self.history_dic_snapshots = {}
 
     def __enter__(self) -> Self:
-        """Context manager invoked on entry to the body of a with statement to make it possible to factor out standard
-        uses of try/finally statements. Calls the main_thread_enter method of the Job.
+        """Context manager invoked on entry to the body of a with statement.
 
         :returns: Class object.
         """
-        # Below is legacy code that now does nothing, so it's being skipped
-        # try:
-        #     self.job.main_thread_enter()
-        # except Exception as e:
-        #     logger.info(f'Job {self.job.index_number}: Exception while creating resources for job', exc_info=True)
-        #     self.exception = e
-        #     self.traceback = self.job.format_error(e, traceback.format_exc())
-
         return self
 
     def __exit__(
@@ -132,21 +123,10 @@ class JobState(ContextManager):
         exc_value: BaseException | None,
         tb: TracebackType | None,
     ) -> bool | None:
-        """Context manager invoked on exit from the body of a with statement to make it possible to factor out standard
-        uses of try/finally statements. Calls the main_thread_exit() method of the Job.
+        """Context manager invoked on exit from the body of a with statement.
 
         :returns: None.
         """
-        # Below is legacy code that now does nothing, so it's being skipped
-        # try:
-        #     self.job.main_thread_exit()
-        # except Exception:
-        #     # We don't want exceptions from releasing resources to override job run results
-        #     logger.warning(f'Job {self.index_number}: Exception while releasing resources for job', exc_info=True)
-        # if isinstance(exc_value, subprocess.CalledProcessError):
-        #     raise subprocess.SubprocessError(exc_value.stderr)
-        # elif isinstance(exc_value, FileNotFoundError):
-        #     raise OSError(exc_value)
         return None
 
     @staticmethod

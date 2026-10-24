@@ -6,7 +6,6 @@ from __future__ import annotations
 
 __lazy_modules__ = ['asyncio', 'copy', 'email.utils', 'hashlib', 'textwrap', 'urllib.parse', 'warnings']
 
-import asyncio  # noqa: TC003 (required for type check)
 import copy
 import email.utils
 import hashlib
@@ -158,7 +157,6 @@ class JobBase(metaclass=TrackSubClasses):
     is_markdown: bool | None = None
     is_rst: bool | None = None
     kind: str | None = None  # hooks.py
-    loop: asyncio.AbstractEventLoop | None = None
     markdown_extras: dict[str, Any] | None = None
     markdown_padded_tables: bool | None = None
     max_tries: int | None = None
@@ -567,12 +565,6 @@ class JobBase(metaclass=TrackSubClasses):
         :returns: A tuple of the data retrieved, the ETag, and the media type.
         """
         raise NotImplementedError
-
-    def main_thread_enter(self) -> None:
-        """Called from the main thread before running the job. No longer needed (does nothing)."""
-
-    def main_thread_exit(self) -> None:
-        """Called from the main thread after running the job. No longer needed (does nothing)."""
 
     def format_error(self, exception: Exception, tb: str) -> str:
         """Format the error of the job if one is encountered.

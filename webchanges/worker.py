@@ -186,23 +186,8 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                         else:
                             urlwatcher.report.unchanged(job_state)
                     else:
-                        # # No exact match to previous snapshot  [fuzzy matching, untested and no longer makes sense]
-                        # if len(job_state.history_dic_snapshots) > 1:
-                        #     # Find the closest fuzzy matching saved snapshot ("good enough") and use it to diff
-                        #     close_matches: list[str] = difflib.get_close_matches(
-                        #         str(job_state.new_data), (str(k) for k in job_state.history_dic_snapshots.keys()), n=1
-                        #     )
-                        #     if close_matches:
-                        #         logger.warning(
-                        #             f'Job {job_state.job.index_number}: Did not find an existing run in the database,
-                        #             f'but fuzzy matched it based on the contents of the data'
-                        #         )
-                        #         job_state.old_data = close_matches[0]
-                        #         job_state.old_timestamp = job_state.history_dic_snapshots[close_matches[0]].timestamp
-                        #         job_state.old_etag = job_state.history_dic_snapshots[close_matches[0]].etag
-                        #         job_state.old_mime_type = job_state.history_dic_snapshots[close_matches[0]].mime_type
-
-                        # It has different data, so we save it
+                        # It has different data, so we save it. We used to do fuzzy matching, but it no longer makes
+                        # sense.
                         job_state.tries = 0
                         if not read_only:
                             job_state.save()

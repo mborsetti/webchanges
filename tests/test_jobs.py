@@ -33,6 +33,7 @@ from webchanges.jobs import (
     UrlJob,
 )
 from webchanges.jobs._base import DEPRECATED_DIRECTIVES, replace_deprecated_directives
+from webchanges.jobs._browser import _proxy_settings
 from webchanges.jobs._shell import _add_python_verbosity, _logger_verbosity
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
@@ -949,6 +950,26 @@ def test_check_bad_proxy(job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Stor
                 for x in ('Connection refused', 'No connection could be made', 'ERR_PROXY_CONNECTION_FAILED ')
             )
             assert job_state.error_ignored is False
+
+
+@pytest.mark.parametrize(
+    ('proxy', 'expected'),
+    [
+        ('http://proxy.example.com:3128', {'server': 'http://proxy.example.com:3128'}),
+        ('https://proxy.example.com', {'server': 'https://proxy.example.com'}),
+        ('proxy.example.com:3128', {'server': 'http://proxy.example.com:3128'}),
+        ('http://[::1]:3128', {'server': 'http://[::1]:3128'}),
+        ('socks5://proxy.example.com:1080', {'server': 'socks5://proxy.example.com:1080'}),
+        (
+            'https://user:p%40ss@proxy.example.com:8080',
+            {'server': 'https://proxy.example.com:8080', 'username': 'user', 'password': 'p@ss'},
+        ),
+        ('http://user@proxy.example.com:8080', {'server': 'http://proxy.example.com:8080', 'username': 'user'}),
+    ],
+)
+def test_proxy_settings(proxy: str, expected: dict[str, str]) -> None:
+    """Credentials and port are passed to Playwright only if present in the proxy URL."""
+    assert _proxy_settings(proxy) == expected
 
 
 @connection_required

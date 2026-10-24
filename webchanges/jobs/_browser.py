@@ -30,7 +30,7 @@ import warnings
 from contextlib import ExitStack
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Literal
-from urllib.parse import SplitResult, SplitResultBytes, parse_qsl, quote, urlencode, urlparse, urlsplit
+from urllib.parse import SplitResult, parse_qsl, quote, unquote, urlencode, urlparse, urlsplit
 
 from webchanges import __project_name__
 from webchanges.jobs._base import UrlJobBase
@@ -45,7 +45,7 @@ from webchanges.jobs._exceptions import (
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
     try:
-        from playwright.sync_api import Browser, Page, Playwright, Response
+        from playwright.sync_api import Browser, Page, Playwright, ProxySettings, Response
     except ImportError:  # pragma: no cover
         pass
 
@@ -158,6 +158,27 @@ def _acquire_cdp_browser(
     return cache.playwright, browser, False
 
 
+def _proxy_settings(proxy: str) -> ProxySettings:
+    """Convert a proxy URL into Playwright's ProxySettings.
+
+    The port and the (percent-decoded) credentials are included only if present in the URL, e.g.
+    ``https://user:p%40ss@proxy.example.com:8080`` becomes ``{'server': 'https://proxy.example.com:8080', 'username':
+    'user', 'password': 'p@ss'}``. A proxy without a scheme (``proxy.example.com:8080``) is taken to be HTTP.
+
+    :param proxy: The proxy URL.
+    :returns: The ProxySettings for Playwright's ``launch()``.
+    """
+    if '://' not in proxy:
+        proxy = f'http://{proxy}'
+    proxy_split = urlsplit(proxy)
+    settings: ProxySettings = {'server': f'{proxy_split.scheme}://{proxy_split.netloc.rpartition("@")[2]}'}
+    if proxy_split.username is not None:
+        settings['username'] = unquote(proxy_split.username)
+    if proxy_split.password is not None:
+        settings['password'] = unquote(proxy_split.password)
+    return settings
+
+
 class BrowserJob(UrlJobBase):
     """Retrieve a URL using a real web browser (use_browser: true)."""
 
@@ -189,9 +210,6 @@ class BrowserJob(UrlJobBase):
     )
 
     use_browser = True
-
-    proxy_username: str = ''
-    proxy_password: str = ''
 
     # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
     chromium_connection_errors = (  # range 100-199 Connection related errors
@@ -386,7 +404,7 @@ class BrowserJob(UrlJobBase):
         try:
             from playwright._repo_version import version as playwright_version
             from playwright.sync_api import Error as PlaywrightError
-            from playwright.sync_api import HttpCredentials, ProxySettings, Route, sync_playwright
+            from playwright.sync_api import HttpCredentials, Route, sync_playwright
             from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
         except ImportError:  # pragma: no cover
             raise ImportError(
@@ -470,20 +488,11 @@ class BrowserJob(UrlJobBase):
 
         proxy_str = self.get_proxy()
         if proxy_str is not None:
-            proxy_split: SplitResult | SplitResultBytes = urlsplit(proxy_str)
-            proxy: ProxySettings | None = {
-                'server': (
-                    f'{proxy_split.scheme!s}://{proxy_split.hostname!s}:{proxy_split.port!s}'
-                    if proxy_split.port
-                    else ''
-                ),
-                'username': str(proxy_split.username),
-                'password': str(proxy_split.password),
-            }
+            proxy: ProxySettings | None = _proxy_settings(proxy_str)
             proxy_for_logging = proxy.copy()
-            if proxy_for_logging['password']:
+            if proxy_for_logging.get('password'):
                 proxy_for_logging['password'] = '*******'  # noqa: S105 possible hardcoded password
-            logger.debug(f'Job {self.index_number}: Proxy: {proxy_for_logging}')
+            logger.debug('Job %s: Proxy: %s', self.index_number, proxy_for_logging)
         else:
             proxy = None
 

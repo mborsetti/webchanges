@@ -182,12 +182,6 @@ def import_module_from_source(module_name: str, source_path: str | bytes | PathL
     module = importlib.util.module_from_spec(spec)  # ty:ignore[invalid-argument-type]
     sys.modules[module_name] = module
     loader.exec_module(module)
-    # try:
-    #     loader.exec_module(module)
-    # except Exception:
-    #     sys.tracebacklimit = 1000
-    #     raise
-    loader.exec_module(module)
     return module
 
 
@@ -264,7 +258,7 @@ def linkify(
     :parameter permitted_protocols: Protocols which should be linkified, e.g. linkify(text,
         permitted_protocols=('http', 'ftp', 'mailto')); it is very unsafe to include protocols such as javascript.
     """
-    # _url_re = re.compile(  # original re
+    # original _url_re was the following:
     #     r'\b('
     #     r'(?:([\w-]+):(/{1,3})|www[.])'
     #     r'(?:('
@@ -274,7 +268,6 @@ def linkify(
     #     r'|(?:\((?:[^\s&()]|&amp;|&quot;)*\))'
     #     r')+'
     #     r')'
-    # )
 
     _url_re = re.compile(  # modified to catch all URL parameters
         r'\b('

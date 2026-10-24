@@ -794,10 +794,6 @@ class CommandDiffer(DifferBase):
         'is_html': 'Whether the output of the command is HTML',
     }
 
-    re_ptags = re.compile(r'^<p>|</p>$')
-    re_htags = re.compile(r'<(/?)h\d>')
-    re_tagend = re.compile(r'<(?!.*<).*>+$')
-
     def differ(
         self,
         directives: dict[str, Any],
@@ -2457,36 +2453,6 @@ class WdiffDiffer(DifferBase):
                 if i < len(parts) - 1:
                     result_text.append('\n')
                     result_html.append('\n')
-
-        # def append_chunk(tokens: list[str], ansi_color: str | None, html_start: str | None) -> None:
-        #     """
-        #     Appends tokens to results. If style is provided, wraps tokens in style.
-        #     Breaks style application at newlines (<\\n>) to maintain clean output formatting.
-        #     """
-        #     current_line_tokens = []
-
-        #     def flush() -> None:
-        #         if current_line_tokens:
-        #             # Join tokens with space for this segment
-        #             segment = ' '.join(current_line_tokens)
-
-        #             if ansi_color:
-        #                 result_text.append(f'{ansi_color}{segment}{ansi_end}')
-        #                 result_html.append(f'{html_start}{segment}{html_end}')
-        #             else:
-        #                 result_text.append(segment)
-        #                 result_html.append(segment)
-        #             current_line_tokens.clear()
-
-        #     for token in tokens:
-        #         if token == '<\\n>':
-        #             flush()
-        #             # Append newline marker without styling
-        #             result_text.append('<\\n>')
-        #             result_html.append('<\\n>')
-        #         else:
-        #             current_line_tokens.append(token)
-        #     flush()
 
         # Process the diff opcodes
         for tag, i1, i2, j1, j2 in diff.get_opcodes():

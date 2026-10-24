@@ -74,9 +74,6 @@ class StdoutReporter(TextReporter):
     def _green(self, s: str) -> str:
         return self._incolor(2, s)
 
-    def _yellow(self, s: str) -> str:
-        return self._incolor(3, s)
-
     def _blue(self, s: str) -> str:
         return self._incolor(4, s)
 

@@ -24,7 +24,6 @@ from webchanges.cli import (
     load_hooks,
     locate_glob_files,
     locate_storage_file,
-    locate_storage_files,
     migrate_from_legacy,
     python_version_warning,
     setup_logger,
@@ -282,17 +281,6 @@ def test_locate_storage_file_prefix_fallback(tmp_path: Path) -> None:
     (tmp_path / 'config-mine.yaml').write_text('x', encoding='utf-8')
     found = locate_storage_file(Path('mine'), default_path=tmp_path, ext='.yaml', prefix='config')
     assert found == tmp_path / 'config-mine.yaml'
-
-
-def test_locate_storage_files_dedupes(tmp_path: Path) -> None:
-    (tmp_path / 'config.yaml').write_text('x', encoding='utf-8')
-    found = locate_storage_files(
-        [Path('config'), Path('config.yaml')],
-        default_path=tmp_path,
-        ext='.yaml',
-        prefix='config',
-    )
-    assert found == {tmp_path / 'config.yaml'}
 
 
 def test_locate_glob_files_expands_pattern(tmp_path: Path) -> None:
