@@ -5,6 +5,7 @@ data/docs_hooks_testadata.yaml file.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -14,7 +15,6 @@ import docutils.nodes
 import docutils.parsers.rst
 import pytest
 import yaml
-from flake8.api import legacy as flake8
 
 here_path = Path(__file__).resolve().parent
 parent_dir = str(here_path.parent)
@@ -34,8 +34,8 @@ data_path = here_path.joinpath('data')
 docs_path = here_path.parent.joinpath('docs')
 
 
-if sys.version_info < (3, 14):
-    pytest.skip('hooks.py is written for Python 3.14', allow_module_level=True)
+if sys.version_info < (3, 15):
+    pytest.skip('hooks.py is written for Python 3.15', allow_module_level=True)
 
 
 # # https://stackoverflow.com/a/48719723/1047040
@@ -115,8 +115,8 @@ def load_hooks_jobs() -> list[JobBase]:
 HOOKS_DOC_JOBS = load_hooks_jobs()
 testdata = load_hooks_testdata()
 
-HOOKS = load_hooks_from_doc()
-HOOKS = f"import sys\n\nif r'{parent_dir}' not in sys.path:\n    sys.path.insert(0, r'{parent_dir}')\n" + HOOKS
+HOOKS_DOC = load_hooks_from_doc()
+HOOKS = f"import sys\n\nif r'{parent_dir}' not in sys.path:\n    sys.path.insert(0, r'{parent_dir}')\n" + HOOKS_DOC
 spec = importlib.util.spec_from_loader('hooks', loader=None)
 if spec:
     hooks = importlib.util.module_from_spec(spec)
@@ -133,21 +133,34 @@ def test_load_hooks() -> None:
         load_hooks(data_path.joinpath('hooks.does_not_exist.py'))
 
 
-def test_flake8_on_hooks_rst(tmp_path: Path) -> None:
-    """Check that the hooks.py example code in hooks.rst passes flake8."""
-    hooks_path = tmp_path.joinpath('hooks.py')
-    hooks_path.write_text(HOOKS)
-
-    # https://flake8.pycqa.org/en/latest/user/python-api.html
-    style_guide = flake8.get_style_guide(
-        extend_ignore=[
-            'W292',  # No newline at end of file
-            'W503',  # Line break before binary operator [conflicts with W504]
+def test_ruff_on_hooks_rst() -> None:
+    """Check that the hooks.py example code in hooks.rst passes ruff's pycodestyle and pyflakes rules."""
+    # Same rules as flake8's defaults; --preview is needed for pycodestyle's whitespace rules (E1, E2, E3)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            '-m',
+            'ruff',
+            'check',
+            '--isolated',
+            '--no-cache',
+            '--preview',
+            '--select',
+            'E,W,F',
+            '--line-length',
+            '120',
+            '--output-format',
+            'concise',
+            '--stdin-filename',
+            'hooks.py',
+            '-',
         ],
-        max_line_length=120,
+        input=HOOKS_DOC + '\n',
+        capture_output=True,
+        text=True,
+        check=False,
     )
-    report = style_guide.input_file(str(hooks_path))
-    assert report.get_statistics('') == [], 'Flake8 found violations in hooks.py'
+    assert proc.returncode == 0, f'ruff found violations in the hooks.py example:\n{proc.stdout}{proc.stderr}'
 
 
 @pytest.mark.parametrize('job', HOOKS_DOC_JOBS, ids=(v.url for v in HOOKS_DOC_JOBS))
