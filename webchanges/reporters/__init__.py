@@ -5,7 +5,14 @@
 
 from __future__ import annotations
 
-from webchanges.reporters._base import HtmlReporter, MarkdownReporter, ReporterBase, TextReporter
+from webchanges.reporters._base import (
+    HtmlReporter,
+    MarkdownReporter,
+    ReporterBase,
+    TextReporter,
+    filter_by_tags,
+    reporter_configs,
+)
 from webchanges.reporters._browser import BrowserReporter
 from webchanges.reporters._chat import (
     XMPP,
@@ -59,6 +66,8 @@ __all__ = [
     'WebServiceReporter',
     'WebhookReporter',
     'XMPPReporter',
+    'filter_by_tags',
+    'reporter_configs',
     'xmpp_have_password',
     'xmpp_set_password',
 ]

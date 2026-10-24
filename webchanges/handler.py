@@ -89,6 +89,7 @@ class JobState(ContextManager):
     old_etag: str = ''
     old_mime_type: str = 'text/plain'
     old_timestamp: float = 1605147837.511478  # initialized to the first release of webchanges!
+    reported_count: int = 0  # the number of reporters this job was submitted to (see ReporterBase.submit_one)
     traceback: str
     tries: int = 0  # if >1, an error; value is the consecutive number of runs leading to an error
     unfiltered_diff: dict[ReportKind, str]
@@ -341,11 +342,16 @@ class JobState(ContextManager):
         """Returns whether the new data is in markdown."""
         return self.new_mime_type == 'text/markdown' or bool(self.job.is_markdown)
 
+    def is_rst(self) -> bool:
+        """Returns whether the new data is in rst."""
+        return self.new_mime_type == 'text/x-rst' or bool(self.job.is_rst)
+
 
 class Report:
     """The base class for reporting."""
 
     new_release_future: Future[str | bool] | None = None
+    reporters_enabled: bool = False  # set by finish()/finish_one(): whether at least one reporter ran
     start: float = time.perf_counter()
 
     def __init__(self, urlwatch: Urlwatch) -> None:
@@ -507,19 +513,28 @@ class Report:
         end = time.perf_counter()
         duration = end - self.start
 
-        ReporterBase.submit_all(self, self.job_states, duration, jobs_file)
+        self.reporters_enabled = ReporterBase.submit_all(self, self.job_states, duration, jobs_file)
 
-    def finish_one(self, name: str, jobs_file: list[Path] | None = None, check_enabled: bool | None = True) -> None:
+    def finish_one(
+        self,
+        name: str,
+        jobs_file: list[Path] | None = None,
+        check_enabled: bool | None = True,
+        apply_tags: bool = True,
+    ) -> None:
         """Finish job run of one: determine its duration and generate reports by submitting job_states to
         :py:Class:`ReporterBase` :py:func:`submit_one`.  Used in testing.
 
         :param name: The name of the reporter to run.
         :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
         :param check_enabled: If True (default), run reports only if they are enabled in the configuration.
+        :param apply_tags: If True (default), honor the 'tags' directive of the reporter's configuration(s).
         """
         end = time.perf_counter()
         duration = end - self.start
         if jobs_file is None:
             jobs_file = []
 
-        ReporterBase.submit_one(name, self, self.job_states, duration, jobs_file, check_enabled)
+        self.reporters_enabled = ReporterBase.submit_one(
+            name, self, self.job_states, duration, jobs_file, check_enabled, apply_tags
+        )

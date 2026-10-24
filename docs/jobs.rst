@@ -518,7 +518,7 @@ E.g. ``https://username:password@proxy.com:8080``.
    Works for all ``url`` jobs, including those with ``use_browser: true``.
 
 .. versionchanged:: 3.28
-   Replaces two separate directives, ``http_proxy`` and ``https_proxy``.
+   Replaces two separate directives, ``http_proxy`` and ``https_proxy``, which are still recognized.
 
 
 .. _no_conditional_request:
@@ -1418,9 +1418,59 @@ The three built-in job Classes are:
 
 is_markdown
 -----------
-Data is in Markdown format (true/false). Defaults to false unless set by a filter such as ``html2text``.
+Data is in Markdown format (true/false). Defaults to false unless the media type is ``text/markdown`` (from a website or set by a filter, such as ``html2text``).
 
 Tells the ``html`` report that the data is in Markdown format and should be reconstructed into HTML.
+
+
+.. _is_rst:
+
+is_rst
+------
+Data is in reStructuredText format (true/false). Defaults to false unless the media type is ``text/x-rst``.
+
+Tells the ``html`` report that the data is in reStructuredText format and should be reconstructed into HTML.
+
+
+.. _markdown_extras:
+
+markdown_extras
+---------------
+Options for the `markdown2 <https://github.com/trentm/python-markdown2>`__ library used to convert Markdown data (see
+:ref:`is_markdown`) into HTML for the ``html`` and ``email`` reports, as a dict of its `extras
+<https://github.com/trentm/python-markdown2/wiki/Extras>`__: the name of each extra, followed by its options or by
+nothing (``null``) if it takes none.
+
+The extras specified are applied over the following ones, which :program:`webchanges` always uses:
+
+* ``strike``: text enclosed in double tildes is ``~~struck through~~``;
+* ``target-blank-links``: links open in a new tab or window;
+* ``middle-word-em: false``: emphasis markers within a word are left as they are, so that ``snake_case_name`` is not
+  rendered as snake\ *case*\ name.
+
+To reinstate the emphasis within words (the library's default), for example:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   markdown_extras:
+     middle-word-em: true
+
+Or, to also render straight quotes and double dashes as typographic ones (“curly quotes” and en dashes):
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   markdown_extras:
+     smarty-pants:
+
+Note that the data of a report is converted one line at a time, so extras that act on blocks of lines (e.g.
+``tables`` or ``fenced-code-blocks``) have no effect there.
+
+The directive can be set for all jobs, or for all jobs of a kind, with ``job_defaults`` in the configuration file
+(see :ref:`here <job_defaults>`).
+
+.. versionadded:: 3.38
 
 
 .. _max_tries:
@@ -1517,6 +1567,39 @@ the first time it is encountered. No more error notifications will be sent unles
 be notified only if the error resolves or a different error occurs.
 
 .. versionadded:: 3.27
+
+
+.. _tags:
+
+tags
+----
+One tag, or a list of tags, used to group jobs (a string or a list of strings).
+
+Tags do nothing by themselves; they let you act on a group of jobs:
+
+* on the command line, ``--tags`` runs only the jobs having any of the tags listed (see :ref:`here <tags_cli>`);
+* in the configuration file, a reporter's ``tags`` directive restricts that reporter to the jobs having any of the
+  tags listed, which (combined with configuring the same reporter more than once) allows different jobs to be
+  reported to different destinations (see :ref:`here <reporter_tags>`).
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   name: Bank balance
+   url: https://example.com/balance
+   tags: personal
+   ---
+   # yaml-language-server: $schema=jobs.schema.json
+   name: Service status
+   url: https://example.com/status
+   tags:
+     - team
+     - ops
+
+A job with no ``tags`` directive is never selected by ``--tags`` nor by a reporter's ``tags`` directive; it is
+reported by every reporter that has no ``tags`` directive of its own.
+
+.. versionadded:: 3.38
 
 
 .. _name:

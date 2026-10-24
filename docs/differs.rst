@@ -318,7 +318,8 @@ Optional directives
    Transient API errors are retried automatically: an HTTP ``429`` (rate limit) is retried one second after the delay
    the server requests (the extra second covers the server truncating its requested delay to whole seconds), and an
    HTTP ``503`` (service unavailable) is retried after a fixed 45 seconds. Retries continue until the cumulative time
-   spent waiting would exceed 244 seconds, at which point it gives up.
+   spent waiting would exceed 244 seconds, at which point it gives up; the error summary then states how many retries
+   were made and for how long it waited in total (or that the error was not retried).
 
 Data to diff
 ::::::::::::

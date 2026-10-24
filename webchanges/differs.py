@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, tzinfo
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Iterator, Literal, NoReturn, TypedDict
 from xml.parsers.expat import ExpatError
 
 import html2text
@@ -36,41 +36,48 @@ if TYPE_CHECKING:
     from webchanges.jobs import JobBase
 
 
+# The fallback assignments below are hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     from deepdiff import DeepDiff
 
     if TYPE_CHECKING:
         from deepdiff.model import DiffLevel
 except ImportError as e:  # pragma: no cover
-    DeepDiff = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        DeepDiff = str(e)
 
 
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    httpx = None  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        httpx = None
 if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # ty:ignore[invalid-assignment]
+        h2 = None
 
 try:
     import numpy as np
 except ImportError as e:  # pragma: no cover
-    np = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        np = str(e)
 
 try:
     from PIL import Image, ImageChops, ImageEnhance, ImageStat
 except ImportError as e:  # pragma: no cover
-    Image = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        Image = str(e)
 
 import json
 
 try:
     import xmltodict
 except ImportError as e:  # pragma: no cover
-    xmltodict = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        xmltodict = str(e)
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -205,11 +212,16 @@ def _ai_google_post_with_retry(
         **kwargs: Additional keyword arguments passed to ``http_client.post``.
 
     Returns:
-        The final httpx response (the first success, or the last response once retrying stops).
+        The final httpx response (the first success, or the last response once retrying stops). The number of retries
+        made and the cumulative seconds slept are recorded in ``response.extensions`` under the keys
+        ``'webchanges_retries'`` and ``'webchanges_total_wait'``, so that callers can report them.
     """
     total_wait = 0.0
+    retries = 0
     while True:
         response = http_client.post(url, **kwargs)
+        response.extensions['webchanges_retries'] = retries
+        response.extensions['webchanges_total_wait'] = total_wait
         logger.debug(f'Job {job.index_number}: Google AI POST to {response.url.host} returned {response.status_code}')
         wait = _ai_google_retry_wait(response)
         if wait is None:
@@ -227,6 +239,7 @@ def _ai_google_post_with_retry(
             )
             break
         total_wait += wait
+        retries += 1
         logger.info(
             f'Job {job.index_number}: Google AI returned {response.status_code}; retrying in {wait:.1f}s '
             f'(cumulative wait {total_wait:.1f}s of {AI_GOOGLE_MAX_TOTAL_WAIT}s max)'
@@ -519,7 +532,7 @@ class DifferBase(metaclass=TrackSubClasses):
         parser.wrap_links = False
         return '\n'.join(line.rstrip() for line in parser.handle(data).splitlines())
 
-    def raise_import_error(self, package_name: str, error_message: str) -> None:
+    def raise_import_error(self, package_name: str, error_message: str) -> NoReturn:
         """Raise ImportError for missing package.
 
         :param package_name: The name of the module/package that could not be imported.
@@ -581,7 +594,7 @@ class UnifiedDiffer(DifferBase):
 
             if line_num > 1 and line[0] != '@':  # don't apply to headers or range information
                 if is_markdown or line[0] == '/':  # our informational header
-                    line = mark_to_html(line[1:], self.job.markdown_padded_tables)
+                    line = mark_to_html(line[1:], self.job.markdown_padded_tables, self.job.markdown_extras)
                 else:
                     line = linkify(line[1:])
             return f'<tr><td{style}>{line}</td></tr>'
@@ -1140,8 +1153,9 @@ class DeepdiffDiffer(DifferBase):
                 """
 
                 def stringify_value(value: Any, value_type: str) -> str:  # noqa: ANN401 Dynamically typed expressions Any are disallowed
+                    extras = self.job.markdown_extras
                     if value_type in {'str', 'int', 'float'}:
-                        return f"'{mark_to_html(str(value))}'"
+                        return f"'{mark_to_html(str(value), extras=extras)}'"
                     if value_type in {'dict', 'list'}:
                         if compact:
                             value_string = yaml.safe_dump(
@@ -1154,10 +1168,10 @@ class DeepdiffDiffer(DifferBase):
                             value_list = value_string.splitlines(keepends=True)
                             if len(value_list) < 2:
                                 return value_string
-                            value_string = mark_to_html('\n    ' + '    '.join(value_list))
+                            value_string = mark_to_html('\n    ' + '    '.join(value_list), extras=extras)
                             return value_string.rstrip()
-                        return mark_to_html(json.dumps(value, ensure_ascii=False, indent=2))
-                    return mark_to_html(str(value))
+                        return mark_to_html(json.dumps(value, ensure_ascii=False, indent=2), extras=extras)
+                    return mark_to_html(str(value), extras=extras)
 
                 type_t1 = type(ddiff.t1).__name__
                 val_t1 = stringify_value(ddiff.t1, type_t1)
@@ -1853,7 +1867,9 @@ class ImageDiffer(DifferBase):
             ),
             'html': '<br>\n'.join(
                 [
-                    mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
+                    mark_to_html(summary, extras={'tables': None, **(self.job.markdown_extras or {})})
+                    .replace('<h2>', '<h3>')
+                    .replace('</h2>', '</h3>'),
                     '',
                     *htm,
                     '-----',
@@ -2024,7 +2040,23 @@ class AIGoogleDiffer(DifferBase):
             )
             if r.content:
                 # summary += f': {r.json().get("error", {}).get("message") or ""}'
-                summary += f': {r.content}'
+                summary += f': `{r.content}`'
+            if r.status_code in (429, 503):
+                # Make it clear whether the transient error persisted through the automatic retries or was never
+                # retried (e.g. the response carried no parseable retry delay).
+                retries = r.extensions.get('webchanges_retries', 0)
+                total_wait = r.extensions.get('webchanges_total_wait', 0.0)
+                if retries:
+                    summary += (
+                        f'\n\nStill failing after {retries} automatic '
+                        f'{"retry" if retries == 1 else "retries"} and {total_wait:.1f} seconds of waiting '
+                        f'(limit {AI_GOOGLE_MAX_TOTAL_WAIT} seconds).'
+                    )
+                else:
+                    summary += (
+                        '\n\nNot retried automatically (the response carried no usable retry delay, or the requested '
+                        f'delay alone exceeded the {AI_GOOGLE_MAX_TOTAL_WAIT}-second limit).'
+                    )
 
         return summary, model_version
 
@@ -2249,7 +2281,9 @@ class AIGoogleDiffer(DifferBase):
             'markdown': (f'{summary}\n\n{unified_report["markdown"]}' + (f'\n* * *\n{footer}' if footer else '')),
             'html': '\n'.join(
                 [
-                    mark_to_html(summary, extras={'tables'}).replace('<h2>', '<h3>').replace('</h2>', '</h3>'),
+                    mark_to_html(summary, extras={'tables': None, **(self.job.markdown_extras or {})})
+                    .replace('<h2>', '<h3>')
+                    .replace('</h2>', '</h3>'),
                     '<br>',
                     '<br>',
                     unified_report['html'],
@@ -2599,7 +2633,11 @@ class WdiffDiffer(DifferBase):
         if self.state.is_markdown():
             diff_text = diff_text.replace('</s>', ' ')
             diff_html = diff_html.replace('</s>', ' ')
-            diff_html = mark_to_html(diff_html, self.job.markdown_padded_tables).replace('<p>', '').replace('</p>', '')
+            diff_html = (
+                mark_to_html(diff_html, self.job.markdown_padded_tables, self.job.markdown_extras)
+                .replace('<p>', '')
+                .replace('</p>', '')
+            )
 
         if self.job.monospace:
             diff_html = f'<span style="font-family:monospace;white-space:pre-wrap">{diff_html}</span>'

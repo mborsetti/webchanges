@@ -26,31 +26,38 @@ from webchanges.jobs._exceptions import EMPTY_RESPONSE_STATUS_CODE, NotModifiedE
 if TYPE_CHECKING:
     from webchanges.handler import JobState
 
+# The fallback assignments below are hidden from the type checker behind `if not TYPE_CHECKING`. Otherwise the type
+# checker infers the union of both bindings (e.g. `<module 'httpx'> | None`), and every reference to a module
+# attribute — including in annotations such as `httpx.Response`, which cannot be guarded at runtime — is reported as
+# unresolved. Hiding the fallback keeps the module type, which is what these code paths are guarded to run under.
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    httpx = None  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        httpx = None
 
 if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # ty:ignore[invalid-assignment]
+        h2 = None
 
 try:
     import requests
     import urllib3
     import urllib3.exceptions
 except ImportError as e:  # pragma: no cover
-    requests = str(e)  # ty:ignore[invalid-assignment]
-    urllib3 = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        requests = str(e)
+        urllib3 = str(e)
 
 try:
     from curl_cffi import requests as curl_cffi_requests
     from curl_cffi.requests import exceptions as curl_cffi_exceptions
 except ImportError as e:  # pragma: no cover
-    curl_cffi_requests = str(e)  # ty:ignore[invalid-assignment]
-    curl_cffi_exceptions = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        curl_cffi_requests = str(e)
+        curl_cffi_exceptions = str(e)
 
 logger = logging.getLogger(__name__)
 
@@ -686,7 +693,9 @@ class UrlJob(UrlJobBase):
         logger.debug(f'Job {self.index_number}: Headers: {headers}')
         logger.debug(f'Job {self.index_number}: Cookies: {self.cookies}')
 
-        if self.http_client == 'curl_cffi' or (not self.http_client and not httpx and isinstance(requests, str)):
+        if self.http_client == 'curl_cffi' or (
+            not self.http_client and not httpx and isinstance(requests, str)  # ty: ignore[redundant-condition]
+        ):
             if isinstance(curl_cffi_requests, str):
                 message = f'Job {job_state.job.index_number} cannot be run '
                 if self.http_client == 'curl_cffi':
@@ -698,7 +707,7 @@ class UrlJob(UrlJobBase):
                 raise ImportError(message)
             job_state._http_client_used = 'curl_cffi'
             data, etag, mime_type = self._retrieve_curl_cffi(headers=headers, timeout=timeout)
-        elif self.http_client == 'requests' or not httpx:
+        elif self.http_client == 'requests' or not httpx:  # ty: ignore[redundant-condition]
             if isinstance(requests, str):
                 message = f'Job {job_state.job.index_number} cannot be run '
                 if self.http_client == 'requests':
@@ -763,7 +772,7 @@ class UrlJob(UrlJobBase):
         """
         if (
             (
-                httpx
+                httpx  # ty: ignore[redundant-condition]
                 and isinstance(exception, (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError))
             )
             or (not isinstance(requests, str) and isinstance(exception, requests.exceptions.RequestException))
@@ -775,7 +784,7 @@ class UrlJob(UrlJobBase):
             # Instead of a full traceback, just show the error
             exception_str = str(exception).strip()
             if self.proxy and (
-                (httpx and isinstance(exception, httpx.TransportError))
+                (httpx and isinstance(exception, httpx.TransportError))  # ty: ignore[redundant-condition]
                 or any(
                     exception_str.startswith(error_string)
                     for error_string in (
@@ -820,7 +829,7 @@ class UrlJob(UrlJobBase):
                 return exception.status_code != EMPTY_RESPONSE_STATUS_CODE
             return isinstance(exception, client_errors)
 
-        if httpx and isinstance(exception, (httpx.HTTPError, TransientHTTPError)):
+        if httpx and isinstance(exception, (httpx.HTTPError, TransientHTTPError)):  # ty: ignore[redundant-condition]
             if self.ignore_timeout_errors and (
                 isinstance(exception, httpx.TimeoutException)
                 or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)

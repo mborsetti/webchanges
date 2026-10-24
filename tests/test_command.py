@@ -446,6 +446,83 @@ def test_list_error_jobs_with_joblist(
     assert 'Checked 1 enabled jobs for errors in' in message
 
 
+def test_list_error_jobs_with_tags(
+    command_config: CommandConfig,
+    urlwatch_command: UrlwatchCommand,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    command_config.errors = 'stdout'
+    urlwatch_command.urlwatcher.jobs[0].tags = ['sample']
+    command_config.tags = ['sample']
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    assert pytest_wrapped_e.value.code == 0
+    message = capsys.readouterr().out
+    assert 'restricted to jobs tagged: sample' in message
+    assert 'Checked 1 enabled jobs for errors in' in message
+
+    command_config.tags = ['nonexistent']
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        urlwatch_command.handle_actions()
+    assert pytest_wrapped_e.value.code == 0
+    assert 'Checked 0 enabled job for errors in' in capsys.readouterr().out
+
+
+# --- tags ---
+
+
+def test_tags_from_cli(urlwatch_command: UrlwatchCommand) -> None:
+    """--tags is repeatable and each occurrence takes a comma-separated list of tags."""
+    assert urlwatch_command.tags_from_cli() == []
+    urlwatch_command.urlwatch_config.tags = ['personal, team', 'ops', ' ']
+    assert urlwatch_command.tags_from_cli() == ['personal', 'team', 'ops']
+
+
+def test_tags_select_jobs_to_run(urlwatch_command: UrlwatchCommand, caplog: pytest.LogCaptureFixture) -> None:
+    """--tags restricts the jobs to run to those having any of the tags given."""
+    urlwatch_command.urlwatcher.jobs[0].tags = ['sample', 'echo']
+
+    assert len(list(urlwatch_command.jobs_from_joblist())) == 1
+
+    urlwatch_command.urlwatch_config.tags = ['echo']
+    assert len(list(urlwatch_command.jobs_from_joblist())) == 1
+
+    urlwatch_command.urlwatch_config.tags = ['nonexistent,echo']
+    assert len(list(urlwatch_command.jobs_from_joblist())) == 1
+
+    urlwatch_command.urlwatch_config.tags = ['nonexistent']
+    assert list(urlwatch_command.jobs_from_joblist()) == []
+    assert 'No job has any of the tags nonexistent' in caplog.text
+
+
+def test_tags_command_line_argument(command_config: CommandConfig) -> None:
+    """The --tags command line argument is parsed into a list of its (repeatable) occurrences."""
+    parsed = CommandConfig(
+        args=['--tags', 'personal,team', '--tags', 'ops'],
+        config_path=command_config.config_path,
+        config_file=command_config.config_file,
+        jobs_def_file=command_config.jobs_files[0],
+        hooks_def_file=command_config.hooks_files[0],
+        ssdb_file=command_config.ssdb_file,
+    )
+    assert parsed.tags == ['personal,team', 'ops']
+
+
+def test_close_warns_of_jobs_no_reporter_reported_on(
+    urlwatcher: Urlwatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A job that no reporter reported on (e.g. because of a typo in a tag) is warned about."""
+    urlwatcher.config_storage.config['report']['stdout'] = {
+        'enabled': True,
+        'color': False,
+        'tags': ['nonexistent'],
+    }
+    urlwatcher.run_jobs()
+    urlwatcher.close()
+    assert 'was not reported on by any reporter.' in caplog.text
+
+
 def test_list_error_jobs_reporter(
     command_config: CommandConfig,
     urlwatch_command: UrlwatchCommand,
@@ -756,6 +833,48 @@ def test_rollback_database(
     assert pytest_wrapped_ve.value.args[0] == 'Cannot parse "Thisisjunk" into a date/time.'
 
 
+def test_rollback_database_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The count shown in the confirmation prompt must not delete anything; only a 'Y' answer deletes."""
+    database_engine = SsdbSQLite3Storage(':memory:')  # ty:ignore[invalid-argument-type]
+    urlwatcher, ssdb_storage, command_config = prepare_storage_test(database_engine)
+    urlwatch_command = UrlwatchCommand(urlwatcher)
+    guid = urlwatcher.jobs[0].guid
+
+    urlwatcher.run_jobs()
+    if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+    cutoff = ssdb_storage.get_history_snapshots(guid)[0].timestamp - 1
+    time.sleep(0.0001)
+    urlwatcher.run_jobs()
+    if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+    assert len(ssdb_storage.get_history_snapshots(guid)) == 2
+
+    # pretend we are on a terminal so that the confirmation prompt is shown
+    monkeypatch.setattr(sys.__stdin__, 'isatty', lambda: True)
+    command_config.rollback_database = str(cutoff)
+
+    # declining must leave the database untouched
+    monkeypatch.setattr('builtins.input', lambda _: 'n')
+    assert urlwatch_command.rollback_database(command_config.rollback_database) == 1
+    out = capsys.readouterr().out
+    assert 'WARNING: All 2 snapshots after this date/time' in out
+    assert 'Quitting rollback. No snapshots have been deleted.' in out
+    assert len(ssdb_storage.get_history_snapshots(guid)) == 2
+
+    # confirming deletes and reports the same count as the warning
+    monkeypatch.setattr('builtins.input', lambda _: 'y')
+    assert urlwatch_command.rollback_database(command_config.rollback_database) == 0
+    out = capsys.readouterr().out
+    assert 'WARNING: All 2 snapshots after this date/time' in out
+    assert 'Deleted 2 snapshots taken after' in out
+    assert len(ssdb_storage.get_history_snapshots(guid)) == 0
+    close_ssdb_storage(database_engine)
+
+
 # --- Reporter / notification checks ---
 
 
@@ -770,7 +889,7 @@ def test_check_telegram_chats(
     assert pytest_wrapped_e.value.code == 1
     assert capsys.readouterr().out == 'You need to set up your bot token first (see documentation).\n'
 
-    urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # noqa: S105
+    urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = 'bogus'  # noqa: S105  # ty:ignore[invalid-assignment]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     assert pytest_wrapped_e.value.code == 1
@@ -779,7 +898,7 @@ def test_check_telegram_chats(
     if os.getenv('TELEGRAM_TOKEN'):
         if os.getenv('GITHUB_ACTIONS'):
             pytest.skip('Telegram testing no longer working from within GitHub Actions')
-        urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = os.getenv(
+        urlwatch_command.urlwatcher.config_storage.config['report']['telegram']['bot_token'] = os.getenv(  # ty:ignore[invalid-assignment]
             'TELEGRAM_TOKEN', ''
         )
         with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -801,7 +920,7 @@ def test_check_test_reporter(
     assert pytest_wrapped_e.value.code == 0
     assert '01. NEW: ' in capsys.readouterr().out
 
-    urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False
+    urlwatch_command.urlwatcher.config_storage.config['report']['stdout']['enabled'] = False  # ty:ignore[invalid-assignment]
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         urlwatch_command.handle_actions()
     assert pytest_wrapped_e.value.code == 0
@@ -872,7 +991,7 @@ def test_check_smtp_login_not_config(
     urlwatch_command: UrlwatchCommand,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    urlwatch_command.urlwatcher.config_storage.config['report']['email'].update(
+    urlwatch_command.urlwatcher.config_storage.config['report']['email'].update(  # ty:ignore[unresolved-attribute]
         {
             'enabled': True,
             'method': 'sendmail',
@@ -901,7 +1020,7 @@ def test_check_smtp_insecure_password(
     urlwatch_command: UrlwatchCommand,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    urlwatch_command.urlwatcher.config_storage.config['report']['email'].update(
+    urlwatch_command.urlwatcher.config_storage.config['report']['email'].update(  # ty:ignore[unresolved-attribute]
         {
             'enabled': True,
             'method': 'smtp',

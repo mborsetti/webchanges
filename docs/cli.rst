@@ -29,6 +29,21 @@ jobs by running ``webchanges --list``.
    Accepts negative indices.
 
 
+.. _tags_cli:
+
+Select subset of jobs by tag
+----------------------------
+Use ``--tags`` to run only the jobs having any of the tags listed in their :ref:`tags <tags>` job directive; for
+example, ``webchanges --tags personal`` will only run the jobs tagged ``personal``. The argument takes a
+comma-separated list of tags and can be repeated, so ``webchanges --tags personal,team`` and ``webchanges --tags
+personal --tags team`` are equivalent and both run the jobs tagged ``personal`` **or** ``team``.
+
+Jobs without a ``tags`` directive are never selected by ``--tags``. When combined with a joblist, both restrictions
+apply.
+
+.. versionadded:: 3.38
+
+
 .. _cli_jobs:
 
 Custom job file specification
@@ -242,6 +257,12 @@ the snapshots that have been saved::
 
    webchanges --test-differ 1 2 --test-reporter browser  # run differ for job 1 a maximum of 2 times
 
+
+..tip
+   To see changes in invisible characters, pipe the output to utilities that make characters visible. Here is an
+   example for Linux::
+
+      webchanges --test-differ 1 | cat -A | sed 's/ /·/g'
 
 
 .. versionchanged:: 3.3

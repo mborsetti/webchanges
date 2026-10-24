@@ -13,7 +13,7 @@ import os
 import re
 import textwrap
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, get_type_hints
+from typing import TYPE_CHECKING, Any, Iterable, Literal, get_type_hints
 from urllib.parse import urlsplit
 
 import yaml
@@ -23,11 +23,14 @@ from webchanges.filters._base import FiltersList  # noqa: TC001 (required for ty
 from webchanges.jobs._exceptions import TransientHTTPError
 from webchanges.util import TrackSubClasses
 
+# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     import httpx
 except ImportError:  # pragma: no cover
     print("Required package 'httpx' not found; will attempt to run using 'requests'")
-    httpx = None  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        httpx = None
 
 if httpx is not None:
     from httpx import Headers
@@ -35,7 +38,7 @@ if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # ty:ignore[invalid-assignment]
+        h2 = None
 else:
     from webchanges._vendored.headers import Headers
 
@@ -66,6 +69,33 @@ yaml.SafeDumper.add_representer(Headers, represent_headers)
 if httpx is not None and logger.getEffectiveLevel() == logging.DEBUG:
     logging.getLogger('hpack').setLevel(logging.INFO)
     logging.getLogger('httpcore').setLevel(logging.INFO)
+
+# Deprecated job directives and the directive replacing each one. Insertion order matters: 'https_proxy' is
+# processed before 'http_proxy' so that, when both are present, 'https_proxy' wins (see below).
+DEPRECATED_DIRECTIVES: dict[str, str] = {
+    'filter': 'filters',
+    'diff_filter': 'diff_filters',
+    'https_proxy': 'proxy',
+    'http_proxy': 'proxy',
+    'json': 'data_as_json',
+}
+
+
+def replace_deprecated_directives(directives: dict[str, Any]) -> None:
+    """Renames any deprecated job directive to the directive replacing it, modifying the dict in place.
+
+    :param directives: The job's directives (e.g. as read from the YAML jobs file).
+    """
+    if 'https_proxy' in directives:
+        # Both legacy directives map onto 'proxy', which is scheme-agnostic; 'https_proxy' takes precedence.
+        directives.pop('http_proxy', None)
+
+    for old, new in DEPRECATED_DIRECTIVES.items():
+        if old in directives:
+            logger.warning(
+                "Job %s: Replacing deprecated directive '%s' with '%s'", directives.get('index_number'), old, new
+            )
+            directives[new] = directives.pop(old)
 
 
 class JobBase(metaclass=TrackSubClasses):
@@ -124,8 +154,10 @@ class JobBase(metaclass=TrackSubClasses):
     initialization_js: str | None = None  # BrowserJob
     initialization_url: str | None = None  # UrlJob, BrowserJob
     is_markdown: bool | None = None
+    is_rst: bool | None = None
     kind: str | None = None  # hooks.py
     loop: asyncio.AbstractEventLoop | None = None
+    markdown_extras: dict[str, Any] | None = None
     markdown_padded_tables: bool | None = None
     max_tries: int | None = None
     method: Literal['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] | None = None  # UrlJobBase
@@ -148,6 +180,7 @@ class JobBase(metaclass=TrackSubClasses):
     suppress_errors: bool | None = None
     suppress_repeated_errors: bool | None = None
     switches: list[str] | None = None  # BrowserJob
+    tags: str | list[str] | None = None
     timeout: float | None = None  # UrlJobBase
     tz: str | None = None  # added by with_defaults, taken from reporter configuration
     user_data_dir: str | None = None  # BrowserJob
@@ -161,22 +194,7 @@ class JobBase(metaclass=TrackSubClasses):
     wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None = None  # BrowserJob
 
     def __init__(self, **kwargs: Any) -> None:
-        # backward-compatibility
-        if 'filter' in kwargs:
-            logger.info(f"Job {kwargs.get('index_number')}: Replacing deprecated directive 'filter' with 'filters'")
-            kwargs['filters'] = kwargs.pop('filter')
-        if 'diff_filter' in kwargs:
-            logger.info(
-                f"Job {kwargs.get('index_number')}: Replacing deprecated directive 'diff_filter' with 'diff_filter'"
-            )
-            kwargs['diff_filters'] = kwargs.pop('diff_filter')
-        if 'https_proxy' in kwargs:
-            logger.info(f"Job {kwargs.get('index_number')}: Replacing deprecated directive 'https_proxy' with 'proxy'")
-            kwargs['proxy'] = kwargs.pop('https_proxy')
-            kwargs.pop('http_proxy', None)
-        elif 'http_proxy' in kwargs:
-            logger.info(f"Job {kwargs.get('index_number')}: Replacing deprecated directive 'http_proxy' with 'proxy'")
-            kwargs['proxy'] = kwargs.pop('http_proxy')
+        replace_deprecated_directives(kwargs)
 
         # Fail if any required keys are not provided
         for k in self.__required__:
@@ -393,12 +411,13 @@ class JobBase(metaclass=TrackSubClasses):
         """Create a JobBase class from a dict, checking that all keys are recognized (i.e. listed in __required__ or
         __optional__).
 
-        :param data: Job data in dict format (e.g. from the YAML jobs file).
+        :param data: Job data in dict format (e.g. from the YAML jobs file); it is modified in place.
         :returns: A JobBase type object.
         """
+        replace_deprecated_directives(data)
+        recognized = set(cls.__required__).union(cls.__optional__)
         for k in data:
-            # backward-compatibility
-            if k not in cls.__required__ + cls.__optional__ + ('filter', 'diff_filter', 'http_client', 'http_proxy'):
+            if k not in recognized:
                 if len(filenames) > 1:
                     jobs_files = ['in the concatenation of the jobs files:'] + [f'• {file},' for file in filenames]
                 elif len(filenames) == 1:
@@ -583,6 +602,26 @@ class JobBase(metaclass=TrackSubClasses):
         """
         return self.enabled is None or self.enabled
 
+    def tags_set(self) -> set[str]:
+        """Returns the job's tags as a set (the 'tags' directive accepts either a single tag or a list of them).
+
+        :returns: The set of the job's tags; empty if the job has no 'tags' directive.
+        """
+        if not self.tags:
+            return set()
+        if isinstance(self.tags, str):
+            return {self.tags}
+        return set(self.tags)
+
+    def matching_tags(self, tags: Iterable[str]) -> set[str]:
+        """Returns the job's tags that are also in ``tags``. Used to select the jobs to run (``--tags``) and those a
+        reporter reports on (a reporter's 'tags' configuration directive).
+
+        :param tags: The tags to match the job's tags against.
+        :returns: The intersection of the job's tags and ``tags``; empty (i.e. falsy) if the job matches none of them.
+        """
+        return self.tags_set().intersection(tags)
+
     def set_to_monospace(self) -> None:
         """If unset, sets the monospace flag to True (will not override)."""
         if self.monospace is None:
@@ -624,7 +663,9 @@ class Job(JobBase):
         'filters',
         'index_number',
         'is_markdown',
+        'is_rst',
         'kind',  # hooks.py
+        'markdown_extras',
         'markdown_padded_tables',
         'max_tries',
         'monospace',
@@ -634,6 +675,7 @@ class Job(JobBase):
         'suppress_error_ended',
         'suppress_errors',
         'suppress_repeated_errors',
+        'tags',
         'user_visible_url',
     )
 

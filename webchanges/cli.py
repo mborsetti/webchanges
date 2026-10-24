@@ -650,7 +650,6 @@ def show_detailed_versions() -> int:
             'aioxmpp',
             'beautifulsoup4',
             'chump',
-            'colorama',
             'cryptography',
             'cssbeautifier',
             'cssselect',
@@ -698,10 +697,12 @@ def show_detailed_versions() -> int:
     )
     print(f'• SQLite: {sqlite3.sqlite_version}')
 
+    psutil_available = False
     try:
         import psutil
         from psutil._common import bytes2human
 
+        psutil_available = True
         print()
         print('System:')
         print(f'• Platform: {platform.platform()}, {platform.machine()}')
@@ -740,7 +741,7 @@ def show_detailed_versions() -> int:
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import sync_playwright
 
-        if psutil:
+        if psutil_available:
             try:
                 virt_mem_before = psutil.virtual_memory().available
                 swap_mem_before = psutil.swap_memory().free
@@ -754,7 +755,7 @@ def show_detailed_versions() -> int:
                 browser = p.chromium.launch(channel='chrome')
                 print(f'• Name: {browser.browser_type.name}')
                 print(f'• Version: {browser.version}')
-                if psutil:
+                if psutil_available:
                     try:
                         print(
                             f'• Free memory before launching browser: '
@@ -763,7 +764,7 @@ def show_detailed_versions() -> int:
                         )
                     except NameError:
                         pass
-                if psutil:
+                if psutil_available:
                     browser.new_page()
                     try:
                         virt_mem_loaded = psutil.virtual_memory().available

@@ -33,15 +33,19 @@ try:
 except ImportError as e:  # pragma: no cover
     aioxmpp = str(e)
 
+# The fallback assignments below are hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     import keyring
 except ImportError as e:  # pragma: no cover
-    keyring = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        keyring = str(e)
 
 try:
     import matrix_client.api
 except ImportError as e:  # pragma: no cover
-    matrix_client = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        matrix_client = str(e)
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +233,9 @@ class MatrixReporter(MarkdownReporter):
 
         client_api = matrix_client.api.MatrixHttpApi(homeserver_url, access_token)
 
-        body_html = Markdown(extras=['fenced-code-blocks', 'highlightjs-lang']).convert(body_markdown)
+        body_html = Markdown(
+            extras={'fenced-code-blocks': None, 'highlightjs-lang': None, 'middle-word-em': False}
+        ).convert(body_markdown)
 
         try:
             client_api.send_message_event(
@@ -260,7 +266,7 @@ class XMPP:
     async def send(self, chunk: str) -> None:
         if self.insecure_password:
             password = self.insecure_password
-        elif keyring is not None:
+        elif not isinstance(keyring, str):
             passw = keyring.get_password('urlwatch_xmpp', self.sender)
             if passw is None:
                 raise ValueError(f'No password available in keyring for {self.sender}')

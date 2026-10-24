@@ -116,7 +116,6 @@ Installed packages
 ------------------
 These Python packages are installed automatically by :program:`pip` when installing :program:`webchanges`:
 
-* `colorama <https://github.com/tartley/colorama>`__ (only in Windows installations);
 * `cssselect <https://github.com/scrapy/cssselect>`__ (required by lxml.cssselect);
 * `h2 <https://github.com/python-hyper/h2>`__;
 * `html2text <https://github.com/Alir3z4/html2text>`__;

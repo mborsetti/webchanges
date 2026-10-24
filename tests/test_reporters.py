@@ -8,6 +8,7 @@ import sys
 import traceback
 from smtplib import SMTPAuthenticationError
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -21,15 +22,18 @@ from webchanges.jobs import JobBase
 from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
 from webchanges.storage import DEFAULT_CONFIG
 
+if TYPE_CHECKING:
+    from webchanges.storage import _ConfigReportStdout
+
 try:
     from keyring.errors import NoKeyringError
 except ImportError:
-    NoKeyringError = None  # ty:ignore[invalid-assignment]
+    NoKeyringError = None
 
 try:
     from matrix_client.errors import MatrixError
 except ImportError:
-    MatrixError = Exception  # ty:ignore[invalid-assignment]
+    MatrixError = Exception
 
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
@@ -214,7 +218,7 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                 test_report.finish_one(reporter, check_enabled=False)
             assert str(pytest_wrapped_e.value) == 'Reporter "run_command" needs a command'
             if sys.platform == 'win32':
-                test_report.config['report']['run_command']['command'] = 'cmd /C echo TEST'
+                test_report.config['report']['run_command']['command'] = 'cmd /C echo TEST'  # ty:ignore[invalid-assignment]
             else:
                 test_report.config['report']['run_command']['command'] = 'echo TEST'
             test_report.finish_one(reporter, check_enabled=False)
@@ -229,6 +233,186 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                 test_report.config['report']['html']['separate'] = True
                 test_report.config['footnote'] = 'Footnote'
                 test_report.finish_one(reporter, check_enabled=False)
+
+
+def build_tagged_report() -> Report:
+    """Builds a report of three changed jobs tagged 'personal', ['team', 'ops'] and nothing at all.
+
+    :return: The test report.
+    """
+
+    def build_job_state(name: str, tags: str | list[str] | None) -> JobState:
+        job = JobBase.unserialize({'name': name, 'url': f'https://example.com/{name}', 'tags': tags})
+        job_state = JobState(None, job)  # ty:ignore[invalid-argument-type]
+        job_state.old_data = 'old\n'
+        job_state.old_timestamp = 1605147837.511478
+        job_state.new_data = 'new\n'
+        job_state.new_timestamp = 1605147837.511478
+        return job_state
+
+    test_report = Report(UrlwatchTest())  # ty:ignore[invalid-argument-type]
+    test_report.job_states = []
+    test_report.changed(build_job_state('personal', 'personal'))
+    test_report.changed(build_job_state('team', ['team', 'ops']))
+    test_report.changed(build_job_state('untagged', None))
+    return test_report
+
+
+def stdout_config(**directives: object) -> _ConfigReportStdout:
+    """Returns a configuration of the (enabled, uncolored) stdout reporter with the directives given."""
+    defaults = cast('dict[str, Any]', copy.deepcopy(DEFAULT_CONFIG['report']['stdout']))
+    return {**defaults, 'enabled': True, 'color': False, **directives}
+
+
+def test_reporter_configured_multiple_times(capsys: pytest.CaptureFixture[str]) -> None:
+    """A reporter configured with a list of configurations runs once per configuration, each on its own tags."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = [
+        stdout_config(tags=['personal']),
+        stdout_config(tags='team'),  # a single tag needs no list
+    ]
+    test_report.finish(jobs_file=[])
+
+    out = capsys.readouterr().out
+    assert out.count('CHANGED: personal') == 2  # once in the summary and once in the details
+    assert out.count('CHANGED: team') == 2
+    assert 'CHANGED: untagged' not in out
+    assert test_report.reporters_enabled is True
+    assert [(state.job.pretty_name(), state.reported_count) for state in test_report.job_states] == [
+        ('personal', 1),
+        ('team', 1),
+        ('untagged', 0),
+    ]
+
+
+def test_reporter_without_tags_reports_on_every_job(capsys: pytest.CaptureFixture[str]) -> None:
+    """A reporter with no 'tags' directive reports on every job, tagged or not, and its footer is unchanged."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = stdout_config()
+    test_report.finish(jobs_file=[])
+
+    out = capsys.readouterr().out
+    assert out.count('CHANGED: personal') == 2
+    assert out.count('CHANGED: untagged') == 2
+    assert 'Checked 3 sources in ' in out
+    assert 'this report covers' not in out
+    assert all(state.reported_count == 1 for state in test_report.job_states)
+
+
+def test_reporter_tags_add_coverage_to_footer(capsys: pytest.CaptureFixture[str]) -> None:
+    """A reporter restricted by tags states in its footer how many of the jobs run it covers."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = stdout_config(tags=['personal', 'team'])
+    test_report.finish(jobs_file=[])
+
+    out = capsys.readouterr().out
+    assert 'Checked 3 sources in ' in out
+    assert '; this report covers 2.' in out
+
+
+def test_reporter_tags_matching_no_job(capsys: pytest.CaptureFixture[str]) -> None:
+    """A reporter whose tags match no job reports nothing, but still counts as enabled."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = stdout_config(tags=['nonexistent'])
+    test_report.finish(jobs_file=[])
+
+    assert capsys.readouterr().out == ''
+    assert test_report.reporters_enabled is True
+    assert all(state.reported_count == 0 for state in test_report.job_states)
+
+
+def test_no_reporters_enabled(caplog: pytest.LogCaptureFixture) -> None:
+    """With every reporter disabled, submit_all warns and reports that none was enabled."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = stdout_config(enabled=False)
+    test_report.finish(jobs_file=[])
+
+    assert test_report.reporters_enabled is False
+    assert 'No reporters enabled.' in caplog.text
+
+
+def test_disabled_reporter_in_list_is_skipped(capsys: pytest.CaptureFixture[str]) -> None:
+    """Only the enabled configurations of a reporter configured multiple times are run."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = [
+        stdout_config(enabled=False, tags=['personal']),
+        stdout_config(tags=['team']),
+    ]
+    test_report.finish(jobs_file=[])
+
+    out = capsys.readouterr().out
+    assert 'CHANGED: personal' not in out
+    assert out.count('CHANGED: team') == 2
+
+
+def test_finish_one_of_reporter_configured_multiple_times(capsys: pytest.CaptureFixture[str]) -> None:
+    """finish_one runs every configuration of the named reporter."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = [stdout_config(tags=['personal']), stdout_config(tags=['team'])]
+    test_report.finish_one('stdout')
+
+    out = capsys.readouterr().out
+    assert out.count('CHANGED: personal') == 2
+    assert out.count('CHANGED: team') == 2
+
+
+def test_finish_one_can_ignore_tags(capsys: pytest.CaptureFixture[str]) -> None:
+    """apply_tags=False (used by --test-reporter and --errors) reports on every job regardless of the tags."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = stdout_config(tags=['nonexistent'])
+    test_report.finish_one('stdout', apply_tags=False)
+
+    out = capsys.readouterr().out
+    assert out.count('CHANGED: personal') == 2
+    assert out.count('CHANGED: untagged') == 2
+
+
+def test_finish_one_of_disabled_reporter_raises() -> None:
+    """finish_one of a reporter with no enabled configuration raises, as before."""
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = [stdout_config(enabled=False), stdout_config(enabled=False)]
+    with pytest.raises(ValueError, match=r'^Reporter not enabled: stdout$'):
+        test_report.finish_one('stdout')
+
+
+@pytest.mark.parametrize(('color', 'intensity'), [(True, '9'), ('bright', '9'), ('normal', '3')])
+def test_stdout_reporter_colors(
+    color: bool | str, intensity: str, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The stdout reporter emits ANSI escape sequences when stdout is a console that supports them."""
+    monkeypatch.setattr(sys.stdout, 'isatty', lambda: True)
+    monkeypatch.setattr('webchanges.reporters._stdout._enable_windows_ansi', lambda: True)
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = stdout_config(color=color)
+    test_report.finish_one('stdout')
+
+    out = capsys.readouterr().out
+    assert f'CHANGED: [{intensity}4mpersonal (' in out  # blue status line
+    assert f'[{intensity}1m-old[0m' in out  # red deletion
+    assert f'[{intensity}2m+new[0m' in out  # green addition
+
+
+def test_stdout_reporter_no_colors_without_console_support(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The stdout reporter emits no ANSI escape sequences when the console cannot process them (e.g. old Windows)."""
+    monkeypatch.setattr(sys.stdout, 'isatty', lambda: True)
+    monkeypatch.setattr('webchanges.reporters._stdout._enable_windows_ansi', lambda: False)
+    test_report = build_tagged_report()
+    test_report.config['report']['stdout'] = stdout_config(color=True)
+    test_report.finish_one('stdout')
+
+    out = capsys.readouterr().out
+    assert 'CHANGED: personal' in out
+    assert '[' not in out
+
+
+def test_html_markdown_to_html_extras() -> None:
+    """Emphasis within words is off by default; the job's markdown_extras can reinstate it."""
+    from webchanges.reporters import HtmlReporter
+
+    assert HtmlReporter.markdown_to_html('snake_case_name\n_word_') == 'snake_case_name<br>\n<em>word</em>'
+    assert HtmlReporter.markdown_to_html('snake_case_name', None, {'middle-word-em': True}) == 'snake<em>case</em>name'
 
 
 def test_mailer_send() -> None:

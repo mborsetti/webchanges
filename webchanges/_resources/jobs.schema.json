@@ -27,6 +27,10 @@
       "type": "string",
       "description": "The URL or text to display in reports instead of the actual checked URL."
     },
+    "tags": {
+      "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+      "description": "One tag, or a list of tags, used to select the job with the --tags command line argument and/or the 'tags' directive of a reporter."
+    },
     "kind": {
       "type": "string",
       "pattern": "^(url|browser|command|hooks_.+)$",
@@ -45,6 +49,12 @@
     "data_as_json": {
       "type": "boolean",
       "description": "If true, sends data as JSON and sets Content-Type to application/json."
+    },
+    "json": {
+      "type": "boolean",
+      "description": "Deprecated: use 'data_as_json' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'data_as_json' instead of 'json'."
     },
     "headers": {
       "type": "object",
@@ -156,6 +166,18 @@
     "proxy": {
       "type": "string",
       "description": "Proxy URL to use for the request."
+    },
+    "http_proxy": {
+      "type": "string",
+      "description": "Deprecated: use 'proxy' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'proxy' instead of 'http_proxy'."
+    },
+    "https_proxy": {
+      "type": "string",
+      "description": "Deprecated: use 'proxy' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'proxy' instead of 'https_proxy'."
     },
     "use_browser": {
       "oneOf": [{ "type": "boolean" }, { "type": "string", "pattern": "^(chrome|msedge|firefox$|webkit$)" }],
@@ -647,6 +669,16 @@
       "description": "If true, treats the data as Markdown for rendering in reports.",
       "default": false
     },
+    "is_rst": {
+      "type": "boolean",
+      "description": "If true, treats the data as reStructuredText for rendering in reports.",
+      "default": false
+    },
+    "markdown_extras": {
+      "type": "object",
+      "description": "markdown2 library 'extras' used when rendering Markdown data as HTML, as name: options (null if it takes none); see https://github.com/trentm/python-markdown2/wiki/Extras. Applied over the defaults strike, target-blank-links and middle-word-em: false; e.g. middle-word-em: true restores emphasis within words.",
+      "default": { "strike": null, "target-blank-links": null, "middle-word-em": false }
+    },
     "monospace": {
       "type": "boolean",
       "description": "If true, uses monospace font in reports.",
@@ -828,7 +860,7 @@
                   "default": false
                 }
               },
-              "required": ["selector"],
+              "anyOf": [{ "required": ["selector"] }, { "required": ["exclude"] }],
               "additionalProperties": false
             }
           ],
@@ -1404,7 +1436,7 @@
                   "default": false
                 }
               },
-              "required": ["path"],
+              "anyOf": [{ "required": ["path"] }, { "required": ["exclude"] }],
               "additionalProperties": false
             }
           ],

@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['base64', 'hashlib']
+
 import base64
 import hashlib
 from typing import Any

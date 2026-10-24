@@ -125,6 +125,23 @@ https://example.org/css-exclude.html:
       <h1>A page™ in a book</h1>
       <p>And some paragraph, too. </p>
     </body>
+https://example.org/css-exclude-only.html:
+  input: |-
+    <html>
+    <head><style>p {color: red;}</style></head>
+    <body>
+      <h1>A page™ in a book</h1><script>alert('hi');</script>
+      <p>And some paragraph, too.</p>
+    </body>
+    </html>
+  output: |-
+    <html>
+    <head></head>
+    <body>
+      <h1>A page™ in a book</h1>
+      <p>And some paragraph, too.</p>
+    </body>
+    </html>
 https://example.net/css-skip-maxitems.html:
   input: |-
     <body>
@@ -796,6 +813,23 @@ https://example.org/xpath-exclude.html:
       <h1>A page™ in a book</h1>
       <p>And some paragraph, too. </p>
     </body>
+https://example.org/xpath-exclude-only.html:
+  input: |-
+    <html>
+    <head><style>p {color: red;}</style></head>
+    <body>
+      <h1>A page™ in a book</h1><script>alert('hi');</script>
+      <p>And some paragraph, too.</p>
+    </body>
+    </html>
+  output: |-
+    <html>
+    <head></head>
+    <body>
+      <h1>A page™ in a book</h1>
+      <p>And some paragraph, too.</p>
+    </body>
+    </html>
 https://example.net/xpath-skip-maxitems.html:
   input: |-
     <body>

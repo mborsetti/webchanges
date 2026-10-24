@@ -1176,7 +1176,7 @@ class TestVersion:
 # Taken from hatchling 1.28
 def reset_version_parts(version: Version, **kwargs: typing.Any) -> None:
     # https://github.com/pypa/packaging/blob/20.9/packaging/version.py#L301-L310
-    internal_version = version._version
+    internal_version = version._version  # ty:ignore[deprecated]
     parts: dict[str, typing.Any] = {}
     ordered_part_names = ('epoch', 'release', 'pre', 'post', 'dev', 'local')
 
@@ -1190,14 +1190,14 @@ def reset_version_parts(version: Version, **kwargs: typing.Any) -> None:
         else:
             parts[part_name] = getattr(internal_version, part_name)
 
-    version._version = type(internal_version)(**parts)
+    version._version = type(internal_version)(**parts)  # ty:ignore[deprecated]
 
 
 # These will be deprecated in 26.1, and removed in the future
 def test_deprecated__version() -> None:
     v = Version('1.2.3')
     with pytest.warns(DeprecationWarning, match='is private'):
-        assert v._version.release == (1, 2, 3)
+        assert v._version.release == (1, 2, 3)  # ty:ignore[deprecated]
 
 
 def test_hatchling_usage__version() -> None:

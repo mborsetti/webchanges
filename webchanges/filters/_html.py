@@ -4,8 +4,21 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'html2text',
+    'importlib.util',
+    'json',
+    'lxml',
+    'lxml.cssselect',
+    're',
+    'urllib.parse',
+    'warnings',
+    'xml.dom',
+]
+
 import html
 import importlib.util
+import json
 import logging
 import re
 import warnings
@@ -25,20 +38,25 @@ from webchanges.filters._base import AutoMatchFilter, FilterBase, RegexMatchFilt
 if TYPE_CHECKING:
     from webchanges.jobs import JobBase
 
+# The fallback assignments below are hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     import bs4
 except ImportError as e:  # pragma: has-bs4
-    bs4 = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        bs4 = str(e)
 
 try:
     import cssbeautifier
 except ImportError as e:  # pragma: no cover
-    cssbeautifier = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        cssbeautifier = str(e)
 
 try:
     import jsbeautifier
 except ImportError as e:  # pragma: no cover
-    jsbeautifier = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        jsbeautifier = str(e)
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +192,10 @@ class Html2TextFilter(FilterBase):
 
         * ``strip_tags``: A simple and fast regex-based HTML tag stripper.
 
+        If the data's media type is JSON and the entire document is a JSON string (i.e. HTML that has been
+        JSON-encoded), it is decoded with ``json.loads()`` first so that e.g. ``\\u00e9`` becomes ``é``; JSON objects
+        and arrays are passed through unchanged.
+
         :param data: The data to be filtered (processed).
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
@@ -181,6 +203,35 @@ class Html2TextFilter(FilterBase):
         # extract method and options from subfilter, defaulting to method html2text
         if not isinstance(data, str):
             raise ValueError
+
+        if mime_type.endswith('json'):
+            # The data is JSON-encoded; if it's a bare JSON string, decode it so that \uXXXX escapes become the
+            # characters they represent before the HTML is converted to text.
+            try:
+                decoded_json = json.loads(data)
+            except json.JSONDecodeError as e:
+                logger.debug(
+                    'Filter html2text: data has media type %s but is not valid JSON (%s); using it as is (%s)',
+                    mime_type,
+                    e,
+                    self.job.get_indexed_location(),
+                )
+            else:
+                if isinstance(decoded_json, str):
+                    logger.info(
+                        'Filter html2text: decoded the JSON-encoded string of media type %s before converting it (%s)',
+                        mime_type,
+                        self.job.get_indexed_location(),
+                    )
+                    data = decoded_json
+                else:
+                    logger.debug(
+                        'Filter html2text: data of media type %s decodes to a %s, not a string; using it as is (%s)',
+                        mime_type,
+                        type(decoded_json).__name__,
+                        self.job.get_indexed_location(),
+                    )
+
         options = subfilter.copy()
         method = options.pop('method', 'html2text')
 
@@ -436,6 +487,10 @@ class LxmlParser:
         'css': 'a CSS selector',
         'xpath': 'an XPath expression',
     }
+    ROOT_EXPRS: dict[str, str] = {
+        'css': ':root',
+        'xpath': '/*',
+    }
 
     expression: str
     method: str
@@ -457,12 +512,13 @@ class LxmlParser:
                 f"The '{filter_kind}' filter's method must be 'html' or 'xml', got '{self.method}'. "
                 f'({job.get_indexed_location()})'
             )
-        if expr_key not in subfilter:
+        if expr_key not in subfilter and 'exclude' not in subfilter:
             raise ValueError(
                 f"The '{filter_kind}' filter needs {self.EXPR_NAMES[filter_kind]} for filtering. "
                 f'({job.get_indexed_location()})'
             )
-        self.expression = subfilter[expr_key]
+        # A filter with only 'exclude' returns the whole document (its root element) minus the exclusions
+        self.expression = subfilter.get(expr_key, self.ROOT_EXPRS[filter_kind])
         self.exclude = subfilter.get('exclude')
         self.namespaces = subfilter.get('namespaces')
         self.skip = int(subfilter.get('skip', 0))

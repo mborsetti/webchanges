@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['re', 'warnings']
+
 import logging
 import re
 import warnings

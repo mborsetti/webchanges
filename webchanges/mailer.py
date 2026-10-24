@@ -17,10 +17,13 @@ from email.utils import formatdate
 from types import ModuleType
 from typing import TYPE_CHECKING
 
+# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     import keyring
 except ImportError as e:  # pragma: no cover
-    keyring = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        keyring = str(e)
 
 if TYPE_CHECKING:
     from pathlib import Path

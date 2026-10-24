@@ -32,6 +32,7 @@ from webchanges.jobs import (
     TransientHTTPError,
     UrlJob,
 )
+from webchanges.jobs._base import DEPRECATED_DIRECTIVES, replace_deprecated_directives
 from webchanges.jobs._shell import _add_python_verbosity, _logger_verbosity
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
@@ -1141,6 +1142,13 @@ def test_validate_wrong_type_bool() -> None:
     assert str(pytest_wrapped_e.value).startswith("Error in directive 'enabled' of job")
 
 
+def test_validate_wrong_type_markdown_extras() -> None:
+    """markdown_extras takes a dict of markdown2 extras, not a list of their names."""
+    job_data = {'url': 'https://www.example.com', 'markdown_extras': ['tables']}
+    with pytest.raises(ValueError, match="Error in directive 'markdown_extras'"):
+        JobBase.unserialize(job_data)
+
+
 def test_validate_wrong_type_numeric() -> None:
     job_data = {'url': 'https://www.example.com', 'timeout': 'soon'}
     with pytest.raises(ValueError, match="Error in directive 'timeout'"):
@@ -1193,6 +1201,84 @@ def test_navigate_directive() -> None:
 #     assert str(pytest_wrapped_warning.list[0].message) == (
 #         f"Job directive 'kind' is deprecated and ignored: delete from job ({job_data})"
 #     )
+
+
+@pytest.mark.parametrize(('old', 'new'), DEPRECATED_DIRECTIVES.items())
+def test_replace_deprecated_directives(old: str, new: str) -> None:
+    directives = {'url': 'https://www.example.com', old: 'value'}
+    replace_deprecated_directives(directives)
+    assert directives == {'url': 'https://www.example.com', new: 'value'}
+
+
+def test_replace_deprecated_directives_https_proxy_wins_over_http_proxy() -> None:
+    directives = {'url': 'https://www.example.com', 'http_proxy': 'http://proxy', 'https_proxy': 'https://proxy'}
+    replace_deprecated_directives(directives)
+    assert directives == {'url': 'https://www.example.com', 'proxy': 'https://proxy'}
+
+
+def test_replace_deprecated_directives_leaves_current_ones_alone() -> None:
+    directives = {'url': 'https://www.example.com', 'filters': 'html2text', 'proxy': 'https://proxy'}
+    replace_deprecated_directives(directives)
+    assert directives == {'url': 'https://www.example.com', 'filters': 'html2text', 'proxy': 'https://proxy'}
+
+
+def test_deprecated_filter_directive_in_job() -> None:
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'filter': 'html2text'})
+    assert job.filters == 'html2text'
+    assert not hasattr(job, 'filter')
+
+
+@pytest.mark.parametrize(
+    ('old', 'new', 'value'),
+    [
+        ('filter', 'filters', 'html2text'),
+        ('diff_filter', 'diff_filters', 'html2text'),
+        ('https_proxy', 'proxy', 'https://proxy'),
+        ('http_proxy', 'proxy', 'http://proxy'),
+        ('json', 'data_as_json', True),
+    ],
+)
+def test_from_dict_accepts_deprecated_directives(old: str, new: str, value: str | bool) -> None:
+    """Deprecated directives must survive from_dict()'s unrecognized-directive check."""
+    job = JobBase.unserialize({'url': 'https://www.example.com', old: value})
+    assert getattr(job, new) == value
+
+
+@pytest.mark.parametrize(
+    ('tags', 'expected'),
+    [
+        (None, set()),
+        ('personal', {'personal'}),
+        (['personal'], {'personal'}),
+        (['personal', 'team'], {'personal', 'team'}),
+    ],
+)
+def test_tags_set(tags: str | list[str] | None, expected: set[str]) -> None:
+    """The 'tags' job directive accepts either a single tag or a list of them."""
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'tags': tags})
+    assert job.tags_set() == expected
+
+
+@pytest.mark.parametrize(
+    ('tags', 'select', 'expected'),
+    [
+        (None, ['personal'], set()),
+        ('personal', ['personal'], {'personal'}),
+        ('personal', ['team'], set()),
+        (['personal', 'team'], ['team', 'ops'], {'team'}),
+        (['personal', 'team'], [], set()),
+    ],
+)
+def test_matching_tags(tags: str | list[str] | None, select: list[str], expected: set[str]) -> None:
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'tags': tags})
+    assert job.matching_tags(select) == expected
+
+
+def test_tags_directive_is_serialized() -> None:
+    """'tags' survives a serialize()/unserialize() round trip (i.e. it is in __optional__)."""
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'tags': ['personal', 'team']})
+    assert job.serialize()['tags'] == ['personal', 'team']
+    job.validate()
 
 
 def test_url_job_without_kind() -> None:

@@ -61,6 +61,7 @@ class CommandConfig(BaseConfig):
     prepare_jobs: bool
     rollback_database: str | None
     smtp_login: bool
+    tags: list[str] | None
     telegram_chats: bool
     test_differ: list[str] | None
     test_job: bool | str | None
@@ -210,6 +211,12 @@ class CommandConfig(BaseConfig):
             help='list jobs and their index number (optional: only those who match REGEX)',
             metavar='REGEX',
             dest='list_jobs',
+        )
+        group.add_argument(
+            '--tags',
+            action='append',
+            help='run only the jobs having any of the TAGS (comma-separated) in their tags directive; can be repeated',
+            metavar='TAGS',
         )
         group.add_argument(
             '--errors',

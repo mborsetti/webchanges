@@ -406,7 +406,7 @@ class SsdbSQLite3Storage(SsdbStorage):
 
         return total_searched
 
-    def clean_all(self, keep_entries: int = 1) -> int:
+    def clean_all(self, keep_entries: int = 1) -> int:  # ty:ignore[invalid-mutable-override]
         """Delete all older entries for each 'guid' (keep only keep_entries).
 
         :returns: Number of records deleted.
@@ -478,7 +478,7 @@ class SsdbSQLite3Storage(SsdbStorage):
         """
         command = 'SELECT COUNT(*)' if count else 'DELETE'
         with self.lock:
-            self._execute(
+            cursor = self._execute(
                 f'{command} '  # noqa: S608 Possible SQL injection
                 'FROM webchanges '
                 'WHERE EXISTS ( '
@@ -490,8 +490,11 @@ class SsdbSQLite3Storage(SsdbStorage):
                 ')',
                 (timestamp, timestamp),
             )
-            num_del: int = self._execute('SELECT changes()').fetchone()[0]
-            self.db.commit()
+            if count:
+                num_del: int = cursor.fetchone()[0]
+            else:
+                num_del = self._execute('SELECT changes()').fetchone()[0]
+                self.db.commit()
         return num_del
 
     def migrate_from_minidb(self, minidb_filename: str | Path) -> None:

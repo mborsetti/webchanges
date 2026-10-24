@@ -163,7 +163,7 @@ class SsdbMiniDBStorage(SsdbStorage):
 
         return total_moved
 
-    def rollback(self, timestamp: float) -> None:
+    def rollback(self, timestamp: float, count: bool = False) -> None:
         raise NotImplementedError("Rolling back of legacy 'minidb' databases is not supported")
 
     def flushdb(self) -> None:

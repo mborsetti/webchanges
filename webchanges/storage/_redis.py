@@ -12,10 +12,13 @@ import msgpack
 from webchanges.handler import Snapshot
 from webchanges.storage._ssdb import SsdbStorage
 
+# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     import redis
 except ImportError as e:  # pragma: no cover
-    redis = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        redis = str(e)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -157,7 +160,7 @@ class SsdbRedisStorage(SsdbStorage):
         self.db.rename(key, new_key)
         return self.db.llen(new_key)
 
-    def rollback(self, timestamp: float) -> None:
+    def rollback(self, timestamp: float, count: bool = False) -> None:
         """Rolls back the database to timestamp.
 
         :raises: NotImplementedError: This function is not implemented for 'redis' database engine.

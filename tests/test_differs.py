@@ -8,6 +8,7 @@ Run individually with
 from __future__ import annotations
 
 import base64
+import contextlib
 import logging
 import os
 import random
@@ -26,6 +27,7 @@ from webchanges.differs import (
     AI_GOOGLE_429_RETRY_BUFFER,
     AI_GOOGLE_503_RETRY_WAIT,
     AI_GOOGLE_MAX_TOTAL_WAIT,
+    AIGoogleDiffer,
     CommandDiffer,
     DifferBase,
     UnifiedDiffer,
@@ -121,6 +123,9 @@ DIFF_TO_HTML_TEST_DATA = [
     (' **strong**', '<td><strong>strong</strong></td>'),
     (' **_strong and emphasis_**', '<td><strong><em>strong and emphasis</em></strong></td>'),
     (' ~~strikethrough~~', '<td><s>strikethrough</s></td>'),
+    (' _emphasis_', '<td><em>emphasis</em></td>'),
+    (' snake_case_name', '<td>snake_case_name</td>'),
+    (' snake*case*name', '<td>snake*case*name</td>'),
     (' | table | row |', '<td>| table | row |</td>'),
 ]
 
@@ -434,6 +439,18 @@ def test_unified_diff_to_html_padded_table(job_state: JobState) -> None:
     assert result[193:-8] == (
         '<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | row |</span></td></tr>'
     )
+
+
+def test_unified_diff_to_html_markdown_extras(job_state: JobState) -> None:
+    """The markdown_extras job directive overrides the default markdown2 extras (here, reinstating middle-word-em)."""
+    # must add to fake headers to get what we want:
+    inpt = '-fake head 1\n+fake head 2\n snake_case_name'
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com', 'is_markdown': True, 'markdown_extras': {'middle-word-em': True}}
+    )
+    job_state.job = job
+    result = ''.join(list(UnifiedDiffer(job_state).unified_diff_to_html(inpt)))
+    assert result[193:-8] == '<tr><td>snake<em>case</em>name</td></tr>'
 
 
 def test_unified_diff_to_html_link(job_state: JobState) -> None:
@@ -1691,3 +1708,45 @@ def test_ai_google_post_with_retry_stops_at_ceiling(monkeypatch: pytest.MonkeyPa
     assert sleeps == [AI_GOOGLE_503_RETRY_WAIT] * expected_sleeps
     assert sum(sleeps) <= AI_GOOGLE_MAX_TOTAL_WAIT
     assert client.calls == expected_sleeps + 1
+
+
+def test_ai_google_post_with_retry_records_retry_stats(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The returned response carries the number of retries made and the cumulative wait in its extensions."""
+    monkeypatch.setattr(differs.time, 'sleep', lambda secs: None)
+    # A 100s delay fits twice under the cumulative ceiling, so the third 429 is returned after two retries.
+    json_data = {'error': {'details': [{'@type': '.../RetryInfo', 'retryDelay': '100s'}]}}
+    client = _FakeClient([_make_response(429, json_data=json_data) for _ in range(3)])
+    result = _ai_google_post_with_retry(client, _AI_GOOGLE_URL, job=_FakeJob())  # ty:ignore[invalid-argument-type]
+    assert result.status_code == 429
+    assert client.calls == 3
+    assert result.extensions['webchanges_retries'] == 2
+    assert result.extensions['webchanges_total_wait'] == pytest.approx(2 * (100.0 + AI_GOOGLE_429_RETRY_BUFFER))
+
+    # Not retried at all: stats are still present and zero.
+    client = _FakeClient([_make_response(429, json_data={'error': {'message': 'rate limited'}})])
+    result = _ai_google_post_with_retry(client, _AI_GOOGLE_URL, job=_FakeJob())  # ty:ignore[invalid-argument-type]
+    assert result.extensions['webchanges_retries'] == 0
+    assert result.extensions['webchanges_total_wait'] == 0.0
+
+
+def test_ai_google_send_to_model_429_summary_reports_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The error summary for a persistent 429 states the retries made, or that none were made."""
+    monkeypatch.setenv('GEMINI_API_KEY', 'A' * 39)
+    monkeypatch.setattr(differs.time, 'sleep', lambda secs: None)
+    job = JobBase.unserialize({'url': 'https://example.com', 'differ': {'name': 'ai_google'}})
+
+    def run(responses: list[httpx.Response]) -> str:
+        client = _FakeClient(responses)
+        monkeypatch.setattr(differs.httpx, 'Client', lambda **kwargs: contextlib.nullcontext(client))
+        summary, _ = AIGoogleDiffer._send_to_model(job, 'system', 'prompt')
+        return summary
+
+    # A 100s delay fits twice under the cumulative ceiling, so the third 429 is reported after two retries.
+    json_data = {'error': {'details': [{'@type': '.../RetryInfo', 'retryDelay': '100s'}]}}
+    summary = run([_make_response(429, json_data=json_data) for _ in range(3)])
+    assert 'Received error 429' in summary
+    assert 'Still failing after 2 automatic retries and 202.0 seconds of waiting' in summary
+
+    summary = run([_make_response(429, json_data={'error': {'message': 'rate limited'}})])
+    assert 'Received error 429' in summary
+    assert 'Not retried automatically' in summary

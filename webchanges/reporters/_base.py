@@ -8,7 +8,7 @@ import html
 import itertools
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Iterable, TypeAlias
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, NoReturn, TypeAlias, cast
 from zoneinfo import ZoneInfo
 
 from webchanges import __project_name__, __url__, __version__
@@ -59,26 +59,32 @@ if TYPE_CHECKING:
 # https://stackoverflow.com/questions/712791
 try:
     import httpx
-    from httpx import Response
+    from httpx import Headers, Response
 except ImportError:  # pragma: no cover
-    httpx = None  # ty:ignore[invalid-assignment]
+    # The assignment is hidden from the type checker so that `httpx` keeps its module type (see webchanges/jobs/
+    # _url.py for the full explanation).
+    if not TYPE_CHECKING:
+        httpx = None
     try:
         import requests
         from requests import Response
+
+        from webchanges._vendored.headers import Headers
     except ImportError as e:  # pragma: no cover
         raise RuntimeError(
-            f"A Python HTTP client package (either 'httpx' or 'requests' is required to run {__project_name__}; "
+            f"A Python HTTP client package (either 'httpx' or 'requests') is required to run {__project_name__}; "
             'neither can be imported.'
         ) from e
 if httpx is not None:
-    from httpx import Headers
-
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # ty:ignore[invalid-assignment]
-else:
-    from webchanges._vendored.headers import Headers
+        h2 = None
+
+try:
+    from docutils import core
+except ImportError:  # pragma: no cover
+    core = None
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +97,42 @@ __all__ = [
     'Response',
     'TextReporter',
     'chunk_string',
+    'filter_by_tags',
     'httpx',
+    'reporter_configs',
 ]
+
+
+def reporter_configs(report_config: Mapping[str, Any], name: str) -> list[Any]:
+    """Returns the configuration(s) of the reporter ``name`` as a list.
+
+    A reporter may be configured more than once (e.g. to send different jobs to different destinations) by using a
+    list of configurations instead of a single one; this normalizes both forms into a list.
+
+    :param report_config: The 'report' section of the configuration (typically from config.yaml).
+    :param name: The name (``__kind__``) of the reporter.
+    :returns: A list of the reporter's configurations, empty if the reporter is not in the configuration.
+    """
+    cfg = report_config.get(name)
+    if cfg is None:
+        return []
+    if isinstance(cfg, list):
+        return list(cfg)
+    return [cfg]
+
+
+def filter_by_tags(job_states: list[JobState], tags: str | list[str] | None) -> list[JobState]:
+    """Selects the job states of the jobs having at least one of ``tags`` among their 'tags' directive.
+
+    :param job_states: The list of JobState objects containing the information about each job retrieved.
+    :param tags: The tag or list of tags to select by; if empty or None, no selection is made.
+    :returns: The selected JobState objects (all of them if ``tags`` is empty or None).
+    """
+    if not tags:
+        return job_states
+    if isinstance(tags, str):
+        tags = [tags]
+    return [job_state for job_state in job_states if job_state.job.matching_tags(tags)]
 
 
 class ReporterBase(metaclass=TrackSubClasses):
@@ -110,6 +150,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         duration: float,
         jobs_files: list[Path],
         differ_config: _ConfigDifferDefaults,
+        job_count_total: int | None = None,
     ) -> None:
         """:param report: The Report object containing information about the report.
         :param config: The configuration of the run (typically from config.yaml).
@@ -117,19 +158,22 @@ class ReporterBase(metaclass=TrackSubClasses):
         :param duration: The duration of the retrieval of jobs.
         :param jobs_files: The list of paths to the files containing the list of jobs (optional, used in footers).
         :param differ_config: The default configuration of differs (typically from config.yaml).
+        :param job_count_total: The number of jobs run, which is higher than the number of ``job_states`` when the
+           reporter's 'tags' directive restricts it to a subset of them; defaults to the number of ``job_states``.
         """
         self.report = report
         self.config = config
         self.job_states = job_states
         self.duration = duration
         self.jobs_files = jobs_files
+        self.job_count_total = len(job_states) if job_count_total is None else job_count_total
         self.tz = ZoneInfo(self.report.config['report']['tz']) if self.report.config['report']['tz'] else None
         self.differ_defaults = differ_config
         if jobs_files and (len(jobs_files) > 1 or jobs_files[0].stem != 'jobs'):
             self.footer_job_file = f' ({", ".join(f.stem for f in jobs_files)})'
         else:
             self.footer_job_file = ''
-        if httpx:
+        if httpx:  # ty: ignore[redundant-condition]
             self.http_client = httpx.Client(http2=h2 is not None, follow_redirects=True)
         else:
             self.http_client = requests.Session()
@@ -143,9 +187,17 @@ class ReporterBase(metaclass=TrackSubClasses):
         if hasattr(othercls, '__kind__'):
             config: _ConfigReportersList = self.report.config['report'][othercls.__kind__]  # ty:ignore[invalid-key]
         else:
-            config = {}
+            config = cast('_ConfigReportersList', {})
 
-        return othercls(self.report, config, self.job_states, self.duration, self.jobs_files, self.differ_defaults)  # ty:ignore[invalid-argument-type]
+        return othercls(
+            self.report,
+            config,
+            self.job_states,
+            self.duration,
+            self.jobs_files,
+            self.differ_defaults,
+            self.job_count_total,
+        )
 
     @classmethod
     def get_base_config(cls, report: Report) -> dict[str, Any]:
@@ -171,6 +223,23 @@ class ReporterBase(metaclass=TrackSubClasses):
             subject_args['jobs_files'] = jobs_files
         return subject.format(**subject_args)
 
+    @property
+    def footer_checked(self) -> str:
+        """The 'Checked N sources in T' fragment of the report's footer, counting every job run (not just the ones
+        this reporter reports on; see :py:attr:`footer_coverage`)."""
+        return (
+            f'Checked {self.job_count_total} source{"s" if self.job_count_total > 1 else ""} in '
+            f'{dur_text(self.duration)}'
+        )
+
+    @property
+    def footer_coverage(self) -> str:
+        """The report's footer fragment stating how many of the jobs run this report covers; empty unless the
+        reporter's 'tags' directive restricted it to a subset of them."""
+        if self.job_count_total <= len(self.job_states):
+            return ''
+        return f'; this report covers {len(self.job_states)}'
+
     @classmethod
     def reporter_documentation(cls) -> str:
         """Generates simple reporter documentation for use in the --features command line argument.
@@ -183,6 +252,61 @@ class ReporterBase(metaclass=TrackSubClasses):
         return '\n'.join(result)
 
     @classmethod
+    def _submit_reporter(
+        cls,
+        name: str,
+        report: Report,
+        job_states: list[JobState],
+        duration: float,
+        jobs_files: list[Path],
+        check_enabled: bool | None = True,
+        apply_tags: bool = True,
+    ) -> bool:
+        """Run every configuration of the named reporter, i.e. the single one or, if the reporter is configured with a
+        list of configurations, each one of them in turn.
+
+        Each configuration may have a 'tags' directive restricting it to the jobs having at least one of those tags
+        among their own 'tags' job directive.
+
+        :param name: The name of the reporter to run.
+        :param report: The Report object with the information of all the reports.
+        :param job_states: The list of JobState objects containing the information about each job retrieved.
+        :param duration: The duration of the retrieval of jobs.
+        :param jobs_files: The path(s) to the file(s) containing the list of jobs (optional, used in footers).
+        :param check_enabled: Whether to only run the configurations marked "enabled" (used for testing).
+        :param apply_tags: Whether to honor the 'tags' directive of the reporter's configuration(s).
+        :returns: Whether at least one configuration of the reporter was run.
+        """
+        subclass = cls.__subclasses__[name]
+        differ_config = report.config['differ_defaults']
+
+        configs = reporter_configs(report.config['report'], name)
+        if not configs and not check_enabled:
+            # Reporter with no configuration of its own (e.g. one from hooks.py) being tested: run it with defaults.
+            configs = [{}]
+
+        any_enabled = False
+        for cfg in configs:
+            if not (cfg.get('enabled', False) or not check_enabled):
+                continue
+            any_enabled = True
+            logger.info(f'Submitting with {name} ({subclass})')
+            base_config = subclass.get_base_config(report)  # ty:ignore[unresolved-attribute]
+            reported_states = filter_by_tags(job_states, cfg.get('tags')) if apply_tags else job_states
+            if not reported_states and job_states:
+                logger.info('Reporter %s reports on no job, as none has any of its tags: %s', name, cfg.get('tags'))
+            if base_config.get('separate', False):
+                for job_state in reported_states:
+                    subclass(report, cfg, [job_state], duration, jobs_files, differ_config, len(job_states)).submit()
+                    job_state.reported_count += 1
+            else:
+                subclass(report, cfg, reported_states, duration, jobs_files, differ_config, len(job_states)).submit()
+                for job_state in reported_states:
+                    job_state.reported_count += 1
+
+        return any_enabled
+
+    @classmethod
     def submit_one(
         cls,
         name: str,
@@ -191,7 +315,8 @@ class ReporterBase(metaclass=TrackSubClasses):
         duration: float,
         jobs_files: list[Path],
         check_enabled: bool | None = True,
-    ) -> None:
+        apply_tags: bool = True,
+    ) -> bool:
         """Run a single named report.
 
         :param name: The name of report to run.
@@ -201,21 +326,17 @@ class ReporterBase(metaclass=TrackSubClasses):
         :param jobs_files: The path(s) to the file(s) containing the list of jobs (optional, used in footers).
         :param check_enabled: Whether to check if the report is marked "enabled" in the configuration (used for
            testing)
+        :param apply_tags: Whether to honor the 'tags' directive of the reporter's configuration(s). The command line
+           arguments that force a single reporter (``--test-reporter`` and ``--errors``) set this to false, as the
+           job states they report on are either synthetic or explicitly chosen by the user and therefore would be
+           dropped by a reporter restricted by tags.
+        :returns: Whether at least one configuration of the reporter was run.
+        :raises ValueError: If the reporter is not enabled (and ``check_enabled`` is true).
         """
-        subclass = cls.__subclasses__[name]
-        cfg = report.config['report'][name]  # ty:ignore[invalid-key]
-        differ_config = report.config['differ_defaults']
-
-        if cfg.get('enabled', False) or not check_enabled:
-            logger.info(f'Submitting with {name} ({subclass})')
-            base_config = subclass.get_base_config(report)  # ty:ignore[unresolved-attribute]
-            if base_config.get('separate', False):
-                for job_state in job_states:
-                    subclass(report, cfg, [job_state], duration, jobs_files, differ_config=differ_config).submit()
-            else:
-                subclass(report, cfg, job_states, duration, jobs_files, differ_config=differ_config).submit()
-        else:
+        any_enabled = cls._submit_reporter(name, report, job_states, duration, jobs_files, check_enabled, apply_tags)
+        if not any_enabled:
             raise ValueError(f'Reporter not enabled: {name}')
+        return any_enabled
 
     @classmethod
     def submit_all(
@@ -224,33 +345,26 @@ class ReporterBase(metaclass=TrackSubClasses):
         job_states: list[JobState],
         duration: float,
         jobs_files: list[Path],
-    ) -> None:
+    ) -> bool:
         """Run all (enabled) reports.
 
         :param report: The Report object with the information of all the reports.
         :param job_states: The list of JobState objects containing the information about each job retrieved.
         :param duration: The duration of the retrieval of jobs.
         :param jobs_files: The path(s) to the file(s) containing the list of jobs (optional, used in footers).
+        :returns: Whether at least one reporter was enabled and run.
         """
         # sort job_states
         job_states = sorted(job_states, key=lambda x: x.job.pretty_name().lower())
-        differ_config = report.config['differ_defaults']
 
         any_enabled = False
-        for name, subclass in cls.__subclasses__.items():
-            cfg: _ConfigReportersList = report.config['report'].get(name, {})  # ty:ignore[invalid-assignment]
-            if cfg.get('enabled', False):
-                any_enabled = True
-                logger.info(f'Submitting with {name} ({subclass})')
-                base_config = subclass.get_base_config(report)  # ty:ignore[unresolved-attribute]
-                if base_config.get('separate', False):
-                    for job_state in job_states:
-                        subclass(report, cfg, [job_state], duration, jobs_files, differ_config=differ_config).submit()
-                else:
-                    subclass(report, cfg, job_states, duration, jobs_files, differ_config=differ_config).submit()
+        for name in cls.__subclasses__:
+            any_enabled |= cls._submit_reporter(name, report, job_states, duration, jobs_files)
 
         if not any_enabled:
             logger.warning('No reporters enabled.')
+
+        return any_enabled
 
     def submit(self, **kwargs: Any) -> Iterable[str]:
         """For the ReporterBase subclass, submit a job to generate the report.
@@ -259,7 +373,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         """
         raise NotImplementedError
 
-    def raise_import_error(self, package_name: str, reporter_name: str, error_message: str) -> None:
+    def raise_import_error(self, package_name: str, reporter_name: str, error_message: str) -> NoReturn:
         """Raise ImportError for missing package.
 
         :param package_name: The name of the module/package that could not be imported.
@@ -351,9 +465,8 @@ class HtmlReporter(ReporterBase):
             if self.report.config['footnote']:
                 yield '\n<hr>'
             yield (
-                f'Checked {len(self.job_states)} source{"s" if len(self.job_states) > 1 else ""} in '
-                f'{dur_text(self.duration)} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
-                f'{html.escape(__version__)}{self.footer_job_file}.<br>\n'
+                f'{self.footer_checked} with <a href="{html.escape(__url__)}">{html.escape(__project_name__)}</a> '
+                f'{html.escape(__version__)}{self.footer_job_file}{self.footer_coverage}.<br>\n'
             )
         if (
             self.report.new_release_future is not None
@@ -370,9 +483,24 @@ class HtmlReporter(ReporterBase):
         yield '</span>\n</body>\n</html>\n'
 
     @staticmethod
-    def markdown_to_html(text: str, markdown_padded_tables: bool | None = None) -> str:
+    def markdown_to_html(
+        text: str, markdown_padded_tables: bool | None = None, markdown_extras: dict[str, Any] | None = None
+    ) -> str:
         """Return an html representation of a markdown string."""
-        return '<br>\n'.join([mark_to_html(line, markdown_padded_tables) for line in text.splitlines()])
+        return '<br>\n'.join(
+            [mark_to_html(line, markdown_padded_tables, markdown_extras) for line in text.splitlines()]
+        )
+
+    @staticmethod
+    def rst_to_html(text: str) -> str:
+        """Return an html representation of an reStructuredText string.  Requires docutils to be installed."""
+        if not core:
+            return text
+        return core.publish_parts(
+            source=text,
+            writer_name='html',
+            settings_overrides={'report_level': 4},
+        )['html_body']
 
     def _format_content(self, job_state: JobState, differ: dict[str, Any]) -> str | None:
         """Returns the HTML of the report for a job; called by _parts.
@@ -384,7 +512,9 @@ class HtmlReporter(ReporterBase):
 
         def _format_for_return(data: str) -> str:
             if job_state.is_markdown():
-                data = self.markdown_to_html(data, job_state.job.markdown_padded_tables)
+                data = self.markdown_to_html(data, job_state.job.markdown_padded_tables, job_state.job.markdown_extras)
+            elif job_state.is_rst():
+                data = self.rst_to_html(data)
             elif job_state.new_mime_type == 'text/html':
                 pass
             elif not job_state.job.monospace:
@@ -491,8 +621,8 @@ class TextReporter(ReporterBase):
             if self.report.config['footnote']:
                 yield f'--\n{self.report.config["footnote"]}'
             yield (
-                f'--\nChecked {len(self.job_states)} source{"s" if len(self.job_states) > 1 else ""} in '
-                f'{dur_text(self.duration)} with {__project_name__} {__version__}{self.footer_job_file}.\n'
+                f'--\n{self.footer_checked} with {__project_name__} {__version__}{self.footer_job_file}'
+                f'{self.footer_coverage}.\n'
             )
             if (
                 self.report.new_release_future is not None
@@ -606,8 +736,8 @@ class MarkdownReporter(ReporterBase):
             # Markdown footer
             footer = f'--\n{self.report.config["footnote"]}' if self.report.config['footnote'] else ''
             footer += (
-                f'--\n_Checked {len(self.job_states)} source{"s" if len(self.job_states) > 1 else ""} in '
-                f'{dur_text(self.duration)} with {__project_name__} {__version__}{self.footer_job_file}_.\n'
+                f'--\n_{self.footer_checked} with {__project_name__} {__version__}{self.footer_job_file}'
+                f'{self.footer_coverage}_.\n'
             )
             if (
                 self.report.new_release_future is not None

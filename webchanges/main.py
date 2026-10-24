@@ -119,4 +119,12 @@ class Urlwatch:
     def close(self) -> None:
         """Finalizer. Create reports ands close snapshots database."""
         self.report.finish(jobs_file=self.jobs_storage.filename)
+
+        # A job reported on by no reporter is almost always a mistake (e.g. a typo in the 'tags' directive of a job
+        # or of a reporter), so it is called out; 'No reporters enabled.' is warned about by ReporterBase.submit_all.
+        if self.report.reporters_enabled:
+            for job_state in self.report.job_states:
+                if not job_state.reported_count:
+                    logger.warning('Job %s was not reported on by any reporter.', job_state.job.pretty_name())
+
         # self.ssdb_storage.close()

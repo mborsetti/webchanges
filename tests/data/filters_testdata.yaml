@@ -82,6 +82,40 @@ xpath_exclude:
     expected_result: |-
         <div>foo</div>
         <div id="bar">bar</div>
+xpath_exclude_only:
+    filters:
+      - xpath:
+          exclude: //*[@class='excl']
+    data: |
+        <html><head></head><body>
+        <div class="excl">you don't want to see me</div>
+        <div>foo</div>
+        </body></html>
+    expected_result: |-
+        <html>
+        <head></head>
+        <body>
+
+        <div>foo</div>
+        </body>
+        </html>
+css_exclude_only:
+    filters:
+      - css:
+          exclude: .excl
+    data: |
+        <html><head></head><body>
+        <div class="excl">you don't want to see me</div>
+        <div>foo</div>
+        </body></html>
+    expected_result: |-
+        <html>
+        <head></head>
+        <body>
+
+        <div>foo</div>
+        </body>
+        </html>
 xpath_xml_namespaces:
     filters:
       - xpath:

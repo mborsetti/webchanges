@@ -20,7 +20,9 @@ The configuration file ``config.yaml`` contains the directives toggling the repo
 or off, and their sub-directives (settings). This file is editable using any text editor or with the command
 ``webchanges --edit--config``. Reporters are listed  under the ``report`` section.
 
-Each reporter has a directive called ``enabled`` that can be set to true or false.
+Each reporter has a directive called ``enabled`` that can be set to true or false, and an optional one called
+``tags`` restricting it to certain jobs (see :ref:`here <reporter_tags>`). A reporter can also be configured more than
+once, e.g. to send different jobs to different destinations (see :ref:`here <multiple_reporters>`).
 
 .. note::
    The ``config.yaml`` file is located in Linux or macOS in the ``~/.config/webchanges`` directory, in Windows in
@@ -93,6 +95,65 @@ Reporters are based on :ref:`reports <reports>`, as follows, and inherit that re
    Even though the ``email`` reporter is listed under ``text`` for historical reason, it also inherits from the
    ``html`` report when its ``html`` option is set to ``true`` (default).
 
+
+
+.. _reporter_tags:
+
+Reporting only certain jobs (``tags``)
+--------------------------------------
+Any reporter accepts an optional ``tags`` directive: one tag, or a list of tags, restricting the reporter to the jobs
+having any of those tags in their :ref:`tags <tags>` job directive. A reporter with no ``tags`` directive reports on
+every job, as before.
+
+.. code-block:: yaml
+
+   report:
+     stdout:
+       enabled: true
+       tags: personal  # a single tag needs no list
+
+.. note::
+   The command line arguments that force a single reporter — ``--test-reporter`` and ``--errors`` — ignore ``tags``,
+   since the jobs they report on are either synthetic or explicitly chosen by you.
+
+.. versionadded:: 3.38
+
+
+.. _multiple_reporters:
+
+Configuring the same reporter more than once
+--------------------------------------------
+A reporter can be configured multiple times by replacing its single set of directives with a **list** of them. Each
+entry is a complete, independent configuration of that reporter, and combining this with ``tags`` allows different
+jobs to be reported to different destinations (e.g. different email addresses or different Telegram chats):
+
+.. code-block:: yaml
+
+   report:
+     telegram:
+       - enabled: true
+         bot_token: '123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh'
+         chat_id: '11111111'
+         tags: personal
+       - enabled: true
+         bot_token: '123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh'
+         chat_id: '22222222'
+         tags:
+           - team
+           - ops
+
+Directives you don't specify in an entry take their default value, exactly as they do for a single configuration, and
+an entry whose ``enabled`` is false is skipped. Reports produced by a reporter restricted by ``tags`` note in their
+footer how many of the jobs run they cover.
+
+A job that ends up being reported by no reporter at all — typically a typo in a tag — is called out in a warning
+during the run.
+
+.. tip::
+   The ``--smtp-login``, ``--telegram-chats`` and ``--xmpp-login`` command line arguments check the credentials of
+   the **first** configuration of the respective reporter only.
+
+.. versionadded:: 3.38
 
 
 .. _tz:

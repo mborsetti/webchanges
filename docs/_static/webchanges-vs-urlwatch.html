@@ -681,7 +681,9 @@ differ:
               <td>urlwatch only has <code>diff_tool</code> (a custom command).</td>
             </tr>
             <tr>
-              <td><code>note</code>, <code>monospace</code>, <code>is_markdown</code></td>
+              <td>
+                <code>note</code>, <code>monospace</code>, <code>is_markdown</code>, <code>markdown_extras</code>
+              </td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
               <td>Per-job rendering hints. <span class="only">webchanges-only</span></td>
@@ -693,7 +695,13 @@ differ:
               <td>webchanges promotes them to first-class job options.</td>
             </tr>
             <tr>
-              <td><code>tags</code>, <code>treat_new_as_changed</code></td>
+              <td><code>tags</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center yes">&check;</td>
+              <td>Group jobs to select them with <code>--tags</code> or to route them to a specific reporter.</td>
+            </tr>
+            <tr>
+              <td><code>treat_new_as_changed</code></td>
               <td class="center no">&times;</td>
               <td class="center yes">&check;</td>
               <td><span class="only bad">urlwatch-only</span></td>
@@ -956,6 +964,12 @@ differ:
                 <code>rich_text</code>.
               </td>
             </tr>
+            <tr>
+              <td>Same reporter configured multiple times, selected by <code>tags</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center yes">&check;</td>
+              <td>Route different jobs to different destinations (e.g. two email addresses, two Telegram chats).</td>
+            </tr>
           </tbody>
         </table>
 
@@ -1091,7 +1105,7 @@ differ:
             <tr>
               <td><code>--tags</code></td>
               <td>Select jobs to run by tag instead of by index.</td>
-              <td class="center no">&times;</td>
+              <td class="center yes">&check;</td>
               <td class="center yes">&check;</td>
             </tr>
           </tbody>

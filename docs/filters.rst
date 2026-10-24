@@ -341,6 +341,16 @@ will not have any ``<a>`` tag in its results:
          selector: 'body'
          exclude: 'a'
 
+When ``exclude`` is specified, ``selector`` can be omitted, in which case the whole document minus the excluded elements
+is returned. For example, the following job returns the entire page without any ``<script>`` or ``<style>`` element:
+
+.. code-block:: yaml
+
+   url: https://example.org/css-exclude-only.html
+   filters:
+     - css:
+         exclude: script, style
+
 Limiting the returned items from a CSS selector
 ```````````````````````````````````````````````
 If you only want to return a subset of the items returned by a CSS selector, you can use two additional sub-directives:
@@ -389,7 +399,7 @@ Alternatively, you can chain the :ref:`sort <sort>` filter.
 
 Optional directives
 ```````````````````
-* ``selector`` (default): the CSS selector.
+* ``selector`` (default): the CSS selector (default: the whole document, but only if ``exclude`` is specified).
 * ``method``: Either of ``html`` (default) or ``xml``.
 * ``namespaces``: Mapping of XML namespaces for matching (default: None).
 * ``exclude``: css selector for elements to remove from the final result (default: None).
@@ -667,6 +677,10 @@ This filter displays the contents both in binary and ASCII using the hex dump fo
 -------------
 This filter converts HTML (or XML) to Unicode text.
 
+If the data reaching the filter has a JSON media type and consists entirely of a JSON string (i.e. the HTML is
+returned inside a JSON-encoded string), it is JSON-decoded first, so that its Unicode escape sequences are converted
+into the characters they represent. JSON objects and arrays are passed through unchanged.
+
 Optional sub-directives
 ```````````````````````
 * ``method``: One of:
@@ -802,6 +816,9 @@ packages <optional_packages>` as follows:
 
 .. versionchanged:: 3.0
    Method ``re`` renamed to ``strip_tags``.
+
+.. versionchanged:: 3.38
+   Data of a JSON media type consisting entirely of a JSON string is JSON-decoded before conversion.
 
 .. deprecated:: urlwatch
    Removed method ``lynx`` (external OS-specific dependency).
@@ -1666,6 +1683,16 @@ will not have any ``<a>`` tag in its results:
          path: //body
          exclude: //a
 
+When ``exclude`` is specified, ``path`` can be omitted, in which case the whole document minus the excluded elements is
+returned. For example, the following job returns the entire page without any ``<script>`` or ``<style>`` element:
+
+.. code-block:: yaml
+
+   url: https://example.org/xpath-exclude-only.html
+   filters:
+     - xpath:
+         exclude: //script | //style
+
 Limiting the returned items from an XPath expression
 `````````````````````````````````````````````````````
 If you only want to return a subset of the items returned by an XPath expression, you can use two additional
@@ -1715,7 +1742,7 @@ Alternatively, you can chain the :ref:`sort <sort>` filter.
 
 Optional directives
 ```````````````````
-* ``path`` (default): the XPath expression.
+* ``path`` (default): the XPath expression (default: the whole document, but only if ``exclude`` is specified).
 * ``method``: Either of ``html`` (default) or ``xml``.
 * ``namespaces``: Mapping of XML namespaces for matching (default: None).
 * ``exclude``: XPath expression for elements to remove from the final result (default: None).

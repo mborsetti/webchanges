@@ -90,12 +90,13 @@ class SsdbStorage(BaseFileStorage):
         """
 
     @abstractmethod
-    def rollback(self, timestamp: float) -> int | None:
+    def rollback(self, timestamp: float, count: bool = False) -> int | None:
         """Rolls back the database to timestamp.
 
         :param timestamp: The timestamp.
+        :param count: If True, only count the number of records that would be deleted without deleting them.
 
-        :returns: Number of records deleted.
+        :returns: Number of records deleted (or that would be deleted).
         :raises: NotImplementedError for those classes where this method is not implemented.
         """
 
@@ -259,7 +260,7 @@ class SsdbDirStorage(SsdbStorage):
             raise ValueError(f'Old snapshot file {old_filepath} does not exist')
         return 1
 
-    def rollback(self, timestamp: float) -> None:
+    def rollback(self, timestamp: float, count: bool = False) -> None:
         raise NotImplementedError("'textfiles' databases cannot be rolled back as new snapshots overwrite old ones")
 
     def flushdb(self) -> None:

@@ -21,7 +21,7 @@ import yaml.scanner
 
 from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.jobs import JobBase
-from webchanges.reporters import ReporterBase
+from webchanges.reporters import ReporterBase, reporter_configs
 from webchanges.storage._base import BaseYamlFileStorage, JobsBaseFileStorage
 from webchanges.storage._config import DEFAULT_CONFIG, _Config, validate_config
 
@@ -50,7 +50,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
     config: _Config = cast('_Config', {})
 
     @staticmethod
-    def dict_deep_difference(d1: _Config, d2: _Config, ignore_underline_keys: bool = False) -> _Config:
+    def dict_deep_difference(d1: _Config, d2: _Config, ignore_underline_keys: bool = False) -> dict[str, Any]:
         """Recursively find elements in the first dict that are not in the second.
 
         :param d1: The first dict.
@@ -80,7 +80,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         # The helper works on plain dicts (the result is a partial diff, not a valid _Config); the deepcopy makes
         # popping required TypedDict keys safe.
         d1_copy = cast('dict[str, Any]', copy.deepcopy(d1))
-        return cast('_Config', _sub_dict_deep_difference(d1_copy, cast('dict[str, Any]', d2)))
+        return _sub_dict_deep_difference(d1_copy, cast('dict[str, Any]', d2))
 
     @staticmethod
     def dict_deep_merge(source: _Config, destination: _Config) -> _Config:
@@ -122,6 +122,34 @@ class YamlConfigStorage(BaseYamlFileStorage):
             config['report'].pop('slack')  # ty:ignore[invalid-key]
         return config
 
+    def normalize_reporter_lists(self, config: _Config) -> None:
+        """Fill in the default sub-directives of each configuration of a reporter that is configured multiple times,
+        i.e. with a list of configurations instead of a single one (a single one gets its defaults from the deep merge
+        with DEFAULT_CONFIG done in :py:func:`load`, which cannot reach inside a list).
+
+        :param config: The configuration; the reporters configured with a list are replaced in place.
+        :raises ValueError: If an entry of a reporter's list of configurations is not a set of directives.
+        """
+        # Plain-dict views: the values written are lists, which the _ConfigReport TypedDict allows but whose keys are
+        # not statically known here.
+        report = cast('dict[str, Any]', config.get('report', {}))
+        default_report = cast('dict[str, Any]', DEFAULT_CONFIG['report'])
+        for name, cfgs in report.items():
+            if not isinstance(cfgs, list):
+                continue
+            defaults = default_report.get(name, {})
+            normalized = []
+            for i, cfg in enumerate(cfgs):
+                if not isinstance(cfg, dict):
+                    raise ValueError(
+                        f"Reporter '{name}' is configured with a list, but entry {i + 1} of that list is a "
+                        f'{type(cfg).__name__} instead of a set of directives, in the configuration file '
+                        f'{self.filename}.'
+                    )
+                normalized.append(self.dict_deep_merge(cast('_Config', cfg), cast('_Config', defaults)))
+            report[name] = normalized
+            logger.info('Reporter %s is configured %d times', name, len(normalized))
+
     def check_for_unrecognized_keys(self, config: _Config) -> None:
         """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError. Also cleanup
         deprecated keys in config.
@@ -155,7 +183,16 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)
                 elif issubclass(obj, ReporterBase) and obj.__kind__ not in DEFAULT_CONFIG['report']:
                     config_for_extras['report'].pop(obj.__kind__, None)
-        extras: _Config = self.dict_deep_difference(
+        for name, reporter_config in config_for_extras.get('report', {}).items():
+            if isinstance(reporter_config, list):
+                # A reporter configured multiple times: collapse its configurations into one so that an unrecognized
+                # directive in any of them is still caught by the diff against DEFAULT_CONFIG below.
+                reporter_config = {k: v for cfg in reporter_config if isinstance(cfg, dict) for k, v in cfg.items()}
+                config_for_extras['report'][name] = reporter_config
+            if isinstance(reporter_config, dict):
+                # 'tags' is accepted by every reporter but, having no default, is not in DEFAULT_CONFIG.
+                reporter_config.pop('tags', None)
+        extras = self.dict_deep_difference(
             cast('_Config', config_for_extras), DEFAULT_CONFIG, ignore_underline_keys=True
         )
         if not extras.get('report'):
@@ -195,16 +232,19 @@ class YamlConfigStorage(BaseYamlFileStorage):
         :param args: None used.
         """
         logger.debug(f'Loading configuration from {self.filename}')
-        config: _Config = self.parse(self.filename)
+        config: _Config | None = self.parse(self.filename)
 
         if config:
             self.replace_none_keys(config)
 
-            # Fix change in key spelling
-            if 'utf-8' in config.get('report', {}).get('email', {}).get('smtp', {}):
-                config['report']['email']['smtp']['utf_8'] = config['report']['email']['smtp'].pop('utf-8')  # ty:ignore[invalid-key]
+            # Fix change in key spelling (the email reporter may be configured more than once)
+            for email_config in reporter_configs(config.get('report', {}), 'email'):
+                smtp_config = cast('dict[str, Any]', email_config.get('smtp', {}))
+                if 'utf-8' in smtp_config:
+                    smtp_config['utf_8'] = smtp_config.pop('utf-8')
 
             config = self.remove_deprecated_keys(config)
+            self.normalize_reporter_lists(config)
             self.check_for_unrecognized_keys(config)
 
             # If config is missing keys in DEFAULT_CONFIG, log the missing keys and deep merge DEFAULT_CONFIG

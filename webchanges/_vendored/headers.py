@@ -77,7 +77,7 @@ def _obfuscate_sensitive_headers(
     items: typing.Iterable[tuple[typing.AnyStr, typing.AnyStr]],
 ) -> typing.Iterator[tuple[typing.AnyStr, typing.AnyStr]]:
     for k, v in items:
-        if to_str(k.lower()) in SENSITIVE_HEADERS:  # ty:ignore[no-matching-overload, invalid-argument-type]
+        if to_str(k.lower()) in SENSITIVE_HEADERS:
             v = to_bytes_or_str('[secure]', match_type_of=v)
         yield k, v
 
@@ -98,8 +98,8 @@ class Headers(typing.MutableMapping[str, str]):
             self._list = list(headers._list)
         elif isinstance(headers, Mapping):
             for k, v in headers.items():
-                bytes_key = _normalize_header_key(k, encoding)  # ty:ignore[invalid-argument-type]
-                bytes_value = _normalize_header_value(v, encoding)  # ty:ignore[invalid-argument-type]
+                bytes_key = _normalize_header_key(k, encoding)
+                bytes_value = _normalize_header_value(v, encoding)
                 self._list.append((bytes_key, bytes_key.lower(), bytes_value))
         elif headers is not None:
             for k, v in headers:

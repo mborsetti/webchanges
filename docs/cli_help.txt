@@ -1,6 +1,6 @@
 usage: webchanges [-h] [-V] [-v] [--log-file FILE] [--jobs FILE] [--config FILE] [--hooks FILE]
-                  [--database FILE] [--list-jobs [REGEX]] [--errors [REPORTER]] [--test [JOB]]
-                  [--no-headless] [--test-differ JOB [JOB ...]] [--dump-history JOB]
+                  [--database FILE] [--list-jobs [REGEX]] [--tags TAGS] [--errors [REPORTER]]
+                  [--test [JOB]] [--no-headless] [--test-differ JOB [JOB ...]] [--dump-history JOB]
                   [--max-workers WORKERS] [--test-reporter REPORTER] [--smtp-login]
                   [--telegram-chats] [--xmpp-login] [--footnote FOOTNOTE] [--edit-jobs]
                   [--edit-config] [--edit-hooks] [--gc-database [RETAIN_LIMIT]]
@@ -32,6 +32,8 @@ override file defaults:
 
 job management:
   --list-jobs [REGEX]   list jobs and their index number (optional: only those who match REGEX)
+  --tags TAGS           run only the jobs having any of the TAGS (comma-separated) in their tags
+                        directive; can be repeated
   --errors [REPORTER]   test-run enabled jobs and list those with errors or no data captured;
                         optionally send output to REPORTER
   --test [JOB]          test a JOB (by index or URL/command) and show filtered output; if no JOB,

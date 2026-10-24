@@ -18,19 +18,23 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from datetime import datetime, tzinfo
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Iterator, TypeGuard
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, TypeGuard, cast
 from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
 from webchanges import __docs_url__, __project_name__
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase, NotModifiedError, UrlJob
+from webchanges.reporters import reporter_configs
 from webchanges.util import dur_text
 
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    httpx = None  # ty:ignore[invalid-assignment]
+    # The assignment is hidden from the type checker so that `httpx` keeps its module type (see webchanges/jobs/
+    # _url.py for the full explanation).
+    if not TYPE_CHECKING:
+        httpx = None
     print("Required package 'httpx' not found; will attempt to run using 'requests'.")
     try:
         import requests
@@ -43,7 +47,7 @@ if httpx is not None:
     try:
         import h2
     except ImportError:  # pragma: no cover
-        h2 = None  # ty:ignore[invalid-assignment]
+        h2 = None
 
 if TYPE_CHECKING:
     from webchanges.main import Urlwatch
@@ -81,7 +85,7 @@ class UrlwatchCommand:
         sys.exit(arg)
 
     def jobs_from_joblist(self) -> Iterator[JobBase]:
-        """Generates the jobs to process from the joblist entered in the CLI."""
+        """Generates the jobs to process from the joblist and/or the tags entered in the CLI."""
         if self.urlwatcher.urlwatch_config.joblist:
             jobs = [self._find_job(job_entry) for job_entry in self.urlwatcher.urlwatch_config.joblist]
             enabled_jobs = [job for job in jobs if job.is_enabled()]
@@ -96,8 +100,25 @@ class UrlwatchCommand:
             disabled = len(enabled_jobs) - len(self.urlwatcher.jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
             logger.debug(f'Processing {len(enabled_jobs)} job{"s" if enabled_jobs else ""}{disabled_str}')
+
+        tags = self.tags_from_cli()
+        if tags:
+            enabled_jobs = [job for job in enabled_jobs if job.matching_tags(tags)]
+            logger.debug('Processing %d job(s) having any of the tags %s', len(enabled_jobs), ', '.join(tags))
+            if not enabled_jobs:
+                logger.warning('No job has any of the tags %s', ', '.join(tags))
+
         for job in enabled_jobs:
             yield job.with_defaults(self.urlwatcher.config_storage.config)
+
+    def tags_from_cli(self) -> list[str]:
+        """Returns the tags entered in the CLI with --tags (which is repeatable and takes comma-separated tags).
+
+        :returns: The list of tags, empty if --tags was not used.
+        """
+        return [
+            tag.strip() for tags in self.urlwatcher.urlwatch_config.tags or [] for tag in tags.split(',') if tag.strip()
+        ]
 
     @staticmethod
     def show_features() -> int:
@@ -432,6 +453,40 @@ class UrlwatchCommand:
             print(f'Invalid reporter {name}.')
         return False
 
+    def _reporter_configs_to_enable(self, name: str) -> list[_ConfigReportersList]:
+        """Returns the configuration(s) of the reporter ``name`` for the ``--test-reporter`` paths to enable.
+
+        A reporter may be configured multiple times (i.e. with a list of configurations), in which case all of them
+        are returned and therefore tested.
+
+        :param name: The name (``__kind__``) of the reporter.
+        :returns: The reporter's configuration(s), which are the very ones in the configuration (i.e. modifying them
+           modifies the configuration); an empty one is created if the reporter has none (e.g. one from hooks.py).
+        """
+        report_config = cast('dict[str, Any]', self.urlwatcher.config_storage.config['report'])
+        cfgs: list[_ConfigReportersList] = reporter_configs(report_config, name)
+        if not cfgs:
+            cfgs = [cast('_ConfigReportersList', {})]
+            report_config[name] = cfgs[0]
+        return cfgs
+
+    def _first_reporter_config(self, name: str) -> _ConfigReportersList:
+        """Returns the first configuration of the reporter ``name``, for the CLI actions that check the credentials of
+        a single destination (``--smtp-login``, ``--telegram-chats`` and ``--xmpp-login``).
+
+        :param name: The name (``__kind__``) of the reporter.
+        :returns: The reporter's first (or only) configuration; an empty one if the reporter has none.
+        """
+        cfgs = reporter_configs(cast('dict[str, Any]', self.urlwatcher.config_storage.config['report']), name)
+        if len(cfgs) > 1:
+            print(f"Reporter '{name}' is configured {len(cfgs)} times; checking the first configuration only.")
+        return cfgs[0] if cfgs else cast('_ConfigReportersList', {})
+
+    def _disable_stdout_color(self) -> None:
+        """Turns color off in every configuration of the stdout reporter (used by the ``--test-reporter`` paths)."""
+        for cfg in reporter_configs(cast('dict[str, Any]', self.urlwatcher.config_storage.config['report']), 'stdout'):
+            cfg['color'] = False
+
     def list_error_jobs(self) -> int:
         if not self._validate_reporter_name(self.urlwatch_config.errors, with_help=False):
             return 1
@@ -570,6 +625,9 @@ class UrlwatchCommand:
         header_lines = ['Jobs with errors; warns of jobs returning no data (after unmodified filters)', *jobs_files]
         if self.urlwatch_config.joblist:
             header_lines.append(f'restricted to jobs: {", ".join(str(j) for j in self.urlwatch_config.joblist)}')
+        tags = self.tags_from_cli()
+        if tags:
+            header_lines.append(f'restricted to jobs tagged: {", ".join(tags)}')
         header = '\n   '.join(header_lines)
 
         jobs = set(self.jobs_from_joblist())
@@ -598,7 +656,9 @@ class UrlwatchCommand:
                 self.urlwatcher.report.config['report']['markdown']['footer'] = False
                 self.urlwatcher.report.config['report']['text']['footer'] = False
                 self.urlwatcher.report.error(job_state)
-                self.urlwatcher.report.finish_one(self.urlwatch_config.errors, check_enabled=False)
+                # apply_tags=False: the synthetic job state above has no tags, so a reporter restricted by tags
+                # would otherwise silently drop the error report.
+                self.urlwatcher.report.finish_one(self.urlwatch_config.errors, check_enabled=False, apply_tags=False)
             else:
                 print(header)
                 print('--')
@@ -625,14 +685,18 @@ class UrlwatchCommand:
 
             :return: The datetime object.
             """
-            # --- 1. Try parsing as a numeric timestamp ---
+            # --- 1. Try parsing as a numeric (Unix) timestamp, including fractional ones ---
             # This is the fastest check and should come first.
-            if timespec.isnumeric() or (timespec.startswith('-') and timespec[1:].isnumeric()):
+            try:
+                timestamp = float(timespec)
+            except ValueError:
+                # Pass to the next method if it's not a valid float (e.g., "123a")
+                pass
+            else:
                 try:
-                    timestamp = float(timespec)
                     return datetime.fromtimestamp(timestamp, tz=tz_info)
-                except (ValueError, TypeError):
-                    # Pass to the next method if it's not a valid float (e.g., "123a")
+                except (ValueError, OverflowError, OSError):
+                    # Pass to the next method if the number is not a valid timestamp (e.g., "inf")
                     pass
 
             # --- 2. Try parsing as ISO 8601 format ---
@@ -669,7 +733,7 @@ class UrlwatchCommand:
         tz_info = ZoneInfo(tz) if tz else datetime.now().astimezone().tzinfo  # from machine
         dt = _convert_to_datetime(timespec, tz_info)
         timestamp_date = email.utils.format_datetime(dt)
-        count = self.urlwatcher.ssdb_storage.rollback(dt.timestamp())
+        count = self.urlwatcher.ssdb_storage.rollback(dt.timestamp(), count=True)
         print(f'Rolling back database to {timestamp_date}.')
         if sys.__stdin__ and sys.__stdin__.isatty():
             print(
@@ -795,14 +859,14 @@ class UrlwatchCommand:
         return 0
 
     def check_telegram_chats(self) -> None:
-        config: _ConfigReportTelegram = self.urlwatcher.config_storage.config['report']['telegram']
+        config = cast('_ConfigReportTelegram', self._first_reporter_config('telegram'))
 
         bot_token = config['bot_token']
         if not bot_token:
             print('You need to set up your bot token first (see documentation).')
             self._exit(1)
 
-        with httpx.Client(http2=h2 is not None) if httpx else requests.Session() as http_client:
+        with httpx.Client(http2=h2 is not None) if httpx else requests.Session() as http_client:  # ty: ignore[redundant-condition]
             info = http_client.get(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
             if not info['ok']:
                 print(f'Error with token {bot_token}: {info["description"]}.')
@@ -880,9 +944,10 @@ class UrlwatchCommand:
         if not self._validate_reporter_name(reporter_name):
             return 1
 
-        cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]  # ty:ignore[invalid-key]
+        cfgs = self._reporter_configs_to_enable(reporter_name)
         if job_state:  # we want a full report
-            cfg['enabled'] = True
+            for cfg in cfgs:
+                cfg['enabled'] = True
             self.urlwatcher.config_storage.config['display'][label] = True  # ty:ignore[invalid-key]
             self.urlwatcher.config_storage.config['report']['text']['details'] = True
             self.urlwatcher.config_storage.config['report']['text']['footer'] = True
@@ -890,14 +955,15 @@ class UrlwatchCommand:
             self.urlwatcher.config_storage.config['report']['markdown']['details'] = True
             self.urlwatcher.config_storage.config['report']['markdown']['footer'] = True
             self.urlwatcher.config_storage.config['report']['markdown']['minimal'] = False
-            self.urlwatcher.config_storage.config['report']['stdout']['color'] = False
-        elif not cfg['enabled']:
+            self._disable_stdout_color()
+        elif not any(cfg.get('enabled') for cfg in cfgs):
             print(
                 f'WARNING: Reporter being tested is not enabled: {reporter_name}.\n'
                 f'Will still attempt to test it, but this may not work.\n'
                 f'Use {__project_name__} --edit-config to configure reporters.'
             )
-            cfg['enabled'] = True
+            for cfg in cfgs:
+                cfg['enabled'] = True
 
         if report is None:
             report = Report(self.urlwatcher)
@@ -941,7 +1007,9 @@ class UrlwatchCommand:
                 )
             )
 
-        report.finish_one(reporter_name, jobs_file=self.urlwatch_config.jobs_files)
+        # apply_tags=False: the pseudo-jobs built above have no tags, so a reporter restricted by tags would
+        # otherwise be tested with nothing to report.
+        report.finish_one(reporter_name, jobs_file=self.urlwatch_config.jobs_files, apply_tags=False)
 
         return 0
 
@@ -966,26 +1034,29 @@ class UrlwatchCommand:
                 job.ignore_cached = True
 
         # Force the chosen reporter on and surface every category so the preview is complete.
-        cfg: _ConfigReportersList = self.urlwatcher.config_storage.config['report'][reporter_name]  # ty:ignore[invalid-key]
-        cfg['enabled'] = True
+        for cfg in self._reporter_configs_to_enable(reporter_name):
+            cfg['enabled'] = True
         self.urlwatcher.config_storage.config['display']['new'] = True
         self.urlwatcher.config_storage.config['display']['error'] = True
         self.urlwatcher.config_storage.config['display']['unchanged'] = True
         if reporter_name == 'stdout':
-            self.urlwatcher.config_storage.config['report']['stdout']['color'] = False
+            self._disable_stdout_color()
 
         self.urlwatcher.run_jobs(read_only=True)
+        # apply_tags=False: the jobs to report on were chosen explicitly on the command line, so a reporter
+        # restricted by tags would otherwise silently drop the untagged ones.
         self.urlwatcher.report.finish_one(
             reporter_name,
             jobs_file=self.urlwatcher.jobs_storage.filename,
             check_enabled=False,
+            apply_tags=False,
         )
         return 0
 
     def check_smtp_login(self) -> None:
         from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
 
-        config: _ConfigReportEmail = self.urlwatcher.config_storage.config['report']['email']
+        config = cast('_ConfigReportEmail', self._first_reporter_config('email'))
         smtp_config: _ConfigReportEmailSmtp = config['smtp']
 
         success = True
@@ -1039,7 +1110,7 @@ class UrlwatchCommand:
     def check_xmpp_login(self) -> None:
         from webchanges.reporters import xmpp_have_password, xmpp_set_password
 
-        xmpp_config: _ConfigReportXmpp = self.urlwatcher.config_storage.config['report']['xmpp']
+        xmpp_config = cast('_ConfigReportXmpp', self._first_reporter_config('xmpp'))
 
         success = True
 

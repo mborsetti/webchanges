@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-import functools
+import logging
 import re
 import sys
 from enum import Enum
@@ -12,11 +12,41 @@ from typing import Any, Callable, Iterable
 
 from webchanges.reporters._base import TextReporter
 
-if sys.platform == 'win32':
+logger = logging.getLogger(__name__)
+
+
+def _enable_windows_ansi() -> bool:
+    """Enables the processing of ANSI escape sequences (colors) by the Windows console attached to stdout.
+
+    Windows 10 and later support ANSI escape sequences natively, but the legacy console host (conhost) only honors
+    them once ENABLE_VIRTUAL_TERMINAL_PROCESSING is set on the output handle; Windows Terminal sets it by default.
+
+    :returns: True if the console processes ANSI escape sequences (or the platform is not Windows), False otherwise.
+    """
+    if sys.platform != 'win32':
+        return True
+
+    import ctypes
+
+    std_output_handle = -11  # STD_OUTPUT_HANDLE
+    enable_virtual_terminal_processing = 0x0004  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
     try:
-        from colorama import AnsiToWin32
-    except ImportError as e:  # pragma: no cover
-        AnsiToWin32 = str(e)  # ty:ignore[invalid-assignment]
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(std_output_handle)
+        mode = ctypes.c_uint32()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            logger.debug('GetConsoleMode failed (error %s); stdout colors disabled', ctypes.get_last_error())
+            return False
+        if mode.value & enable_virtual_terminal_processing:
+            return True
+        if not kernel32.SetConsoleMode(handle, mode.value | enable_virtual_terminal_processing):
+            logger.debug('SetConsoleMode failed (error %s); stdout colors disabled', ctypes.get_last_error())
+            return False
+        logger.debug('Enabled ANSI escape sequence processing in the Windows console')
+        return True
+    except (AttributeError, OSError) as e:
+        logger.debug('Unable to enable ANSI escape sequence processing in the Windows console: %s', e)
+        return False
 
 
 class StdoutReporter(TextReporter):
@@ -26,7 +56,9 @@ class StdoutReporter(TextReporter):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._has_color = sys.stdout.isatty() and self.config['color']  # ty:ignore[invalid-key]
+        self._has_color = bool(
+            sys.stdout.isatty() and self.config['color'] and _enable_windows_ansi()  # ty:ignore[invalid-key]
+        )
         self._color_code = '3' if self.config['color'] == 'normal' else '9'  # ty:ignore[invalid-key]
 
     def _incolor(self, color_id: int, s: str) -> str:
@@ -46,14 +78,7 @@ class StdoutReporter(TextReporter):
     def _blue(self, s: str) -> str:
         return self._incolor(4, s)
 
-    def _get_print(self) -> Callable:
-        if sys.platform == 'win32' and self._has_color and not isinstance(AnsiToWin32, str):
-            return functools.partial(print, file=AnsiToWin32(sys.stdout).stream)
-        return print
-
     def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
-        print_color = self._get_print()
-
         cfg = self.get_base_config(self.report)
         line_length = cfg['line_length']
 
@@ -122,4 +147,4 @@ class StdoutReporter(TextReporter):
                     case LineType.OTHER:
                         print_color(line)
 
-        process_lines(body, separators, print_color, self._green, self._red, self._blue)
+        process_lines(body, separators, print, self._green, self._red, self._blue)

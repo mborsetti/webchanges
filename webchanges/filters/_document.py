@@ -4,45 +4,55 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['csv', 'io', 'json', 'yaml']
+
 import csv
 import io
 import json
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 
 from webchanges.filters._base import FilterBase
 
+# The fallback assignments below are hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     from pypdf import PdfReader
 except ImportError as e:  # pragma: no cover
-    PdfReader = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        PdfReader = str(e)
 
 try:
     import pdftotext  # ty:ignore[unresolved-import]
 except ImportError as e:  # pragma: has-pdftotext
-    pdftotext = str(e)
+    if not TYPE_CHECKING:
+        pdftotext = str(e)
 
 try:
     from PIL import Image
 except ImportError as e:  # pragma: no cover
-    Image = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        Image = str(e)
 
 try:
     import pytesseract  # ty:ignore[unresolved-import]
 except ImportError as e:  # pragma: has-pytesseract
-    pytesseract = str(e)
+    if not TYPE_CHECKING:
+        pytesseract = str(e)
 
 try:
     import vobject.base
 except ImportError as e:  # pragma: no cover
-    vobject = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        vobject = str(e)
 
 try:
     import jq  # ty:ignore[unresolved-import]
 except ImportError as e:  # pragma: has-jq
-    jq = str(e)
+    if not TYPE_CHECKING:
+        jq = str(e)
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +194,7 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
 
         return (
             '\n'.join(
-                pdftotext.PDF(  # ty:ignore[unresolved-attribute]
+                pdftotext.PDF(
                     io.BytesIO(data),
                     password=subfilter.get('password', ''),
                     raw=subfilter.get('method', False),
@@ -259,7 +269,7 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
             self.raise_import_error('pytesseract', self.__kind__, pytesseract)
 
         return (
-            pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip(),  # ty:ignore[unresolved-attribute]
+            pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip(),
             'text/plain',
         )
 
@@ -288,7 +298,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
         if isinstance(jq, str):
             self.raise_import_error('jq', self.__kind__, jq)
 
-        return jq.text(subfilter['query'], jsondata), 'text/plain'  # ty:ignore[unresolved-attribute]
+        return jq.text(subfilter['query'], jsondata), 'text/plain'
         # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59
         # however it aborts execution(!) during testing
         # return '\n'.join(json.dumps(v, ensure_ascii=False) for v in (jq.compile(subfilter['query'], jsondata)))

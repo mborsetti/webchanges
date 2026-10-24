@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, Literal, Mapping, TypedDict
+from typing import Any, Literal, Mapping, NotRequired, TypedDict
 
 from webchanges import __project_name__
 
@@ -24,6 +24,14 @@ _ConfigDisplay = TypedDict(
         'empty-diff': bool,
     },
 )
+
+
+class _ConfigReporter(TypedDict, total=False):
+    """Directives accepted by every reporter, in addition to its own ones. Reporters inherit from this (the report
+    formats -- text, html and markdown -- do not, as they are not reporters)."""
+
+    # Restricts the reporter to the jobs having at least one of these tags in their own 'tags' directive.
+    tags: str | list[str]
 
 
 class _ConfigReportText(TypedDict):
@@ -48,16 +56,16 @@ class _ConfigReportMarkdown(TypedDict):
     separate: bool
 
 
-class _ConfigReportStdout(TypedDict):
+class _ConfigReportStdout(_ConfigReporter):
     enabled: bool
     color: bool | Literal['normal', 'bright']
 
 
-class _ConfigReportBrowser(TypedDict):
+class _ConfigReportBrowser(_ConfigReporter):
     enabled: bool
 
 
-class _ConfigReportDiscord(TypedDict):
+class _ConfigReportDiscord(_ConfigReporter):
     enabled: bool
     webhook_url: str
     embed: bool
@@ -92,11 +100,13 @@ _ConfigReportEmail = TypedDict(
         'method': Literal['sendmail', 'smtp'],
         'smtp': _ConfigReportEmailSmtp,
         'sendmail': _ConfigReportEmailSendmail,
+        # Same as _ConfigReporter.tags; repeated here as the functional syntax does not allow inheritance.
+        'tags': NotRequired[str | list[str]],
     },
 )
 
 
-class _ConfigReportGithubIssue(TypedDict):
+class _ConfigReportGithubIssue(_ConfigReporter):
     enabled: bool
     token: str
     owner: str
@@ -110,7 +120,7 @@ class _ConfigReportGithubIssue(TypedDict):
     milestone: str
 
 
-class _ConfigReportGotify(TypedDict):
+class _ConfigReportGotify(_ConfigReporter):
     enabled: bool
     priority: int
     server_url: str
@@ -118,13 +128,13 @@ class _ConfigReportGotify(TypedDict):
     token: str
 
 
-class _ConfigReportIfttt(TypedDict):
+class _ConfigReportIfttt(_ConfigReporter):
     enabled: bool
     key: str
     event: str
 
 
-class _ConfigReportMailgun(TypedDict):
+class _ConfigReportMailgun(_ConfigReporter):
     enabled: bool
     region: str
     api_key: str
@@ -135,7 +145,7 @@ class _ConfigReportMailgun(TypedDict):
     subject: str
 
 
-class _ConfigReportMatrix(TypedDict):
+class _ConfigReportMatrix(_ConfigReporter):
     enabled: bool
     homeserver: str
     access_token: str
@@ -149,14 +159,14 @@ class _ConfigReportNtfyPriorities(TypedDict):
     error: int | str
 
 
-class _ConfigReportNtfy(TypedDict):
+class _ConfigReportNtfy(_ConfigReporter):
     enabled: bool
     topic_url: str
     authorization: str | None
     priorities: _ConfigReportNtfyPriorities
 
 
-class _ConfigReportProwl(TypedDict):
+class _ConfigReportProwl(_ConfigReporter):
     enabled: bool
     api_key: str
     priority: int
@@ -164,12 +174,12 @@ class _ConfigReportProwl(TypedDict):
     subject: str
 
 
-class _ConfigReportPushbullet(TypedDict):
+class _ConfigReportPushbullet(_ConfigReporter):
     enabled: bool
     api_key: str
 
 
-class _ConfigReportPushover(TypedDict):
+class _ConfigReportPushover(_ConfigReporter):
     enabled: bool
     app: str
     device: str | None
@@ -178,19 +188,19 @@ class _ConfigReportPushover(TypedDict):
     priority: str
 
 
-class _ConfigReportRunCommand(TypedDict):
+class _ConfigReportRunCommand(_ConfigReporter):
     enabled: bool
     command: str
 
 
-class _ConfigReportTelegram(TypedDict):
+class _ConfigReportTelegram(_ConfigReporter):
     enabled: bool
     bot_token: str
     chat_id: str | int | list[str | int]
     silent: bool
 
 
-class _ConfigReportWebhook(TypedDict):
+class _ConfigReportWebhook(_ConfigReporter):
     enabled: bool
     markdown: bool
     webhook_url: str
@@ -198,7 +208,7 @@ class _ConfigReportWebhook(TypedDict):
     max_message_length: int | None
 
 
-class _ConfigReportXmpp(TypedDict):
+class _ConfigReportXmpp(_ConfigReporter):
     enabled: bool
     sender: str
     recipient: str
@@ -206,27 +216,29 @@ class _ConfigReportXmpp(TypedDict):
 
 
 class _ConfigReport(TypedDict):
+    # Every reporter (i.e. all but 'tz' and the report formats text, html and markdown) may be configured either once,
+    # with a single configuration, or multiple times, with a list of configurations (see ReporterBase.submit_one).
     tz: str | None
     text: _ConfigReportText
     html: _ConfigReportHtml
     markdown: _ConfigReportMarkdown
-    stdout: _ConfigReportStdout
-    browser: _ConfigReportBrowser
-    discord: _ConfigReportDiscord
-    email: _ConfigReportEmail
-    github_issue: _ConfigReportGithubIssue
-    gotify: _ConfigReportGotify
-    ifttt: _ConfigReportIfttt
-    mailgun: _ConfigReportMailgun
-    matrix: _ConfigReportMatrix
-    ntfy: _ConfigReportNtfy
-    prowl: _ConfigReportProwl
-    pushbullet: _ConfigReportPushbullet
-    pushover: _ConfigReportPushover
-    run_command: _ConfigReportRunCommand
-    telegram: _ConfigReportTelegram
-    webhook: _ConfigReportWebhook
-    xmpp: _ConfigReportXmpp
+    stdout: _ConfigReportStdout | list[_ConfigReportStdout]
+    browser: _ConfigReportBrowser | list[_ConfigReportBrowser]
+    discord: _ConfigReportDiscord | list[_ConfigReportDiscord]
+    email: _ConfigReportEmail | list[_ConfigReportEmail]
+    github_issue: _ConfigReportGithubIssue | list[_ConfigReportGithubIssue]
+    gotify: _ConfigReportGotify | list[_ConfigReportGotify]
+    ifttt: _ConfigReportIfttt | list[_ConfigReportIfttt]
+    mailgun: _ConfigReportMailgun | list[_ConfigReportMailgun]
+    matrix: _ConfigReportMatrix | list[_ConfigReportMatrix]
+    ntfy: _ConfigReportNtfy | list[_ConfigReportNtfy]
+    prowl: _ConfigReportProwl | list[_ConfigReportProwl]
+    pushbullet: _ConfigReportPushbullet | list[_ConfigReportPushbullet]
+    pushover: _ConfigReportPushover | list[_ConfigReportPushover]
+    run_command: _ConfigReportRunCommand | list[_ConfigReportRunCommand]
+    telegram: _ConfigReportTelegram | list[_ConfigReportTelegram]
+    webhook: _ConfigReportWebhook | list[_ConfigReportWebhook]
+    xmpp: _ConfigReportXmpp | list[_ConfigReportXmpp]
 
 
 class _ConfigJobDefaults(TypedDict, total=False):

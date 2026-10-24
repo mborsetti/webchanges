@@ -35,7 +35,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.38.0rc1
+Version 3.38.0rc2
 -------------------
 Unreleased
 
@@ -54,6 +54,23 @@ Added
   and to keep secrets such as API tokens out of the YAML files. Suggested by `Marcos Alano
   <https://github.com/mhalano>`__ in `#99 <https://github.com/mborsetti/webchanges/issues/99>`__. See
   :ref:`here <environment_variables>`.
+* New ``tags`` job directive: one tag, or a list of tags, grouping jobs so that they can be acted on together. Tags
+  are used by the new ``--tags`` command line argument and by the new ``tags`` reporter directive (both below).
+  See :ref:`here <tags>`.
+* New ``--tags`` command line argument: runs only the jobs having any of the tags listed (comma-separated, and the
+  argument can be repeated), e.g. ``webchanges --tags personal,team``. Can be combined with a joblist, in which case
+  both restrictions apply. See :ref:`here <tags_cli>`.
+* New ``tags`` reporter directive (accepted by every reporter): restricts the reporter to the jobs having any of the
+  tags listed. Reports so restricted note in their footer how many of the jobs run they cover, and a job that ends up
+  being reported by no reporter at all (typically a typo in a tag) is called out in a warning. See :ref:`here
+  <reporter_tags>`.
+* A reporter can now be configured more than once, by replacing its single set of directives in the configuration
+  file with a list of them; each entry is an independent configuration of that reporter, and directives left out of
+  an entry take their default value. Combined with the ``tags`` directive above, this allows different jobs to be
+  reported to different destinations, e.g. to different email addresses or Telegram chats. See :ref:`here <multiple_reporters>`.
+* The ``html2text`` filter now JSON-decodes data whose media type is JSON and that consists entirely of a JSON string
+  (i.e. HTML returned inside a JSON-encoded string), so that its Unicode escape sequences are converted into the
+  characters they represent instead of being reported verbatim.
 * New ``empty_as_error`` job directive: when the server or a command returns an empty response or output consisting
   only of whitespace, it is treated as a transient error (with the synthetic HTTP response status code 999) instead
   of as valid empty content, so the snapshot database retains the last non-empty content and a flaky site or command
@@ -62,6 +79,28 @@ Added
   ``ignore_http_error_codes: 999`` (or, for ``command`` jobs, ``suppress_errors``) to never be notified of them.
   Suggested by `Marcos Alano <https://github.com/mhalano>`__ in `#169
   <https://github.com/mborsetti/webchanges/issues/169>`__. See :ref:`here <empty_as_error>`.
+* New ``markdown_extras`` job directive: sets the `extras <https://github.com/trentm/python-markdown2/wiki/Extras>`__
+  of the ``markdown2`` library used to render Markdown data as HTML in reports, in the same way as the ``html2text``
+  filter passes its sub-directives to the ``html2text`` library. Can be set for all jobs with ``job_defaults``. See
+  :ref:`here <markdown_extras>`.
+
+
+Changed
+```````
+* On Windows, the ``stdout`` reporter no longer depends on the ``colorama`` package to display colors: it now enables
+  the console's native processing of ANSI escape sequences (supported since Windows 10), and ``colorama`` has been
+  dropped from the installation requirements.
+* ``ai_google`` differ: the error summary for a transient Google AI API error (HTTP 429 or 503) that persists now
+  states how many automatic retries were made and for how long it waited in total, or that it was not retried, so
+  that a rate limit that outlasted the retries can be told apart from one that was never retried.
+* ``css`` and ``xpath`` filters: the ``selector`` and ``path`` sub-directives respectively are no longer required when
+  ``exclude`` is specified; the filter then returns the whole document minus the excluded elements. See :ref:`here
+  <css>` and :ref:`here <xpath>`.
+* Markdown emphasis markers (``_`` and ``*``) within a word are no longer converted to emphasis when Markdown is
+  rendered as HTML (in ``html`` and ``email`` reports, and by the ``matrix`` reporter): ``snake_case_name`` is now
+  shown as written instead of as snake\ *case*\ name. Emphasis of whole words (``_word_`` or ``*word*``) and strong
+  emphasis (``**word**``) are unaffected. To reinstate it, use the new ``markdown_extras`` job directive (see above)
+  with ``middle-word-em: true``.
 
 Fixed
 `````
@@ -76,12 +115,25 @@ Fixed
   request were affected, as :program:`webchanges` strips the conditional request headers while retrying a failed job.
 * A ``headers`` directive set in ``job_defaults`` for one job kind leaked into jobs of a different kind (e.g. headers
   set under ``job_defaults.url`` were also sent by jobs with ``use_browser: true``).
+* ``--rollback-database``: the snapshots were deleted while computing the count displayed in the confirmation
+  prompt, i.e. before (and regardless of) the answer; declining did not prevent the deletion, and confirming
+  reported ``No snapshots found`` as nothing was left to delete. In addition, the count itself was wrong (it
+  reported the number of rows affected by the previous database write rather than the number of snapshots to be
+  deleted).
+* ``--rollback-database``: a Unix timestamp with a fractional part (e.g. ``1789618017.98``) was rejected as unparseable.
 * Reports of a transient HTTP error (status codes 429, 500, 502, 503, 504, and the synthetic 999) in ``url`` jobs
   without ``use_browser: true``, and in ``command`` jobs, contained a full Python traceback instead of just the
   error message, making a condition of the monitored resource look like a failure of :program:`webchanges`.
 * The bundled ``jobs.schema.json`` JSON Schema, used by editors to validate and autocomplete the jobs file, rejected
   the ``ocr``, ``pdf2text``, ``pypdf``, ``remove-duplicate-lines``, ``sha256sum`` and ``striplines`` filters when
   written without sub-directives, flagging valid jobs files as invalid.
+* The bundled ``config.schema.json`` JSON Schema, used by editors to validate and autocomplete the configuration
+  file, marked every sub-directive of every reporter as required, flagging as invalid a configuration file from which
+  any of them had been trimmed. :program:`webchanges` fills in any missing one with its default value, so none is
+  required.
+* The ``xmpp`` reporter raised an ``AttributeError`` instead of a clear error message when the ``keyring`` Python
+  package is not installed and no ``insecure_password`` is set.
+* ``--detailed-versions`` crashed with an ``UnboundLocalError`` when Playwright is installed but ``psutil`` is not.
 
 Internals
 `````````
@@ -92,6 +144,17 @@ Internals
   on the remote and skips the test matrix, so the release test suite executes only once (in the tag's run).
 * tox: the ``pre-commit`` environment now runs ``pre-commit autoupdate`` before running the hooks, so hook version
   updates are picked up as part of a normal local test run.
+* The fallback assignments of the optional imports (e.g. ``httpx = None`` when ``httpx`` cannot be imported) are now
+  hidden from the type checker, and ``raise_import_error()`` is annotated as ``NoReturn``, restoring a clean
+  ``ty`` 0.0.72 run.
+* The filter modules declare ``__lazy_modules__`` (`PEP 810 <https://peps.python.org/pep-0810/>`__), so that on
+  Python 3.15 and newer the standard-library and third-party modules they use are imported only when first needed;
+  it has no effect on earlier Python versions.
+* CI: the CodeQL workflow's analysis step had been mistakenly replaced by a second initialization step in version
+  3.34.2, so no code scanning results were produced since; it has been restored.
+* CI: the Redis storage tests never ran, as the ``REDIS_URI`` environment variable they require was exported in a
+  step of its own and therefore lost before the tests ran. In addition, the workflow's token is now read-only except
+  in the deploy job, and test jobs time out after 30 minutes.
 
 
 Version 3.37.0

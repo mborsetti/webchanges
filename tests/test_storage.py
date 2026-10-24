@@ -16,6 +16,7 @@ import shutil
 import sys
 import tempfile
 import time
+import warnings
 from abc import ABC
 from dataclasses import dataclass
 from pathlib import Path
@@ -123,7 +124,7 @@ def test_empty_config_file() -> None:
     """Test if config is empyty and DEFAULT_CONFIG is used."""
     config_storage = YamlConfigStorage('')
     config_storage.load()
-    assert config_storage.config['report']
+    assert config_storage.config['report'] == DEFAULT_CONFIG['report']
 
 
 def test_config_is_not_default_config_object() -> None:
@@ -295,6 +296,51 @@ def test_load_remark_keys_do_not_break_type_check(tmp_path: Path) -> None:
     """User-added '_'-prefixed remark keys must not trigger a type-check failure."""
     cfg = _write_config(tmp_path, {'job_defaults': {'all': {'_note': 'a remark'}}})
     YamlConfigStorage(cfg).load()
+
+
+def test_load_reporter_configured_multiple_times(tmp_path: Path) -> None:
+    """A reporter configured with a list of configurations loads, and each entry is filled in with the defaults."""
+    cfg = _write_config(
+        tmp_path,
+        {
+            'report': {
+                'telegram': [
+                    {'enabled': True, 'bot_token': 'token', 'chat_id': '111', 'tags': ['personal']},
+                    {'enabled': True, 'bot_token': 'token', 'chat_id': '222', 'tags': 'team'},
+                ]
+            }
+        },
+    )
+    config = YamlConfigStorage(cfg)
+    config.load()
+    telegram = config.config['report']['telegram']
+    assert isinstance(telegram, list)
+    assert [c['chat_id'] for c in telegram] == ['111', '222']
+    assert [c['tags'] for c in telegram] == [['personal'], 'team']
+    # 'silent' is set in neither entry, so both get it from DEFAULT_CONFIG
+    assert [c['silent'] for c in telegram] == [False, False]
+
+
+def test_load_reporter_configured_multiple_times_with_bad_entry(tmp_path: Path) -> None:
+    """An entry of a reporter's list of configurations that is not a set of directives raises ValueError."""
+    cfg = _write_config(tmp_path, {'report': {'telegram': [{'enabled': True}, 'oops']}})
+    with pytest.raises(ValueError, match=r"^Reporter 'telegram' is configured with a list, but entry 2 of that list"):
+        YamlConfigStorage(cfg).load()
+
+
+def test_load_reporter_configured_multiple_times_with_unrecognized_directive(tmp_path: Path) -> None:
+    """An unrecognized directive in any entry of a reporter's list of configurations is still reported."""
+    cfg = _write_config(tmp_path, {'report': {'telegram': [{'enabled': True}, {'chat_ids': '222'}]}})
+    with pytest.warns(RuntimeWarning, match='chat_ids'):
+        YamlConfigStorage(cfg).load()
+
+
+def test_load_reporter_tags_are_not_unrecognized(tmp_path: Path) -> None:
+    """The 'tags' reporter directive, which has no default, is not flagged as unrecognized."""
+    cfg = _write_config(tmp_path, {'report': {'telegram': {'tags': ['personal']}}})
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', RuntimeWarning)
+        YamlConfigStorage(cfg).load()
 
 
 def test_remove_deprecated_keys_strips_slack() -> None:
@@ -855,7 +901,7 @@ def test_abstractmethods() -> None:
         filename: Path
 
     filename = Path('test')
-    d = DummyBaseTextualFileStorage(filename)
+    d = DummyBaseTextualFileStorage(filename)  # ty:ignore[call-non-callable]
     assert d.load() is None
     assert d.save() is None
     assert d.parse(Path()) is None
@@ -867,7 +913,7 @@ def test_abstractmethods() -> None:
         filename: Path
 
     filename = Path('test')
-    dummy_ssdb = DummySsdbStorage(filename)
+    dummy_ssdb = DummySsdbStorage(filename)  # ty:ignore[call-non-callable]
     assert dummy_ssdb.close() is None
     assert dummy_ssdb.get_guids() is None
     assert dummy_ssdb.load('guid') is None

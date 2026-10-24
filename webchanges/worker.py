@@ -16,10 +16,13 @@ from webchanges.command import UrlwatchCommand
 from webchanges.handler import JobState
 from webchanges.jobs import NotModifiedError, TransientHTTPError, UrlJobBase
 
+# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     import psutil
 except ImportError as e:  # pragma: no cover
-    psutil = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        psutil = str(e)
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:

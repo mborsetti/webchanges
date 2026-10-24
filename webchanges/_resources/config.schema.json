@@ -160,8 +160,11 @@
       "title": "stdout reporter",
       "description": "Display a text report on standard output (the console).",
       "type": "object",
-      "required": ["enabled", "color"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the stdout reporter.",
@@ -178,8 +181,11 @@
       "title": "Browser reporter",
       "description": "Open the HTML report in the system's default web browser.",
       "type": "object",
-      "required": ["enabled"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the browser reporter.",
@@ -191,8 +197,11 @@
       "title": "Discord reporter",
       "description": "Send the report as a message in a Discord channel via a webhook.",
       "type": "object",
-      "required": ["enabled", "webhook_url", "embed", "subject", "colored", "max_message_length"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the Discord reporter.",
@@ -290,8 +299,11 @@
       "title": "Email reporter",
       "description": "Send the report via email, using either SMTP or the external sendmail program.",
       "type": "object",
-      "required": ["enabled", "html", "to", "from", "subject", "method", "smtp", "sendmail"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the email reporter.",
@@ -330,20 +342,11 @@
       "title": "GitHub Issue reporter",
       "description": "Submit the Markdown report as a new issue on a GitHub repository. Requires a personal access token with 'public_repo' (public) or 'repo' (private) scope.",
       "type": "object",
-      "required": [
-        "enabled",
-        "token",
-        "owner",
-        "repo",
-        "title",
-        "labels",
-        "format_dt",
-        "format_content",
-        "assignees",
-        "type",
-        "milestone"
-      ],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the GitHub Issue reporter.",
@@ -407,8 +410,11 @@
       "title": "Gotify reporter",
       "description": "Send the Markdown report to a Gotify server. Requires an application token created on the Gotify server's Web-UI.",
       "type": "object",
-      "required": ["enabled", "priority", "server_url", "title", "token"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the Gotify reporter.",
@@ -440,8 +446,11 @@
       "title": "IFTTT reporter",
       "description": "Send the text report as an IFTTT event via the Maker Webhooks service.",
       "type": "object",
-      "required": ["enabled", "key", "event"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the IFTTT reporter.",
@@ -463,8 +472,11 @@
       "title": "Mailgun reporter",
       "description": "Send the text report via email using the Mailgun service.",
       "type": "object",
-      "required": ["enabled", "region", "api_key", "domain", "from_mail", "from_name", "to", "subject"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the Mailgun reporter.",
@@ -511,8 +523,11 @@
       "title": "Matrix reporter",
       "description": "Send the report to a room using the Matrix protocol.",
       "type": "object",
-      "required": ["enabled", "homeserver", "access_token", "room_id"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the Matrix reporter.",
@@ -567,8 +582,11 @@
       "title": "ntfy reporter",
       "description": "Send the text report to an ntfy server (https://ntfy.sh).",
       "type": "object",
-      "required": ["enabled", "topic_url", "authorization", "priorities"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the ntfy reporter.",
@@ -591,8 +609,11 @@
       "title": "Prowl reporter",
       "description": "Send the text report via Prowl (iOS push notifications).",
       "type": "object",
-      "required": ["enabled", "api_key", "priority", "application", "subject"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the Prowl reporter.",
@@ -624,8 +645,11 @@
       "title": "Pushbullet reporter",
       "description": "Send the text report via Pushbullet. Note: the underlying 'pushbullet' Python package has not been maintained since 2022.",
       "type": "object",
-      "required": ["enabled", "api_key"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the Pushbullet reporter.",
@@ -642,8 +666,11 @@
       "title": "Pushover reporter",
       "description": "Send the text report via Pushover (https://pushover.net).",
       "type": "object",
-      "required": ["enabled", "app", "device", "sound", "user", "priority"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the Pushover reporter.",
@@ -681,8 +708,11 @@
       "title": "run_command reporter",
       "description": "Run a local command receiving the text report. Substitutes {count}, {jobs}, and {text} in the command string and exposes the WEBCHANGES_REPORT_CONFIG_JSON and WEBCHANGES_CHANGED_JOBS_JSON environment variables.",
       "type": "object",
-      "required": ["enabled", "command"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the run_command reporter.",
@@ -699,8 +729,11 @@
       "title": "Telegram reporter",
       "description": "Send the Markdown report via Telegram using the Bot API.",
       "type": "object",
-      "required": ["enabled", "bot_token", "chat_id", "silent"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the Telegram reporter.",
@@ -736,8 +769,11 @@
       "title": "Webhook reporter",
       "description": "Send the report to a webhook endpoint (e.g. Slack, Mattermost).",
       "type": "object",
-      "required": ["enabled", "markdown", "webhook_url", "rich_text", "max_message_length"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the webhook reporter.",
@@ -769,8 +805,11 @@
       "title": "XMPP reporter",
       "description": "Send the text report via the XMPP protocol. Use a dedicated XMPP account, never a primary one.",
       "type": "object",
-      "required": ["enabled", "sender", "recipient", "insecure_password"],
       "properties": {
+        "tags": {
+          "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Restrict this reporter to the jobs having any of these tags in their 'tags' directive. If omitted, the reporter reports on every job."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enable the XMPP reporter.",
@@ -829,23 +868,108 @@
         "text": { "$ref": "#/$defs/_ConfigReportText" },
         "html": { "$ref": "#/$defs/_ConfigReportHtml" },
         "markdown": { "$ref": "#/$defs/_ConfigReportMarkdown" },
-        "stdout": { "$ref": "#/$defs/_ConfigReportStdout" },
-        "browser": { "$ref": "#/$defs/_ConfigReportBrowser" },
-        "discord": { "$ref": "#/$defs/_ConfigReportDiscord" },
-        "email": { "$ref": "#/$defs/_ConfigReportEmail" },
-        "github_issue": { "$ref": "#/$defs/_ConfigReportGithubIssue" },
-        "gotify": { "$ref": "#/$defs/_ConfigReportGotify" },
-        "ifttt": { "$ref": "#/$defs/_ConfigReportIfttt" },
-        "mailgun": { "$ref": "#/$defs/_ConfigReportMailgun" },
-        "matrix": { "$ref": "#/$defs/_ConfigReportMatrix" },
-        "ntfy": { "$ref": "#/$defs/_ConfigReportNtfy" },
-        "prowl": { "$ref": "#/$defs/_ConfigReportProwl" },
-        "pushbullet": { "$ref": "#/$defs/_ConfigReportPushbullet" },
-        "pushover": { "$ref": "#/$defs/_ConfigReportPushover" },
-        "run_command": { "$ref": "#/$defs/_ConfigReportRunCommand" },
-        "telegram": { "$ref": "#/$defs/_ConfigReportTelegram" },
-        "webhook": { "$ref": "#/$defs/_ConfigReportWebhook" },
-        "xmpp": { "$ref": "#/$defs/_ConfigReportXmpp" }
+        "stdout": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportStdout" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportStdout" }, "minItems": 1 }
+          ]
+        },
+        "browser": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportBrowser" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportBrowser" }, "minItems": 1 }
+          ]
+        },
+        "discord": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportDiscord" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportDiscord" }, "minItems": 1 }
+          ]
+        },
+        "email": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportEmail" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportEmail" }, "minItems": 1 }
+          ]
+        },
+        "github_issue": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportGithubIssue" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportGithubIssue" }, "minItems": 1 }
+          ]
+        },
+        "gotify": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportGotify" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportGotify" }, "minItems": 1 }
+          ]
+        },
+        "ifttt": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportIfttt" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportIfttt" }, "minItems": 1 }
+          ]
+        },
+        "mailgun": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportMailgun" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportMailgun" }, "minItems": 1 }
+          ]
+        },
+        "matrix": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportMatrix" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportMatrix" }, "minItems": 1 }
+          ]
+        },
+        "ntfy": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportNtfy" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportNtfy" }, "minItems": 1 }
+          ]
+        },
+        "prowl": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportProwl" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportProwl" }, "minItems": 1 }
+          ]
+        },
+        "pushbullet": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportPushbullet" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportPushbullet" }, "minItems": 1 }
+          ]
+        },
+        "pushover": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportPushover" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportPushover" }, "minItems": 1 }
+          ]
+        },
+        "run_command": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportRunCommand" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportRunCommand" }, "minItems": 1 }
+          ]
+        },
+        "telegram": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportTelegram" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportTelegram" }, "minItems": 1 }
+          ]
+        },
+        "webhook": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportWebhook" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportWebhook" }, "minItems": 1 }
+          ]
+        },
+        "xmpp": {
+          "anyOf": [
+            { "$ref": "#/$defs/_ConfigReportXmpp" },
+            { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportXmpp" }, "minItems": 1 }
+          ]
+        }
       }
     },
     "_ConfigJobDefaults": {

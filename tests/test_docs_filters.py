@@ -19,19 +19,6 @@ from webchanges.filters import FilterBase
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase
 
-# import sys
-
-
-# if sys.platform == 'win32':
-#     sys.path.insert(1, str(Path(__file__).parent.parent))
-
-
-# https://stackoverflow.com/questions/712791
-# try:
-#     import simplejson as jsonlib
-# except ImportError:
-#     import json as jsonlib
-
 here = Path(__file__).parent
 data_path = here.joinpath('data')
 docs_path = here.parent.joinpath('docs')
@@ -176,7 +163,10 @@ def test_jobs(job: JobBase) -> None:
                 pytest.skip("'cssbeautifier' not installed")
 
             data, _ = FilterBase.process(filter_kind, subfilter, job_state, data, '')
-            if filter_kind in {'pdf2text', 'shellpipe'}:  # fix for macOS or OS-specific end of line
+            if filter_kind in {
+                'pdf2text',
+                'shellpipe',
+            }:  # fix for macOS or OS-specific end of line
                 data = data.rstrip()
 
         if job.url == 'https://example.net/execute.html':

@@ -22,10 +22,13 @@ if TYPE_CHECKING:
         _ConfigReportWebhook,
     )
 
+# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
+# _url.py for the full explanation).
 try:
     import chump
 except ImportError as e:  # pragma: no cover
-    chump = str(e)  # ty:ignore[invalid-assignment]
+    if not TYPE_CHECKING:
+        chump = str(e)
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +139,7 @@ class PushbulletReport(WebServiceReporter):
         try:
             from pushbullet import Pushbullet
         except ImportError as e:  # pragma: no cover
-            Pushbullet = str(e)  # noqa: N806 variable should be lowercase  # ty:ignore[invalid-assignment]
+            Pushbullet = str(e)  # noqa: N806 variable should be lowercase
 
         if isinstance(Pushbullet, str):
             self.raise_import_error('pushbullet', self.__kind__, Pushbullet)
@@ -416,7 +419,7 @@ class NtfyReporter(TextReporter):
 
             job_headers['Actions'] = f'view, Open URL, "{job_state.job.get_location()}", clear=true'
 
-            if httpx:
+            if httpx:  # ty: ignore[redundant-condition]
                 with self.http_client as http_client:
                     result = http_client.post(topic_url, headers=job_headers, content=content)
             else:

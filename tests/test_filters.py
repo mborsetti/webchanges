@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import logging
 import os
 import sys
@@ -429,6 +430,28 @@ def test_filter_exceptions_jq(data: str, subfilter: dict[str, Any], expected: st
         # noinspection PyTypeChecker
         filtercls(job_state).filter(data, 'text/json', subfilter)  # ty:ignore[call-non-callable]
     assert e.value.args[0][: len(expected)] == expected
+
+
+def test_html2text_decodes_json_encoded_string() -> None:
+    """A JSON document that is a bare string is decoded (unescaping the \\uXXXX) before being converted."""
+    json_encoded = json.dumps('<div>café — café</div>')  # i.e. '"<div>caf\\u00e9 \\u2014 caf\\u00e9</div>"'
+    assert 'é' not in json_encoded  # ensure_ascii is on by default, so the input really is escaped
+    data, mime_type = Html2TextFilter(job_state).filter(json_encoded, 'application/json', {})
+    assert data == 'café — café'
+    assert mime_type == 'text/markdown'
+
+
+def test_html2text_leaves_json_objects_alone() -> None:
+    """A JSON document that is not a bare string is passed through as is."""
+    json_encoded = json.dumps({'a': 'café'})
+    data, _ = Html2TextFilter(job_state).filter(json_encoded, 'application/json', {'method': 'strip_tags'})
+    assert data == json_encoded
+
+
+def test_html2text_ignores_invalid_json() -> None:
+    """Data claiming to be JSON but that doesn't parse is passed through as is."""
+    data, _ = Html2TextFilter(job_state).filter('<div>a</div>', 'application/json', {})
+    assert data == 'a'
 
 
 def test_html2text_roundtrip() -> None:

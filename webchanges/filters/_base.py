@@ -4,10 +4,12 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['itertools', 'warnings', 'yaml']
+
 import itertools
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, NoReturn
 
 import yaml
 
@@ -267,7 +269,7 @@ class FilterBase(metaclass=TrackSubClasses):
         """
         raise NotImplementedError
 
-    def raise_import_error(self, package_name: str, filter_name: str, error_message: str) -> None:
+    def raise_import_error(self, package_name: str, filter_name: str, error_message: str) -> NoReturn:
         """Raise ImportError for missing package.
 
         :param package_name: The name of the module/package that could not be imported.
