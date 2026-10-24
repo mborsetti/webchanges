@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['msgpack', 'sqlite3', 'threading']
+
 import logging
 import sqlite3
 import sys

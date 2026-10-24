@@ -15,6 +15,8 @@ Having it into a standalone module allows running the program without requiring 
 
 from __future__ import annotations
 
+__lazy_modules__ = ['pathlib']
+
 from pathlib import Path
 from typing import Any
 

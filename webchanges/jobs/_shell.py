@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['subprocess']
+
 import logging
 import re
 import subprocess

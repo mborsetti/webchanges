@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['json', 'shlex', 'subprocess']
+
 import logging
 import os
 import shlex

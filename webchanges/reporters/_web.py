@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['warnings']
+
 import logging
 from typing import TYPE_CHECKING, Any
 from warnings import warn

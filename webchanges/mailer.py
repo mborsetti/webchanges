@@ -4,6 +4,18 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'base64',
+    'email',
+    'email.message',
+    'email.utils',
+    'getpass',
+    're',
+    'smtplib',
+    'subprocess',
+    'types',
+]
+
 import base64
 import getpass
 import logging

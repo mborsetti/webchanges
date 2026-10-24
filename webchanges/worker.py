@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['concurrent.futures', 'contextlib', 'gc', 'urllib.parse']
+
 import gc
 import logging
 import os

@@ -4,6 +4,19 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'contextlib',
+    'html',
+    'json',
+    'pathlib',
+    'platform',
+    're',
+    'tempfile',
+    'time',
+    'urllib.parse',
+    'warnings',
+]
+
 import html
 import json
 import logging

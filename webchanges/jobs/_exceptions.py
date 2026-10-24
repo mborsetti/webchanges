@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['http.client']
+
 from http.client import responses as http_response_names
 from typing import Any
 

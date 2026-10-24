@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['warnings']
+
 import warnings
 from typing import Any, Literal, Mapping, NotRequired, TypedDict
 

@@ -4,6 +4,28 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'base64',
+    'concurrent.futures',
+    'datetime',
+    'difflib',
+    'html',
+    'html2text',
+    'io',
+    'json',
+    'math',
+    'pathlib',
+    'shlex',
+    'subprocess',
+    'tempfile',
+    'time',
+    'traceback',
+    'urllib.parse',
+    'warnings',
+    'xml.parsers.expat',
+    'yaml',
+]
+
 import base64
 import difflib
 import html

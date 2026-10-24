@@ -3,6 +3,21 @@
 # The code below is subject to the license contained in the LICENSE.md file, which is part of the source code.
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'getpass',
+    'importlib.machinery',
+    'importlib.util',
+    'json',
+    'math',
+    'platformdirs',
+    're',
+    'shlex',
+    'stat',
+    'subprocess',
+    'textwrap',
+    'time',
+]
+
 import getpass
 import importlib.machinery
 import importlib.util

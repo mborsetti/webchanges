@@ -134,9 +134,9 @@ Internals
 * The fallback assignments of the optional imports (e.g. ``httpx = None`` when ``httpx`` cannot be imported) are now
   hidden from the type checker, and ``raise_import_error()`` is annotated as ``NoReturn``, restoring a clean
   ``ty`` 0.0.72 run.
-* The filter modules declare ``__lazy_modules__`` (PEP 810, https://peps.python.org/pep-0810/), so that on Python
-  3.15 and newer the standard-library and third-party modules they use are imported only when first needed; it has
-  no effect on earlier Python versions.
+* The modules declare ``__lazy_modules__`` (PEP 810, https://peps.python.org/pep-0810/), so that on Python 3.15 and
+  newer the standard-library and third-party modules they use only inside functions are imported when first needed,
+  speeding up start-up (e.g. ``webchanges --help`` by about 8%); it has no effect on earlier Python versions.
 * CI: the CodeQL workflow's analysis step had been mistakenly replaced by a second initialization step in version
   3.34.2, so no code scanning results were produced since; it has been restored.
 * CI: the Redis storage tests never ran, as the ``REDIS_URI`` environment variable they require was exported in a

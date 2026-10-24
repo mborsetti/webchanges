@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['enum', 're']
+
 import logging
 import re
 import sys

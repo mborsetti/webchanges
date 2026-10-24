@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['asyncio', 'copy', 'email.utils', 'hashlib', 'textwrap', 'urllib.parse', 'warnings']
+
 import asyncio  # noqa: TC003 (required for type check)
 import copy
 import email.utils

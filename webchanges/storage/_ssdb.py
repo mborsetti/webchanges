@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['datetime', 'pathlib']
+
 import logging
 import os
 from abc import abstractmethod

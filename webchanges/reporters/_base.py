@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['html', 'itertools', 'zoneinfo']
+
 import html
 import itertools
 import logging

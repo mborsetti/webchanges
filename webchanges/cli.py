@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['pathlib', 'platform', 'platformdirs', 'shutil', 'subprocess', 'warnings']
+
 import logging
 import os
 import platform

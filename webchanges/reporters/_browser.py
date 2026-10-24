@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['pathlib', 'time']
+
 import logging
 import time
 from pathlib import Path

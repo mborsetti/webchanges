@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['ftplib', 'html', 'html2text', 'json', 'pathlib', 're', 'ssl', 'time', 'urllib.parse']
+
 import html
 import json
 import logging

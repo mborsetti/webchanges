@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ['pathlib', 'textwrap']
+
 import argparse
 import os
 import textwrap

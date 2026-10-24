@@ -4,6 +4,19 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'collections',
+    'copy',
+    'datetime',
+    'inspect',
+    'io',
+    'types',
+    'warnings',
+    'yaml',
+    'yaml.constructor',
+    'yaml.scanner',
+]
+
 import copy
 import inspect
 import io

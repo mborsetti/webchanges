@@ -4,6 +4,22 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = [
+    'concurrent.futures',
+    'contextlib',
+    'datetime',
+    'difflib',
+    'email.utils',
+    'gc',
+    'pathlib',
+    're',
+    'subprocess',
+    'time',
+    'traceback',
+    'urllib.parse',
+    'zoneinfo',
+]
+
 import difflib
 import email.utils
 import gc
