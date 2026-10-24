@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from webchanges import init_data
 
 INITDATAKEYS = {
@@ -13,7 +15,6 @@ INITDATAKEYS = {
     '__path__',
     '__file__',
     # '__init__',
-    '__cached__',
     '__builtins__',
     '__min_python_version__',
     '__project_name__',
@@ -27,6 +28,9 @@ INITDATAKEYS = {
     '__docs_url__',
     '__user_agent__',
 }
+if sys.version_info < (3, 15):
+    # Python 3.15 no longer sets a module's __cached__ (deprecated since 3.13)
+    INITDATAKEYS.add('__cached__')
 
 
 def test_init_data() -> None:

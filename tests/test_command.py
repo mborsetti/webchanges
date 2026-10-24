@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 py_latest_only = cast(
     'Callable[[Callable], Callable]',
     pytest.mark.skipif(
-        sys.version_info < (3, 14),
+        sys.version_info < (3, 15),
         reason='Latest python only (time consuming)',
     ),
 )

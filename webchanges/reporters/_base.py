@@ -8,7 +8,7 @@ import html
 import itertools
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Iterable, Mapping, NoReturn, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, NoReturn, cast
 from zoneinfo import ZoneInfo
 
 from webchanges import __project_name__, __url__, __version__
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         _ConfigReportXmpp,
     )
 
-    _ConfigReportersList: TypeAlias = (
+    type _ConfigReportersList = (
         _ConfigReportBrowser
         | _ConfigReportDiscord
         | _ConfigReportEmail

@@ -740,6 +740,9 @@ class TableDiffer(DifferBase):
             table = table.replace('<th ', '<th style="font-family:monospace" ')
             table = table.replace('<td ', '<td style="font-family:monospace" ')
             table = table.replace(' nowrap="nowrap"', '')
+            # Python 3.15+ marks changed cells with this class, which has no style rule (not even in difflib's own
+            # stylesheet, which isn't used here); remove it so the output is the same on every Python version.
+            table = table.replace(' class="diff_changed"', '')
             table = table.replace('<a ', '<a style="font-family:monospace;color:inherit" ')
             table = table.replace('<span class="diff_add"', '<span style="color:green;background-color:lightgreen"')
             table = table.replace('<span class="diff_sub"', '<span style="color:red;background-color:lightred"')

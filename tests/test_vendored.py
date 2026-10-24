@@ -6,10 +6,9 @@ packaging) is not installed, so the regular test suite never exercises them; the
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 import pytest
-from typing_extensions import NotRequired
 
 from webchanges._vendored.headers import Headers
 from webchanges._vendored.packaging_version import parse

@@ -12,7 +12,7 @@ supported services. Can check the output of local commands as well.
 
 from __future__ import annotations
 
-__min_python_version__ = (3, 11)  # minimum version of Python required to run; 3.11 supported until fall 2026
+__min_python_version__ = (3, 12)  # minimum version of Python required to run; 3.12 supported until 7 October 2027
 
 
 __project_name__ = str(__package__)

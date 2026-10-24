@@ -66,11 +66,13 @@ jobs:
 
     # A strategy creates a build matrix for your jobs. You can define different variations to run each job in.
     strategy:
+      # Let every combination finish, so that one failing (or flaky) job doesn't cancel and hide the others' results
+      fail-fast: false
       matrix:
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
         # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-prereleases: true in setup-python.
-        python-version: ['3.14t', '3.14', '3.13', '3.12', '3.11']
+        python-version: ['3.15t', '3.15', '3.14', '3.13', '3.12']
 
     env:
       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
@@ -102,10 +104,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # PyYAML has no Python 3.15 wheels, so it is built from source, and on Windows building its optional libyaml C
+      # extension fails the install; PYYAML_FORCE_LIBYAML=0 builds the pure-Python version instead. It goes to
+      # $GITHUB_ENV because a plain `$env:` assignment would not outlive this step.
+      - name: Build PyYAML without libyaml (Windows w/Python 3.15 and 3.15t)
+        if: ${{ runner.os == 'Windows' && startsWith(matrix.python-version, '3.15') }}
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_ENV -Value 'PYYAML_FORCE_LIBYAML=0'
+
       - name: Install redis, pdf2text and ocr dependencies (Linux w/latest Python)
         # Redis easily installable on Ubuntu
         # Do full install and testing of pdf2text and ocr only on latest Python version
-        if: ${{ matrix.python-version == '3.14' && runner.os == 'Linux' }}
+        if: ${{ matrix.python-version == '3.15' && runner.os == 'Linux' }}
         # https://github.com/jalan/pdftotext#os-dependencies
         # REDIS_URI goes to $GITHUB_ENV, as an `export` would not outlive this step and the Redis tests would be skipped
         run: |
@@ -116,7 +126,7 @@ jobs:
 
       - name: Install pdf2text and ocr dependencies (macOS w/latest Python)
         # Do full install and testing of pdf2text and ocr only on latest Python version
-        if: ${{ matrix.python-version == '3.14' && runner.os == 'macOS' }}
+        if: ${{ matrix.python-version == '3.15' && runner.os == 'macOS' }}
         run: |
           brew update
           brew install poppler tesseract
@@ -124,7 +134,7 @@ jobs:
 
       # - name: Install pdf2text and ocr dependencies (Windows w/latest Python)
       #   # Do full install and testing of pdf2text and ocr only on latest Python version
-      #   if: ${{ matrix.python-version == '3.14' && runner.os == 'Windows' }}
+      #   if: ${{ matrix.python-version == '3.15' && runner.os == 'Windows' }}
       #   shell: pwsh
       #   run: |
       #     # Set the preference variable to display Verbose messages
@@ -204,7 +214,7 @@ jobs:
         # forward-reference resolution differences between vendored and upstream typeguard.
         # Pin to <4.5 to exercise the older `evaluate_forwardref` (the behaviour shipped by current Linux
         # distro packages); typeguard 4.5+ added a `__forward_module__` fallback that would mask the bug.
-        if: ${{ matrix.python-version == '3.14' && runner.os == 'Linux' }}
+        if: ${{ matrix.python-version == '3.15' && runner.os == 'Linux' }}
         run: |
           uv pip install "typeguard<4.5"
           uv run --no-project pytest -v tests/test_storage.py tests/test_jobs.py
@@ -276,7 +286,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.14'
+          python-version: '3.15'
 
       # Install uv per https://github.com/astral-sh/setup-uv/blob/main/README.md
       # and https://docs.astral.sh/uv/guides/integration/github

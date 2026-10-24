@@ -1,5 +1,13 @@
+Reminder
+````````
+Older Python versions are supported for 3 years after being obsoleted by a new major release. As Python 3.13 was
+released on 7 October 2024, the codebase will be streamlined by removing support for Python 3.12 on or after 7
+October 2027.
+
 ⚠ Breaking Changes
 ``````````````````
+* Removed support for Python 3.11. As a reminder, older Python versions are supported for 3 years after being obsoleted
+  by a new major release.
 * The ``empty_as_transient`` job directive, introduced 3 days earlier in version 3.37.0, has been retired in favor
   of the new ``empty_as_error`` one (see below), whose name describes what you actually observe. It is no longer
   recognized: if you use it, rename it in your jobs file, or the run aborts with the error
@@ -8,6 +16,8 @@
 
 Added
 `````
+* Support for Python 3.15, including its free-threaded (GIL-free) build 3.15t. Please note that certain optional
+  dependencies may not yet support free-threaded Python.
 * New ``!env`` YAML tag: inserts the value of environment variables anywhere within a string value of the jobs or
   configuration file. Reference a variable as ``${VAR}``, or as ``${VAR:-default}`` to fall back to ``default`` when
   the variable is not set; an unset variable without a default aborts the run with an error reporting the variable's
@@ -129,3 +139,9 @@ Internals
 * CI: the test workflow runs on pushes only to the ``main`` and ``unreleased`` branches and to release tags, so that
   a pull request's branch (e.g. a Dependabot one) is no longer tested twice, once for the push and once for the pull
   request.
+* Testing: Python 3.15 and 3.15t replace 3.11 and 3.14t in the CI test matrix (and 3.15 replaces 3.11 in ``tox``), the
+  tests that run only on the latest Python version now run on 3.15, and a failing CI test job no longer cancels the
+  other ones.
+* Code modernized for Python 3.12 and newer: PEP 695 syntax for type aliases and generics.
+* CI: removed the ClusterFuzzLite workflow, an unconfigured template (set up for C++, without fuzz targets) that
+  failed on every pull request.

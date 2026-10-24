@@ -9,6 +9,7 @@ docutils-stubs
 flynt
 lxml-stubs
 pre-commit
+ruff
 # tox-ini-fmt
 ty
 types-backports

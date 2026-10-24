@@ -16,7 +16,7 @@ dynamic = ['version', 'dependencies']
 name = 'webchanges'
 description = 'Web Changes Delivered. AI-Summarized. Totally Anonymous.'
 readme = { file = 'README.rst', content-type = 'text/x-rst' }
-requires-python = '>=3.11'
+requires-python = '>=3.12'
 license = "MIT AND BSD-3-Clause"
 license-files = ['LICENSE.md']
 authors = [{ name = 'Mike Borsetti', email = 'mike+webchanges@borsetti.com' }]
@@ -35,10 +35,10 @@ classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
     'Programming Language :: Python :: 3.13',
     'Programming Language :: Python :: 3.14',
+    'Programming Language :: Python :: 3.15',
     'Programming Language :: Python :: Free Threading',
     'Programming Language :: Python :: Free Threading :: 4 - Resilient',
     'Programming Language :: Python :: Implementation :: CPython',

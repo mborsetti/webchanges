@@ -10,7 +10,7 @@ import re
 import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Mapping, TypeVar, cast
+from typing import Any, Mapping, cast
 
 import yaml
 
@@ -18,9 +18,6 @@ from webchanges import __docs_url__
 from webchanges.filters import FilterBase
 from webchanges.jobs import JobBase, ShellJob
 from webchanges.util import edit_file, file_ownership_checks
-
-# TypeVar that is compatible with TypedDict structures
-T = TypeVar('T', bound=Mapping[str, object])
 
 logger = logging.getLogger(__name__)
 
@@ -176,8 +173,9 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         print('Saved edits in', filename)
         return 0
 
-    def remove_remark_keys(self, _dict: T) -> T:
-        """Recursively removes all keys starting with '_' from a dict.
+    def remove_remark_keys[T: Mapping[str, object]](self, _dict: T) -> T:
+        """Recursively removes all keys starting with '_' from a dict. ``T`` is bound to ``Mapping`` so that TypedDict
+        structures are accepted and returned with their type intact.
 
         :param _dict: The dict.
         :return: The dict with all keys starting with '_' removed.
