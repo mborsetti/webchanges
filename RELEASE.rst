@@ -19,7 +19,10 @@ Added
 * Support for Python 3.15, including its free-threaded (GIL-free) build 3.15t. Please note that certain optional
   dependencies may not yet support free-threaded Python. On Python 3.15, the ``deepdiff`` and ``deepdiff_xml``
   extras install ``deepdiff`` 8.x, as ``deepdiff`` 9 requires a version of ``cachebox`` that cannot be installed on
-  Python 3.15.
+  Python 3.15. On Windows, installing on Python 3.15 requires first setting the environment variable
+  ``PYYAML_FORCE_LIBYAML=0``, as the ``PyYAML`` dependency does not yet publish packages for Python 3.15 and building
+  its optional C extension fails there; see
+  https://webchanges.readthedocs.io/en/stable/introduction.html#install-windows.
 * New ``!env`` YAML tag: inserts the value of environment variables anywhere within a string value of the jobs or
   configuration file. Reference a variable as ``${VAR}``, or as ``${VAR:-default}`` to fall back to ``default`` when
   the variable is not set; an unset variable without a default aborts the run with an error reporting the variable's

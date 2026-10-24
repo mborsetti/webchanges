@@ -284,15 +284,27 @@ using a system scheduler to automatically run :program:`webchanges` periodically
   <https://en.wikipedia.org/wiki/Windows_Task_Scheduler>`__.
 
 
+.. _install_windows:
+
 Installing on Windows
 ---------------------
 * Install (or upgrade to) the `latest version of Python <https://www.python.org/downloads/>`__;
 * Open a command window by pressing ``⊞ Win`` + ``R`` together, typing ``cmd``, and pressing Enter (or clicking on OK);
+* If you are using Python 3.15, type ``set PYYAML_FORCE_LIBYAML=0`` and press Enter (see the note below);
 * Type ``py -m pip install webchanges`` (or ``py -m pip install webchanges[browser]`` etc.) and press Enter;
 
   - This will download :program:`webchanges` and install it;
 * After this, :program:`webchanges` should be available as a command (type ``webchanges --version`` to check);
 * Follow this documentation to configure the program :program:`webchanges`.
+
+.. note::
+  On Python 3.15, installation fails on Windows unless ``PYYAML_FORCE_LIBYAML=0`` is set as above. The `PyYAML
+  <https://pyyaml.org/>`__ package that :program:`webchanges` depends on does not yet publish ready-made packages for
+  Python 3.15, so it is built during the installation, and on Windows building its optional (faster) C extension
+  fails. ``PYYAML_FORCE_LIBYAML=0`` tells the build to skip it and install the pure-Python version, which works the same
+  way. The setting only lasts for the current command window, so set it again in any new window you install from (in
+  PowerShell, use ``$env:PYYAML_FORCE_LIBYAML = "0"`` instead). It is not needed on Linux or macOS, on Python 3.14 or
+  earlier, or once PyYAML publishes packages for Python 3.15.
 
 .. tip::
   If you receive ``*** fatal error - Internal error: TP_NUM_C_BUFS too small: 50`` when running :program:`webchanges`

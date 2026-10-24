@@ -54,6 +54,10 @@ or with ``pip``:
 
    pip install webchanges
 
+On Windows with Python 3.15, first run ``set PYYAML_FORCE_LIBYAML=0`` (in PowerShell:
+``$env:PYYAML_FORCE_LIBYAML = "0"``), as explained `here
+<https://webchanges.readthedocs.io/en/stable/introduction.html#install-windows>`__.
+
 Other ways to run
 -----------------
 - In a `Docker <https://www.docker.com/>`__ container: a minimal implementation (no browser) is `here
