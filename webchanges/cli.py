@@ -14,7 +14,6 @@ import logging
 import os
 import platform
 import shutil
-import signal
 import subprocess
 import sys
 import warnings
@@ -26,14 +25,10 @@ from webchanges import __copyright__, __docs_url__, __min_python_version__, __pr
 from webchanges.config import CommandConfig
 from webchanges.util import edit_file, file_ownership_checks, get_new_version_number, import_module_from_source
 
-# Restore the default system behavior for the SIGPIPE signal, which is ignored by Python by default.
-# This prevents a BrokenPipeError when piping output to a command like `less` that may close the pipe before reading all
-# of the output.
-try:
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # not defined in Windows  # ty:ignore[unresolved-attribute]
-except AttributeError:
-    pass
-
+# SIGPIPE is deliberately left at Python's default (ignored, so that writing to a closed pipe or socket raises
+# BrokenPipeError). Restoring the system default (SIG_DFL) would make the OS kill the process outright, with no error
+# reported, whenever a server (SMTP, HTTP, ...) closes a connection that is being written to. A reader of stdout that
+# exits early (e.g. `webchanges --list | head`) is handled in main() instead.
 
 logger = logging.getLogger(__name__)
 
@@ -849,10 +844,39 @@ def show_detailed_versions() -> int:
     return 0
 
 
-def main() -> None:  # pragma: no cover
-    """The entry point run when __name__ == '__main__'.
+def _stdout_is_broken() -> bool:
+    """Whether stdout's reader has gone away (e.g. `less` or `head` exited before reading all of the output).
 
-    Contains all the high-level logic to instantiate all classes that run the program.
+    A failed write leaves its data in stdout's buffer, so flushing it again raises BrokenPipeError only if stdout itself
+    is the broken pipe (and not, e.g., a socket to a server that closed the connection).
+    """
+    try:
+        sys.stdout.flush()
+    except BrokenPipeError:
+        return True
+    return False
+
+
+def main() -> None:
+    """The entry point (console script and `python -m webchanges`): runs the program, stopping quietly if the reader of
+    stdout goes away before reading all of the output, as recommended in the documentation of the `signal` module.
+
+    :raises BrokenPipeError: If raised by anything other than writing to stdout (e.g. a server closing a connection).
+    """
+    try:
+        _main()
+        sys.stdout.flush()  # surface a broken stdout pipe while still inside this try block
+    except BrokenPipeError:
+        if not _stdout_is_broken():
+            raise
+        # Point stdout to devnull so that Python's flush of stdout at exit does not raise BrokenPipeError again
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        sys.exit(1)  # the exit code Python itself uses for a broken pipe
+
+
+def _main() -> None:  # pragma: no cover
+    """Run the program. Contains all the high-level logic to instantiate all classes that run the program.
 
     :raises NotImplementedError: If a `--database-engine` is specified that is not supported.
     :raises RuntimeError: If `--database-engine redis` is selected but `--cache` with a redis URI is not provided.

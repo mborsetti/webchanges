@@ -113,6 +113,10 @@ October 2027.
 - The `xmpp` reporter raised an `AttributeError` instead of a clear error message when the `keyring` Python
   package is not installed and no `insecure_password` is set.
 - `--detailed-versions` crashed with an `UnboundLocalError` when Playwright is installed but `psutil` is not.
+- On Linux and macOS, **webchanges** could be killed by the operating system without reporting any error (exit
+  code 141) when a server it was sending data to closed the connection, e.g. a mail server while sending an `email`
+  report, as it restored the system's default action for the `SIGPIPE` signal. Such errors are now reported, while
+  output piped into a program that stops reading early (e.g. `webchanges --list | head`) still ends quietly.
 - The `email` reporter using the `smtp` method, and `--smtp-login`, waited indefinitely for an SMTP server that
   did not accept the connection or did not answer; they now give up after 60 seconds with a timeout error. See
   https://webchanges.readthedocs.io/en/stable/reporters.html#smtp.

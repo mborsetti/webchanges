@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import logging
 import os
+import signal
 import sys
 import sysconfig
 from pathlib import Path
@@ -14,6 +16,7 @@ from typing import Generator, cast
 import pytest
 
 from webchanges import __min_python_version__, __project_name__, __version__
+from webchanges import cli as cli_module
 from webchanges.cli import (
     _expand_glob_files,
     first_run,
@@ -643,6 +646,48 @@ def test_python_version_warning(capsys: pytest.CaptureFixture[str]) -> None:
         )
     else:
         assert not message
+
+
+def _raise_broken_pipe() -> None:
+    raise BrokenPipeError(32, 'Broken pipe')
+
+
+class _BrokenStdout(io.StringIO):
+    """A stdout whose reader has gone away: flushing it raises BrokenPipeError."""
+
+    def __init__(self, fd: int) -> None:
+        super().__init__()
+        self._fd = fd
+
+    def flush(self) -> None:
+        raise BrokenPipeError(32, 'Broken pipe')
+
+    def fileno(self) -> int:
+        return self._fd
+
+
+def test_main_exits_quietly_when_stdout_reader_goes_away(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A BrokenPipeError from stdout (e.g. `webchanges --list | head`) ends the program with exit code 1."""
+    monkeypatch.setattr(cli_module, '_main', _raise_broken_pipe)
+    with tmp_path.joinpath('stdout').open('w') as fake_stdout_file:
+        monkeypatch.setattr(sys, 'stdout', _BrokenStdout(fake_stdout_file.fileno()))
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            cli_module.main()
+    assert pytest_wrapped_e.value.code == 1
+
+
+def test_main_reraises_broken_pipe_not_from_stdout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A BrokenPipeError from elsewhere (e.g. a server closing a connection) is a real error and is not swallowed."""
+    monkeypatch.setattr(cli_module, '_main', _raise_broken_pipe)
+    monkeypatch.setattr(sys, 'stdout', io.StringIO())
+    with pytest.raises(BrokenPipeError):
+        cli_module.main()
+
+
+@pytest.mark.skipif(sys.platform == 'win32', reason='SIGPIPE does not exist on Windows')
+def test_importing_cli_leaves_sigpipe_ignored() -> None:
+    """Importing cli must not restore SIGPIPE's default action, which would kill the process on a closed socket."""
+    assert signal.getsignal(signal.SIGPIPE) == signal.SIG_IGN  # ty:ignore[unresolved-attribute]
 
 
 def test_first_run_creates_default_config_and_jobs_files(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
