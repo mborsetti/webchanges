@@ -10,49 +10,15 @@ import csv
 import io
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 import yaml
 
 from webchanges.filters._base import FilterBase
+from webchanges.util import missing_dependency
 
-# The fallback assignments below are hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
-# _url.py for the full explanation).
-try:
-    from pypdf import PdfReader
-except ImportError as e:  # pragma: no cover
-    if not TYPE_CHECKING:
-        PdfReader = str(e)
-
-try:
-    import pdftotext  # ty:ignore[unresolved-import]
-except ImportError as e:  # pragma: has-pdftotext
-    if not TYPE_CHECKING:
-        pdftotext = str(e)
-
-try:
-    from PIL import Image
-except ImportError as e:  # pragma: no cover
-    if not TYPE_CHECKING:
-        Image = str(e)
-
-try:
-    import pytesseract  # ty:ignore[unresolved-import]
-except ImportError as e:  # pragma: has-pytesseract
-    if not TYPE_CHECKING:
-        pytesseract = str(e)
-
-try:
-    import vobject.base
-except ImportError as e:  # pragma: no cover
-    if not TYPE_CHECKING:
-        vobject = str(e)
-
-try:
-    import jq  # ty:ignore[unresolved-import]
-except ImportError as e:  # pragma: has-jq
-    if not TYPE_CHECKING:
-        jq = str(e)
+# Optional dependencies (pypdf, pdftotext, Pillow, pytesseract, vobject, jq) are imported inside the filters that use
+# them, so that only the runs that need them pay for importing them (see missing_dependency() in webchanges/util.py).
 
 logger = logging.getLogger(__name__)
 
@@ -128,8 +94,10 @@ class PypdfFilter(FilterBase):
                 f'({self.job.get_indexed_location()})'
             )
 
-        if isinstance(PdfReader, str):
-            self.raise_import_error('pypdf', self.__kind__, PdfReader)
+        try:
+            from pypdf import PdfReader
+        except ImportError as e:  # pragma: no cover
+            self.raise_import_error('pypdf', self.__kind__, e, extra='pypdf')
 
         class RenamePypdfFilter(logging.Filter):
             """Function to rename logging name from '_.utils' to 'pypdf_utils'"""
@@ -149,12 +117,14 @@ class PypdfFilter(FilterBase):
         if password:
             try:
                 import cryptography  # noqa: F401 imported but unused
-            except ImportError:  # pragma: no cover
-                self.raise_import_error(
+            except ImportError as e:  # pragma: no cover
+                raise missing_dependency(
+                    e,
                     'cryptography',
-                    f'password sub-directive of {self.__kind__}',
-                    "Please install with 'uv pip install --upgrade webchanges[pypdf_crypto]'",
-                )
+                    used_by=f"the 'password' sub-directive of the '{self.__kind__}' filter",
+                    extra='pypdf_crypto',
+                    location=self.job.get_indexed_location(),
+                ) from e
 
         reader = PdfReader(io.BytesIO(data), password=password)
         logger.info(f'Job {self.job.index_number}: Found {reader.pdf_header} file')
@@ -189,8 +159,10 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
                 f'({self.job.get_indexed_location()})'
             )
 
-        if isinstance(pdftotext, str):
-            self.raise_import_error('pdftotext', self.__kind__, pdftotext)
+        try:
+            import pdftotext  # ty:ignore[unresolved-import]
+        except ImportError as e:  # pragma: has-pdftotext
+            self.raise_import_error('pdftotext', self.__kind__, e, extra='pdf2text')
 
         return (
             '\n'.join(
@@ -213,8 +185,10 @@ class Ical2TextFilter(FilterBase):
     __no_subfilter__ = True
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
-        if isinstance(vobject, str):
-            self.raise_import_error('vobject', self.__kind__, vobject)
+        try:
+            import vobject.base
+        except ImportError as e:  # pragma: no cover
+            self.raise_import_error('vobject', self.__kind__, e, extra='ical2text')
 
         result = []
         if isinstance(data, str):
@@ -262,11 +236,15 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
         language = subfilter.get('language')
         timeout = int(subfilter.get('timeout', 10))
 
-        if isinstance(Image, str):
-            self.raise_import_error('PIL', self.__kind__, Image)
+        try:
+            from PIL import Image
+        except ImportError as e:  # pragma: no cover
+            self.raise_import_error('pillow', self.__kind__, e, extra='ocr')
 
-        if isinstance(pytesseract, str):
-            self.raise_import_error('pytesseract', self.__kind__, pytesseract)
+        try:
+            import pytesseract  # ty:ignore[unresolved-import]
+        except ImportError as e:  # pragma: has-pytesseract
+            self.raise_import_error('pytesseract', self.__kind__, e, extra='ocr')
 
         return (
             pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang=language, timeout=timeout).strip(),
@@ -295,8 +273,10 @@ class JQFilter(FilterBase):  # pragma: has-jq
         except ValueError:
             raise ValueError(f"The 'jq' filter needs valid JSON. ({self.job.get_indexed_location()})")  # noqa: B904
 
-        if isinstance(jq, str):
-            self.raise_import_error('jq', self.__kind__, jq)
+        try:
+            import jq  # ty:ignore[unresolved-import]
+        except ImportError as e:  # pragma: has-jq
+            self.raise_import_error('jq', self.__kind__, e, extra='jq')
 
         return jq.text(subfilter['query'], jsondata), 'text/plain'
         # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59

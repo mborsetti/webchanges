@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 from webchanges import __project_name__, __url__, __version__
 from webchanges.jobs import UrlJob
-from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_html
+from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_html, missing_dependency
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -82,11 +82,6 @@ if httpx is not None:
         import h2
     except ImportError:  # pragma: no cover
         h2 = None
-
-try:
-    from docutils import core
-except ImportError:  # pragma: no cover
-    core = None
 
 logger = logging.getLogger(__name__)
 
@@ -375,19 +370,19 @@ class ReporterBase(metaclass=TrackSubClasses):
         """
         raise NotImplementedError
 
-    def raise_import_error(self, package_name: str, reporter_name: str, error_message: str) -> NoReturn:
-        """Raise ImportError for missing package.
+    def raise_import_error(
+        self, package_name: str, reporter_name: str, error_message: ImportError | str, extra: str | None = None
+    ) -> NoReturn:
+        """Raise the standard ImportError for a package that the reporter needs but cannot be imported.
 
-        :param package_name: The name of the module/package that could not be imported.
+        :param package_name: The name to install the package with (e.g. 'matrix_client').
         :param reporter_name: The name of the reporter that needs the package.
-        :param error_message: The error message from ImportError.
+        :param error_message: The ImportError raised when importing the package (or its message).
+        :param extra: The webchanges extra that installs the package, if any (e.g. 'matrix' for webchanges[matrix]).
 
         :raises: ImportError.
         """
-        raise ImportError(
-            f"Python package '{package_name}' cannot be imported; cannot use the '{reporter_name}' reporter.\n"
-            f'{error_message}'
-        )
+        raise missing_dependency(error_message, package_name, used_by=f"the '{reporter_name}' reporter", extra=extra)
 
 
 class HtmlReporter(ReporterBase):
@@ -496,7 +491,11 @@ class HtmlReporter(ReporterBase):
     @staticmethod
     def rst_to_html(text: str) -> str:
         """Return an html representation of an reStructuredText string.  Requires docutils to be installed."""
-        if not core:
+        try:
+            from docutils import core
+        except ImportError as e:  # pragma: no cover
+            error = missing_dependency(e, 'docutils', used_by='rendering reStructuredText as HTML')
+            logger.debug(f'{error} It is reported as is.')
             return text
         return core.publish_parts(
             source=text,

@@ -21,6 +21,7 @@ try:
 except ImportError:
     from requests.exceptions import MissingSchema as UnsupportedProtocol
 
+from webchanges import mailer as mailer_module
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
 from webchanges.mailer import SMTP_TIMEOUT, SMTPMailer, smtp_have_password, smtp_set_password
@@ -460,13 +461,12 @@ def test_mailer_send() -> None:
     assert pytest_wrapped_e.value.smtp_code == 535
 
 
-def test_mailer_send_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The SMTP connection is opened with a timeout, so that an unresponsive server cannot block the run forever."""
-    opened_with: dict[str, Any] = {}
+def _fake_smtp(calls: list[tuple]) -> type:
+    """A stand-in for smtplib.SMTP that records the calls made to it, in order."""
 
     class FakeSMTP:
-        def __init__(self, host: str, port: int, timeout: float) -> None:
-            opened_with.update(host=host, port=port, timeout=timeout)
+        def __init__(self, host: str, port: int, local_hostname: str | None, timeout: float) -> None:
+            calls.append(('connect', host, port, local_hostname, timeout))  # the real one connects here
 
         def __enter__(self) -> Self:
             return self
@@ -475,15 +475,24 @@ def test_mailer_send_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
         def ehlo(self) -> None:
-            pass
+            calls.append(('ehlo',))
 
         def starttls(self) -> None:
-            pass
+            calls.append(('starttls',))
 
         def login(self, user: str, password: str) -> None:
-            pass
+            calls.append(('login', user))
 
-    monkeypatch.setattr('webchanges.mailer.smtplib.SMTP', FakeSMTP)
+    return FakeSMTP
+
+
+def test_mailer_send_timeout_and_hostname_before_connecting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The SMTP connection has a timeout (an unresponsive server cannot block the run forever), and the local hostname
+    sent in EHLO is looked up before connecting (a slow lookup after connecting can make the server time out).
+    """
+    calls: list[tuple] = []
+    monkeypatch.setattr('webchanges.mailer.socket.getfqdn', lambda: calls.append(('getfqdn',)) or 'host.example.com')
+    monkeypatch.setattr('webchanges.mailer.smtplib.SMTP', _fake_smtp(calls))
     SMTPMailer(
         smtp_user='test@example.com',
         smtp_server='smtp.example.com',
@@ -492,4 +501,17 @@ def test_mailer_send_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
         auth=True,
         insecure_password='password',  # noqa: S106 possible hardcoded password
     ).send(msg=None)
-    assert opened_with == {'host': 'smtp.example.com', 'port': 587, 'timeout': SMTP_TIMEOUT}
+    assert calls == [
+        ('getfqdn',),
+        ('connect', 'smtp.example.com', 587, 'host.example.com', SMTP_TIMEOUT),
+        ('ehlo',),
+        ('starttls',),
+        ('login', 'test@example.com'),
+    ]
+
+
+def test_ehlo_hostname_falls_back_to_address_literal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without a fully qualified domain name, EHLO uses the IP address as a domain literal, as smtplib does."""
+    monkeypatch.setattr('webchanges.mailer.socket.getfqdn', lambda: 'localhostname')
+    monkeypatch.setattr('webchanges.mailer.socket.gethostbyname', lambda _name: '192.0.2.1')
+    assert mailer_module._ehlo_hostname() == '[192.0.2.1]'

@@ -10,37 +10,70 @@ __lazy_modules__ = [
     'email.message',
     'email.utils',
     'getpass',
+    'importlib.util',
     're',
     'smtplib',
+    'socket',
     'subprocess',
-    'types',
 ]
 
 import base64
 import getpass
+import importlib.util
 import logging
 import re
 import smtplib
+import socket
 import subprocess
 from dataclasses import dataclass
 from email import policy
 from email.message import EmailMessage
 from email.utils import formatdate
-from types import ModuleType
 from typing import TYPE_CHECKING
 
-# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
-# _url.py for the full explanation).
-try:
-    import keyring
-except ImportError as e:  # pragma: no cover
-    if not TYPE_CHECKING:
-        keyring = str(e)
+from webchanges.util import missing_dependency
+
+# The optional dependency keyring is imported only when a password is stored in or read from it (see
+# missing_dependency() in webchanges/util.py).
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from types import ModuleType
 
 logger = logging.getLogger(__name__)
+
+
+def _ehlo_hostname() -> str:
+    """The local hostname to send in the SMTP EHLO greeting, determined exactly as smtplib.SMTP does by default.
+
+    RFC 2821 says to use the fully qualified domain name, or, if that can't be determined, a domain literal (the
+    encoded IP address, e.g. [192.0.2.1]).
+
+    :returns: The hostname.
+    """
+    fqdn = socket.getfqdn()
+    if '.' in fqdn:
+        return fqdn
+    addr = '127.0.0.1'
+    try:
+        addr = socket.gethostbyname(socket.gethostname())
+    except socket.gaierror:
+        pass
+    return f'[{addr}]'
+
+
+def import_keyring(used_by: str) -> ModuleType:
+    """Import the optional keyring package (used to store passwords), or raise the standard ImportError.
+
+    :param used_by: What needs keyring, for the error message (e.g. "storing the SMTP password in the keyring").
+    :returns: The keyring module.
+    """
+    try:
+        import keyring
+    except ImportError as e:  # pragma: no cover
+        raise missing_dependency(e, 'keyring', used_by=used_by, extra='safe_password') from e
+    return keyring
+
 
 # Seconds to wait for the SMTP server, both to connect and for each reply, before giving up; without it an unreachable
 # or unresponsive server blocks the run indefinitely.
@@ -151,15 +184,19 @@ class SMTPMailer(Mailer):
         if self.auth:
             if self.insecure_password:
                 passwd = self.insecure_password
-            elif isinstance(keyring, ModuleType):
+            else:
+                keyring = import_keyring(used_by="the SMTP password (as no 'insecure_password' is set)")
                 key_pass = keyring.get_password(self.smtp_server, self.smtp_user)
                 if key_pass is None:
                     raise ValueError(f'No password available in keyring for {self.smtp_server} {self.smtp_user}')
                 passwd = key_pass
-            else:
-                raise ValueError(f'No password available for {self.smtp_server} {self.smtp_user}')
 
-        with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=SMTP_TIMEOUT) as server:
+        # The local hostname sent in EHLO is looked up before connecting (the argument is evaluated first), as smtplib
+        # would otherwise look it up after connecting, which can take seconds on hosts with slow reverse DNS and make
+        # the server time out waiting for the EHLO (e.g. Amazon SES: '451 4.4.2 Timeout waiting for data from client').
+        with smtplib.SMTP(
+            self.smtp_server, self.smtp_port, local_hostname=_ehlo_hostname(), timeout=SMTP_TIMEOUT
+        ) as server:
             server.ehlo()
             if self.tls:
                 server.starttls()
@@ -203,8 +240,10 @@ def smtp_have_password(smtp_server: str, from_email: str) -> bool:
     :param from_email: The email address of the sender.
     :returns: True if the keyring password is set.
     """
-    if isinstance(keyring, str):
+    if importlib.util.find_spec('keyring') is None:
         return False
+
+    import keyring
 
     return keyring.get_password(smtp_server, from_email) is not None
 
@@ -215,8 +254,6 @@ def smtp_set_password(smtp_server: str, from_email: str) -> None:
     :param smtp_server: The address of the SMTP server.
     :param from_email: The email address of the sender.
     """
-    if isinstance(keyring, str):
-        raise ImportError(f"Python package 'keyring' cannot be loaded - service unsupported\n{keyring}")
-
+    keyring = import_keyring(used_by='storing the SMTP password in the keyring')
     password = getpass.getpass(prompt=f'Enter password for {from_email} using {smtp_server}: ')
     keyring.set_password(smtp_server, from_email, password)

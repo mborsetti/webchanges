@@ -24,13 +24,10 @@ if TYPE_CHECKING:
         _ConfigReportWebhook,
     )
 
-# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
-# _url.py for the full explanation).
-try:
+# The optional dependencies chump and pushbullet.py are imported inside the reporters that use them (see
+# missing_dependency() in webchanges/util.py).
+if TYPE_CHECKING:
     import chump
-except ImportError as e:  # pragma: no cover
-    if not TYPE_CHECKING:
-        chump = str(e)
 
 logger = logging.getLogger(__name__)
 
@@ -103,13 +100,17 @@ class PushoverReport(WebServiceReporter):
     config: _ConfigReportPushover
 
     def web_service_get(self) -> chump.User:
-        if isinstance(chump, str):
-            self.raise_import_error('chump', self.__kind__, chump)
+        try:
+            import chump
+        except ImportError as e:  # pragma: no cover
+            self.raise_import_error('chump', self.__kind__, e, extra='pushover')
 
         app = chump.Application(self.config['app'])
         return app.get_user(self.config['user'])
 
     def web_service_submit(self, service: chump.User, title: str, body: str) -> None:  # ty:ignore[invalid-method-override]
+        import chump  # availability already checked by web_service_get()
+
         sound = self.config['sound']
         # If device is the empty string or not specified at all, use None to send to all devices
         # (see https://github.com/thp/urlwatch/issues/372)
@@ -141,10 +142,7 @@ class PushbulletReport(WebServiceReporter):
         try:
             from pushbullet import Pushbullet
         except ImportError as e:  # pragma: no cover
-            Pushbullet = str(e)  # noqa: N806 variable should be lowercase
-
-        if isinstance(Pushbullet, str):
-            self.raise_import_error('pushbullet', self.__kind__, Pushbullet)
+            self.raise_import_error('pushbullet.py', self.__kind__, e, extra='pushbullet')
 
         return Pushbullet(self.config['api_key'])
 

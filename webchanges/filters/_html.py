@@ -35,29 +35,13 @@ from lxml import etree
 from lxml.cssselect import CSSSelector
 
 from webchanges.filters._base import AutoMatchFilter, FilterBase, RegexMatchFilter
+from webchanges.util import missing_dependency
 
 if TYPE_CHECKING:
     from webchanges.jobs import JobBase
 
-# The fallback assignments below are hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
-# _url.py for the full explanation).
-try:
-    import bs4
-except ImportError as e:  # pragma: has-bs4
-    if not TYPE_CHECKING:
-        bs4 = str(e)
-
-try:
-    import cssbeautifier
-except ImportError as e:  # pragma: no cover
-    if not TYPE_CHECKING:
-        cssbeautifier = str(e)
-
-try:
-    import jsbeautifier
-except ImportError as e:  # pragma: no cover
-    if not TYPE_CHECKING:
-        jsbeautifier = str(e)
+# Optional dependencies (beautifulsoup4, jsbeautifier, cssbeautifier) are imported inside the filters that use them, so
+# that only the runs that need them pay for importing them (see missing_dependency() in webchanges/util.py).
 
 logger = logging.getLogger(__name__)
 
@@ -88,17 +72,25 @@ class BeautifyFilter(FilterBase):
         :param subfilter: The subfilter information.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
-        if isinstance(bs4, str):
-            self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
+        try:
+            import bs4
+        except ImportError as e:  # pragma: has-bs4
+            self.raise_import_error('beautifulsoup4', self.__kind__, e, extra='beautify')
 
         bs4_features = 'lxml' if importlib.util.find_spec('lxml') is not None else 'html'
         soup = bs4.BeautifulSoup(data, features=bs4_features)
 
-        if isinstance(jsbeautifier, str):
-            logger.warning(
-                f"Python package 'jsbeautifier' cannot be imported; will not beautify <script> tags"
-                f' ({self.job.get_indexed_location()})\n{jsbeautifier}'
+        try:
+            import jsbeautifier
+        except ImportError as e:  # pragma: no cover
+            error = missing_dependency(
+                e,
+                'jsbeautifier',
+                used_by='beautifying <script> tags',
+                extra='beautify',
+                location=self.job.get_indexed_location(),
             )
+            logger.warning(f'{error} The <script> tags are left as they are.')
         else:
             scripts = soup.find_all('script')
             for script in scripts:
@@ -106,11 +98,17 @@ class BeautifyFilter(FilterBase):
                     beautified_js = jsbeautifier.beautify(script.string)
                     script.string = beautified_js
 
-        if isinstance(cssbeautifier, str):
-            logger.warning(
-                "Python package 'cssbeautifier' cannot be imported; will not beautify <style> tags"
-                f' ({self.job.get_indexed_location()})\n{cssbeautifier}'
+        try:
+            import cssbeautifier
+        except ImportError as e:  # pragma: no cover
+            error = missing_dependency(
+                e,
+                'cssbeautifier',
+                used_by='beautifying <style> tags',
+                extra='beautify',
+                location=self.job.get_indexed_location(),
             )
+            logger.warning(f'{error} The <style> tags are left as they are.')
         else:
             styles = soup.find_all('style')
             for style in styles:
@@ -261,8 +259,10 @@ class Html2TextFilter(FilterBase):
             return '\n'.join(line.rstrip() for line in parser.handle(data).splitlines()), 'text/markdown'
 
         if method == 'bs4':
-            if isinstance(bs4, str):
-                self.raise_import_error('BeautifulSoup', self.__kind__, bs4)
+            try:
+                import bs4
+            except ImportError as e:  # pragma: has-bs4
+                self.raise_import_error('beautifulsoup4', self.__kind__, e, extra='bs4')
 
             default_bs4_parser = 'lxml' if importlib.util.find_spec('lxml') is not None else 'html'
             bs4_parser: str = options.pop('parser', default_bs4_parser)

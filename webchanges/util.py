@@ -57,24 +57,6 @@ def _parse_version(value: str):  # noqa: ANN202 returns packaging.version.Versio
     return parse(value)
 
 
-def lazy_import(fullname: str) -> ModuleType | None:
-    """Lazily imports a module. See https://stackoverflow.com/questions/42703908.
-
-    To identify loading time, run $ python -X importtime webchanges --help
-    """
-    try:
-        return sys.modules[fullname]
-    except KeyError:
-        spec = importlib.util.find_spec(fullname)
-        if spec and spec.loader:
-            module = importlib.util.module_from_spec(spec)
-            loader = importlib.util.LazyLoader(spec.loader)
-            # Make module with proper locking and get it inserted into sys.modules.
-            loader.exec_module(module)
-            return module
-    return None
-
-
 class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
 
@@ -553,21 +535,43 @@ def mark_to_html(
     return pre + html_out + post
 
 
-def import_optional_dependency(name: str, extra: str = '') -> ModuleType:
-    """Import an optional dependency.
+# Optional dependencies are imported inside the functions that use them, so that start-up only pays for what a run
+# needs (several of them take tens of milliseconds to import). The ImportError of a failed import is turned into the
+# standard message below, e.g.:
+#
+#     try:
+#         import pdftotext
+#     except ImportError as e:
+#         raise missing_dependency(e, 'pdftotext', used_by="the 'pdf2text' filter", extra='pdf2text') from e
+#
+# (FilterBase, DifferBase and ReporterBase wrap this in their raise_import_error() methods.) To check whether a package
+# is available without importing it, use importlib.util.find_spec(); to use it only if it was already imported (e.g. to
+# classify an exception), use sys.modules.get().
 
-    If a dependency is missing an ImportError with a nice message will be raised.
 
-    :param name: The module name.
-    :param extra: Additional text to include in the ImportError message.
+def missing_dependency(
+    error: ImportError | str,
+    package: str,
+    *,
+    used_by: str,
+    extra: str | None = None,
+    location: str | None = None,
+) -> ImportError:
+    """Return the standard ImportError for an optional dependency that cannot be imported (to be raised).
 
-    :returns maybe_module: The imported module, when found and the version is correct.
-      None is returned when the package is not found.
+    :param error: The ImportError raised when importing the package (or its message).
+    :param package: The name to install the package with (e.g. 'beautifulsoup4', not its module name 'bs4').
+    :param used_by: What needs the package, e.g. "the 'pdf2text' filter".
+    :param extra: The webchanges extra that installs the package (e.g. 'pdf2text' for webchanges[pdf2text]); if None,
+       the message suggests installing the package itself.
+    :param location: Where the package is needed, e.g. a job's indexed location.
+    :returns: The ImportError, whose message includes how to install the package.
     """
-    try:
-        module = importlib.import_module(name)
-    except ImportError as err:
-        msg = f'`Import {name}` failed. {extra} Use pip or conda to install the {name} package.'
-        raise ImportError(msg) from err
-
-    return module
+    subject = f'{used_by[:1].upper()}{used_by[1:]}'
+    if location:
+        subject += f' ({location})'
+    install = f'webchanges[{extra}]' if extra else package
+    return ImportError(
+        f"{subject} requires the Python package '{package}', which cannot be imported ({error}). Install it with "
+        f"e.g. 'uv pip install --upgrade {install}'."
+    )

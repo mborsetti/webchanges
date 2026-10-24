@@ -200,11 +200,24 @@ def test_html2text() -> None:
 
 
 def test_raise_import_error(job_state: JobState) -> None:
-    """Test ai_google with no key."""
+    """The standard message for a missing package, suggesting to install the package itself when there's no extra."""
     with pytest.raises(ImportError) as pytest_wrapped_e:
         DifferBase(job_state).raise_import_error('test', 'error!')
     assert str(pytest_wrapped_e.value) == (
-        "Job 0: Python package 'test' is not installed; cannot use 'differ: ' ()\nerror!"
+        "The '' differ (Job 0: ) requires the Python package 'test', which cannot be imported (error!). Install it "
+        "with e.g. 'uv pip install --upgrade test'."
+    )
+
+
+def test_raise_import_error_with_extra(job_state: JobState) -> None:
+    """With an extra, the message suggests installing webchanges with that extra."""
+    with pytest.raises(ImportError) as pytest_wrapped_e:
+        DifferBase(job_state).raise_import_error(
+            'deepdiff', ImportError("No module named 'deepdiff'"), extra='deepdiff'
+        )
+    assert str(pytest_wrapped_e.value).endswith(
+        "requires the Python package 'deepdiff', which cannot be imported (No module named 'deepdiff'). Install it "
+        "with e.g. 'uv pip install --upgrade webchanges[deepdiff]'."
     )
 
 

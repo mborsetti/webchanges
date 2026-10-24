@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, NoReturn
 
 import yaml
 
-from webchanges.util import TrackSubClasses
+from webchanges.util import TrackSubClasses, missing_dependency
 
 if TYPE_CHECKING:
     import re
@@ -269,17 +269,24 @@ class FilterBase(metaclass=TrackSubClasses):
         """
         raise NotImplementedError
 
-    def raise_import_error(self, package_name: str, filter_name: str, error_message: str) -> NoReturn:
-        """Raise ImportError for missing package.
+    def raise_import_error(
+        self, package_name: str, filter_name: str, error_message: ImportError | str, extra: str | None = None
+    ) -> NoReturn:
+        """Raise the standard ImportError for a package that the filter needs but cannot be imported.
 
-        :param package_name: The name of the module/package that could not be imported.
+        :param package_name: The name to install the package with (e.g. 'beautifulsoup4', not 'bs4').
         :param filter_name: The name of the filter that needs the package.
-        :param error_message: The error message from ImportError.
+        :param error_message: The ImportError raised when importing the package (or its message).
+        :param extra: The webchanges extra that installs the package, if any (e.g. 'bs4' for webchanges[bs4]).
 
         :raises: ImportError.
         """
-        raise ImportError(
-            f"Filter {filter_name} requires package '{package_name}', which has the following error: {error_message}"
+        raise missing_dependency(
+            error_message,
+            package_name,
+            used_by=f"the '{filter_name}' filter",
+            extra=extra,
+            location=self.job.get_indexed_location(),
         )
 
 

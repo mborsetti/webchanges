@@ -17,14 +17,10 @@ from typing import TYPE_CHECKING, Callable, Iterable
 from webchanges.command import UrlwatchCommand
 from webchanges.handler import JobState
 from webchanges.jobs import NotModifiedError, TransientHTTPError, UrlJobBase
+from webchanges.util import missing_dependency
 
-# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
-# _url.py for the full explanation).
-try:
-    import psutil
-except ImportError as e:  # pragma: no cover
-    if not TYPE_CHECKING:
-        psutil = str(e)
+# The optional dependency psutil is imported only when browser jobs are run (see missing_dependency() in
+# webchanges/util.py).
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
@@ -284,11 +280,12 @@ def get_virt_mem_mib() -> float:
 
     :returns: The amount of virtual memory available in MiB (IEC).
     """
-    if isinstance(psutil, str):
-        raise ImportError(
-            "Error when loading package 'psutil'; cannot use 'use_browser: true'. Please install "
-            f"dependencies with 'pip install webchanges[use_browser]'.\n{psutil}"
-        ) from None
+    try:
+        import psutil
+    except ImportError as e:  # pragma: no cover
+        raise missing_dependency(
+            e, 'psutil', used_by="the 'use_browser: true' job directive", extra='use_browser'
+        ) from e
     try:
         virt_mem: float = psutil.virtual_memory().available
         virt_mem /= 1_048_576

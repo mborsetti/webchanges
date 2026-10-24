@@ -60,6 +60,13 @@ October 2027.
   https://webchanges.readthedocs.io/en/stable/jobs.html#markdown-extras.
 
 ## Changed
+- The error reported when an optional Python package needed by a filter, differ, reporter, job directive or database
+  engine cannot be imported now has the same form everywhere: it names what needs the package (and the job, if any),
+  the package to install, the underlying error, and the command to install it (e.g.
+  `uv pip install --upgrade webchanges[pdf2text]`). Previously the wording varied, mostly omitted how to install the
+  package, and sometimes named it in a way that cannot be installed (e.g. `BeautifulSoup` instead of
+  `beautifulsoup4`). In particular, the `email` (SMTP) and `xmpp` reporters now report that the `keyring`
+  package cannot be imported when they need it for a password, instead of reporting that no password is available.
 - The `jq` filter is now also available on Windows, as the `jq` Python library now publishes packages for it:
   `webchanges[jq]` installs it on every operating system. See
   https://webchanges.readthedocs.io/en/stable/filters.html#jq.
@@ -120,6 +127,24 @@ October 2027.
 - The `email` reporter using the `smtp` method, and `--smtp-login`, waited indefinitely for an SMTP server that
   did not accept the connection or did not answer; they now give up after 60 seconds with a timeout error. See
   https://webchanges.readthedocs.io/en/stable/reporters.html#smtp.
+- When `httpx` is not installed (**webchanges** then uses `requests` or, failing that, `curl_cffi`), a job with
+  `http_client: httpx`, the `image` differ and the AI summaries (the `ai_google` differ and the `image` differ's
+  `ai_google` sub-directive) failed with an obscure `AttributeError`: the `image` differ now downloads images with
+  `requests` (or `curl_cffi`), and the others report that `httpx`, which they require, cannot be imported.
+- The `email` reporter using the `smtp` method, and `--smtp-login`, could fail with
+  `STARTTLS extension not supported by server` on a computer whose own hostname is slow to look up (e.g. because of
+  slow reverse DNS): the hostname, sent in the `EHLO` greeting, was looked up after connecting, by which time the
+  server could have stopped waiting (e.g. Amazon SES replies `451 4.4.2 Timeout waiting for data from client`). It is
+  now looked up before connecting.
+
+## Internals impacting hooks.py
+- `FilterBase.raise_import_error()`, `DifferBase.raise_import_error()` and `ReporterBase.raise_import_error()`
+  now accept the `ImportError` itself as well as its message, and a new optional `extra` argument naming the
+  **webchanges** extra that installs the package; they raise the standard error described above. The new
+  `webchanges.util.missing_dependency()` returns that error for code outside these classes.
+- Removed `webchanges.util.lazy_import()` and `webchanges.util.import_optional_dependency()`, which were no longer
+  used; use a plain import inside the function that needs the package, with `missing_dependency()` for its
+  `ImportError`.
 
 ## Internals
 - Updated the vendored copy of `packaging` (used as a fallback when the `packaging` library is not installed)
@@ -135,6 +160,10 @@ October 2027.
 - The modules declare `__lazy_modules__` (PEP 810, https://peps.python.org/pep-0810/), so that on Python 3.15 and
   newer the standard-library and third-party modules they use only inside functions are imported when first needed,
   speeding up start-up (e.g. `webchanges --help` by about 8%); it has no effect on earlier Python versions.
+- Optional packages (e.g. `deepdiff`, `keyring`, `pypdf`, `beautifulsoup4`, `requests`) are now imported
+  only by the code that uses them instead of when **webchanges** starts, so that a run only imports what its jobs and
+  reporters need: importing the modules of a run went from about 1.5 s to 0.45 s on Python 3.14, and from 0.95 s to
+  0.26 s on Python 3.15 (measured on Windows with all optional packages installed).
 - CI: the CodeQL workflow's analysis step had been mistakenly replaced by a second initialization step in version
   3.34.2, so no code scanning results were produced since; it has been restored.
 - CI: the Redis storage tests never ran, as the `REDIS_URI` environment variable they require was exported in a
