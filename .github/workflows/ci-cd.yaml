@@ -247,6 +247,24 @@ jobs:
           # Don't leave this job's write-scoped token in .git/config; nothing below pushes with git
           persist-credentials: false
 
+      # Refuse to publish if the tag (minus its 'v'), __version__ and the top CHANGELOG.rst section disagree, or if
+      # that section is still dated 'Unreleased'.
+      - name: Check that the tag matches __version__ and the CHANGELOG.rst header
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          pkg_version=$(sed -n "s/^__version__ = '\([^']*\)'.*/\1/p" webchanges/__init__.py)
+          changelog_version=$(sed -n 's/^Version \([^ ]*\)$/\1/p' CHANGELOG.rst | head -n 1)
+          changelog_date=$(grep -m 1 -A 2 '^Version ' CHANGELOG.rst | tail -n 1)
+          echo "tag: ${tag_version} | __version__: ${pkg_version} | CHANGELOG.rst: ${changelog_version} (${changelog_date})"
+          if [ "${tag_version}" != "${pkg_version}" ] || [ "${tag_version}" != "${changelog_version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match __version__ (${pkg_version}) and/or the CHANGELOG.rst header (${changelog_version})"
+            exit 1
+          fi
+          if [ "${changelog_date}" = 'Unreleased' ]; then
+            echo "::error::The CHANGELOG.rst section for ${changelog_version} is still dated 'Unreleased'"
+            exit 1
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:

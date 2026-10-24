@@ -119,3 +119,5 @@
 - CI: the Redis storage tests never ran, as the `REDIS_URI` environment variable they require was exported in a
   step of its own and therefore lost before the tests ran. In addition, the workflow's token is now read-only except
   in the deploy job, and test jobs time out after 30 minutes.
+- CI: before publishing, the deploy job now checks that the release tag matches both `__version__` and the version
+  header of the top `CHANGELOG.rst` section, and that this section is no longer dated "Unreleased".
