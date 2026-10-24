@@ -3,14 +3,17 @@
 # Env. variables: https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-variables#default-environment-variables
 # Add'l variables: https://docs.github.com/en/actions/reference/workflows-and-actions/contexts
 
-# Requires encrypted secret secrets.pypi_password
-# (see https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
+# Publishes to PyPI via trusted publishing (OIDC), so no PyPI token secret is needed
+# (see https://docs.pypi.org/trusted-publishers/)
 
-# This file is automatically "updated" with PRs by the "pre-commit ci" app in GitHub https://pre-commit.ci; it is
-# currently scheduled weekly at approximately 16:00 UTC Monday.
+# The action pins in this file are bumped by Dependabot PRs (weekly, Friday; see .github/dependabot.yml).
 
 name: Test and deploy release
 on: [push, pull_request, workflow_dispatch]
+
+# Least privilege for the GITHUB_TOKEN (the repository default is write); the deploy job raises its own permissions.
+permissions:
+  contents: read
 
 env:
   FORCE_COLOR: 1
@@ -28,7 +31,7 @@ jobs:
       skip: ${{ steps.tagged.outputs.skip }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
         with:
           egress-policy: audit
 
@@ -43,11 +46,12 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
-  # Set the job key. The key is displayed as the job name when a job name is not provided.
   test:
     # matrix.* values are defined below in strategy.
     name: "Test ${{ matrix.python-version }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
+    # A hung test (e.g. a browser that never returns) would otherwise run until the 6-hour default.
+    timeout-minutes: 30
 
     needs: [check-skip]
     if: needs.check-skip.outputs.skip != 'true'
@@ -57,28 +61,27 @@ jobs:
       matrix:
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         # Python versions at https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
-        # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-preleleases: true in setup-python.
+        # RCs need to be specified fully, e.g. '3.13.0-rc.3', or use allow-prereleases: true in setup-python.
         python-version: ['3.14t', '3.14', '3.13', '3.12', '3.11']
 
     env:
-      commitmsg: ${{ github.event.head_commit.message }}  # only available at check-out; becomes env.commitmsg
       TELEGRAM_TOKEN: ${{ secrets.telegram_token }}  # for telegram testing
       UV_SYSTEM_PYTHON: 1  # for uv, turns on --system by default
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
         with:
           egress-policy: audit
 
       # Checks out a copy of the repository per https://github.com/actions/checkout
       - name: Check out repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Build Python and packages per https://github.com/actions/setup-python
       # Using actions/setup-python can be faster than uv, because GitHub caches the Python versions alongside the runner.
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -87,19 +90,20 @@ jobs:
       # and https://docs.astral.sh/uv/guides/integration/github
       # Caching is enabled on GitHub-hosted runners
       - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install redis, pdf2text and ocr dependencies (Linux w/latest Python)
-        # Redis easily installable on Unbuntu
+        # Redis easily installable on Ubuntu
         # Do full install and testing of pdf2text and ocr only on latest Python version
         if: ${{ matrix.python-version == '3.14' && runner.os == 'Linux' }}
         # https://github.com/jalan/pdftotext#os-dependencies
+        # REDIS_URI goes to $GITHUB_ENV, as an `export` would not outlive this step and the Redis tests would be skipped
         run: |
           sudo apt-get update
           sudo apt-get install redis-server python3-dbus build-essential libpoppler-cpp-dev pkg-config python3-dev tesseract-ocr
-          export REDIS_URI="redis://localhost:6379"
+          echo "REDIS_URI=redis://localhost:6379" >> "$GITHUB_ENV"
           uv pip install --upgrade pdftotext pytesseract
 
       - name: Install pdf2text and ocr dependencies (macOS w/latest Python)
@@ -155,7 +159,7 @@ jobs:
 
       - name: Run tests (GIL)
         if: ${{ ! endsWith(matrix.python-version, 't') }}
-        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
+        # '>' folded style scalar (allows splitting line)
         run: >
           uv run --no-project
           pytest
@@ -176,7 +180,7 @@ jobs:
 
       - name: Run tests (free-threaded)
         if: ${{ endsWith(matrix.python-version, 't') }}
-        # python -m required to get it to run in the correct directory; '>' folded style scalar (allows splitting line)
+        # '>' folded style scalar (allows splitting line)
         run: >
           uv run --no-project
           pytest
@@ -212,7 +216,7 @@ jobs:
     continue-on-error: true
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+      uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
       with:
         egress-policy: audit
 
@@ -225,23 +229,26 @@ jobs:
   deploy:
     name: Deploy release
     permissions:
-      contents: write  # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token: write  # IMPORTANT: this permission is mandatory for create GitHub release
+      contents: write  # IMPORTANT: this permission is mandatory to create the GitHub release
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     needs: [test]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
         with:
           egress-policy: audit
 
       - name: Check out repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Don't leave this job's write-scoped token in .git/config; nothing below pushes with git
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
 
@@ -249,7 +256,7 @@ jobs:
       # and https://docs.astral.sh/uv/guides/integration/github
       # Caching is enabled on GitHub-hosted runners
       - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
 
       # Build using uv https://docs.astral.sh/uv/concepts/projects/build/
       - name: Build dist
