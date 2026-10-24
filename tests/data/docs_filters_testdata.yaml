@@ -448,6 +448,30 @@ https://example.com/format_xml.xml:
         <details>Coffee maker™ is broken.</details>
       </issue>
     </issues>
+https://example.com/xmltojson.xml:
+  input: |
+      <?xml version="1.0" ?>
+      <issues><issue><id>1</id><title>Coffee maker</title><details>Coffee maker™ is broken.</details></issue></issues>
+  output: |-
+    {
+        "issues": {
+            "issue": {
+                "id": "1",
+                "title": "Coffee maker",
+                "details": "Coffee maker™ is broken."
+            }
+        }
+    }
+https://example.com/xmltoyaml.xml:
+  input: |
+      <?xml version="1.0" ?>
+      <issues><issue><id>1</id><title>Coffee maker</title><details>Coffee maker™ is broken.</details></issue></issues>
+  output: |
+    issues:
+      issue:
+        id: '1'
+        title: Coffee maker
+        details: Coffee maker™ is broken.
 https://example.com/pretty_xml.xml:
   input: |
       <?xml version="1.0" ?>

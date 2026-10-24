@@ -20,6 +20,13 @@ October 2027.
   `PYYAML_FORCE_LIBYAML=0`, as the `PyYAML` dependency does not yet publish packages for Python 3.15 and building
   its optional C extension fails there; see
   https://webchanges.readthedocs.io/en/stable/introduction.html#install-windows.
+- New `xmltojson` and `xmltoyaml` filters: they convert XML (e.g. an API response or a feed) to JSON or YAML using
+  the `xmltodict` package, so that changes are reported as readable keys and values; attributes become keys prefixed
+  with `@`. `xmltojson` supports the same sub-directives as `format-json`. Install with
+  `uv pip install --upgrade webchanges[xmltodict]`. See
+  https://webchanges.readthedocs.io/en/stable/filters.html#xmltojson.
+- New `compact` sub-directive of the `format-json` filter: removes all unnecessary whitespace. See
+  https://webchanges.readthedocs.io/en/stable/filters.html#format-json.
 - New `!env` YAML tag: inserts the value of environment variables anywhere within a string value of the jobs or
   configuration file. Reference a variable as `${VAR}`, or as `${VAR:-default}` to fall back to `default` when
   the variable is not set; an unset variable without a default aborts the run with an error reporting the variable's

@@ -4,13 +4,14 @@
 
 from __future__ import annotations
 
-__lazy_modules__ = ['csv', 'io', 'json', 'yaml']
+__lazy_modules__ = ['csv', 'io', 'json', 'xml.parsers.expat', 'yaml']
 
 import csv
 import io
 import json
 import logging
 from typing import Any, Literal
+from xml.parsers.expat import ExpatError
 
 import yaml
 
@@ -284,6 +285,19 @@ class JQFilter(FilterBase):  # pragma: has-jq
         # return '\n'.join(json.dumps(v, ensure_ascii=False) for v in (jq.compile(subfilter['query'], jsondata)))
 
 
+def _json_layout(subfilter: dict[str, Any], default_indentation: int) -> tuple[int | None, tuple[str, str] | None]:
+    """The json.dumps() layout requested by the 'indentation' and 'compact' sub-directives.
+
+    :param subfilter: The filter's sub-directives.
+    :param default_indentation: The indentation if neither sub-directive is set.
+    :returns: The indent and separators arguments for json.dumps(); with 'compact', no indentation and no whitespace
+       after separators.
+    """
+    if subfilter.get('compact'):
+        return None, (',', ':')
+    return int(subfilter.get('indentation', default_indentation)), None
+
+
 class FormatJsonFilter(FilterBase):
     """Convert to formatted JSON."""
 
@@ -292,6 +306,7 @@ class FormatJsonFilter(FilterBase):
     __supported_subfilters__: dict[str, str] = {
         'indentation': 'Indentation level for pretty-printing',
         'sort_keys': 'Sort the output of dictionaries by key',
+        'compact': 'Remove all unnecessary whitespace (overrides indentation)',
     }
 
     __default_subfilter__ = 'indentation'
@@ -299,7 +314,7 @@ class FormatJsonFilter(FilterBase):
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         self.job.set_to_monospace()
         sort_keys = subfilter.get('sort_keys', False)
-        indentation = int(subfilter.get('indentation', 4))
+        indentation, separators = _json_layout(subfilter, default_indentation=4)
         try:
             parsed_json = json.loads(data)
         except json.JSONDecodeError as e:
@@ -313,7 +328,9 @@ class FormatJsonFilter(FilterBase):
             )
         if not mime_type.endswith('json'):
             mime_type = 'application/json'
-        return json.dumps(parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation), mime_type
+        return json.dumps(
+            parsed_json, ensure_ascii=False, sort_keys=sort_keys, indent=indentation, separators=separators
+        ), mime_type
 
 
 class JsontoYamlFilter(FilterBase):
@@ -352,4 +369,67 @@ class JsontoYamlFilter(FilterBase):
                 line_break='\n',
                 sort_keys=False,
             )
+        return yaml_data, 'application/yaml'
+
+
+class XmlToJsonFilter(FilterBase):
+    """Convert XML to formatted JSON (attributes become '@' keys and text '#text'), using xmltodict."""
+
+    __kind__ = 'xmltojson'
+
+    __supported_subfilters__: dict[str, str] = {
+        'indentation': 'Indentation level for pretty-printing',
+        'sort_keys': 'Sort the output of dictionaries by key',
+        'compact': 'Remove all unnecessary whitespace (overrides indentation)',
+    }
+
+    __default_subfilter__ = 'indentation'
+
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
+        try:
+            import xmltodict
+        except ImportError as e:  # pragma: no cover
+            self.raise_import_error('xmltodict', self.__kind__, e, extra='xmltodict')
+
+        self.job.set_to_monospace()
+        sort_keys = subfilter.get('sort_keys', False)
+        indentation, separators = _json_layout(subfilter, default_indentation=4)
+        try:
+            parsed_xml = xmltodict.parse(data, dict_constructor=dict)
+        except ExpatError as e:
+            return f"Filter '{self.__kind__}' returned ExpatError: {e}\n\n{data!s}", mime_type
+        return json.dumps(
+            parsed_xml, ensure_ascii=False, sort_keys=sort_keys, indent=indentation, separators=separators
+        ), 'application/json'
+
+
+class XmlToYamlFilter(FilterBase):
+    """Convert XML to formatted YAML (attributes become '@' keys and text '#text'), using xmltodict.  An alternative to
+    xmltojson.
+    """
+
+    __kind__ = 'xmltoyaml'
+
+    __supported_subfilters__: dict[str, str] = {
+        'indentation': 'Indentation level for pretty-printing',
+    }
+
+    __default_subfilter__ = 'indentation'
+
+    def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
+        try:
+            import xmltodict
+        except ImportError as e:  # pragma: no cover
+            self.raise_import_error('xmltodict', self.__kind__, e, extra='xmltodict')
+
+        self.job.set_to_monospace()
+        indentation = int(subfilter.get('indentation', 2))
+        try:
+            parsed_xml = xmltodict.parse(data, dict_constructor=dict)
+        except ExpatError as e:
+            return f"Filter '{self.__kind__}' returned ExpatError: {e}\n\n{data!s}", mime_type
+        # xmltodict always returns a single dict (the document's root element)
+        yaml_data = yaml.safe_dump(
+            parsed_xml, indent=indentation, width=999, allow_unicode=True, line_break='\n', sort_keys=False
+        )
         return yaml_data, 'application/yaml'

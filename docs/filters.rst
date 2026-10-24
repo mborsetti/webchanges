@@ -93,6 +93,8 @@ At the moment, the following filters are available:
 
   - :ref:`format-xml`: Reformat (pretty-print) XML (using lxml.etree).
   - :ref:`pretty-xml`: Reformat (pretty-print) XML (using Python's xml.minidom).
+  - :ref:`xmltoyaml`: Convert XML to YAML.
+  - :ref:`xmltojson`: Convert XML to JSON.
 
 * To make iCal more readable:
 
@@ -629,9 +631,13 @@ Optional sub-directives
 * ``indentation`` (integer or string): Either the number of spaces or a string to be used to indent each level with; if
   ``0``, a negative number or ``""`` then no indentation (default: 4, i.e. 4 spaces).
 * ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false).
+* ``compact`` (true/false): Whether to remove all unnecessary whitespace, overriding ``indentation`` (default: false).
 
 .. versionadded:: 3.0.1
    ``sort_keys`` sub-directive.
+
+.. versionadded:: 3.38
+   ``compact`` sub-directive.
 
 .. versionchanged:: 3.20
    The filter sets the job's ``monospace`` directive to ``true``.
@@ -1612,6 +1618,82 @@ Optional sub-directives
 
 .. versionchanged:: 3.5
    Added optional sub-directives ``chars``, ``side`` and ``splitlines``.
+
+
+
+.. _xmltojson:
+
+``xmltojson``
+-------------
+This filter converts XML data to JSON using the `xmltodict <https://github.com/martinblech/xmltodict>`__ Python
+package, and serializes it to a pretty-printed indented string with a default indent level of 4. Each element becomes a
+key; an element's attributes become keys prefixed with ``@`` and, if it also has attributes or child elements, its text
+becomes the key ``#text``; repeated elements become a list. Values are strings, or null for empty elements.
+
+.. tip:: For a more compact and legible output, use :ref:`xmltoyaml` instead.
+
+.. code-block:: yaml
+
+   name: "convert XML to JSON"
+   url: https://example.com/xmltojson.xml
+   filters:
+     - xmltojson:
+
+If the job directive ``monospace`` is unset, to improve the readability in HTML reports this filter will set it to
+``true``. To override, add the directive ``monospace: true`` to the job (see :ref:`here <monospace>`).
+
+Optional sub-directives
+```````````````````````
+* ``indentation`` (integer): The number of spaces to indent each level with; if ``0`` or a negative number, then no
+  indentation (default: 4).
+* ``sort_keys`` (true/false): Whether to sort the output of dictionaries by key (default: false).
+* ``compact`` (true/false): Whether to remove all unnecessary whitespace, overriding ``indentation`` (default: false).
+
+Required packages
+`````````````````
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
+
+.. code-block:: bash
+
+   uv pip install --upgrade webchanges[xmltodict]
+
+.. versionadded:: 3.38
+
+
+
+.. _xmltoyaml:
+
+``xmltoyaml``
+-------------
+This filter converts XML data to YAML using the `xmltodict <https://github.com/martinblech/xmltodict>`__ Python
+package (with the same structure as :ref:`xmltojson`) and Python's `PyYAML <https://pyyaml.org/>`__ library, with a
+default indent level of 2.
+
+.. code-block:: yaml
+
+   name: "convert XML to YAML"
+   url: https://example.com/xmltoyaml.xml
+   filters:
+     - xmltoyaml:
+
+If the job directive ``monospace`` is unset, to improve the readability in HTML reports this filter will set it to
+``true``. To override, add the directive ``monospace: true`` to the job (see :ref:`here <monospace>`).
+
+Optional sub-directives
+```````````````````````
+* ``indentation`` (integer): The number of spaces to indent each level with (default: 2).
+
+Required packages
+`````````````````
+To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
+follows:
+
+.. code-block:: bash
+
+   uv pip install --upgrade webchanges[xmltodict]
+
+.. versionadded:: 3.38
 
 
 

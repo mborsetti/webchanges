@@ -55,6 +55,9 @@ square brackets, like this::
 |                         | * Note: you will also have to **separately install** OS-specific        |
 |                         |   dependencies [#f5]_                                                   |
 +-------------------------+-------------------------------------------------------------------------+
+| ``xmltojson`` and       | * `xmltodict <https://github.com/martinblech/xmltodict>`__              |
+| ``xmltoyaml`` filters   |                                                                         |
++-------------------------+-------------------------------------------------------------------------+
 | ``pypdf`` filter        | * `pypdf <https://pypi.org/project/pypdf/>`__                           |
 |                         | * Note: for PDF files that are not password-protected (otherwise use    |
 |                         |   ``pypfd_crytpo``)                                                     |

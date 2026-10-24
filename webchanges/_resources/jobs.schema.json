@@ -750,7 +750,9 @@
             "sha256sum",
             "sort",
             "strip",
-            "striplines"
+            "striplines",
+            "xmltojson",
+            "xmltoyaml"
           ],
           "description": "A filter name with no parameters (uses defaults)."
         },
@@ -959,6 +961,11 @@
                 "sort_keys": {
                   "type": "boolean",
                   "description": "Sort object keys alphabetically.",
+                  "default": false
+                },
+                "compact": {
+                  "type": "boolean",
+                  "description": "Remove all unnecessary whitespace (overrides indentation).",
                   "default": false
                 }
               },
@@ -1395,6 +1402,50 @@
             }
           ],
           "description": "Strips leading/trailing whitespace or specified characters."
+        },
+        "xmltojson": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "indentation": {
+                  "type": "integer",
+                  "description": "Number of spaces for indentation.",
+                  "default": 4
+                },
+                "sort_keys": {
+                  "type": "boolean",
+                  "description": "Sort object keys alphabetically.",
+                  "default": false
+                },
+                "compact": {
+                  "type": "boolean",
+                  "description": "Remove all unnecessary whitespace (overrides indentation).",
+                  "default": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Converts XML to JSON (attributes become '@' keys and text '#text'). Requires the xmltodict package."
+        },
+        "xmltoyaml": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            {
+              "type": "object",
+              "properties": {
+                "indentation": {
+                  "type": "integer",
+                  "description": "Number of spaces for indentation.",
+                  "default": 2
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Converts XML to YAML (attributes become '@' keys and text '#text'). Requires the xmltodict package."
         },
         "xpath": {
           "oneOf": [
