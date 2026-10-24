@@ -788,6 +788,7 @@
         "beautify": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": ["integer", "string"], "description": "Shorthand for the 'indent' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -869,24 +870,29 @@
           "description": "Selects HTML/XML elements matching a CSS selector."
         },
         "csv2text": {
-          "type": "object",
-          "properties": {
-            "format_message": {
-              "type": "string",
-              "description": "Python format string with replacement fields for each column."
-            },
-            "has_header": {
-              "type": "boolean",
-              "description": "Whether the CSV has a header row (auto-detected if not specified)."
-            },
-            "ignore_header": {
-              "type": "boolean",
-              "description": "If true, skip the header row in output.",
-              "default": false
+          "oneOf": [
+            { "type": "string", "description": "Shorthand for the 'format_message' sub-directive." },
+            {
+              "type": "object",
+              "properties": {
+                "format_message": {
+                  "type": "string",
+                  "description": "Python format string with replacement fields for each column."
+                },
+                "has_header": {
+                  "type": "boolean",
+                  "description": "Whether the CSV has a header row (auto-detected if not specified)."
+                },
+                "ignore_header": {
+                  "type": "boolean",
+                  "description": "If true, skip the header row in output.",
+                  "default": false
+                }
+              },
+              "required": ["format_message"],
+              "additionalProperties": false
             }
-          },
-          "required": ["format_message"],
-          "additionalProperties": false,
+          ],
           "description": "Converts CSV data to text using a format string."
         },
         "delete_lines_containing": {
@@ -950,6 +956,7 @@
         "format-json": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": ["integer", "string"], "description": "Shorthand for the 'indentation' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1029,6 +1036,7 @@
         "html2text": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": "string", "description": "Shorthand for the 'method' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1131,6 +1139,7 @@
         "jsontoyaml": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": ["integer", "string"], "description": "Shorthand for the 'indentation' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1190,6 +1199,7 @@
         "pdf2text": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": "string", "description": "Shorthand for the 'password' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1214,13 +1224,27 @@
           "description": "Extracts text from PDF using pdftotext."
         },
         "pretty-xml": {
-          "type": ["boolean", "null"],
-          "description": "Pretty-prints XML using Python xml.dom.minidom.",
-          "default": true
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            { "type": "integer", "description": "Shorthand for the 'indentation' sub-directive." },
+            {
+              "type": "object",
+              "properties": {
+                "indentation": {
+                  "type": "integer",
+                  "description": "Number of spaces for indentation.",
+                  "default": 2
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Pretty-prints XML using Python xml.dom.minidom."
         },
         "pypdf": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": "string", "description": "Shorthand for the 'password' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1283,9 +1307,27 @@
           ],
           "description": "Replaces text matching a regex pattern."
         },
+        "remove-duplicate-lines": {
+          "oneOf": [
+            { "type": ["boolean", "null"] },
+            { "type": "string", "description": "Shorthand for the 'separator' sub-directive." },
+            {
+              "type": "object",
+              "properties": {
+                "separator": {
+                  "type": "string",
+                  "description": "Item separator (default: newline)."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Removes duplicate lines (or items, with 'separator'), case sensitive, keeping the first occurrence."
+        },
         "remove_repeated": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": "string", "description": "Shorthand for the 'separator' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1313,6 +1355,7 @@
         "reverse": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": "string", "description": "Shorthand for the 'separator' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1357,6 +1400,7 @@
         "sort": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": "string", "description": "Shorthand for the 'separator' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1406,6 +1450,7 @@
         "xmltojson": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": "integer", "description": "Shorthand for the 'indentation' sub-directive." },
             {
               "type": "object",
               "properties": {
@@ -1433,6 +1478,7 @@
         "xmltoyaml": {
           "oneOf": [
             { "type": ["boolean", "null"] },
+            { "type": "integer", "description": "Shorthand for the 'indentation' sub-directive." },
             {
               "type": "object",
               "properties": {

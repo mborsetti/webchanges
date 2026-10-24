@@ -126,6 +126,11 @@ Fixed
 * The bundled ``jobs.schema.json`` JSON Schema, used by editors to validate and autocomplete the jobs file, rejected
   the ``ocr``, ``pdf2text``, ``pypdf``, ``remove-duplicate-lines``, ``sha256sum`` and ``striplines`` filters when
   written without sub-directives, flagging valid jobs files as invalid.
+* The bundled ``jobs.schema.json`` JSON Schema also rejected a filter's default sub-directive given directly (e.g.
+  ``html2text: bs4`` for ``html2text: {method: bs4}``, or ``format-json: 2``) for the ``beautify``, ``csv2text``,
+  ``format-json``, ``html2text``, ``jsontoyaml``, ``pdf2text``, ``pretty-xml``, ``pypdf``, ``remove-duplicate-lines``,
+  ``remove_repeated``, ``reverse`` and ``sort`` filters, as well as any sub-directive of ``pretty-xml`` and
+  ``remove-duplicate-lines``.
 * The bundled ``config.schema.json`` JSON Schema, used by editors to validate and autocomplete the configuration
   file, marked every sub-directive of every reporter as required, flagging as invalid a configuration file from which
   any of them had been trimmed. **webchanges** fills in any missing one with its default value, so none is required.

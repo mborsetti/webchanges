@@ -21,11 +21,12 @@ def main(paths: list[str]) -> int:
         hash_file = schema.with_name(f'.{schema.name}').with_suffix('.sha256')
         new_content = f'{digest}\n'
         try:
-            existing = hash_file.read_text(encoding='utf-8')
+            # Compared as bytes so that a file with Windows line endings is rewritten too
+            existing = hash_file.read_bytes()
         except FileNotFoundError:
-            existing = ''
-        if existing != new_content:
-            hash_file.write_text(new_content, encoding='utf-8')
+            existing = b''
+        if existing != new_content.encode('utf-8'):
+            hash_file.write_text(new_content, encoding='utf-8', newline='\n')
             changed += 1
             print(f'Updated {hash_file} ({digest[:12]}…)')
     return 1 if changed else 0
