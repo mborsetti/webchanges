@@ -317,6 +317,12 @@ SMTP sub-directives
 * ``utf_8``: Whether to use RFC 6531 Internationalized Email, aka SMTPUTF8 service extension (true/false). Default is
   true.
 
+:program:`webchanges` gives up on the SMTP server if it does not accept the connection, or does not answer a command,
+within 60 seconds, ending with a timeout error instead of waiting indefinitely.
+
+.. versionchanged:: 3.38
+   Added the 60-second timeout; previously an unresponsive SMTP server blocked the run indefinitely.
+
 Amazon Simple Email Service (SES) example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 First ensure that you have configured SES as per the `quick start guide

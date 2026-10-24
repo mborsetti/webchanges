@@ -19,10 +19,12 @@ except ImportError:
 
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
-from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
+from webchanges.mailer import SMTP_TIMEOUT, SMTPMailer, smtp_have_password, smtp_set_password
 from webchanges.storage import DEFAULT_CONFIG
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from webchanges.storage import _ConfigReportStdout
 
 try:
@@ -416,9 +418,12 @@ def test_html_markdown_to_html_extras() -> None:
 
 
 def test_mailer_send() -> None:
+    # Amazon SES answers each failed AUTH mechanism with 535 and keeps the connection open, so smtplib raises
+    # SMTPAuthenticationError. Gmail (used until 3.38) now drops the connection after the first failed mechanism,
+    # which smtplib surfaces as SMTPServerDisconnected.
     mailer = SMTPMailer(
-        smtp_user='test@gmail.com',
-        smtp_server='smtp.gmail.com',
+        smtp_user='test@example.com',
+        smtp_server='email-smtp.us-east-1.amazonaws.com',
         smtp_port=587,
         tls=True,
         auth=True,
@@ -427,3 +432,38 @@ def test_mailer_send() -> None:
     with pytest.raises(SMTPAuthenticationError) as pytest_wrapped_e:
         mailer.send(msg=None)
     assert pytest_wrapped_e.value.smtp_code == 535
+
+
+def test_mailer_send_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The SMTP connection is opened with a timeout, so that an unresponsive server cannot block the run forever."""
+    opened_with: dict[str, Any] = {}
+
+    class FakeSMTP:
+        def __init__(self, host: str, port: int, timeout: float) -> None:
+            opened_with.update(host=host, port=port, timeout=timeout)
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def ehlo(self) -> None:
+            pass
+
+        def starttls(self) -> None:
+            pass
+
+        def login(self, user: str, password: str) -> None:
+            pass
+
+    monkeypatch.setattr('webchanges.mailer.smtplib.SMTP', FakeSMTP)
+    SMTPMailer(
+        smtp_user='test@example.com',
+        smtp_server='smtp.example.com',
+        smtp_port=587,
+        tls=True,
+        auth=True,
+        insecure_password='password',  # noqa: S106 possible hardcoded password
+    ).send(msg=None)
+    assert opened_with == {'host': 'smtp.example.com', 'port': 587, 'timeout': SMTP_TIMEOUT}

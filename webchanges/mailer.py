@@ -30,6 +30,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Seconds to wait for the SMTP server, both to connect and for each reply, before giving up; without it an unreachable
+# or unresponsive server blocks the run indefinitely.
+SMTP_TIMEOUT = 60
+
 
 class Mailer:
     """Mailer class."""
@@ -143,7 +147,7 @@ class SMTPMailer(Mailer):
             else:
                 raise ValueError(f'No password available for {self.smtp_server} {self.smtp_user}')
 
-        with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+        with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=SMTP_TIMEOUT) as server:
             server.ehlo()
             if self.tls:
                 server.starttls()

@@ -100,6 +100,9 @@ Fixed
 * The ``xmpp`` reporter raised an ``AttributeError`` instead of a clear error message when the ``keyring`` Python
   package is not installed and no ``insecure_password`` is set.
 * ``--detailed-versions`` crashed with an ``UnboundLocalError`` when Playwright is installed but ``psutil`` is not.
+* The ``email`` reporter using the ``smtp`` method, and ``--smtp-login``, waited indefinitely for an SMTP server that
+  did not accept the connection or did not answer; they now give up after 60 seconds with a timeout error. See
+  https://webchanges.readthedocs.io/en/stable/reporters.html#smtp.
 
 Internals
 `````````
