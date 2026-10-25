@@ -172,7 +172,6 @@ jobs:
         run: >
           uv pip install
           --upgrade
-          coveralls
           -r tests/requirements_pytest.txt
 
       - name: Run tests (GIL)
@@ -193,7 +192,6 @@ jobs:
         run: >
           uv pip install
           --upgrade
-          coveralls
           -r tests/requirements_pytest_free-threaded.txt
 
       - name: Run tests (free-threaded)
@@ -219,12 +217,22 @@ jobs:
           uv pip install "typeguard<4.5"
           uv run --no-project pytest -v tests/test_storage.py tests/test_jobs.py
 
+      - name: Write coverage data as XML
+        run: uv run --no-project coverage xml
+        continue-on-error: true
+
+      # Coveralls names a build after the ref that triggered the run, which for a release is the tag, as the branch
+      # runs skip their tests (see check-skip); a tag run is therefore reported as main, so that main's page updates.
       - name: Upload coverage data to coveralls.io (parallel)
-        run: coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
-          COVERALLS_FLAG_NAME: tests-${{ matrix.python-version }}-${{ matrix.os }}
-          COVERALLS_PARALLEL: true
+        uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e # v2.3.7
+        with:
+          github-token: ${{ secrets.github_token }}
+          file: coverage.xml
+          format: cobertura
+          flag-name: tests-${{ matrix.python-version }}-${{ matrix.os }}
+          parallel: true
+          git-branch: ${{ github.ref_type == 'tag' && 'main' || '' }}
+          fail-on-error: false
         continue-on-error: true
 
   coveralls:
