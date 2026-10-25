@@ -664,13 +664,17 @@ doesn't rely on a DH key and therefore doesn't trigger the error.
 Set it as a last resort if you're getting a ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh key too small (_ssl.c:1129)``
 error and can't get the anyone to fix the security vulnerability on the server.
 
-.. warning::
-   This directive works only with the default ``http_client: httpx``. It is not supported by ``http_client:
-   curl_cffi``, and with ``http_client: requests`` it works only with version 1 of the ``urllib3`` library (used by
-   ``requests``): with ``urllib3`` 2.x, which current versions of ``requests`` install, it has no effect and an error
-   is logged.
+It works by lowering the OpenSSL security level to 1 for the job's connections, which accepts a 1024-bit
+Diffie-Hellman key; certificates are still verified (unless :ref:`ssl_no_verify` is set).
+
+This directive is supported by the ``httpx`` (default) and ``requests`` HTTP clients, but not by ``http_client:
+curl_cffi``.
 
 .. versionadded:: 3.9.2
+
+.. versionchanged:: 3.38
+   Fixed: with ``http_client: httpx`` it made every HTTPS request fail with a certificate verification error, and with
+   ``http_client: requests`` it had no effect with version 2.x of the ``urllib3`` library.
 
 
 .. _impersonate:

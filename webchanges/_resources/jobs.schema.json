@@ -166,7 +166,7 @@
     },
     "ignore_dh_key_too_small": {
       "type": "boolean",
-      "description": "If true, works around weak DH key errors. Only with http_client: httpx (and with requests only if urllib3 1.x is installed); not supported by curl_cffi.",
+      "description": "If true, accepts a server's weak (1024-bit) Diffie-Hellman key by lowering the OpenSSL security level (certificates are still verified). Supported by http_client httpx and requests, not by curl_cffi.",
       "default": false
     },
     "params": {

@@ -42,7 +42,12 @@ from webchanges.jobs._base import DEPRECATED_DIRECTIVES, replace_deprecated_dire
 from webchanges.jobs._browser import _proxy_settings
 from webchanges.jobs._exceptions import EMPTY_RESPONSE_STATUS_CODE
 from webchanges.jobs._shell import _add_python_verbosity, _logger_verbosity
-from webchanges.jobs._url import RETRY_AFTER_MAX, RETRY_BACKOFF_MAX, retry_after_seconds
+from webchanges.jobs._url import (
+    RETRY_AFTER_MAX,
+    RETRY_BACKOFF_MAX,
+    retry_after_seconds,
+    weak_dh_requests_adapter,
+)
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
 
@@ -2231,3 +2236,35 @@ def test_ignore_dh_key_too_small_httpx_context(
     assert context.verify_mode == verify_mode
     if not ssl_no_verify:
         assert context.cert_store_stats()['x509_ca'] > 0
+
+
+@pytest.mark.parametrize(('verify', 'verify_mode'), [(True, ssl.CERT_REQUIRED), (False, ssl.CERT_NONE)])
+def test_weak_dh_requests_adapter(verify: bool, verify_mode: ssl.VerifyMode) -> None:
+    """The requests adapter of ignore_dh_key_too_small passes its SSL context to direct and proxied connections."""
+    adapter = weak_dh_requests_adapter(verify)
+    context = adapter.poolmanager.connection_pool_kw['ssl_context']
+    assert isinstance(context, ssl.SSLContext)
+    assert context.verify_mode == verify_mode
+    assert adapter.proxy_manager_for('http://proxy.example.com:3128').connection_pool_kw['ssl_context'] is context
+
+
+def test_ignore_dh_key_too_small_requests_mounts_adapter(mocker: pytest_mock.MockerFixture) -> None:
+    """With ignore_dh_key_too_small and http_client: requests, HTTPS requests go through the weak-DH adapter."""
+    import requests
+
+    adapters: list[str] = []
+
+    def capture(session: requests.Session, *args: Any, **kwargs: Any) -> None:
+        adapters.append(type(session.get_adapter('https://www.example.com/')).__name__)
+        raise RuntimeError('stop')
+
+    mocker.patch.object(requests.Session, 'request', autospec=True, side_effect=capture)
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'http_client': 'requests', 'ignore_dh_key_too_small': True}
+    )
+    with (
+        JobState(None, job) as job_state,  # ty:ignore[invalid-argument-type]
+        pytest.raises(RuntimeError, match='stop'),
+    ):
+        job.retrieve(job_state)
+    assert adapters == ['WeakDHAdapter']

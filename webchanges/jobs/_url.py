@@ -14,6 +14,7 @@ __lazy_modules__ = [
     'json',
     'pathlib',
     're',
+    'ssl',
     'time',
     'urllib.parse',
 ]
@@ -23,6 +24,7 @@ import importlib.util
 import json
 import logging
 import re
+import ssl
 import sys
 import time
 from datetime import UTC, datetime
@@ -41,7 +43,7 @@ from webchanges.util import missing_dependency
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    import ssl
+    from requests.adapters import HTTPAdapter
 
     from webchanges.handler import JobState
 
@@ -80,6 +82,35 @@ _CURL_CFFI_HTTP_VERSIONS: tuple[str, ...] = ('v1', 'v2', 'v2tls', 'v2_prior_know
 # RETRY_BACKOFF_MAX, or the server's Retry-After (on a 429 or 503) up to RETRY_AFTER_MAX, so a job can't stall a run.
 RETRY_BACKOFF_MAX = 30.0
 RETRY_AFTER_MAX = 60.0
+
+
+def weak_dh_requests_adapter(verify: bool) -> HTTPAdapter:
+    """A transport adapter for the requests library whose SSL context lowers the OpenSSL security level to 1, so that a
+    server's weak (1024-bit) Diffie-Hellman key is accepted (the 'ignore_dh_key_too_small' directive). Works with both
+    urllib3 1.x and 2.x.
+
+    :param verify: Whether certificates are verified (i.e. the job has no 'ssl_no_verify').
+    :returns: The adapter, to be mounted on the session for 'https://'.
+    """
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.ssl_ import create_urllib3_context
+
+    context = create_urllib3_context(
+        ciphers='DEFAULT@SECLEVEL=1', cert_reqs=ssl.CERT_REQUIRED if verify else ssl.CERT_NONE
+    )
+    if not verify:
+        context.check_hostname = False
+
+    class WeakDHAdapter(HTTPAdapter):
+        def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
+            kwargs['ssl_context'] = context
+            super().init_poolmanager(*args, **kwargs)
+
+        def proxy_manager_for(self, proxy: str, **proxy_kwargs: Any) -> Any:  # noqa: ANN401
+            proxy_kwargs['ssl_context'] = context
+            return super().proxy_manager_for(proxy, **proxy_kwargs)
+
+    return WeakDHAdapter()
 
 
 def retry_after_seconds(value: str | None) -> float | None:
@@ -352,23 +383,12 @@ class UrlJob(UrlJobBase):
                 f'ignoring the directive.'
             )
 
-        if self.ignore_dh_key_too_small:
-            # https://stackoverflow.com/questions/38015537
-            logger.debug(
-                'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
-                "and thus are not affected by the server's weak DH key"
-            )
-            try:
-                # only works with urllib3 <2.0, which removed DEFAULT_CIPHERS
-                urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # ty:ignore[unresolved-attribute]
-            except AttributeError:
-                logger.error(
-                    f"Job {self.index_number}: 'ignore_dh_key_too_small' is not supported with 'http_client: requests' "
-                    f"and version 2.x of urllib3; use 'http_client: httpx' instead (see "
-                    f'https://github.com/psf/requests/issues/6443)'
-                )
-
         with requests.Session() as session:
+            if self.ignore_dh_key_too_small:
+                logger.debug(
+                    'Lowering the OpenSSL security level to 1 so that a weak (1024-bit) Diffie-Hellman key is accepted'
+                )
+                session.mount('https://', weak_dh_requests_adapter(verify=not self.ssl_no_verify))
             if headers:
                 session.headers.update(headers)
             if self.cookies:

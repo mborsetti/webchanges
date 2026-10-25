@@ -135,10 +135,6 @@ Changed
   shown as written instead of as snake\ *case*\ name. Emphasis of whole words (``_word_`` or ``*word*``) and strong
   emphasis (``**word**``) are unaffected. To reinstate it, use the new ``markdown_extras`` job directive (see above)
   with ``middle-word-em: true``.
-* ⚠ The ``ignore_dh_key_too_small`` job directive works only with the default ``http_client: httpx``. With
-  ``http_client: requests`` it has no effect (and logs an error) when version 2.x of the ``urllib3`` library is
-  installed, as current versions of ``requests`` do; it works only with ``urllib3`` 1.x. It is not supported by
-  ``http_client: curl_cffi``. See :ref:`here <ignore_dh_key_too_small>`.
 
 Deprecated
 ``````````
@@ -225,10 +221,13 @@ Fixed
   attempts for the time requested by the server's ``Retry-After`` header (up to 60 seconds) or else for 1, 2, 4...
   seconds (up to 30). Other errors (e.g. a 404) are not retried. Reported by `101Dude
   <https://github.com/101Dude>`__ in `#196 <https://github.com/mborsetti/webchanges/issues/196>`__. See :ref:`here <retries>`.
-* The ``ignore_dh_key_too_small`` job directive, with the default ``http_client: httpx``, made every request to an
-  HTTPS site fail with ``CERTIFICATE_VERIFY_FAILED``, as it replaced the verification of certificates with one using
-  no certificate authorities, and it ignored ``ssl_no_verify``. It now only lowers the OpenSSL security level, so
-  that a server's weak (1024-bit) Diffie-Hellman key is accepted, and certificates are verified as usual.
+* The ``ignore_dh_key_too_small`` job directive did not work: with the default ``http_client: httpx`` it made every
+  request to an HTTPS site fail with ``CERTIFICATE_VERIFY_FAILED`` (it replaced the verification of certificates
+  with one using no certificate authorities, and ignored ``ssl_no_verify``), and with ``http_client: requests`` it
+  had no effect with version 2.x of the ``urllib3`` library, which current versions of ``requests`` install. With
+  both clients it now lowers the OpenSSL security level, so that a server's weak (1024-bit) Diffie-Hellman key is
+  accepted, while certificates are verified as usual. It remains unsupported by ``http_client: curl_cffi``. See
+  :ref:`here <ignore_dh_key_too_small>`.
 
 Internals impacting hooks.py
 ````````````````````````````
