@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 __lazy_modules__ = [
+    'datetime',
+    'email.utils',
     'ftplib',
     'html',
     'html2text',
@@ -25,9 +27,11 @@ import re
 import ssl
 import sys
 import time
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from ftplib import FTP
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
 import html2text
@@ -71,6 +75,33 @@ _HTTPX_HTTP_VERSIONS: dict[str, tuple[bool, bool]] = {
     'v2': (True, True),
 }
 _CURL_CFFI_HTTP_VERSIONS: tuple[str, ...] = ('v1', 'v2', 'v2tls', 'v2_prior_knowledge', 'v3', 'v3only')
+
+# Waits between the attempts made by the 'retries' directive (seconds): exponential backoff (1, 2, 4, ...) up to
+# RETRY_BACKOFF_MAX, or the server's Retry-After (on a 429 or 503) up to RETRY_AFTER_MAX, so a job can't stall a run.
+RETRY_BACKOFF_MAX = 30.0
+RETRY_AFTER_MAX = 60.0
+
+
+def retry_after_seconds(value: str | None) -> float | None:
+    """Converts the value of an HTTP Retry-After header, either a number of seconds or an HTTP date, into seconds.
+
+    :param value: The value of the header, if any.
+    :returns: The number of seconds to wait (not negative), or None if there is no (valid) value.
+    """
+    if not value:
+        return None
+    try:
+        return max(float(value), 0.0)
+    except ValueError:
+        pass
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        logger.debug(f'Ignoring unparseable Retry-After header {value!r}')
+        return None
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=UTC)
+    return max((retry_at - datetime.now(UTC)).total_seconds(), 0.0)
 
 
 class UrlJob(UrlJobBase):
@@ -245,7 +276,11 @@ class UrlJob(UrlJobBase):
 
             if response.status_code in (429, 500, 502, 503, 504):
                 logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
-                raise TransientHTTPError(http_error_msg, status_code=response.status_code)
+                raise TransientHTTPError(
+                    http_error_msg,
+                    status_code=response.status_code,
+                    retry_after=retry_after_seconds(response.headers.get('Retry-After')),
+                )
 
             raise httpx.HTTPStatusError(http_error_msg, request=response.request, response=response)
 
@@ -324,13 +359,14 @@ class UrlJob(UrlJobBase):
                 "and thus are not affected by the server's weak DH key"
             )
             try:
-                # only works with urllib3 <2.0
-                urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'
+                # only works with urllib3 <2.0, which removed DEFAULT_CIPHERS
+                urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'  # ty:ignore[unresolved-attribute]
             except AttributeError:
                 logger.error(
-                    'Unable to ignore_dh_key_too_small due to bug in requests.packages.urrlib3.util.ssl.DEFAULT_CIPHERS'
+                    f"Job {self.index_number}: 'ignore_dh_key_too_small' is not supported with 'http_client: requests' "
+                    f"and version 2.x of urllib3; use 'http_client: httpx' instead (see "
+                    f'https://github.com/psf/requests/issues/6443)'
                 )
-                logger.error('See https://github.com/psf/requests/issues/6443')
 
         with requests.Session() as session:
             if headers:
@@ -396,7 +432,11 @@ class UrlJob(UrlJobBase):
 
             if response.status_code in (429, 500, 502, 503, 504):
                 logger.debug(f'Job {self.index_number}: Response error is transient.')
-                raise TransientHTTPError(http_error_msg, status_code=response.status_code)
+                raise TransientHTTPError(
+                    http_error_msg,
+                    status_code=response.status_code,
+                    retry_after=retry_after_seconds(response.headers.get('Retry-After')),
+                )
 
             raise requests.HTTPError(http_error_msg, response=response)
 
@@ -558,7 +598,11 @@ class UrlJob(UrlJobBase):
 
             if response.status_code in (429, 500, 502, 503, 504):
                 logger.debug(f'Job {self.index_number}: Response error is transient.')
-                raise TransientHTTPError(http_error_msg, status_code=response.status_code)
+                raise TransientHTTPError(
+                    http_error_msg,
+                    status_code=response.status_code,
+                    retry_after=retry_after_seconds(response.headers.get('Retry-After')),
+                )
 
             raise curl_cffi_exceptions.HTTPError(http_error_msg, response=response)
 
@@ -720,7 +764,7 @@ class UrlJob(UrlJobBase):
                     location=self.get_indexed_location(),
                 ) from e
             job_state._http_client_used = 'curl_cffi'
-            data, etag, mime_type = self._retrieve_curl_cffi(headers=headers, timeout=timeout)
+            retrieve_with_client = self._retrieve_curl_cffi
         elif self.http_client == 'requests' or not httpx:  # ty: ignore[redundant-condition]
             try:
                 import requests  # noqa: F401 imported but unused (checks that it loads)
@@ -743,7 +787,7 @@ class UrlJob(UrlJobBase):
                     f'( {self.get_indexed_location()} ).'
                 )
             job_state._http_client_used = 'requests'
-            data, etag, mime_type = self._retrieve_requests(headers=headers, timeout=timeout)
+            retrieve_with_client = self._retrieve_requests
         elif not self.http_client or self.http_client == 'httpx':
             if httpx is None:  # pragma: no cover  # only reachable with an explicit 'http_client: httpx'
                 raise missing_dependency(
@@ -753,12 +797,14 @@ class UrlJob(UrlJobBase):
                     location=self.get_indexed_location(),
                 )
             job_state._http_client_used = 'httpx'
-            data, etag, mime_type = self._retrieve_httpx(headers=headers, timeout=timeout)
+            retrieve_with_client = self._retrieve_httpx
         else:
             raise ValueError(
                 f"Job {job_state.job.index_number}: http_client '{self.http_client}' is not supported; cannot run job "
                 f'( {self.get_indexed_location()} )'
             )
+
+        data, etag, mime_type = self.retrieve_with_retries(retrieve_with_client, headers, timeout)
 
         # Note: the empty_as_error check is made by JobState.process(), which applies it to every job kind.
 
@@ -829,6 +875,74 @@ class UrlJob(UrlJobBase):
                 exception_str += f'\n\n(Job has proxy {self.proxy})'
             return exception_str
         return super().format_error(exception, tb)
+
+    def retrieve_with_retries(
+        self,
+        retrieve_with_client: Callable[..., tuple[str | bytes, str, str]],
+        headers: Any,  # noqa: ANN401 Dynamically typed expressions Any are disallowed
+        timeout: float | None,
+    ) -> tuple[str | bytes, str, str]:
+        """Retrieves the data with the HTTP client, retrying a transient failure (see :py:meth:`is_transient_error`)
+        as many times as set by the 'retries' directive.
+
+        :param retrieve_with_client: The method retrieving the data with the selected HTTP client.
+        :param headers: The request headers.
+        :param timeout: The request timeout.
+        :returns: The data retrieved, the ETag, and the media type (fka MIME type).
+        """
+        attempts = 1 + max(self.retries or 0, 0)
+        for attempt in range(1, attempts):
+            try:
+                return retrieve_with_client(headers=headers, timeout=timeout)
+            except Exception as e:
+                if not self.is_transient_error(e):
+                    raise
+                wait = self.retry_wait(e, attempt)
+                logger.info(
+                    f'Job {self.index_number}: Attempt {attempt} of {attempts} failed ({type(e).__name__}: {e}); '
+                    f'retrying in {wait:g} seconds (retries directive)'
+                )
+                time.sleep(wait)
+        return retrieve_with_client(headers=headers, timeout=timeout)
+
+    @staticmethod
+    def is_transient_error(exception: Exception) -> bool:
+        """Whether the exception is a failure that a new attempt could overcome (the ones retried by the 'retries'
+        directive): a connection error (e.g. a connection reset by the server), a timeout, or a transient HTTP response
+        (429, 500, 502, 503 or 504), of any of the HTTP clients.
+
+        :param exception: The exception.
+        :returns: True if the request should be retried, False otherwise.
+        """
+        if isinstance(exception, TransientHTTPError):
+            return exception.status_code != EMPTY_RESPONSE_STATUS_CODE
+        # An exception of the optional HTTP clients can only have been raised if that client was imported
+        requests = sys.modules.get('requests')
+        curl_cffi_exceptions = sys.modules.get('curl_cffi.requests.exceptions')
+        return bool(
+            (httpx and isinstance(exception, httpx.TransportError))
+            or (
+                requests is not None
+                and isinstance(exception, (requests.exceptions.ConnectionError, requests.exceptions.Timeout))
+            )
+            or (
+                curl_cffi_exceptions is not None
+                and isinstance(exception, (curl_cffi_exceptions.ConnectionError, curl_cffi_exceptions.Timeout))
+            )
+        )
+
+    @staticmethod
+    def retry_wait(exception: Exception, attempt: int) -> float:
+        """The number of seconds to wait before the next attempt: the server's Retry-After (if any) up to
+        RETRY_AFTER_MAX, otherwise an exponential backoff (1, 2, 4, ... seconds) up to RETRY_BACKOFF_MAX.
+
+        :param exception: The exception raised by the failed attempt.
+        :param attempt: The number of the failed attempt (starting at 1).
+        :returns: The number of seconds to wait.
+        """
+        if isinstance(exception, TransientHTTPError) and exception.retry_after is not None:
+            return min(exception.retry_after, RETRY_AFTER_MAX)
+        return min(2.0 ** (attempt - 1), RETRY_BACKOFF_MAX)
 
     def ignore_error(self, exception: Exception) -> bool:
         """Determine whether the error of the job should be ignored.

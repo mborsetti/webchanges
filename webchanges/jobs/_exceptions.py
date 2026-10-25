@@ -31,13 +31,17 @@ class TransientHTTPError(Exception):
 
     Also raised, for any job kind, with the synthetic EMPTY_RESPONSE_STATUS_CODE when the job returns no data and its
     empty_as_error directive is set.
+
+    ``retry_after`` is the number of seconds the server asked to wait before retrying (its Retry-After header), if any.
     """
 
     status_code: int
+    retry_after: float | None
 
-    def __init__(self, *args: object, status_code: int) -> None:
+    def __init__(self, *args: object, status_code: int, retry_after: float | None = None) -> None:
         super().__init__(*args)
         self.status_code = status_code
+        self.retry_after = retry_after
 
 
 class TransientBrowserError(Exception):

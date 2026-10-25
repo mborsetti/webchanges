@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+import email.utils
 import ftplib
 import importlib.util
 import logging
 import os
 import socket
+import struct
 import subprocess
 import sys
+import threading
 import traceback
 from contextlib import ExitStack, nullcontext
+from datetime import UTC, datetime, timedelta
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
 
@@ -34,7 +39,9 @@ from webchanges.jobs import (
 )
 from webchanges.jobs._base import DEPRECATED_DIRECTIVES, replace_deprecated_directives
 from webchanges.jobs._browser import _proxy_settings
+from webchanges.jobs._exceptions import EMPTY_RESPONSE_STATUS_CODE
 from webchanges.jobs._shell import _add_python_verbosity, _logger_verbosity
+from webchanges.jobs._url import RETRY_AFTER_MAX, RETRY_BACKOFF_MAX, retry_after_seconds
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
 
@@ -2052,3 +2059,152 @@ def test_job_states_verb_notimestamp_changed(time_jobs_urlwatcher: Urlwatch) -> 
     urlwatcher.run_jobs()
     urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
+
+
+# ---------------------------------------------------------------- retries directive
+
+
+class _FlakyHandler(BaseHTTPRequestHandler):
+    """Fails the first ``failures`` requests (by resetting the connection, or with the status code ``mode``), then
+    answers 200 'ok'."""
+
+    count = 0
+    failures = 1
+    mode = 'reset'
+    retry_after: str | None = None
+
+    def do_GET(self) -> None:
+        cls = type(self)
+        cls.count += 1
+        if cls.count <= cls.failures:
+            if cls.mode == 'reset':
+                # Close with RST instead of FIN
+                self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                self.connection.close()
+                return
+            self.send_response(int(cls.mode))
+            if cls.retry_after:
+                self.send_header('Retry-After', cls.retry_after)
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
+        body = b'ok'
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+        pass
+
+
+@pytest.fixture
+def flaky_server() -> Iterator[str]:
+    """A local HTTP server with a _FlakyHandler; yields its URL."""
+    _FlakyHandler.count, _FlakyHandler.failures, _FlakyHandler.mode, _FlakyHandler.retry_after = 0, 1, 'reset', None
+    server = ThreadingHTTPServer(('127.0.0.1', 0), _FlakyHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f'http://127.0.0.1:{server.server_address[1]}/'
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+RETRY_CLIENTS = [
+    'httpx',
+    'requests',
+    pytest.param('curl_cffi', marks=pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')),
+]
+
+
+@pytest.mark.parametrize('client', RETRY_CLIENTS)
+@pytest.mark.parametrize(('mode', 'retry_after', 'expected_wait'), [('reset', None, 1), ('503', '7', 7)])
+def test_retries_transient_error(
+    flaky_server: str,
+    mocker: pytest_mock.MockerFixture,
+    client: str,
+    mode: str,
+    retry_after: str | None,
+    expected_wait: float,
+) -> None:
+    """With 'retries', a connection reset or a transient HTTP response is retried, after the server's Retry-After or
+    else the backoff (issue #196)."""
+    _FlakyHandler.mode, _FlakyHandler.retry_after = mode, retry_after
+    sleep = mocker.patch('webchanges.jobs._url.time.sleep')
+    job = JobBase.unserialize({'url': flaky_server, 'http_client': client, 'retries': 2, 'timeout': 5})
+    with JobState(None, job) as job_state:  # ty:ignore[invalid-argument-type]
+        data, _, _ = job.retrieve(job_state)
+    assert data == 'ok'
+    assert _FlakyHandler.count == 2
+    sleep.assert_called_once_with(expected_wait)
+
+
+@pytest.mark.parametrize('client', RETRY_CLIENTS)
+def test_retries_not_set_does_not_retry(flaky_server: str, client: str) -> None:
+    """Without 'retries', a failed request is not repeated."""
+    job = JobBase.unserialize({'url': flaky_server, 'http_client': client, 'timeout': 5})
+    with (
+        JobState(None, job) as job_state,  # ty:ignore[invalid-argument-type]
+        pytest.raises(Exception) as exc_info,
+    ):
+        job.retrieve(job_state)
+    assert UrlJob.is_transient_error(exc_info.value)
+    assert _FlakyHandler.count == 1
+
+
+def test_retries_exhausted(flaky_server: str, mocker: pytest_mock.MockerFixture) -> None:
+    """When every attempt fails, the error of the last one is raised after 1 + 'retries' attempts, with exponential
+    backoff between them."""
+    _FlakyHandler.mode, _FlakyHandler.failures = '503', 99
+    sleep = mocker.patch('webchanges.jobs._url.time.sleep')
+    job = JobBase.unserialize({'url': flaky_server, 'retries': 2, 'timeout': 5})
+    with (
+        JobState(None, job) as job_state,  # ty:ignore[invalid-argument-type]
+        pytest.raises(TransientHTTPError),
+    ):
+        job.retrieve(job_state)
+    assert _FlakyHandler.count == 3
+    assert [call.args[0] for call in sleep.call_args_list] == [1, 2]
+
+
+def test_retries_permanent_error_not_retried(flaky_server: str, mocker: pytest_mock.MockerFixture) -> None:
+    """An error that a new attempt cannot fix (e.g. HTTP 404) is not retried."""
+    _FlakyHandler.mode = '404'
+    sleep = mocker.patch('webchanges.jobs._url.time.sleep')
+    job = JobBase.unserialize({'url': flaky_server, 'retries': 2, 'timeout': 5})
+    with (
+        JobState(None, job) as job_state,  # ty:ignore[invalid-argument-type]
+        pytest.raises(HTTPStatusError),
+    ):
+        job.retrieve(job_state)
+    assert _FlakyHandler.count == 1
+    sleep.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [(None, None), ('', None), ('5', 5.0), ('-3', 0.0), ('not a date', None), ('Wed, 21 Oct 2015 07:28:00 GMT', 0.0)],
+)
+def test_retry_after_seconds(value: str | None, expected: float | None) -> None:
+    """A Retry-After header is read as seconds or as an HTTP date (a past one meaning no wait)."""
+    assert retry_after_seconds(value) == expected
+
+
+def test_retry_after_seconds_future_date() -> None:
+    """A Retry-After HTTP date in the future is the number of seconds until then."""
+    value = email.utils.format_datetime(datetime.now(UTC) + timedelta(seconds=100), usegmt=True)
+    seconds = retry_after_seconds(value)
+    assert seconds is not None
+    assert 95 < seconds <= 100
+
+
+def test_retry_wait_caps() -> None:
+    """The backoff and the server's Retry-After are both capped, so a job can't stall a run."""
+    assert UrlJob.retry_wait(ValueError(), 1) == 1
+    assert UrlJob.retry_wait(ValueError(), 3) == 4
+    assert UrlJob.retry_wait(ValueError(), 20) == RETRY_BACKOFF_MAX
+    assert UrlJob.retry_wait(TransientHTTPError('', status_code=429, retry_after=3600), 1) == RETRY_AFTER_MAX
+    assert not UrlJob.is_transient_error(TransientHTTPError('', status_code=EMPTY_RESPONSE_STATUS_CODE))

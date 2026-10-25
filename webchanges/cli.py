@@ -605,7 +605,7 @@ def show_detailed_versions() -> int:
 
     def dependencies() -> list[str]:
         try:
-            from pip._internal.metadata import get_default_environment  # ty:ignore[unresolved-import]
+            from pip._internal.metadata import get_default_environment
 
             env = get_default_environment()
             dist = None

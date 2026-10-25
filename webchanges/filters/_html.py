@@ -118,7 +118,7 @@ class BeautifyFilter(FilterBase):
 
         if subfilter.get('absolute_links') is None or subfilter.get('absolute_links'):
             for link in soup.find_all('a', href=True):
-                link['href'] = urljoin(self.job.url, link['href'])
+                link['href'] = urljoin(self.job.url, str(link['href']))
 
         indent = subfilter.get('indent', 1)
         return soup.prettify(formatter=bs4.formatter.HTMLFormatter(indent=indent)), mime_type

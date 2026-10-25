@@ -664,6 +664,12 @@ doesn't rely on a DH key and therefore doesn't trigger the error.
 Set it as a last resort if you're getting a ``ssl.SSLError: [SSL: DH_KEY_TOO_SMALL] dh key too small (_ssl.c:1129)``
 error and can't get the anyone to fix the security vulnerability on the server.
 
+.. warning::
+   This directive works only with the default ``http_client: httpx``. It is not supported by ``http_client:
+   curl_cffi``, and with ``http_client: requests`` it works only with version 1 of the ``urllib3`` library (used by
+   ``requests``): with ``urllib3`` 2.x, which current versions of ``requests`` install, it has no effect and an error
+   is logged.
+
 .. versionadded:: 3.9.2
 
 
@@ -785,10 +791,23 @@ Example (equivalent to the URL https://example.com/?Element1=Data&Element2=Other
 
 retries
 ^^^^^^^
-Number of times to retry a url after receiving an error before giving up (a number). Default 0.
+Number of times to retry the request when it fails with an error that a new attempt could overcome, before reporting
+the error (a number). Defaults to 0 (no retry).
 
-Setting it to 1 will often solve the ``('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))``
-error received when attempting to connect to a misconfigured server.
+The errors retried are:
+
+* connection errors, such as the ``('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))``
+  received when attempting to connect to a misconfigured server, which setting ``retries: 1`` will often solve;
+* timeouts (see :ref:`timeout`);
+* the transient HTTP response status codes 429 (Too Many Requests), 500 (Internal Server Error), 502 (Bad Gateway),
+  503 (Service Unavailable) and 504 (Gateway Timeout).
+
+Other errors, such as a 404 (Not Found), are reported at once, as retrying cannot fix them.
+
+Between attempts, :program:`webchanges` waits for the time requested by the server in the ``Retry-After`` header of a
+429 or 503 response, up to 60 seconds, or else for 1 second after the first failed attempt, 2 seconds after the second,
+4 after the third, and so on, up to 30 seconds. The retries are made within the same run; to instead be notified of an
+error only after it has persisted across several runs, use :ref:`max_tries`.
 
 .. code-block:: yaml
 
@@ -797,6 +816,11 @@ error received when attempting to connect to a misconfigured server.
    retries: 1
    filters:
      - html2text:
+
+.. versionadded:: 3.13
+
+.. versionchanged:: 3.38
+   The directive, which had no effect, is now implemented, as described above.
 
 
 .. _ssl_no_verify:

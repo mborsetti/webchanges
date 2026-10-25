@@ -135,6 +135,10 @@ Changed
   shown as written instead of as snake\ *case*\ name. Emphasis of whole words (``_word_`` or ``*word*``) and strong
   emphasis (``**word**``) are unaffected. To reinstate it, use the new ``markdown_extras`` job directive (see above)
   with ``middle-word-em: true``.
+* ⚠ The ``ignore_dh_key_too_small`` job directive works only with the default ``http_client: httpx``. With
+  ``http_client: requests`` it has no effect (and logs an error) when version 2.x of the ``urllib3`` library is
+  installed, as current versions of ``requests`` do; it works only with ``urllib3`` 1.x. It is not supported by
+  ``http_client: curl_cffi``. See :ref:`here <ignore_dh_key_too_small>`.
 
 Deprecated
 ``````````
@@ -215,6 +219,12 @@ Fixed
 * The ``remove_repeated`` filter compared each line with the one before it as text contained within it rather than
   as an equal line: with ``adjacent: true`` (the default), a line contained within the preceding one (e.g. ``ab``
   followed by ``b``) was removed when it had also appeared earlier.
+* The ``retries`` job directive, introduced in version 3.13, had no effect: a failed request was never retried. It
+  now retries, with any HTTP client, a request that fails with a connection error (e.g. a connection reset by the
+  server), a timeout, or a transient HTTP response (status codes 429, 500, 502, 503 and 504), waiting between
+  attempts for the time requested by the server's ``Retry-After`` header (up to 60 seconds) or else for 1, 2, 4...
+  seconds (up to 30). Other errors (e.g. a 404) are not retried. Reported by `101Dude
+  <https://github.com/101Dude>`__ in `#196 <https://github.com/mborsetti/webchanges/issues/196>`__. See :ref:`here <retries>`.
 
 Internals impacting hooks.py
 ````````````````````````````

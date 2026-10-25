@@ -93,7 +93,9 @@
     },
     "retries": {
       "type": "integer",
-      "description": "Number of retries for failed requests."
+      "minimum": 0,
+      "description": "Number of times to retry a request that fails with a connection error (e.g. a connection reset), a timeout, or HTTP status code 429, 500, 502, 503 or 504, before reporting the error. Waits the time requested by the server's Retry-After header (up to 60 seconds) or else 1, 2, 4... seconds (up to 30) between attempts. url jobs without use_browser only.",
+      "default": 0
     },
     "cookies": {
       "type": "object",
@@ -164,7 +166,7 @@
     },
     "ignore_dh_key_too_small": {
       "type": "boolean",
-      "description": "If true, works around weak DH key errors.",
+      "description": "If true, works around weak DH key errors. Only with http_client: httpx (and with requests only if urllib3 1.x is installed); not supported by curl_cffi.",
       "default": false
     },
     "params": {
