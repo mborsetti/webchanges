@@ -1361,47 +1361,42 @@ with:
 
 empty_as_error
 --------------
-Treat an empty response or command output as an error instead of as valid (empty) content (true/false). Defaults to
-false.
+Treat empty data as an error instead of as valid (empty) content (true/false/``ignore``). Defaults to false.
 
-This is useful with flaky websites (or CDNs) that every now and then return an empty page instead of the content
-being monitored, and with commands that occasionally produce no output. Without this directive, the empty response is
-saved as the new snapshot, and you receive a change report when the content "disappears" as well as another one when
+This is useful with flaky websites (or CDNs) that every now and then return an empty page, or a page lacking the
+content being monitored, and with commands that occasionally produce no output. Without this directive, the empty data
+is saved as the new snapshot, and you receive a change report when the content "disappears" as well as another one when
 it is restored — even if it is restored to the exact same content as before.
 
-When this directive is set to true and the job returns no data, the run is handled like a transient HTTP error (with
-the synthetic HTTP response status code 999): the snapshot database retains the last non-empty content and, once the
-job returns data again, any change is computed against that content, so a mere restoration does not trigger a change
+Data is empty when the response or command output is empty, or when the :ref:`filters <filters_job_directive>` leave
+nothing of it (e.g. an ``xpath`` filter selecting an element that is missing from the page this time). Data consisting
+only of whitespace (e.g. a lone newline, which a shell command emits very easily) counts as empty.
+
+When this directive is set to true and the data is empty, the run is handled like a transient HTTP error (with the
+synthetic HTTP response status code 999): the snapshot database retains the last non-empty content and, once the job
+returns data again, any change is computed against that content, so a mere restoration does not trigger a change
 report.
 
-A response or output consisting only of whitespace (e.g. a lone newline, which a shell command emits very easily)
-counts as empty.
+For jobs with ``use_browser: true``, the response is checked on the raw network response, as the rendered page source
+is never empty (the browser always builds a minimal document skeleton). A page that renders without the content being
+monitored (e.g. because client-side JavaScript has not yet populated it) is caught after filtering instead. If the
+content is merely slow to appear, consider also adding the :ref:`wait_for_selector` directive so that the job waits for
+it and captures it.
 
-For jobs with ``use_browser: true``, an empty response means that the browser received an empty document from the
-server: the check is made on the raw network response, as the rendered page source is never empty (the browser always
-builds a minimal document skeleton). This directive therefore does not detect the related failure mode in which the
-server does return content but the page renders empty, e.g. because client-side JavaScript fails to populate it; that
-case is covered by the :ref:`wait_for_selector` directive, since a wait for an element that never appears makes the
-job fail with a transient timeout error, which likewise preserves the last good snapshot instead of saving the empty
-content.
-
-An empty response is still reported as an error (subject to :ref:`max_tries`), so combine this directive with one of
-the following to control error reporting:
-
-* ``max_tries: 3`` (for example), to be notified only if the response is empty for 3 consecutive runs;
-* for ``url`` jobs, ``ignore_http_error_codes: 999``, to never be notified of empty responses (see
-  :ref:`ignore_http_error_codes`);
-* for ``command`` jobs, which have no ``ignore_http_error_codes`` directive, :ref:`suppress_errors` (which suppresses
-  every error of that job, including a command failing outright).
-
-Note that ``ignore_connection_errors`` does **not** silence it, as the server did respond.
+When set to true, empty data is still reported as an error (subject to :ref:`max_tries`), so it can be combined with
+``max_tries: 3`` (for example) to be notified only if the data is empty for 3 consecutive runs. Set it to ``ignore``
+instead to never be notified of empty data: the last non-empty snapshot is silently kept and nothing is reported,
+whatever the job kind. Note that ``ignore_connection_errors`` does **not** silence it, as the server did respond.
 
 .. code-block:: yaml
 
    # yaml-language-server: $schema=jobs.schema.json
    url: https://example.com/flaky
-   empty_as_error: true
-   ignore_http_error_codes: 999
+   use_browser: true
+   empty_as_error: ignore
+   filters:
+     - xpath: //table[@id="prices"]//tr[3]/td[6]
+     - html2text
 
 .. versionadded:: 3.38
 

@@ -188,6 +188,18 @@ class JobState(ContextManager):
         """Removes the last instance in the snapshot database."""
         self.snapshots_db.delete_latest(guid=self.job.guid, temporary=temporary)
 
+    def _raise_if_empty(self, data: str | bytes, what: str) -> None:
+        """Raises the error of the empty_as_error directive if the data is empty or consists only of whitespace.
+
+        :param data: The data retrieved or filtered.
+        :param what: The description of the condition, used in the log and in the error message.
+        :raises TransientHTTPError: With the synthetic status code EMPTY_RESPONSE_STATUS_CODE, if the data is empty.
+        """
+        stripped = data.strip() if isinstance(data, (str, bytes)) else data
+        if not stripped:
+            logger.info('Job %s: %s; treating it as an error.', self.job.index_number, what)
+            raise TransientHTTPError(f'{what} and empty_as_error is set', status_code=EMPTY_RESPONSE_STATUS_CODE)
+
     def process(self, headless: bool = True) -> JobState:
         """Processes the job: loads it (i.e. runs it) and handles Exceptions (errors).
 
@@ -215,15 +227,12 @@ class JobState(ContextManager):
 
             # An empty (or whitespace-only) response is treated as an error when empty_as_error is set, so that the
             # last non-empty snapshot is retained instead of being overwritten. The check is made here, before
-            # filtering, so that it applies to every job kind including those defined in hooks.py. BrowserJob makes
-            # its own, earlier check against the raw network body, as its rendered page source is never empty.
+            # filtering, so that it applies to every job kind including those defined in hooks.py, and again after
+            # filtering, as a filter (e.g. an xpath matching nothing on a page that did not render fully) can leave
+            # nothing. BrowserJob makes its own, earlier check against the raw network body, as its rendered page
+            # source is never empty.
             if self.job.empty_as_error:
-                stripped = data.strip() if isinstance(data, (str, bytes)) else data
-                if not stripped:
-                    logger.info('Job %s: No data received; treating it as an error.', self.job.index_number)
-                    raise TransientHTTPError(
-                        'No data received and empty_as_error is set', status_code=EMPTY_RESPONSE_STATUS_CODE
-                    )
+                self._raise_if_empty(data, 'No data received')
 
             # Apply automatic filters first
             filtered_data, mime_type = FilterBase.auto_process(self, data, mime_type)
@@ -231,6 +240,9 @@ class JobState(ContextManager):
             # Apply any specified filters
             for filter_kind, subfilter in FilterBase.normalize_filter_list(self.job.filters, self.job.index_number):
                 filtered_data, mime_type = FilterBase.process(filter_kind, subfilter, self, filtered_data, mime_type)
+
+            if self.job.empty_as_error:
+                self._raise_if_empty(filtered_data, 'No data left after filtering')
 
             self.new_data = filtered_data
             self.new_mime_type = mime_type
@@ -251,7 +263,11 @@ class JobState(ContextManager):
                 logger.warning('Running in a debugging session: raising the exception instead of processing it')
                 raise
             self.exception = e
-            self.error_ignored = self.job.ignore_error(e)
+            self.error_ignored = self.job.ignore_error(e) or (
+                self.job.empty_as_error == 'ignore'
+                and isinstance(e, TransientHTTPError)
+                and e.status_code == EMPTY_RESPONSE_STATUS_CODE
+            )
             if not self.error_ignored:
                 self.new_timestamp = time.time()
                 # Check for specific exception types to provide more detailed tracebacks

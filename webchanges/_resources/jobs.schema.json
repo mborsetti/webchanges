@@ -78,8 +78,8 @@
       "description": "If true, connection errors are ignored (no report sent)."
     },
     "empty_as_error": {
-      "type": "boolean",
-      "description": "If true, an empty (or whitespace-only) response or command output is treated as an error instead of as valid content, preserving the last non-empty snapshot. Works in all job types; with use_browser, empty means the server returned an empty document (the rendered page is never empty). Combine with max_tries to be notified only of persistent empty responses; in url jobs, 'ignore_http_error_codes: 999' silences them entirely.",
+      "oneOf": [{ "type": "boolean" }, { "type": "string", "enum": ["ignore"] }],
+      "description": "If true, an empty (or whitespace-only) response or command output, or one from which the filters leave nothing, is treated as an error (HTTP status code 999) instead of as valid content, preserving the last non-empty snapshot. Works in all job types; with use_browser, an empty response means the server returned an empty document (the rendered page is never empty). Combine with max_tries to be notified only of persistent empty data. If 'ignore', the error is never reported: the last non-empty snapshot is silently kept.",
       "default": false
     },
     "no_redirects": {

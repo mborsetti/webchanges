@@ -92,13 +92,14 @@ Added
   (i.e. HTML returned inside a JSON-encoded string), so that its Unicode escape sequences are converted into the
   characters they represent instead of being reported verbatim.
 * New ``empty_as_error`` job directive: when the server or a command returns an empty response or output consisting
-  only of whitespace, it is treated as a transient error (with the synthetic HTTP response status code 999) instead
-  of as valid empty content, so the snapshot database retains the last non-empty content and a flaky site or command
-  that intermittently returns nothing no longer triggers a change report when the content "disappears" and another
-  one when it is restored. Combine with ``max_tries`` to be notified only of persistent empty responses, or with
-  ``ignore_http_error_codes: 999`` (or, for ``command`` jobs, ``suppress_errors``) to never be notified of them.
-  Suggested by `Marcos Alano <https://github.com/mhalano>`__ in `#169
-  <https://github.com/mborsetti/webchanges/issues/169>`__. See :ref:`here <empty_as_error>`.
+  only of whitespace, or the filters leave nothing of it (e.g. an ``xpath`` selecting an element missing from a page
+  that did not render fully), it is treated as a transient error (with the synthetic HTTP response status code 999)
+  instead of as valid empty content, so the snapshot database retains the last non-empty content and a flaky site or
+  command that intermittently returns nothing no longer triggers a change report when the content "disappears" and
+  another one when it is restored. Combine with ``max_tries`` to be notified only of persistent empty data, or set it
+  to ``ignore`` to never be notified of it. Suggested by `Marcos Alano <https://github.com/mhalano>`__ in `#169
+  <https://github.com/mborsetti/webchanges/issues/169>`__ and `#195
+  <https://github.com/mborsetti/webchanges/issues/195>`__. See :ref:`here <empty_as_error>`.
 * New ``markdown_extras`` job directive: sets the `extras <https://github.com/trentm/python-markdown2/wiki/Extras>`__
   of the ``markdown2`` library used to render Markdown data as HTML in reports, in the same way as the ``html2text``
   filter passes its sub-directives to the ``html2text`` library. Can be set for all jobs with ``job_defaults``. See

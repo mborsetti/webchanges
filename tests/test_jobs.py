@@ -459,6 +459,101 @@ def test_empty_response_without_empty_as_error(
         assert job_state.new_data == ''
 
 
+def test_empty_as_error_after_filtering(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
+    """Check that with empty_as_error a response that is not empty but from which the filters leave nothing (e.g. a
+    page that did not render fully) also raises a TransientHTTPError (status code 999) and the last non-empty
+    snapshot is preserved, so a later restoration of the same content shows as unchanged."""
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'empty_as_error': True, 'filters': [{'keep_lines_containing': 'value'}]}
+    )
+
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.url = 'https://www.example.com/'
+    mock_response.history = []
+    mock_response.headers = {'Content-Type': 'text/plain'}
+    mock_response.text = 'header\nvalue: 1\nfooter'
+    mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    # First run: the filtered content is saved as the snapshot
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert job_state.new_data == 'value: 1'
+        job_state.save()
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+
+    # Second run: the filters leave nothing, which is treated as an error and the old data is preserved
+    mock_response.text = 'header\nfooter'
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TransientHTTPError)
+        assert job_state.exception.status_code == 999
+        assert 'after filtering' in str(job_state.exception)
+        assert job_state.error_ignored is False
+        assert job_state.old_data == 'value: 1'
+        job_state.save()  # on error, save() retains the old data in the snapshot
+        ssdb_storage._copy_temp_to_permanent(delete=True)
+
+    # Third run: the content is restored unchanged, so it matches the last non-empty snapshot (no change to report)
+    mock_response.text = 'header\nvalue: 1\nfooter'
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert job_state.exception is None
+        assert job_state.new_data == job_state.old_data == 'value: 1'
+
+
+def test_empty_as_error_ignore(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
+    """Check that with empty_as_error: ignore the error raised for an empty response, or for one from which the
+    filters leave nothing, is ignored (so it is neither reported nor counted towards max_tries) while other errors
+    are not."""
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'empty_as_error': 'ignore', 'filters': [{'keep_lines_containing': 'value'}]}
+    )
+
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.url = 'https://www.example.com/'
+    mock_response.history = []
+    mock_response.headers = {'Content-Type': 'text/plain'}
+    mocker.patch('httpx.Client.request', return_value=mock_response)
+
+    for text in ('', 'header\nfooter'):
+        mock_response.text = text
+        with JobState(ssdb_storage, job) as job_state:
+            job_state.process()
+            assert isinstance(job_state.exception, TransientHTTPError)
+            assert job_state.exception.status_code == 999
+            assert job_state.error_ignored is True
+            assert job_state.tries == 0
+
+    mock_response.status_code = 503
+    mock_response.reason_phrase = 'Service Unavailable'
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TransientHTTPError)
+        assert job_state.exception.status_code == 503
+        assert job_state.error_ignored is False
+
+
+def test_command_job_empty_as_error_ignore(ssdb_storage: SsdbSQLite3Storage) -> None:
+    """Check that empty_as_error: ignore also silences command jobs, which have no ignore_http_error_codes
+    directive."""
+    job = JobBase.unserialize({'command': f'"{sys.executable}" -c "pass"', 'empty_as_error': 'ignore'})
+
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, TransientHTTPError)
+        assert job_state.exception.status_code == 999
+        assert job_state.error_ignored is True
+
+
+def test_empty_as_error_invalid_value() -> None:
+    """Check that empty_as_error only accepts true, false and 'ignore'."""
+    with pytest.raises(ValueError, match='empty_as_error'):
+        JobBase.unserialize({'url': 'https://www.example.com/', 'empty_as_error': 'yes'})
+
+
 def test_command_job_empty_as_error(ssdb_storage: SsdbSQLite3Storage) -> None:
     """Check that empty_as_error works in command jobs: no output raises a TransientHTTPError (status code 999) and
     the last non-empty snapshot is preserved, so a later restoration of the same output shows as unchanged."""
