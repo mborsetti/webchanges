@@ -23,6 +23,7 @@ from webchanges.cli import (
     handle_unitialized_actions,
     load_hooks,
     locate_glob_files,
+    locate_jobs_and_hooks_files,
     locate_storage_file,
     migrate_from_legacy,
     python_version_warning,
@@ -288,6 +289,114 @@ def test_locate_glob_files_expands_pattern(tmp_path: Path) -> None:
     (tmp_path / 'jobs-b.yaml').write_text('x', encoding='utf-8')
     found = locate_glob_files([tmp_path / 'jobs-*.yaml'], default_path=tmp_path / 'unused')
     assert {p.name for p in found} == {'jobs-a.yaml', 'jobs-b.yaml'}
+
+
+def test_locate_glob_files_keeps_order_given_and_sorts_matches(tmp_path: Path) -> None:
+    for name in ('b.yaml', 'a.yaml', 'z.yaml'):
+        (tmp_path / name).write_text('x', encoding='utf-8')
+    found = locate_glob_files([tmp_path / 'z.yaml', tmp_path / '*.yaml'], default_path=tmp_path / 'unused')
+    assert found == [tmp_path / 'z.yaml', tmp_path / 'a.yaml', tmp_path / 'b.yaml']
+
+
+def test_expand_glob_files_directory_is_recursive(tmp_path: Path) -> None:
+    jobs_dir = tmp_path / 'jobs'
+    (jobs_dir / 'sub' / 'subsub').mkdir(parents=True)
+    for name in ('x.yaml', 'sub/y.yaml', 'sub/subsub/z.yaml', 'sub/notes.txt'):
+        (jobs_dir / name).write_text('x', encoding='utf-8')
+    result = _expand_glob_files(jobs_dir, default_path=tmp_path / 'unused', ext='.yaml', prefix='jobs')
+    assert result == [jobs_dir / 'sub' / 'subsub' / 'z.yaml', jobs_dir / 'sub' / 'y.yaml', jobs_dir / 'x.yaml']
+
+
+def test_expand_glob_files_directory_in_default_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / 'hooks').mkdir()
+    (tmp_path / 'hooks' / 'h.py').write_text('x', encoding='utf-8')
+    elsewhere = tmp_path / 'elsewhere'
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    assert _expand_glob_files(Path('hooks'), default_path=tmp_path, ext='.py', prefix='hooks') == [
+        tmp_path / 'hooks' / 'h.py'
+    ]
+
+
+def test_expand_glob_files_current_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / 'a.yaml').write_text('x', encoding='utf-8')
+    monkeypatch.chdir(tmp_path)
+    assert _expand_glob_files(Path(), default_path=tmp_path / 'unused', ext='.yaml', prefix='jobs') == [Path('a.yaml')]
+
+
+def test_expand_glob_files_double_star_pattern(tmp_path: Path) -> None:
+    (tmp_path / 'jobs' / 'sub').mkdir(parents=True)
+    (tmp_path / 'jobs' / 'a.yaml').write_text('x', encoding='utf-8')
+    (tmp_path / 'jobs' / 'sub' / 'b.yaml').write_text('x', encoding='utf-8')
+    result = _expand_glob_files(tmp_path / 'jobs' / '**' / '*.yaml', default_path=tmp_path / 'unused')
+    assert result == [tmp_path / 'jobs' / 'a.yaml', tmp_path / 'jobs' / 'sub' / 'b.yaml']
+
+
+def _make_command_config(tmp_path: Path, args: list[str] | None = None) -> CommandConfig:
+    return CommandConfig(
+        args=args or [],
+        config_path=tmp_path,
+        config_file=tmp_path / 'config.yaml',
+        jobs_def_file=tmp_path / 'jobs.yaml',
+        hooks_def_file=tmp_path / 'hooks.py',
+        ssdb_file=tmp_path / 'snapshots.db',
+    )
+
+
+def test_locate_jobs_and_hooks_files_from_config_directives(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The configuration file's directives apply, with relative paths taken from its directory (not the current one)."""
+    (tmp_path / 'jobs' / 'sub').mkdir(parents=True)
+    (tmp_path / 'jobs' / 'a.yaml').write_text('x', encoding='utf-8')
+    (tmp_path / 'jobs' / 'sub' / 'b.yaml').write_text('x', encoding='utf-8')
+    (tmp_path / 'my_hooks.py').write_text('x', encoding='utf-8')
+    (tmp_path / 'config.yaml').write_text('jobs: jobs\nhooks:\n  - my_hooks.py\n', encoding='utf-8')
+    elsewhere = tmp_path / 'elsewhere'
+    (elsewhere / 'jobs').mkdir(parents=True)
+    (elsewhere / 'jobs' / 'decoy.yaml').write_text('x', encoding='utf-8')
+    monkeypatch.chdir(elsewhere)
+    cmd = _make_command_config(tmp_path)
+    locate_jobs_and_hooks_files(cmd)
+    assert cmd.jobs_files == [tmp_path / 'jobs' / 'a.yaml', tmp_path / 'jobs' / 'sub' / 'b.yaml']
+    assert cmd.hooks_files == [tmp_path / 'my_hooks.py']
+    assert cmd.hooks_files_inputted
+
+
+def test_locate_jobs_and_hooks_files_cli_overrides_config(tmp_path: Path) -> None:
+    (tmp_path / 'jobs-cli.yaml').write_text('x', encoding='utf-8')
+    (tmp_path / 'jobs-config.yaml').write_text('x', encoding='utf-8')
+    (tmp_path / 'config.yaml').write_text('jobs: jobs-config.yaml\n', encoding='utf-8')
+    cmd = _make_command_config(tmp_path, ['--jobs', str(tmp_path / 'jobs-cli.yaml')])
+    locate_jobs_and_hooks_files(cmd)
+    assert cmd.jobs_files == [tmp_path / 'jobs-cli.yaml']
+    assert cmd.hooks_files == [tmp_path / 'hooks.py']
+    assert not cmd.hooks_files_inputted
+
+
+@pytest.mark.parametrize(
+    'config_text',
+    ['footnote: x\n', 'jobs: null\n', 'jobs: []\n', 'jobs: 3\n', '- a list\n', 'jobs: [unclosed\n'],
+    ids=['absent', 'null', 'empty', 'invalid', 'not-a-mapping', 'yaml-error'],
+)
+def test_locate_jobs_and_hooks_files_defaults(tmp_path: Path, config_text: str) -> None:
+    """Without valid directives, the defaults are used; invalid ones are reported when the configuration is loaded."""
+    (tmp_path / 'jobs.yaml').write_text('x', encoding='utf-8')
+    (tmp_path / 'config.yaml').write_text(config_text, encoding='utf-8')
+    cmd = _make_command_config(tmp_path)
+    locate_jobs_and_hooks_files(cmd)
+    assert cmd.jobs_files == [tmp_path / 'jobs.yaml']
+    assert cmd.hooks_files == [tmp_path / 'hooks.py']
+
+
+def test_first_run_creates_jobs_file_in_empty_directory(tmp_path: Path) -> None:
+    jobs_dir = tmp_path / 'jobs'
+    jobs_dir.mkdir()
+    cmd = _make_command_config(tmp_path, ['--jobs', str(jobs_dir)])
+    cmd.edit = cmd.edit_config = False
+    locate_jobs_and_hooks_files(cmd)
+    assert cmd.jobs_files == [jobs_dir]
+    first_run(cmd)
+    assert cmd.jobs_files == [jobs_dir / 'jobs.yaml']
+    assert (jobs_dir / 'jobs.yaml').is_file()
 
 
 def test_migrate_from_legacy_copies_when_dest_missing(

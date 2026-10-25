@@ -147,6 +147,22 @@ def teardown_logger(verbose: int | None = None) -> None:
         os.environ.pop('DEBUG', None)
 
 
+def _glob_files(pattern: Path, ext: str | None = None) -> list[Path]:
+    """The files matching a glob pattern, sorted; a pattern that is a directory matches the files with extension 'ext'
+    (all files if None) in its whole tree.
+
+    :param pattern: The glob pattern, file or directory.
+    :param ext: The extension, e.g. '.yaml', of the files to match within a directory.
+
+    :returns: The sorted list of the matching files (no directories).
+    """
+    if pattern.is_dir():
+        logger.debug('Searching directory %s recursively for *%s files', pattern, ext or '')
+        return sorted(f for f in pattern.rglob(f'*{ext or ""}') if f.is_file())
+    # https://stackoverflow.com/questions/56311703/globbing-absolute-paths-with-pathlib
+    return sorted(f for f in Path(pattern.anchor).glob(str(pattern.relative_to(pattern.anchor))) if f.is_file())
+
+
 def _expand_glob_files(
     filename: Path,
     default_path: Path,
@@ -154,38 +170,40 @@ def _expand_glob_files(
     prefix: str | None = None,
 ) -> list[Path]:
     """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
+    A directory stands for all the files with extension 'ext' in its tree.
 
-    :param filename: The filename.
+    :param filename: The filename, glob pattern or directory.
     :param default_path: The default directory.
     :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
     :param prefix: The prefix, e.g. 'config', to add with a hypen (e.g. 'config-') for searching if first scan fails.
 
-    :returns: The filename, either original or one with path where found and/or extension.
+    :returns: The sorted matching files, or the filename if none is found.
     """
     search_filenames = [filename]
 
-    # if ext is given, iterate both on raw filename and the filename with ext if different
-    if ext and filename.suffix != ext:
-        search_filenames.append(filename.with_suffix(ext))
-
-    # if prefix is given, iterate both on raw filename and the filename with prefix if different
-    if prefix and not filename.name.startswith(prefix):
-        search_filenames.append(filename.with_stem(f'{prefix}-{filename.stem}'))
+    if filename.name:  # e.g. '.' has no name, so no variations
+        # if ext is given, iterate both on raw filename and the filename with ext if different
         if ext and filename.suffix != ext:
-            search_filenames.append(filename.with_stem(f'{prefix}-{filename.stem}').with_suffix(ext))
+            search_filenames.append(filename.with_suffix(ext))
+
+        # if prefix is given, iterate both on raw filename and the filename with prefix if different
+        if prefix and not filename.name.startswith(prefix):
+            search_filenames.append(filename.with_stem(f'{prefix}-{filename.stem}'))
+            if ext and filename.suffix != ext:
+                search_filenames.append(filename.with_stem(f'{prefix}-{filename.stem}').with_suffix(ext))
 
     # try as given
     for file in search_filenames:
-        # https://stackoverflow.com/questions/56311703/globbing-absolute-paths-with-pathlib
-        file_list = list(Path(file.anchor).glob(str(file.relative_to(file.anchor))))
-        if any(f.is_file() for f in file_list):
+        if file_list := _glob_files(file, ext):
             return file_list
 
         # no directory specified (and not in current one): add default one
-        if not file.is_absolute() and Path(file).parent != Path.cwd():
-            file_list = list(default_path.glob(str(file)))
-            if any(f.is_file() for f in file_list):
-                return file_list
+        if (
+            not file.is_absolute()
+            and Path(file).parent != Path.cwd()
+            and (file_list := _glob_files(default_path.joinpath(file), ext))
+        ):
+            return file_list
 
     # no matches found
     return [filename]
@@ -197,11 +215,80 @@ def locate_glob_files(
     ext: str | None = None,
     prefix: str | None = None,
 ) -> list[Path]:
-    job_files = set()
-    for filename in filenames:
-        for file in _expand_glob_files(filename, default_path, ext, prefix):
-            job_files.add(file)
-    return list(job_files)
+    """Expands each filename, glob pattern or directory into the files it matches, keeping the order given (and
+    dropping duplicates) so that jobs are always concatenated, and therefore numbered, the same way.
+
+    :param filenames: The filenames, glob patterns or directories.
+    :param default_path: The default directory.
+    :param ext: The extension, e.g. '.yaml', to add for searching if first scan fails.
+    :param prefix: The prefix, e.g. 'config', to add with a hypen (e.g. 'config-') for searching if first scan fails.
+
+    :returns: The files found.
+    """
+    return list(
+        dict.fromkeys(
+            file for filename in filenames for file in _expand_glob_files(filename, default_path, ext, prefix)
+        )
+    )
+
+
+def _read_file_directives(config_file: Path) -> dict[str, list[Path]]:
+    """Read the 'jobs' and 'hooks' directives of the configuration file, which are needed before the file is loaded
+    (as the hooks must be imported first). Relative paths are taken from the configuration file's directory.
+
+    :param config_file: The configuration file.
+
+    :returns: The filenames, glob patterns or directories, by name of the directive (only those set).
+    """
+    import yaml
+
+    from webchanges.storage import YamlConfigStorage
+
+    try:
+        config = YamlConfigStorage.parse(config_file)
+    except (OSError, yaml.YAMLError) as exc:  # reported when the configuration file is loaded
+        logger.debug('Could not read the jobs and hooks directives of %s: %s', config_file, exc)
+        return {}
+    if not isinstance(config, dict):
+        return {}
+    directives = {}
+    for name in ('jobs', 'hooks'):
+        value = config.get(name)
+        if isinstance(value, str):
+            value = [value]
+        # an invalid value is reported when the configuration file is loaded
+        if isinstance(value, list) and value and all(isinstance(v, str) for v in value):
+            directives[name] = [config_file.parent.joinpath(Path(v).expanduser()) for v in value]
+            logger.info('Configuration file directive %s is %s', name, value)
+    return directives
+
+
+def locate_jobs_and_hooks_files(command_config: CommandConfig) -> None:
+    """Locate the jobs and hooks files: those given with the command line arguments --jobs and --hooks, else those in
+    the configuration file's 'jobs' and 'hooks' directives, else the default ones. The configuration file must already
+    have been located.
+
+    :param command_config: The CommandConfig, whose jobs_files and hooks_files are replaced with the files found.
+    """
+    if not (command_config.jobs_files_inputted and command_config.hooks_files_inputted):
+        directives = _read_file_directives(command_config.config_file)
+        if not command_config.jobs_files_inputted and 'jobs' in directives:
+            command_config.jobs_files = directives['jobs']
+        if not command_config.hooks_files_inputted and 'hooks' in directives:
+            command_config.hooks_files = directives['hooks']
+            command_config.hooks_files_inputted = True  # warn if missing, as for --hooks
+    command_config.jobs_files = locate_glob_files(
+        filenames=command_config.jobs_files,
+        default_path=command_config.config_path,
+        ext='.yaml',
+        prefix='jobs',
+    )
+    command_config.hooks_files = locate_glob_files(
+        filenames=command_config.hooks_files,
+        default_path=command_config.config_path,
+        ext='.py',
+        prefix='hooks',
+    )
 
 
 def locate_storage_file(
@@ -260,6 +347,8 @@ def first_run(command_config: CommandConfig) -> None:
         if not command_config.edit_config:
             print(f'> Edit it with {__project_name__} --edit-config')
     if not any(f.is_file() for f in command_config.jobs_files):
+        if command_config.jobs_files[0].is_dir():  # a directory without jobs files
+            command_config.jobs_files[0] = command_config.jobs_files[0].joinpath('jobs.yaml')
         command_config.jobs_files[0].parent.mkdir(parents=True, exist_ok=True)
         command_config.jobs_files[0].write_text(
             f'# {__project_name__} jobs file. See {__docs_url__}en/stable/jobs.html\n'
@@ -426,18 +515,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_fi
             ext='.yaml',
             prefix='config',
         )
-        urlwatch_config.jobs_files = locate_glob_files(
-            filenames=urlwatch_config.jobs_files,
-            default_path=urlwatch_config.config_path,
-            ext='.yaml',
-            prefix='jobs',
-        )
-        urlwatch_config.hooks_files = locate_glob_files(
-            filenames=urlwatch_config.hooks_files,
-            default_path=urlwatch_config.config_path,
-            ext='.py',
-            prefix='hooks',
-        )
+        locate_jobs_and_hooks_files(urlwatch_config)
         sync_bundled_schemas(urlwatch_config)
         if (
             default_config_file is not None
@@ -934,18 +1012,7 @@ def _main() -> None:  # pragma: no cover
         ext='.yaml',
         prefix='config',
     )
-    command_config.jobs_files = locate_glob_files(
-        filenames=command_config.jobs_files,
-        default_path=command_config.config_path,
-        ext='.yaml',
-        prefix='jobs',
-    )
-    command_config.hooks_files = locate_glob_files(
-        filenames=command_config.hooks_files,
-        default_path=command_config.config_path,
-        ext='.py',
-        prefix='hooks',
-    )
+    locate_jobs_and_hooks_files(command_config)
     command_config.ssdb_file = locate_storage_file(
         filename=command_config.ssdb_file,
         default_path=data_path,

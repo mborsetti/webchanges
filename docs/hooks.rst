@@ -10,7 +10,8 @@ Hook your own Python code
 =========================
 Python programmers can hook their own code to expand :program:`webchanges` with custom functionality by writing such
 code into a ``hooks.py`` file located in the same directory as the job and configuration files (or as specified in the
-command line using the ``--hooks`` argument). The file will be automatically loaded as a module at startup.
+command line using the ``--hooks`` argument or in the configuration file using the :ref:`hooks <config_hooks>`
+directive). The file will be automatically loaded as a module at startup.
 
 A (very good) AI-generated high-level architectural overview is available on
 `DeepWiki <https://deepwiki.com/mborsetti/webchanges>`__.
@@ -41,6 +42,9 @@ Example ``hooks.py`` file:
 .. code-block:: python
 
    """Example hooks file for webchanges (for Python >= 3.14)."""
+   # PEP 810 (Python 3.15+; ignored by earlier versions): load these modules only when a name they bind is first used
+   __lazy_modules__ = ["pathlib", "zoneinfo"]
+
    import logging
    import re
    import threading

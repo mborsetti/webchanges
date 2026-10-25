@@ -327,6 +327,40 @@ The ``--check-new`` command line argument always queries PyPi, regardless of thi
 
 
 
+.. _config_jobs:
+
+.. _config_hooks:
+
+Jobs and hooks files
+--------------------
+The top-level ``jobs`` and ``hooks`` directives select the jobs and hooks files to use instead of the default
+``jobs.yaml`` and ``hooks.py``, so that you don't need to type the ``--jobs`` and ``--hooks`` command line arguments at
+every run. Each takes a file, a `glob pattern <https://en.wikipedia.org/wiki/Glob_(programming)>`__ or a directory, or a
+list of these:
+
+.. code-block:: yaml
+
+   jobs: jobs  # every *.yaml file in the jobs directory and its subdirectories
+   hooks:
+     - hooks.py
+     - hooks/*.py
+
+* Relative paths are taken from the directory of the configuration file (not the current one), and ``~`` stands for the
+  home directory.
+* A directory stands for every file in its tree with the ``.yaml`` (``jobs``) or ``.py`` (``hooks``) suffix; a glob
+  pattern can include ``**`` to match any number of subdirectories (e.g. ``jobs/**/*.yaml``).
+* The files found are used in the order listed, with those matching the same pattern or directory in alphabetical
+  order; with multiple jobs files, their contents are combined in that order.
+* The same :ref:`smart file specification <smart-file-specification>` as the command line arguments applies (e.g.
+  ``jobs: test`` will also look for ``test.yaml``, ``jobs-test`` and ``jobs-test.yaml``).
+* The ``--jobs`` and ``--hooks`` command line arguments override these directives.
+
+If set to ``null`` (the default) or omitted, the default files are used.
+
+.. versionadded:: 3.38
+
+
+
 Omitting configuration directives
 ---------------------------------
 When the ``config.yaml`` file is created, it contains all configuration directives and their default settings. If

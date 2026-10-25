@@ -279,6 +279,8 @@ class _Config(TypedDict):
     database: _ConfigDatabase
     footnote: str | None
     version_check: _ConfigVersionCheck
+    jobs: str | list[str] | None
+    hooks: str | list[str] | None
 
 
 def validate_config(config: Mapping[str, Any]) -> None:
@@ -485,4 +487,7 @@ DEFAULT_CONFIG: _Config = {
     'version_check': {
         'enabled': True,  # whether to check PyPi once a day for a newer release of webchanges
     },
+    # read before the rest of the file by cli.locate_jobs_and_hooks_files(); overridden by --jobs and --hooks
+    'jobs': None,
+    'hooks': None,
 }

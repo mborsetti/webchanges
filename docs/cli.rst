@@ -55,9 +55,10 @@ By default, the job file is named ``jobs.yaml`` and is located in the following 
 * macOS: ``~/Library/Preferences/webchanges``
 * Windows: ``%USERPROFILE%\Documents\webchanges`` (the webchanges folder within your Documents folder)
 
-Use the ``--jobs`` command line argument to specify a file with a different name or location or a `glob pattern
-<https://en.wikipedia.org/wiki/Glob_(programming)>`__ for multiple files (the contents of matching files will be
-combined)
+Use the ``--jobs`` command line argument to specify a file with a different name or location, a `glob pattern
+<https://en.wikipedia.org/wiki/Glob_(programming)>`__ for multiple files, or a directory for all the ``*.yaml`` files in
+its tree (the contents of the files found will be combined). To avoid typing it at every run, use the ``jobs``
+directive in the configuration file instead (see :ref:`here <config_jobs>`); ``--jobs`` overrides it.
 
 - If you specify a file name without a directory, :program:`webchanges` searches:
   1. The current directory
@@ -74,15 +75,25 @@ combined)
 Multiple job files
 ^^^^^^^^^^^^^^^^^^
 
-To load multiple job files in a single run, glob patterns are supported, as well as repeating the ``--jobs`` argument:
+To load multiple job files in a single run, glob patterns and directories are supported, as well as repeating the
+``--jobs`` argument:
 
-``webchanges --jobs file1.yaml --jobs file2.yaml --jobs morningrun/*.yaml``
+``webchanges --jobs file1.yaml --jobs file2.yaml --jobs morningrun/*.yaml --jobs eveningrun``
 
-The contents of all specified files will be combined by appending them in order.
+A glob pattern can include ``**`` to match any number of subdirectories (e.g. ``--jobs "jobs/**/*.yaml"``), and a
+directory (``eveningrun`` above) stands for all the ``*.yaml`` files in it and in its subdirectories.
+
+The contents of all specified files will be combined by appending them in the order the arguments are given, with the
+files matching the same glob pattern or directory in alphabetical order.
+
+The same applies to the ``--hooks`` argument, where a directory stands for all the ``*.py`` files in its tree.
 
 
 .. versionchanged:: 3.25
    Added ability to repeat the argument multiple times.
+
+.. versionchanged:: 3.38
+   Added directories; files are combined in a consistent order (it could previously change from run to run).
 
 
 .. _smart-file-specification:
@@ -122,6 +133,8 @@ The search process is as follows:
 
     *Example:* ``--hooks myhooks`` will look for ``myhooks``, then ``myhooks.py``, ``hooks-myhooks``, and
     finally ``hooks-myhooks.py``.
+
+This also applies to the ``jobs`` and ``hooks`` directives of the configuration file (see :ref:`here <config_jobs>`).
 
 .. versionchanged::  3.31
    Added prefix and expanded from ``--jobs`` to also include ``--config`` and ``--hooks``.

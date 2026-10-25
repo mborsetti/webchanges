@@ -55,6 +55,7 @@ class CommandConfig(BaseConfig):
     install_chrome: bool
     joblist: list[str | int]
     jobs_files: list[Path]
+    jobs_files_inputted: bool
     list_jobs: bool | str | None
     log_file: Path
     max_snapshots: int | None
@@ -92,6 +93,7 @@ class CommandConfig(BaseConfig):
         """
         super().__init__(config_path, config_file, jobs_def_file, hooks_def_file, ssdb_file)
         self.parse_args(args)
+        self.jobs_files_inputted = bool(self.jobs_files)
         self.jobs_files = self.jobs_files or [jobs_def_file]
         self.hooks_files_inputted = bool(self.hooks_files)
         self.hooks_files = self.hooks_files or [hooks_def_file]

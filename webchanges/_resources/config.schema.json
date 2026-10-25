@@ -34,6 +34,16 @@
     "version_check": {
       "$ref": "#/$defs/_ConfigVersionCheck",
       "description": "Settings for the once-a-day check against PyPi for a newer release of webchanges."
+    },
+    "jobs": {
+      "anyOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}, "minItems": 1}, {"type": "null"}],
+      "description": "The jobs file(s) to use instead of the default jobs.yaml: a file, a glob pattern (e.g. 'jobs/**/*.yaml') or a directory (for all its *.yaml files, recursively), or a list of these. Relative paths are taken from the directory of this configuration file. Overridden by the --jobs command line argument. Set to null for the default.",
+      "default": null
+    },
+    "hooks": {
+      "anyOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}, "minItems": 1}, {"type": "null"}],
+      "description": "The hooks file(s) to use instead of the default hooks.py: a file, a glob pattern or a directory (for all its *.py files, recursively), or a list of these. Relative paths are taken from the directory of this configuration file. Overridden by the --hooks command line argument. Set to null for the default.",
+      "default": null
     }
   },
   "additionalProperties": false,
