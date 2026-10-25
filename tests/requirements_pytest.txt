@@ -5,6 +5,7 @@
 -r ../requirements.txt
 
 # aioxmpp  # does not install in oct-2025 (obsolete lxml~=4.0 dependency fails to build)
+argparse-manpage  # setup.py: build_manpages
 beautifulsoup4
 chump
 coverage

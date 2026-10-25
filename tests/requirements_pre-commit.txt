@@ -10,7 +10,8 @@ flynt
 lxml-stubs
 pre-commit
 ruff
-# tox-ini-fmt
+# tox
+# tox-uv-bare
 ty
 types-backports
 types-docutils
