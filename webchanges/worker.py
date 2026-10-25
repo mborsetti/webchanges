@@ -162,12 +162,15 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                             job_state.new_mime_type = job_state.old_mime_type
                         if not read_only:
                             job_state.save()
-                        if job_state.new_error_data == job_state.old_error_data:
+                        # The first error reported is never a repeated one, even if the same error was saved by the
+                        # runs whose errors max_tries kept from being reported
+                        if job_state.tries > max(max_tries, 1) and job_state.new_error_data == job_state.old_error_data:
                             urlwatcher.report.error_same_error(job_state)
                         else:
                             urlwatcher.report.error(job_state)
-                elif job_state.old_data or job_state.old_timestamp != 0:
-                    # This is not the first time running this job (we have snapshots)
+                elif job_state.old_data or (job_state.old_timestamp != 0 and not job_state.old_error_data):
+                    # This is not the first time running this job successfully (we have snapshots of data, not only of
+                    # errors)
                     if (
                         job_state.new_data == job_state.old_data
                         or job_state.new_data in job_state.history_dic_snapshots
@@ -189,7 +192,7 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                             job_state.save()
                         urlwatcher.report.changed(job_state)
                 else:
-                    # We have never run this job before (there are no snapshots)
+                    # We have never run this job successfully before (there are no snapshots, or only of errors)
                     job_state.tries = 0
                     if not read_only:
                         job_state.save()

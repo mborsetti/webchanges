@@ -331,7 +331,7 @@ class SsdbSQLite3Storage(SsdbStorage):
                     ')',
                     (guid, delete_entries),
                 )
-                num_del: int = self._execute('SELECT changes()').fetchone()[0]
+                num_del: int = self._temp_execute('SELECT changes()').fetchone()[0]
         else:
             with self.lock:
                 self._execute(

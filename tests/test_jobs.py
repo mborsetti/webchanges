@@ -2412,3 +2412,167 @@ def test_ignore_dh_key_too_small_requests_mounts_adapter(mocker: pytest_mock.Moc
     ):
         job.retrieve(job_state)
     assert adapters == ['WeakDHAdapter']
+
+
+# ---------------------------------------------------------------- HTTP clients behave the same
+
+# UrlJob has one implementation per HTTP client (httpx, requests, curl_cffi), and the fallback chain between them means
+# a user can end up on any of them, so they must give the same data, ETag, media type and error messages.
+
+
+class _ScriptedHandler(BaseHTTPRequestHandler):
+    """Answers each path with the status, Content-Type, body and extra headers in ``ROUTES``; '/cookies' answers with
+    the Cookie request header received."""
+
+    ROUTES: dict[str, tuple[int, str | None, bytes, dict[str, str]]] = {
+        '/etag': (200, 'text/plain; charset=utf-8', b'hello', {'ETag': '"v1"'}),
+        '/no-charset': (200, 'text/plain', 'café crème brûlée naïve résumé façade'.encode(), {}),
+        '/redirect': (302, 'text/plain', b'moved', {'Location': '/etag'}),
+        '/redirect-html': (301, 'text/html', b'<p>moved</p>', {'Location': 'https://example.com/new'}),
+        '/redirect-json': (307, 'application/json', b'{}', {'Location': 'https://example.com/new'}),
+        '/redirect-other': (308, 'image/png', b'', {'Location': 'https://example.com/new'}),
+        '/not-modified': (304, None, b'', {}),
+        '/json-400': (400, 'application/json', b'{"error": "bad",\n "code": 7}', {}),
+        '/html-403': (
+            403,
+            'text/html',
+            b'<html><head><title>Forbidden</title></head><body><h1>Access denied</h1><p>Go away</p></body></html>',
+            {},
+        ),
+        '/text-404': (404, 'text/plain', b'not here', {}),
+        '/text-500': (500, 'text/plain', b'oops', {}),
+        '/text-503': (503, 'text/plain', b'try later', {'Retry-After': '30'}),
+    }
+
+    def do_GET(self) -> None:
+        if self.path == '/cookies':
+            status, content_type, body, extra = 200, 'text/plain', (self.headers.get('Cookie') or '').encode(), {}
+        else:
+            status, content_type, body, extra = self.ROUTES[self.path]
+        self.send_response(status)
+        if content_type:
+            self.send_header('Content-Type', content_type)
+        for key, value in extra.items():
+            self.send_header(key, value)
+        if status != 304:
+            self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        if status != 304:
+            self.wfile.write(body)
+
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+        pass
+
+
+@pytest.fixture(scope='module')
+def scripted_server() -> Iterator[str]:
+    """A local HTTP server with a _ScriptedHandler; yields its URL (without a trailing slash)."""
+    server = ThreadingHTTPServer(('127.0.0.1', 0), _ScriptedHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f'http://127.0.0.1:{server.server_address[1]}'
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def _retrieve(url: str, client: str, **directives: Any) -> tuple[str | bytes, str, str]:
+    job = JobBase.unserialize({'url': url, 'http_client': client, 'timeout': 5, **directives})
+    with JobState(None, job) as job_state:  # ty:ignore[invalid-argument-type]
+        return job.retrieve(job_state)
+
+
+@pytest.mark.parametrize('client', RETRY_CLIENTS)
+@pytest.mark.parametrize(
+    ('path', 'directives', 'expected'),
+    [
+        pytest.param('/etag', {}, ('hello', '"v1"', 'text/plain'), id='etag'),
+        pytest.param('/no-charset', {}, ('café crème brûlée naïve résumé façade', '', 'text/plain'), id='no-charset'),
+        pytest.param('/redirect', {}, ('hello', '', 'text/plain'), id='followed-redirect-drops-etag'),
+        pytest.param(
+            '/redirect', {'no_redirects': True}, ('Redirect 302 Found to /etag:\nmoved', '', 'text/plain'), id='text'
+        ),
+        pytest.param(
+            '/redirect-html',
+            {'no_redirects': True},
+            (
+                (
+                    'Redirect <b>301 Moved Permanently</b> to <a href="https://example.com/new">'
+                    'https://example.com/new</a>:<br><p>moved</p>'
+                ),
+                '',
+                'text/html',
+            ),
+            id='html',
+        ),
+        pytest.param(
+            '/redirect-json',
+            {'no_redirects': True},
+            ('{"Redirect 307 Temporary Redirect":"https://example.com/new"}', '', 'application/json'),
+            id='json',
+        ),
+        pytest.param(
+            '/redirect-other',
+            {'no_redirects': True},
+            ('Redirect 308 Permanent Redirect to https://example.com/new.', '', 'image/png'),
+            id='other',
+        ),
+    ],
+)
+def test_http_clients_response(
+    scripted_server: str, client: str, path: str, directives: dict[str, Any], expected: tuple[str, str, str]
+) -> None:
+    """Every HTTP client returns the same data, ETag and media type, including for a redirect not followed (no_redirects
+    directive), whose data describes it according to its media type."""
+    assert _retrieve(scripted_server + path, client, **directives) == expected
+
+
+@pytest.mark.parametrize('client', RETRY_CLIENTS)
+@pytest.mark.parametrize(
+    ('path', 'transient', 'message', 'retry_after'),
+    [
+        pytest.param(
+            '/json-400',
+            False,
+            '400 Client Error: Bad Request for url: {url}\n{{"error":"bad","code":7}}',
+            None,
+            id='json',
+        ),
+        pytest.param(
+            '/html-403', False, '403 Client Error: Forbidden for url: {url}\n# Access denied\nGo away', None, id='html'
+        ),
+        pytest.param('/text-404', False, '404 Client Error: Not Found for url: {url}', None, id='404-no-body'),
+        pytest.param('/text-500', True, '500 Server Error: Internal Server Error for url: {url}\noops', None, id='500'),
+        pytest.param(
+            '/text-503', True, '503 Server Error: Service Unavailable for url: {url}\ntry later', 30.0, id='503'
+        ),
+    ],
+)
+def test_http_clients_error_response(
+    scripted_server: str, client: str, path: str, transient: bool, message: str, retry_after: float | None
+) -> None:
+    """Every HTTP client raises the same error message for an HTTP error, with the response body appended (except for a
+    404): JSON compacted, HTML converted to text without its title, else as is. 429 and 5xx errors are transient and
+    carry the server's Retry-After."""
+    url = scripted_server + path
+    with pytest.raises(Exception) as exc_info:
+        _retrieve(url, client)
+    assert str(exc_info.value) == message.format(url=url)
+    assert isinstance(exc_info.value, TransientHTTPError) is transient
+    if transient:
+        assert exc_info.value.retry_after == retry_after  # ty:ignore[unresolved-attribute]
+
+
+@pytest.mark.parametrize('client', RETRY_CLIENTS)
+def test_http_clients_not_modified(scripted_server: str, client: str) -> None:
+    """Every HTTP client raises NotModifiedError for an HTTP 304 response."""
+    with pytest.raises(NotModifiedError):
+        _retrieve(scripted_server + '/not-modified', client)
+
+
+@pytest.mark.parametrize('client', RETRY_CLIENTS)
+def test_http_clients_send_cookies(scripted_server: str, client: str) -> None:
+    """Every HTTP client sends the cookies of the 'cookies' directive, except those set to null."""
+    data, _, _ = _retrieve(scripted_server + '/cookies', client, cookies={'session': 'abc', 'tracking': None})
+    assert data == 'session=abc'

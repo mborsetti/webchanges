@@ -162,6 +162,12 @@ Fixed
   ``insecure_password`` is set. See :ref:`here <xmpp>`.
 * ``--detailed-versions`` crashed when Playwright is installed but ``psutil`` is not.
 * The deprecation warning of the ``striplines`` filter named it ``strip_each_line``.
+* With ``max_tries``, the first error reported was flagged as a repeated one, so that with ``suppress_repeated_errors:
+  true`` it was never reported (yet its end was). See :ref:`here <max_tries>`.
+* A job whose first run(s) failed was reported as changed (from no data) instead of new when it first succeeded.
+* The ``telegram`` reporter mangled code blocks (e.g. the traceback of a differ error), could send a code block split
+  across messages in a message longer than Telegram's maximum, and merged a line too long for one message with the
+  following one. See :ref:`here <telegram>`.
 
 Internals impacting hooks.py
 ````````````````````````````
@@ -183,6 +189,9 @@ Internals
   failing CI test job no longer cancels the others, and ``jq`` is also tested on Windows and free-threaded Python.
 * Testing: a new test checks that the code, the bundled JSON Schemas and the documentation agree on the filters, job
   directives and configuration directives.
+* Testing: new tests of the classification of each run (new, changed, error, etc.) over consecutive runs, of the
+  ``httpx``, ``requests`` and ``curl_cffi`` HTTP clients giving the same results, and of the ``telegram`` reporter's
+  escaping and splitting into messages.
 * CI: before publishing, the deploy job checks that the release tag matches ``__version__`` and the top section of
   ``CHANGELOG.rst``, which must be dated.
 * CI: the test suite no longer runs twice for a release push (branch and tag) or for a pull request's branch (push and

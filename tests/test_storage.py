@@ -818,6 +818,16 @@ def test_delete_latest(database_engine: SsdbStorage) -> None:
         assert len(history) == 1
 
 
+def test_delete_latest_temporary_sqlite3(ssdb_storage: SsdbSQLite3Storage) -> None:
+    """delete_latest(temporary=True) deletes the latest snapshot saved in this run (not yet in the permanent database)
+    and returns how many it deleted, counted in the temporary database."""
+    for timestamp, data in ((1.0, 'old'), (2.0, 'new')):
+        ssdb_storage.save(guid='guid', snapshot=Snapshot(data, timestamp, 0, '', 'text/plain', {}))
+    assert ssdb_storage.delete_latest('guid', temporary=True) == 1
+    ssdb_storage._copy_temp_to_permanent(delete=True)
+    assert [s.data for s in ssdb_storage.get_history_snapshots('guid')] == ['old']
+
+
 @pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,

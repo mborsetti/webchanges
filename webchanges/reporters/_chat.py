@@ -135,18 +135,14 @@ class TelegramReporter(MarkdownReporter):
 
         return ''.join(lines)
 
-    def telegram_chunk_by_line(self, text: str, max_length: int) -> list[str]:
-        """Chunk-ify by line while escaping markdown as required by Telegram."""
-        chunks = []
-
-        # Escape Markdown by type
-        lines = re.split(r'(`)(.*?)(`)', text)
-        for i in range(len(lines)):
+    def telegram_escape_line(self, line: str) -> str:
+        """Escape a line outside a code block, escaping inline code and the URL of links as their entities require."""
+        parts = re.split(r'(`)(.*?)(`)', line)
+        for i in range(len(parts)):
             if i % 4 in {1, 3}:
                 continue
             base_entity = 'code' if i % 4 == 2 else None
-            # subtext = re.split(r'(\[[^\][]*]\((?:https?|tel|mailto):[^()]*\))', text[i])
-            subtext = re.split(r'(\[.*?]\((?:https?|tel|mailto):[^()]*\))', lines[i])
+            subtext = re.split(r'(\[.*?]\((?:https?|tel|mailto):[^()]*\))', parts[i])
             for j in range(len(subtext)):
                 if (j + 1) % 2:
                     subtext[j] = self.telegram_escape_markdown(subtext[j], entity_type=base_entity)
@@ -162,37 +158,73 @@ class TelegramReporter(MarkdownReporter):
                             ')',
                         ]
                     )
-            lines[i] = ''.join(subtext)
+            parts[i] = ''.join(subtext)
+        return ''.join(parts)
 
-        new_text = ''.join(lines).splitlines(keepends=True)
+    @staticmethod
+    def telegram_split_line(line: str, width: int) -> list[str]:
+        """Split an escaped line into pieces of at most width characters, preferably after a space and never between a
+        backslash and the character it escapes. Joined, the pieces are the line.
+        """
+        pieces = []
+        while len(line) > width:
+            cut = line.rfind(' ', 1, width) + 1 or width
+            while cut > 1 and (cut - len(line[:cut].rstrip('\\'))) % 2:  # odd number of trailing backslashes
+                cut -= 1
+            pieces.append(line[:cut])
+            line = line[cut:]
+        pieces.append(line)
+        return pieces
 
-        # check if any individual line is too long and chunk it
-        if any(len(line) > max_length for line in new_text):
-            new_lines: list[str] = []
-            for line in new_text:
-                if len(line) > max_length:
-                    new_lines.extend(chunk_string(line, max_length))
-                else:
-                    new_lines.append(line)
-            new_text = new_lines
+    def telegram_chunk_by_line(self, text: str, max_length: int) -> list[str]:
+        """Chunk-ify by line while escaping markdown as required by Telegram.
 
-        it_lines = iter(new_text)
-        chunk_lines: list[str] = []
-        pre_status = False  # keep track of whether you're in the middle of a PreCode entity to close and reopen
-        try:
-            while True:
-                next_line = next(it_lines)
-                if sum(len(line) for line in chunk_lines) + len(next_line) > max_length - pre_status * 3:
-                    if pre_status:
-                        chunk_lines[-1] += '```'
-                    chunks.append(''.join(chunk_lines))
-                    chunk_lines = [pre_status * '```' + next_line]
-                else:
-                    chunk_lines.append(next_line)
-                if next_line.count('```') % 2:
-                    pre_status = not pre_status
-        except StopIteration:
-            chunks.append(''.join(chunk_lines))
+        No chunk is longer than max_length. A code block split across chunks is closed at the end of a chunk and
+        reopened (with its opening fence) at the start of the next, and a line too long for a chunk is split.
+        """
+        # Escape each line as its context requires; a fence line (```) is kept as is, as is the code block's content
+        # except for the characters a 'pre' entity requires to be escaped.
+        escaped: list[tuple[str, bool, bool]] = []  # (line, is a fence, whether a code block is open after it)
+        in_pre = False
+        for line in text.splitlines(keepends=True):
+            is_fence = line.lstrip().startswith('```') and bool(line.count('```') % 2)
+            if is_fence:
+                in_pre = not in_pre
+                if not in_pre:  # a closing fence fits in the room kept to close a code block
+                    line = '```\n' if line.endswith('\n') else '```'
+            elif in_pre:
+                line = self.telegram_escape_markdown(line, entity_type='pre')
+            else:
+                line = self.telegram_escape_line(line)
+            escaped.append((line, is_fence, in_pre))
+
+        # Room is kept in each chunk to close a code block ('\n```') and, in the next chunk, to reopen it
+        reopen_length = max((len(line) for line, is_fence, _ in escaped if is_fence), default=0)
+        width = max(max_length - 4 - reopen_length, 1)
+
+        chunks: list[str] = []
+        chunk: list[str] = []
+        size = 0
+        pre_open = False  # whether a code block is open at the end of the chunk
+        opening_fence = ''
+        for line, is_fence, pre_after in escaped:
+            for piece in [line] if is_fence else self.telegram_split_line(line, width):
+                if chunk and size + len(piece) + 4 * pre_after > max_length:
+                    if pre_open and chunk[-1] is opening_fence:
+                        chunk.pop()  # rather than leaving an empty code block, move its opening fence to the next chunk
+                    elif pre_open:
+                        chunk[-1] += '```' if chunk[-1].endswith('\n') else '\n```'
+                    if chunk:
+                        chunks.append(''.join(chunk))
+                    chunk = [opening_fence] if pre_open else []
+                    size = sum(len(c) for c in chunk)
+                if is_fence and pre_after:
+                    opening_fence = piece
+                chunk.append(piece)
+                size += len(piece)
+                pre_open = pre_after
+        if chunk or not chunks:
+            chunks.append(''.join(chunk))
 
         return chunks
 

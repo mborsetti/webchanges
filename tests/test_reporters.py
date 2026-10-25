@@ -25,6 +25,7 @@ from webchanges import mailer as mailer_module
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
 from webchanges.mailer import SMTP_TIMEOUT, SMTPMailer, smtp_have_password, smtp_set_password
+from webchanges.reporters import TelegramReporter
 from webchanges.storage import DEFAULT_CONFIG
 
 if TYPE_CHECKING:
@@ -515,3 +516,54 @@ def test_ehlo_hostname_falls_back_to_address_literal(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr('webchanges.mailer.socket.getfqdn', lambda: 'localhostname')
     monkeypatch.setattr('webchanges.mailer.socket.gethostbyname', lambda _name: '192.0.2.1')
     assert mailer_module._ehlo_hostname() == '[192.0.2.1]'
+
+
+# ---------------------------------------------------------------- Telegram MarkdownV2 escaping and chunking
+
+# Telegram rejects a message longer than 4096 characters or whose MarkdownV2 doesn't parse (e.g. an unescaped
+# character or an unclosed code block), so a broken chunk means a report that is never delivered.
+
+
+def _telegram_chunks(text: str, max_length: int) -> list[str]:
+    reporter = TelegramReporter.__new__(TelegramReporter)  # the chunking needs neither a report nor a config
+    return reporter.telegram_chunk_by_line(text, max_length)
+
+
+def test_telegram_escaping() -> None:
+    """Text is escaped, except for the inline code (only ` and \\ escaped), links and bolding."""
+    assert _telegram_chunks('Go to [the site](https://ex.com/a_b) and run `x.y`! **New**', 4096) == [
+        r'Go to [the site](https://ex.com/a_b) and run `x.y`\! *New*'
+    ]
+
+
+def test_telegram_code_block() -> None:
+    """A code block keeps its fences (and language), and only ` and \\ are escaped inside it, as is a differ error's
+    traceback."""
+    text = 'Error:\n```python\nprint("a_b") # `x` \\ y\n```\nDone.'
+    assert _telegram_chunks(text, 4096) == ['Error:\n```python\nprint("a_b") # \\`x\\` \\\\ y\n```\nDone\\.']
+
+
+def test_telegram_code_block_across_chunks() -> None:
+    """A code block too long for one chunk is closed at the end of each chunk and reopened with its opening fence at the
+    start of the next one; no chunk is longer than the maximum or holds an empty code block."""
+    code = [f'line {i:02} = a.b(c)\n' for i in range(30)]
+    text = 'Start\n```diff\n' + ''.join(code) + '```\nEnd\n'
+    chunks = _telegram_chunks(text, 80)
+    assert len(chunks) > 2
+    assert all(len(chunk) <= 80 for chunk in chunks)
+    assert all(chunk.count('```') == 2 for chunk in chunks)
+    assert all(chunk.startswith('```diff\n') for chunk in chunks[1:])
+    assert '```diff\n```' not in ''.join(chunks)
+    received = [line for chunk in chunks for line in chunk.splitlines(keepends=True) if not line.startswith('```')]
+    assert received == ['Start\n', *code, 'End\n']
+
+
+def test_telegram_long_line() -> None:
+    """A line longer than a chunk is split across chunks without losing or adding anything, never between an escaping
+    backslash and the character it escapes, and the next line is not merged into it."""
+    text = 'a.b ' * 30 + '\nNext line.'
+    chunks = _telegram_chunks(text, 25)
+    assert all(len(chunk) <= 25 for chunk in chunks)
+    assert ''.join(chunks) == 'a\\.b ' * 30 + '\nNext line\\.'
+    assert not any(chunk.endswith('\\') for chunk in chunks)
+    assert chunks[-1].endswith('\nNext line\\.')
