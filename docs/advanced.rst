@@ -464,7 +464,7 @@ or like this in the config file for all ``use_browser: true`` jobs:
    :class: strike
 
    job_defaults:
-     browser:
+     browser_jobs:
        block_elements:
          - stylesheet
          - font

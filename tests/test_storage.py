@@ -27,6 +27,7 @@ import yaml
 from tests.conftest import prepare_storage_test
 from webchanges import __docs_url__
 from webchanges.handler import Snapshot
+from webchanges.jobs import JobBase
 from webchanges.storage import (
     DEFAULT_CONFIG,
     BaseTextualFileStorage,
@@ -294,8 +295,50 @@ def test_remove_remark_keys_strips_underscore_keys() -> None:
 
 def test_load_remark_keys_do_not_break_type_check(tmp_path: Path) -> None:
     """User-added '_'-prefixed remark keys must not trigger a type-check failure."""
-    cfg = _write_config(tmp_path, {'job_defaults': {'all': {'_note': 'a remark'}}})
+    cfg = _write_config(tmp_path, {'job_defaults': {'all_jobs': {'_note': 'a remark'}}})
     YamlConfigStorage(cfg).load()
+
+
+def _write_config_job_defaults(tmp_path: Path, job_defaults: dict) -> Path:
+    """Write the test config.yaml baseline to tmp_path/config.yaml with its job_defaults replaced by job_defaults."""
+    base = YamlConfigStorage(config_file).parse(config_file)
+    base['job_defaults'] = job_defaults
+    out = tmp_path / 'config.yaml'
+    out.write_text(yaml.safe_dump(base), encoding='utf-8')
+    return out
+
+
+def test_load_legacy_job_defaults_keys(tmp_path: Path) -> None:
+    """The legacy (urlwatch) job_defaults keys are renamed to the job-kind ones, without warnings."""
+    cfg = _write_config_job_defaults(
+        tmp_path,
+        {
+            'all': {'timeout': 10},
+            'url': {'headers': {'User-Agent': 'url'}},
+            'browser': {'headers': {'User-Agent': 'browser'}},
+            'shell': {'max_tries': 2},
+        },
+    )
+    config_storage = YamlConfigStorage(cfg)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        config_storage.load()
+    job_defaults = config_storage.config['job_defaults']
+    assert set(job_defaults) - {'_note'} == {'all_jobs', 'url_jobs', 'browser_jobs', 'command_jobs'}
+    assert job_defaults['all_jobs']['timeout'] == 10
+    assert job_defaults['url_jobs']['headers']['User-Agent'] == 'url'
+    assert job_defaults['browser_jobs']['headers']['User-Agent'] == 'browser'
+    assert job_defaults['command_jobs']['max_tries'] == 2
+    job = JobBase.unserialize({'url': 'https://www.example.com'}).with_defaults(config_storage.config)
+    assert job.headers['User-Agent'] == 'url'
+    assert job.timeout == 10
+
+
+def test_load_legacy_and_new_job_defaults_key(tmp_path: Path) -> None:
+    """A legacy job_defaults key alongside the job-kind one that replaces it is a duplicate."""
+    cfg = _write_config_job_defaults(tmp_path, {'url': {'timeout': 10}, 'url_jobs': {'timeout': 20}})
+    with pytest.raises(KeyError, match="Found both 'url' and 'url_jobs'"):
+        YamlConfigStorage(cfg).load()
 
 
 def test_load_reporter_configured_multiple_times(tmp_path: Path) -> None:

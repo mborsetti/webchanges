@@ -1255,7 +1255,7 @@ def test_job_defaults_dict_does_not_leak_between_jobs() -> None:
     A job that doesn't set the directive itself reads the class attribute (``JobBase.headers`` is a shared, mutable
     ``Headers`` object), so ``_set_defaults`` must merge into a copy rather than in place.
     """
-    config = cast('_Config', {'job_defaults': {'url': {'headers': {'X-Test': 'from-job-defaults'}}}})
+    config = cast('_Config', {'job_defaults': {'url_jobs': {'headers': {'X-Test': 'from-job-defaults'}}}})
 
     url_job = JobBase.unserialize({'url': 'https://www.example.com/'})
     job_with_defaults = url_job.with_defaults(config)
@@ -1472,23 +1472,23 @@ def test_unserialize_leaves_input_dict_unmodified() -> None:
 def test_with_defaults() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
-    config: _Config = {'job_defaults': {'all': {'timeout': 999}}}  # ty:ignore[missing-typed-dict-key]
+    config: _Config = {'job_defaults': {'all_jobs': {'timeout': 999}}}  # ty:ignore[missing-typed-dict-key]
     job = job.with_defaults(config)
     assert job.timeout == 999
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
 
 
 def test_with_defaults_headers() -> None:
-    """Tests that the default headers are overwritten correctly: those more specific (i.e. ``url`` and ``browser``)
-    override those more generic (i.e. ``all``).
+    """Tests that the default headers are overwritten correctly: those more specific (i.e. ``url_jobs`` and
+    ``browser_jobs``) override those more generic (i.e. ``all_jobs``).
     """
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
     config: _Config = {  # ty:ignore[missing-typed-dict-key]
         'job_defaults': {
-            'all': {'headers': {'a': '1', 'b': '2'}},
-            'url': {'headers': {'b': '3', 'c': '4'}},
-            'browser': {'headers': {'c': '5', 'd': '6'}},
+            'all_jobs': {'headers': {'a': '1', 'b': '2'}},
+            'url_jobs': {'headers': {'b': '3', 'c': '4'}},
+            'browser_jobs': {'headers': {'c': '5', 'd': '6'}},
         }
     }
     job = job.with_defaults(config)

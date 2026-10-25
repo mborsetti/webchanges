@@ -55,6 +55,16 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# The legacy (urlwatch) 'job_defaults' keys, which read like job directives, mapped to the job-kind names that replace
+# them.
+LEGACY_JOB_DEFAULTS_KEYS = {
+    'all': 'all_jobs',
+    'url': 'url_jobs',
+    'browser': 'browser_jobs',
+    'command': 'command_jobs',
+    'shell': 'command_jobs',
+}
+
 
 class YamlConfigStorage(BaseYamlFileStorage):
     """Class for configuration file (is a YAML textual file)."""
@@ -226,16 +236,18 @@ class YamlConfigStorage(BaseYamlFileStorage):
             # deepcopy so that later mutations of the loaded config cannot corrupt the shared DEFAULT_CONFIG
             config['job_defaults'] = copy.deepcopy(DEFAULT_CONFIG['job_defaults'])
         else:
-            if 'shell' in config['job_defaults']:
-                if 'command' in config['job_defaults']:
-                    raise KeyError(
-                        "Found both 'shell' and 'command' job_defaults in config, a duplicate. Please remove 'shell' "
-                        'ones.'
-                    )
-                # 'shell' is a legacy key not in the _ConfigJobDefaults TypedDict, so pop it off a plain-dict view
-                job_defaults = cast('dict[str, Any]', config['job_defaults'])
-                job_defaults['command'] = job_defaults.pop('shell')
-            for key in ('all', 'url', 'browser', 'command'):
+            # The legacy keys are not in the _ConfigJobDefaults TypedDict, so rename them on a plain-dict view
+            job_defaults = cast('dict[str, Any]', config['job_defaults'])
+            for legacy_key, key in LEGACY_JOB_DEFAULTS_KEYS.items():
+                if legacy_key in job_defaults:
+                    if key in job_defaults:
+                        raise KeyError(
+                            f"Found both '{legacy_key}' and '{key}' in job_defaults in config, a duplicate. Please "
+                            f"rename '{legacy_key}' to '{key}', merging the two."
+                        )
+                    logger.info("Using legacy key '%s' in job_defaults in config as '%s'", legacy_key, key)
+                    job_defaults[key] = job_defaults.pop(legacy_key)
+            for key in ('all_jobs', 'url_jobs', 'browser_jobs', 'command_jobs'):
                 if key not in config['job_defaults'] or config['job_defaults'][key] is None:
                     config['job_defaults'][key] = {}
 
@@ -287,7 +299,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 raise ValueError(f'Found invalid data in configuration file {self.filename} entry:\n{exc})') from None
 
             # format headers
-            for job_defaults_type in ('all', 'url', 'browser'):
+            for job_defaults_type in ('all_jobs', 'url_jobs', 'browser_jobs'):
                 if 'headers' in config['job_defaults'][job_defaults_type]:
                     config['job_defaults'][job_defaults_type]['headers'] = Headers(
                         {k: str(v) for k, v in config['job_defaults'][job_defaults_type]['headers'].items()},

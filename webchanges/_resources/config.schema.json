@@ -16,7 +16,7 @@
     },
     "job_defaults": {
       "$ref": "#/$defs/_ConfigJobDefaults",
-      "description": "Default directives applied to jobs by kind (all, url, browser, command)."
+      "description": "Default directives applied to jobs by kind (all_jobs, url_jobs, browser_jobs, command_jobs)."
     },
     "differ_defaults": {
       "$ref": "#/$defs/_ConfigDifferDefaults",
@@ -989,28 +989,53 @@
     },
     "_ConfigJobDefaults": {
       "title": "Job defaults",
-      "description": "Default directives applied to jobs by kind. All keys are optional; any directive set under 'url', 'browser', or 'command' overrides the same directive set under 'all' (the 'headers' directive merges header-by-header).",
+      "description": "Default directives applied to jobs by kind. All keys are optional; any directive set under 'url_jobs', 'browser_jobs', or 'command_jobs' overrides the same directive set under 'all_jobs' (the 'headers' directive merges header-by-header).",
       "type": "object",
       "properties": {
         "_note": {
           "type": "string",
           "description": "Free-form note (ignored by webchanges; keys starting with '_' are not interpreted)."
         },
-        "all": {
+        "all_jobs": {
           "type": "object",
           "description": "Directives applied to every job, including those defined in hooks.py."
         },
-        "url": {
+        "url_jobs": {
           "type": "object",
           "description": "Directives applied to 'url' jobs without 'use_browser'."
         },
-        "browser": {
+        "browser_jobs": {
           "type": "object",
           "description": "Directives applied to 'url' jobs with 'use_browser: true'."
         },
-        "command": {
+        "command_jobs": {
           "type": "object",
           "description": "Directives applied to 'command' jobs."
+        },
+        "all": {
+          "type": "object",
+          "description": "Deprecated; renamed 'all_jobs'.",
+          "deprecated": true
+        },
+        "url": {
+          "type": "object",
+          "description": "Deprecated; renamed 'url_jobs'.",
+          "deprecated": true
+        },
+        "browser": {
+          "type": "object",
+          "description": "Deprecated; renamed 'browser_jobs'.",
+          "deprecated": true
+        },
+        "command": {
+          "type": "object",
+          "description": "Deprecated; renamed 'command_jobs'.",
+          "deprecated": true
+        },
+        "shell": {
+          "type": "object",
+          "description": "Deprecated; renamed 'command_jobs'.",
+          "deprecated": true
         }
       }
     },

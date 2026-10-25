@@ -502,13 +502,13 @@ class JobBase(metaclass=TrackSubClasses):
 
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
-            # Apply defaults specific to this job kind, then 'all' defaults (which don't override more specific ones)
+            # Apply defaults specific to this job kind, then 'all_jobs' ones (which don't override more specific ones)
             for class_type in (UrlJob, BrowserJob, ShellJob):
                 if isinstance(self, class_type):
-                    job_with_defaults._set_defaults(cfg.get(class_type.__kind__))
+                    job_with_defaults._set_defaults(cfg.get(f'{class_type.__kind__}_jobs'))
                     break
-            # all is done last, so that more specific defaults are not overwritten
-            job_with_defaults._set_defaults(cfg.get('all'))
+            # all_jobs is done last, so that more specific defaults are not overwritten
+            job_with_defaults._set_defaults(cfg.get('all_jobs'))
 
         # backwards-compatible
         if hasattr(job_with_defaults, 'diff_tool'):

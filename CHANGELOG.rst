@@ -98,6 +98,11 @@ Changed
   specified, which then removes elements from the whole document. See :ref:`here <css>` and :ref:`here <xpath>`.
 * ``ai_google`` differ: the summary of a transient API error (HTTP 429 or 503) that persists now states how many
   retries were made and for how long. See :ref:`here <ai_google_diff>`.
+* The sub-directives of ``job_defaults`` in the configuration file are renamed after the job kind they apply to, so
+  that they can no longer be mistaken for the job directives of the same name: ``all_jobs``, ``url_jobs``,
+  ``browser_jobs`` and ``command_jobs``. The previous ``all``, ``url``, ``browser`` and ``command`` (and the older
+  ``shell``) continue to work unchanged. Suggested by `drws <https://github.com/drws>`__ in `#173
+  <https://github.com/mborsetti/webchanges/issues/173>`__. See :ref:`here <job_defaults>`.
 
 Deprecated
 ``````````

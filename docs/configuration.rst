@@ -144,15 +144,17 @@ Reporters are implemented in a hierarchy, and configuration settings of a report
 Job defaults
 ------------
 If you want to apply or change default settings for all your jobs, add them to the ``job_defaults`` section in your
-config file. The following example will set default headers for all ``url`` jobs without ``use_browser``:
+config file. Under it, each sub-directive names a job kind, and holds the job directives that apply by default to the
+jobs of that kind, written exactly as they would be in a job. The following example will set default headers for all
+``url`` jobs without ``use_browser``:
 
 .. code-block:: yaml
 
    job_defaults:
-     all:
+     all_jobs:
        _note: Default directives that are applied to all job kinds.
        suppress_repeated_errors: true
-     url:
+     url_jobs:
        _note: These are defaults for URL jobs without 'use_browser'.
        headers:
          Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
@@ -171,21 +173,40 @@ config file. The following example will set default headers for all ``url`` jobs
          User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36
 
 The above config file sets all jobs to use the suppress_repeated_errors option and ``url`` jobs without the
-``use_browser`` directive to use the specified headers.
+``use_browser`` directive to use the specified headers, as if each of these jobs contained the same ``headers``
+directive, e.g.:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   headers:
+     Accept-Language: en-US,en;q=0.9
+     # (...)
 
 The possible sub-directives to ``job_defaults`` are:
 
-* ``all``: Applies to all your jobs, including those in hooks.py;
-* ``url``: Applies only to jobs with the directive ``url`` without ``use_browser``;
-* ``browser``: Applies only to jobs with the directives ``url`` and ``use_browser: true``;
-* ``command``: Applies only to jobs with the directive ``command``.
+* ``all_jobs``: Applies to all your jobs, including those in hooks.py;
+* ``url_jobs``: Applies only to jobs with the directive ``url`` without ``use_browser``;
+* ``browser_jobs``: Applies only to jobs with the directives ``url`` and ``use_browser: true``;
+* ``command_jobs``: Applies only to jobs with the directive ``command``.
 
 See :ref:`jobs <jobs>` for an explanation of the different job kinds and their directives.
 
 Handling of duplicate directives
 ````````````````````````````````
-Any directive specified in either ``url``, ``browser`` or ``command`` will override the same directive specified in
-``all``.  In case of the ``headers`` directive, the overriding is done on a header-by-header basis.
+Any directive specified in either ``url_jobs``, ``browser_jobs`` or ``command_jobs`` will override the same directive
+specified in ``all_jobs``, and any directive specified in a job will override the same directive specified in
+``job_defaults``. In case of the ``headers`` directive, the overriding is done on a header-by-header basis.
+
+Previous names
+``````````````
+These sub-directives were previously named ``all``, ``url``, ``browser`` and ``command`` (the latter originally
+``shell``), as in :program:`urlwatch`. These names continue to work unchanged, but cannot be used together with the
+new name of the same sub-directive (e.g. ``url`` together with ``url_jobs``).
+
+.. versionchanged:: 3.38
+   Renamed the sub-directives from ``all``, ``url``, ``browser`` and ``command`` to ``all_jobs``, ``url_jobs``,
+   ``browser_jobs`` and ``command_jobs``.
 
 
 .. _differ_defaults:

@@ -245,10 +245,10 @@ class _ConfigReport(TypedDict):
 
 class _ConfigJobDefaults(TypedDict, total=False):
     _note: str
-    all: dict[str, Any]
-    url: dict[str, Any]
-    browser: dict[str, Any]
-    command: dict[str, Any]
+    all_jobs: dict[str, Any]
+    url_jobs: dict[str, Any]
+    browser_jobs: dict[str, Any]
+    command_jobs: dict[str, Any]
 
 
 class _ConfigDifferDefaults(TypedDict, total=False):
@@ -464,10 +464,10 @@ DEFAULT_CONFIG: _Config = {
     },
     'job_defaults': {
         '_note': 'Default directives that are applied to jobs.',
-        'all': {'_note': 'These are used for all type of jobs, including those in hooks.py.'},
-        'url': {'_note': "These are used for 'url' jobs without 'use_browser'."},
-        'browser': {'_note': "These are used for 'url' jobs with 'use_browser: true'."},
-        'command': {'_note': "These are used for 'command' jobs."},
+        'all_jobs': {'_note': 'These are used for all type of jobs, including those in hooks.py.'},
+        'url_jobs': {'_note': "These are used for 'url' jobs without 'use_browser'."},
+        'browser_jobs': {'_note': "These are used for 'url' jobs with 'use_browser: true'."},
+        'command_jobs': {'_note': "These are used for 'command' jobs."},
     },
     'differ_defaults': {
         '_note': 'Default directives that are applied to individual differs.',

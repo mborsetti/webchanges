@@ -133,13 +133,13 @@ report:
     insecure_password: ''
 job_defaults:
   _note: Default directives that are applied to jobs.
-  all:
+  all_jobs:
     _note: These are used for all type of jobs, including those in hooks.py.
-  url:
+  url_jobs:
     _note: "These are used for 'url' jobs without 'use_browser'."
-  browser:
+  browser_jobs:
     _note: "These are used for 'url' jobs with 'use_browser: true'."
-  command:
+  command_jobs:
     _note: "These are used for 'command' jobs."
 differ_defaults:
   _note: Default directives that are applied to individual differs.
