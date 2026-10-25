@@ -14,7 +14,6 @@ __lazy_modules__ = [
     'json',
     'pathlib',
     're',
-    'ssl',
     'time',
     'urllib.parse',
 ]
@@ -24,7 +23,6 @@ import importlib.util
 import json
 import logging
 import re
-import ssl
 import sys
 import time
 from datetime import UTC, datetime
@@ -43,6 +41,8 @@ from webchanges.util import missing_dependency
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    import ssl
+
     from webchanges.handler import JobState
 
 # The fallback assignments below are hidden from the type checker behind `if not TYPE_CHECKING`. Otherwise the type
@@ -207,10 +207,10 @@ class UrlJob(UrlJobBase):
 
         if self.ignore_dh_key_too_small:
             logger.debug(
-                'Setting default cipher list to ciphers that do not make any use of Diffie Hellman Key Exchange '
-                "and thus are not affected by the server's weak DH key"
+                'Lowering the OpenSSL security level to 1 so that a weak (1024-bit) Diffie-Hellman key is accepted'
             )
-            context: ssl.SSLContext | str | bool = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            # httpx's own context (its CA certificates, ssl_no_verify honored), as a bare SSLContext verifies nothing
+            context: ssl.SSLContext | str | bool = httpx.create_ssl_context(verify=not self.ssl_no_verify)
             context.set_ciphers('DEFAULT@SECLEVEL=1')
         else:
             context = not self.ssl_no_verify

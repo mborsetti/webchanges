@@ -182,6 +182,10 @@ October 2027.
   attempts for the time requested by the server's `Retry-After` header (up to 60 seconds) or else for 1, 2, 4...
   seconds (up to 30). Other errors (e.g. a 404) are not retried. Reported by 101Dude in
   https://github.com/mborsetti/webchanges/issues/196. See https://webchanges.readthedocs.io/en/stable/jobs.html#retries.
+- The `ignore_dh_key_too_small` job directive, with the default `http_client: httpx`, made every request to an
+  HTTPS site fail with `CERTIFICATE_VERIFY_FAILED`, as it replaced the verification of certificates with one using
+  no certificate authorities, and it ignored `ssl_no_verify`. It now only lowers the OpenSSL security level, so
+  that a server's weak (1024-bit) Diffie-Hellman key is accepted, and certificates are verified as usual.
 
 ## Internals impacting hooks.py
 - `FilterBase.raise_import_error()`, `DifferBase.raise_import_error()` and `ReporterBase.raise_import_error()`

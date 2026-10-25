@@ -8,6 +8,7 @@ import importlib.util
 import logging
 import os
 import socket
+import ssl
 import struct
 import subprocess
 import sys
@@ -2208,3 +2209,25 @@ def test_retry_wait_caps() -> None:
     assert UrlJob.retry_wait(ValueError(), 20) == RETRY_BACKOFF_MAX
     assert UrlJob.retry_wait(TransientHTTPError('', status_code=429, retry_after=3600), 1) == RETRY_AFTER_MAX
     assert not UrlJob.is_transient_error(TransientHTTPError('', status_code=EMPTY_RESPONSE_STATUS_CODE))
+
+
+@pytest.mark.parametrize(('ssl_no_verify', 'verify_mode'), [(False, ssl.CERT_REQUIRED), (True, ssl.CERT_NONE)])
+def test_ignore_dh_key_too_small_httpx_context(
+    mocker: pytest_mock.MockerFixture, ssl_no_verify: bool, verify_mode: ssl.VerifyMode
+) -> None:
+    """With ignore_dh_key_too_small, httpx gets an SSL context that lowers the security level but still verifies
+    certificates against CA certificates (unless ssl_no_verify is set)."""
+    client = mocker.patch('webchanges.jobs._url.httpx.Client', side_effect=RuntimeError('stop'))
+    job = JobBase.unserialize(
+        {'url': 'https://www.example.com/', 'ignore_dh_key_too_small': True, 'ssl_no_verify': ssl_no_verify}
+    )
+    with (
+        JobState(None, job) as job_state,  # ty:ignore[invalid-argument-type]
+        pytest.raises(RuntimeError, match='stop'),
+    ):
+        job.retrieve(job_state)
+    context = client.call_args.kwargs['verify']
+    assert isinstance(context, ssl.SSLContext)
+    assert context.verify_mode == verify_mode
+    if not ssl_no_verify:
+        assert context.cert_store_stats()['x509_ca'] > 0
