@@ -71,6 +71,14 @@ October 2027.
   `self.hook_data` (job) or `self.job.hook_data` (the others), so that one custom Class can serve many jobs. Unlike
   directives declared by a custom job Class itself, it is known to the jobs file's JSON Schema, so editors don't flag
   it as an error. See https://webchanges.readthedocs.io/en/stable/jobs.html#hook-data.
+- New `jobs` and `hooks` configuration directives: they select the jobs and hooks files to use instead of the
+  default `jobs.yaml` and `hooks.py`, so that the `--jobs` and `--hooks` command line arguments no longer need
+  to be typed at every run (they still override the directives). Each takes a file, a glob pattern or a directory, or
+  a list of these; relative paths are taken from the directory of the configuration file. Requested by drws in
+  https://github.com/mborsetti/webchanges/issues/174. See
+  https://webchanges.readthedocs.io/en/stable/configuration.html#config-jobs.
+- The `--jobs` and `--hooks` command line arguments now also accept a directory, standing for all the `*.yaml`
+  (jobs) or `*.py` (hooks) files in its tree. See https://webchanges.readthedocs.io/en/stable/cli.html#cli-jobs.
 
 
 ## Changed
@@ -99,6 +107,17 @@ October 2027.
   shown as written instead of with `case` in italics. Emphasis of whole words (`_word_` or `*word*`) and strong
   emphasis (`**word**`) are unaffected. To reinstate it, use the new `markdown_extras` job directive (see above)
   with `middle-word-em: true`.
+- The sub-directives of `job_defaults` in the configuration file are renamed after the job kind they apply to, so
+  that they can no longer be mistaken for the job directives of the same name: `all_jobs`, `url_jobs`,
+  `browser_jobs` and `command_jobs`. The previous `all`, `url`, `browser` and `command` (and the older
+  `shell`) continue to work unchanged. Suggested by drws in https://github.com/mborsetti/webchanges/issues/173. See
+  https://webchanges.readthedocs.io/en/stable/configuration.html#job-defaults.
+- A header or cookie set to null (no value) in the `headers` or `cookies` directive of a job, or of `url_jobs`
+  or `browser_jobs` in `job_defaults`, now removes the one of the same name set in a less specific
+  `job_defaults` entry, which is then not sent; previously, it was sent with the value `None`. Headers are merged
+  one at a time (job, then the job kind's `job_defaults`, then `all_jobs`), ignoring case. See
+  https://webchanges.readthedocs.io/en/stable/jobs.html#headers and
+  https://webchanges.readthedocs.io/en/stable/jobs.html#cookies.
 
 ## Deprecated
 - The `remove-duplicate-lines` filter, inherited from **urlwatch**: use `remove_repeated` with
@@ -118,8 +137,8 @@ October 2027.
   request were affected, as **webchanges** strips the conditional request headers while retrying a failed job.
 - A dict-valued directive set in `job_defaults` for one job kind (in practice `headers`) leaked into every other
   job of the run, including jobs of a different kind: the defaults were merged into the shared class-level default
-  instead of into a copy of it. Headers set under `job_defaults.url` were therefore also sent by jobs with
-  `use_browser: true`, and appeared in the output of `--test-diff` and in any jobs file saved during that run.
+  instead of into a copy of it. Headers set under `job_defaults.url` (now `url_jobs`) were therefore also sent by
+  jobs with `use_browser: true`, and appeared in the output of `--test-diff` and in any jobs file saved during that run.
 - `--rollback-database`: the snapshots were deleted while computing the count displayed in the confirmation
   prompt, i.e. before (and regardless of) the answer; declining did not prevent the deletion, and confirming
   reported `No snapshots found` as nothing was left to delete. In addition, the count itself was wrong (it
@@ -187,6 +206,24 @@ October 2027.
   both clients it now lowers the OpenSSL security level, so that a server's weak (1024-bit) Diffie-Hellman key is
   accepted, while certificates are verified as usual. It remains unsupported by `http_client: curl_cffi`. See
   https://webchanges.readthedocs.io/en/stable/jobs.html#ignore-dh-key-too-small.
+- With multiple jobs files, `--add`, `--delete` and `--change-location` saved all the jobs into the first file,
+  duplicating those of the other files into it (and the following run then failed on the duplicates). They now exit
+  with an error asking to select a single file with `--jobs`. See
+  https://webchanges.readthedocs.io/en/stable/cli.html#cli-jobs.
+- With multiple jobs files, the order in which they were combined, and with it the jobs' index numbers, could change
+  from run to run. They are now combined in the order given, with the files matching the same glob pattern or
+  directory in alphabetical order.
+- In jobs with `use_browser: true`, a `proxy` without credentials was sent with the username and password
+  `None`, and one without a port was ignored; credentials in the proxy URL are now also percent-decoded. See
+  https://webchanges.readthedocs.io/en/stable/jobs.html#proxy.
+- With `max_tries`, the first error reported was flagged as a repeated one (the failures not yet reported had
+  stored the same error), so that with `suppress_repeated_errors: true` it was never reported, yet its end was. See
+  https://webchanges.readthedocs.io/en/stable/jobs.html#max-tries.
+- A job whose first run(s) failed was reported as changed (from no data) instead of as new when it first succeeded.
+- The `telegram` reporter mangled code blocks (e.g. the traceback of a differ error), could split a code block
+  across messages in a way that made a message longer than Telegram's maximum of 4096 characters, and merged a line
+  too long for one message with the following one. See
+  https://webchanges.readthedocs.io/en/stable/reporters.html#telegram.
 
 ## Internals impacting hooks.py
 - `FilterBase.raise_import_error()`, `DifferBase.raise_import_error()` and `ReporterBase.raise_import_error()`
@@ -234,3 +271,6 @@ October 2027.
 - Testing: the `jq` filter is now also tested on Windows and on free-threaded Python.
 - Testing: a new test checks that the code, the bundled JSON Schemas and the documentation list the same filters (and
   their sub-directives), job directives and configuration directives, so that they no longer drift apart.
+- Testing: new tests of the classification of each run (new, changed, error, etc.) over consecutive runs, of the
+  `httpx`, `requests` and `curl_cffi` HTTP clients giving the same results, and of the `telegram` reporter's
+  escaping and splitting into messages.

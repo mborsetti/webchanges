@@ -35,9 +35,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.38.0rc3
+Version 3.38.0
 -------------------
-Unreleased
+2026-10-25
 
 ⚠ Breaking Changes
 ``````````````````
@@ -49,8 +49,8 @@ Unreleased
 
 Added
 `````
-* Support for Python 3.15, including its free-threaded build 3.15t (some optional dependencies may not support either yet;
-  the ``deepdiff`` extras install ``deepdiff`` 8.x there). On Windows, installing on Python 3.15 requires an extra
+* Support for Python 3.15, including its free-threaded build 3.15t (some optional dependencies may not support either
+  yet; the ``deepdiff`` extras install ``deepdiff`` 8.x there). On Windows, installing on Python 3.15 requires an extra
   step; see :ref:`here <install_windows>`.
 * New ``empty_as_error`` job directive: treats an empty response or output, or one that the filters leave empty, as a
   transient error, so that a flaky site or command no longer reports its content disappearing and then reappearing.

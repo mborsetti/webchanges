@@ -1672,31 +1672,6 @@ class ImageDiffer(DifferBase):
                         '',
                     )
 
-            # system_instructions = (
-            #     'You are a skilled journalist tasked with summarizing the key differences between two versions '
-            #     'of the same image. The audience for your summary is already familiar with the image, so you can'
-            #     'focus on the most significant changes.'
-            # )
-            # model_prompt = (
-            #     'You are a skilled visual analyst tasked with analyzing two versions of an image and summarizing the '
-            #     'key differences between them. The audience for your summary is already familiar with the '
-            #     "image's content, so you should focus only on the most significant differences.\n\n"
-            #     '**Instructions:**\n\n'
-            #     # '1. Carefully examine the yellow areas in the image '
-            #     f"{additional_parts[2]['file_data']['file_uri']}, identify the differences, and describe them.\n"
-            #     f"2. Refer to the old version of the image {additional_parts[0]['file_data']['file_uri']} and the "
-            #     f"new version {additional_parts[1]['file_data']['file_uri']}.\n"
-            #     '3. You are only interested in those differences, such as additions, removals, or alterations, that '
-            #     'modify the intended message or interpretation.\n'
-            #     '4. Summarize the identified differences, except those ignored, in a clear and concise manner, '
-            #     'explaining how the meaning has shifted or evolved in the new version compared to the old version '
-            #     'only when necessary. Be specific and provide examples to illustrate your points when needed.\n'
-            #     '5. If there are only additions to the image, then summarize the additions.\n'
-            #     '6. Use Markdown formatting to structure your summary effectively. Use headings, bullet points, '
-            #     'and other Markdown elements as needed to enhance readability.\n'
-            #     '7. Restrict your analysis and summary to the information provided within these images. Do '
-            #     'not introduce external information or assumptions.\n'
-            # )
             system_instructions = (
                 'You are a meticulous visual comparison agent. Your task is to analyze two images: an "old '
                 'version" and a "new version". Your entire focus is on identifying and listing the concrete, '
