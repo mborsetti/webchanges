@@ -578,6 +578,40 @@ def test_modify_urls(
 
 
 @pytest.mark.parametrize(
+    ('attribute', 'value', 'action'),
+    [
+        ('add', 'url=https://www.example.com/#test_modify_urls', '--add'),
+        ('delete', 'https://www.example.com/#test_modify_urls', '--delete'),
+        ('change_location', ('a', 'b'), '--change-location'),
+    ],
+)
+def test_modify_urls_refuses_multiple_jobs_files(
+    command_config: CommandConfig,
+    urlwatch_command: UrlwatchCommand,
+    jobs_file_path: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    attribute: str,
+    value: str | tuple[str, str],
+    action: str,
+) -> None:
+    """Commands rewriting the jobs file refuse to run with multiple jobs files, which they would corrupt."""
+    second_jobs = tmp_path / 'jobs-second.yaml'
+    second_jobs.write_text('url: https://www.example.com/#second\n', encoding='utf-8')
+    before = jobs_file_path.read_text()
+    command_config.jobs_files = [jobs_file_path, second_jobs]
+    setattr(command_config, attribute, value)
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
+        urlwatch_command.handle_actions()
+    assert pytest_wrapped_se.value.code == 1
+    assert capsys.readouterr().out == (
+        f'{action} cannot be used with multiple jobs files, as it rewrites the jobs file. Select the jobs file to '
+        f'modify with --jobs <file>. The jobs files are:\n• {jobs_file_path}\n• {second_jobs}\n'
+    )
+    assert jobs_file_path.read_text() == before
+
+
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),

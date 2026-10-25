@@ -122,6 +122,9 @@ Fixed
   affected).
 * ``--rollback-database`` deleted the snapshots before asking for confirmation, regardless of the answer, and displayed
   a wrong count; it also rejected Unix timestamps with a fractional part. See :ref:`here <rollback-database>`.
+* With multiple jobs files, ``--add``, ``--delete`` and ``--change-location`` saved all the jobs into the first file,
+  duplicating those of the other files. They now ask to select a single file with ``--jobs``. See :ref:`here
+  <cli_jobs>`.
 * A ``headers`` directive set in ``job_defaults`` for one job kind leaked into jobs of other kinds. See :ref:`here
   <job_defaults>`.
 * With multiple jobs files, the order in which they were combined, and with it the jobs' index numbers, could change

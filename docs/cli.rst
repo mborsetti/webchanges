@@ -88,6 +88,10 @@ files matching the same glob pattern or directory in alphabetical order.
 
 The same applies to the ``--hooks`` argument, where a directory stands for all the ``*.py`` files in its tree.
 
+The command line arguments that rewrite the jobs file (``--add``, ``--delete`` and ``--change-location``) cannot be
+used with multiple jobs files: select the file to modify with ``--jobs`` (which overrides the configuration file's
+``jobs`` directive), e.g. ``webchanges --jobs jobs/news.yaml --delete 3``.
+
 
 .. versionchanged:: 3.25
    Added ability to repeat the argument multiple times.
@@ -442,6 +446,8 @@ configuration file ``urls.yaml`` will create a new job with no history. Retain h
     webchanges --change-location https://example.org#old https://example.org#new
     # or
     webchanges --change-location old_command new_command
+
+When using multiple jobs files, select the one containing the job with ``--jobs`` (see :ref:`here <cli_jobs>`).
 
 .. versionadded:: 3.13
 

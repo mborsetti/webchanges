@@ -805,6 +805,24 @@ class UrlwatchCommand:
         return 1
 
     def modify_urls(self) -> int:
+        if len(self.urlwatch_config.jobs_files) > 1:
+            # Saving writes all the jobs to the first file only, which would duplicate those of the other files into it
+            action = next(
+                arg
+                for arg, value in (
+                    ('--delete', self.urlwatch_config.delete),
+                    ('--add', self.urlwatch_config.add),
+                    ('--change-location', self.urlwatch_config.change_location),
+                )
+                if value is not None
+            )
+            print(
+                f'{action} cannot be used with multiple jobs files, as it rewrites the jobs file. Select the jobs file '
+                f'to modify with --jobs <file>. The jobs files are:\n'
+                + '\n'.join(f'• {file}' for file in self.urlwatch_config.jobs_files)
+            )
+            return 1
+
         if self.urlwatch_config.delete is not None:
             job = self._find_job(self.urlwatch_config.delete)
             if job is not None:
