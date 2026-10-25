@@ -117,7 +117,7 @@ Schedule
 
 Code
 ====
-|coveralls| |issues| |code_style| |OpenSSF_Scorecard|
+|coveralls| |issues| |code_style|
 
 The code, issues tracker, and discussions are hosted on `GitHub <https://github.com/mborsetti/webchanges>`__.
 
@@ -195,6 +195,3 @@ see the `comparison <https://webchanges.readthedocs.io/en/stable/upgrading.html>
 .. .. |snyk| image:: https://snyk.io/advisor/python/webchanges/badge.svg
 ..     :target: https://security.snyk.io/package/pip/webchanges
 ..     :alt: Snyk Package Health Score
-.. |OpenSSF_Scorecard| image:: https://api.scorecard.dev/projects/github.com/mborsetti/webchanges/badge
-    :target: https://scorecard.dev/viewer/?uri=github.com/mborsetti/webchanges
-    :alt: OpenSSF Scoreard
