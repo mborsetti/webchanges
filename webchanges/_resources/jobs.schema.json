@@ -99,8 +99,8 @@
     },
     "cookies": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
-      "description": "Cookies to send with the request."
+      "additionalProperties": { "type": ["string", "null"] },
+      "description": "Cookies to send with the request, merged cookie by cookie with the defaults set in the configuration's job_defaults; a cookie set to null is not sent, even if set in job_defaults."
     },
     "ignore_cached": {
       "type": "boolean",

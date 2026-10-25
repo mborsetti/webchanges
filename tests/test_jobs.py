@@ -1527,6 +1527,24 @@ def test_with_defaults_headers_null_removes_default() -> None:
     assert job.to_dict()['headers'] == {'user-agent': None, 'dnt': None}
 
 
+def test_with_defaults_cookies_null_removes_default() -> None:
+    """A job's cookie set to null stops the job_defaults from supplying it, is not sent, and is saved back as null."""
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'cookies': {'session': None, 'theme': 'dark'}})
+    config: _Config = {  # ty:ignore[missing-typed-dict-key]
+        'job_defaults': {
+            'all_jobs': {'cookies': {'consent': 'yes', 'session': 'abc'}},
+            'url_jobs': {'cookies': {'theme': 'light'}},
+        }
+    }
+    job_with_defaults = cast('UrlJob', job.with_defaults(config))
+    assert job_with_defaults.get_cookies() == {'theme': 'dark', 'consent': 'yes'}
+    job_state = cast('JobState', SimpleNamespace(tries=0, old_etag='', old_timestamp=None))
+    assert job_with_defaults.get_headers(job_state)['Cookie'] == 'theme=dark; consent=yes'
+    assert job.to_dict()['cookies'] == {'session': None, 'theme': 'dark'}
+    only_removed = JobBase.unserialize({'url': 'https://www.example.com', 'cookies': {'session': None}})
+    assert cast('UrlJob', only_removed).get_cookies() is None
+
+
 def test_ignore_error() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)

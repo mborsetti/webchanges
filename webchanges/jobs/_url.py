@@ -248,7 +248,7 @@ class UrlJob(UrlJobBase):
 
         with httpx.Client(
             headers=headers,
-            cookies=self.cookies,
+            cookies=self.get_cookies(),
             verify=context,
             http1=http1,
             http2=http2,
@@ -391,8 +391,8 @@ class UrlJob(UrlJobBase):
                 session.mount('https://', weak_dh_requests_adapter(verify=not self.ssl_no_verify))
             if headers:
                 session.headers.update(headers)
-            if self.cookies:
-                session.cookies.update(self.cookies)
+            if cookies := self.get_cookies():
+                session.cookies.update(cookies)
             if proxies:
                 session.proxies.update(proxies)
             session.verify = not self.ssl_no_verify
@@ -538,7 +538,7 @@ class UrlJob(UrlJobBase):
 
         session_kwargs: dict[str, Any] = {
             'headers': headers,
-            'cookies': self.cookies,
+            'cookies': self.get_cookies(),
             'proxies': proxies,
             'verify': (not self.ssl_no_verify),
             'timeout': timeout,

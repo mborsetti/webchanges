@@ -34,7 +34,7 @@ import yaml.scanner
 
 from webchanges import __docs_url__, __project_name__, __version__
 from webchanges.jobs import JobBase
-from webchanges.jobs._base import headers_from_dict
+from webchanges.jobs._base import cookies_from_dict, headers_from_dict
 from webchanges.reporters import ReporterBase, reporter_configs
 from webchanges.storage._base import BaseYamlFileStorage, JobsBaseFileStorage
 from webchanges.storage._config import DEFAULT_CONFIG, _Config, validate_config
@@ -299,17 +299,17 @@ class YamlConfigStorage(BaseYamlFileStorage):
             except TypeCheckError as exc:
                 raise ValueError(f'Found invalid data in configuration file {self.filename} entry:\n{exc})') from None
 
-            # format headers (a null one is marked as removed, so that it stops the less specific defaults from
-            # supplying it)
+            # format headers and cookies (a null one is kept as removed, so that it stops the less specific defaults
+            # from supplying it)
             for job_defaults_type in ('all_jobs', 'url_jobs', 'browser_jobs'):
                 if 'headers' in config['job_defaults'][job_defaults_type]:
                     config['job_defaults'][job_defaults_type]['headers'] = headers_from_dict(
                         config['job_defaults'][job_defaults_type]['headers']
                     )
                 if 'cookies' in config['job_defaults'][job_defaults_type]:
-                    config['job_defaults'][job_defaults_type]['cookies'] = {
-                        k: str(v) for k, v in config['job_defaults'][job_defaults_type]['cookies'].items()
-                    }
+                    config['job_defaults'][job_defaults_type]['cookies'] = cookies_from_dict(
+                        config['job_defaults'][job_defaults_type]['cookies']
+                    )
             logger.info(f'Loaded configuration from {self.filename}')
 
         else:

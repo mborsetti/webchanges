@@ -265,10 +265,23 @@ cookies
 ^^^^^^^
 Cookies to send with the request (a dict).
 
-See examples :ref:`here <cookies>`.
+The cookies found in a job are merged one cookie at a time with the default ones set in ``job_defaults`` in
+``config.yaml``: a cookie in the job replaces only the default cookie of the same name, and all the other default
+cookies are still sent. To stop a default cookie from being sent, set it to null (no value) in the job:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   cookies:
+     session_id:  # removes the session_id cookie set in job_defaults in config.yaml
+
+See :ref:`here <job_defaults>` for how the defaults set for all jobs and for a job kind are combined.
 
 .. versionchanged:: 3.0
    Works for all ``url`` jobs, including those with ``use_browser: true``.
+
+.. versionchanged:: 3.38
+   A cookie set to null removes the default one; previously, it was sent with the value ``None``.
 
 
 .. _data:

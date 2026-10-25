@@ -224,8 +224,8 @@ this job:
 
 is sent the headers ``Accept-Language: en-US,en;q=0.9``, ``DNT: 1`` and ``user-agent: Lynx``.
 
-To remove a default header, set it to null (no value): the header is then not sent, and no less specific default can
-supply it. This works both in a job, to remove a header set in ``job_defaults``, and in ``url_jobs`` or
+To remove a default header or cookie, set it to null (no value): it is then not sent, and no less specific default can
+supply it. This works both in a job, to remove a header or cookie set in ``job_defaults``, and in ``url_jobs`` or
 ``browser_jobs``, to remove one set in ``all_jobs``. Continuing the example above, this job is sent only the header
 ``Accept-Language: en-US,en;q=0.9`` and, as no ``User-Agent`` header is left, :program:`webchanges`' own default one:
 
@@ -240,7 +240,7 @@ Directives whose value is a list, such as ``filters``, are not merged: the one s
 default one entirely.
 
 .. versionchanged:: 3.38
-   A header set to null removes the default one; previously, it was sent with the value ``None``.
+   A header or cookie set to null removes the default one; previously, it was sent with the value ``None``.
 
 Previous names
 ``````````````

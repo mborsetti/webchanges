@@ -81,6 +81,18 @@ def headers_to_dict(headers: Headers) -> dict[str, str | None]:
     return {k: None if v == REMOVED_HEADER else v for k, v in headers.items()}
 
 
+def cookies_from_dict(cookies: dict[str, Any]) -> dict[str, str | None]:
+    """Convert cookies read from YAML into strings, keeping null ones (removed) as None.
+
+    As with headers, a None value is kept while the job_defaults are merged, so that it stops the less specific
+    defaults from supplying that cookie, and is dropped by get_cookies() before the request is sent.
+
+    :param cookies: The cookies, e.g. from the 'cookies' directive of a job or job_defaults.
+    :returns: The cookies.
+    """
+    return {k: None if v is None else str(v) for k, v in cookies.items()}
+
+
 # Custom YAML representer function for httpx.Headers
 def represent_headers(dumper: yaml.SafeDumper, data: Headers) -> yaml.MappingNode:
     return dumper.represent_dict(headers_to_dict(data))
@@ -147,7 +159,7 @@ class JobBase(metaclass=TrackSubClasses):
     compared_versions: int | None = None
     contextlines: int | None = None
     connect_over_cdp: str | bool | None = None  # BrowserJob
-    cookies: dict[str, str] | None = None  # UrlJobBase
+    cookies: dict[str, str | None] | None = None  # UrlJobBase; a None value is a removed cookie, see get_cookies()
     data: str | list | dict | None = None  # UrlJobBase
     data_as_json: bool | None = None  # UrlJobBase
     deletions_only: bool | None = None
@@ -410,7 +422,7 @@ class JobBase(metaclass=TrackSubClasses):
         if isinstance(job.headers, dict):
             job.headers = headers_from_dict(job.headers)
         if isinstance(job.cookies, dict):
-            job.cookies = {k: str(v) for k, v in job.cookies.items()} if job.cookies is not None else None
+            job.cookies = cookies_from_dict(job.cookies)
 
         # Add GUID
         job.guid = job.get_guid()
@@ -766,6 +778,24 @@ class UrlJobBase(Job):
         'timeout',
     )
 
+    def get_cookies(self) -> dict[str, str] | None:
+        """Get the cookies to send, i.e. those of the 'cookies' directive (merged with job_defaults) not set to null.
+
+        :returns: The cookies, or None if there are none.
+        """
+        if not self.cookies:
+            return None
+        if not isinstance(self.cookies, dict):
+            raise TypeError(
+                f"Job {self.index_number}: Directive 'cookies' needs to be a dictionary; "
+                f"found a '{type(self.cookies).__name__}' ( {self.get_indexed_location()} ).'"
+            )
+        cookies = {k: v for k, v in self.cookies.items() if v is not None}
+        if len(cookies) < len(self.cookies):
+            removed = ', '.join(k for k, v in self.cookies.items() if v is None)
+            logger.debug('Job %s: Not sending cookie(s) set to null: %s', self.index_number, removed)
+        return cookies or None
+
     def get_headers(
         self,
         job_state: JobState,
@@ -778,7 +808,7 @@ class UrlJobBase(Job):
 
         :param job_state: The job state.
         :param user_agent: The user agent string.
-        :include_cookies: Whether to include cookies (from `self.cookies`) as a `Cookie` header.
+        :include_cookies: Whether to include cookies (from `get_cookies()`) as a `Cookie` header.
 
         :returns: The headers.
         """
@@ -789,12 +819,7 @@ class UrlJobBase(Job):
                 del headers[name]
         if 'User-Agent' not in headers and user_agent:
             headers['User-Agent'] = user_agent
-        if include_cookies and self.cookies:
-            if not isinstance(self.cookies, dict):
-                raise TypeError(
-                    f"Job {self.index_number}: Directive 'cookies' needs to be a dictionary; "
-                    f"found a '{type(self.cookies).__name__}' ( {self.get_indexed_location()} ).'"
-                )
+        if include_cookies and (cookies := self.get_cookies()):
             if 'Cookie' in headers:
                 warnings.warn(
                     f"Job {self.index_number}: Found both a header 'Cookie' and a directive 'cookies'; "
@@ -803,7 +828,7 @@ class UrlJobBase(Job):
                     RuntimeWarning,
                     stacklevel=1,
                 )
-            headers['Cookie'] = '; '.join([f'{k}={v}' for k, v in self.cookies.items()])
+            headers['Cookie'] = '; '.join([f'{k}={v}' for k, v in cookies.items()])
         if self.no_conditional_request:
             headers.pop('If-Modified-Since', None)
             headers.pop('If-None-Match', None)

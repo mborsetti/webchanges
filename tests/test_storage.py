@@ -354,6 +354,23 @@ def test_load_job_defaults_null_header_removes_all_jobs_one(tmp_path: Path) -> N
     assert dict(browser_job.get_headers(job_state, user_agent=None)) == {'dnt': '1', 'accept-language': 'en-US'}
 
 
+def test_load_job_defaults_null_cookie_removes_all_jobs_one(tmp_path: Path) -> None:
+    """A cookie set to null in url_jobs stops the all_jobs one from being sent by url jobs, but not by browser jobs."""
+    cfg = _write_config_job_defaults(
+        tmp_path,
+        {'all_jobs': {'cookies': {'consent': 1, 'session': 'abc'}}, 'url_jobs': {'cookies': {'session': None}}},
+    )
+    config_storage = YamlConfigStorage(cfg)
+    config_storage.load()
+    url_job = cast(
+        'UrlJob', JobBase.unserialize({'url': 'https://www.example.com'}).with_defaults(config_storage.config)
+    )
+    assert url_job.get_cookies() == {'consent': '1'}
+    browser_job = JobBase.unserialize({'url': 'https://www.example.com', 'use_browser': True})
+    browser_job = cast('BrowserJob', browser_job.with_defaults(config_storage.config))
+    assert browser_job.get_cookies() == {'consent': '1', 'session': 'abc'}
+
+
 def test_load_legacy_and_new_job_defaults_key(tmp_path: Path) -> None:
     """A legacy job_defaults key alongside the job-kind one that replaces it is a duplicate."""
     cfg = _write_config_job_defaults(tmp_path, {'url': {'timeout': 10}, 'url_jobs': {'timeout': 20}})
