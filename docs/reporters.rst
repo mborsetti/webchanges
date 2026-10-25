@@ -501,9 +501,21 @@ Here is a sample configuration:
      enabled: true
      priority: 4
      server_url: http://127.0.0.1:8090
-     subject: [webchanges] {count} changes{jobs_files}: {jobs}
+     subject: '[webchanges] {count} changes{jobs_files}: {jobs}'
      token: Aa1yyikLFjEm35A
 
+Sub-directives:
+
+* ``priority``: The message priority (an integer); defaults to 0.
+* ``server_url``: The URL of the gotify server (required).
+* ``subject``: The title of the message; can contain the placeholders ``{count}`` (the number of jobs reported),
+  ``{jobs}`` (their names) and ``{jobs_files}`` (the names of the jobs files, if not the default one). Defaults to no
+  title.
+* ``token``: The application token (required).
+
+.. versionchanged:: 3.38
+   The ``subject`` sub-directive is now recognized; the sub-directive ``title``, which was listed in the default
+   configuration but had no effect, is deprecated and treated as ``subject``.
 
 
 .. _ifttt:

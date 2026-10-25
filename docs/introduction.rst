@@ -176,7 +176,7 @@ Once :program:`webchanges` has collected the raw output, you may transform it to
 * Make XML more readable: ``format-xml`` or ``pretty-xml``;
 * Make iCal more readable: ``ical2text``;
 * Make binary readable: ``hexdump``;
-* Just detect if anything changed: ``sha1sum``;
+* Just detect if anything changed: ``sha1sum``, ``sha256sum``;
 * Filter and/or edit text: ``keep_lines_containing``, ``delete_lines_containing``, ``re.sub``, ``re.findall``,
   ``strip``, ``sort``, ``remove_repeated`` and ``reverse``;
 * Run any custom script or program: ``execute``.

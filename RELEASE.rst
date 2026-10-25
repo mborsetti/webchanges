@@ -67,7 +67,12 @@ Added
 * New ``markdown_extras`` job directive: sets the extras (https://github.com/trentm/python-markdown2/wiki/Extras) of
   the ``markdown2`` library used to render Markdown data as HTML in reports, in the same way as the ``html2text``
   filter passes its sub-directives to the ``html2text`` library. Can be set for all jobs with ``job_defaults``. See
-  https://webchanges.readthedocs.io/en/stable/jobs.html#markdown-extras.
+  https://webchanges.readthedocs.io/en/stable/jobs.html#markdown-extras.* New ``hook_data`` job directive, for the code in ``hooks.py``: it carries any data (typically a mapping of names to
+  values) from a job to the custom job, filter, differ or reporter Classes it uses, which read it as
+  ``self.hook_data`` (job) or ``self.job.hook_data`` (the others), so that one custom Class can serve many jobs. Unlike
+  directives declared by a custom job Class itself, it is known to the jobs file's JSON Schema, so editors don't flag
+  it as an error. See https://webchanges.readthedocs.io/en/stable/jobs.html#hook-data.
+
 
 Changed
 ```````
@@ -96,6 +101,12 @@ Changed
   shown as written instead of with ``case`` in italics. Emphasis of whole words (``_word_`` or ``*word*``) and strong
   emphasis (``**word**``) are unaffected. To reinstate it, use the new ``markdown_extras`` job directive (see above)
   with ``middle-word-em: true``.
+
+Deprecated
+``````````
+* The ``remove-duplicate-lines`` filter, inherited from **urlwatch**: use ``remove_repeated`` with
+  ``adjacent: false``, which does the same. See https://webchanges.readthedocs.io/en/stable/filters.html#remove-repeated.
+* The ``title`` sub-directive of the ``gotify`` reporter: use ``subject`` (see Fixed, below).
 
 Fixed
 `````
@@ -153,6 +164,20 @@ Fixed
   slow reverse DNS): the hostname, sent in the ``EHLO`` greeting, was looked up after connecting, by which time the
   server could have stopped waiting (e.g. Amazon SES replies ``451 4.4.2 Timeout waiting for data from client``). It is
   now looked up before connecting.
+* The ``gotify`` reporter's ``subject`` sub-directive, which sets the message title and is the one shown in the
+  documentation, was flagged as unrecognized when the configuration file was loaded, while the ``title`` one listed in
+  the default configuration had no effect. ``subject`` is now recognized, and ``title`` is deprecated and treated as
+  ``subject``. See https://webchanges.readthedocs.io/en/stable/reporters.html#gotify.
+* The bundled ``jobs.schema.json`` JSON Schema did not know the ``fingerprints``, ``http_version`` and
+  ``markdown_padded_tables`` job directives, nor the object form of the ``jq`` and ``element-by-…`` filters (e.g.
+  ``jq: {query: …}``), so editors flagged valid jobs files as invalid; it offered the ``delay`` and ``stealth`` job
+  directives, which do not exist; and it gave the deprecated ``grep`` and ``grepi`` filters a ``text`` sub-directive
+  instead of ``re``. The deprecated job directives ``diff_tool``, ``navigate``, ``stderr``, ``wait_for`` and
+  ``wait_for_navigation`` are now flagged by editors as deprecated rather than as invalid.
+* The deprecation warning of the ``striplines`` filter named it ``strip_each_line``.
+* The ``remove_repeated`` filter compared each line with the one before it as text contained within it rather than
+  as an equal line: with ``adjacent: true`` (the default), a line contained within the preceding one (e.g. ``ab``
+  followed by ``b``) was removed when it had also appeared earlier.
 
 Internals impacting hooks.py
 ````````````````````````````
@@ -200,3 +225,5 @@ Internals
 * CI: removed the ClusterFuzzLite workflow, an unconfigured template (set up for C++, without fuzz targets) that
   failed on every pull request.
 * Testing: the ``jq`` filter is now also tested on Windows and on free-threaded Python.
+* Testing: a new test checks that the code, the bundled JSON Schemas and the documentation list the same filters (and
+  their sub-directives), job directives and configuration directives, so that they no longer drift apart.

@@ -210,6 +210,39 @@ Example ``hooks.py`` file:
            return "\n".join((" " * indent) + line for line in str(data).splitlines()), mime_type
 
 
+   class KeywordsFilter(FilterBase):
+       """Custom filter that keeps only the lines containing any of the keywords listed in the job's
+       ``hook_data`` directive, which carries data from a job to any of the custom Classes it uses (a job
+       Class reads it as ``self.hook_data``; filters, differs and reporters as ``self.job.hook_data``).
+
+       Needs to be selected manually, i.e. add ``- hooks_keywords:`` to the list of filters in the job's
+       ``filter:`` directive. E.g.:
+
+       .. code-block:: yaml
+
+       url: example.com/hooks/keywords
+       hook_data:
+           keywords:
+           - sale
+           - discount
+       filters:
+           - hooks_keywords:
+       """
+
+       __kind__ = "hooks_keywords"
+
+       __no_subfilter__ = True
+
+       def filter(
+           self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]
+       ) -> tuple[str | bytes, str]:
+           """:returns: The filtered data and its media type (fka MIME type)."""
+           keywords = [keyword.lower() for keyword in (self.job.hook_data or {}).get("keywords", [])]
+           return "\n".join(
+               line for line in str(data).splitlines() if any(keyword in line.lower() for keyword in keywords)
+           ), mime_type
+
+
    class CustomMatchUrlFilter(AutoMatchFilter):
        """
        An AutoMatchFilter applies automatically to all jobs that exactly match the MATCH properties set.
@@ -450,3 +483,7 @@ Example ``hooks.py`` file:
     replaces the built-in page.goto() directive), ``content_handler`` (a callable which replaces the built-in content
     extractor from the Page),  and ``return_data`` (a callable which replaces all of the built-in functionality after
     the browser is launched).
+
+.. versionchanged:: 3.38
+   The new ``hook_data`` job directive (see :ref:`here <hook_data>`) carries any data from a job to the custom Classes
+   it uses, e.g. ``self.job.hook_data`` in ``KeywordsFilter`` above.

@@ -13,3 +13,12 @@ https://example.org/:
 https://example.org/.foobar:
   input: foo
   output: bar
+https://example.org/keywords:
+  input: |-
+    New arrivals™
+    Summer SALE™ on now
+    Free shipping
+    10% discount™ for members
+  output: |-
+    Summer SALE™ on now
+    10% discount™ for members

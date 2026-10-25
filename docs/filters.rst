@@ -46,10 +46,10 @@ At the moment, the following filters are available:
 
   - :ref:`css <css>`: Filter XML/HTML using CSS selectors.
   - :ref:`xpath <xpath>`: Filter XML/HTML using XPath expressions.
-  - :ref:`element-by-class <element-by-…>`: Get all HTML elements matching a class.
-  - :ref:`element-by-id <element-by-…>`: Get all HTML elements matching an id.
-  - :ref:`element-by-style <element-by-…>`: Get all HTML elements matching a style.
-  - :ref:`element-by-tag <element-by-…>`: Get all HTML elements matching a tag.
+  - :ref:`element-by-class`: Get all HTML elements matching a class.
+  - :ref:`element-by-id`: Get all HTML elements matching an id.
+  - :ref:`element-by-style`: Get all HTML elements matching a style.
+  - :ref:`element-by-tag`: Get all HTML elements matching a tag.
 
 * To extract text from HTML (or XML):
 
@@ -107,6 +107,7 @@ At the moment, the following filters are available:
 * To just detect if anything changed:
 
   - :ref:`sha1sum`: Calculate the SHA-1 checksum of the data.
+  - :ref:`sha256sum`: Calculate the SHA-256 checksum of the data.
 
 * To filter and/or edit text:
 
@@ -500,6 +501,10 @@ Optional sub-directives
 
 
 
+.. _element-by-class:
+.. _element-by-id:
+.. _element-by-style:
+.. _element-by-tag:
 .. _element-by-…:
 
 ``element-by-`` [ ``class`` | ``id`` | ``style`` | ``tag`` ]
@@ -552,6 +557,18 @@ To extract ``<div style="something">.../<div>`` from a page:
    url: https://example.org/styletest.html
    filters:
      - element-by-style: something
+
+Sub-directives
+``````````````
+Each filter takes one sub-directive, which can also be specified inline as the value of the filter, as in the examples
+above:
+
+* ``class`` (``element-by-class``): The value of the ``class`` attribute to match exactly (required).
+* ``id`` (``element-by-id``): The value of the ``id`` attribute to match exactly (required).
+* ``style`` (``element-by-style``): The value of the ``style`` attribute to match exactly (required).
+* ``tag`` (``element-by-tag``): The name of the tag to match (required).
+
+For more complex selections, use the :ref:`css` or :ref:`xpath` filters.
 
 
 
@@ -882,6 +899,11 @@ Supports aggregations, selections, and the built-in operators like ``length``.
 For more information on the operations permitted, see the `jq Manual
 <https://stedolan.github.io/jq/manual/#Basicfilters>`__.
 
+Sub-directives
+``````````````
+* ``query`` (default): The jq filter expression to apply (required); it can also be specified inline as the value of
+  ``jq``, as in the example above.
+
 Required packages
 :::::::::::::::::
 To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
@@ -1102,6 +1124,11 @@ This filter deserializes an XML object and pretty-prints it. It uses Python's xm
    url: https://example.com/pretty_xml.xml
    filters:
      - pretty-xml:
+
+Optional sub-directives
+```````````````````````
+* ``indentation`` (default): The number of spaces of each level of indentation (default: 2); it can also be specified
+  inline as the value of ``pretty-xml``.
 
 .. versionadded:: 3.3
 
@@ -1412,6 +1439,10 @@ Optional sub-directives
 .. versionchanged:: 3.13
    Added ``adjacent`` sub-directive.
 
+.. versionchanged:: 3.38
+   The ``remove-duplicate-lines`` filter, inherited from :program:`urlwatch`, is deprecated: replace it with
+   ``remove_repeated`` with ``adjacent: false``, which does the same.
+
 
 
 .. _reverse:
@@ -1467,6 +1498,22 @@ any detail and avoiding saving large snapshots of data.
    url: https://example.com/sha.html
    filters:
      - sha1sum:
+
+
+
+.. _sha256sum:
+
+``sha256sum``
+-------------
+This filter calculates a SHA-256 hash for the contents, like :ref:`sha1sum` but with a longer hash that is even less
+likely to be the same for different contents.
+
+.. code-block:: yaml
+
+   name: "Calculate SHA-256 hash"
+   url: https://example.com/sha256.html
+   filters:
+     - sha256sum:
 
 
 

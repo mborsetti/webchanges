@@ -335,6 +335,19 @@ def test_load_reporter_configured_multiple_times_with_unrecognized_directive(tmp
         YamlConfigStorage(cfg).load()
 
 
+def test_load_gotify_subject_and_deprecated_title(tmp_path: Path) -> None:
+    """The gotify reporter's 'subject' is recognized, and the deprecated 'title' is loaded as 'subject'."""
+    cfg = _write_config(tmp_path, {'report': {'gotify': [{'subject': 'one'}, {'title': 'two'}]}})
+    config = YamlConfigStorage(cfg)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', RuntimeWarning)
+        config.load()
+    gotify = config.config['report']['gotify']
+    assert isinstance(gotify, list)
+    assert [c['subject'] for c in gotify] == ['one', 'two']
+    assert all('title' not in c for c in gotify)
+
+
 def test_load_reporter_tags_are_not_unrecognized(tmp_path: Path) -> None:
     """The 'tags' reporter directive, which has no default, is not flagged as unrecognized."""
     cfg = _write_config(tmp_path, {'report': {'telegram': {'tags': ['personal']}}})

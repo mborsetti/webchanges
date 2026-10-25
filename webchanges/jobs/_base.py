@@ -139,6 +139,7 @@ class JobBase(metaclass=TrackSubClasses):
     fingerprints: dict[str, str | dict[str, Any]] | None = None  # UrlJob (curl_cffi backend only)
     guid: str = ''
     headers = Headers(encoding='utf-8')  # UrlJobBase; shared by all jobs not setting it: never mutate it in place
+    hook_data: Any = None  # hooks.py
     http_client: Literal['httpx', 'requests', 'curl_cffi'] | None = None  # UrlJob
     http_version: Literal['v1', 'v2', 'v2tls', 'v2_prior_knowledge', 'v3', 'v3only'] | None = None  # UrlJob
     http_credentials: str | None = None  # BrowserJob
@@ -655,6 +656,7 @@ class Job(JobBase):
         'empty_as_error',
         'enabled',
         'filters',
+        'hook_data',  # hooks.py
         'index_number',
         'is_markdown',
         'is_rst',

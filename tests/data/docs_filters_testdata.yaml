@@ -530,6 +530,13 @@ https://example.com/sha.html:
     </html>
   output:
     59719f4dc3dcf5caa89160c8e017d1749cf32dbc
+https://example.com/sha256.html:
+  input: |-
+    <html>
+    <body>
+    </body>
+    </html>
+  output: 341b1e579259b4a10cbb73830a124dbf04df9a8037db18403208380dc9096c0c
 https://example.com/keep_lines_containing.html:
   input: |-
     <html>

@@ -430,10 +430,15 @@
           "description": "Base URL of the Gotify server.",
           "default": ""
         },
+        "subject": {
+          "type": "string",
+          "description": "Message title; can contain the placeholders {count}, {jobs} and {jobs_files}. Empty for no title.",
+          "default": ""
+        },
         "title": {
           "type": "string",
-          "description": "Message title.",
-          "default": ""
+          "deprecated": true,
+          "description": "DEPRECATED: Replace key with 'subject'."
         },
         "token": {
           "type": "string",

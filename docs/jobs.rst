@@ -1400,6 +1400,36 @@ Can be tested with ``--test``.
 .. versionchanged:: 3.28
    Renamed from ``filter`` (singular).
 
+
+.. _hook_data:
+
+hook_data
+---------
+For Python programmers only, this carries any data (typically a mapping of names to values) to your own code in
+``hooks.py``: a custom job Class (see :ref:`kind`) reads it as ``self.hook_data``, and a custom filter, differ or
+reporter as ``self.job.hook_data``. :program:`webchanges` itself does not use it. Example:
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   url: https://example.com/flights/status
+   hook_data:
+     flight: XY123
+     arrival_day_offset: 1
+   filters:
+     - hooks_flight_status:
+
+This allows you to write a single custom Class that serves many jobs, each passing its own data. See
+:ref:`here <hooks>` for an example.
+
+A custom job Class could instead accept directives of its own by listing them in its ``__required__`` or
+``__optional__`` attribute, and :program:`webchanges` would pass them to the job. However, editors that validate the
+jobs file against its JSON Schema (``jobs.schema.json``) flag them as errors, as the schema does not know them.
+``hook_data`` is defined in the schema, so a job using it passes validation, whatever data it carries.
+
+.. versionadded:: 3.38
+
+
 .. _kind:
 
 kind
@@ -1471,6 +1501,25 @@ The directive can be set for all jobs, or for all jobs of a kind, with ``job_def
 (see :ref:`here <job_defaults>`).
 
 .. versionadded:: 3.38
+
+
+.. _markdown_padded_tables:
+
+markdown_padded_tables
+----------------------
+Show the rows of Markdown tables (i.e. the lines containing a ``|``) in a monospace font when Markdown data (see
+:ref:`is_markdown`) is rendered as HTML for the ``html`` and ``email`` reports (true/false), so that the columns of a
+table padded with spaces line up. Defaults to false.
+
+It is set automatically to the value of the ``pad_tables`` sub-directive of the ``html2text`` filter (see
+:ref:`here <html2text>`), so it is normally needed only when the padded tables come from elsewhere, for example:
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   command: python3 make_table.py
+   is_markdown: true
+   markdown_padded_tables: true
 
 
 .. _max_tries:

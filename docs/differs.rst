@@ -3,6 +3,7 @@
 .. role:: deletions
     :class: deletions
 
+.. _differ:
 .. _differs:
 
 =======

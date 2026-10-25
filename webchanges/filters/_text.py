@@ -266,7 +266,7 @@ class StripLinesFilter(FilterBase):
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         warnings.warn(
-            f"The 'strip_each_line' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: "
+            f"The 'striplines' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: "
             f"true' ({self.job.get_indexed_location()})",
             DeprecationWarning,
             stacklevel=1,
@@ -375,27 +375,22 @@ class RemoveRepeatedFilter(FilterBase):
             raise ValueError
         separator = subfilter.get('separator', '\n')
         ignore_case = subfilter.get('ignore_case', False)
-        consecutive = subfilter.get('adjacent', True)
-        data_lines = data.split(separator)
-        uniq_lines = [data_lines[0]]
-        if not ignore_case:
-            for line in data_lines[1:]:
-                if (consecutive and line not in uniq_lines[-1]) or line not in uniq_lines:
-                    uniq_lines.append(line)
-        else:
-            past_lines = [data_lines[0].strip().lower()]
-            for line in data_lines[1:]:
-                if (
-                    consecutive and line.strip().lower() not in past_lines[-1]
-                ) or line.strip().lower() not in past_lines:
-                    past_lines.append(line.strip().lower())
-                    uniq_lines.append(line)
+        adjacent = subfilter.get('adjacent', True)
+        uniq_lines: list[str] = []
+        seen: set[str] = set()
+        last: str | None = None
+        for line in data.split(separator):
+            key = line.strip().lower() if ignore_case else line
+            if (key != last) if adjacent else (key not in seen):
+                uniq_lines.append(line)
+                seen.add(key)
+                last = key
 
         return separator.join(uniq_lines), mime_type
 
 
 class RemoveDuplicateLinesFilter(FilterBase):
-    """Remove duplicate lines (case sensitive)."""
+    """Deprecated; use ``remove_repeated`` with sub-directive ``adjacent: false`` instead."""
 
     __kind__ = 'remove-duplicate-lines'
 
@@ -408,6 +403,12 @@ class RemoveDuplicateLinesFilter(FilterBase):
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         if not isinstance(data, str):
             raise ValueError
+        warnings.warn(
+            f"The 'remove-duplicate-lines' filter is deprecated; replace with 'remove_repeated' and sub-directive "
+            f"'adjacent: false' ({self.job.get_indexed_location()})",
+            DeprecationWarning,
+            stacklevel=1,
+        )
         separator = subfilter.get('separator', '\n')
         data_lines = data.split(separator)
 

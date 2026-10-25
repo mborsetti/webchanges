@@ -103,6 +103,11 @@ Added
   of the ``markdown2`` library used to render Markdown data as HTML in reports, in the same way as the ``html2text``
   filter passes its sub-directives to the ``html2text`` library. Can be set for all jobs with ``job_defaults``. See
   :ref:`here <markdown_extras>`.
+* New ``hook_data`` job directive, for the code in ``hooks.py``: it carries any data (typically a mapping of names to
+  values) from a job to the custom job, filter, differ or reporter Classes it uses, which read it as
+  ``self.hook_data`` (job) or ``self.job.hook_data`` (the others), so that one custom Class can serve many jobs. Unlike
+  directives declared by a custom job Class itself, it is known to the jobs file's JSON Schema, so editors don't flag
+  it as an error. See :ref:`here <hook_data>`.
 
 
 Changed
@@ -130,6 +135,12 @@ Changed
   shown as written instead of as snake\ *case*\ name. Emphasis of whole words (``_word_`` or ``*word*``) and strong
   emphasis (``**word**``) are unaffected. To reinstate it, use the new ``markdown_extras`` job directive (see above)
   with ``middle-word-em: true``.
+
+Deprecated
+``````````
+* The ``remove-duplicate-lines`` filter, inherited from :program:`urlwatch`: use ``remove_repeated`` with
+  ``adjacent: false``, which does the same. See :ref:`here <remove_repeated>`.
+* The ``title`` sub-directive of the ``gotify`` reporter: use ``subject`` (see Fixed, below).
 
 Fixed
 `````
@@ -190,6 +201,20 @@ Fixed
   ``None``, and a proxy without a port was ignored. Credentials and port are now passed only if present, credentials
   are percent-decoded (e.g. ``p%40ss`` is the password ``p@ss``), IPv6 proxy addresses are kept intact, and a proxy
   without a scheme (e.g. ``proxy.example.com:3128``) is taken to be HTTP.
+* The ``gotify`` reporter's ``subject`` sub-directive, which sets the message title and is the one shown in the
+  documentation, was flagged as unrecognized when the configuration file was loaded, while the ``title`` one listed in
+  the default configuration had no effect. ``subject`` is now recognized, and ``title`` is deprecated and treated as
+  ``subject``. See :ref:`here <gotify>`.
+* The bundled ``jobs.schema.json`` JSON Schema did not know the ``fingerprints``, ``http_version`` and
+  ``markdown_padded_tables`` job directives, nor the object form of the ``jq`` and ``element-by-…`` filters (e.g.
+  ``jq: {query: …}``), so editors flagged valid jobs files as invalid; it offered the ``delay`` and ``stealth`` job
+  directives, which do not exist; and it gave the deprecated ``grep`` and ``grepi`` filters a ``text`` sub-directive
+  instead of ``re``. The deprecated job directives ``diff_tool``, ``navigate``, ``stderr``, ``wait_for`` and
+  ``wait_for_navigation`` are now flagged by editors as deprecated rather than as invalid.
+* The deprecation warning of the ``striplines`` filter named it ``strip_each_line``.
+* The ``remove_repeated`` filter compared each line with the one before it as text contained within it rather than
+  as an equal line: with ``adjacent: true`` (the default), a line contained within the preceding one (e.g. ``ab``
+  followed by ``b``) was removed when it had also appeared earlier.
 
 Internals impacting hooks.py
 ````````````````````````````
@@ -237,6 +262,8 @@ Internals
 * CI: removed the ClusterFuzzLite workflow, an unconfigured template (set up for C++, without fuzz targets) that
   failed on every pull request.
 * Testing: the ``jq`` filter is now also tested on Windows and on free-threaded Python.
+* Testing: a new test checks that the code, the bundled JSON Schemas and the documentation list the same filters (and
+  their sub-directives), job directives and configuration directives, so that they no longer drift apart.
 
 
 Version 3.37.0

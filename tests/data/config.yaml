@@ -67,7 +67,7 @@ report:
     enabled: false
     priority: 0
     server_url: ''
-    title: ''
+    subject: ''
     token: ''
   ifttt:
     enabled: false

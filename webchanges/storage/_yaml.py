@@ -255,6 +255,11 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 smtp_config = cast('dict[str, Any]', email_config.get('smtp', {}))
                 if 'utf-8' in smtp_config:
                     smtp_config['utf_8'] = smtp_config.pop('utf-8')
+            # The gotify reporter's message title was mistakenly named 'title' instead of 'subject' in DEFAULT_CONFIG
+            for gotify_config in reporter_configs(config.get('report', {}), 'gotify'):
+                if isinstance(gotify_config, dict) and 'title' in gotify_config:
+                    title = gotify_config.pop('title')
+                    gotify_config.setdefault('subject', title)
 
             config = self.remove_deprecated_keys(config)
             self.normalize_reporter_lists(config)

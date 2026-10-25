@@ -126,7 +126,7 @@ class _ConfigReportGotify(_ConfigReporter):
     enabled: bool
     priority: int
     server_url: str
-    title: str
+    subject: str
     token: str
 
 
@@ -382,7 +382,7 @@ DEFAULT_CONFIG: _Config = {
             'enabled': False,
             'priority': 0,
             'server_url': '',
-            'title': '',
+            'subject': '',
             'token': '',
         },
         'ifttt': {  # uses text

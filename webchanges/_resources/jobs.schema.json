@@ -73,10 +73,6 @@
       "type": ["integer", "number"],
       "description": "Number of seconds to wait before retrieving the URL when an earlier job in the list already targets the same site (network location). The first (or only) job for a given site is never delayed. Use it to stagger jobs that would otherwise hit the same site at the same instant and get rate-limited or blocked."
     },
-    "delay": {
-      "type": ["integer", "number"],
-      "description": "Number of seconds to wait before retrieving the URL (e.g. to stagger jobs that hit the same site, or to space out requests to a slow or rate-limited server)."
-    },
     "ignore_connection_errors": {
       "type": "boolean",
       "description": "If true, connection errors are ignored (no report sent)."
@@ -147,6 +143,24 @@
       "type": "string",
       "description": "Browser TLS fingerprint to impersonate when http_client is curl_cffi (e.g. 'chrome', 'chrome124', 'safari17_0', 'firefox133'). Defaults to 'chrome'. Ignored by other HTTP clients.",
       "default": "chrome"
+    },
+    "http_version": {
+      "type": "string",
+      "enum": ["v1", "v2", "v2tls", "v2_prior_knowledge", "v3", "v3only"],
+      "description": "HTTP protocol version: v1 (HTTP/1.1), v2 (HTTP/2; with httpx requires the h2 package), and, with http_client: curl_cffi only, v2tls, v2_prior_knowledge, v3 (HTTP/3 with fallback) and v3only. Not supported by http_client: requests."
+    },
+    "fingerprints": {
+      "type": "object",
+      "properties": {
+        "ja3": { "type": "string", "description": "JA3 TLS fingerprint string." },
+        "akamai": { "type": "string", "description": "Akamai HTTP/2 fingerprint string." },
+        "extra_fp": {
+          "type": "object",
+          "description": "Additional fingerprint overrides (e.g. tls_min_version, tls_grease, http2_stream_weight)."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Low-level TLS/HTTP fingerprint overrides for http_client: curl_cffi (ignored, with a warning, by other HTTP clients)."
     },
     "ignore_dh_key_too_small": {
       "type": "boolean",
@@ -245,10 +259,6 @@
       "type": "string",
       "description": "Referer header value (browser jobs)."
     },
-    "stealth": {
-      "type": "boolean",
-      "description": "Use stealth mode (browser jobs)."
-    },
     "switches": {
       "type": "array",
       "items": { "type": "string" },
@@ -344,6 +354,35 @@
       "description": "Deprecated: use 'diff_filters' instead.",
       "deprecated": true,
       "deprecationMessage": "Use 'diff_filters' instead of 'diff_filter'."
+    },
+    "diff_tool": {
+      "type": "string",
+      "description": "Deprecated: use 'differ' with name 'command' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'differ: {name: command, command: ...}' instead of 'diff_tool'."
+    },
+    "navigate": {
+      "type": "string",
+      "description": "Deprecated: use 'url' with 'use_browser: true' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'url' with 'use_browser: true' instead of 'navigate'."
+    },
+    "wait_for": {
+      "type": ["integer", "string"],
+      "description": "No longer supported (Pyppeteer): use 'wait_for_function', 'wait_for_selector' or 'wait_for_timeout' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'wait_for_function', 'wait_for_selector' or 'wait_for_timeout' instead of 'wait_for'."
+    },
+    "wait_for_navigation": {
+      "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+      "description": "Deprecated (Pyppeteer): use 'wait_for_url' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Use 'wait_for_url' instead of 'wait_for_navigation'."
+    },
+    "stderr": {
+      "type": "string",
+      "description": "Ignored; accepted for compatibility with urlwatch (command jobs).",
+      "deprecated": true
     },
     "differ": {
       "oneOf": [
@@ -679,6 +718,11 @@
       "description": "markdown2 library 'extras' used when rendering Markdown data as HTML, as name: options (null if it takes none); see https://github.com/trentm/python-markdown2/wiki/Extras. Applied over the defaults strike, target-blank-links and middle-word-em: false; e.g. middle-word-em: true restores emphasis within words.",
       "default": { "strike": null, "target-blank-links": null, "middle-word-em": false }
     },
+    "markdown_padded_tables": {
+      "type": "boolean",
+      "description": "Show the rows of Markdown tables in a monospace font in HTML reports, so that the columns of tables padded with spaces line up. Set automatically by the html2text filter's pad_tables sub-directive.",
+      "default": false
+    },
     "monospace": {
       "type": "boolean",
       "description": "If true, uses monospace font in reports.",
@@ -703,21 +747,10 @@
       "description": "Number of versions to keep/compare."
     },
     "hook_data": {
-      "description": "Any custom data to be passed to a custom job type defined in hooks.py."
+      "description": "Any data (e.g. a mapping of names to values) for the code in hooks.py: a custom job class reads it as self.hook_data, and a custom filter, differ or reporter as self.job.hook_data. Not used by webchanges itself."
     }
   },
   "additionalProperties": false,
-  "if": {
-    "properties": {
-      "kind": { "pattern": "^hooks_.+" }
-    },
-    "required": ["kind"]
-  },
-  "else": {
-    "not": {
-      "required": ["hook_data"]
-    }
-  },
   "definitions": {
     "filterList": {
       "type": "array",
@@ -916,20 +949,72 @@
           "description": "Removes lines containing the specified text or matching a regex pattern."
         },
         "element-by-class": {
-          "type": "string",
-          "description": "Selects HTML elements matching the specified class name."
+          "oneOf": [
+            { "type": "string", "description": "Shorthand for the 'class' sub-directive." },
+            {
+              "type": "object",
+              "properties": {
+                "class": {
+                  "type": "string",
+                  "description": "The class to match."
+                }
+              },
+              "required": ["class"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Selects all the HTML elements whose class is the one specified."
         },
         "element-by-id": {
-          "type": "string",
-          "description": "Selects the HTML element with the specified id."
+          "oneOf": [
+            { "type": "string", "description": "Shorthand for the 'id' sub-directive." },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id to match."
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Selects all the HTML elements whose id is the one specified."
         },
         "element-by-style": {
-          "type": "string",
-          "description": "Selects HTML elements matching the specified style attribute value."
+          "oneOf": [
+            { "type": "string", "description": "Shorthand for the 'style' sub-directive." },
+            {
+              "type": "object",
+              "properties": {
+                "style": {
+                  "type": "string",
+                  "description": "The style attribute value to match."
+                }
+              },
+              "required": ["style"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Selects all the HTML elements whose style attribute value is the one specified."
         },
         "element-by-tag": {
-          "type": "string",
-          "description": "Selects HTML elements matching the specified tag name."
+          "oneOf": [
+            { "type": "string", "description": "Shorthand for the 'tag' sub-directive." },
+            {
+              "type": "object",
+              "properties": {
+                "tag": {
+                  "type": "string",
+                  "description": "The tag name to match."
+                }
+              },
+              "required": ["tag"],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Selects all the HTML elements whose tag name is the one specified."
         },
         "execute": {
           "oneOf": [
@@ -988,44 +1073,38 @@
         },
         "grep": {
           "oneOf": [
-            { "type": "string", "description": "Literal text to match." },
+            { "type": "string", "description": "Shorthand for the 're' sub-directive." },
             {
               "type": "object",
               "properties": {
-                "text": {
-                  "type": "string",
-                  "description": "Literal text to match."
-                },
                 "re": {
                   "type": "string",
                   "description": "Regular expression pattern to match."
                 }
               },
+              "required": ["re"],
               "additionalProperties": false
             }
           ],
-          "description": "Deprecated: use keep_lines_containing instead.",
+          "description": "Deprecated: use keep_lines_containing with the 're' sub-directive instead.",
           "deprecated": true
         },
         "grepi": {
           "oneOf": [
-            { "type": "string", "description": "Literal text to match." },
+            { "type": "string", "description": "Shorthand for the 're' sub-directive." },
             {
               "type": "object",
               "properties": {
-                "text": {
-                  "type": "string",
-                  "description": "Literal text to match."
-                },
                 "re": {
                   "type": "string",
                   "description": "Regular expression pattern to match."
                 }
               },
+              "required": ["re"],
               "additionalProperties": false
             }
           ],
-          "description": "Deprecated: use delete_lines_containing instead.",
+          "description": "Deprecated: use delete_lines_containing with the 're' sub-directive instead.",
           "deprecated": true
         },
         "hexdump": {
@@ -1127,13 +1206,31 @@
           ],
           "description": "Converts HTML to plain text."
         },
+        "striplines": {
+          "type": ["boolean", "null"],
+          "description": "Deprecated: use strip with 'splitlines: true' instead.",
+          "deprecated": true
+        },
         "ical2text": {
           "type": ["boolean", "null"],
           "description": "Converts iCalendar data to text.",
           "default": true
         },
         "jq": {
-          "type": "string",
+          "oneOf": [
+            { "type": "string", "description": "Shorthand for the 'query' sub-directive." },
+            {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "description": "jq filter expression."
+                }
+              },
+              "required": ["query"],
+              "additionalProperties": false
+            }
+          ],
           "description": "Applies a jq filter expression to JSON data."
         },
         "jsontoyaml": {
@@ -1322,7 +1419,8 @@
               "additionalProperties": false
             }
           ],
-          "description": "Removes duplicate lines (or items, with 'separator'), case sensitive, keeping the first occurrence."
+          "description": "Deprecated: use remove_repeated with 'adjacent: false' instead.",
+          "deprecated": true
         },
         "remove_repeated": {
           "oneOf": [
@@ -1373,6 +1471,11 @@
         "sha1sum": {
           "type": ["boolean", "null"],
           "description": "Computes the SHA-1 hash of the content.",
+          "default": true
+        },
+        "sha256sum": {
+          "type": ["boolean", "null"],
+          "description": "Computes the SHA-256 hash of the content.",
           "default": true
         },
         "shellpipe": {

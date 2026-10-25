@@ -17,3 +17,12 @@ url: https://example.org/
 ---
 # yaml-language-server: $schema=jobs.schema.json
 url: https://example.org/.foobar
+---
+# yaml-language-server: $schema=jobs.schema.json
+url: https://example.org/keywords
+hook_data:
+  keywords:
+    - sale
+    - Discount
+filters:
+  - hooks_keywords:

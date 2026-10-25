@@ -23,6 +23,9 @@ from webchanges.util import mark_to_html
 logger = logging.getLogger(__name__)
 
 bs4_is_installed = importlib.util.find_spec('bs4') is not None
+
+# Deprecated filters exercised by data/filters_testdata.yaml, which emit a DeprecationWarning
+DEPRECATED_FILTERS_IN_TESTDATA = {'grep', 'grepi', 'remove-duplicate-lines'}
 # skip_mac_issue = pytest.mark.skipif(
 #     sys.platform == 'darwin' and sys.version_info == (3, 12),
 #     reason='Crashing',
@@ -93,7 +96,7 @@ def test_filters(test_data: dict[str, Any]) -> None:
         filtercls = FilterBase.__subclasses__.get(filter_kind)
         if filtercls is None:
             raise ValueError(f'Unknown filter kind: {filter_kind}:{subfilter}')
-        deprecation_ctx = pytest.deprecated_call() if filter_kind in {'grep', 'grepi'} else nullcontext()
+        deprecation_ctx = pytest.deprecated_call() if filter_kind in DEPRECATED_FILTERS_IN_TESTDATA else nullcontext()
         with deprecation_ctx:
             # noinspection PyTypeChecker
             filter_result = filtercls(local_job_state).filter(result, '', subfilter)
@@ -259,8 +262,17 @@ def test_deprecated_filters() -> None:
         data, _ = filtercls(job_state).filter('a  \nb', 'text/plain', {})  # ty:ignore[call-non-callable]
     assert data == 'a\nb'
     assert len(w) == 1
+    expected = "The 'striplines' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: true' (Job "
+    assert _warning_message(w[0].message)[: len(expected)] == expected
+
+    filtercls = FilterBase.__subclasses__.get('remove-duplicate-lines')
+    with pytest.warns(DeprecationWarning) as w:
+        data, _ = filtercls(job_state).filter('a\nb\na', 'text/plain', {})  # ty:ignore[call-non-callable]
+    assert data == 'a\nb'
+    assert len(w) == 1
     expected = (
-        "The 'strip_each_line' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: true' (Job "
+        "The 'remove-duplicate-lines' filter is deprecated; replace with 'remove_repeated' and sub-directive "
+        "'adjacent: false' (Job "
     )
     assert _warning_message(w[0].message)[: len(expected)] == expected
 
