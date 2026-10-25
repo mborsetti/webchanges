@@ -20,14 +20,16 @@ import warnings
 from abc import ABC
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 import yaml
 
 from tests.conftest import prepare_storage_test
 from webchanges import __docs_url__
-from webchanges.handler import Snapshot
-from webchanges.jobs import JobBase
+from webchanges.handler import JobState, Snapshot
+from webchanges.jobs import BrowserJob, JobBase, UrlJob
 from webchanges.storage import (
     DEFAULT_CONFIG,
     BaseTextualFileStorage,
@@ -332,6 +334,24 @@ def test_load_legacy_job_defaults_keys(tmp_path: Path) -> None:
     job = JobBase.unserialize({'url': 'https://www.example.com'}).with_defaults(config_storage.config)
     assert job.headers['User-Agent'] == 'url'
     assert job.timeout == 10
+
+
+def test_load_job_defaults_null_header_removes_all_jobs_one(tmp_path: Path) -> None:
+    """A header set to null in url_jobs stops the all_jobs one from being sent by url jobs, but not by browser jobs."""
+    cfg = _write_config_job_defaults(
+        tmp_path,
+        {'all_jobs': {'headers': {'DNT': 1, 'Accept-Language': 'en-US'}}, 'url_jobs': {'headers': {'DNT': None}}},
+    )
+    config_storage = YamlConfigStorage(cfg)
+    config_storage.load()
+    job_state = cast('JobState', SimpleNamespace(tries=0, old_etag='', old_timestamp=None))
+    url_job = cast(
+        'UrlJob', JobBase.unserialize({'url': 'https://www.example.com'}).with_defaults(config_storage.config)
+    )
+    assert dict(url_job.get_headers(job_state, user_agent=None)) == {'accept-language': 'en-US'}
+    browser_job = JobBase.unserialize({'url': 'https://www.example.com', 'use_browser': True})
+    browser_job = cast('BrowserJob', browser_job.with_defaults(config_storage.config))
+    assert dict(browser_job.get_headers(job_state, user_agent=None)) == {'dnt': '1', 'accept-language': 'en-US'}
 
 
 def test_load_legacy_and_new_job_defaults_key(tmp_path: Path) -> None:

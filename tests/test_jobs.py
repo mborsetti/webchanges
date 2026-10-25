@@ -18,6 +18,7 @@ from contextlib import ExitStack, nullcontext
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
 
 import pytest
@@ -1494,6 +1495,36 @@ def test_with_defaults_headers() -> None:
     job = job.with_defaults(config)
     assert dict(job.headers) == {'a': '1', 'b': '3', 'c': '4'}
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
+
+
+def test_with_defaults_headers_job_wins_case_insensitively() -> None:
+    """The example in docs/configuration.rst: the job's headers win over url_jobs ones, which win over all_jobs ones,
+    header by header and case-insensitively."""
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'headers': {'user-agent': 'Lynx'}})
+    config: _Config = {  # ty:ignore[missing-typed-dict-key]
+        'job_defaults': {
+            'all_jobs': {'headers': {'Accept-Language': 'en-US,en;q=0.9', 'User-Agent': 'Mozilla/5.0'}},
+            'url_jobs': {'headers': {'DNT': '1', 'User-Agent': 'Chrome'}},
+        }
+    }
+    job = job.with_defaults(config)
+    assert dict(job.headers) == {'user-agent': 'Lynx', 'dnt': '1', 'accept-language': 'en-US,en;q=0.9'}
+
+
+def test_with_defaults_headers_null_removes_default() -> None:
+    """A job's header set to null stops the job_defaults from supplying it, is not sent, and is saved back as null."""
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'headers': {'user-agent': None, 'DNT': None}})
+    config: _Config = {  # ty:ignore[missing-typed-dict-key]
+        'job_defaults': {
+            'all_jobs': {'headers': {'Accept-Language': 'en-US', 'User-Agent': 'Mozilla/5.0'}},
+            'url_jobs': {'headers': {'DNT': '1'}},
+        }
+    }
+    job_with_defaults = cast('UrlJob', job.with_defaults(config))
+    job_state = cast('JobState', SimpleNamespace(tries=0, old_etag='', old_timestamp=None))
+    headers = job_with_defaults.get_headers(job_state, user_agent='webchanges-test')
+    assert dict(headers) == {'accept-language': 'en-US', 'user-agent': 'webchanges-test'}
+    assert job.to_dict()['headers'] == {'user-agent': None, 'dnt': None}
 
 
 def test_ignore_error() -> None:

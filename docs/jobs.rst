@@ -361,8 +361,21 @@ headers
 ^^^^^^^
 Headers to send along with the request (a dict).
 
-The headers found in a job are merged case-insensitively with the default ones (including those found in
-``config.yaml``).  In case of conflicts, the header in the job will replace the default one.
+The headers found in a job are merged one header at a time, case-insensitively, with the default ones (including those
+set in ``job_defaults`` in ``config.yaml``): a header in the job replaces only the default header of the same name, and
+all the other default headers are still sent. To stop a default header from being sent, set it to null (no value)
+in the job:
+
+.. code-block:: yaml
+
+   url: https://example.com/
+   headers:
+     Referer:  # removes the Referer header set in job_defaults in config.yaml
+
+See :ref:`here <job_defaults>` for how the defaults set for all jobs and for a job kind are combined.
+
+.. versionchanged:: 3.38
+   A header set to null removes the default one; previously, it was sent with the value ``None``.
 
 See examples :ref:`here <default_headers>`.
 

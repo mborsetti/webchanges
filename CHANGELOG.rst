@@ -103,6 +103,9 @@ Changed
   ``browser_jobs`` and ``command_jobs``. The previous ``all``, ``url``, ``browser`` and ``command`` (and the older
   ``shell``) continue to work unchanged. Suggested by `drws <https://github.com/drws>`__ in `#173
   <https://github.com/mborsetti/webchanges/issues/173>`__. See :ref:`here <job_defaults>`.
+* A header set to null (no value) in the ``headers`` directive of a job, or of ``url_jobs`` or ``browser_jobs`` in
+  ``job_defaults``, now removes the header of the same name set in ``job_defaults``, which is then not sent;
+  previously, the header was sent with the value ``None``. See :ref:`here <headers>`.
 
 Deprecated
 ``````````

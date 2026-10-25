@@ -58,8 +58,8 @@
     },
     "headers": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
-      "description": "Custom HTTP headers."
+      "additionalProperties": { "type": ["string", "null"] },
+      "description": "Custom HTTP headers, merged header by header with the defaults set in the configuration's job_defaults; a header set to null is not sent, even if set in job_defaults."
     },
     "encoding": {
       "type": "string",

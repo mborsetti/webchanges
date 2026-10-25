@@ -194,9 +194,53 @@ See :ref:`jobs <jobs>` for an explanation of the different job kinds and their d
 
 Handling of duplicate directives
 ````````````````````````````````
-Any directive specified in either ``url_jobs``, ``browser_jobs`` or ``command_jobs`` will override the same directive
-specified in ``all_jobs``, and any directive specified in a job will override the same directive specified in
-``job_defaults``. In case of the ``headers`` directive, the overriding is done on a header-by-header basis.
+A directive specified in a job overrides the same directive specified in ``job_defaults``, and one specified in
+``url_jobs``, ``browser_jobs`` or ``command_jobs`` overrides the same one specified in ``all_jobs``.
+
+Directives whose value is a set of key-value pairs, such as ``headers`` and ``cookies``, are instead merged one key at a
+time, with the same precedence: each header is taken from the job if the job specifies it, otherwise from
+``url_jobs`` (or ``browser_jobs``) if specified there, otherwise from ``all_jobs``. Header names are matched
+case-insensitively. For example, with this configuration:
+
+.. code-block:: yaml
+
+   job_defaults:
+     all_jobs:
+       headers:
+         Accept-Language: en-US,en;q=0.9
+         User-Agent: Mozilla/5.0
+     url_jobs:
+       headers:
+         DNT: 1
+         User-Agent: Chrome
+
+this job:
+
+.. code-block:: yaml
+
+   url: https://lynx.invisible-island.net
+   headers:
+     user-agent: Lynx
+
+is sent the headers ``Accept-Language: en-US,en;q=0.9``, ``DNT: 1`` and ``user-agent: Lynx``.
+
+To remove a default header, set it to null (no value): the header is then not sent, and no less specific default can
+supply it. This works both in a job, to remove a header set in ``job_defaults``, and in ``url_jobs`` or
+``browser_jobs``, to remove one set in ``all_jobs``. Continuing the example above, this job is sent only the header
+``Accept-Language: en-US,en;q=0.9`` and, as no ``User-Agent`` header is left, :program:`webchanges`' own default one:
+
+.. code-block:: yaml
+
+   url: https://lynx.invisible-island.net
+   headers:
+     DNT:
+     User-Agent:
+
+Directives whose value is a list, such as ``filters``, are not merged: the one specified in the job replaces the
+default one entirely.
+
+.. versionchanged:: 3.38
+   A header set to null removes the default one; previously, it was sent with the value ``None``.
 
 Previous names
 ``````````````

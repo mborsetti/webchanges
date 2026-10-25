@@ -57,10 +57,33 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# The value standing for a header set to null, i.e. removed (a Headers object cannot hold None). It is kept while the
+# job_defaults are merged, so that it stops the less specific defaults from supplying that header, and is dropped by
+# get_headers() before the request is sent.
+REMOVED_HEADER = '\x00removed'
+
+
+def headers_from_dict(headers: dict[str, Any]) -> Headers:
+    """Convert headers read from YAML into a Headers object, with values as strings and null ones marked as removed.
+
+    :param headers: The headers, e.g. from the 'headers' directive of a job or job_defaults.
+    :returns: The Headers object.
+    """
+    return Headers({k: REMOVED_HEADER if v is None else str(v) for k, v in headers.items()}, encoding='utf-8')
+
+
+def headers_to_dict(headers: Headers) -> dict[str, str | None]:
+    """Convert a Headers object into a dict, restoring removed headers to None (the inverse of headers_from_dict).
+
+    :param headers: The Headers object.
+    :returns: The headers as a dict.
+    """
+    return {k: None if v == REMOVED_HEADER else v for k, v in headers.items()}
+
 
 # Custom YAML representer function for httpx.Headers
 def represent_headers(dumper: yaml.SafeDumper, data: Headers) -> yaml.MappingNode:
-    return dumper.represent_dict(dict(data))
+    return dumper.represent_dict(headers_to_dict(data))
 
 
 # Add the custom representer to the SafeDumper
@@ -385,7 +408,7 @@ class JobBase(metaclass=TrackSubClasses):
 
         # Format headers and cookies (and turn values into strings to avoid httpx Exception):
         if isinstance(job.headers, dict):
-            job.headers = Headers({k: str(v) for k, v in (job.headers or {}).items()}, encoding='utf-8')
+            job.headers = headers_from_dict(job.headers)
         if isinstance(job.cookies, dict):
             job.cookies = {k: str(v) for k, v in job.cookies.items()} if job.cookies is not None else None
 
@@ -401,7 +424,7 @@ class JobBase(metaclass=TrackSubClasses):
         :returns: A dict with all job directives as keys, ignoring those that are extras.
         """
         return {
-            k: dict(getattr(self, k)) if isinstance(getattr(self, k), Headers) else getattr(self, k)
+            k: headers_to_dict(getattr(self, k)) if isinstance(getattr(self, k), Headers) else getattr(self, k)
             for keys in {self.__required__, self.__optional__}
             for k in keys
             if hasattr(self, k) and getattr(self, k)
@@ -467,12 +490,16 @@ class JobBase(metaclass=TrackSubClasses):
         return destination
 
     def _set_defaults(self, defaults: dict[str, Any] | None) -> None:
-        """Merge default attributes (e.g. from configuration) into those of the Job object.
+        """Merge default attributes (e.g. from configuration) into those of the Job object, without overwriting any.
+
+        A directive the job already has keeps its value, except that a dict-valued one (e.g. ``headers``, ``cookies``)
+        is merged key by key, one level deep: the default's keys missing from the job's are added (case-insensitively
+        for ``headers``, as both are ``Headers`` objects), the others are left untouched. A list (e.g. ``filters``) is
+        never merged. Called repeatedly, the first call's defaults win over the later ones'.
 
         :param defaults: The default Job parameters.
         """
         if isinstance(defaults, dict):
-            # merge defaults from configuration (including dicts) into Job attributes without overwriting them
             for key, value in defaults.items():
                 if key in self.__optional__:
                     attribute = getattr(self, key, None)
@@ -502,12 +529,14 @@ class JobBase(metaclass=TrackSubClasses):
 
         cfg = config.get('job_defaults')
         if isinstance(cfg, dict):
-            # Apply defaults specific to this job kind, then 'all_jobs' ones (which don't override more specific ones)
+            # Apply defaults specific to this job kind, then 'all_jobs' ones. As _set_defaults never overwrites, the
+            # precedence is: the job's directive > the kind's default > the all_jobs default; for headers (and any other
+            # dict-valued directive) this holds header by header, e.g. a job's User-Agent replaces only the default
+            # User-Agent, and all the other default headers are still sent.
             for class_type in (UrlJob, BrowserJob, ShellJob):
                 if isinstance(self, class_type):
                     job_with_defaults._set_defaults(cfg.get(f'{class_type.__kind__}_jobs'))
                     break
-            # all_jobs is done last, so that more specific defaults are not overwritten
             job_with_defaults._set_defaults(cfg.get('all_jobs'))
 
         # backwards-compatible
@@ -743,8 +772,9 @@ class UrlJobBase(Job):
         user_agent: str | None = __user_agent__,
         include_cookies: bool = True,
     ) -> Headers:
-        """Get headers and modify them to add cookies and conditional request. If headers don't
-        contain `User-Agent`, either the default one or the one provided as `user_agent` is added.
+        """Get headers and modify them to add cookies and conditional request. Headers set to null (removed) are
+        dropped first; then, if headers don't contain `User-Agent`, either the default one or the one provided as
+        `user_agent` is added.
 
         :param job_state: The job state.
         :param user_agent: The user agent string.
@@ -753,6 +783,10 @@ class UrlJobBase(Job):
         :returns: The headers.
         """
         headers = self.headers.copy() if self.headers else Headers(encoding='utf-8')
+        if removed := [k for k, v in headers.items() if v == REMOVED_HEADER]:
+            logger.debug('Job %s: Not sending header(s) set to null: %s', self.index_number, ', '.join(removed))
+            for name in removed:
+                del headers[name]
         if 'User-Agent' not in headers and user_agent:
             headers['User-Agent'] = user_agent
         if include_cookies and self.cookies:
