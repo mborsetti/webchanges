@@ -370,13 +370,15 @@ autosummary_generate = True
 
 class PatchedHTMLTranslator(HTML5Translator):
     """Adds open-in-new-tab support.
+
     See https://stackoverflow.com/questions/25583581.
     """
 
     def unknown_visit(self, node: nodes.Node) -> None:
-        pass
+        """Ignore nodes the translator does not know."""
 
     def visit_reference(self, node: nodes.Element) -> None:
+        """Render a reference, opening external links in a new tab."""
         attributes = {'class': 'reference'}
         if node.get('internal') or 'refuri' not in node:
             attributes['class'] += ' internal'
@@ -410,4 +412,5 @@ class PatchedHTMLTranslator(HTML5Translator):
 
 
 def setup(app: sphinx.application.Sphinx) -> None:
+    """Register the patched HTML translator."""
     app.set_translator('html', PatchedHTMLTranslator)

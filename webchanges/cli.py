@@ -454,6 +454,50 @@ def sync_bundled_schemas(command_config: CommandConfig) -> None:
         logger.info('Updated %s (sha256 %s…).', schema_dest, bundled_hash[:12])
 
 
+def _print_new_version() -> int:
+    """Will print alert message if a newer version is found on PyPi."""
+    print(f'{__project_name__} {__version__}.', end='')
+    new_release = get_new_version_number(timeout=2, force_refresh=True)
+    if new_release == '':
+        print(' You are running the latest release.')
+        return 0
+    if new_release is True:
+        print(' You are running a pre-release.')
+        return 0
+    if new_release:
+        print(
+            f'\nNew release version {new_release} is available; we recommend updating using e.g. '
+            f"'uv pip install -U {__project_name__}'."
+        )
+        return 0
+    print(' Error contacting PyPI to determine the latest release.')
+    return 1
+
+
+def _playwright_install_chrome() -> int:  # pragma: no cover
+    """Install the browser by replicating playwright.__main__.main(), as the playwright executable does.
+
+    :return: Playwright's executable return code.
+    """
+    try:
+        from playwright._impl._driver import compute_driver_executable
+    except ImportError:  # pragma: no cover
+        raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
+
+    driver_executable = compute_driver_executable()
+    env = os.environ.copy()
+    env['PW_CLI_TARGET_LANG'] = 'python'
+    cmd = [str(driver_executable), 'install', 'chrome']
+    logger.info('Running playwright CLI: %s', ' '.join(cmd))
+    completed_process = subprocess.run(cmd, check=False, env=env, capture_output=True, text=True)  # noqa: S603
+    if completed_process.returncode:
+        print(completed_process.stderr)
+        return completed_process.returncode
+    if completed_process.stdout:
+        logger.info('Success! Output of Playwright CLI: %s', completed_process.stdout)
+    return 0
+
+
 def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_file: Path | None = None) -> None:
     """Handles CLI actions that don't need everything initialized (and command.py loaded), for speed.
 
@@ -466,53 +510,11 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_fi
         logger.info('Exiting with exit code %s', arg)
         sys.exit(arg)
 
-    def print_new_version() -> int:
-        """Will print alert message if a newer version is found on PyPi."""
-        print(f'{__project_name__} {__version__}.', end='')
-        new_release = get_new_version_number(timeout=2, force_refresh=True)
-        if new_release == '':
-            print(' You are running the latest release.')
-            return 0
-        if new_release is True:
-            print(' You are running a pre-release.')
-            return 0
-        if new_release:
-            print(
-                f'\nNew release version {new_release} is available; we recommend updating using e.g. '
-                f"'uv pip install -U {__project_name__}'."
-            )
-            return 0
-        print(' Error contacting PyPI to determine the latest release.')
-        return 1
-
-    def playwright_install_chrome() -> int:  # pragma: no cover
-        """Install the browser by replicating playwright.__main__.main(), as the playwright executable does.
-
-        :return: Playwright's executable return code.
-        """
-        try:
-            from playwright._impl._driver import compute_driver_executable
-        except ImportError:  # pragma: no cover
-            raise ImportError('Python package playwright is not installed; cannot install the Chrome browser') from None
-
-        driver_executable = compute_driver_executable()
-        env = os.environ.copy()
-        env['PW_CLI_TARGET_LANG'] = 'python'
-        cmd = [str(driver_executable), 'install', 'chrome']
-        logger.info('Running playwright CLI: %s', ' '.join(cmd))
-        completed_process = subprocess.run(cmd, check=False, env=env, capture_output=True, text=True)  # noqa: S603
-        if completed_process.returncode:
-            print(completed_process.stderr)
-            return completed_process.returncode
-        if completed_process.stdout:
-            logger.info('Success! Output of Playwright CLI: %s', completed_process.stdout)
-        return 0
-
     if urlwatch_config.check_new:
-        _exit(print_new_version())
+        _exit(_print_new_version())
 
     if urlwatch_config.install_chrome:  # pragma: no cover
-        _exit(playwright_install_chrome())
+        _exit(_playwright_install_chrome())
 
     if urlwatch_config.detailed_versions:
         _exit(show_detailed_versions())
@@ -682,77 +684,108 @@ def _show_features() -> int:
     return 0
 
 
+def _dependencies() -> list[str]:
+    """The names of webchanges' dependencies: from its pip distribution, else every possible one."""
+    import re
+
+    try:
+        from pip._internal.metadata import get_default_environment
+
+        env = get_default_environment()
+        dist = None
+        for dist in env.iter_all_distributions():
+            if dist.canonical_name == __project_name__:
+                break
+        if dist and dist.canonical_name == __project_name__:
+            requires_dist = dist.metadata_dict.get('requires_dist', [])
+            dependencies = {re.split('[ <>=;#^[]', d)[0] for d in requires_dist}
+            dependencies.update(('httpx', 'packaging', 'typeguard'))
+            return sorted(dependencies, key=str.lower)
+    except ImportError:
+        pass
+
+    # default list of all possible dependencies
+    logger.info('Found no pip distribution for %s; returning all possible dependencies.', __project_name__)
+    deps = [
+        'aioxmpp',
+        'beautifulsoup4',
+        'chump',
+        'cryptography',
+        'cssbeautifier',
+        'cssselect',
+        'curl_cffi',
+        'deepdiff',
+        'h2',
+        'html2text',
+        'html5lib',
+        'httpx',
+        'jq',
+        'jsbeautifier',
+        'keyring',
+        'lxml',
+        'markdown2',
+        'matrix_client',
+        'msgpack',
+        'packaging',
+        'pdftotext',
+        'Pillow',
+        'platformdirs',
+        'playwright',
+        'playwright-stealth',
+        'psutil',
+        'pushbullet.py',
+        'pypdf',
+        'pytesseract',
+        'pyyaml',
+        'redis',
+        'requests',
+        'typeguard',
+        'typing-extensions',
+        'tzdata',
+        'vobject',
+        'xmltodict',
+    ]
+    if sys.version_info < (3, 14):
+        deps.append('zstandard')
+    return sorted(deps)
+
+
+def _print_system() -> bool:
+    """Print the platform, CPUs, free memory and free disk space, if psutil is installed.
+
+    :return: Whether psutil is installed.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    try:
+        import psutil
+        from psutil._common import bytes2human
+    except ImportError:
+        return False
+
+    print()
+    print('System:')
+    print(f'• Platform: {platform.platform()}, {platform.machine()}')
+    print(f'• Processor: {platform.processor()}')
+    print(f'• CPUs (logical): {psutil.cpu_count()}')
+    try:
+        virt_mem = psutil.virtual_memory().available
+        print(f'• Free memory: {bytes2human(virt_mem)} physical plus {bytes2human(psutil.swap_memory().free)} swap.')
+    except psutil.Error as e:  # pragma: no cover
+        print(f'• Free memory: Could not read information: {e}')
+    print(f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} ({100 - psutil.disk_usage('/').percent:.1f}%)")
+    executor = ThreadPoolExecutor()
+    print(f'• --max-threads default value: {executor._max_workers}')
+    return True
+
+
 def show_detailed_versions() -> int:
     """Prints the detailed versions, including of dependencies.
 
     :return: 0.
     """
     import importlib.metadata
-    import re
     import sqlite3
-    from concurrent.futures import ThreadPoolExecutor
-
-    def dependencies() -> list[str]:
-        try:
-            from pip._internal.metadata import get_default_environment
-
-            env = get_default_environment()
-            dist = None
-            for dist in env.iter_all_distributions():
-                if dist.canonical_name == __project_name__:
-                    break
-            if dist and dist.canonical_name == __project_name__:
-                requires_dist = dist.metadata_dict.get('requires_dist', [])
-                dependencies = {re.split('[ <>=;#^[]', d)[0] for d in requires_dist}
-                dependencies.update(('httpx', 'packaging', 'typeguard'))
-                return sorted(dependencies, key=str.lower)
-        except ImportError:
-            pass
-
-        # default list of all possible dependencies
-        logger.info('Found no pip distribution for %s; returning all possible dependencies.', __project_name__)
-        deps = [
-            'aioxmpp',
-            'beautifulsoup4',
-            'chump',
-            'cryptography',
-            'cssbeautifier',
-            'cssselect',
-            'curl_cffi',
-            'deepdiff',
-            'h2',
-            'html2text',
-            'html5lib',
-            'httpx',
-            'jq',
-            'jsbeautifier',
-            'keyring',
-            'lxml',
-            'markdown2',
-            'matrix_client',
-            'msgpack',
-            'packaging',
-            'pdftotext',
-            'Pillow',
-            'platformdirs',
-            'playwright',
-            'playwright-stealth',
-            'psutil',
-            'pushbullet.py',
-            'pypdf',
-            'pytesseract',
-            'pyyaml',
-            'redis',
-            'requests',
-            'typeguard',
-            'typing-extensions',
-            'tzdata',
-            'vobject',
-            'xmltodict',
-        ]
-        if sys.version_info < (3, 14):
-            deps.append('zstandard')
-        return sorted(deps)
 
     print('Software:')
     print(f'• {__project_name__}: {__version__}')
@@ -762,35 +795,11 @@ def show_detailed_versions() -> int:
     )
     print(f'• SQLite: {sqlite3.sqlite_version}')
 
-    psutil_available = False
-    try:
-        import psutil
-        from psutil._common import bytes2human
-
-        psutil_available = True
-        print()
-        print('System:')
-        print(f'• Platform: {platform.platform()}, {platform.machine()}')
-        print(f'• Processor: {platform.processor()}')
-        print(f'• CPUs (logical): {psutil.cpu_count()}')
-        try:
-            virt_mem = psutil.virtual_memory().available
-            print(
-                f'• Free memory: {bytes2human(virt_mem)} physical plus {bytes2human(psutil.swap_memory().free)} swap.'
-            )
-        except psutil.Error as e:  # pragma: no cover
-            print(f'• Free memory: Could not read information: {e}')
-        print(
-            f"• Free disk '/': {bytes2human(psutil.disk_usage('/').free)} ({100 - psutil.disk_usage('/').percent:.1f}%)"
-        )
-        executor = ThreadPoolExecutor()
-        print(f'• --max-threads default value: {executor._max_workers}')
-    except ImportError:
-        pass
+    psutil_available = _print_system()
 
     print()
     print('Relevant PyPi packages:')
-    for dist_name in dependencies():
+    for dist_name in _dependencies():
         if dist_name == __project_name__:
             continue
         try:
@@ -801,12 +810,25 @@ def show_detailed_versions() -> int:
         if mod.requires:
             _print_dist_sub_deps(dist_name, mod.requires)
 
-    # playwright
+    _print_playwright(psutil_available)
+    _print_dpkg_dependencies()
+    print()
+    return 0
+
+
+def _print_playwright(psutil_available: bool) -> None:
+    """Print the browser Playwright launches and, if psutil is installed, the memory it uses.
+
+    :param psutil_available: Whether psutil is installed.
+    """
     try:
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import sync_playwright
 
         if psutil_available:
+            import psutil
+            from psutil._common import bytes2human
+
             try:
                 virt_mem_before = psutil.virtual_memory().available
                 swap_mem_before = psutil.swap_memory().free
@@ -829,7 +851,6 @@ def show_detailed_versions() -> int:
                         )
                     except NameError:
                         pass
-                if psutil_available:
                     browser.new_page()
                     try:
                         virt_mem_loaded = psutil.virtual_memory().available
@@ -859,57 +880,58 @@ def show_detailed_versions() -> int:
     except ImportError:
         pass
 
-    if os.name == 'posix':
-        print()
-        print('Installed dpkg dependencies:')
-        try:
-            import apt
 
-            apt_cache = apt.Cache()
+def _print_dpkg_dependencies() -> None:
+    """Print the versions of the dpkg packages needed by the optional dependencies installed (Debian/Ubuntu)."""
+    if os.name != 'posix':
+        return
 
-            def print_version(libs: list[str]) -> None:
-                for lib in libs:
-                    if lib in apt_cache and apt_cache[lib].versions:
-                        ver = apt_cache[lib].versions
-                        print(f'   - {ver[0].package}: {ver[0].version}')
+    import importlib.metadata
 
-            installed_packages = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
-            for module, apt_dists in (
-                ('jq', ['jq']),
-                # https://github.com/jalan/pdftotext#os-dependencies
-                ('pdftotext', ['libpoppler-cpp-dev']),
-                # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
-                (
-                    'Pillow',
-                    [
-                        'libjpeg-dev',
-                        'zlib-dev',
-                        'zlib1g-dev',
-                        'libtiff-dev',
-                        'libfreetype-dev',
-                        'littlecms-dev',
-                        'libwebp-dev',
-                        'tcl/tk-dev',
-                        'openjpeg-dev',
-                        'libimagequant-dev',
-                        'libraqm-dev',
-                        'libxcb-dev',
-                        'libxcb1-dev',
-                    ],
-                ),
-                ('playwright', ['google-chrome-stable']),
-                # https://tesseract-ocr.github.io/tessdoc/Installation.html
-                ('pytesseract', ['tesseract-ocr']),
-            ):
-                if module in installed_packages:
-                    importlib.metadata.distribution(module)
-                    print(f'• {module}')
-                    print_version(apt_dists)
-        except ImportError:
-            print('Dependencies cannot be printed as python3-apt is not installed.')
-            print("Run 'sudo apt-get install python3-apt' to install.")
     print()
-    return 0
+    print('Installed dpkg dependencies:')
+    try:
+        import apt
+    except ImportError:
+        print('Dependencies cannot be printed as python3-apt is not installed.')
+        print("Run 'sudo apt-get install python3-apt' to install.")
+        return
+
+    apt_cache = apt.Cache()
+    installed_packages = {dist.metadata['Name'] for dist in importlib.metadata.distributions()}
+    for module, apt_dists in (
+        ('jq', ['jq']),
+        # https://github.com/jalan/pdftotext#os-dependencies
+        ('pdftotext', ['libpoppler-cpp-dev']),
+        # https://pillow.readthedocs.io/en/latest/installation.html#external-libraries
+        (
+            'Pillow',
+            [
+                'libjpeg-dev',
+                'zlib-dev',
+                'zlib1g-dev',
+                'libtiff-dev',
+                'libfreetype-dev',
+                'littlecms-dev',
+                'libwebp-dev',
+                'tcl/tk-dev',
+                'openjpeg-dev',
+                'libimagequant-dev',
+                'libraqm-dev',
+                'libxcb-dev',
+                'libxcb1-dev',
+            ],
+        ),
+        ('playwright', ['google-chrome-stable']),
+        # https://tesseract-ocr.github.io/tessdoc/Installation.html
+        ('pytesseract', ['tesseract-ocr']),
+    ):
+        if module in installed_packages:
+            print(f'• {module}')
+            for lib in apt_dists:
+                if lib in apt_cache and apt_cache[lib].versions:
+                    ver = apt_cache[lib].versions
+                    print(f'   - {ver[0].package}: {ver[0].version}')
 
 
 def _stdout_is_broken() -> bool:

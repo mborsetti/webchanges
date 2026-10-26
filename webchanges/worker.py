@@ -58,35 +58,6 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
     :raises IndexError: If any index(es) is/are out of range.
     """
 
-    def activate_same_site_delays(jobs: list[JobBase]) -> list[JobBase]:
-        """Activate each URL job's ``same_site_delay`` when it shares a network location with an earlier job.
-
-        Because jobs run in parallel, several jobs pointing at the same site (network location, e.g.
-        ``www.example.com``) can hit it at the exact same instant and get rate-limited or blocked. The first job for a
-        given network location runs with no delay; for each subsequent one, its configured ``same_site_delay`` (if any)
-        is copied into the internal ``_delay`` that :py:meth:`JobBase.retrieve` sleeps for before fetching. Jobs without
-        the directive set, and jobs whose network location is unique, are never delayed.
-
-        :param jobs: The list of jobs.
-        :return: The same list of jobs, with ``_delay`` activated where applicable.
-        """
-        previous_netlocs: set[str] = set()
-        for job in jobs:
-            if isinstance(job, UrlJobBase):
-                netloc = urllib.parse.urlparse(job.url).netloc
-                if netloc not in previous_netlocs:
-                    previous_netlocs.add(netloc)
-                elif job.same_site_delay:
-                    job._delay = job.same_site_delay
-                    logger.debug(
-                        'Job %s: Will wait %ss before retrieving '
-                        '(shares network location %r with an earlier job; same_site_delay directive)',
-                        job.index_number,
-                        job._delay,
-                        netloc,
-                    )
-        return jobs
-
     def job_runner(
         jobs: Iterable[JobBase],
         max_workers: int | None = None,
@@ -120,104 +91,15 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                 lambda jobstate: jobstate.process(headless=not urlwatcher.urlwatch_config.no_headless),
                 (stack.enter_context(JobState(urlwatcher.ssdb_storage, job)) for job in jobs),
             ):
-                max_tries = 0 if not job_state.job.max_tries else job_state.job.max_tries
-                # tries is incremented by JobState.process when an exception (including 304) is encountered.
-
                 if job_state.exception is not None:
                     # Oops, we have captured an error (which could also be 304 or a Playwright timeout)
-                    if job_state.error_ignored:
-                        # We captured an error but are ignoring it
-                        logger.info(
-                            'Job %s: Job resulted in an error that is ignored due to directives',
-                            job_state.job.index_number,
-                        )
-                    elif isinstance(job_state.exception, NotModifiedError):
-                        # We captured a 304 Not Modified
-                        logger.info('Job %s: Job has not changed (HTTP 304 response)', job_state.job.index_number)
-                        if job_state.tries > 0:
-                            job_state.tries = 0
-                            if not read_only:
-                                job_state.save()
-                        if job_state.old_error_data and job_state.job.suppress_repeated_errors:
-                            urlwatcher.report.unchanged_from_error(job_state)
-                        else:
-                            urlwatcher.report.unchanged(job_state)
-                    elif job_state.tries < max_tries:
-                        # We're not reporting the error yet because we haven't yet hit 'max_tries'
-                        logger.debug(
-                            'Job %s: Job error suppressed as cumulative number of '
-                            'failures (%s) does not exceed max_tries=%s',
-                            job_state.job.index_number,
-                            job_state.tries,
-                            max_tries,
-                        )
-                        if not read_only:
-                            job_state.save()
-                    else:
-                        # Reporting the error
-                        logger.debug(
-                            'Job %s: Job error flagged as error as max_tries=%s has been met or exceeded (%s',
-                            job_state.job.index_number,
-                            max_tries,
-                            job_state.tries,
-                        )
-                        if isinstance(job_state.exception, TransientHTTPError):
-                            # We captured a transient error
-                            logger.info(
-                                'Job %s: Job has received an HTTP response of a typically transient nature',
-                                job_state.job.index_number,
-                            )
-                            job_state.new_data = job_state.old_data
-                            job_state.new_etag = job_state.old_etag
-                            job_state.new_mime_type = job_state.old_mime_type
-                        if not read_only:
-                            job_state.save()
-                        # The first error reported is never a repeated one, even if the same error was saved by the
-                        # runs whose errors max_tries kept from being reported
-                        if job_state.tries > max(max_tries, 1) and job_state.new_error_data == job_state.old_error_data:
-                            urlwatcher.report.error_same_error(job_state)
-                        else:
-                            urlwatcher.report.error(job_state)
-                elif job_state.old_data or (job_state.old_timestamp != 0 and not job_state.old_error_data):
-                    # This is not the first time running this job successfully (we have snapshots of data, not only of
-                    # errors)
-                    if (
-                        job_state.new_data == job_state.old_data
-                        or job_state.new_data in job_state.history_dic_snapshots
-                    ):
-                        # Exactly matches one of the previous snapshots
-                        if job_state.tries > 0:
-                            job_state.tries = 0
-                            if not read_only:
-                                job_state.save()
-                        if job_state.old_error_data and job_state.job.suppress_repeated_errors:
-                            urlwatcher.report.unchanged_from_error(job_state)
-                        else:
-                            urlwatcher.report.unchanged(job_state)
-                    else:
-                        # It has different data, so we save it. We used to do fuzzy matching, but it no longer makes
-                        # sense.
-                        job_state.tries = 0
-                        if not read_only:
-                            job_state.save()
-                        urlwatcher.report.changed(job_state)
+                    _classify_error(urlwatcher, job_state, read_only)
                 else:
-                    # We have never run this job successfully before (there are no snapshots, or only of errors)
-                    job_state.tries = 0
-                    if not read_only:
-                        job_state.save()
-                    if job_state.job.treat_new_as_changed:
-                        # Report it as a change from empty content, so that its differ and diff_filters apply
-                        logger.debug(
-                            'Job %s: New job reported as changed (treat_new_as_changed)', job_state.job.index_number
-                        )
-                        urlwatcher.report.changed(job_state)
-                    else:
-                        urlwatcher.report.new(job_state)
+                    _classify_data(urlwatcher, job_state, read_only)
 
     jobs = list(UrlwatchCommand(urlwatcher).jobs_from_joblist())
 
-    jobs = activate_same_site_delays(jobs)
+    jobs = _activate_same_site_delays(jobs)
 
     # run non-BrowserJob jobs first
     jobs_to_run = [job for job in jobs if not job.__is_browser__]
@@ -236,6 +118,139 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
         _run_browser_jobs(browser_jobs, urlwatcher.urlwatch_config.max_workers, job_runner)
     else:
         logger.debug("Found no jobs that require Chrome (i.e. with 'use_browser: true').")
+
+
+def _activate_same_site_delays(jobs: list[JobBase]) -> list[JobBase]:
+    """Activate each URL job's ``same_site_delay`` when it shares a network location with an earlier job.
+
+    Because jobs run in parallel, several jobs pointing at the same site (network location, e.g. ``www.example.com``)
+    can hit it at the exact same instant and get rate-limited or blocked. The first job for a given network location
+    runs with no delay; for each subsequent one, its configured ``same_site_delay`` (if any) is copied into the internal
+    ``_delay`` that :py:meth:`JobBase.retrieve` sleeps for before fetching. Jobs without the directive set, and jobs
+    whose network location is unique, are never delayed.
+
+    :param jobs: The list of jobs.
+    :return: The same list of jobs, with ``_delay`` activated where applicable.
+    """
+    previous_netlocs: set[str] = set()
+    for job in jobs:
+        if isinstance(job, UrlJobBase):
+            netloc = urllib.parse.urlparse(job.url).netloc
+            if netloc not in previous_netlocs:
+                previous_netlocs.add(netloc)
+            elif job.same_site_delay:
+                job._delay = job.same_site_delay
+                logger.debug(
+                    'Job %s: Will wait %ss before retrieving '
+                    '(shares network location %r with an earlier job; same_site_delay directive)',
+                    job.index_number,
+                    job._delay,
+                    netloc,
+                )
+    return jobs
+
+
+def _classify_unchanged(urlwatcher: Urlwatch, job_state: JobState, read_only: bool) -> None:
+    """Reset the job's failure count and report it as unchanged.
+
+    :param urlwatcher: The :py:class:`Urlwatch` orchestrator.
+    :param job_state: The processed job state.
+    :param read_only: If True, do not save the job state.
+    """
+    if job_state.tries > 0:
+        job_state.tries = 0
+        if not read_only:
+            job_state.save()
+    if job_state.old_error_data and job_state.job.suppress_repeated_errors:
+        urlwatcher.report.unchanged_from_error(job_state)
+    else:
+        urlwatcher.report.unchanged(job_state)
+
+
+def _classify_error(urlwatcher: Urlwatch, job_state: JobState, read_only: bool) -> None:
+    """Save and report a job whose run raised an exception (including HTTP 304).
+
+    ``tries`` was incremented by :py:meth:`JobState.process`; the error is only reported once it reaches the job's
+    ``max_tries``.
+
+    :param urlwatcher: The :py:class:`Urlwatch` orchestrator.
+    :param job_state: The processed job state.
+    :param read_only: If True, do not save the job state.
+    """
+    max_tries = job_state.job.max_tries or 0
+    if job_state.error_ignored:
+        # We captured an error but are ignoring it
+        logger.info('Job %s: Job resulted in an error that is ignored due to directives', job_state.job.index_number)
+    elif isinstance(job_state.exception, NotModifiedError):
+        # We captured a 304 Not Modified
+        logger.info('Job %s: Job has not changed (HTTP 304 response)', job_state.job.index_number)
+        _classify_unchanged(urlwatcher, job_state, read_only)
+    elif job_state.tries < max_tries:
+        # We're not reporting the error yet because we haven't yet hit 'max_tries'
+        logger.debug(
+            'Job %s: Job error suppressed as cumulative number of failures (%s) does not exceed max_tries=%s',
+            job_state.job.index_number,
+            job_state.tries,
+            max_tries,
+        )
+        if not read_only:
+            job_state.save()
+    else:
+        # Reporting the error
+        logger.debug(
+            'Job %s: Job error flagged as error as max_tries=%s has been met or exceeded (%s',
+            job_state.job.index_number,
+            max_tries,
+            job_state.tries,
+        )
+        if isinstance(job_state.exception, TransientHTTPError):
+            # We captured a transient error
+            logger.info(
+                'Job %s: Job has received an HTTP response of a typically transient nature',
+                job_state.job.index_number,
+            )
+            job_state.new_data = job_state.old_data
+            job_state.new_etag = job_state.old_etag
+            job_state.new_mime_type = job_state.old_mime_type
+        if not read_only:
+            job_state.save()
+        # The first error reported is never a repeated one, even if the same error was saved by the runs whose errors
+        # max_tries kept from being reported
+        if job_state.tries > max(max_tries, 1) and job_state.new_error_data == job_state.old_error_data:
+            urlwatcher.report.error_same_error(job_state)
+        else:
+            urlwatcher.report.error(job_state)
+
+
+def _classify_data(urlwatcher: Urlwatch, job_state: JobState, read_only: bool) -> None:
+    """Save and report a job that ran successfully as new, changed or unchanged.
+
+    :param urlwatcher: The :py:class:`Urlwatch` orchestrator.
+    :param job_state: The processed job state.
+    :param read_only: If True, do not save the job state.
+    """
+    if job_state.old_data or (job_state.old_timestamp != 0 and not job_state.old_error_data):
+        # This is not the first time running this job successfully (we have snapshots of data, not only of errors)
+        if job_state.new_data == job_state.old_data or job_state.new_data in job_state.history_dic_snapshots:
+            # Exactly matches one of the previous snapshots
+            _classify_unchanged(urlwatcher, job_state, read_only)
+        else:
+            # It has different data, so we save it. We used to do fuzzy matching, but it no longer makes sense.
+            job_state.tries = 0
+            if not read_only:
+                job_state.save()
+            urlwatcher.report.changed(job_state)
+    else:
+        # We have never run this job successfully before (there are no snapshots, or only of errors)
+        job_state.tries = 0
+        if not read_only:
+            job_state.save()
+        if job_state.job.treat_new_as_changed:
+            # Report it as a change from empty content, so that its differ and diff_filters apply
+            logger.debug('Job %s: New job reported as changed (treat_new_as_changed)', job_state.job.index_number)
+            urlwatcher.report.changed(job_state)
+        else:
+            urlwatcher.report.new(job_state)
 
 
 def _run_browser_jobs(

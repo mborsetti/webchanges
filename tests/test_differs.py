@@ -1033,7 +1033,7 @@ def test_image_ascii85(job_state: JobState) -> None:
     job_state.old_data = base64.a85encode(old_file.read_bytes()).decode()
     job_state.new_data = base64.a85encode(new_file.read_bytes()).decode()
     job_state.job.differ = {'name': 'image', 'data_type': 'ascii85'}
-    expected = '<br>\n'.join(
+    expected = '<br>\n'.join(  # noqa: FLY002 one line per item reads better than one long literal
         [
             (
                 '<span style="font-family:monospace">'
@@ -1082,7 +1082,7 @@ def test_image_base64_and_resize(job_state: JobState) -> None:
     new_img.save(output_stream, format=img_format)
     job_state.new_data = base64.b64encode(output_stream.getvalue()).decode()
     job_state.job.differ = {'name': 'image', 'data_type': 'base64'}
-    expected = '<br>\n'.join(
+    expected = '<br>\n'.join(  # noqa: FLY002 one line per item reads better than one long literal
         [
             (
                 '<span style="font-family:monospace">'

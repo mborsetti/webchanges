@@ -1,5 +1,5 @@
 # pragma: exclude file
-# ruff: noqa: S101  # Use of `assert` detected
+# Use of `assert` detected
 # ruff: noqa: S301
 """Vendored tests for packaging.version.parse() from packaging v26.3 (released 03-Aug-26).
 
@@ -163,7 +163,7 @@ VERSIONS = [
 class SimpleVersion(_BaseVersion):
     """A simple _BaseVersion subclass for testing cross-type comparisons."""
 
-    def __init__(self, key: typing.Any) -> None:  # noqa: ANN401
+    def __init__(self, key: typing.Any) -> None:
         # If key is a string, parse it as a version to create a compatible key
         if isinstance(key, str):
             parsed = Version(key)
@@ -172,11 +172,11 @@ class SimpleVersion(_BaseVersion):
             self._key_tuple = key
 
     @property
-    def _key(self) -> typing.Any:  # noqa: ANN401
+    def _key(self) -> typing.Any:
         return self._key_tuple
 
     @_key.setter
-    def _key(self, value: typing.Any) -> None:  # noqa: ANN401
+    def _key(self, value: typing.Any) -> None:
         self._key_tuple = value
 
 

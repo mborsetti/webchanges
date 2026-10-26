@@ -342,10 +342,52 @@ class JobBase(metaclass=TrackSubClasses):
         if filenames is None:
             filenames = []
 
-        # Work on a shallow copy, as the backwards-compatibility migrations below rewrite and remove keys and the
-        # caller's dict (e.g. one owned by hooks.py code) must not be modified.
+        # Work on a shallow copy, as the backwards-compatibility migrations rewrite and remove keys and the caller's
+        # dict (e.g. one owned by hooks.py code) must not be modified.
         data = dict(data)
+        cls._migrate_legacy_directives(data)
 
+        # 'url' and 'command' each identify a different job kind and are mutually exclusive (as the jobs.schema.json
+        # JSON Schema declares); a job with both used to be silently run as a 'command' one, ignoring the URL.
+        if data.get('url') and data.get('command'):
+            raise ValueError(
+                f"Error in jobs file: Job directives 'url' and 'command' are mutually exclusive (a job monitors "
+                f'either a URL or the output of a command):\n{yaml.safe_dump(data)}'
+            )
+
+        job_subclass = cls._job_subclass(data)
+
+        # Remove extra required directives ("Falsy")
+        other_subclasses: list[JobBase] = list(cls.__subclasses__.values())[1:]
+        other_subclasses.remove(job_subclass)
+        for other_subclass in other_subclasses:
+            for k in other_subclass.__required__:
+                if k not in job_subclass.__required__:
+                    data.pop(k, None)
+
+        job = job_subclass.from_dict(data, filenames)
+
+        # Make sure all the types are correct
+        job.validate()
+
+        # Format headers and cookies (and turn values into strings to avoid httpx Exception):
+        if isinstance(job.headers, dict):
+            job.headers = headers_from_dict(job.headers)
+        if isinstance(job.cookies, dict):
+            job.cookies = cookies_from_dict(job.cookies)
+
+        # Add GUID
+        job.guid = job.get_guid()
+
+        return job
+
+    @staticmethod
+    def _migrate_legacy_directives(data: dict) -> None:
+        """Rewrite deprecated directives (webchanges' own and urlwatch's) into their current form.
+
+        :param data: The dict with job data, modified in place.
+        :raises ValueError: If 'differ' is neither a string nor a dict.
+        """
         if data.get('kind') == 'shell':
             data['kind'] = 'command'
 
@@ -403,14 +445,14 @@ class JobBase(metaclass=TrackSubClasses):
                 f'{yaml.safe_dump(data)}'
             )
 
-        # 'url' and 'command' each identify a different job kind and are mutually exclusive (as the jobs.schema.json
-        # JSON Schema declares); a job with both used to be silently run as a 'command' one, ignoring the URL.
-        if data.get('url') and data.get('command'):
-            raise ValueError(
-                f"Error in jobs file: Job directives 'url' and 'command' are mutually exclusive (a job monitors "
-                f'either a URL or the output of a command):\n{yaml.safe_dump(data)}'
-            )
+    @classmethod
+    def _job_subclass(cls, data: dict) -> JobBase:
+        """The job class: the one named by 'kind', else the one whose required directives the data best matches.
 
+        :param data: The dict with job data.
+        :returns: The job class.
+        :raises ValueError: If 'kind' is unknown, or no job class matches.
+        """
         if 'kind' in data:
             # Used for hooks.py.
             try:
@@ -447,30 +489,7 @@ class JobBase(metaclass=TrackSubClasses):
                     f"Error in jobs file: Job directives (with values) don't match a job type (check for "
                     f'errors/typos/escaping):\n{yaml.safe_dump(data)}'
                 )
-
-        # Remove extra required directives ("Falsy")
-        other_subclasses: list[JobBase] = list(cls.__subclasses__.values())[1:]
-        other_subclasses.remove(job_subclass)
-        for other_subclass in other_subclasses:
-            for k in other_subclass.__required__:
-                if k not in job_subclass.__required__:
-                    data.pop(k, None)
-
-        job = job_subclass.from_dict(data, filenames)
-
-        # Make sure all the types are correct
-        job.validate()
-
-        # Format headers and cookies (and turn values into strings to avoid httpx Exception):
-        if isinstance(job.headers, dict):
-            job.headers = headers_from_dict(job.headers)
-        if isinstance(job.cookies, dict):
-            job.cookies = cookies_from_dict(job.cookies)
-
-        # Add GUID
-        job.guid = job.get_guid()
-
-        return job
+        return job_subclass
 
     def to_dict(self) -> dict:
         """Return the job's directives with a truthy value, required and optional, as a serializable dict.

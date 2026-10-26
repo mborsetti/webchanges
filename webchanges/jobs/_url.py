@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from ftplib import FTP
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
 import html2text
@@ -45,6 +45,7 @@ from webchanges.util import missing_dependency
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
+    from httpx import Headers
     from requests.adapters import HTTPAdapter
 
     from webchanges.handler import JobState
@@ -138,6 +139,104 @@ def retry_after_seconds(value: str | None) -> float | None:
     return max((retry_at - datetime.now(UTC)).total_seconds(), 0.0)
 
 
+class _ClientErrors(NamedTuple):
+    """The exception classes of an HTTP client that the ``ignore_*`` directives silence."""
+
+    timeout: type[Exception]
+    connection: type[Exception]
+    too_many_redirects: type[Exception]
+    incomplete_read: type[Exception] | tuple[type[Exception], ...]
+    http_status: type[Exception]
+
+
+def _client_errors(exception: Exception) -> _ClientErrors | None:
+    """The exception classes of the HTTP client that raised the exception.
+
+    A :py:class:`TransientHTTPError` is attributed to the first client imported of httpx, requests and curl_cffi.
+
+    :param exception: The exception.
+    :returns: The client's exception classes, or None if the exception is not from an HTTP client.
+    """
+    # An exception of the optional HTTP clients can only have been raised if that client was imported
+    if httpx and isinstance(exception, (httpx.HTTPError, TransientHTTPError)):  # ty: ignore[redundant-condition]
+        return _ClientErrors(
+            httpx.TimeoutException,
+            httpx.TransportError,
+            httpx.TooManyRedirects,
+            httpx.RemoteProtocolError,
+            httpx.HTTPStatusError,
+        )
+    requests = sys.modules.get('requests')
+    if requests is not None and isinstance(exception, (requests.exceptions.RequestException, TransientHTTPError)):
+        errors = requests.exceptions
+        return _ClientErrors(
+            errors.Timeout,
+            errors.ConnectionError,
+            errors.TooManyRedirects,
+            errors.ChunkedEncodingError,
+            errors.HTTPError,
+        )
+    errors = sys.modules.get('curl_cffi.requests.exceptions')
+    if errors is not None and isinstance(exception, (errors.RequestException, TransientHTTPError)):
+        return _ClientErrors(
+            errors.Timeout,
+            errors.ConnectionError,
+            errors.TooManyRedirects,
+            (errors.ChunkedEncodingError, errors.IncompleteRead),
+            errors.HTTPError,
+        )
+    return None
+
+
+def _decode_reason(reason: str | bytes) -> str:
+    """Decode an HTTP reason phrase: UTF-8 (HTML5 standard), else ISO-8859-1 (legacy standard for HTML <= 4.01)."""
+    if isinstance(reason, str):
+        return reason
+    try:
+        return reason.decode()
+    except UnicodeDecodeError:
+        return reason.decode('iso-8859-1')
+
+
+def _error_body(text: str) -> str:
+    """The body of an HTTP error response, for the error message: compact JSON, HTML as text, or as is.
+
+    :param text: The body of the response.
+    :returns: The text to append to the error message.
+    """
+    try:
+        return json.dumps(json.loads(text), ensure_ascii=False, separators=(',', ':'))
+    except json.JSONDecodeError:
+        pass
+    if '<title' not in text:
+        return text
+    parser = html2text.HTML2Text()
+    parser.unicode_snob = True
+    parser.body_width = 0
+    parser.single_line_break = True
+    parser.ignore_images = True
+    return parser.handle(text.split('<title', maxsplit=1)[0] + text.split('</title>', maxsplit=1)[-1]).strip()
+
+
+def _redirect_data(status_code: int, reason: str, location: str, mime_type: str, text: str) -> str:
+    """The data reported for a redirect not followed ('no_redirects' directive), in the response's media type.
+
+    :param status_code: The HTTP status code.
+    :param reason: The HTTP reason phrase.
+    :param location: The URL redirected to.
+    :param mime_type: The media type of the response.
+    :param text: The body of the response.
+    :returns: The data.
+    """
+    if mime_type == 'text/plain':
+        return f'Redirect {status_code} {reason} to {location}:\n{text}'
+    if mime_type == 'text/html':
+        return f'Redirect <b>{status_code} {reason}</b> to <a href="{location}">{location}</a>:<br>{text}'
+    if mime_type == 'application/json':
+        return f'{{"Redirect {status_code} {reason}":"{location}"}}'
+    return f'Redirect {status_code} {reason} to {location}.'
+
+
 class UrlJob(UrlJobBase):
     """Retrieve a URL from a web server."""
 
@@ -190,6 +289,30 @@ class UrlJob(UrlJobBase):
         if url != self.url:
             logger.info('Job %s: URL updated to %s', self.index_number, url)
         return url
+
+    def _http_error_message(
+        self, status_code: int, reason: str | bytes, url: object, text: str, retry_after: str | None
+    ) -> str:
+        """The message of an HTTP error (4xx or 5xx) response, including its body: a custom ``raise_for_status()``.
+
+        :param status_code: The HTTP status code.
+        :param reason: The HTTP reason phrase.
+        :param url: The URL of the response.
+        :param text: The body of the response.
+        :param retry_after: The value of the response's Retry-After header, if any.
+        :returns: The message, for the client's own HTTP error exception.
+        :raises TransientHTTPError: If the status code is of a typically transient nature (429, 500, 502, 503, 504).
+        """
+        kind = 'Client' if status_code < 500 else 'Server'
+        http_error_msg = f'{status_code} {kind} Error: {_decode_reason(reason)} for url: {url}'
+        if status_code != 404:
+            http_error_msg += f'\n{_error_body(text)}'
+        if status_code in (429, 500, 502, 503, 504):
+            logger.debug('Job %s: Response with %s status is transient.', self.index_number, status_code)
+            raise TransientHTTPError(
+                http_error_msg, status_code=status_code, retry_after=retry_after_seconds(retry_after)
+            )
+        return http_error_msg
 
     def _retrieve_httpx(
         self,
@@ -281,43 +404,14 @@ class UrlJob(UrlJobBase):
         logger.debug('Job %s: Response headers: %s', self.index_number, response.headers)
 
         if 400 <= response.status_code < 600:
-            # Custom version of request.raise_for_status() to include returned text.
             # https://www.python-httpx.org/exceptions/
-            reason = response.reason_phrase
-
-            if response.status_code < 500:
-                http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
-            else:
-                http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
-
-            if response.status_code != 404:
-                try:
-                    parsed_json = json.loads(response.text)
-                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ':'))
-                except json.JSONDecodeError:
-                    if '<title' in response.text:
-                        html_text = (
-                            response.text.split('<title', maxsplit=1)[0]
-                            + response.text.split('</title>', maxsplit=1)[-1]
-                        )
-                        parser = html2text.HTML2Text()
-                        parser.unicode_snob = True
-                        parser.body_width = 0
-                        parser.single_line_break = True
-                        parser.ignore_images = True
-                        error_message = parser.handle(html_text).strip()
-                    else:
-                        error_message = response.text
-                http_error_msg += f'\n{error_message}'
-
-            if response.status_code in (429, 500, 502, 503, 504):
-                logger.debug('Job %s: Intercepted response with %s status', self.index_number, response.status_code)
-                raise TransientHTTPError(
-                    http_error_msg,
-                    status_code=response.status_code,
-                    retry_after=retry_after_seconds(response.headers.get('Retry-After')),
-                )
-
+            http_error_msg = self._http_error_message(
+                response.status_code,
+                response.reason_phrase,
+                response.url,
+                response.text,
+                response.headers.get('Retry-After'),
+            )
             raise httpx.HTTPStatusError(http_error_msg, request=response.request, response=response)
 
         if response.status_code == 304:
@@ -340,18 +434,9 @@ class UrlJob(UrlJobBase):
             response.encoding = self.encoding
 
         if self.no_redirects and response.is_redirect:
-            new_location = response.headers['Location']
-            if mime_type == 'text/plain':
-                data = f'Redirect {response.status_code} {response.reason_phrase} to {new_location}:\n{response.text}'
-            elif mime_type == 'text/html':
-                data = (
-                    f'Redirect <b>{response.status_code} {response.reason_phrase}</b> to <a href="{new_location}">'
-                    f'{new_location}</a>:<br>{response.text}'
-                )
-            elif mime_type == 'application/json':
-                data = f'{{"Redirect {response.status_code} {response.reason_phrase}":"{new_location}"}}'
-            else:
-                data = f'Redirect {response.status_code} {response.reason_phrase} to {new_location}.'
+            data = _redirect_data(
+                response.status_code, response.reason_phrase, response.headers['Location'], mime_type, response.text
+            )
         else:
             data = response.text
 
@@ -418,51 +503,14 @@ class UrlJob(UrlJobBase):
             )
 
         if 400 <= response.status_code < 600:
-            # Custom version of request.raise_for_status() to include returned text.
             # https://requests.readthedocs.io/en/master/_modules/requests/models/#Response.raise_for_status
-            if isinstance(response.reason, bytes):
-                # If the reason isn't utf-8 (HTML5 standard), we fall back to iso-8859-1
-                # (legacy standard for HTML <= 4.01).
-                try:
-                    reason = response.reason.decode()
-                except UnicodeDecodeError:
-                    reason = response.reason.decode('iso-8859-1')
-            else:
-                reason = response.reason
-
-            if response.status_code < 500:
-                http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
-            else:
-                http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
-
-            if response.status_code != 404:
-                try:
-                    parsed_json = json.loads(response.text)
-                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ':'))
-                except json.JSONDecodeError:
-                    if '<title' in response.text:
-                        html_text = (
-                            response.text.split('<title', maxsplit=1)[0]
-                            + response.text.split('</title>', maxsplit=1)[-1]
-                        )
-                        parser = html2text.HTML2Text()
-                        parser.unicode_snob = True
-                        parser.body_width = 0
-                        parser.single_line_break = True
-                        parser.ignore_images = True
-                        error_message = parser.handle(html_text).strip()
-                    else:
-                        error_message = response.text
-                http_error_msg += f'\n{error_message}'
-
-            if response.status_code in (429, 500, 502, 503, 504):
-                logger.debug('Job %s: Response error is transient.', self.index_number)
-                raise TransientHTTPError(
-                    http_error_msg,
-                    status_code=response.status_code,
-                    retry_after=retry_after_seconds(response.headers.get('Retry-After')),
-                )
-
+            http_error_msg = self._http_error_message(
+                response.status_code,
+                response.reason,
+                response.url,
+                response.text,
+                response.headers.get('Retry-After'),
+            )
             raise requests.HTTPError(http_error_msg, response=response)
 
         if response.status_code == 304:
@@ -497,18 +545,9 @@ class UrlJob(UrlJobBase):
             response.encoding = response.apparent_encoding
 
         if self.no_redirects and response.is_redirect:
-            new_location = response.headers['Location']
-            if mime_type == 'text/plain':
-                data = f'Redirect {response.status_code} {response.reason} to {new_location}:\n{response.text}'
-            elif mime_type == 'text/html':
-                data = (
-                    f'Redirect <b>{response.status_code} {response.reason}</b> to <a href="{new_location}">'
-                    f'{new_location}</a>:<br>{response.text}'
-                )
-            elif mime_type == 'application/json':
-                data = f'{{"Redirect {response.status_code} {response.reason}":"{new_location}"}}'
-            else:
-                data = f'Redirect {response.status_code} {response.reason} to {new_location}.'
+            data = _redirect_data(
+                response.status_code, response.reason, response.headers['Location'], mime_type, response.text
+            )
         else:
             data = response.text
 
@@ -592,48 +631,13 @@ class UrlJob(UrlJobBase):
             )
 
         if 400 <= response.status_code < 600:
-            # Custom version of request.raise_for_status() to include returned text.
-            if isinstance(response.reason, bytes):
-                try:
-                    reason = response.reason.decode()
-                except UnicodeDecodeError:
-                    reason = response.reason.decode('iso-8859-1')
-            else:
-                reason = response.reason
-
-            if response.status_code < 500:
-                http_error_msg = f'{response.status_code} Client Error: {reason} for url: {response.url}'
-            else:
-                http_error_msg = f'{response.status_code} Server Error: {reason} for url: {response.url}'
-
-            if response.status_code != 404:
-                try:
-                    parsed_json = json.loads(response.text)
-                    error_message = json.dumps(parsed_json, ensure_ascii=False, separators=(',', ':'))
-                except json.JSONDecodeError:
-                    if '<title' in response.text:
-                        html_text = (
-                            response.text.split('<title', maxsplit=1)[0]
-                            + response.text.split('</title>', maxsplit=1)[-1]
-                        )
-                        parser = html2text.HTML2Text()
-                        parser.unicode_snob = True
-                        parser.body_width = 0
-                        parser.single_line_break = True
-                        parser.ignore_images = True
-                        error_message = parser.handle(html_text).strip()
-                    else:
-                        error_message = response.text
-                http_error_msg += f'\n{error_message}'
-
-            if response.status_code in (429, 500, 502, 503, 504):
-                logger.debug('Job %s: Response error is transient.', self.index_number)
-                raise TransientHTTPError(
-                    http_error_msg,
-                    status_code=response.status_code,
-                    retry_after=retry_after_seconds(response.headers.get('Retry-After')),
-                )
-
+            http_error_msg = self._http_error_message(
+                response.status_code,
+                response.reason,
+                response.url,
+                response.text,
+                response.headers.get('Retry-After'),
+            )
             raise curl_cffi_exceptions.HTTPError(http_error_msg, response=response)
 
         if response.status_code == 304:
@@ -660,18 +664,9 @@ class UrlJob(UrlJobBase):
 
         is_redirect = 300 <= response.status_code < 400 and 'Location' in response.headers
         if self.no_redirects and is_redirect:
-            new_location = response.headers['Location']
-            if mime_type == 'text/plain':
-                data = f'Redirect {response.status_code} {response.reason} to {new_location}:\n{response.text}'
-            elif mime_type == 'text/html':
-                data = (
-                    f'Redirect <b>{response.status_code} {response.reason}</b> to <a href="{new_location}">'
-                    f'{new_location}</a>:<br>{response.text}'
-                )
-            elif mime_type == 'application/json':
-                data = f'{{"Redirect {response.status_code} {response.reason}":"{new_location}"}}'
-            else:
-                data = f'Redirect {response.status_code} {response.reason} to {new_location}.'
+            data = _redirect_data(
+                response.status_code, response.reason, response.headers['Location'], mime_type, response.text
+            )
         else:
             data = response.text
 
@@ -689,73 +684,14 @@ class UrlJob(UrlJobBase):
             logger.debug('Job %s: Sleeping %ss (same_site_delay directive)', self.index_number, self._delay)
             time.sleep(self._delay)
 
-        if urlparse(self.url).scheme == 'file':
-            logger.info('Job %s: Using local filesystem (file URI scheme)', self.index_number)
-
-            if sys.platform == 'win32':
-                filename = Path(str(urlparse(self.url).path).lstrip('/'))
-            else:
-                filename = Path(str(urlparse(self.url).path))
-
-            if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
-                return filename.read_bytes(), '', 'application/octet-stream'
-            return filename.read_text(), '', 'text/plain'
-
-        if urlparse(self.url).scheme == 'ftp':
-            url = urlparse(self.url)
-            username = url.username or 'anonymous'
-            password = url.password or 'anonymous'
-
-            with FTP(  # noqa: S321 FTP-related functions are being called. FTP is considered insecure.
-                str(url.hostname),
-                str(username),
-                str(password),
-                timeout=self.timeout,
-            ) as ftp:
-                if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
-                    data_bytes = b''
-
-                    def callback_bytes(dt: bytes) -> None:
-                        """Handle FTP callback."""
-                        nonlocal data_bytes
-                        data_bytes += dt
-
-                    ftp.retrbinary(f'RETR {url.path}', callback_bytes)
-
-                    return data_bytes, '', 'application/octet-stream'
-                data_list: list[str] = []
-
-                def callback(dt: str) -> None:
-                    """Handle FTP callback."""
-                    data_list.append(dt)
-
-                ftp.retrlines(f'RETR {url.path}', callback)
-
-                return '\n'.join(data_list), '', 'text/plain'
+        scheme = urlparse(self.url).scheme
+        if scheme == 'file':
+            return self._retrieve_file()
+        if scheme == 'ftp':
+            return self._retrieve_ftp()
 
         headers = self.get_headers(job_state, include_cookies=False)
-
-        if self.data is not None:
-            if self.method is None:
-                self.method = 'POST'
-            if 'Content-Type' not in headers:
-                if self.data_as_json:
-                    headers['Content-Type'] = 'application/json'
-                else:
-                    headers['Content-Type'] = 'application/x-www-form-urlencoded'
-            if isinstance(self.data, (dict, list)):
-                if self.data_as_json:
-                    self.data = json.dumps(self.data, ensure_ascii=False, separators=(',', ':'))
-                else:
-                    self.data = urlencode(self.data)
-            elif not isinstance(self.data, str):
-                raise TypeError(
-                    f"Job {job_state.job.index_number}: Directive 'data' needs to be a string, dictionary or list; "
-                    f'found a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
-                )
-
-        elif self.method is None:
-            self.method = 'GET'
+        self._prepare_request_data(headers)
 
         # if self.headers:
         #     self.add_custom_headers(headers)
@@ -774,6 +710,107 @@ class UrlJob(UrlJobBase):
         logger.debug('Job %s: Headers: %s', self.index_number, headers)
         logger.debug('Job %s: Cookies: %s', self.index_number, self.cookies)
 
+        retrieve_with_client = self._select_http_client(job_state)
+        data, etag, mime_type = self.retrieve_with_retries(retrieve_with_client, headers, timeout)
+
+        # Note: the empty_as_error check is made by JobState.process(), which applies it to every job kind.
+
+        # If no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
+        if not self.name and isinstance(data, str):
+            title = re.search(r'<title.*?>(.+?)</title>', data)
+            if title:
+                self.name = html.unescape(title.group(1))[:60]
+
+        return data, etag, mime_type
+
+    def _retrieve_file(self) -> tuple[str | bytes, str, str]:
+        """Read a local file (file URI scheme).
+
+        :returns: The data read, an empty ETag, and the media type.
+        """
+        logger.info('Job %s: Using local filesystem (file URI scheme)', self.index_number)
+
+        if sys.platform == 'win32':
+            filename = Path(str(urlparse(self.url).path).lstrip('/'))
+        else:
+            filename = Path(str(urlparse(self.url).path))
+
+        if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
+            return filename.read_bytes(), '', 'application/octet-stream'
+        return filename.read_text(), '', 'text/plain'
+
+    def _retrieve_ftp(self) -> tuple[str | bytes, str, str]:
+        """Download a file from an FTP server, logging in anonymously unless the URL has credentials.
+
+        :returns: The data downloaded, an empty ETag, and the media type.
+        """
+        url = urlparse(self.url)
+        username = url.username or 'anonymous'
+        password = url.password or 'anonymous'
+
+        with FTP(  # noqa: S321 FTP-related functions are being called. FTP is considered insecure.
+            str(url.hostname),
+            str(username),
+            str(password),
+            timeout=self.timeout,
+        ) as ftp:
+            if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
+                data_bytes = b''
+
+                def callback_bytes(dt: bytes) -> None:
+                    """Handle FTP callback."""
+                    nonlocal data_bytes
+                    data_bytes += dt
+
+                ftp.retrbinary(f'RETR {url.path}', callback_bytes)
+
+                return data_bytes, '', 'application/octet-stream'
+            data_list: list[str] = []
+
+            def callback(dt: str) -> None:
+                """Handle FTP callback."""
+                data_list.append(dt)
+
+            ftp.retrlines(f'RETR {url.path}', callback)
+
+            return '\n'.join(data_list), '', 'text/plain'
+
+    def _prepare_request_data(self, headers: Headers) -> None:
+        """Serialize the 'data' directive and set the default method and Content-Type header.
+
+        :param headers: The request headers, updated in place.
+        :raises TypeError: If 'data' is not a string, dictionary or list.
+        """
+        if self.data is None:
+            if self.method is None:
+                self.method = 'GET'
+            return
+
+        if self.method is None:
+            self.method = 'POST'
+        if 'Content-Type' not in headers:
+            if self.data_as_json:
+                headers['Content-Type'] = 'application/json'
+            else:
+                headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        if isinstance(self.data, (dict, list)):
+            if self.data_as_json:
+                self.data = json.dumps(self.data, ensure_ascii=False, separators=(',', ':'))
+            else:
+                self.data = urlencode(self.data)
+        elif not isinstance(self.data, str):
+            raise TypeError(
+                f"Job {self.index_number}: Directive 'data' needs to be a string, dictionary or list; "
+                f'found a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
+            )
+
+    def _select_http_client(self, job_state: JobState) -> Callable[..., tuple[str | bytes, str, str]]:
+        """Select the HTTP client: per 'http_client', else the first of httpx, requests and curl_cffi installed.
+
+        :param job_state: The JobState object, which records the client used.
+        :returns: The method retrieving the data with that client.
+        :raises ValueError: If the client is not supported, or does not support the 'http_version' directive.
+        """
         if self.http_client == 'curl_cffi' or (
             not self.http_client
             and not httpx  # ty: ignore[redundant-condition]
@@ -794,8 +831,8 @@ class UrlJob(UrlJobBase):
                     location=self.get_indexed_location(),
                 ) from e
             job_state._http_client_used = 'curl_cffi'
-            retrieve_with_client = self._retrieve_curl_cffi
-        elif self.http_client == 'requests' or not httpx:  # ty: ignore[redundant-condition]
+            return self._retrieve_curl_cffi
+        if self.http_client == 'requests' or not httpx:  # ty: ignore[redundant-condition]
             try:
                 import requests  # noqa: F401 imported but unused (checks that it loads)
             except ImportError as e:
@@ -817,8 +854,8 @@ class UrlJob(UrlJobBase):
                     f'( {self.get_indexed_location()} ).'
                 )
             job_state._http_client_used = 'requests'
-            retrieve_with_client = self._retrieve_requests
-        elif not self.http_client or self.http_client == 'httpx':
+            return self._retrieve_requests
+        if not self.http_client or self.http_client == 'httpx':
             if httpx is None:  # pragma: no cover  # only reachable with an explicit 'http_client: httpx'
                 raise missing_dependency(
                     "No module named 'httpx'",
@@ -827,24 +864,11 @@ class UrlJob(UrlJobBase):
                     location=self.get_indexed_location(),
                 )
             job_state._http_client_used = 'httpx'
-            retrieve_with_client = self._retrieve_httpx
-        else:
-            raise ValueError(
-                f"Job {job_state.job.index_number}: http_client '{self.http_client}' is not supported; cannot run job "
-                f'( {self.get_indexed_location()} )'
-            )
-
-        data, etag, mime_type = self.retrieve_with_retries(retrieve_with_client, headers, timeout)
-
-        # Note: the empty_as_error check is made by JobState.process(), which applies it to every job kind.
-
-        # If no name directive is given, set it to the title element if found in HTML or XML truncated to 60 characters
-        if not self.name and isinstance(data, str):
-            title = re.search(r'<title.*?>(.+?)</title>', data)
-            if title:
-                self.name = html.unescape(title.group(1))[:60]
-
-        return data, etag, mime_type
+            return self._retrieve_httpx
+        raise ValueError(
+            f"Job {job_state.job.index_number}: http_client '{self.http_client}' is not supported; cannot run job "
+            f'( {self.get_indexed_location()} )'
+        )
 
     # def add_custom_headers(self, headers: dict[str, Any]) -> None:
     #     """
@@ -989,78 +1013,32 @@ class UrlJob(UrlJobBase):
         :param exception: The exception.
         :returns: True if the error should be ignored, False otherwise.
         """
-
-        def is_connection_error(exception: Exception, *client_errors: type[BaseException]) -> bool:
-            """Whether the exception is a connection error or a transient HTTP response.
-
-            Except the synthetic one of the empty_as_error directive: the server did respond, so an empty response is
-            not a connection problem and must not be silenced by ignore_connection_errors.
-            """
-            if isinstance(exception, TransientHTTPError):
-                return exception.status_code != EMPTY_RESPONSE_STATUS_CODE
-            return isinstance(exception, client_errors)
-
-        # An exception of the optional HTTP clients can only have been raised if that client was imported
-        requests = sys.modules.get('requests')
-        curl_cffi_exceptions = sys.modules.get('curl_cffi.requests.exceptions')
-
-        if httpx and isinstance(exception, (httpx.HTTPError, TransientHTTPError)):  # ty: ignore[redundant-condition]
-            if self.ignore_timeout_errors and (
-                isinstance(exception, httpx.TimeoutException)
-                or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
-            ):
-                return True
-            if self.ignore_connection_errors and is_connection_error(exception, httpx.TransportError):
-                return True
-            if self.ignore_too_many_redirects and isinstance(exception, httpx.TooManyRedirects):
-                return True
-            # The server closed the connection before sending the complete response body.
-            if self.ignore_incomplete_reads and isinstance(exception, httpx.RemoteProtocolError):
-                return True
-            if self.ignore_http_error_codes:
-                if isinstance(exception, httpx.HTTPStatusError):
-                    return self._ignore_http_error_code(exception.response.status_code)
-                if isinstance(exception, TransientHTTPError):
-                    return self._ignore_http_error_code(exception.status_code)
-
-        elif requests is not None and isinstance(exception, (requests.exceptions.RequestException, TransientHTTPError)):
-            if self.ignore_timeout_errors and (
-                isinstance(exception, requests.exceptions.Timeout)
-                or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
-            ):
-                return True
-            if self.ignore_connection_errors and is_connection_error(exception, requests.exceptions.ConnectionError):
-                return True
-            if self.ignore_too_many_redirects and isinstance(exception, requests.exceptions.TooManyRedirects):
-                return True
-            if self.ignore_incomplete_reads and isinstance(exception, requests.exceptions.ChunkedEncodingError):
-                return True
-            if self.ignore_http_error_codes:
-                if isinstance(exception, requests.exceptions.HTTPError) and exception.response is not None:
-                    return self._ignore_http_error_code(exception.response.status_code)
-                if isinstance(exception, TransientHTTPError):
-                    return self._ignore_http_error_code(exception.status_code)
-
-        elif curl_cffi_exceptions is not None and isinstance(
-            exception, (curl_cffi_exceptions.RequestException, TransientHTTPError)
+        errors = _client_errors(exception)
+        if errors is None:
+            return False
+        if self.ignore_timeout_errors and (
+            isinstance(exception, errors.timeout)
+            or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
         ):
-            if self.ignore_timeout_errors and (
-                isinstance(exception, curl_cffi_exceptions.Timeout)
-                or (isinstance(exception, TransientHTTPError) and exception.status_code == 504)
-            ):
-                return True
-            if self.ignore_connection_errors and is_connection_error(exception, curl_cffi_exceptions.ConnectionError):
-                return True
-            if self.ignore_too_many_redirects and isinstance(exception, curl_cffi_exceptions.TooManyRedirects):
-                return True
-            if self.ignore_incomplete_reads and isinstance(
-                exception, (curl_cffi_exceptions.ChunkedEncodingError, curl_cffi_exceptions.IncompleteRead)
-            ):
-                return True
-            if self.ignore_http_error_codes:
-                if isinstance(exception, curl_cffi_exceptions.HTTPError) and exception.response is not None:
-                    return self._ignore_http_error_code(exception.response.status_code)
-                if isinstance(exception, TransientHTTPError):
-                    return self._ignore_http_error_code(exception.status_code)
-
+            return True
+        if self.ignore_connection_errors and (
+            # Except the synthetic TransientHTTPError of the empty_as_error directive: the server did respond, so an
+            # empty response is not a connection problem and must not be silenced by ignore_connection_errors.
+            exception.status_code != EMPTY_RESPONSE_STATUS_CODE
+            if isinstance(exception, TransientHTTPError)
+            else isinstance(exception, errors.connection)
+        ):
+            return True
+        if self.ignore_too_many_redirects and isinstance(exception, errors.too_many_redirects):
+            return True
+        # The server closed the connection before sending the complete response body.
+        if self.ignore_incomplete_reads and isinstance(exception, errors.incomplete_read):
+            return True
+        if self.ignore_http_error_codes:
+            # Not a truthiness test: a requests Response with an error status is falsy
+            response = getattr(exception, 'response', None)
+            if isinstance(exception, errors.http_status) and response is not None:
+                return self._ignore_http_error_code(response.status_code)
+            if isinstance(exception, TransientHTTPError):
+                return self._ignore_http_error_code(exception.status_code)
         return False

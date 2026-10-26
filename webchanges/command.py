@@ -529,6 +529,30 @@ class UrlwatchCommand:
         for cfg in reporter_configs(cast('dict[str, Any]', self.urlwatcher.config_storage.config['report']), 'stdout'):
             cfg['color'] = False
 
+    def _error_job_line(self, job_state: JobState) -> str | None:
+        """The ``--errors`` line of a job that failed or returned no data.
+
+        :param job_state: The processed job state.
+        :returns: The line, or None if the job ran fine (including an HTTP 304 Not Modified response).
+        """
+        if isinstance(job_state.exception, NotModifiedError):
+            return None
+        job = job_state.job
+        if job_state.exception is None:
+            data = job_state.new_data if hasattr(job_state, 'new_data') else job_state.old_data
+            if data.strip():
+                return None
+            if self.urlwatch_config.verbose:
+                return f'{job.index_number:3}: No data: {job!r}'
+            problem = 'No data'
+        else:
+            problem = f'Error "{job_state.exception}"'
+        pretty_name = job.pretty_name()
+        location = job.get_location()
+        if pretty_name != location:
+            return f'{job.index_number:3}: {problem}: {pretty_name} ({location})'
+        return f'{job.index_number:3}: {problem}: {pretty_name}'
+
     def list_error_jobs(self) -> int:
         """Run the enabled jobs and report those that fail or return no data."""
         if not self._validate_reporter_name(self.urlwatch_config.errors, with_help=False):
@@ -568,38 +592,8 @@ class UrlwatchCommand:
                             lambda jobstate: jobstate.process(headless=not self.urlwatch_config.no_headless),
                             (stack.enter_context(JobState(self.urlwatcher.ssdb_storage, job)) for job in jobs),
                         ):
-                            if not isinstance(job_state.exception, NotModifiedError):
-                                if job_state.exception is None:
-                                    if (
-                                        len(job_state.new_data.strip()) == 0
-                                        if hasattr(job_state, 'new_data')
-                                        else len(job_state.old_data.strip()) == 0
-                                    ):
-                                        if self.urlwatch_config.verbose:
-                                            yield f'{job_state.job.index_number:3}: No data: {job_state.job!r}'
-                                        else:
-                                            pretty_name = job_state.job.pretty_name()
-                                            location = job_state.job.get_location()
-                                            if pretty_name != location:
-                                                yield (
-                                                    f'{job_state.job.index_number:3}: No data: '
-                                                    f'{pretty_name} ({location})'
-                                                )
-                                            else:
-                                                yield f'{job_state.job.index_number:3}: No data: {pretty_name}'
-                                else:
-                                    pretty_name = job_state.job.pretty_name()
-                                    location = job_state.job.get_location()
-                                    if pretty_name != location:
-                                        yield (
-                                            f'{job_state.job.index_number:3}: Error "{job_state.exception}": '
-                                            f'{pretty_name} ({location})'
-                                        )
-                                    else:
-                                        yield (
-                                            f'{job_state.job.index_number:3}: Error "{job_state.exception}": '
-                                            f'{pretty_name})'
-                                        )
+                            if line := self._error_job_line(job_state):
+                                yield line
                     finally:
                         try:
                             executor.submit(_browser._close_current_thread_cdp_cache).result()
