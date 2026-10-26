@@ -33,13 +33,14 @@ import textwrap
 import time
 from math import floor, log10
 from os import PathLike
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Match
+from typing import TYPE_CHECKING, Any
 
 import platformdirs
 
 from webchanges import __project_name__, __version__
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
     from pathlib import Path
     from types import ModuleType
 
@@ -268,7 +269,7 @@ def linkify(
     if extra_params and not callable(extra_params):
         extra_params = f' {extra_params.strip()}'
 
-    def make_link(m: Match) -> str:
+    def make_link(m: re.Match) -> str:
         """Replacement function for re.sub using re.match as input to convert plain text into HTML with links."""
         url: str = m.group(1)
         proto: str = m.group(2)

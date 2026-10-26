@@ -24,9 +24,9 @@ import logging
 import sys
 import warnings
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import NoneType
-from typing import TYPE_CHECKING, Any, Iterable, TextIO, cast
+from typing import TYPE_CHECKING, Any, TextIO, cast
 
 import yaml
 import yaml.constructor
@@ -52,6 +52,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -376,7 +377,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
         with self.filename.open('w') as fp:
             fp.write(
                 f'# {__project_name__} configuration file. See {__docs_url__}en/stable/configuration.html\n'
-                f'# Originally written on {datetime.now(timezone.utc).replace(microsecond=0).isoformat()}Z by version'
+                f'# Originally written on {datetime.now(UTC).replace(microsecond=0).isoformat()}Z by version'
                 f' {__version__}.\n'
                 f'\n'
                 f'# yaml-language-server: $schema=config.schema.json\n'
@@ -421,7 +422,7 @@ class YamlJobsStorage(BaseYamlFileStorage, JobsBaseFileStorage):
         jobs = []
         jobs_by_guid = defaultdict(list)
         try:
-            for i, job_data in enumerate((job for job in yaml.safe_load_all(fp) if job)):
+            for i, job_data in enumerate(job for job in yaml.safe_load_all(fp) if job):
                 if not isinstance(job_data, dict):
                     raise ValueError(
                         '\n   '.join(

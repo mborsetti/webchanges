@@ -11,7 +11,7 @@ import time
 import warnings
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Callable, Iterator, cast
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
@@ -25,6 +25,8 @@ from webchanges.storage import DEFAULT_CONFIG, SsdbSQLite3Storage, YamlConfigSto
 from webchanges.util import import_module_from_source
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
+
     import pytest_mock
 
 minidb_is_installed = importlib.util.find_spec('minidb') is not None

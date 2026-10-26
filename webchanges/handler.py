@@ -12,7 +12,8 @@ import subprocess
 import sys
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ContextManager, Iterator, Literal, NamedTuple, Self, TypedDict
+from contextlib import AbstractContextManager
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Self, TypedDict
 from zoneinfo import ZoneInfo
 
 from webchanges.differs import DifferBase, ReportKind
@@ -22,6 +23,7 @@ from webchanges.reporters import ReporterBase
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from concurrent.futures import Future
     from datetime import tzinfo
     from pathlib import Path
@@ -62,10 +64,14 @@ Verb = Literal[
     'error',  # error, prior state was different (either data or different error)
     'error,repeated',  # error, same as before
 ]
-ErrorData = TypedDict('ErrorData', {'type': str, 'message': str}, total=False)
 
 
-class JobState(ContextManager):
+class ErrorData(TypedDict, total=False):
+    type: str
+    message: str
+
+
+class JobState(AbstractContextManager):
     """The JobState class, which contains run information about a job."""
 
     _http_client_used: Literal['httpx', 'requests', 'curl_cffi', 'playwright'] | None = None

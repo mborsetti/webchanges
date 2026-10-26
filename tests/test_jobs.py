@@ -14,12 +14,13 @@ import subprocess
 import sys
 import threading
 import traceback
+from collections.abc import Iterator
 from contextlib import ExitStack, nullcontext
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 import yaml
@@ -53,7 +54,7 @@ from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from unittest.mock import Mock
 
     import pytest_mock

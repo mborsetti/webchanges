@@ -299,7 +299,7 @@ class Html2TextFilter(FilterBase):
                     stacklevel=1,
                 )
             stripped_tags = html.unescape(re.sub(r'<[^>]*>', '', data))
-            return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != '')), 'text/plain'
+            return '\n'.join(line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''), 'text/plain'
 
         raise ValueError(f"Unknown method {method} for filter 'html2text'. ({self.job.get_indexed_location()})")
 

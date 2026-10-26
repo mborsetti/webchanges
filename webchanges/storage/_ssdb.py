@@ -11,10 +11,13 @@ import os
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator
+from typing import TYPE_CHECKING, Any
 
 from webchanges.handler import ErrorData, Snapshot
 from webchanges.storage._base import BaseFileStorage
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Iterator
 
 logger = logging.getLogger(__name__)
 
