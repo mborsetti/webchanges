@@ -87,7 +87,7 @@ def test_filters(test_data: dict[str, Any]) -> None:
 
     result: str | bytes = data
     for filter_kind, subfilter in FilterBase.normalize_filter_list(filter_spec):
-        logger.info(f'filter kind: {filter_kind}, subfilter: {subfilter}')
+        logger.info('filter kind: %s, subfilter: %s', filter_kind, subfilter)
         # Both 'beautify' and 'html2text' with method 'bs4' require the optional 'beautifulsoup4' package.
         if not bs4_is_installed and (
             filter_kind == 'beautify' or (filter_kind == 'html2text' and subfilter.get('method') == 'bs4')
@@ -102,8 +102,8 @@ def test_filters(test_data: dict[str, Any]) -> None:
             filter_result = filtercls(local_job_state).filter(result, '', subfilter)
         result = filter_result[0]
 
-    logger.debug(f'Expected result:\n{expected_result}')
-    logger.debug(f'Actual result:\n{filter_result}')
+    logger.debug('Expected result:\n%s', expected_result)
+    logger.debug('Actual result:\n%s', filter_result)
     assert len(filter_result[0])
     assert filter_result[0] == expected_result
 

@@ -131,7 +131,7 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         :returns: None if edit is successful, 1 otherwise.
         """
         # Similar code to UrlwatchCommand.edit_hooks()
-        logger.debug(f'Edit file {self.filename}')
+        logger.debug('Edit file %s', self.filename)
         if isinstance(self.filename, list):
             if len(self.filename) > 1:
                 raise ValueError(f'Only one jobs file can be specified for editing; found {len(self.filename)}.')
@@ -244,7 +244,7 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
             )
             jobs = [job for job in jobs if job not in removed_jobs]
 
-        logger.info(f'Loaded {len(jobs)} jobs from {", ".join(str(file) for file in self.filename)}.')
+        logger.info('Loaded %s jobs from %s.', len(jobs), ', '.join(str(file) for file in self.filename))
         return jobs
 
 

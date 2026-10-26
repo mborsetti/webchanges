@@ -116,15 +116,17 @@ class TrackSubClasses(type):
                 subclasses = getattr(base, '__subclasses__', None)
                 if subclasses is not None:
                     logger.debug(
-                        f'Registering Class {cls.__module__}.{cls.__qualname__}'
-                        + (f' as {cls.__kind__}' if cls.__kind__ else '')
+                        'Registering Class %s.%s%s',
+                        cls.__module__,
+                        cls.__qualname__,
+                        f' as {cls.__kind__}' if cls.__kind__ else '',
                     )
                     subclasses[cls.__kind__] = cls
                     break
             else:
                 anonymous_subclasses = getattr(base, '__anonymous_subclasses__', None)
                 if anonymous_subclasses is not None:
-                    logger.debug(f'Registering Class {cls.__module__}.{cls.__qualname__}')
+                    logger.debug('Registering Class %s.%s', cls.__module__, cls.__qualname__)
                     anonymous_subclasses.append(cls)
                     break
 
@@ -203,7 +205,7 @@ def chunk_string(text: str, length: int, numbering: bool = False) -> list[str]:
             return [f'{line} ({i + 1:{digits_try}d}/{length})' for i, line in enumerate(chunks)]
 
         except ValueError as e:
-            logger.error(f'{e}')
+            logger.error('%s', e)
 
     return textwrap.wrap(text, length, replace_whitespace=False)
 
@@ -345,7 +347,7 @@ def _write_pypi_cache(path: Path, latest: str) -> None:
         tmp.write_text(json.dumps({'checked_at': time.time(), 'latest': latest}))
         tmp.replace(path)
     except OSError as e:
-        logger.info(f'Could not write PyPi version cache: {e}')
+        logger.info('Could not write PyPi version cache: %s', e)
 
 
 def _fetch_latest_from_pypi(timeout: float | None) -> str | None:
@@ -369,17 +371,17 @@ def _fetch_latest_from_pypi(timeout: float | None) -> str | None:
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 trusted host
             body = r.read()
-            logger.info(f'Downloaded {len(body):,} bytes from PyPi querying for latest release.')
+            logger.info('Downloaded %d bytes from PyPi querying for latest release.', len(body))
     except urllib.error.HTTPError as e:
-        logger.info(f'HTTP error when querying PyPi for latest release: {e}')
+        logger.info('HTTP error when querying PyPi for latest release: %s', e)
         return None
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        logger.info(f'Exception when querying PyPi for latest release: {e}')
+        logger.info('Exception when querying PyPi for latest release: %s', e)
         return None
     try:
         versions: list[str] = json.loads(body)['versions']
     except (ValueError, KeyError, TypeError) as e:
-        logger.info(f'Unexpected PyPi response when querying for latest release: {e}')
+        logger.info('Unexpected PyPi response when querying for latest release: %s', e)
         return None
     if not versions:
         return None
@@ -416,7 +418,7 @@ def get_new_version_number(
         fetched = _fetch_latest_from_pypi(timeout)
         if fetched is not None:
             _write_pypi_cache(path, fetched)
-            logger.info(f'Updated {path} cache with release {fetched}.')
+            logger.info('Updated %s cache with release %s.', path, fetched)
             latest = fetched
         elif cached is not None:
             latest = cached[1]

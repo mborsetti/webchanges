@@ -95,7 +95,7 @@ class UrlwatchCommand:
         self.urlwatch_config = urlwatcher.urlwatch_config
 
     def _exit(self, arg: str | int | None) -> None:
-        logger.info(f'Exiting with exit code {arg}')
+        logger.info('Exiting with exit code %s', arg)
 
         self.urlwatcher.ssdb_storage.close()
         sys.exit(arg)
@@ -112,14 +112,19 @@ class UrlwatchCommand:
             disabled = len(jobs) - len(enabled_jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
             logger.debug(
-                f'Processing {len(enabled_jobs)} job{"s" if len(enabled_jobs) != 1 else ""}{disabled_str} as '
-                f'specified in command line: {", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
+                'Processing %s job%s%s as specified in command line: %s',
+                len(enabled_jobs),
+                's' if len(enabled_jobs) != 1 else '',
+                disabled_str,
+                ', '.join(str(j) for j in self.urlwatcher.urlwatch_config.joblist),
             )
         else:
             enabled_jobs = [job for job in self.urlwatcher.jobs if job.is_enabled()]
             disabled = len(self.urlwatcher.jobs) - len(enabled_jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
-            logger.debug(f'Processing {len(enabled_jobs)} job{"s" if len(enabled_jobs) != 1 else ""}{disabled_str}')
+            logger.debug(
+                'Processing %s job%s%s', len(enabled_jobs), 's' if len(enabled_jobs) != 1 else '', disabled_str
+            )
 
         tags = self.tags_from_cli()
         if tags:
@@ -596,7 +601,7 @@ class UrlwatchCommand:
                         try:
                             executor.submit(_browser._close_current_thread_cdp_cache).result()
                         except Exception as e:  # noqa: BLE001  best-effort cleanup
-                            logger.debug(f'Could not tear down CDP cache on worker thread: {e}')
+                            logger.debug('Could not tear down CDP cache on worker thread: %s', e)
 
             with ExitStack() as stack:
                 # This code is from worker.run_jobs, modified to yield from job_runner.
@@ -632,14 +637,16 @@ class UrlwatchCommand:
 
                     if non_cdp_browser_jobs:
                         logger.debug(
-                            f"Running {len(non_cdp_browser_jobs)} non-CDP browser job(s) (with 'use_browser') in "
-                            f'parallel with {max_workers} max_workers.'
+                            "Running %s non-CDP browser job(s) (with 'use_browser') in parallel with %s max_workers.",
+                            len(non_cdp_browser_jobs),
+                            max_workers,
                         )
                         yield from job_runner(stack, non_cdp_browser_jobs, max_workers)
                     if cdp_jobs:
                         logger.debug(
-                            f'Running {len(cdp_jobs)} CDP browser job(s) on a single dedicated thread (one manual '
-                            f'browser authorization per unique connect_over_cdp URL per run).'
+                            'Running %s CDP browser job(s) on a single dedicated thread (one manual '
+                            'browser authorization per unique connect_over_cdp URL per run).',
+                            len(cdp_jobs),
                         )
                         yield from job_runner(stack, cdp_jobs, 1)
                 else:
@@ -1269,13 +1276,13 @@ class UrlwatchCommand:
         env = os.environ.copy()
         env['PW_CLI_TARGET_LANG'] = 'python'
         cmd = [str(driver_executable), 'install', 'chrome']
-        logger.info(f'Running playwright CLI: {" ".join(cmd)}')
+        logger.info('Running playwright CLI: %s', ' '.join(cmd))
         completed_process = subprocess.run(cmd, check=False, env=env, capture_output=True, text=True)  # noqa: S603 subprocess call
         if completed_process.returncode:
             print(completed_process.stderr)
             return completed_process.returncode
         if completed_process.stdout:
-            logger.info(f'Success! Output of Playwright CLI: {completed_process.stdout}')
+            logger.info('Success! Output of Playwright CLI: %s', completed_process.stdout)
         return 0
 
     def handle_actions(self) -> None:

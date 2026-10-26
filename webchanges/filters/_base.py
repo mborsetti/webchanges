@@ -106,7 +106,7 @@ class FilterBase(metaclass=TrackSubClasses):
         for filtercls in filters:
             filter_instance = filtercls(state)
             if filter_instance.match():
-                logger.info(f'Job {state.job.index_number}: Auto-applying filter {filter_instance}')
+                logger.info('Job %s: Auto-applying filter %s', state.job.index_number, filter_instance)
                 data, mime_type = filter_instance.filter(data, mime_type, {})  # All filters take a subfilter
 
         return data, mime_type
@@ -222,7 +222,7 @@ class FilterBase(metaclass=TrackSubClasses):
         :param data: The data upon which to apply the filter.
         :returns: The data and media type (fka MIME type) of the data after the filter has been applied.
         """
-        logger.info(f'Job {job_state.job.index_number}: Applying filter {filter_kind}, subfilter(s) {subfilter}')
+        logger.info('Job %s: Applying filter %s, subfilter(s) %s', job_state.job.index_number, filter_kind, subfilter)
         filtercls: TrackSubClasses | None = cls.__subclasses__.get(filter_kind)
         if filtercls:
             return filtercls(job_state).filter(data, mime_type, subfilter)
@@ -308,7 +308,7 @@ class AutoMatchFilter(FilterBase):
 
         d = self.job.to_dict()
         result = all(d.get(k, None) == v for k, v in self.MATCH.items())
-        logger.debug(f'Matching {self} with {self.job} result: {result}')
+        logger.debug('Matching %s with %s result: %s', self, self.job, result)
         return result
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
@@ -344,7 +344,7 @@ class RegexMatchFilter(FilterBase):
         # and no key/value pairs that do not match
         matches = [v.match(d[k]) for k, v in self.MATCH.items() if k in d]
         result = len(matches) > 0 and all(matches)
-        logger.debug(f'Matching {self} with {self.job} result: {result}')
+        logger.debug('Matching %s with %s result: %s', self, self.job, result)
         return result
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:

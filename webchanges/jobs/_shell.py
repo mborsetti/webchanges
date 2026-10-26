@@ -247,10 +247,10 @@ class ShellJob(Job):
                 text=(not needs_bytes),
             )
         except subprocess.CalledProcessError as e:
-            logger.info(f'Job {self.index_number}: Command: {e.cmd} ')
-            logger.info(f'Job {self.index_number}: Failed with returncode {e.returncode}')
-            logger.info(f'Job {self.index_number}: stderr : {e.stderr}')
-            logger.info(f'Job {self.index_number}: stdout : {e.stdout}')
+            logger.info('Job %s: Command: %s ', self.index_number, e.cmd)
+            logger.info('Job %s: Failed with returncode %s', self.index_number, e.returncode)
+            logger.info('Job %s: stderr : %s', self.index_number, e.stderr)
+            logger.info('Job %s: stdout : %s', self.index_number, e.stdout)
             if stderr_mode == 'forward' and e.stderr:
                 self._forward_stderr(e.stderr)
             raise

@@ -39,7 +39,7 @@ class RunCommandReporter(TextReporter):
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
@@ -61,10 +61,10 @@ class RunCommandReporter(TextReporter):
                 env=env,
             )
         except subprocess.CalledProcessError as e:
-            logger.error(f"The '{self.__kind__}' filter with command {command} returned error:\n{e.stderr}")
+            logger.error("The '%s' filter with command %s returned error:\n%s", self.__kind__, command, e.stderr)
             raise e
         except FileNotFoundError as e:
-            logger.error(f"The '{self.__kind__}' filter with command {command} returned error:\n{e}")
+            logger.error("The '%s' filter with command %s returned error:\n%s", self.__kind__, command, e)
             raise FileNotFoundError(e, f'with command {command}')  # noqa: B904
         print(result.stdout, end='')
 
@@ -106,7 +106,7 @@ class ShellReporter(RunCommandReporter):
 
         text = '\n'.join(TextReporter.submit(self))
         if not text:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
@@ -120,7 +120,7 @@ class ShellReporter(RunCommandReporter):
                 env=self.environment(filtered_job_states),
             )
         except FileNotFoundError as e:
-            logger.error(f"The '{self.__kind__}' reporter with command {command} returned error:\n{e}")
+            logger.error("The '%s' reporter with command %s returned error:\n%s", self.__kind__, command, e)
             raise FileNotFoundError(e, f'with command {command}')  # noqa: B904
         if result.stdout and not self.config['ignore_stdout']:
             logger.info('Standard output from reporter %s: %s', self.__kind__, result.stdout.decode(errors='replace'))

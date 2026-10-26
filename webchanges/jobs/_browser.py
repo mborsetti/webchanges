@@ -335,7 +335,7 @@ class BrowserJob(UrlJobBase):
         ).name
         try:
             page.screenshot(path=screenshot_filename)
-            logger.info(f'Job {self.index_number}: Screenshot saved at {screenshot_filename}')
+            logger.info('Job %s: Screenshot saved at %s', self.index_number, screenshot_filename)
         except PlaywrightError:
             Path(screenshot_filename).unlink()
         full_filename = tempfile.NamedTemporaryFile(
@@ -345,7 +345,7 @@ class BrowserJob(UrlJobBase):
         ).name
         try:
             page.screenshot(path=full_filename, full_page=True)
-            logger.info(f'Job {self.index_number}: Full page image saved at {full_filename}')
+            logger.info('Job %s: Full page image saved at %s', self.index_number, full_filename)
         except PlaywrightError:
             Path(full_filename).unlink()
         html_filename = tempfile.NamedTemporaryFile(
@@ -353,7 +353,7 @@ class BrowserJob(UrlJobBase):
         ).name
         try:
             Path(html_filename).write_text(page.content())
-            logger.info(f'Job {self.index_number}: Page HTML content saved at {html_filename}')
+            logger.info('Job %s: Page HTML content saved at %s', self.index_number, html_filename)
         except PlaywrightError:
             Path(html_filename).unlink()
 
@@ -398,7 +398,7 @@ class BrowserJob(UrlJobBase):
         job_state._http_client_used = 'playwright'
 
         if self._delay:
-            logger.debug(f'Job {self.index_number}: Sleeping {self._delay}s (same_site_delay directive)')
+            logger.debug('Job %s: Sleeping %ss (same_site_delay directive)', self.index_number, self._delay)
             time.sleep(self._delay)
 
         try:
@@ -536,8 +536,10 @@ class BrowserJob(UrlJobBase):
         swap_memory = psutil.swap_memory().free
         start_free_mem = virtual_memory + swap_memory
         logger.debug(
-            f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical memory '
-            f'(plus {swap_memory / 1e6:,.0f} MB of swap) before launching the browser.'
+            'Job %s: Found %.0f MB of available physical memory (plus %.0f MB of swap) before launching the browser.',
+            job_state.job.index_number,
+            virtual_memory / 1e6,
+            swap_memory / 1e6,
         )
 
         # launch browser
@@ -553,9 +555,12 @@ class BrowserJob(UrlJobBase):
                 browser_version = browser.version
                 user_agent = context.pages[-1].evaluate('navigator.userAgent') if context.pages else None
                 logger.info(
-                    f'Job {self.index_number}: Playwright {playwright_version} '
-                    f'{"reusing cached" if from_cache else "connected via"} CDP to '
-                    f'{browser_name} browser {browser_version}'
+                    'Job %s: Playwright %s %s CDP to %s browser %s',
+                    self.index_number,
+                    playwright_version,
+                    'reusing cached' if from_cache else 'connected via',
+                    browser_name,
+                    browser_version,
                 )
             else:
                 p = stack.enter_context(sync_playwright())
@@ -609,8 +614,11 @@ class BrowserJob(UrlJobBase):
                         )
                     )
                     logger.info(
-                        f'Job {self.index_number}: Playwright {playwright_version} launched '
-                        f'{browser_name.capitalize()} browser {browser_version}'
+                        'Job %s: Playwright %s launched %s browser %s',
+                        self.index_number,
+                        playwright_version,
+                        browser_name.capitalize(),
+                        browser_version,
                     )
 
                 else:
@@ -634,8 +642,11 @@ class BrowserJob(UrlJobBase):
                     )
                     browser_version = context.browser.version if context.browser else 'unknown'
                     logger.info(
-                        f'Job {self.index_number}: Playwright {playwright_version} launched '
-                        f'{browser_name.capitalize()} browser from user data directory {self.user_data_dir}'
+                        'Job %s: Playwright %s launched %s browser from user data directory %s',
+                        self.index_number,
+                        playwright_version,
+                        browser_name.capitalize(),
+                        self.user_data_dir,
                     )
 
                 # the below to bypass detection; from https://intoli.com/blog/not-possible-to-block-chrome-headless/
@@ -657,14 +668,16 @@ class BrowserJob(UrlJobBase):
 
             url = self.url
             if self.initialization_url:
-                logger.info(f'Job {self.index_number}: Initializing website by navigating to {self.initialization_url}')
+                logger.info(
+                    'Job %s: Initializing website by navigating to %s', self.index_number, self.initialization_url
+                )
                 try:
                     response = page.goto(
                         self.initialization_url,
                         wait_until=self.wait_until,  # ty:ignore[invalid-argument-type]
                     )
                 except PlaywrightError as e:
-                    logger.info(f'Job {self.index_number}: Website initialization page returned error {e}')
+                    logger.info('Job %s: Website initialization page returned error %s', self.index_number, e)
                     if logger.root.level <= 20:  # logging.INFO
                         self._save_error_files(page)
                     raise
@@ -673,10 +686,10 @@ class BrowserJob(UrlJobBase):
                     raise BrowserResponseError(('No response received from browser on initialization',))
 
                 if self.initialization_js:
-                    logger.info(f"Job {self.index_number}: Running init script '{self.initialization_js}'")
+                    logger.info("Job %s: Running init script '%s'", self.index_number, self.initialization_js)
                     page.evaluate(self.initialization_js)
                     if self.wait_for_url:
-                        logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
+                        logger.info('Job %s: Waiting for page to navigate to %s', self.index_number, self.wait_for_url)
                         page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)  # ty:ignore[invalid-argument-type]
                 updated_url = page.url
                 init_url_params = dict(parse_qsl(urlparse(updated_url).params))
@@ -689,13 +702,13 @@ class BrowserJob(UrlJobBase):
                     )
                 if new_url != url:
                     url = new_url
-                    logger.info(f'Job {self.index_number}: URL updated to {url}')
+                    logger.info('Job %s: URL updated to %s', self.index_number, url)
 
             data = None
             if self.data:
                 if not self.method:
                     self.method = 'POST'
-                logger.info(f'Job {self.index_number}: Sending POST request to {url}')
+                logger.info('Job %s: Sending POST request to %s', self.index_number, url)
                 if 'Content-Type' not in headers:
                     headers['Content-Type'] = (
                         'application/json' if self.data_as_json else 'application/x-www-form-urlencoded'
@@ -726,7 +739,9 @@ class BrowserJob(UrlJobBase):
 
                 def handle_route(route: Route) -> None:
                     """Handler function to change the route (a pyee.EventEmitter callback)."""
-                    logger.info(f'Job {self.index_number}: Intercepted route to change request method to {self.method}')
+                    logger.info(
+                        'Job %s: Intercepted route to change request method to %s', self.index_number, self.method
+                    )
                     route.continue_(method=str(self.method), post_data=data)
 
                 page.route(url, handler=handle_route)
@@ -760,14 +775,17 @@ class BrowserJob(UrlJobBase):
                         raise ValueError(
                             f"Unknown '{element}' resource type in 'block_elements' ( {self.get_indexed_location()} )"
                         )
-                logger.info(f"Job {self.index_number}: Found 'block_elements' and adding a route to intercept elements")
+                logger.info(
+                    "Job %s: Found 'block_elements' and adding a route to intercept elements", self.index_number
+                )
 
                 def handle_elements(route: Route) -> None:
                     """Handler function to block elements (a pyee.EventEmitter callback)."""
                     if route.request.resource_type in self.block_elements:  # ty:ignore[unsupported-operator]
                         logger.debug(
-                            f'Job {self.index_number}: Intercepted retrieval of resource_type '
-                            f"'{route.request.resource_type}' and aborting"
+                            "Job %s: Intercepted retrieval of resource_type '%s' and aborting",
+                            self.index_number,
+                            route.request.resource_type,
                         )
                         route.abort()
                     else:
@@ -776,15 +794,17 @@ class BrowserJob(UrlJobBase):
                 page.route('**/*', handler=handle_elements)
 
             # navigate page
-            logger.info(f'Job {self.index_number}: {browser_name.capitalize()} {browser_version} navigating to {url}')
-            logger.debug(f'Job {self.index_number}: User agent {user_agent}')
-            logger.debug(f'Job {self.index_number}: Extra headers {headers}')
+            logger.info(
+                'Job %s: %s %s navigating to %s', self.index_number, browser_name.capitalize(), browser_version, url
+            )
+            logger.debug('Job %s: User agent %s', self.index_number, user_agent)
+            logger.debug('Job %s: Extra headers %s', self.index_number, headers)
             try:
                 if return_data is not None:
-                    logger.info(f"Job {self.index_number}: Using the 'return_data' Callable")
+                    logger.info("Job %s: Using the 'return_data' Callable", self.index_number)
                     return return_data(page, url, self.wait_until, self.referer)  # ty:ignore[invalid-argument-type]
                 if response_handler is not None:
-                    logger.info(f"Job {self.index_number}: Using the 'response_handler' Callable")
+                    logger.info("Job %s: Using the 'response_handler' Callable", self.index_number)
                     response = response_handler(page, url, self.wait_until, self.referer)  # ty:ignore[invalid-argument-type]
                 else:
                     response = page.goto(url, wait_until=self.wait_until, referer=self.referer)  # ty:ignore[invalid-argument-type]
@@ -793,7 +813,7 @@ class BrowserJob(UrlJobBase):
                     raise BrowserResponseError(('No response received from browser on navigation',))
 
                 if response.status == 304:
-                    logger.debug(f'Job {self.index_number}: Intercepted response with {response.status} status')
+                    logger.debug('Job %s: Intercepted response with %s status', self.index_number, response.status)
                     raise NotModifiedError(response.status)
 
                 if response.ok:
@@ -806,13 +826,13 @@ class BrowserJob(UrlJobBase):
                         except PlaywrightError:
                             body_len = None  # raw body unavailable; cannot determine emptiness
                         if body_len == 0:
-                            logger.info(f'Job {self.index_number}: No data received; treating it as an error.')
+                            logger.info('Job %s: No data received; treating it as an error.', self.index_number)
                             raise TransientHTTPError(
                                 'No data received and empty_as_error is set',
                                 status_code=EMPTY_RESPONSE_STATUS_CODE,
                             )
                     if self.wait_for_url:
-                        logger.info(f'Job {self.index_number}: Waiting for page to navigate to {self.wait_for_url}')
+                        logger.info('Job %s: Waiting for page to navigate to %s', self.index_number, self.wait_for_url)
                         if isinstance(self.wait_for_url, str):
                             page.wait_for_url(
                                 self.wait_for_url,
@@ -828,7 +848,7 @@ class BrowserJob(UrlJobBase):
                                 f'( {self.get_indexed_location()} ).'
                             )
                     if self.wait_for_selector:
-                        logger.info(f'Job {self.index_number}: Waiting for selector {self.wait_for_selector}')
+                        logger.info('Job %s: Waiting for selector %s', self.index_number, self.wait_for_selector)
                         if not isinstance(self.wait_for_selector, list):
                             self.wait_for_selector = [self.wait_for_selector]
                         for selector in self.wait_for_selector:
@@ -843,7 +863,7 @@ class BrowserJob(UrlJobBase):
                                     f'{type(self.wait_for_selector).__name__} ( {self.get_indexed_location()} ).'
                                 )
                     if self.wait_for_function:
-                        logger.info(f'Job {self.index_number}: Waiting for function {self.wait_for_function}')
+                        logger.info('Job %s: Waiting for function %s', self.index_number, self.wait_for_function)
                         if isinstance(self.wait_for_function, str):
                             page.wait_for_function(self.wait_for_function)
                         elif isinstance(self.wait_for_function, dict):
@@ -855,7 +875,7 @@ class BrowserJob(UrlJobBase):
                                 f' ( {self.get_indexed_location()} ).'
                             )
                     if self.wait_for_timeout:
-                        logger.info(f'Job {self.index_number}: Waiting for timeout {self.wait_for_timeout}')
+                        logger.info('Job %s: Waiting for timeout %s', self.index_number, self.wait_for_timeout)
                         if isinstance(self.wait_for_timeout, (int, float)) and not isinstance(
                             self.wait_for_timeout, bool
                         ):
@@ -869,10 +889,13 @@ class BrowserJob(UrlJobBase):
 
                 else:
                     logger.info(
-                        f'Job {self.index_number}: Received response HTTP {response.status} {response.status_text} '
-                        f'from {response.url}'
+                        'Job %s: Received response HTTP %s %s from %s',
+                        self.index_number,
+                        response.status,
+                        response.status_text,
+                        response.url,
                     )
-                    logger.debug(f'Job {self.index_number}: Response headers {response.all_headers()}')
+                    logger.debug('Job %s: Response headers %s', self.index_number, response.all_headers())
                     message = response.status_text
                     if response.status != 404:
                         body = page.text_content('body')
@@ -880,21 +903,23 @@ class BrowserJob(UrlJobBase):
                             message = f'{message}\n{body.strip()}' if message else body.strip()
 
                     if response.status in (429, 500, 502, 503, 504):
-                        logger.debug(f'Job {self.index_number}: Response error is transient.')
+                        logger.debug('Job %s: Response error is transient.', self.index_number)
                         raise TransientHTTPError(message, status_code=response.status)
 
                     raise BrowserResponseError((message,), response.status)
 
                 # extract content
                 if content_handler is not None:
-                    logger.info(f"Job {self.index_number}: Using the 'content_handler' Callable")
+                    logger.info("Job %s: Using the 'content_handler' Callable", self.index_number)
                     return content_handler(page)
                 if self.evaluate is not None:
                     try:
                         content = page.evaluate(self.evaluate)
                     except PlaywrightError:
                         logger.error(
-                            f'Job {self.index_number}: Received browser error when trying to evaluate {self.evaluate}'
+                            'Job %s: Received browser error when trying to evaluate %s',
+                            self.index_number,
+                            self.evaluate,
                         )
                         logger.debug(page.content())
                         raise
@@ -917,9 +942,13 @@ class BrowserJob(UrlJobBase):
                 swap_memory = psutil.swap_memory().free
                 used_mem = start_free_mem - (virtual_memory + swap_memory)
                 logger.debug(
-                    f'Job {job_state.job.index_number}: Found {virtual_memory / 1e6:,.0f} MB of available physical '
-                    f'memory (plus {swap_memory / 1e6:,.0f} MB of swap) before closing the browser (a decrease of '
-                    f'{used_mem / 1e6:,.0f} MB).'
+                    'Job %s: Found %.0f MB of available physical '
+                    'memory (plus %.0f MB of swap) before closing the browser (a decrease of '
+                    '%.0f MB).',
+                    job_state.job.index_number,
+                    virtual_memory / 1e6,
+                    swap_memory / 1e6,
+                    used_mem / 1e6,
                 )
 
                 # if no name directive is given, set to title tag if found in HTML or XML, truncated to 60 chars
@@ -931,13 +960,13 @@ class BrowserJob(UrlJobBase):
                 return content, etag, mime_type
 
             except PlaywrightError as e:
-                logger.error(f'Job {self.index_number}: Browser returned error {e}\n({url})')
+                logger.error('Job %s: Browser returned error %s\n(%s)', self.index_number, e, url)
                 if isinstance(e, PlaywrightTimeoutError):
-                    logger.debug(f'Job {self.index_number}: PlaywrightTimeoutError is transient')
+                    logger.debug('Job %s: PlaywrightTimeoutError is transient', self.index_number)
                     raise TransientBrowserError('PlaywrightTimeoutError') from e
                 chromium_error = str(e.args[0]).split()[-1]  # error format is 'Page.goto: net:: ...'
                 if chromium_error in self.chromium_connection_errors:
-                    logger.debug(f'Job {self.index_number}: Browser error {chromium_error} is transient')
+                    logger.debug('Job %s: Browser error %s is transient', self.index_number, chromium_error)
                     raise TransientBrowserError(chromium_error) from e
                 if logger.root.level <= 20:  # logging.INFO
                     self._save_error_files(page)

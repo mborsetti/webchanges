@@ -78,7 +78,7 @@ class WebServiceReporter(TextReporter):
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.info(f'Not sending {self.__kind__} (no changes)')
+            logger.info('Not sending %s (no changes)', self.__kind__)
             return
 
         if len(text) > self.MAX_LENGTH:
@@ -180,7 +180,7 @@ class WebhookReporter(TextReporter):
             text = '\n'.join(super().submit())
 
         if not text:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return None
 
         result = None
@@ -194,7 +194,7 @@ class WebhookReporter(TextReporter):
         return result
 
     def submit_to_webhook(self, webhook_url: str, text: str) -> Response:
-        logger.debug(f'Sending request to webhook with text: {text}')
+        logger.debug('Sending request to webhook with text: %s', text)
         post_data = self.prepare_post_data(text)
         result = self.http_client.post(webhook_url, json=post_data, timeout=60)
         try:
@@ -204,8 +204,9 @@ class WebhookReporter(TextReporter):
                 raise RuntimeError(f'Webhook server error: {result.text}')
         except ValueError:
             logger.error(
-                f'Failed to parse webhook server response. HTTP status code: {result.status_code}, '
-                f'content: {result.content!s}'
+                'Failed to parse webhook server response. HTTP status code: %s, content: %s',
+                result.status_code,
+                result.content,
             )
         return result
 
@@ -321,17 +322,19 @@ class DiscordReporter(TextReporter):
         else:
             post_data = {'content': text}
 
-        logger.info(f'Sending Discord request with post_data: {post_data}')
+        logger.info('Sending Discord request with post_data: %s', post_data)
 
         result = self.http_client.post(webhook_url, json=post_data, timeout=60)
         try:
             if result.status_code in {200, 204}:
                 logger.info('Discord response: ok')
             else:
-                logger.error(f'Discord error: {result.text}')
+                logger.error('Discord error: %s', result.text)
         except ValueError:
             logger.error(
-                f'Failed to parse Discord response. HTTP status code: {result.status_code}, content: {result.content!r}'
+                'Failed to parse Discord response. HTTP status code: %s, content: %r',
+                result.status_code,
+                result.content,
             )
         return result
 
@@ -354,7 +357,7 @@ class ProwlReporter(TextReporter):
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
@@ -392,7 +395,7 @@ class ProwlReporter(TextReporter):
                 raise RuntimeError(f'Prowl error: {result.text}')
         except ValueError:
             logger.error(
-                f'Failed to parse Prowl response. HTTP status code: {result.status_code}, content: {result.content!s}'
+                'Failed to parse Prowl response. HTTP status code: %s, content: %s', result.status_code, result.content
             )
 
 

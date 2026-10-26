@@ -164,7 +164,7 @@ class SsdbDirStorage(SsdbStorage):
     def __init__(self, dirname: str | Path) -> None:
         super().__init__(dirname)
         self.filename.mkdir(parents=True, exist_ok=True)  # using the attr filename because it is a Path (confusing!)
-        logger.info(f'Using directory {self.filename} to store snapshot data as individual text files')
+        logger.info('Using directory %s to store snapshot data as individual text files', self.filename)
 
     def close(self) -> None:
         # Nothing to close
@@ -185,7 +185,7 @@ class SsdbDirStorage(SsdbStorage):
             data = filename.read_text()
         except UnicodeDecodeError:
             data = filename.read_text(errors='ignore')
-            logger.warning(f'Found and ignored Unicode-related errors when retrieving saved snapshot {guid}')
+            logger.warning('Found and ignored Unicode-related errors when retrieving saved snapshot %s', guid)
 
         timestamp = filename.stat().st_mtime
 

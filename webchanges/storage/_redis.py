@@ -36,7 +36,7 @@ class SsdbRedisStorage(SsdbStorage):
             raise missing_dependency(e, 'redis', used_by="the 'redis' database engine", extra='redis') from e
 
         self.db = redis.from_url(str(filename))
-        logger.info(f'Using {self.filename} for database')
+        logger.info('Using %s for database', self.filename)
 
     @staticmethod
     def _make_key(guid: str) -> str:

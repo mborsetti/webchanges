@@ -90,7 +90,7 @@ class BeautifyFilter(FilterBase):
                 extra='beautify',
                 location=self.job.get_indexed_location(),
             )
-            logger.warning(f'{error} The <script> tags are left as they are.')
+            logger.warning('%s The <script> tags are left as they are.', error)
         else:
             scripts = soup.find_all('script')
             for script in scripts:
@@ -108,7 +108,7 @@ class BeautifyFilter(FilterBase):
                 extra='beautify',
                 location=self.job.get_indexed_location(),
             )
-            logger.warning(f'{error} The <style> tags are left as they are.')
+            logger.warning('%s The <style> tags are left as they are.', error)
         else:
             styles = soup.find_all('style')
             for style in styles:

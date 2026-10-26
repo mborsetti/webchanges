@@ -42,7 +42,7 @@ def _close_worker_cdp_cache(executor: ThreadPoolExecutor) -> None:
     try:
         executor.submit(_browser._close_current_thread_cdp_cache).result()
     except Exception as e:  # noqa: BLE001  best-effort cleanup
-        logger.debug(f'Could not tear down CDP cache on worker thread: {e}')
+        logger.debug('Could not tear down CDP cache on worker thread: %s', e)
 
 
 def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
@@ -77,8 +77,11 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                 elif job.same_site_delay:
                     job._delay = job.same_site_delay
                     logger.debug(
-                        f'Job {job.index_number}: Will wait {job._delay}s before retrieving '
-                        f'(shares network location {netloc!r} with an earlier job; same_site_delay directive)'
+                        'Job %s: Will wait %ss before retrieving '
+                        '(shares network location %r with an earlier job; same_site_delay directive)',
+                        job.index_number,
+                        job._delay,
+                        netloc,
                     )
         return jobs
 
@@ -123,12 +126,12 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                     if job_state.error_ignored:
                         # We captured an error but are ignoring it
                         logger.info(
-                            f'Job {job_state.job.index_number}: Job resulted in an error that is ignored due to '
-                            f'directives'
+                            'Job %s: Job resulted in an error that is ignored due to directives',
+                            job_state.job.index_number,
                         )
                     elif isinstance(job_state.exception, NotModifiedError):
                         # We captured a 304 Not Modified
-                        logger.info(f'Job {job_state.job.index_number}: Job has not changed (HTTP 304 response)')
+                        logger.info('Job %s: Job has not changed (HTTP 304 response)', job_state.job.index_number)
                         if job_state.tries > 0:
                             job_state.tries = 0
                             if not read_only:
@@ -140,22 +143,27 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                     elif job_state.tries < max_tries:
                         # We're not reporting the error yet because we haven't yet hit 'max_tries'
                         logger.debug(
-                            f'Job {job_state.job.index_number}: Job error suppressed as cumulative number of '
-                            f'failures ({job_state.tries}) does not exceed max_tries={max_tries}'
+                            'Job %s: Job error suppressed as cumulative number of '
+                            'failures (%s) does not exceed max_tries=%s',
+                            job_state.job.index_number,
+                            job_state.tries,
+                            max_tries,
                         )
                         if not read_only:
                             job_state.save()
                     else:
                         # Reporting the error
                         logger.debug(
-                            f'Job {job_state.job.index_number}: Job error flagged as error as max_tries={max_tries} '
-                            f'has been met or exceeded ({job_state.tries}'
+                            'Job %s: Job error flagged as error as max_tries=%s has been met or exceeded (%s',
+                            job_state.job.index_number,
+                            max_tries,
+                            job_state.tries,
                         )
                         if isinstance(job_state.exception, TransientHTTPError):
                             # We captured a transient error
                             logger.info(
-                                f'Job {job_state.job.index_number}: Job has received an HTTP response of a typically '
-                                'transient nature'
+                                'Job %s: Job has received an HTTP response of a typically transient nature',
+                                job_state.job.index_number,
                             )
                             job_state.new_data = job_state.old_data
                             job_state.new_etag = job_state.old_etag
@@ -199,7 +207,7 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                     if job_state.job.treat_new_as_changed:
                         # Report it as a change from empty content, so that its differ and diff_filters apply
                         logger.debug(
-                            f'Job {job_state.job.index_number}: New job reported as changed (treat_new_as_changed)'
+                            'Job %s: New job reported as changed (treat_new_as_changed)', job_state.job.index_number
                         )
                         urlwatcher.report.changed(job_state)
                     else:
@@ -260,9 +268,12 @@ def _run_browser_jobs(
 
     if cdp_jobs and non_cdp_browser_jobs:
         logger.debug(
-            f'Running {len(cdp_jobs)} CDP browser job(s) on a single dedicated thread (one manual browser '
-            f'authorization per unique connect_over_cdp URL per run) concurrently with '
-            f'{len(non_cdp_browser_jobs)} non-CDP browser job(s) using up to {max_workers} workers.'
+            'Running %s CDP browser job(s) on a single dedicated thread (one manual browser '
+            'authorization per unique connect_over_cdp URL per run) concurrently with '
+            '%s non-CDP browser job(s) using up to %s workers.',
+            len(cdp_jobs),
+            len(non_cdp_browser_jobs),
+            max_workers,
         )
         with ThreadPoolExecutor(max_workers=2) as runner_executor:
             cdp_future = runner_executor.submit(job_runner, cdp_jobs, 1)
@@ -271,14 +282,15 @@ def _run_browser_jobs(
             other_future.result()
     elif cdp_jobs:
         logger.debug(
-            f'Running {len(cdp_jobs)} CDP browser job(s) on a single dedicated thread (one manual browser '
-            f'authorization per unique connect_over_cdp URL per run).'
+            'Running %s CDP browser job(s) on a single dedicated thread (one manual browser '
+            'authorization per unique connect_over_cdp URL per run).',
+            len(cdp_jobs),
         )
         job_runner(cdp_jobs, 1)
     else:
         logger.debug(
-            f"Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with {max_workers} "
-            f'max_workers.'
+            "Running jobs that require Chrome (i.e. with 'use_browser: true') in parallel with %s max_workers.",
+            max_workers,
         )
         job_runner(non_cdp_browser_jobs, max_workers)
 
@@ -300,11 +312,10 @@ def get_virt_mem_mib() -> float:
         virt_mem: float = psutil.virtual_memory().available
         virt_mem /= 1_048_576
         logger.debug(
-            f'Found {virt_mem:,.0f} MiB of available physical memory (plus '
-            f'{psutil.swap_memory().free:,.0f} MiB of swap).'
+            'Found %.0f MiB of available physical memory (plus %.0f MiB of swap).', virt_mem, psutil.swap_memory().free
         )
     except psutil.Error as e:  # pragma: no cover
         virt_mem = 0
-        logger.debug(f'Could not read memory information: {e}')
+        logger.debug('Could not read memory information: %s', e)
 
     return virt_mem

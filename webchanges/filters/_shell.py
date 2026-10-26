@@ -63,12 +63,16 @@ def _pipe_filter(f_cls: FilterBase, data: str | bytes, subfilter: dict[str, Any]
         ).stdout
     except subprocess.CalledProcessError as e:
         logger.error(
-            f"The '{f_cls.__kind__}' filter returned error code {e.returncode} ({f_cls.job.get_indexed_location()}):\n"
-            f'{e.stderr}\n---\n{e.stdout}'
+            "The '%s' filter returned error code %s (%s):\n%s\n---\n%s",
+            f_cls.__kind__,
+            e.returncode,
+            f_cls.job.get_indexed_location(),
+            e.stderr,
+            e.stdout,
         )
         raise e
     except FileNotFoundError as e:
-        logger.error(f"The '{f_cls.__kind__}' filter returned error ({f_cls.job.get_indexed_location()}):\n{e}")
+        logger.error("The '%s' filter returned error (%s):\n%s", f_cls.__kind__, f_cls.job.get_indexed_location(), e)
         raise FileNotFoundError(e, f'with command {command}') from None
 
 

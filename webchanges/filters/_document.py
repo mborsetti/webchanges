@@ -128,7 +128,7 @@ class PypdfFilter(FilterBase):
                 ) from e
 
         reader = PdfReader(io.BytesIO(data), password=password)
-        logger.info(f'Job {self.job.index_number}: Found {reader.pdf_header} file')
+        logger.info('Job %s: Found %s file', self.job.index_number, reader.pdf_header)
         text = [page.extract_text(extraction_mode=extraction_mode) for page in reader.pages]
 
         return '\n'.join(text), 'text/plain'

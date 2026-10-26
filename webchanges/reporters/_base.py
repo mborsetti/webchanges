@@ -288,7 +288,7 @@ class ReporterBase(metaclass=TrackSubClasses):
             if not (cfg.get('enabled', False) or not check_enabled):
                 continue
             any_enabled = True
-            logger.info(f'Submitting with {name} ({subclass})')
+            logger.info('Submitting with %s (%s)', name, subclass)
             base_config = subclass.get_base_config(report)  # ty:ignore[unresolved-attribute]
             reported_states = filter_by_tags(job_states, cfg.get('tags')) if apply_tags else job_states
             if not reported_states and job_states:
@@ -496,7 +496,7 @@ class HtmlReporter(ReporterBase):
             from docutils import core
         except ImportError as e:  # pragma: no cover
             error = missing_dependency(e, 'docutils', used_by='rendering reStructuredText as HTML')
-            logger.debug(f'{error} It is reported as is.')
+            logger.debug('%s It is reported as is.', error)
             return text
         return core.publish_parts(
             source=text,
