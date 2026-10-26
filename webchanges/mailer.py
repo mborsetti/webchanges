@@ -93,7 +93,13 @@ class Mailer:
 
     @staticmethod
     def msg(
-        from_email: str, to_email: str, subject: str, text_body: str, html_body: str | None = None, utf_8: bool = True
+        from_email: str,
+        to_email: str,
+        subject: str,
+        text_body: str,
+        html_body: str | None = None,
+        utf_8: bool = True,
+        reply_to: str | None = None,
     ) -> EmailMessage:
         """Create an Email object for a message.
 
@@ -103,6 +109,7 @@ class Mailer:
         :param text_body: The body in text format
         :param html_body: The body in html format (optional)
         :param utf_8: Whether to format the message using SMTPUTF8 (optional)
+        :param reply_to: The 'Reply-To' email address(es) (optional; the header is omitted if empty)
         """
 
         def extract_inline_images(html_body: str) -> tuple[str, dict[str, bytes]]:
@@ -134,6 +141,8 @@ class Mailer:
         msg = EmailMessage(policy=policy.SMTPUTF8 if utf_8 else policy.SMTP)
         msg['From'] = from_email
         msg['To'] = to_email
+        if reply_to:
+            msg['Reply-To'] = reply_to
         msg['Subject'] = subject
         msg['Date'] = formatdate(localtime=True)
         msg.set_content(text_body, subtype='plain')

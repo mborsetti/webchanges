@@ -103,19 +103,23 @@ class UrlwatchCommand:
     def jobs_from_joblist(self) -> Iterator[JobBase]:
         """Generates the jobs to process from the joblist and/or the tags entered in the CLI."""
         if self.urlwatcher.urlwatch_config.joblist:
-            jobs = [self._find_job(job_entry) for job_entry in self.urlwatcher.urlwatch_config.joblist]
+            # A job selected more than once (e.g. by its index and by its URL, or by --prepare-jobs adding a new job
+            # that was also selected) is run only once.
+            jobs = list(
+                dict.fromkeys(self._find_job(job_entry) for job_entry in self.urlwatcher.urlwatch_config.joblist)
+            )
             enabled_jobs = [job for job in jobs if job.is_enabled()]
-            disabled = len(enabled_jobs) - len(jobs)
+            disabled = len(jobs) - len(enabled_jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
             logger.debug(
-                f'Processing {len(enabled_jobs)} job{"s" if enabled_jobs else ""}{disabled_str} as specified in '
-                f'command line: {", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
+                f'Processing {len(enabled_jobs)} job{"s" if len(enabled_jobs) != 1 else ""}{disabled_str} as '
+                f'specified in command line: {", ".join(str(j) for j in self.urlwatcher.urlwatch_config.joblist)}'
             )
         else:
             enabled_jobs = [job for job in self.urlwatcher.jobs if job.is_enabled()]
-            disabled = len(enabled_jobs) - len(self.urlwatcher.jobs)
+            disabled = len(self.urlwatcher.jobs) - len(enabled_jobs)
             disabled_str = f' (excluding {disabled} disabled)' if disabled else ''
-            logger.debug(f'Processing {len(enabled_jobs)} job{"s" if enabled_jobs else ""}{disabled_str}')
+            logger.debug(f'Processing {len(enabled_jobs)} job{"s" if len(enabled_jobs) != 1 else ""}{disabled_str}')
 
         tags = self.tags_from_cli()
         if tags:
@@ -196,11 +200,12 @@ class UrlwatchCommand:
     def _find_job(self, query: str | int) -> JobBase:
         """Finds the job based on a query.
 
-        It is matched to the job index (also negative) or a job location (i.e. the url/user_visible_url or command).
+        It is matched to the job index (also negative), a job name, or a job location (i.e. the url/user_visible_url
+        or command).
 
         :param query: The query.
         :return: The matching JobBase.
-        :raises IndexError: If job is not found.
+        :raises ValueError: If no job, or more than one job, matches.
         """
         if isinstance(query, int):
             index = query
@@ -208,11 +213,25 @@ class UrlwatchCommand:
             try:
                 index = int(query)
             except ValueError:
-                query = unquote_plus(query)
-                try:
-                    return next((job for job in self.urlwatcher.jobs if unquote_plus(job.get_location()) == query))
-                except StopIteration:
-                    raise ValueError(f"Job {query} does not match any job's url/user_visible_url or command.") from None
+                location = unquote_plus(query)
+                jobs = [
+                    job
+                    for job in self.urlwatcher.jobs
+                    if job.name == query or unquote_plus(job.get_location()) == location
+                ]
+                if not jobs:
+                    raise ValueError(
+                        f"Job {query} does not match any job's name, url/user_visible_url or command."
+                    ) from None
+                if len(jobs) > 1:
+                    raise ValueError(
+                        f'Job {query} matches {len(jobs)} jobs; select the job by its index number instead:\n'
+                        + '\n'.join(
+                            f'• {job.get_indexed_location()}' + (f' ({job.name})' if job.name else '') for job in jobs
+                        )
+                    ) from None
+                logger.debug('Job %s matched %s', query, jobs[0].get_indexed_location())
+                return jobs[0]
 
         if index == 0:
             raise ValueError(f'Job index {index} out of range.')
@@ -226,7 +245,7 @@ class UrlwatchCommand:
     def _find_job_with_defaults(self, query: str | int) -> JobBase:
         """Returns the job with defaults based on job_id.
 
-        This could match an index or a location (url/user_visible_url or command). Accepts negative numbers.
+        This could match an index, a name or a location (url/user_visible_url or command). Accepts negative numbers.
 
         :param query: The query.
         :return: The matching JobBase with defaults.
@@ -813,6 +832,8 @@ class UrlwatchCommand:
                     ('--delete', self.urlwatch_config.delete),
                     ('--add', self.urlwatch_config.add),
                     ('--change-location', self.urlwatch_config.change_location),
+                    ('--enable', self.urlwatch_config.enable),
+                    ('--disable', self.urlwatch_config.disable),
                 )
                 if value is not None
             )
@@ -829,10 +850,13 @@ class UrlwatchCommand:
                 if sys.__stdin__ and sys.__stdin__.isatty():
                     print(
                         f'WARNING: About to permanently delete {job.get_indexed_location()}.\n'
-                        '         Job file will be overwritten and all remarks lost.'
+                        '         Job file will be overwritten and all remarks lost.\n'
                         '         This operation cannot be undone!\n'
                     )
-                    resp = input("         Please enter 'Y' to proceed: ")
+                    try:
+                        resp = input("         Please enter 'Y' to proceed: ")
+                    except EOFError:  # e.g. stdin redirected from NUL on Windows, which isatty() reports as a terminal
+                        resp = ''
                     if not resp.upper().startswith('Y'):
                         print(f'Quitting. Job {job.index_number} has not been deleted and job file is unmodified.')
                         return 1
@@ -885,11 +909,61 @@ class UrlwatchCommand:
                 print(f'Job not found: "{self.urlwatch_config.change_location[0]}".')
                 return 1
             message = 'Do you want me to update the jobs file (remarks will be lost)? [y/N] '
-            if not input(message).lower().startswith('y'):
+            try:
+                resp = input(message)
+            except EOFError:  # no input available (e.g. run by cron, or stdin redirected from the null device)
+                resp = ''
+            if not resp.lower().startswith('y'):
                 print(f'Please manually update the jobs file by replacing "{old_loc}" with "{new_loc}".')
             else:
                 self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
 
+        for query, enable in ((self.urlwatch_config.enable, True), (self.urlwatch_config.disable, False)):
+            if query is not None and self._set_job_enabled(query, enable):
+                return 1
+
+        return 0
+
+    def _set_job_enabled(self, query: str, enable: bool) -> int:
+        """Enable or disable a job (urlwatch's --enable and --disable) by setting its 'enabled' directive and
+        rewriting the jobs file, which loses its remarks.
+
+        :param query: The job's index number, name or URL/command.
+        :param enable: True to enable the job, False to disable it.
+        :returns: 0 if successful (including when the job already was in the state requested), 1 otherwise.
+        """
+        verb = 'enable' if enable else 'disable'
+        try:
+            job = self._find_job(query)
+        except ValueError as e:
+            print(e)
+            return 1
+        config = self.urlwatcher.config_storage.config
+        if job.with_defaults(config).is_enabled() == enable:
+            print(f'Job {job.index_number} is already {verb}d: {job.get_location()}. The jobs file is unmodified.')
+            return 0
+        if sys.__stdin__ and sys.__stdin__.isatty():
+            print(
+                f'WARNING: About to {verb} {job.get_indexed_location()}.\n'
+                '         Job file will be overwritten and all remarks lost.\n'
+            )
+            try:
+                resp = input("         Please enter 'Y' to proceed: ")
+            except EOFError:  # e.g. stdin redirected from NUL on Windows, which isatty() reports as a terminal
+                resp = ''
+            if not resp.upper().startswith('Y'):
+                print(f'Quitting. Job {job.index_number} has not been {verb}d and job file is unmodified.')
+                return 1
+        if enable:
+            # Remove the directive, unless the job would remain disabled by job_defaults
+            job.enabled = None
+            if not job.with_defaults(config).is_enabled():
+                job.enabled = True
+        else:
+            job.enabled = False
+        logger.info('Job %s: %sd (enabled: %s)', job.index_number, verb, job.enabled)
+        print(f'{verb.capitalize()}d job {job.index_number}: {job.get_location()}.')
+        self.urlwatcher.jobs_storage.save(self.urlwatcher.jobs)
         return 0
 
     def check_telegram_chats(self) -> None:
@@ -1227,7 +1301,13 @@ class UrlwatchCommand:
         if self.urlwatch_config.dump_history:
             self._exit(self.dump_history(self.urlwatch_config.dump_history))
 
-        if self.urlwatch_config.add or self.urlwatch_config.delete or self.urlwatch_config.change_location:
+        if (
+            self.urlwatch_config.add
+            or self.urlwatch_config.delete
+            or self.urlwatch_config.change_location
+            or self.urlwatch_config.enable
+            or self.urlwatch_config.disable
+        ):
             self._exit(self.modify_urls())
 
         if self.urlwatch_config.test_reporter and not self.urlwatch_config.joblist:

@@ -184,6 +184,7 @@ class JobBase(metaclass=TrackSubClasses):
     ignore_dh_key_too_small: bool | None = None  # UrlJob
     ignore_http_error_codes: list[int | str] | int | str | None = None  # UrlJobBase
     ignore_https_errors: bool | None = None  # BrowserJob
+    ignore_incomplete_reads: bool | None = None  # UrlJob
     ignore_timeout_errors: bool | None = None  # UrlJobBase
     ignore_too_many_redirects: bool | None = None  # UrlJobBase
     impersonate: str | None = None  # UrlJob (curl_cffi backend only)
@@ -210,7 +211,7 @@ class JobBase(metaclass=TrackSubClasses):
     retries: int | None = None  # UrlJob
     same_site_delay: float | None = None  # UrlJobBase
     ssl_no_verify: bool | None = None  # UrlJob
-    stderr: str | None = None  # urlwatch backwards compatibility for ShellJob (not used)
+    stderr: str | None = None  # ShellJob (from urlwatch)
     stealth: bool | None = None  # BrowserJob
     suppress_error_ended: bool | None = None
     suppress_errors: bool | None = None
@@ -218,6 +219,7 @@ class JobBase(metaclass=TrackSubClasses):
     switches: list[str] | None = None  # BrowserJob
     tags: str | list[str] | None = None
     timeout: float | None = None  # UrlJobBase
+    treat_new_as_changed: bool | None = None
     tz: str | None = None  # added by with_defaults, taken from reporter configuration
     user_data_dir: str | None = None  # BrowserJob
     user_visible_url: str | None = None
@@ -295,9 +297,18 @@ class JobBase(metaclass=TrackSubClasses):
     def serialize(self) -> dict:
         """Serialize the Job object, excluding its index_number (e.g. for saving).
 
+        Unlike :py:meth:`to_dict`, it keeps the directives set to false or 0 (e.g. ``enabled: false`` or
+        ``contextlines: 0``), as these differ from leaving the directive out; empty strings and collections (e.g. the
+        empty headers of every URL job) are left out.
+
         :returns: A dict with the Job object serialized.
         """
-        d = self.to_dict()
+        d = {
+            k: headers_to_dict(v) if isinstance(v, Headers) else v
+            for keys in (self.__required__, self.__optional__)
+            for k in keys
+            if (v := getattr(self, k, None)) is not None and (isinstance(v, (bool, int, float)) or v)
+        }
         d.pop('index_number', None)
         return d
 
@@ -338,6 +349,7 @@ class JobBase(metaclass=TrackSubClasses):
             data['kind'] = 'command'
 
         # Backwards compatibility with 'navigate' directive (deprecated)
+        from_navigate = bool(data.get('navigate'))
         if data.get('navigate') and not data.get('use_browser'):
             warnings.warn(
                 f"Error in jobs file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: "
@@ -347,6 +359,36 @@ class JobBase(metaclass=TrackSubClasses):
             )
             data['url'] = data.get('url', data['navigate'])
             data['use_browser'] = True
+        if data.get('use_browser') and data.get('url'):
+            # Translated: a browser job with 'navigate' set fails, and saving the job would write both directives
+            data.pop('navigate', None)
+
+        # Backwards compatibility with urlwatch's browser job directives 'useragent' and 'browser' (deprecated)
+        if 'useragent' in data:
+            logger.warning(
+                "Job directive 'useragent' is deprecated: replace it with a 'User-Agent' header in 'headers' (job %s)",
+                data.get('url'),
+            )
+            useragent = data.pop('useragent')
+            headers = dict(data.get('headers') or {})
+            if useragent and not any(key.lower() == 'user-agent' for key in headers):
+                headers['User-Agent'] = useragent
+            data['headers'] = headers
+        if 'browser' in data:
+            logger.warning(
+                "Job directive 'browser' is deprecated: replace it with 'use_browser: <browser>' (job %s)",
+                data.get('url'),
+            )
+            browser = data.pop('browser')
+            # Only for browser jobs (urlwatch's 'navigate' ones); its default 'chromium' is webchanges' default browser
+            if browser and browser != 'chromium' and data.get('use_browser') is True:
+                data['use_browser'] = browser
+        # urlwatch's 'wait_for' waits for an element matching a selector (webchanges' own former 'wait_for' is rejected)
+        if from_navigate and isinstance(data.get('wait_for'), str) and not data.get('wait_for_selector'):
+            logger.warning(
+                "Job directive 'wait_for' is deprecated: replace it with 'wait_for_selector' (job %s)", data.get('url')
+            )
+            data['wait_for_selector'] = data.pop('wait_for')
 
         # Backwards-compatible with diff_tool
         if data.get('diff_tool') and not data.get('differ'):
@@ -430,11 +472,15 @@ class JobBase(metaclass=TrackSubClasses):
         return job
 
     def to_dict(self) -> dict:
-        """Return all defined (not None) Job object directives, required and optional, as a serializable dict,
+        """Return all Job object directives with a truthy value, required and optional, as a serializable dict,
         converting Headers object (which are not JSON serializable) to dicts.
 
         :returns: A dict with all job directives as keys, ignoring those that are extras.
         """
+        # Deliberately drops every falsy value (False, 0, '', empty collections), unlike serialize(), which keeps False
+        # and 0 because saving must not lose e.g. 'enabled: false'. Do not make the two consistent: RegexMatchFilter
+        # (filters/_base.py), also subclassed in users' hooks.py, runs regexes over these values and would raise
+        # TypeError on a False or 0; the WEBCHANGES_*_JSON environment variables of reporters and filters also use it.
         return {
             k: headers_to_dict(getattr(self, k)) if isinstance(getattr(self, k), Headers) else getattr(self, k)
             for keys in {self.__required__, self.__optional__}
@@ -713,6 +759,7 @@ class Job(JobBase):
         'suppress_errors',
         'suppress_repeated_errors',
         'tags',
+        'treat_new_as_changed',
         'user_visible_url',
     )
 

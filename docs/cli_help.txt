@@ -1,13 +1,14 @@
 usage: webchanges [-h] [-V] [-v] [--log-file FILE] [--jobs FILE] [--config FILE] [--hooks FILE]
-                  [--database FILE] [--list-jobs [REGEX]] [--tags TAGS] [--errors [REPORTER]]
-                  [--test [JOB]] [--no-headless] [--test-differ JOB [JOB ...]] [--dump-history JOB]
-                  [--max-workers WORKERS] [--test-reporter REPORTER] [--smtp-login]
-                  [--telegram-chats] [--xmpp-login] [--footnote FOOTNOTE] [--edit-jobs]
-                  [--edit-config] [--edit-hooks] [--gc-database [RETAIN_LIMIT]]
-                  [--clean-database [RETAIN_LIMIT]] [--rollback-database TIMESTAMP]
-                  [--delete-snapshot JOB] [--prepare-jobs] [--change-location JOB NEW_LOCATION]
-                  [--check-new] [--install-chrome] [--features] [--detailed-versions]
-                  [--database-engine DATABASE_ENGINE] [--max-snapshots NUM_SNAPSHOTS]
+                  [--database FILE] [--list-jobs [REGEX]] [--enable JOB] [--disable JOB]
+                  [--tags TAGS] [--errors [REPORTER]] [--test [JOB]] [--no-headless]
+                  [--test-differ JOB [JOB ...]] [--dump-history JOB] [--max-workers WORKERS]
+                  [--test-reporter REPORTER] [--smtp-login] [--telegram-chats] [--xmpp-login]
+                  [--footnote FOOTNOTE] [--edit-jobs] [--edit-config] [--edit-hooks]
+                  [--gc-database [RETAIN_LIMIT]] [--clean-database [RETAIN_LIMIT]]
+                  [--rollback-database TIMESTAMP] [--delete-snapshot JOB] [--prepare-jobs]
+                  [--change-location JOB NEW_LOCATION] [--check-new] [--install-chrome] [--features]
+                  [--detailed-versions] [--database-engine DATABASE_ENGINE]
+                  [--max-snapshots NUM_SNAPSHOTS]
                   [JOB(S) ...]
 
 Checks web content, including images, to detect any changes since the prior run. If any are found, it
@@ -15,7 +16,7 @@ summarizes (including with Gen AI) what changed ('diff') and displays it and/or 
 and/or other supported services. Can check the output of local commands as well.
 
 positional arguments:
-  JOB(S)                JOB(S) to run (index number(s) as per --list; if one also URL/command)
+  JOB(S)                JOB(S) to run (index number(s) as per --list, name(s) or URL(s)/command(s))
                         (default: run all jobs)
 
 options:
@@ -32,17 +33,21 @@ override file defaults:
 
 job management:
   --list-jobs [REGEX]   list jobs and their index number (optional: only those who match REGEX)
+  --enable JOB          enable a JOB (by index, name or URL/command) by rewriting the jobs file,
+                        losing its remarks
+  --disable JOB         disable a JOB (by index, name or URL/command) by rewriting the jobs file,
+                        losing its remarks
   --tags TAGS           run only the jobs having any of the TAGS (comma-separated) in their tags
                         directive; can be repeated
   --errors [REPORTER]   test-run enabled jobs and list those with errors or no data captured;
                         optionally send output to REPORTER
-  --test [JOB]          test a JOB (by index or URL/command) and show filtered output; if no JOB,
-                        check config and jobs file(s) syntax for errors
+  --test [JOB]          test a JOB (by index, name or URL/command) and show filtered output; if no
+                        JOB, check config and jobs file(s) syntax for errors
   --no-headless         turn off browser headless mode (for jobs using a browser)
   --test-differ JOB [JOB ...]
-                        show diff(s) using existing saved snapshots of a JOB (by index or
+                        show diff(s) using existing saved snapshots of a JOB (by index, name or
                         URL/command); can be combined with --test-reporter
-  --dump-history JOB    print all saved changed snapshots for a JOB (by index or URL/command)
+  --dump-history JOB    print all saved changed snapshots for a JOB (by index, name or URL/command)
   --max-workers WORKERS
                         maximum number of parallel threads
 
@@ -71,10 +76,10 @@ database:
   --rollback-database TIMESTAMP
                         delete changed snapshots added since TIMESTAMP
   --delete-snapshot JOB
-                        delete the last saved changed snapshot of JOB (index or URL/command)
+                        delete the last saved changed snapshot of JOB (index, name or URL/command)
   --prepare-jobs        run newly added jobs (i.e. those without snapshots)
   --change-location JOB NEW_LOCATION
-                        change the location of an existing JOB (index or URL/command)
+                        change the location of an existing JOB (index, name or URL/command)
 
 miscellaneous:
   --check-new           check if a new release is available

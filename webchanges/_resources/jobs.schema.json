@@ -169,6 +169,11 @@
       "description": "If true, accepts a server's weak (1024-bit) Diffie-Hellman key by lowering the OpenSSL security level (certificates are still verified). Supported by http_client httpx and requests, not by curl_cffi.",
       "default": false
     },
+    "ignore_incomplete_reads": {
+      "type": "boolean",
+      "description": "If true, suppresses errors caused by the server closing the connection before sending the complete response. Not supported with use_browser: true.",
+      "default": false
+    },
     "params": {
       "type": "object",
       "additionalProperties": { "type": "string" },
@@ -369,9 +374,22 @@
       "deprecated": true,
       "deprecationMessage": "Use 'url' with 'use_browser: true' instead of 'navigate'."
     },
+    "useragent": {
+      "type": "string",
+      "description": "Deprecated (legacy): set a 'User-Agent' header in 'headers' instead.",
+      "deprecated": true,
+      "deprecationMessage": "Set a 'User-Agent' header in 'headers' instead of 'useragent'."
+    },
+    "browser": {
+      "type": "string",
+      "enum": ["chromium", "firefox", "webkit"],
+      "description": "Deprecated (legacy): use 'use_browser: <browser>' instead ('chromium' is 'use_browser: true').",
+      "deprecated": true,
+      "deprecationMessage": "Use 'use_browser: <browser>' instead of 'browser'."
+    },
     "wait_for": {
       "type": ["integer", "string"],
-      "description": "No longer supported (Pyppeteer): use 'wait_for_function', 'wait_for_selector' or 'wait_for_timeout' instead.",
+      "description": "No longer supported (Pyppeteer): use 'wait_for_function', 'wait_for_selector' or 'wait_for_timeout' instead. In legacy 'navigate' jobs, a selector, run as 'wait_for_selector'.",
       "deprecated": true,
       "deprecationMessage": "Use 'wait_for_function', 'wait_for_selector' or 'wait_for_timeout' instead of 'wait_for'."
     },
@@ -383,8 +401,9 @@
     },
     "stderr": {
       "type": "string",
-      "description": "Ignored; accepted for compatibility with urlwatch (command jobs).",
-      "deprecated": true
+      "enum": ["ignore", "forward", "fail", "stdout"],
+      "description": "What to do with the standard error output of a command job: 'ignore' reports it only when the command fails (exits with a non-zero code), 'forward' also writes it to webchanges' own standard error, 'fail' fails the job if there is any, and 'stdout' merges it into the standard output, i.e. into the data. For backward compatibility, 'urlwatch' is accepted for 'forward'.",
+      "default": "ignore"
     },
     "differ": {
       "oneOf": [
@@ -743,6 +762,11 @@
     "suppress_repeated_errors": {
       "type": "boolean",
       "description": "If true, only report the first occurrence of an error."
+    },
+    "treat_new_as_changed": {
+      "type": "boolean",
+      "description": "If true, report a new job (its first successful run) as changed, with its content shown as a diff from empty content, instead of as new.",
+      "default": false
     },
     "compared_versions": {
       "type": "integer",

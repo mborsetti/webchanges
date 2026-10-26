@@ -291,6 +291,15 @@ or ignore all HTTP errors if you like by using :ref:`ignore_http_error_codes`:
    url: https://example.com/
    ignore_http_error_codes: 4xx, 5xx
 
+A server that sometimes closes the connection before sending the complete response can be silenced with
+:ref:`ignore_incomplete_reads`:
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   url: https://example.com/
+   ignore_incomplete_reads: true
+
 
 .. _bypassing_bot_walls:
 

@@ -39,6 +39,7 @@ report:
     html: true
     to: ''
     from: ''
+    reply_to: ''
     subject: '[webchanges] {count} changes{jobs_files}: {jobs}'
     method: smtp
     smtp:

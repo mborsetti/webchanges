@@ -703,6 +703,23 @@ curl_cffi``.
    ``http_client: requests`` it had no effect with version 2.x of the ``urllib3`` library.
 
 
+.. _ignore_incomplete_reads:
+
+ignore_incomplete_reads
+^^^^^^^^^^^^^^^^^^^^^^^
+Ignore error if the server closes the connection before sending the complete response (true/false). Defaults to false.
+
+The error is ``httpx.RemoteProtocolError`` with ``http_client: httpx`` (e.g. ``peer closed connection without sending
+complete message body: incomplete chunked read``), ``requests.exceptions.ChunkedEncodingError`` with ``http_client:
+requests``, and ``ChunkedEncodingError`` or ``IncompleteRead`` with ``http_client: curl_cffi``.
+
+Not supported by jobs with ``use_browser: true``.
+
+See more :ref:`here <ignoring_http_connection_errors>`.
+
+.. versionadded:: 3.39
+
+
 .. _impersonate:
 
 impersonate
@@ -1296,6 +1313,32 @@ command
 ^^^^^^^
 The shell command to execute.
 
+Optional directives
+-------------------
+
+.. _stderr:
+
+stderr
+^^^^^^
+What to do with the command's standard error output (a string). Defaults to ``ignore``.
+
+* ``ignore``: report it only when the command fails (exits with a non-zero code), as part of the error;
+* ``forward``: as ``ignore``, but also write it to :program:`webchanges`' own standard error (e.g. the terminal, or
+  the email that ``cron`` sends);
+* ``fail``: fail the job if the command writes anything to standard error, even if it exits with code 0;
+* ``stdout``: merge it into the standard output (like ``2>&1`` in the shell), so that it becomes part of the data that
+  is filtered and compared.
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   name: Disk usage, including permission errors
+   command: du -sh ~/*
+   stderr: stdout
+
+.. versionchanged:: 3.39
+   Implemented (for backward compatibility); previously a job with this directive failed.
+
 Optional directives for all job types
 =====================================
 These optional directives apply to all job types:
@@ -1433,6 +1476,9 @@ enabled
 -------
 Convenience setting to disable running the job while leaving it in the jobs file (true/false). Defaults to true.
 
+The command line arguments ``--disable`` and ``--enable`` set it for you, but rewrite the jobs file, losing all its
+remarks (see :ref:`here <enable_disable>`).
+
 .. versionadded:: 3.18
 
 
@@ -1497,7 +1543,8 @@ The three built-in job Classes are:
 
 is_markdown
 -----------
-Data is in Markdown format (true/false). Defaults to false unless the media type is ``text/markdown`` (from a website or set by a filter, such as ``html2text``).
+Data is in Markdown format (true/false). Defaults to false unless the media type is ``text/markdown`` (from a website
+or set by a filter, such as ``html2text``).
 
 Tells the ``html`` report that the data is in Markdown format and should be reconstructed into HTML.
 
@@ -1604,6 +1651,24 @@ tabular data extracted by the ``pdf2text`` filter.
    Default setting can be overridden by a filter or differ.
 
 
+.. _name:
+
+name
+----
+Human-readable name/label of the job used in reports (a string).
+
+If this directive is not specified, the label used in reports will either be the ``url`` or the ``command`` itself or,
+for ``url`` jobs retrieving HTML or XML data, the first 60 character of the contents of the <title> field if found.
+
+While jobs are executed in parallel for speed, they appear in the report in alphabetical order by name, so
+you can control the order in which they appear through their naming.
+
+.. versionchanged:: 3.0
+   Added auto-detect <title> tag in HTML or XML.
+
+.. versionchanged:: 3.11
+   Reports are sorted by job name.
+
 .. _note:
 
 note
@@ -1700,23 +1765,27 @@ reported by every reporter that has no ``tags`` directive of its own.
 .. versionadded:: 3.38
 
 
-.. _name:
+.. _treat_new_as_changed:
 
-name
-----
-Human-readable name/label of the job used in reports (a string).
+treat_new_as_changed
+--------------------
+Report a new job as changed instead of new (true/false). Defaults to false.
 
-If this directive is not specified, the label used in reports will either be the ``url`` or the ``command`` itself or,
-for ``url`` jobs retrieving HTML or XML data, the first 60 character of the contents of the <title> field if found.
+The first time a job runs successfully, :program:`webchanges` normally reports it as new, showing its content. With
+``treat_new_as_changed: true``, it reports the job as changed instead, with the content shown as a diff from empty
+content (every line added). The job's :ref:`differ <differs>` and :ref:`diff_filters <diff_filters_job_directive>`
+then apply from the first run, and the job is reported under ``display: changed`` rather than ``display: new`` (see
+:ref:`configuration_display`).
 
-While jobs are executed in parallel for speed, they appear in the report in alphabetical order by name, so
-you can control the order in which they appear through their naming.
+.. code-block:: yaml
 
-.. versionchanged:: 3.0
-   Added auto-detect <title> tag in HTML or XML.
+   # yaml-language-server: $schema=jobs.schema.json
+   url: https://example.com/announcements
+   treat_new_as_changed: true
+   additions_only: true
 
-.. versionchanged:: 3.11
-   Reports are sorted by job name.
+.. versionadded:: 3.39
+   For backward compatibility.
 
 
 .. _user_visible_url:

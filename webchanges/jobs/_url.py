@@ -145,6 +145,7 @@ class UrlJob(UrlJobBase):
         'http_client',
         'http_version',
         'ignore_dh_key_too_small',
+        'ignore_incomplete_reads',
         'impersonate',
         'initialization_url',
         'no_redirects',
@@ -994,6 +995,9 @@ class UrlJob(UrlJobBase):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, httpx.TooManyRedirects):
                 return True
+            # The server closed the connection before sending the complete response body.
+            if self.ignore_incomplete_reads and isinstance(exception, httpx.RemoteProtocolError):
+                return True
             if self.ignore_http_error_codes:
                 if isinstance(exception, httpx.HTTPStatusError):
                     return self._ignore_http_error_code(exception.response.status_code)
@@ -1009,6 +1013,8 @@ class UrlJob(UrlJobBase):
             if self.ignore_connection_errors and is_connection_error(exception, requests.exceptions.ConnectionError):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, requests.exceptions.TooManyRedirects):
+                return True
+            if self.ignore_incomplete_reads and isinstance(exception, requests.exceptions.ChunkedEncodingError):
                 return True
             if self.ignore_http_error_codes:
                 if isinstance(exception, requests.exceptions.HTTPError) and exception.response is not None:
@@ -1027,6 +1033,10 @@ class UrlJob(UrlJobBase):
             if self.ignore_connection_errors and is_connection_error(exception, curl_cffi_exceptions.ConnectionError):
                 return True
             if self.ignore_too_many_redirects and isinstance(exception, curl_cffi_exceptions.TooManyRedirects):
+                return True
+            if self.ignore_incomplete_reads and isinstance(
+                exception, (curl_cffi_exceptions.ChunkedEncodingError, curl_cffi_exceptions.IncompleteRead)
+            ):
                 return True
             if self.ignore_http_error_codes:
                 if isinstance(exception, curl_cffi_exceptions.HTTPError) and exception.response is not None:

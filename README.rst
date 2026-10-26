@@ -16,22 +16,25 @@ notifications and AI-powered summaries to your favorite `platform
 
 Highlights
 ==========
-- **AI-powered change summaries** via Gemini (`ai_google differ
-  <https://webchanges.readthedocs.io/en/stable/differs.html#ai-google-diff>`__, BETA).
-- **Structural diffs for JSON and XML** via the `deepdiff differ
-  <https://webchanges.readthedocs.io/en/stable/differs.html#deepdiff-diff>`__.
-- **Visual diffs for images** via the `image differ
-  <https://webchanges.readthedocs.io/en/stable/differs.html#image-diff>`__ (BETA).
-- **Bypass TLS/JA3 fingerprinting** with the optional `curl_cffi
-  <https://webchanges.readthedocs.io/en/stable/jobs.html#http-client>`__ HTTP client.
-- **JSON-Schema-validated** ``jobs.yaml`` and ``config.yaml`` for editor autocompletion and inline validation.
+- **Watch anything**: web pages (in a `real browser
+  <https://webchanges.readthedocs.io/en/stable/jobs.html#use-browser>`__ if needed), APIs, local files and command
+  output.
+- **Track only what matters** with over 30 `filters <https://webchanges.readthedocs.io/en/stable/filters.html>`__.
+- **Read changes at a glance** in formatted HTML, side by side, word by word, as `AI summaries
+  <https://webchanges.readthedocs.io/en/stable/differs.html#ai-google-diff>`__ and more.
+- **Get notified anywhere**: email, Telegram, Discord, ntfy, webhooks and `more
+  <https://webchanges.readthedocs.io/en/stable/reporters.html>`__.
+- **Few false alarms**: transient errors can be held back and repeated ones reported `once
+  <https://webchanges.readthedocs.io/en/stable/jobs.html#suppress-repeated-errors>`__.
+- **Runs on your machine**, total privacy, no account needed, and extends with Python `hooks
+  <https://webchanges.readthedocs.io/en/stable/hooks.html>`__.
 
 
 Requirements
 ============
 **webchanges** requires |support|. For the best experience, use the current version of `Python
-<https://www.python.org/downloads/>`__; older Python versions are supported for 3 years after they're replaced. Free-threaded Python is supported, though some
-optional dependencies may not be.
+<https://www.python.org/downloads/>`__; older Python versions are supported for 3 years after they're replaced.
+Free-threaded Python is supported.
 
 For Generative AI summaries (BETA), you need a free `API Key from Google Cloud AI Studio
 <https://aistudio.google.com/app/apikey>`__ (see `here
@@ -136,10 +139,11 @@ License
 =======
 |license|
 
-See the `complete licenses <https://raw.githubusercontent.com/mborsetti/webchanges/refs/heads/main/LICENSE.md>`__ (released
-under the `MIT License <https://opensource.org/licenses/MIT>`__ but redistributing modified source code, dated 30
-July 2020, from `urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__
-licensed under a `BSD 3-Clause License
+See the `complete licenses
+<https://raw.githubusercontent.com/mborsetti/webchanges/refs/heads/main/LICENSE.md>`__ (released under the `MIT
+License <https://opensource.org/licenses/MIT>`__ but redistributing modified source code, dated 30 July 2020, from
+`urlwatch 2.21 <https://github.com/thp/urlwatch/tree/346b25914b0418342ffe2fb0529bed702fddc01f>`__ licensed under a
+`BSD 3-Clause License
 <https://raw.githubusercontent.com/thp/urlwatch/346b25914b0418342ffe2fb0529bed702fddc01f/COPYING>`__).
 
 

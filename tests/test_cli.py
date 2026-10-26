@@ -415,6 +415,7 @@ def test_migrate_from_legacy_copies_when_dest_missing(
         'webchanges.cli.platformdirs.user_cache_path',
         lambda _pkg: tmp_path / 'no-cache',
     )
+    monkeypatch.setattr('webchanges.cli.platformdirs.user_config_path', lambda _pkg: tmp_path / 'no-config')
 
     new_config = tmp_path / 'new' / 'config.yaml'
     with caplog.at_level(logging.WARNING, logger='webchanges.cli'):
@@ -423,6 +424,24 @@ def test_migrate_from_legacy_copies_when_dest_missing(
     assert new_config.is_file()
     assert new_config.read_bytes() == payload
     assert any('Copied urlwatch' in r.message for r in caplog.records)
+
+
+def test_migrate_from_legacy_platform_config_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without ~/.urlwatch, the files are copied from urlwatch's platform configuration directory, where urlwatch
+    keeps them in that case (fixed in 3.39)."""
+    fake_home = tmp_path / 'home'
+    fake_home.mkdir()
+    platform_dir = tmp_path / 'platform-config' / 'urlwatch'
+    platform_dir.mkdir(parents=True)
+    (platform_dir / 'urls.yaml').write_bytes(b'url: https://example.com/\n')
+
+    monkeypatch.setattr('webchanges.cli.Path.home', lambda: fake_home)
+    monkeypatch.setattr('webchanges.cli.platformdirs.user_cache_path', lambda _pkg: tmp_path / 'no-cache')
+    monkeypatch.setattr('webchanges.cli.platformdirs.user_config_path', lambda _pkg: platform_dir)
+
+    new_jobs = tmp_path / 'new' / 'jobs.yaml'
+    migrate_from_legacy('urlwatch', jobs_file=new_jobs)
+    assert new_jobs.read_bytes() == b'url: https://example.com/\n'
 
 
 def test_migrate_from_legacy_skips_when_dest_exists(
@@ -437,6 +456,7 @@ def test_migrate_from_legacy_skips_when_dest_exists(
         'webchanges.cli.platformdirs.user_cache_path',
         lambda _pkg: tmp_path / 'no-cache',
     )
+    monkeypatch.setattr('webchanges.cli.platformdirs.user_config_path', lambda _pkg: tmp_path / 'no-config')
 
     new_config = tmp_path / 'new' / 'config.yaml'
     new_config.parent.mkdir()
@@ -457,6 +477,7 @@ def test_migrate_from_legacy_noop_when_no_source(tmp_path: Path, monkeypatch: py
         'webchanges.cli.platformdirs.user_cache_path',
         lambda _pkg: tmp_path / 'no-cache',
     )
+    monkeypatch.setattr('webchanges.cli.platformdirs.user_config_path', lambda _pkg: tmp_path / 'no-config')
 
     new_config = tmp_path / 'new' / 'config.yaml'
     migrate_from_legacy('urlwatch', config_file=new_config)

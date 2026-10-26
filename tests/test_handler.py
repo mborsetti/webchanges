@@ -524,6 +524,16 @@ def run_once(
             [('a', 'new', 'a', 0), ('b', 'changed', 'b', 0), ('a', 'unchanged', 'b', 0), ('c', 'changed', 'c', 0)],
             id='compared_versions',
         ),
+        pytest.param(
+            {'treat_new_as_changed': True},
+            [('a', 'changed', 'a', 0), ('a', 'unchanged', 'a', 0), ('b', 'changed', 'b', 0)],
+            id='treat_new_as_changed',
+        ),
+        pytest.param(
+            {'treat_new_as_changed': True},
+            [(_ERROR, 'error', '', 1), ('a', 'changed', 'a', 0)],
+            id='treat_new_as_changed-after-errors',
+        ),
     ],
 )
 def test_run_classification(
@@ -548,6 +558,16 @@ def test_run_classification(
         assert (job_state.verb if job_state else None) == verb, f'run {i}: {outcome!r}'
         snapshot = ssdb_storage.load(job.guid)
         assert (snapshot.data, snapshot.tries) == (stored_data, tries), f'run {i}: {outcome!r}'
+
+
+def test_run_treat_new_as_changed_diff(urlwatcher: Urlwatch, run_once: Callable[..., JobState | None]) -> None:
+    """With treat_new_as_changed, a new job's report is a diff from empty content, every line added."""
+    urlwatcher.jobs = [JobBase.unserialize({'url': 'https://www.example.com/', 'treat_new_as_changed': True})]
+    job_state = run_once('line 1\nline 2')
+    assert job_state is not None
+    diff = job_state.get_diff()
+    assert '--- @ NEW' in diff
+    assert '+line 1\n+line 2' in diff
 
 
 @pytest.mark.parametrize(

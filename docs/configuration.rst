@@ -12,7 +12,7 @@ The global configuration for :program:`webchanges` contains basic settings for t
 format**, is called ``config.yaml``, and is located in the following directory:
 
 * Linux: ``~/.config/webchanges``
-* MacOS: ``~/Library/Preferences/webchanges``
+* MacOS: ``~/Library/Application Support/webchanges``
 * Windows: ``%USERPROFILE%/Documents/webchanges`` (the webchanges folder within your Documents folder)
 
 It can be edited with any text editor or with:

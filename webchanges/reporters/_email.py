@@ -52,14 +52,17 @@ class EMailReporter(TextReporter):
         else:
             raise ValueError(f'Unknown email reporter method: {self.config["method"]}')
 
+        reply_to = self.config.get('reply_to')
         if self.config['html']:
             html_reporter = HtmlReporter(
                 self.report, self.config, self.job_states, self.duration, self.jobs_files, self.differ_defaults
             )
             body_html = '\n'.join(html_reporter.submit())
-            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, body_html, utf_8=utf_8)
+            msg = mailer.msg(
+                self.config['from'], self.config['to'], subject, body_text, body_html, utf_8=utf_8, reply_to=reply_to
+            )
         else:
-            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, utf_8=utf_8)
+            msg = mailer.msg(self.config['from'], self.config['to'], subject, body_text, utf_8=utf_8, reply_to=reply_to)
 
         mailer.send(msg)
 

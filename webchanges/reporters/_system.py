@@ -4,19 +4,21 @@
 
 from __future__ import annotations
 
-__lazy_modules__ = ['json', 'shlex', 'subprocess']
+__lazy_modules__ = ['json', 'shlex', 'subprocess', 'warnings']
 
 import logging
 import os
 import shlex
 import subprocess
-from typing import TYPE_CHECKING
+import warnings
+from typing import TYPE_CHECKING, Any
 
 from webchanges import __project_name__
 from webchanges.reporters._base import TextReporter
 
 if TYPE_CHECKING:
-    from webchanges.storage import _ConfigReportRunCommand
+    from webchanges.handler import JobState
+    from webchanges.storage import _ConfigReportRunCommand, _ConfigReportShell
 
 import json
 
@@ -41,11 +43,7 @@ class RunCommandReporter(TextReporter):
             return
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
-
-        # Work on a copy to not modify the outside environment
-        env = dict(os.environ)
-        env.update({f'{__project_name__.upper()}_REPORT_CONFIG_JSON': json.dumps(self.report.config)})
-        env.update({f'{__project_name__.upper()}_REPORT_REPORTED_JOBS_JSON': json.dumps(self.report.config)})
+        env = self.environment(filtered_job_states)
 
         subject_args = {
             'text': text,
@@ -69,3 +67,66 @@ class RunCommandReporter(TextReporter):
             logger.error(f"The '{self.__kind__}' filter with command {command} returned error:\n{e}")
             raise FileNotFoundError(e, f'with command {command}')  # noqa: B904
         print(result.stdout, end='')
+
+    def environment(self, filtered_job_states: list[JobState]) -> dict[str, str]:
+        """The environment the command runs in: a copy of the current one (so that the outside one is not modified)
+        with the report's configuration and the directives of the jobs reported on added in JSON format.
+
+        :param filtered_job_states: The job states reported on.
+        :returns: The environment variables.
+        """
+        jobs_json = json.dumps([job_state.job.to_dict() for job_state in filtered_job_states], default=str)
+        env = dict(os.environ)
+        env[f'{__project_name__.upper()}_REPORT_CONFIG_JSON'] = json.dumps(self.report.config)
+        env[f'{__project_name__.upper()}_CHANGED_JOBS_JSON'] = jobs_json
+        # Undocumented name, which until 3.39 held the report's configuration instead of the jobs; kept as is.
+        env[f'{__project_name__.upper()}_REPORT_REPORTED_JOBS_JSON'] = jobs_json
+        return env
+
+
+class ShellReporter(RunCommandReporter):
+    """Pipe the text report to a command (urlwatch's 'shell' reporter); deprecated, use run_command instead."""
+
+    __kind__ = 'shell'
+
+    config: _ConfigReportShell  # ty:ignore[invalid-attribute-override]
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        warnings.warn("'shell' reporter is deprecated; use 'run_command' instead", DeprecationWarning, stacklevel=1)
+        super().__init__(*args, **kwargs)
+
+    def submit(self) -> None:
+        """Run the command with the report on its standard input, as urlwatch does: the command (a string or a list
+        of arguments) is run without a shell and with no substitutions, its output is logged unless ignored, and a
+        non-zero exit code is logged as an error.
+        """
+        command = self.config['command']
+        if not command:
+            raise ValueError('Reporter "shell" needs a command')
+
+        text = '\n'.join(TextReporter.submit(self))
+        if not text:
+            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            return
+
+        filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
+        logger.debug('Reporter %s: running %s', self.__kind__, command)
+        try:
+            result = subprocess.run(  # noqa: S603 subprocess call - check for execution of untrusted input.
+                command,
+                input=f'{text}\n'.encode(),
+                capture_output=True,
+                check=False,
+                env=self.environment(filtered_job_states),
+            )
+        except FileNotFoundError as e:
+            logger.error(f"The '{self.__kind__}' reporter with command {command} returned error:\n{e}")
+            raise FileNotFoundError(e, f'with command {command}')  # noqa: B904
+        if result.stdout and not self.config['ignore_stdout']:
+            logger.info('Standard output from reporter %s: %s', self.__kind__, result.stdout.decode(errors='replace'))
+        if result.stderr and not self.config['ignore_stderr']:
+            logger.warning(
+                'Standard error output from reporter %s: %s', self.__kind__, result.stderr.decode(errors='replace')
+            )
+        if result.returncode:
+            logger.error('Reporter %s command %s exited with %d', self.__kind__, command, result.returncode)

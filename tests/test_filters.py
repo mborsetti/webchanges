@@ -232,6 +232,21 @@ def test_deprecated_filters() -> None:
     )
     assert _warning_message(w[0].message)[: len(expected)] == expected
 
+    # urlwatch's lynx method runs the default method instead, ignoring lynx's options
+    with pytest.warns(DeprecationWarning) as w:
+        data, _ = filtercls(job_state).filter(  # ty:ignore[call-non-callable]
+            '<div>a</div>',
+            'text/plain',
+            {'method': 'lynx', 'width': 200},
+        )
+    assert data == 'a'
+    assert len(w) == 1
+    expected = (
+        "Filter html2text's method 'lynx' is no longer supported and the filter's default method is used instead: "
+        'remove method and its options width, which are ignored (Job 0: '
+    )
+    assert _warning_message(w[0].message)[: len(expected)] == expected
+
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
         data, _ = filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 're'})  # ty:ignore[call-non-callable]
@@ -279,17 +294,6 @@ def test_deprecated_filters() -> None:
 
 # Cases of (filter_kind, data, mime_type, subfilter, exc_type, expected message prefix) that must raise.
 FILTER_EXCEPTION_CASES: list[tuple[str, str, str, dict[str, Any], type[Exception], str]] = [
-    (
-        'html2text',
-        '<div>a</div>',
-        'text/plain',
-        {'method': 'lynx'},
-        NotImplementedError,
-        (
-            "Filter html2text's method 'lynx' is no longer supported; for similar results, use the filter without "
-            'specifying a method. (Job 0:'
-        ),
-    ),
     (
         'html2text',
         '<div>a</div>',

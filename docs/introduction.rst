@@ -77,7 +77,7 @@ The instructions for each such job are contained in a file in the :ref:`YAML for
 and located in the following directory:
 
 * Linux: ``~/.config/webchanges``
-* MacOS: ``~/Library/Preferences/webchanges``
+* MacOS: ``~/Library/Application Support/webchanges``
 * Windows: ``%USERPROFILE%/Documents/webchanges`` (the webchanges folder within your Documents folder)
 
 It can be edited with any text editor or using the following command:
@@ -291,7 +291,7 @@ Installing on Windows
 * Install (or upgrade to) the `latest version of Python <https://www.python.org/downloads/>`__;
 * Open a command window by pressing ``⊞ Win`` + ``R`` together, typing ``cmd``, and pressing Enter (or clicking on OK);
 * If you are using Python 3.15, type ``set PYYAML_FORCE_LIBYAML=0`` and press Enter (see the note below);
-* Type ``py -m pip install webchanges`` (or ``py -m pip install webchanges[browser]`` etc.) and press Enter;
+* Type ``py -m pip install webchanges`` (or ``py -m pip install webchanges[use_browser]`` etc.) and press Enter;
 
   - This will download :program:`webchanges` and install it;
 * After this, :program:`webchanges` should be available as a command (type ``webchanges --version`` to check);

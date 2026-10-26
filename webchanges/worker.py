@@ -196,7 +196,14 @@ def run_jobs(urlwatcher: Urlwatch, read_only: bool = False) -> None:
                     job_state.tries = 0
                     if not read_only:
                         job_state.save()
-                    urlwatcher.report.new(job_state)
+                    if job_state.job.treat_new_as_changed:
+                        # Report it as a change from empty content, so that its differ and diff_filters apply
+                        logger.debug(
+                            f'Job {job_state.job.index_number}: New job reported as changed (treat_new_as_changed)'
+                        )
+                        urlwatcher.report.changed(job_state)
+                    else:
+                        urlwatcher.report.new(job_state)
 
     jobs = list(UrlwatchCommand(urlwatcher).jobs_from_joblist())
 

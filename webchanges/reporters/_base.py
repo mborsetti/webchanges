@@ -210,8 +210,9 @@ class ReporterBase(metaclass=TrackSubClasses):
             'count': len(filtered_job_states),
             'jobs': ', '.join(job_state.job.pretty_name() for job_state in filtered_job_states),
         }
-        if subject_args['count'] == 1 and '{count}' in subject:
-            subject.replace('changes', 'change')
+        if subject_args['count'] == 1:
+            # Only the word right after {count}, so that e.g. the '[webchanges]' prefix is left alone.
+            subject = re.sub(r'(\{count\}\s+change)s\b', r'\1', subject)
         if '{jobs_files}' in subject:
             if self.jobs_files and (len(self.jobs_files) > 1 or self.jobs_files[0].stem != 'jobs'):
                 jobs_files = f' ({", ".join(f.stem.removeprefix("jobs-") for f in self.jobs_files)})'

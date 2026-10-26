@@ -1324,11 +1324,46 @@ def test_validate_accepts_none_for_nullable() -> None:
 def test_navigate_directive() -> None:
     job_data = {'navigate': 'http://www.example.com'}
     with pytest.deprecated_call() as pytest_wrapped_warning:
-        JobBase.unserialize(job_data.copy())
+        job = JobBase.unserialize(job_data.copy())
     assert str(pytest_wrapped_warning.list[0].message) == (
         f"Error in jobs file: Job directive 'navigate' is deprecated: replace with 'url' and add 'use_browser: true':\n"
         f'{yaml.safe_dump(job_data)}'
     )
+    # Translated, not kept: until 3.39 the job failed when run ("Directive 'navigate' is deprecated with Playwright")
+    assert isinstance(job, BrowserJob)
+    assert job.navigate is None
+    assert job.serialize() == {'url': 'http://www.example.com', 'use_browser': True}
+
+
+@pytest.mark.filterwarnings('ignore::DeprecationWarning')  # of 'navigate'
+@pytest.mark.parametrize(
+    ('directives', 'use_browser', 'user_agent'),
+    [
+        ({'useragent': 'UA/1', 'browser': 'firefox'}, 'firefox', 'UA/1'),
+        ({'browser': 'chromium'}, True, None),
+        ({'useragent': 'UA/1', 'headers': {'user-agent': 'mine'}}, True, 'mine'),  # an explicit header wins
+        ({'wait_for': 'div.content'}, True, None),
+    ],
+)
+def test_urlwatch_browser_directives(
+    directives: dict[str, Any], use_browser: str | bool, user_agent: str | None, caplog: pytest.LogCaptureFixture
+) -> None:
+    """urlwatch's 'useragent', 'browser' and 'wait_for' directives of 'navigate' jobs are translated to a
+    'User-Agent' header, 'use_browser' and 'wait_for_selector', with a deprecation warning (until 3.39 they were
+    rejected as unrecognized, and 'wait_for' failed the job)."""
+    job = cast('BrowserJob', JobBase.unserialize({'navigate': 'https://example.com/', **directives}))
+    assert job.use_browser == use_browser
+    assert (job.headers or {}).get('User-Agent') == user_agent
+    assert job.wait_for is None
+    assert job.wait_for_selector == directives.get('wait_for')
+    assert 'is deprecated' in caplog.text
+
+
+def test_urlwatch_browser_directive_url_job() -> None:
+    """urlwatch's 'browser' directive does not turn a 'url' job into a browser job."""
+    job = JobBase.unserialize({'url': 'https://example.com/', 'browser': 'firefox'})
+    assert isinstance(job, UrlJob)
+    assert not job.use_browser
 
 
 # def test_kind_directive_deprecation() -> None:
@@ -1549,6 +1584,33 @@ def test_ignore_error() -> None:
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
     assert job.ignore_error(Exception()) is False
+
+
+def test_ignore_incomplete_reads() -> None:
+    """ignore_incomplete_reads silences the incomplete-read error of each HTTP client, and only that error."""
+    import httpx
+    import requests
+
+    incomplete_reads: list[Exception] = [
+        httpx.RemoteProtocolError(
+            'peer closed connection without sending complete message body: incomplete chunked read'
+        ),
+        requests.exceptions.ChunkedEncodingError('Connection broken: IncompleteRead(0 bytes read)'),
+    ]
+    if curl_cffi_is_installed:
+        from curl_cffi.requests import exceptions as curl_cffi_exceptions
+
+        incomplete_reads.extend(
+            [curl_cffi_exceptions.ChunkedEncodingError('chunked'), curl_cffi_exceptions.IncompleteRead('partial')]
+        )
+
+    job = JobBase.unserialize({'url': 'https://www.example.com', 'ignore_incomplete_reads': True})
+    assert all(job.ignore_error(exception) for exception in incomplete_reads)
+    assert job.ignore_error(httpx.ConnectError('Connection refused')) is False
+    assert job.ignore_error(requests.exceptions.ConnectionError('Connection refused')) is False
+
+    job = JobBase.unserialize({'url': 'https://www.example.com'})
+    assert not any(job.ignore_error(exception) for exception in incomplete_reads)
 
 
 def test_browser_switches_not_str_or_list() -> None:
@@ -2052,6 +2114,58 @@ def test_shell_command_stdin_is_null_device(ssdb_storage: SsdbSQLite3Storage) ->
         job_state.process()
         assert isinstance(job_state.exception, subprocess.CalledProcessError)
         assert 'EOFError' in (job_state.exception.stderr or '')
+
+
+@pytest.mark.parametrize(
+    ('stderr', 'exit_code', 'data', 'error', 'forwarded'),
+    [
+        (None, 0, 'out\n', None, ''),
+        ('ignore', 0, 'out\n', None, ''),
+        ('ignore', 1, None, 'Error: Exit status 1 returned from subprocess:\nerr', ''),
+        ('forward', 0, 'out\n', None, 'err\n'),
+        ('forward', 1, None, 'Error: Exit status 1 returned from subprocess:\nerr', 'err\n'),
+        ('urlwatch', 0, 'out\n', None, 'err\n'),  # urlwatch's name for 'forward'
+        ('fail', 0, None, 'Error: Output on standard error (directive stderr: fail):\nerr', ''),
+        ('stdout', 0, 'out\nerr\n', None, ''),
+    ],
+)
+def test_shell_stderr_directive(
+    stderr: str | None,
+    exit_code: int,
+    data: str | None,
+    error: str | None,
+    forwarded: str,
+    ssdb_storage: SsdbSQLite3Storage,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The stderr directive of command jobs: 'ignore' (the default) reports stderr only in the error of a failed
+    command, 'forward' (urlwatch's 'urlwatch') also writes it to webchanges' stderr, 'fail' fails the job on any stderr
+    output, and 'stdout' merges it into the data (until 3.39, any value failed the job)."""
+    script = f"import sys; print('out', flush=True); print('err', file=sys.stderr, flush=True); sys.exit({exit_code})"
+    job_data: dict[str, Any] = {'command': f'"{sys.executable}" -c "{script}"'}
+    if stderr:
+        job_data['stderr'] = stderr
+    job = JobBase.unserialize(job_data)
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        if error is None:
+            assert job_state.exception is None
+            assert str(job_state.new_data).replace('\r\n', '\n') == data
+        else:
+            assert job_state.exception is not None
+            assert job.format_error(job_state.exception, '').replace('\r\n', '\n') == error
+    assert capsys.readouterr().err.replace('\r\n', '\n') == forwarded
+
+
+def test_shell_stderr_directive_invalid(ssdb_storage: SsdbSQLite3Storage) -> None:
+    """An unknown value of the stderr directive is an error naming the valid ones."""
+    job = JobBase.unserialize({'command': 'echo hi', 'stderr': 'nope'})
+    with JobState(ssdb_storage, job) as job_state:
+        job_state.process()
+        assert isinstance(job_state.exception, ValueError)
+        assert "Invalid value 'nope' for directive 'stderr'; must be one of ignore, forward, fail, stdout." in str(
+            job_state.exception
+        )
 
 
 def test_compared_versions(ssdb_storage: SsdbSQLite3Storage) -> None:

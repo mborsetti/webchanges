@@ -11,6 +11,7 @@ from __future__ import annotations
 import atexit
 import copy
 import importlib.util
+import logging
 import os
 import shutil
 import sys
@@ -21,7 +22,7 @@ from abc import ABC
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 
 import pytest
 import yaml
@@ -218,15 +219,32 @@ def test_check_for_shell_job() -> None:
     #     assert len(jobs) == 1
 
 
-def test_legacy_slack_keys() -> None:
-    """Test if legacy report 'slack' keys don't trigger a ValueError even if not in DEFAULT_CONFIG."""
-    config_storage = YamlConfigStorage(config_file)
-    config = config_storage.parse(config_file)
-    config['report']['slack'] = {'enabled': False}
-    # mirror the load() flow: deprecated keys are removed before checking for unrecognized ones
-    config = config_storage.remove_deprecated_keys(config)
-    config_storage.check_for_unrecognized_keys(config)
-    assert 'slack' not in config['report']
+@pytest.mark.parametrize(
+    ('name', 'legacy_config', 'expected'),
+    [
+        ('slack', {'enabled': True, 'webhook_url': 'https://example.com/hook'}, {'markdown': False}),
+        ('mattermost', {'enabled': True, 'webhook_url': 'https://example.com/hook'}, {'markdown': True}),
+        ('shell', {'enabled': True, 'command': ['cat']}, {'ignore_stdout': True, 'ignore_stderr': False}),
+    ],
+)
+def test_legacy_urlwatch_reporters(
+    name: str,
+    legacy_config: dict[str, Any],
+    expected: dict[str, Any],
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The urlwatch reporters webchanges replaced are kept and filled with their defaults (until 3.39 'slack' was
+    dropped and the others flagged as unrecognized), with a deprecation warning but no 'unrecognized' one."""
+    config_path = _write_config(tmp_path, {'report': {name: legacy_config}})
+    config_storage = YamlConfigStorage(config_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', RuntimeWarning)  # 'Found unrecognized directive(s)' is a RuntimeWarning
+        with caplog.at_level(logging.WARNING, logger='webchanges.storage._yaml'):
+            config_storage.load()
+    reporter_config = cast('dict[str, Any]', config_storage.config['report'])[name]
+    assert reporter_config == {**YamlConfigStorage.legacy_reporter_defaults(name), **legacy_config, **expected}
+    assert f"Reporter '{name}' of the configuration file" in caplog.text
 
 
 def _write_config(tmp_path: Path, overrides: dict) -> Path:
@@ -434,14 +452,6 @@ def test_load_reporter_tags_are_not_unrecognized(tmp_path: Path) -> None:
     with warnings.catch_warnings():
         warnings.simplefilter('error', RuntimeWarning)
         YamlConfigStorage(cfg).load()
-
-
-def test_remove_deprecated_keys_strips_slack() -> None:
-    """remove_deprecated_keys drops the legacy 'slack' reporter key."""
-    config = YamlConfigStorage(config_file).parse(config_file)
-    config['report']['slack'] = {'enabled': False}
-    cleaned = YamlConfigStorage.remove_deprecated_keys(config)
-    assert 'slack' not in cleaned['report']
 
 
 # @py37_required

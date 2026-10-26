@@ -846,6 +846,10 @@ packages <optional_packages>` as follows:
 .. deprecated:: urlwatch
    Removed method ``lynx`` (external OS-specific dependency).
 
+.. versionchanged:: 3.39
+   Method ``lynx`` runs the default method instead (ignoring its options) and prints a deprecation warning, instead
+   of failing.
+
 
 
 .. _ical2text:

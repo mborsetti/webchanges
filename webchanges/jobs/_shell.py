@@ -9,6 +9,7 @@ __lazy_modules__ = ['subprocess']
 import logging
 import re
 import subprocess
+import sys
 from typing import TYPE_CHECKING
 
 from webchanges.filters import FilterBase
@@ -29,6 +30,10 @@ SHORT_VERBOSE_RE = re.compile(r'-(v+)')
 LONG_VERBOSE = '--verbose'
 # Characters that separate one shell command from the next (pipes, chaining, redirections, subshells).
 SHELL_OPERATORS = frozenset('|&;<>()')
+# The values of the stderr directive (from urlwatch).
+STDERR_MODES = ('ignore', 'forward', 'fail', 'stdout')
+# Values accepted under another name: urlwatch's 'urlwatch' is 'forward'.
+STDERR_MODE_ALIASES = {'urlwatch': 'forward'}
 
 
 def _logger_verbosity() -> int:
@@ -178,7 +183,7 @@ class ShellJob(Job):
 
     __required__: tuple[str, ...] = ('command',)
     __optional__: tuple[str, ...] = (
-        'stderr',  # ignored; here for backwards compatibility
+        'stderr',  # from urlwatch
     )
 
     def get_location(self) -> str:
@@ -213,9 +218,15 @@ class ShellJob(Job):
         logger.info('Job %s: Running shell command: %s', self.index_number, self.command)
         needs_bytes = FilterBase.filter_chain_needs_bytes(self.filters)  # ty:ignore[invalid-argument-type]
 
-        # deprecations
-        if self.stderr:
-            raise ValueError(f"Job {job_state.job.index_number}: Directive 'stderr' is deprecated and does nothing.")
+        # The stderr directive: 'ignore' (the default) reports stderr only with a non-zero exit code, 'forward' also
+        # writes it to webchanges' stderr, 'fail' fails the job on any stderr output, and 'stdout' merges it into
+        # stdout (like 2>&1)
+        stderr_mode = STDERR_MODE_ALIASES.get(self.stderr or 'ignore', self.stderr or 'ignore')
+        if stderr_mode not in STDERR_MODES:
+            raise ValueError(
+                f"Job {self.index_number}: Invalid value {self.stderr!r} for directive 'stderr'; must be one of "
+                f'{", ".join(STDERR_MODES)}.'
+            )
 
         # Pass the verbosity webchanges was run with (-v, -vv or -vvv) on to any Python interpreter invoked by the
         # command.  Never modifies self.command, as it is what the job's guid is computed from.
@@ -229,7 +240,8 @@ class ShellJob(Job):
             response = subprocess.run(  # noqa: S602 `shell=True`, security issue
                 command,
                 stdin=subprocess.DEVNULL,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT if stderr_mode == 'stdout' else subprocess.PIPE,
                 shell=True,
                 check=True,
                 text=(not needs_bytes),
@@ -239,8 +251,29 @@ class ShellJob(Job):
             logger.info(f'Job {self.index_number}: Failed with returncode {e.returncode}')
             logger.info(f'Job {self.index_number}: stderr : {e.stderr}')
             logger.info(f'Job {self.index_number}: stdout : {e.stdout}')
+            if stderr_mode == 'forward' and e.stderr:
+                self._forward_stderr(e.stderr)
             raise
+        if response.stderr:
+            logger.debug('Job %s: stderr (directive stderr: %s): %s', self.index_number, stderr_mode, response.stderr)
+            if stderr_mode == 'forward':
+                self._forward_stderr(response.stderr)
+            elif stderr_mode == 'fail':
+                # Reported by format_error as output on stderr, not as an exit status
+                raise subprocess.CalledProcessError(0, command, response.stdout, response.stderr)
         return (response.stdout, '', 'application/octet-stream' if needs_bytes else 'text/plain')
+
+    @staticmethod
+    def _forward_stderr(stderr: str | bytes) -> None:
+        """Write a command's standard error output to webchanges' own (directive ``stderr: forward``).
+
+        :param stderr: The command's standard error output.
+        """
+        if isinstance(stderr, bytes):
+            sys.stderr.buffer.write(stderr)
+        else:
+            sys.stderr.write(stderr)
+        sys.stderr.flush()
 
     def format_error(self, exception: Exception, tb: str) -> str:
         """Format the error of the job if one is encountered.
@@ -251,6 +284,11 @@ class ShellJob(Job):
         """
         if isinstance(exception, subprocess.CalledProcessError):
             # Instead of a full traceback, just show the HTTP error
+            if exception.returncode == 0:  # raised with directive 'stderr: fail'
+                stderr = exception.stderr
+                if isinstance(stderr, bytes):
+                    stderr = stderr.decode(errors='replace')
+                return f'Error: Output on standard error (directive stderr: fail):\n{stderr.strip()}'
             return (
                 f'Error: Exit status {exception.returncode} returned from subprocess:\n'
                 f'{(exception.stderr or exception.stdout).strip()}'

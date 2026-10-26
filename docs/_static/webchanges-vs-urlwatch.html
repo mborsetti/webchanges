@@ -8,25 +8,25 @@
     <title>webchanges vs urlwatch: a comparison</title>
     <meta
       name="description"
-      content="A 2026 comparison of webchanges and urlwatch built from each project's reference docs. Lead with the four high-value wins for webchanges &mdash; AI diff summaries, structural JSON/XML diffs, image change detection, and TLS/JA3 fingerprint evasion &mdash; then a full directive-level reference." />
+      content="webchanges 3.39 compared with urlwatch 2.29, built from each project's code and reference docs: the four high-value wins for webchanges &mdash; TLS/JA3 fingerprint evasion, AI diff summaries, image change detection and structural JSON/XML diffs &mdash; how it runs your urlwatch files as they are, and a full directive-level reference." />
     <meta
       name="keywords"
-      content="webchanges, urlwatch, webchanges vs urlwatch, AI diff summary, Gemini diff, deepdiff, image change detection, JA3, curl_cffi, Playwright, urlwatch alternative, web change monitoring" />
+      content="webchanges, urlwatch, webchanges vs urlwatch, urlwatch alternative, migrate from urlwatch, AI diff summary, Gemini diff, deepdiff, image change detection, JA3, curl_cffi, Playwright, web change monitoring" />
     <meta name="robots" content="index,follow,max-image-preview:large" />
-    <link rel="canonical" href="https://example.com/webchanges-vs-urlwatch.html" />
+    <link rel="canonical" href="https://webchanges.readthedocs.io/en/stable/_static/webchanges-vs-urlwatch.html" />
 
     <meta property="og:type" content="article" />
     <meta property="og:title" content="webchanges vs urlwatch: a comparison" />
     <meta
       property="og:description"
-      content="AI diff summaries, structural JSON/XML diffs, image change detection, TLS/JA3 evasion. The high-value reasons to pick webchanges over urlwatch &mdash; with the full reference comparison underneath." />
+      content="TLS/JA3 evasion, AI diff summaries, image change detection, structural JSON/XML diffs &mdash; and your urlwatch jobs run as they are. The reasons to pick webchanges over urlwatch, with the full reference comparison underneath." />
     <meta property="og:locale" content="en_US" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="webchanges vs urlwatch: a comparison" />
     <meta
       name="twitter:description"
-      content="The 4 high-value wins for webchanges &mdash; AI summaries, deepdiff, image differ, JA3 evasion &mdash; with full reference detail." />
+      content="The 4 high-value wins for webchanges &mdash; JA3 evasion, AI summaries, image differ, deepdiff &mdash; and a drop-in switch from urlwatch." />
 
     <script type="application/ld+json">
       {
@@ -35,9 +35,9 @@
           {
             "@type": "Article",
             "headline": "webchanges vs urlwatch: a comparison",
-            "description": "A 2026 comparison built from each project's reference docs.",
+            "description": "webchanges 3.39 compared with urlwatch 2.29, built from each project's code and reference docs.",
             "datePublished": "2026-05-09",
-            "dateModified": "2026-05-09",
+            "dateModified": "2026-10-26",
             "inLanguage": "en"
           },
           {
@@ -48,7 +48,7 @@
                 "name": "What is the single biggest reason to choose webchanges over urlwatch?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "webchanges has a typed differ system. The ai_google differ summarizes long diffs via Gemini, deepdiff compares JSON/YAML/XML element by element, and image diffs visual changes &mdash; none of which urlwatch offers natively."
+                  "text": "Its typed differ system. The ai_google differ summarizes long diffs via Gemini, deepdiff compares JSON/YAML/XML element by element, and image highlights visual changes; urlwatch offers none of these."
                 }
               },
               {
@@ -56,7 +56,7 @@
                 "name": "Can webchanges scrape sites that block urlwatch?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Often yes. Set http_client: curl_cffi with impersonate: chrome (or safari/firefox/edge). You can also override fingerprints.ja3 and fingerprints.akamai directly. urlwatch uses requests and offers no fingerprinting controls."
+                  "text": "Often, yes. Set http_client: curl_cffi with impersonate: chrome (or safari, firefox, edge), and override fingerprints.ja3 and fingerprints.akamai if needed. urlwatch uses requests and has no fingerprinting controls."
                 }
               },
               {
@@ -64,7 +64,15 @@
                 "name": "Is migrating from urlwatch hard?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Usually not. Job and config files are mostly compatible; webchanges auto-migrates the database.  Original files are retained so you can go back if you want."
+                  "text": "No. webchanges reads urlwatch's jobs and configuration files as they are, copies them on its first run, and converts the snapshot database once. urlwatch's own files are left untouched, so you can switch back at any time. Only custom hooks.py code needs adapting."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does webchanges send my pages to Google?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Only if you opt in to the ai_google differ, which needs your own Gemini API key. Otherwise everything runs on your machine."
                 }
               }
             ]
@@ -176,7 +184,6 @@
       .lede {
         font-size: 1.07rem;
         color: var(--muted);
-        max-width: 74ch;
       }
       .tldr {
         background: var(--soft);
@@ -474,52 +481,66 @@
 
     <header>
       <div class="kicker">
-        Updated 9 May 2026 &middot; ~3 min read &middot; built from each project's reference docs
+        Updated 26 Oct 2026 &middot; webchanges 3.39 vs urlwatch 2.29 &middot; ~4 min read &middot; built from each
+        project's code and reference docs
       </div>
       <h1>webchanges vs urlwatch: a comparison</h1>
       <p class="lede">
-        Both tools watch URLs, browser-rendered pages, and shell-command output for changes and notify you. webchanges
-        does everything urlwatch does &mdash; same jobs, filters, and reporter model &mdash; and four high-value things
-        urlwatch can't.
+        Both tools watch web pages, browser-rendered pages and the output of shell commands for changes, and notify you.
+        webchanges began as a fork of urlwatch and runs urlwatch's jobs and configuration files as they are &mdash; then
+        adds four high-value things urlwatch can't do, and many smaller ones.
       </p>
 
       <div class="tldr" role="note" aria-label="Bottom line">
-        <strong>Bottom line:</strong> Pick <strong>webchanges</strong> if you need any of:
-        <strong>TLS/JA3 fingerprint evasion</strong> for anti-bot sites, <strong>AI-summarized diffs</strong> of long
-        documents, <strong>image change detection</strong>, or <strong>structural JSON/XML diffs</strong> without false
-        positives. Or one of the many other additions, and a tool that is actively developed.
+        <strong>Bottom line:</strong> Pick <strong>webchanges</strong> if you need any of
+        <strong>TLS/JA3 fingerprint evasion</strong> for sites with bot walls, <strong>AI-summarized diffs</strong> of
+        long documents, <strong>image change detection</strong>, or <strong>structural JSON/XML diffs</strong> without
+        false alarms &mdash; or simply a tool that is actively developed. Switching takes one command and leaves your
+        urlwatch setup untouched.
       </div>
     </header>
 
     <main id="main">
-      <h2 id="wins-h">Release activity in the last 12 months</h2>
-      <aside class="activity" aria-label="Release activity in the last 12 months">
+      <nav class="toc" aria-label="Contents">
+        <strong>Contents</strong>
+        <ol>
+          <li><a href="#activity-h">Release activity</a></li>
+          <li><a href="#wins">The 4 high-value wins</a></li>
+          <li><a href="#use">Use webchanges if&hellip;</a></li>
+          <li><a href="#switch">Switching from urlwatch</a></li>
+          <li><a href="#reference">Full reference comparison</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="activity-h">Release activity in the last 12 months</h2>
+      <aside class="activity" aria-labelledby="activity-h">
         <div class="stat">
-          <div class="num">12</div>
+          <div class="num">10</div>
           <div class="lbl">
             <strong>webchanges releases</strong>
-            <span class="sub">in the last 12 months &middot; latest <code>v3.36.1</code> (27 Apr 2026)</span>
+            <span class="sub">in the last 12 months &middot; latest <code>v3.39.0</code> (26 Oct 2026)</span>
           </div>
         </div>
         <div class="stat dim">
           <div class="num">0</div>
           <div class="lbl">
             <strong>urlwatch releases</strong>
-            <span class="sub">in the last 12 months &middot; latest tag 28 Oct 2024</span>
+            <span class="sub">in the last 12 months &middot; latest <code>2.29</code> (28 Oct 2024)</span>
           </div>
         </div>
       </aside>
       <p class="activity-cap">
-        Source: GitHub releases on
-        <a href="https://github.com/mborsetti/webchanges/releases" rel="noopener">mborsetti/webchanges</a> and tags on
-        <a href="https://github.com/thp/urlwatch/tags" rel="noopener">thp/urlwatch</a>, as of 9 May 2026.
+        Source: GitHub releases of
+        <a href="https://github.com/mborsetti/webchanges/releases" rel="noopener">mborsetti/webchanges</a> and tags of
+        <a href="https://github.com/thp/urlwatch/tags" rel="noopener">thp/urlwatch</a>, as of 26 Oct 2026.
       </p>
 
       <section id="wins" aria-labelledby="wins-h">
         <h2 id="wins-h">The 4 high-value wins</h2>
         <p>
-          If any of these match what you actually monitor, urlwatch can't keep up. Each is a webchanges feature with no
-          native urlwatch equivalent.
+          If any of these match what you monitor, urlwatch can't keep up. Each is a webchanges feature with no urlwatch
+          equivalent.
         </p>
 
         <div class="wins">
@@ -527,13 +548,14 @@
             <h3><span class="num">1</span>Get past TLS/JA3 fingerprinting <span class="chip">curl_cffi</span></h3>
             <p class="why">
               <strong>Why it matters:</strong> Cloudflare, Akamai, DataDome and friends fingerprint the TLS handshake
-              and HTTP/2 settings &mdash; not just User-Agent. urlwatch's stock <code>requests</code> client gets you a
-              403 with no recourse. webchanges routes through <code>curl_cffi</code> with a real browser TLS profile.
+              and the HTTP/2 settings, not just the User-Agent. urlwatch's <code>requests</code> client gets a 403 with
+              no recourse; webchanges can go through <code>curl_cffi</code> with a real browser's TLS profile.
             </p>
             <p>
-              <strong>How:</strong> Set <code>http_client: curl_cffi</code> and <code>impersonate: chrome</code> (or
+              <strong>How:</strong> set <code>http_client: curl_cffi</code> and <code>impersonate: chrome</code> (or
               <code>safari</code> / <code>firefox</code> / <code>edge</code>). Override <code>fingerprints.ja3</code>,
-              <code>fingerprints.akamai</code>, or pin <code>http_version</code> as far as <code>v3only</code>.
+              <code>fingerprints.akamai</code> and <code>fingerprints.extra_fp</code>, or pin
+              <code>http_version</code> (up to <code>v3only</code>).
             </p>
             <pre><code>url: https://hard-to-scrape.example/
 http_client: curl_cffi
@@ -544,15 +566,15 @@ http_version: v2tls</code></pre>
           <article class="win">
             <h3><span class="num">2</span>Long diffs &rarr; one paragraph <span class="chip">ai_google</span></h3>
             <p class="why">
-              <strong>Why it matters:</strong> Watching a 50-page terms-of-service, an RFC draft, a regulatory filing,
-              or a long policy page? webchanges sends you a plain-English summary of the meaningful changes instead of a
-              2,000-line unified diff. urlwatch ships the raw patch and leaves you to read it.
+              <strong>Why it matters:</strong> watching 50 pages of terms of service, an RFC draft, a regulatory filing
+              or a long policy? webchanges sends you a plain-language summary of what changed, ahead of the diff, instead
+              of only a 2,000-line patch. urlwatch sends the raw patch and leaves the reading to you.
             </p>
             <p>
-              <strong>How:</strong> <code>differ: ai_google</code> calls Google Gemini with a prompt template that
-              exposes <code>{old_text}</code>, <code>{new_text}</code>, <code>{unified_diff}</code>. Configurable
+              <strong>How:</strong> <code>differ: ai_google</code> calls Google's Gemini with a prompt template that
+              can use <code>{old_text}</code>, <code>{new_text}</code> and <code>{unified_diff}</code>. Set the
               <code>model</code>, <code>system_instructions</code>, <code>temperature</code>, <code>top_p</code>,
-              <code>thinking_budget</code>. Bring your own free Gemini API key.
+              <code>thinking_budget</code> or <code>thinking_level</code>. Bring your own (free) Gemini API key.
             </p>
             <pre><code>differ:
   name: ai_google
@@ -562,34 +584,37 @@ http_version: v2tls</code></pre>
           <article class="win">
             <h3><span class="num">3</span>Watch images, not just text <span class="chip">image</span></h3>
             <p class="why">
-              <strong>Why it matters:</strong> Logo swaps, product-photo updates, dashboard screenshots, status-page
-              banners, captcha pages. urlwatch is text-first; if the page is a chart or an image, you're out. webchanges
-              pixel-diffs and ships a yellow overlay showing what moved.
+              <strong>Why it matters:</strong> logo swaps, product-photo updates, chart images, status-page banners.
+              urlwatch only compares text, so if the content is an image you're out of luck. webchanges highlights what
+              changed in yellow on a greyscale copy of the image, right in the HTML report.
             </p>
             <p>
               <strong>How:</strong> <code>differ: image</code> with <code>data_type: url</code> (or
-              <code>filename</code> / <code>ascii85</code> / <code>base64</code>) and
-              <code>mse_threshold</code> (default 2.5) to tolerate compression noise.
+              <code>filename</code> / <code>ascii85</code> / <code>base64</code>), and <code>mse_threshold</code>
+              (default 2.5) to ignore compression noise. Add <code>ai_google</code> to also get a description of the
+              change. In BETA.
             </p>
             <pre><code>url: https://example.com/logo.png
+filters:
+  - ascii85
 differ:
   name: image
-  data_type: url
+  data_type: ascii85
   mse_threshold: 5.0</code></pre>
           </article>
 
           <article class="win">
             <h3><span class="num">4</span>JSON/XML diffs that don't cry wolf <span class="chip">deepdiff</span></h3>
             <p class="why">
-              <strong>Why it matters:</strong> APIs reorder keys. Numeric precision drifts. Whitespace flips. urlwatch
-              text-diffs the serialized form and pings you for noise; you end up chaining <code>format-json</code> +
-              <code>jq</code> + a custom <code>diff_tool</code> and still missing nested changes. webchanges compares
-              the parsed structure element by element.
+              <strong>Why it matters:</strong> APIs reorder arrays, numbers drift in the last decimal, and a one-field
+              change turns into a wall of reformatted lines. urlwatch compares the serialized text and pings you for
+              noise; you end up chaining <code>format-json</code>, <code>jq</code> and a custom <code>diff_tool</code>
+              and still miss nested changes. webchanges compares the parsed structure, element by element.
             </p>
             <p>
               <strong>How:</strong> <code>differ: deepdiff</code> with <code>data_type: json</code> (or
               <code>yaml</code> / <code>xml</code>), <code>ignore_order</code>, <code>ignore_string_case</code>,
-              <code>significant_digits</code>, <code>compact</code>.
+              <code>significant_digits</code> and <code>compact</code>.
             </p>
             <pre><code>differ:
   name: deepdiff
@@ -605,40 +630,111 @@ differ:
         <ul class="tight">
           <li>Any of the four wins above apply.</li>
           <li>
-            You need <strong>granular Playwright control</strong>: <code>block_elements</code>, <code>evaluate</code>,
-            chained <code>wait_for_*</code>, persistent <code>user_data_dir</code>, <code>switches</code>,
-            <code>http_credentials</code>.
+            You want <strong>reports you can read at a glance</strong>: HTML reports keep the page's formatting and
+            clickable links, mark additions and deletions in color (also in Gmail and in dark mode), and can show
+            changes side by side (<code>table</code>) or word by word (<code>wdiff</code>).
           </li>
           <li>
-            You want <strong>reporters that earn their keep</strong>: <code>github_issue</code> turns each change into a
-            tracked ticket with labels/assignees/milestones; <code>mailgun</code> for transactional email;
-            <code>browser</code> opens the HTML report locally; <code>run_command</code> exposes
-            <code>{count}</code>/<code>{jobs}</code>/<code>{text}</code> plus <code>WEBCHANGES_*_JSON</code> env vars.
+            You need <strong>fine control of the browser</strong>: <code>block_elements</code>, <code>evaluate</code>,
+            chained <code>wait_for_*</code>, a persistent <code>user_data_dir</code>, <code>switches</code>,
+            <code>http_credentials</code>, or attaching to a browser that is already running
+            (<code>connect_over_cdp</code>).
           </li>
           <li>
-            You want <strong>Telegram with formatting</strong>: bold/italics/strikethrough/links via Markdown, not plain
-            text plus a <code>monospace</code> flag.
+            You want <strong>fewer false alarms</strong>: <code>empty_as_error</code> treats an empty response as a
+            transient error, <code>suppress_repeated_errors</code> reports an error once instead of at every run, and
+            <code>same_site_delay</code> spaces out the jobs hitting the same site.
           </li>
           <li>
-            You want <strong>snapshot retention controls</strong>: <code>max_snapshots</code> caps storage growth and
-            <code>--rollback-database</code> recovers from a bad filter change. urlwatch keeps every snapshot.
+            You want <strong>reporters that earn their keep</strong>: <code>github_issue</code> turns each change into
+            a tracked issue with labels, assignees and milestone; <code>browser</code> opens the HTML report locally;
+            <code>run_command</code> passes <code>{count}</code>, <code>{jobs}</code> and <code>{text}</code> plus the
+            <code>WEBCHANGES_*_JSON</code> environment variables; <code>telegram</code> keeps bold, italics,
+            strikethrough and links.
           </li>
           <li>
-            You want <strong>safer external commands</strong>: the <code>execute</code> filter runs a program without
-            shell interpretation. <code>shellpipe</code> is still available but flagged as a security risk.
+            You want <strong>snapshots you can trust</strong>: they are saved only after the reports have been sent;
+            <code>max_snapshots</code> caps the database's growth; and <code>--rollback-database</code> undoes a bad
+            filter change.
           </li>
           <li>
-            You want <strong>extra filters</strong> at the edges: <code>ascii85</code>, <code>base64</code>,
-            <code>format-xml</code>, <code>jsontoyaml</code>, <code>xmltojson</code>, <code>xmltoyaml</code>,
-            <code>pypdf</code>, <code>remove_repeated</code>, <code>absolute_links</code>; renamed <code>keep_lines_containing</code> /
-            <code>delete_lines_containing</code> with <code>text</code>+<code>re</code> modes.
+            You want <strong>tools for maintaining your jobs</strong>: <code>--errors</code> lists the jobs that fail
+            or capture nothing, <code>--test</code> without a job checks every file, and editors autocomplete and
+            validate <code>jobs.yaml</code> and <code>config.yaml</code> from the JSON Schemas webchanges installs.
           </li>
-          <li>You want a <strong>JSON Schema</strong> (<code>config.schema.json</code>) for editor autocomplete.</li>
-          <li>You need <strong>HTTP/2</strong> to access sites.</li>
+          <li>
+            You keep <strong>jobs in several files</strong> (globs and directories, with <code>--jobs</code> or the
+            <code>jobs</code> configuration directive), or want secrets kept out of them (<code>!env</code>).
+          </li>
+          <li>
+            You want <strong>extra filters</strong>: <code>execute</code> (runs a program without a shell),
+            <code>between</code>, <code>absolute_links</code>, <code>format-xml</code>, <code>jsontoyaml</code>,
+            <code>xmltojson</code>, <code>xmltoyaml</code>, <code>ascii85</code>, <code>base64</code>,
+            <code>pypdf</code>, <code>remove_repeated</code>, and <code>keep_lines_containing</code> /
+            <code>delete_lines_containing</code> with <code>text</code> or <code>re</code>.
+          </li>
+          <li>You need <strong>HTTP/2</strong> (or HTTP/3) to reach a site.</li>
         </ul>
+      </section>
+
+      <section id="switch" aria-labelledby="switch-h">
+        <h2 id="switch-h">Switching from urlwatch</h2>
+        <p>
+          Install webchanges and run <code>webchanges --test</code>. On its first run it copies urlwatch's files from
+          <code>~/.urlwatch</code> (or urlwatch's default directory, e.g. <code>~/.config/urlwatch</code>):
+          <code>urls.yaml</code> becomes <code>jobs.yaml</code>, <code>urlwatch.yaml</code> becomes
+          <code>config.yaml</code>, and the snapshot database is converted once (with the <code>minidb</code> package).
+          urlwatch's own files are left untouched, so you can switch back at any time.
+        </p>
+        <div class="decide">
+          <article>
+            <h3>Keeps working <span class="badge">as is</span></h3>
+            <ul class="tight">
+              <li>
+                Browser jobs: <code>navigate</code>, <code>useragent</code>, <code>browser</code>,
+                <code>wait_until</code>, <code>wait_for</code>
+              </li>
+              <li>
+                <code>filter</code>, <code>diff_filter</code>, <code>diff_tool</code>, <code>http_proxy</code>,
+                <code>https_proxy</code>, <code>json</code>, <code>kind: shell</code>,
+                <code>treat_new_as_changed</code>, and <code>stderr</code> with all four values
+              </li>
+              <li>
+                Filters <code>grep</code>, <code>grepi</code>, and <code>html2text</code> methods
+                <code>pyhtml2text</code>, <code>re</code> and <code>lynx</code> (which uses the default method)
+              </li>
+              <li>Reporters <code>slack</code>, <code>mattermost</code> and <code>shell</code></li>
+              <li>
+                <code>--urls</code>, <code>--cache</code>, <code>--gc-cache</code>, <code>--test-filter</code>,
+                <code>--test-diff-filter</code>, <code>--enable</code>, <code>--disable</code>, and selecting a job by
+                index, name or URL/command
+              </li>
+            </ul>
+            <p class="meta">The renamed ones print a deprecation warning, to update when convenient.</p>
+          </article>
+          <article>
+            <h3>Needs a change</h3>
+            <ul class="tight">
+              <li>
+                <code>hooks.py</code>: import from <code>webchanges</code> instead of <code>urlwatch</code>, and adapt
+                custom classes to the hooks API.
+              </li>
+              <li><code>--tags work home</code> becomes <code>--tags work,home</code>.</li>
+            </ul>
+            <h3>Looks different</h3>
+            <ul class="tight">
+              <li>
+                <code>html2text</code> without a method converts to Markdown (urlwatch only removed the tags); add
+                <code>method: strip_tags</code> to keep urlwatch's output.
+              </li>
+              <li>Only the latest 4 snapshots of each job are kept; set <code>max_snapshots: 0</code> to keep all.</li>
+              <li>Telegram reports are sent in Markdown, so <code>monospace</code> has no effect.</li>
+            </ul>
+          </article>
+        </div>
         <p class="meta">
-          Migration is mostly drop-in: <code>jobs.yaml</code> / <code>config.yaml</code> are largely compatible, and the
-          database auto-migrates. Original files are retained so you can go back if you want.
+          Step by step, with every difference: the
+          <a href="../upgrading.html">Upgrading from urlwatch</a> guide.
         </p>
       </section>
 
@@ -646,7 +742,7 @@ differ:
 
       <section id="reference" aria-labelledby="reference-h">
         <h2 id="reference-h">Full reference comparison</h2>
-        <p class="ref-banner">Source: each project's official reference docs.</p>
+        <p class="ref-banner">Source: each project's code and reference docs (webchanges 3.39, urlwatch 2.29).</p>
 
         <h3 id="jobs">Jobs &amp; universal directives</h3>
         <table aria-label="Universal directives">
@@ -662,81 +758,74 @@ differ:
             <tr>
               <td>
                 <code>name</code>, <code>enabled</code>, <code>kind</code>, <code>user_visible_url</code>,
-                <code>compared_versions</code>, <code>max_tries</code>
+                <code>compared_versions</code>, <code>max_tries</code>, <code>tags</code>,
+                <code>treat_new_as_changed</code>, <code>stderr</code> (command jobs)
               </td>
               <td class="center yes">&check;</td>
               <td class="center yes">&check;</td>
-              <td>Common ground.</td>
+              <td>
+                Common ground. <code>stderr: forward</code> is urlwatch's <code>stderr: urlwatch</code>, which also
+                works.
+              </td>
             </tr>
             <tr>
               <td><code>filter</code> / <code>filters</code>, <code>diff_filter</code> / <code>diff_filters</code></td>
               <td class="center yes">&check;</td>
               <td class="center yes">&check;</td>
-              <td>Plural form in webchanges.</td>
+              <td>Plural in webchanges; the singular still works.</td>
             </tr>
             <tr>
               <td><code>differ</code> &mdash; typed differ selector with sub-directives</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
-              <td>urlwatch only has <code>diff_tool</code> (a custom command).</td>
+              <td>urlwatch only has <code>diff_tool</code> (an external command).</td>
             </tr>
             <tr>
-              <td>
-                <code>note</code>, <code>monospace</code>, <code>is_markdown</code>, <code>markdown_extras</code>
-              </td>
+              <td><code>additions_only</code>, <code>deletions_only</code></td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
-              <td>Per-job rendering hints. <span class="only">webchanges-only</span></td>
-            </tr>
-            <tr>
-              <td><code>additions_only</code>, <code>deletions_only</code> at job level</td>
-              <td class="center yes">&check;</td>
-              <td class="center partial">filter-only</td>
-              <td>webchanges promotes them to first-class job options.</td>
-            </tr>
-            <tr>
-              <td><code>tags</code></td>
-              <td class="center yes">&check;</td>
-              <td class="center yes">&check;</td>
-              <td>Group jobs to select them with <code>--tags</code> or to route them to a specific reporter.</td>
-            </tr>
-            <tr>
-              <td><code>treat_new_as_changed</code></td>
-              <td class="center no">&times;</td>
-              <td class="center yes">&check;</td>
-              <td><span class="only bad">urlwatch-only</span></td>
+              <td>Report only what was added (e.g. new items in a list), or only what was removed.</td>
             </tr>
             <tr>
               <td>
                 <code>suppress_errors</code> / <code>suppress_repeated_errors</code> / <code>suppress_error_ended</code>
               </td>
               <td class="center yes">&check;</td>
-              <td class="center partial">~</td>
-              <td>Finer-grained muting in webchanges.</td>
+              <td class="center no">&times;</td>
+              <td>Mute errors, repeated errors, or the notice that an error has ended.</td>
+            </tr>
+            <tr>
+              <td><code>empty_as_error</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>Treat an empty response as a transient error instead of a change.</td>
             </tr>
             <tr>
               <td><code>same_site_delay</code></td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
-              <td>Staggers jobs hitting the same site to dodge rate limits. <span class="only">webchanges-only</span></td>
+              <td>Spaces out the jobs hitting the same site, to stay clear of rate limits.</td>
+            </tr>
+            <tr>
+              <td>
+                <code>note</code>, <code>monospace</code>, <code>is_markdown</code>, <code>markdown_extras</code>,
+                <code>contextlines</code>
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>Per-job report rendering.</td>
+            </tr>
+            <tr>
+              <td><code>hook_data</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center no">&times;</td>
+              <td>Any data for your <code>hooks.py</code> code.</td>
             </tr>
             <tr>
               <td><code>!env</code> YAML tag</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
-              <td>
-                Inserts environment variables (e.g. secrets) into any value of the jobs and configuration files.
-                <span class="only">webchanges-only</span>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Shell job <code>stderr</code> handling
-                (<code>ignore</code>/<code>fail</code>/<code>stdout</code>&hellip;)
-              </td>
-              <td class="center no">&times;</td>
-              <td class="center yes">&check;</td>
-              <td><span class="only bad">urlwatch-only</span></td>
+              <td>Inserts environment variables (e.g. secrets) into any value of the jobs and configuration files.</td>
             </tr>
           </tbody>
         </table>
@@ -752,9 +841,12 @@ differ:
           </thead>
           <tbody>
             <tr>
-              <td>Selectable client (<code>httpx</code> (HTTP/2), <code>requests</code>, <code>curl_cffi</code>)</td>
+              <td>
+                Choice of client per job: <code>httpx</code> (with HTTP/2), <code>requests</code> or
+                <code>curl_cffi</code>
+              </td>
               <td class="center yes">&check;</td>
-              <td class="center no">&times;</td>
+              <td class="center no"><code>requests</code> only</td>
             </tr>
             <tr>
               <td>
@@ -770,23 +862,33 @@ differ:
               <td class="center no">&times;</td>
             </tr>
             <tr>
-              <td><code>fingerprints.ja3</code>, <code>fingerprints.akamai</code>, <code>extra_fp</code></td>
+              <td>
+                <code>fingerprints</code>: <code>ja3</code>, <code>akamai</code>, <code>extra_fp</code>
+              </td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td>
-                <code>params</code>, <code>data_as_json</code>, <code>retries</code>, <code>no_redirects</code>,
-                <code>no_conditional_request</code>, <code>empty_as_error</code>
+                <code>params</code>, <code>retries</code>, <code>no_redirects</code>,
+                <code>no_conditional_request</code>, <code>ignore_dh_key_too_small</code>
               </td>
               <td class="center yes">&check;</td>
-              <td class="center partial">~</td>
+              <td class="center no">&times;</td>
+            </tr>
+            <tr>
+              <td><code>data_as_json</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center yes"><code>json</code></td>
             </tr>
             <tr>
               <td>
                 Common: <code>headers</code>, <code>cookies</code>, <code>data</code>, <code>method</code>,
-                <code>encoding</code>, <code>timeout</code>, <code>ssl_no_verify</code>,
-                <code>http_proxy</code>/<code>https_proxy</code>, <code>ignore_*_errors</code>
+                <code>encoding</code>, <code>timeout</code>, <code>ssl_no_verify</code>, <code>ignore_cached</code>,
+                <code>proxy</code> (urlwatch: <code>http_proxy</code> / <code>https_proxy</code>),
+                <code>ignore_connection_errors</code>, <code>ignore_http_error_codes</code>,
+                <code>ignore_timeout_errors</code>, <code>ignore_too_many_redirects</code>,
+                <code>ignore_incomplete_reads</code>
               </td>
               <td class="center yes">&check;</td>
               <td class="center yes">&check;</td>
@@ -796,31 +898,29 @@ differ:
 
         <h3 id="browser">Browser jobs (Playwright)</h3>
         <p>
-          Both projects use Playwright and support the same engines (chromium, chrome, firefox, webkit, msedge). The
-          difference is the directive surface, which is much broader for webchanges.
+          Both projects drive the browser with Playwright. urlwatch launches Playwright's bundled Chromium, Firefox or
+          WebKit with a handful of directives; webchanges uses an installed Chrome or Edge (any release channel),
+          Firefox or WebKit, and exposes far more of Playwright.
         </p>
         <div class="twocol">
           <article>
             <h4>webchanges &mdash; <code>use_browser: true</code></h4>
             <ul class="tight">
-              <li><code>block_elements</code> (skip stylesheets/images/fonts/media/scripts)</li>
+              <li><code>block_elements</code> (skip stylesheets, images, fonts, media, scripts&hellip;)</li>
               <li><code>connect_over_cdp</code> (attach to an already-running browser over the DevTools Protocol)</li>
-              <li><code>evaluate</code> (run JS, return result)</li>
+              <li><code>evaluate</code> (run JavaScript and use its result)</li>
               <li>
-                <code>init_script</code>, <code>initialization_url</code>, <code>initialization_js</code> (initialize
-                page before going to the URL with the data)
+                <code>init_script</code>, <code>initialization_url</code>, <code>initialization_js</code> (prepare the
+                page before going to the URL)
               </li>
               <li>
-                <code>switches</code>, <code>ignore_default_args</code>, <code>user_data_dir</code>(control browser
-                launch)
+                <code>switches</code>, <code>ignore_default_args</code>, <code>user_data_dir</code> (control how the
+                browser is launched)
               </li>
-              <li><code>http_credentials</code> (log in, including a proxy)</li>
+              <li><code>http_credentials</code>, <code>proxy</code> (log in, also to a proxy)</li>
+              <li><code>ignore_https_errors</code>, <code>referer</code>, <code>headers</code>, <code>cookies</code></li>
               <li>
-                <code>ignore_https_errors</code>,
-                <code>referer</code>
-              </li>
-              <li>
-                <code>wait_for_function</code>, <code>wait_for_selector</code> (state / strict / timeout, list-able),
+                <code>wait_for_function</code>, <code>wait_for_selector</code> (state, strict, timeout; one or a list),
                 <code>wait_for_url</code>, <code>wait_for_timeout</code>, <code>wait_until</code>
               </li>
             </ul>
@@ -830,30 +930,44 @@ differ:
             <ul class="tight">
               <li>
                 <code>navigate</code>, <code>wait_until</code>, <code>wait_for</code>, <code>useragent</code>,
-                <code>browser</code>
+                <code>browser</code>, <code>ignore_http_error_codes</code>
               </li>
             </ul>
-            <p class="meta">Same engine, much smaller knob set.</p>
+            <p class="meta">
+              Same engine, much smaller set of controls. webchanges runs these jobs as they are, translating
+              <code>useragent</code> into a <code>User-Agent</code> header, <code>browser</code> into
+              <code>use_browser</code> and <code>wait_for</code> into <code>wait_for_selector</code>.
+            </p>
           </article>
         </div>
 
         <h3 id="filters">Filters</h3>
         <p>
-          Both share the core (CSS/XPath, html2text, jq, pdf2text, OCR, regex, sort/reverse). Differences is the additional filters offered by webchanges.
+          Both share the core: CSS and XPath selectors, <code>element-by-*</code>, <code>html2text</code>,
+          <code>beautify</code>, <code>csv2text</code>, <code>ical2text</code>, <code>pdf2text</code>,
+          <code>ocr</code>, <code>jq</code>, <code>format-json</code>, <code>pretty-xml</code>, <code>re.sub</code>,
+          <code>re.findall</code>, <code>sort</code>, <code>reverse</code>, <code>sha1sum</code>, <code>hexdump</code>
+          and <code>shellpipe</code>. The differences are webchanges' additions:
         </p>
         <ul class="tight">
           <li>
-            <strong>webchanges-only:</strong> <code>execute</code> (safer than <code>shellpipe</code>),
-            <code>ascii85</code>, <code>base64</code>, <code>between</code>, <code>format-xml</code>, <code>jsontoyaml</code>,
-            <code>xmltojson</code>, <code>xmltoyaml</code>, <code>pypdf</code>, <code>remove_repeated</code>, <code>absolute_links</code>, enhanced
-            <code>strip</code> (<code>chars</code>/<code>side</code>/<code>splitlines</code>),
-            <code>format-json</code> with <code>sort_keys</code>, <code>pdf2text</code> with
-            <code>raw</code>/<code>physical</code>.
+            <strong>webchanges-only:</strong> <code>execute</code> (runs a program without a shell, safer than
+            <code>shellpipe</code>), <code>between</code>, <code>absolute_links</code>, <code>format-xml</code>,
+            <code>jsontoyaml</code>, <code>xmltojson</code>, <code>xmltoyaml</code>, <code>ascii85</code>,
+            <code>base64</code>, <code>pypdf</code>, <code>sha256sum</code>, <code>remove_repeated</code>; a
+            <code>strip</code> with <code>chars</code>, <code>side</code> and <code>splitlines</code>; and
+            <code>pdf2text</code> with <code>raw</code> and <code>physical</code>.
           </li>
           <li>
-            Renamed in webchanges: <code>grep</code> &rarr; <code>keep_lines_containing</code>,
-            <code>grepi</code> &rarr; <code>delete_lines_containing</code> (both accept <code>text</code> or
-            <code>re</code> in webchanges).
+            Renamed in webchanges (the old names still work): <code>grep</code> &rarr;
+            <code>keep_lines_containing</code>, <code>grepi</code> &rarr; <code>delete_lines_containing</code> (both
+            take <code>text</code> or <code>re</code>), <code>striplines</code> &rarr; <code>strip</code> with
+            <code>splitlines: true</code>, <code>remove-duplicate-lines</code> &rarr; <code>remove_repeated</code>.
+          </li>
+          <li>
+            <code>html2text</code> converts to Markdown by default in webchanges (with the Python
+            <code>html2text</code> package); urlwatch's default only strips the tags, which webchanges does with
+            <code>method: strip_tags</code>.
           </li>
         </ul>
 
@@ -882,13 +996,13 @@ differ:
             </tr>
             <tr>
               <td><code>wdiff</code></td>
-              <td>Word-level diff with line breaks preserved</td>
+              <td>Word-level diff, keeping the line breaks</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>command</code></td>
-              <td>Pipe to external program (<code>is_html</code>)</td>
+              <td>Output of an external program (<code>is_html</code>)</td>
               <td class="center yes">&check;</td>
               <td class="center yes"><code>diff_tool</code></td>
             </tr>
@@ -900,13 +1014,13 @@ differ:
             </tr>
             <tr>
               <td><code>image</code></td>
-              <td>Pixel diff with overlay</td>
+              <td>Changes highlighted on the image (BETA)</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>ai_google</code></td>
-              <td>LLM summary via Gemini</td>
+              <td>Plain-language summary by Gemini, ahead of the diff</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
@@ -926,9 +1040,10 @@ differ:
           <tbody>
             <tr>
               <td>
-                Common: <code>stdout</code>, <code>email</code> (sendmail/SMTP), <code>mailgun</code>, </code><code>telegram</code>,
-                <code>matrix</code>, <code>gotify</code>, <code>ntfy</code>, <code>pushover</code>,
-                <code>pushbullet</code>, <code>prowl</code>, <code>ifttt</code>, <code>xmpp</code>, <code>discord</code>
+                Common: <code>stdout</code>, <code>email</code> (SMTP or sendmail), <code>mailgun</code>,
+                <code>telegram</code>, <code>matrix</code>, <code>gotify</code>, <code>ntfy</code>,
+                <code>pushover</code>, <code>pushbullet</code>, <code>prowl</code>, <code>ifttt</code>,
+                <code>xmpp</code>, <code>discord</code>
               </td>
               <td class="center yes">&check;</td>
               <td class="center yes">&check;</td>
@@ -938,45 +1053,52 @@ differ:
               <td><code>github_issue</code></td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
-              <td>Token, owner, repo, labels, assignees, milestone. <span class="only">webchanges-only</span></td>
+              <td>Opens an issue per report: labels, assignees, milestone, type.</td>
             </tr>
             <tr>
               <td><code>browser</code></td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
-              <td>Open HTML report locally. <span class="only">webchanges-only</span></td>
+              <td>Opens the HTML report in your browser.</td>
             </tr>
             <tr>
               <td><code>run_command</code></td>
               <td class="center yes">&check;</td>
-              <td class="center partial">~</td>
+              <td class="center partial"><code>shell</code></td>
               <td>
-                webchanges substitutes <code>{count}</code>/<code>{jobs}</code>/<code>{text}</code> +
-                <code>WEBCHANGES_*_JSON</code>; urlwatch has a simpler <code>shell</code> reporter.
+                Passes <code>{count}</code>, <code>{jobs}</code>, <code>{text}</code> and the
+                <code>WEBCHANGES_*_JSON</code> environment variables. urlwatch's <code>shell</code> reporter, which
+                pipes the report to a command, also runs in webchanges.
               </td>
             </tr>
             <tr>
-              <td><code>webhook</code> (unified Slack / Mattermost / custom)</td>
+              <td><code>webhook</code> (Slack, Mattermost and compatible services)</td>
               <td class="center yes">&check;</td>
-              <td class="center yes"><code>slack</code> + <code>mattermost</code></td>
+              <td class="center partial"><code>slack</code>, <code>mattermost</code></td>
               <td>
-                webchanges merges them with <code>markdown</code>, <code>max_message_length</code>,
-                <code>rich_text</code>.
+                Adds <code>markdown</code>, <code>max_message_length</code> and <code>rich_text</code>. urlwatch's
+                <code>slack</code> and <code>mattermost</code> configurations also run in webchanges.
               </td>
             </tr>
             <tr>
-              <td>Same reporter configured multiple times, selected by <code>tags</code></td>
+              <td><code>telegram</code> formatting</td>
+              <td class="center yes">Markdown</td>
+              <td class="center partial">plain or monospace</td>
+              <td>webchanges keeps bold, italics, underlining, strikethrough and links.</td>
+            </tr>
+            <tr>
+              <td>The same reporter configured several times, each selected by <code>tags</code></td>
               <td class="center yes">&check;</td>
               <td class="center yes">&check;</td>
-              <td>Route different jobs to different destinations (e.g. two email addresses, two Telegram chats).</td>
+              <td>Send different jobs to different destinations (e.g. two email addresses or Telegram chats).</td>
             </tr>
           </tbody>
         </table>
 
         <h3 id="cli">Command-line interface</h3>
         <p>
-          Webchanges
-          adds operational tooling for testing, retention, recovery, observability, and packaging.
+          webchanges accepts urlwatch's arguments (the renamed ones under their old names too) and adds tools for
+          testing, maintaining jobs, managing the database and troubleshooting.
         </p>
         <table aria-label="CLI flag comparison">
           <thead>
@@ -989,124 +1111,135 @@ differ:
           </thead>
           <tbody>
             <tr>
+              <td>
+                <code>--tags</code>, <code>--enable</code>, <code>--disable</code>, <code>--prepare-jobs</code>,
+                <code>--change-location</code>, <code>--dump-history</code>, <code>--test-reporter</code>,
+                <code>--smtp-login</code>, <code>--xmpp-login</code>, <code>--telegram-chats</code>,
+                <code>--edit-config</code>, <code>--edit-hooks</code>, <code>--features</code>
+              </td>
+              <td>Common ground; each argument that takes a job selects it by index, name or URL/command.</td>
+              <td class="center yes">&check;</td>
+              <td class="center yes">&check;</td>
+            </tr>
+            <tr>
+              <td><code>--jobs</code>, <code>--hooks</code></td>
+              <td>Load several files: repeat the argument, or give a glob or a directory.</td>
+              <td class="center yes">&check;</td>
+              <td class="center partial">one file</td>
+            </tr>
+            <tr>
               <td><code>--errors [REPORTER]</code></td>
               <td>
-                Test-run every enabled job and list ones that errored or captured no data; optionally pipe the result
-                to a reporter.
+                Run every enabled job and list those that fail or capture no data; optionally send the list to a
+                reporter.
               </td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--list-jobs [REGEX]</code></td>
-              <td>
-                List jobs and their indexes, filtered by an optional regex. urlwatch's <code>--list</code> has no
-                filter.
-              </td>
+              <td>List jobs and their index numbers, optionally only those matching a regular expression.</td>
               <td class="center yes">&check;</td>
-              <td class="center partial">no regex</td>
+              <td class="center partial"><code>--list</code>, no filter</td>
             </tr>
             <tr>
               <td><code>--test [JOB]</code></td>
               <td>
-                Run one job and show filtered output. With no JOB, validates the syntax of every config, jobs, and
-                hooks file.
+                Run one job and show its filtered output. Without a JOB, check the configuration, jobs and hooks files
+                for errors.
               </td>
               <td class="center yes">&check;</td>
-              <td class="center partial">JOB required</td>
+              <td class="center partial"><code>--test-filter</code>, JOB required</td>
             </tr>
             <tr>
               <td><code>--test-differ JOB</code></td>
               <td>
-                Replay the differ against existing saved snapshots; combines with <code>--test-reporter</code> to
-                preview the rendered output.
+                Replay the differ over the saved snapshots; with <code>--test-reporter</code>, preview the result in
+                any reporter.
               </td>
               <td class="center yes">&check;</td>
-              <td class="center yes"><code>--test-diff-filter</code></td>
+              <td class="center partial"><code>--test-diff-filter</code></td>
             </tr>
             <tr>
               <td><code>--no-headless</code></td>
-              <td>Show the actual browser window for Playwright jobs (debug captchas, redirects, login walls).</td>
+              <td>Show the browser window of browser jobs (to debug captchas, redirects, login walls).</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--max-workers N</code></td>
-              <td>Cap the parallel thread pool used to fetch jobs.</td>
+              <td>Cap the number of jobs run in parallel.</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
+              <td><code>--gc-database [N]</code></td>
+              <td>
+                Delete the snapshots of jobs no longer in the jobs file and keep the latest N of the others (default
+                1).
+              </td>
+              <td class="center yes">&check;</td>
+              <td class="center yes"><code>--gc-cache</code></td>
+            </tr>
+            <tr>
               <td><code>--clean-database [N]</code></td>
-              <td>Trim snapshot history to the latest N per job (default 1).</td>
+              <td>Keep only the latest N snapshots of every job (default 1), and compact the database.</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--rollback-database TIMESTAMP</code></td>
               <td>
-                Recovery undo: drop every changed snapshot newer than TIMESTAMP &mdash; the antidote to a bad filter
-                that triggered a wave of false changes.
+                Delete every snapshot saved after TIMESTAMP &mdash; the undo for a bad filter that set off a wave of
+                false changes.
               </td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--delete-snapshot JOB</code></td>
-              <td>Delete only the most recent snapshot for a job, e.g. to force a re-fetch.</td>
+              <td>Delete a job's latest snapshot, e.g. to have a change reported again.</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
-              <td><code>--gc-database [N]</code></td>
-              <td>Drop snapshots for jobs no longer in the jobs file.</td>
-              <td class="center yes">&check;</td>
-              <td class="center yes"><code>--gc-cache</code></td>
-            </tr>
-            <tr>
               <td><code>--database-engine</code>, <code>--max-snapshots N</code></td>
-              <td>Override the database engine and retention from the CLI without editing <code>config.yaml</code>.</td>
+              <td>Override the database engine and retention without editing <code>config.yaml</code>.</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--footnote "TEXT"</code></td>
-              <td>Append a custom footer to every rendered report.</td>
+              <td>Add a footnote to the reports.</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--log-file FILE</code></td>
-              <td>Redirect logs to a file (defaults to verbose when set).</td>
+              <td>Write the log to a file (implies <code>-v</code>).</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--check-new</code></td>
-              <td>Query PyPI to see if a newer release of webchanges is available.</td>
+              <td>Check PyPI for a newer release of webchanges.</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--detailed-versions</code></td>
               <td>
-                Dump version info for webchanges, Python, SQLite, every dependency, the Playwright browser, and (on
-                Linux) related apt packages &mdash; useful for bug reports.
+                Show the versions of webchanges, Python, SQLite, every dependency and the browser &mdash; useful for bug
+                reports.
               </td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
             </tr>
             <tr>
               <td><code>--install-chrome</code></td>
-              <td>Install or update the Chrome browser used by Playwright jobs.</td>
+              <td>Install or update the Chrome browser used by browser jobs.</td>
               <td class="center yes">&check;</td>
               <td class="center no">&times;</td>
-            </tr>
-            <tr>
-              <td><code>--tags</code></td>
-              <td>Select jobs to run by tag instead of by index.</td>
-              <td class="center yes">&check;</td>
-              <td class="center yes">&check;</td>
             </tr>
           </tbody>
         </table>
@@ -1114,18 +1247,20 @@ differ:
         <h3 id="config">Configuration &amp; database</h3>
         <ul class="tight">
           <li>
-            <strong>webchanges</strong> exposes <code>differ_defaults</code> (per-differ defaults),
-            <code>database</code> (engine + <code>max_snapshots</code>), global <code>tz</code>,
-            <code>footnote</code>, and <code>jobs</code>/<code>hooks</code> (which files to load: files, globs or
-            directories). Ships <code>config.schema.json</code> for editor autocompletion. Underscore-prefixed
-            keys (<code>_note:</code>) act as inline comments.
+            Configuration items only in <strong>webchanges</strong>: <code>differ_defaults</code> (defaults for each
+            differ), <code>database</code> (engine and <code>max_snapshots</code>), <code>footnote</code>, and
+            <code>jobs</code> / <code>hooks</code> (which files to load: files, globs or directories). Keys starting
+            with <code>_</code> (e.g. <code>_note:</code>) are remarks.
           </li>
           <li>
-            Database backends &mdash;  webchanges allows to set <code>max_snapshots</code> to define retention.
+            Database: both offer SQLite-based, Redis and text-file storage. webchanges' default SQLite database is
+            indexed and compressed, keeps the latest 4 snapshots of each job (urlwatch keeps them all), and is written
+            only after the reports have been sent.
           </li>
           <li>
-            Default config locations &mdash; webchanges: Linux <code>~/.config/webchanges</code>, macOS
-            <code>~/Library/Preferences/webchanges</code>, Windows <code>%USERPROFILE%\Documents\webchanges</code>.
+            Default locations of the files &mdash; webchanges: Linux <code>~/.config/webchanges</code>, macOS
+            <code>~/Library/Application Support/webchanges</code>, Windows
+            <code>%USERPROFILE%\Documents\webchanges</code>. urlwatch's are found automatically on the first run.
           </li>
         </ul>
       </section>
@@ -1135,30 +1270,32 @@ differ:
         <details open>
           <summary>What's the single biggest reason to choose webchanges?</summary>
           <p>
-            The differ system <code>ai_google</code> turns a 2,000-line legal diff into three bullets;
-            <code>deepdiff</code> kills false positives on JSON/XML; <code>image</code> watches pictures. urlwatch has
-            none of these natively.
+            Its differs: <code>ai_google</code> turns a 2,000-line legal diff into a paragraph, <code>deepdiff</code>
+            ends false alarms on JSON and XML, and <code>image</code> watches pictures. urlwatch has none of these.
           </p>
         </details>
         <details>
           <summary>Can webchanges scrape sites that block urlwatch?</summary>
           <p>
             Often, yes. Use <code>http_client: curl_cffi</code> with <code>impersonate: chrome</code> (or
-            <code>safari</code>/<code>firefox</code>/<code>edge</code>) and override <code>fingerprints.ja3</code> /
-            <code>fingerprints.akamai</code> if needed. urlwatch ships with no fingerprinting controls.
+            <code>safari</code> / <code>firefox</code> / <code>edge</code>), and override <code>fingerprints.ja3</code>
+            / <code>fingerprints.akamai</code> if needed. urlwatch has no fingerprinting controls.
           </p>
         </details>
         <details>
           <summary>Is migrating from urlwatch hard?</summary>
           <p>
-            Usually not. Job and config files are mostly compatible; the database auto-migrates. Original files are retained so you can go back if you want.
+            No. webchanges reads urlwatch's jobs and configuration files as they are, copies them on its first run, and
+            converts the snapshot database once. urlwatch's own files are left untouched, so you can switch back at any
+            time. Only custom <code>hooks.py</code> code needs adapting; see
+            <a href="#switch">Switching from urlwatch</a>.
           </p>
         </details>
         <details>
           <summary>Does webchanges send my pages to Google?</summary>
           <p>
-            Only if you opt in via the <code>ai_google</code> differ, which needs your own Gemini API key. Otherwise
-            change detection is local.
+            Only if you opt in to the <code>ai_google</code> differ, which needs your own Gemini API key. Otherwise
+            everything runs on your machine.
           </p>
         </details>
       </section>
@@ -1166,7 +1303,7 @@ differ:
       <hr />
 
       <section aria-label="Sources">
-        <h2>Sources (reference docs)</h2>
+        <h2>Sources</h2>
         <ul class="tight">
           <li>
             <a href="https://webchanges.readthedocs.io/en/stable/jobs.html" rel="noopener"
@@ -1194,6 +1331,11 @@ differ:
             >
           </li>
           <li>
+            <a href="https://webchanges.readthedocs.io/en/stable/upgrading.html" rel="noopener"
+              >webchanges &mdash; Upgrading from urlwatch</a
+            >
+          </li>
+          <li>
             <a href="https://urlwatch.readthedocs.io/en/latest/jobs.html" rel="noopener">urlwatch &mdash; Jobs</a>
           </li>
           <li>
@@ -1209,14 +1351,19 @@ differ:
               >urlwatch &mdash; Configuration</a
             >
           </li>
+          <li>
+            <a href="https://github.com/thp/urlwatch/tree/2.29/lib/urlwatch" rel="noopener"
+              >urlwatch 2.29 &mdash; source code</a
+            >
+          </li>
         </ul>
       </section>
     </main>
 
     <footer>
       <p class="meta">
-        Compiled 9 May 2026 from each project's reference documentation. Verify against current release notes before
-        migrating production setups.
+        Compiled 26 Oct 2026 from the code and documentation of webchanges 3.39 and urlwatch 2.29. Check the current
+        release notes before migrating production setups.
       </p>
     </footer>
   </body>

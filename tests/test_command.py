@@ -10,7 +10,8 @@ import os
 import shutil
 import sys
 import time
-from typing import TYPE_CHECKING, Callable, Iterator, cast
+from types import SimpleNamespace
+from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
 
 import pytest
 
@@ -18,6 +19,7 @@ from tests.conftest import WINDOWS_TIME_COMMAND, close_ssdb_storage
 from tests.test_storage import DATABASE_ENGINES, prepare_storage_test
 from webchanges.command import UrlwatchCommand, _human_size
 from webchanges.config import CommandConfig
+from webchanges.jobs import JobBase
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, SsdbStorage, YamlConfigStorage, YamlJobsStorage
 from webchanges.util import import_module_from_source
@@ -144,7 +146,7 @@ def test__find_job(urlwatch_command: UrlwatchCommand) -> None:
         urlwatch_command._find_job('https://example.com/')
     assert (
         str(pytest_wrapped_e.value)
-        == "Job https://example.com/ does not match any job's url/user_visible_url or command."
+        == "Job https://example.com/ does not match any job's name, url/user_visible_url or command."
     )
 
 
@@ -167,7 +169,56 @@ def test__find_job_index_error(urlwatch_command: UrlwatchCommand) -> None:
 def test__find_job_index_no_match(urlwatch_command: UrlwatchCommand) -> None:
     with pytest.raises(ValueError) as pytest_wrapped_e:
         urlwatch_command._find_job('nomatch')
-    assert str(pytest_wrapped_e.value) == "Job nomatch does not match any job's url/user_visible_url or command."
+    assert str(pytest_wrapped_e.value) == "Job nomatch does not match any job's name, url/user_visible_url or command."
+
+
+def _set_jobs(urlwatcher: Urlwatch, *jobs_directives: dict[str, str]) -> None:
+    """Replaces the jobs of urlwatcher with those of the directives given, numbered from 1."""
+    urlwatcher.jobs = [JobBase.unserialize(directives) for directives in jobs_directives]
+    for index_number, job in enumerate(urlwatcher.jobs, start=1):
+        job.index_number = index_number
+
+
+def test__find_job_by_name(urlwatch_command: UrlwatchCommand, urlwatcher: Urlwatch) -> None:
+    """A job can be found by its name as well as by its location (added in 3.39)."""
+    _set_jobs(
+        urlwatcher,
+        {'name': 'Example news', 'url': 'https://example.com/news'},
+        {'name': 'Other', 'url': 'https://example.com/other'},
+    )
+    assert urlwatch_command._find_job('Example news') is urlwatcher.jobs[0]
+    assert urlwatch_command._find_job('https://example.com/other') is urlwatcher.jobs[1]
+
+
+def test__find_job_multiple_matches(urlwatch_command: UrlwatchCommand, urlwatcher: Urlwatch) -> None:
+    """A query matching more than one job, by name and/or location, is an error listing the jobs matched."""
+    _set_jobs(
+        urlwatcher,
+        {'name': 'News', 'url': 'https://example.com/a'},
+        {'url': 'https://example.com/a', 'filters': 'html2text'},
+        {'name': 'News', 'url': 'https://example.com/b'},
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        urlwatch_command._find_job('News')
+    assert str(pytest_wrapped_e.value) == (
+        'Job News matches 2 jobs; select the job by its index number instead:\n'
+        '• Job 1: https://example.com/a (News)\n'
+        '• Job 3: https://example.com/b (News)'
+    )
+    with pytest.raises(ValueError) as pytest_wrapped_e:
+        urlwatch_command._find_job('https://example.com/a')
+    assert str(pytest_wrapped_e.value).startswith('Job https://example.com/a matches 2 jobs;')
+
+
+def test_jobs_from_joblist_runs_each_job_once(urlwatch_command: UrlwatchCommand, urlwatcher: Urlwatch) -> None:
+    """A job selected more than once in the joblist (e.g. by --prepare-jobs adding a job already selected) is run
+    once (fixed in 3.39)."""
+    _set_jobs(urlwatcher, {'name': 'A', 'url': 'https://example.com/a'}, {'url': 'https://example.com/b'})
+    urlwatcher.urlwatch_config.joblist = ['2', 1, 'A', 2, 'https://example.com/b']
+    assert [job.get_location() for job in urlwatch_command.jobs_from_joblist()] == [
+        'https://example.com/b',
+        'https://example.com/a',
+    ]
 
 
 def test__get_job(urlwatch_command: UrlwatchCommand) -> None:
@@ -583,6 +634,8 @@ def test_modify_urls(
         ('add', 'url=https://www.example.com/#test_modify_urls', '--add'),
         ('delete', 'https://www.example.com/#test_modify_urls', '--delete'),
         ('change_location', ('a', 'b'), '--change-location'),
+        ('enable', '1', '--enable'),
+        ('disable', '1', '--disable'),
     ],
 )
 def test_modify_urls_refuses_multiple_jobs_files(
@@ -612,6 +665,65 @@ def test_modify_urls_refuses_multiple_jobs_files(
 
 
 @pytest.mark.parametrize(
+    ('attribute', 'query', 'job_defaults', 'code', 'message', 'saved_enabled'),
+    [
+        ('disable', 'a', {}, 0, 'Disabled job 1: https://a.example/.', [False, False]),
+        ('enable', 'b', {}, 0, 'Enabled job 2: https://b.example/.', [None, None]),
+        # job_defaults would keep the job disabled if the directive were only removed
+        ('enable', 'a', {'all_jobs': {'enabled': False}}, 0, 'Enabled job 1: https://a.example/.', [True, False]),
+        ('enable', 'a', {}, 0, 'Job 1 is already enabled: https://a.example/. The jobs file is unmodified.', None),
+        ('disable', '2', {}, 0, 'Job 2 is already disabled: https://b.example/. The jobs file is unmodified.', None),
+        ('disable', 'c', {}, 1, 'Job c does not match any job', None),
+    ],
+)
+def test_enable_disable_job(
+    urlwatch_command: UrlwatchCommand,
+    command_config: CommandConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    attribute: str,
+    query: str,
+    job_defaults: dict[str, Any],
+    code: int,
+    message: str,
+    saved_enabled: list[bool | None] | None,
+) -> None:
+    """urlwatch's --enable and --disable set the job's enabled directive (removing it when enabling, unless
+    job_defaults would then keep the job disabled) and rewrite the jobs file, unless the job already is in the state
+    requested."""
+    urlwatcher = urlwatch_command.urlwatcher
+    _set_jobs(urlwatcher, {'name': 'a', 'url': 'https://a.example/'}, {'name': 'b', 'url': 'https://b.example/'})
+    urlwatcher.jobs[1].enabled = False
+    monkeypatch.setitem(cast('dict[str, Any]', urlwatcher.config_storage.config), 'job_defaults', job_defaults)
+    saved: list[list[dict[str, Any]]] = []
+    monkeypatch.setattr(urlwatcher.jobs_storage, 'save', lambda jobs: saved.append([job.serialize() for job in jobs]))
+    monkeypatch.setattr('builtins.input', lambda _: 'y')
+    setattr(command_config, attribute, query)
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
+        urlwatch_command.handle_actions()
+    assert pytest_wrapped_se.value.code == code
+    assert message in capsys.readouterr().out
+    if saved_enabled is None:
+        assert not saved
+    else:
+        assert [job.get('enabled') for job in saved[0]] == saved_enabled
+
+
+def test_serialize_keeps_false_directives() -> None:
+    """Rewriting the jobs file (e.g. with --disable) keeps the directives set to false or 0, which differ from leaving
+    them out (until 3.39 they were dropped), but not the empty headers of URL jobs."""
+    job = JobBase.unserialize(
+        {'url': 'https://a.example/', 'enabled': False, 'contextlines': 0, 'additions_only': False}
+    )
+    assert job.serialize() == {
+        'url': 'https://a.example/',
+        'enabled': False,
+        'contextlines': 0,
+        'additions_only': False,
+    }
+
+
+@pytest.mark.parametrize(
     'database_engine',
     DATABASE_ENGINES,
     ids=(type(v).__name__ for v in DATABASE_ENGINES),
@@ -633,7 +745,7 @@ def test_modify_urls_move_location(
     with pytest.raises(ValueError) as pytest_wrapped_ve:
         urlwatch_command2.handle_actions()
     command_config2.change_location = None
-    assert str(pytest_wrapped_ve.value) == "Job a does not match any job's url/user_visible_url or command."
+    assert str(pytest_wrapped_ve.value) == "Job a does not match any job's name, url/user_visible_url or command."
 
     # un-saved job
     old_loc = urlwatch_command2.urlwatcher.jobs[0].get_location()
@@ -689,6 +801,49 @@ def test_modify_urls_move_location(
     assert urlwatch_command2.urlwatcher.jobs[0].get_guid() == old_guid
     assert urlwatch_command2.urlwatcher.jobs[0].get_location() == old_loc
     assert ssdb_storage2.load(old_guid) == new_data
+
+    # no input available (e.g. run by cron): the snapshots are moved, but the jobs file is left as is (until 3.39, the
+    # prompt crashed with EOFError)
+    def no_input(_: str) -> str:
+        raise EOFError
+
+    monkeypatch.setattr('builtins.input', no_input)
+    saved_jobs_file = urlwatcher2.jobs_storage.filename[0]
+    before = saved_jobs_file.read_text(encoding='utf-8')
+    command_config2.change_location = old_loc, new_loc
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
+        urlwatch_command2.handle_actions()
+    assert pytest_wrapped_se.value.code == 0
+    assert f'Please manually update the jobs file by replacing "{old_loc}" with "{new_loc}".' in (
+        capsys.readouterr().out
+    )
+    assert saved_jobs_file.read_text(encoding='utf-8') == before
+
+
+def test_enable_disable_no_input(
+    urlwatch_command: UrlwatchCommand,
+    command_config: CommandConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """With no input available at the confirmation prompt (e.g. stdin redirected from the null device on Windows,
+    which reports it as a terminal), --disable leaves the jobs file unmodified instead of crashing with EOFError."""
+
+    def no_input(_: str) -> str:
+        raise EOFError
+
+    urlwatcher = urlwatch_command.urlwatcher
+    _set_jobs(urlwatcher, {'name': 'a', 'url': 'https://a.example/'})
+    saved: list[object] = []
+    monkeypatch.setattr(urlwatcher.jobs_storage, 'save', saved.append)
+    monkeypatch.setattr('builtins.input', no_input)
+    monkeypatch.setattr(sys, '__stdin__', SimpleNamespace(isatty=lambda: True))
+    command_config.disable = 'a'
+    with pytest.raises(SystemExit) as pytest_wrapped_se:
+        urlwatch_command.handle_actions()
+    assert pytest_wrapped_se.value.code == 1
+    assert 'Quitting. Job 1 has not been disabled and job file is unmodified.' in capsys.readouterr().out
+    assert not saved
 
 
 # --- Snapshot DB commands ---

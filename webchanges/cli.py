@@ -72,7 +72,12 @@ def migrate_from_legacy(
         ('hooks.py', hooks_file),
     ]
     if any(dest is not None for _, dest in yaml_dests):
+        # Like urlwatch itself: ~/.urlwatch if it exists, otherwise the platform's configuration directory (e.g.
+        # ~/.config/urlwatch on Linux).
         legacy_project_path = Path.home() / f'.{legacy_package}'
+        if not legacy_project_path.is_dir():
+            legacy_project_path = platformdirs.user_config_path(legacy_package)
+        logger.debug('Looking for legacy %s files in %s', legacy_package, legacy_project_path)
         if legacy_project_path.is_dir():
             pairs.extend((legacy_project_path / name, dest) for name, dest in yaml_dests if dest is not None)
 

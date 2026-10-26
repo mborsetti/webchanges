@@ -42,10 +42,12 @@ class CommandConfig(BaseConfig):
     delete: str | None
     delete_snapshot: str | None
     detailed_versions: bool
+    disable: str | None
     dump_history: str | None
     edit: bool
     edit_config: bool
     edit_hooks: bool
+    enable: str | None
     errors: str | None
     features: bool
     footnote: str | None
@@ -136,7 +138,7 @@ class CommandConfig(BaseConfig):
         parser.add_argument(
             'joblist',
             nargs='*',
-            help=('JOB(S) to run (index number(s) as per --list; if one also URL/command) (default: run all jobs)'),
+            help='JOB(S) to run (index number(s) as per --list, name(s) or URL(s)/command(s)) (default: run all jobs)',
             metavar='JOB(S)',
         )
         parser.add_argument(
@@ -217,6 +219,16 @@ class CommandConfig(BaseConfig):
             dest='list_jobs',
         )
         group.add_argument(
+            '--enable',
+            help='enable a JOB (by index, name or URL/command) by rewriting the jobs file, losing its remarks',
+            metavar='JOB',
+        )
+        group.add_argument(
+            '--disable',
+            help='disable a JOB (by index, name or URL/command) by rewriting the jobs file, losing its remarks',
+            metavar='JOB',
+        )
+        group.add_argument(
             '--tags',
             action='append',
             help='run only the jobs having any of the TAGS (comma-separated) in their tags directive; can be repeated',
@@ -234,8 +246,8 @@ class CommandConfig(BaseConfig):
             '--test',
             nargs='?',
             const=True,
-            help='test a JOB (by index or URL/command) and show filtered output; if no JOB, check config and jobs '
-            'file(s) syntax for errors',
+            help='test a JOB (by index, name or URL/command) and show filtered output; if no JOB, check config and '
+            'jobs file(s) syntax for errors',
             metavar='JOB',
             dest='test_job',
         )
@@ -255,8 +267,8 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--test-differ',
             nargs='+',
-            help='show diff(s) using existing saved snapshots of a JOB (by index or URL/command); can be combined with '
-            '--test-reporter',
+            help='show diff(s) using existing saved snapshots of a JOB (by index, name or URL/command); can be '
+            'combined with --test-reporter',
             metavar='JOB',
             dest='test_differ',
         )
@@ -270,7 +282,7 @@ class CommandConfig(BaseConfig):
         )
         group.add_argument(
             '--dump-history',
-            help='print all saved changed snapshots for a JOB (by index or URL/command)',
+            help='print all saved changed snapshots for a JOB (by index, name or URL/command)',
             metavar='JOB',
         )
         group.add_argument(
@@ -377,7 +389,7 @@ class CommandConfig(BaseConfig):
         )
         group.add_argument(
             '--delete-snapshot',
-            help='delete the last saved changed snapshot of JOB (index or URL/command)',
+            help='delete the last saved changed snapshot of JOB (index, name or URL/command)',
             metavar='JOB',
         )
         group.add_argument(
@@ -388,7 +400,7 @@ class CommandConfig(BaseConfig):
         group.add_argument(
             '--change-location',
             nargs=2,
-            help='change the location of an existing JOB (index or URL/command)',
+            help='change the location of an existing JOB (index, name or URL/command)',
             metavar=('JOB', 'NEW_LOCATION'),
         )
 
@@ -437,7 +449,7 @@ class CommandConfig(BaseConfig):
         )
         group.add_argument(
             '--delete',
-            # help='delete a job (by index or URL/command) [use --edit-jobs instead]',
+            # help='delete a job (by index, name or URL/command) [use --edit-jobs instead]',
             help=argparse.SUPPRESS,
             metavar='JOB',
         )

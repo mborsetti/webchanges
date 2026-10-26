@@ -23,10 +23,18 @@ Add job index number(s) (a "joblist") to the command line to run a subset of job
 will only run jobs #2, #3, and #9, and ``webchanges -1`` will only run the last job. Find the index numbering of your
 jobs by running ``webchanges --list``.
 
+Wherever a command line argument takes a job, you can also select it by its ``name``, its URL (or
+``user_visible_url``) or its command, e.g. ``webchanges --test "Example news"``. If more than one job matches, the
+error message lists them; select the one you want by its index number instead. A job selected more than once in a
+joblist runs only once.
+
 .. versionadded:: 3.6
 
 .. versionchanged:: 3.8
    Accepts negative indices.
+
+.. versionchanged:: 3.39
+   Jobs can be selected by their ``name``; a query matching more than one job is an error.
 
 
 .. _tags_cli:
@@ -52,7 +60,7 @@ Custom job file specification
 By default, the job file is named ``jobs.yaml`` and is located in the following directory:
 
 * Linux: ``~/.config/webchanges``
-* macOS: ``~/Library/Preferences/webchanges``
+* macOS: ``~/Library/Application Support/webchanges``
 * Windows: ``%USERPROFILE%\Documents\webchanges`` (the webchanges folder within your Documents folder)
 
 Use the ``--jobs`` command line argument to specify a file with a different name or location, a `glob pattern
@@ -88,7 +96,8 @@ files matching the same glob pattern or directory in alphabetical order.
 
 The same applies to the ``--hooks`` argument, where a directory stands for all the ``*.py`` files in its tree.
 
-The command line arguments that rewrite the jobs file (``--add``, ``--delete`` and ``--change-location``) cannot be
+The command line arguments that rewrite the jobs file (``--enable``, ``--disable``, ``--add``, ``--delete`` and
+``--change-location``) cannot be
 used with multiple jobs files: select the file to modify with ``--jobs`` (which overrides the configuration file's
 ``jobs`` directive), e.g. ``webchanges --jobs jobs/news.yaml --delete 3``.
 
@@ -156,6 +165,38 @@ in a `case-insensitive manner <https://docs.python.org/3/library/re.html#re.I>`_
 
 .. versionchanged:: 3.25
    Added ability to filter list using a RegEx.
+
+
+.. _enable_disable:
+
+Enable or disable a job
+-----------------------
+You can disable a job, so that it is no longer run but stays in the jobs file, with the command line argument
+``--disable`` followed by the job's index number (as per ``--list``), name, or URL/command; ``--enable`` undoes it. For
+example:
+
+.. code-block:: bash
+
+   webchanges --disable 3
+   webchanges --enable "Weather forecast"
+
+These set the job's :ref:`enabled` directive: ``--disable`` sets ``enabled: false``, and ``--enable`` removes the
+directive (or sets ``enabled: true`` if :ref:`job_defaults <job_defaults>` would otherwise keep the job disabled).
+
+.. warning::
+
+   To do so, :program:`webchanges` **rewrites the whole jobs file from the jobs it has loaded, so every remark
+   (comment) in the file is lost**, and so is its formatting: directives are written in a standard order and layout,
+   and deprecated ones with their current names. This cannot be undone. When run from a terminal, you are asked to
+   confirm first.
+
+   To keep your remarks, edit the ``enabled`` directive yourself instead, e.g. with ``webchanges --edit-jobs``.
+
+Nothing is rewritten if the job already is enabled (or disabled). These arguments cannot be used with multiple jobs
+files (see :ref:`here <cli_jobs>`).
+
+.. versionadded:: 3.39
+   For backward compatibility.
 
 
 .. _error:

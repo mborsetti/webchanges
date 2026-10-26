@@ -26,15 +26,15 @@ from webchanges.reporters._chat import (
 )
 from webchanges.reporters._email import EMailReporter, MailgunReporter
 from webchanges.reporters._stdout import StdoutReporter
-from webchanges.reporters._system import RunCommandReporter
+from webchanges.reporters._system import RunCommandReporter, ShellReporter
 from webchanges.reporters._web import (
     DiscordReporter,
     IFTTTReport,
+    MattermostReporter,
     NtfyReporter,
     ProwlReporter,
     PushbulletReport,
     PushoverReport,
-    ShellReporter,
     SlackReporter,
     WebhookReporter,
     WebServiceReporter,
@@ -52,6 +52,7 @@ __all__ = [
     'MailgunReporter',
     'MarkdownReporter',
     'MatrixReporter',
+    'MattermostReporter',
     'NtfyReporter',
     'ProwlReporter',
     'PushbulletReport',

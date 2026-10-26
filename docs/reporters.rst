@@ -251,6 +251,9 @@ Sub-directives
 * ``from``: The sender's email address. **Do not use your main email address** but create a throwaway one!
 * ``to``: The destination email address(es); if sending to more than one recipient, concatenate the addresses with a
   comma (``,``).
+* ``reply_to``: The address(es) that email clients reply to, set in the ``Reply-To`` header; to set more than one,
+  concatenate the addresses with a comma (``,``). Default: blank (no ``Reply-To`` header, so replies go to ``from``).
+  Added in version 3.39.
 * ``subject``: The subject line. Use ``{count}`` for the number of reports, ``{jobs}`` for the title of jobs
   reported, and ``{jobs_files}`` for a space followed by the name of the jobs file(s) used within parenthesis, stripped
   of preceding ``jobs-``, if not using the default ``jobs.yaml``. Default: ``[webchanges] {count}
@@ -812,7 +815,7 @@ All environment variables are preserved and the following ones added:
 +====================================+==================================================================+
 | ``WEBCHANGES_REPORT_CONFIG_JSON``  | All report parameters in JSON format                             |
 +------------------------------------+------------------------------------------------------------------+
-| ``WEBCHANGES_CHANGED_JOBS_JSON``   | All parameters of changed jobs in JSON format                    |
+| ``WEBCHANGES_CHANGED_JOBS_JSON``   | The directives of the jobs reported on, as a list in JSON format |
 +------------------------------------+------------------------------------------------------------------+
 
 If the command generates an error, the output of the error will be reported in the first line(s).
@@ -820,6 +823,8 @@ If the command generates an error, the output of the error will be reported in t
 .. versionadded:: 3.8
 .. versionchanged:: 3.9
    Added environment variable ``WEBCHANGES_CHANGED_JOBS_JSON``
+.. versionchanged:: 3.39
+   Fixed: ``WEBCHANGES_CHANGED_JOBS_JSON`` was not set.
 
 
 

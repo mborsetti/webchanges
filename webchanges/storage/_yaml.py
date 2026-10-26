@@ -66,6 +66,15 @@ LEGACY_JOB_DEFAULTS_KEYS = {
     'shell': 'command_jobs',
 }
 
+# The urlwatch reporters that webchanges replaced, mapped to their replacement. They still run, with the defaults of
+# YamlConfigStorage.legacy_reporter_defaults(): 'slack' and 'mattermost' as a 'webhook' (the latter with Markdown),
+# and 'shell' piping the report to its command like urlwatch does.
+LEGACY_REPORTERS = {
+    'slack': 'webhook',
+    'mattermost': "webhook (with 'markdown: true')",
+    'shell': 'run_command',
+}
+
 
 class YamlConfigStorage(BaseYamlFileStorage):
     """Class for configuration file (is a YAML textual file)."""
@@ -139,12 +148,45 @@ class YamlConfigStorage(BaseYamlFileStorage):
         return cast('_Config', _sub_dict_deep_merge(cast('dict[str, Any]', source), destination_copy))
 
     @staticmethod
-    def remove_deprecated_keys(config: _Config) -> _Config:
-        """Remove deprecated keys from config."""
-        if 'slack' in config.get('report', {}):
-            # Ignore legacy key
-            config['report'].pop('slack')  # ty:ignore[invalid-key]
-        return config
+    def legacy_reporter_defaults(name: str) -> dict[str, Any]:
+        """Returns the default sub-directives of one of the LEGACY_REPORTERS.
+
+        :param name: The name of the reporter.
+        :returns: Its default sub-directives.
+        """
+        if name == 'shell':
+            return {'enabled': False, 'command': '', 'ignore_stdout': True, 'ignore_stderr': False}
+        defaults = cast('dict[str, Any]', copy.deepcopy(DEFAULT_CONFIG['report']['webhook']))
+        if name == 'mattermost':
+            defaults['markdown'] = True
+        return defaults
+
+    def fill_legacy_reporters(self, config: _Config) -> None:
+        """Fill in the default sub-directives of the urlwatch reporters in LEGACY_REPORTERS found in the configuration
+        (they are not in DEFAULT_CONFIG, so that they are not written into new configuration files), and warn about
+        those enabled.
+
+        :param config: The configuration; the reporters' configurations are replaced in place.
+        """
+        report = cast('dict[str, Any]', config.get('report', {}))
+        for name, replacement in LEGACY_REPORTERS.items():
+            if name not in report:
+                continue
+            defaults = self.legacy_reporter_defaults(name)
+            cfgs = report[name]
+            filled = [
+                self.dict_deep_merge(cast('_Config', cfg or {}), cast('_Config', defaults))
+                for cfg in (cfgs if isinstance(cfgs, list) else [cfgs])
+            ]
+            report[name] = filled if isinstance(cfgs, list) else filled[0]
+            if any(cast('dict[str, Any]', cfg).get('enabled') for cfg in filled):
+                logger.warning(
+                    "Reporter '%s' of the configuration file %s is deprecated (it comes from urlwatch); replace it "
+                    "with '%s'",
+                    name,
+                    self.filename,
+                    replacement,
+                )
 
     def normalize_reporter_lists(self, config: _Config) -> None:
         """Fill in the default sub-directives of each configuration of a reporter that is configured multiple times,
@@ -207,6 +249,9 @@ class YamlConfigStorage(BaseYamlFileStorage):
                         config_for_extras['job_defaults'].pop(obj.__kind__, None)
                 elif issubclass(obj, ReporterBase) and obj.__kind__ not in DEFAULT_CONFIG['report']:
                     config_for_extras['report'].pop(obj.__kind__, None)
+        for name in LEGACY_REPORTERS:
+            # Not in DEFAULT_CONFIG (see fill_legacy_reporters), so not diffed against it.
+            config_for_extras.get('report', {}).pop(name, None)
         for name, reporter_config in config_for_extras.get('report', {}).items():
             if isinstance(reporter_config, list):
                 # A reporter configured multiple times: collapse its configurations into one so that an unrecognized
@@ -274,7 +319,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     title = gotify_config.pop('title')
                     gotify_config.setdefault('subject', title)
 
-            config = self.remove_deprecated_keys(config)
+            self.fill_legacy_reporters(config)
             self.normalize_reporter_lists(config)
             self.check_for_unrecognized_keys(config)
 

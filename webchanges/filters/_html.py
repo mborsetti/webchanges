@@ -234,6 +234,17 @@ class Html2TextFilter(FilterBase):
         options = subfilter.copy()
         method = options.pop('method', 'html2text')
 
+        if method == 'lynx':  # urlwatch; lynx's options (e.g. width) mean nothing to the html2text package
+            ignored = f' and its options {", ".join(options)}, which are ignored' if options else ''
+            warnings.warn(
+                f"Filter html2text's method 'lynx' is no longer supported and the filter's default method is used "
+                f'instead: remove method{ignored} ({self.job.get_indexed_location()})',
+                DeprecationWarning,
+                stacklevel=1,
+            )
+            method = 'html2text'
+            options = {}
+
         if method in {'html2text', 'pyhtml2text'}:  # pythtml2text for backward compatibility
             if method == 'pyhtml2text':
                 warnings.warn(
@@ -289,12 +300,6 @@ class Html2TextFilter(FilterBase):
                 )
             stripped_tags = html.unescape(re.sub(r'<[^>]*>', '', data))
             return '\n'.join((line.rstrip() for line in stripped_tags.splitlines() if line.strip() != '')), 'text/plain'
-
-        if method == 'lynx':
-            raise NotImplementedError(
-                f"Filter html2text's method 'lynx' is no longer supported; for similar results, use the filter without "
-                f'specifying a method. ({self.job.get_indexed_location()})'
-            )
 
         raise ValueError(f"Unknown method {method} for filter 'html2text'. ({self.job.get_indexed_location()})")
 

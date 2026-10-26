@@ -334,6 +334,11 @@
           "description": "Sender's email address. Do not use a primary mailbox; create a throwaway account for webchanges.",
           "default": ""
         },
+        "reply_to": {
+          "type": "string",
+          "description": "Reply-To email address(es), used by email clients when replying to the report. For multiple addresses, concatenate with commas. If blank, no Reply-To header is sent.",
+          "default": ""
+        },
         "subject": {
           "type": "string",
           "description": "Subject line. Use {count}, {jobs}, and {jobs_files} placeholders (see html.title for details).",
@@ -984,6 +989,21 @@
             { "$ref": "#/$defs/_ConfigReportXmpp" },
             { "type": "array", "items": { "$ref": "#/$defs/_ConfigReportXmpp" }, "minItems": 1 }
           ]
+        },
+        "mattermost": {
+          "type": ["object", "array"],
+          "description": "Deprecated (legacy); replace with 'webhook' and add 'markdown: true'. Still runs as a webhook reporter with Markdown.",
+          "deprecated": true
+        },
+        "shell": {
+          "type": ["object", "array"],
+          "description": "Deprecated (legacy); replace with 'run_command'. Still runs its 'command' (a string or a list of arguments, without a shell) with the text report on its standard input; sub-directives 'command', 'ignore_stdout' (default true) and 'ignore_stderr' (default false).",
+          "deprecated": true
+        },
+        "slack": {
+          "type": ["object", "array"],
+          "description": "Deprecated (legacy); rename to 'webhook' (same sub-directives). Still runs as a webhook reporter.",
+          "deprecated": true
         }
       }
     },

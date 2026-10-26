@@ -98,6 +98,7 @@ _ConfigReportEmail = TypedDict(
         'html': bool,
         'to': str,
         'from': str,
+        'reply_to': str,
         'subject': str,
         'method': Literal['sendmail', 'smtp'],
         'smtp': _ConfigReportEmailSmtp,
@@ -195,6 +196,15 @@ class _ConfigReportRunCommand(_ConfigReporter):
     command: str
 
 
+class _ConfigReportShell(_ConfigReporter):
+    """urlwatch's 'shell' reporter (deprecated); not in DEFAULT_CONFIG, its defaults are in storage/_yaml.py."""
+
+    enabled: bool
+    command: str | list[str]
+    ignore_stdout: bool
+    ignore_stderr: bool
+
+
 class _ConfigReportTelegram(_ConfigReporter):
     enabled: bool
     bot_token: str
@@ -241,6 +251,10 @@ class _ConfigReport(TypedDict):
     telegram: _ConfigReportTelegram | list[_ConfigReportTelegram]
     webhook: _ConfigReportWebhook | list[_ConfigReportWebhook]
     xmpp: _ConfigReportXmpp | list[_ConfigReportXmpp]
+    # urlwatch reporters (deprecated), not in DEFAULT_CONFIG; see LEGACY_REPORTERS in storage/_yaml.py
+    mattermost: NotRequired[_ConfigReportWebhook | list[_ConfigReportWebhook]]
+    shell: NotRequired[_ConfigReportShell | list[_ConfigReportShell]]
+    slack: NotRequired[_ConfigReportWebhook | list[_ConfigReportWebhook]]
 
 
 class _ConfigJobDefaults(TypedDict, total=False):
@@ -352,6 +366,7 @@ DEFAULT_CONFIG: _Config = {
             'html': True,
             'from': '',
             'to': '',
+            'reply_to': '',
             'subject': f'[{__project_name__}] {{count}} changes{{jobs_files}}: {{jobs}}',
             'method': 'smtp',  # either 'smtp' or 'sendmail'
             'smtp': {

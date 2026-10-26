@@ -6,6 +6,8 @@ import contextlib
 import copy
 import importlib.util
 import io
+import json
+import logging
 import smtplib
 import socket
 import sys
@@ -25,10 +27,11 @@ from webchanges import mailer as mailer_module
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase
 from webchanges.mailer import SMTP_TIMEOUT, SMTPMailer, smtp_have_password, smtp_set_password
-from webchanges.reporters import TelegramReporter
+from webchanges.reporters import ReporterBase, TelegramReporter
 from webchanges.storage import DEFAULT_CONFIG
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from typing import Self
 
     from webchanges.storage import _ConfigReportStdout
@@ -567,3 +570,183 @@ def test_telegram_long_line() -> None:
     assert ''.join(chunks) == 'a\\.b ' * 30 + '\nNext line\\.'
     assert not any(chunk.endswith('\\') for chunk in chunks)
     assert chunks[-1].endswith('\nNext line\\.')
+
+
+def build_ntfy_report() -> Report:
+    """Builds a report of two changed jobs, a URL one and a command one, with ntfy configured.
+
+    :return: The test report.
+    """
+    test_report = Report(UrlwatchTest())  # ty:ignore[invalid-argument-type]
+    test_report.job_states = []
+    for directives in ({'name': 'url job', 'url': 'https://example.com/'}, {'name': 'shell job', 'command': 'echo'}):
+        job_state = JobState(None, JobBase.unserialize(directives))  # ty:ignore[invalid-argument-type]
+        job_state.old_data = 'old\n'
+        job_state.old_timestamp = 1605147837.511478
+        job_state.new_data = 'new\n'
+        job_state.new_timestamp = 1605147837.511478
+        test_report.changed(job_state)
+    test_report.config['report']['ntfy']['topic_url'] = 'https://ntfy.example.com/topic'  # ty:ignore[invalid-assignment]
+    return test_report
+
+
+@pytest.mark.parametrize('client', ['httpx', 'requests'])
+def test_ntfy_publishes_every_job(client: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ntfy publishes one message per job with either HTTP client (until 3.39, the httpx client was closed after the
+    first job and the requests fallback raised NameError), and offers to open the location of URL jobs only."""
+    import requests
+
+    from webchanges.reporters import _base as reporters_base
+    from webchanges.reporters import _web as reporters_web
+
+    calls: list[dict[str, Any]] = []
+
+    def fake_post(_self: object, url: str, **kwargs: Any) -> SimpleNamespace:
+        calls.append({'url': url, **kwargs})
+        return SimpleNamespace(status_code=200, text='')
+
+    if client == 'httpx':
+        import httpx
+
+        monkeypatch.setattr(httpx.Client, 'post', fake_post)
+    else:
+        monkeypatch.setattr(reporters_base, 'httpx', None)
+        monkeypatch.setattr(reporters_base, 'requests', requests, raising=False)
+        monkeypatch.setattr(reporters_web, 'httpx', None)
+        monkeypatch.setattr(requests.Session, 'post', fake_post)
+
+    build_ntfy_report().finish_one('ntfy', check_enabled=False)
+
+    assert [call['url'] for call in calls] == ['https://ntfy.example.com/topic'] * 2
+    # The requests fallback sends the header values as UTF-8 bytes
+    headers = [
+        {key: value.decode() if isinstance(value, bytes) else value for key, value in call['headers'].items()}
+        for call in calls
+    ]
+    by_title = {job_headers['Title']: job_headers for job_headers in headers}
+    assert set(by_title) == {'WEBCHANGES CHANGED: url job', 'WEBCHANGES CHANGED: shell job'}
+    assert by_title['WEBCHANGES CHANGED: url job']['Actions'] == 'view, Open URL, "https://example.com/", clear=true'
+    assert 'Actions' not in by_title['WEBCHANGES CHANGED: shell job']
+
+
+@pytest.mark.parametrize(
+    ('name', 'config'),
+    [
+        ('ifttt', {'event': 'changed', 'key': 'secret'}),  # one post per job
+        ('webhook', {'webhook_url': 'https://example.com/hook', 'max_message_length': 120}),  # one per chunk
+        ('discord', {'webhook_url': 'https://example.com/hook', 'embed': False, 'max_message_length': 120}),
+    ],
+)
+def test_reporters_post_more_than_once(name: str, config: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reporters posting once per job or per chunk reuse one open HTTP client (until 3.39, the httpx client was closed
+    after the first post and the second one raised RuntimeError: Cannot reopen a client instance)."""
+    import httpx
+
+    calls: list[str] = []
+
+    def fake_post(_self: object, url: str, **kwargs: Any) -> SimpleNamespace:
+        calls.append(url)
+        return SimpleNamespace(status_code=200, text='ok', content=b'ok')
+
+    monkeypatch.setattr(httpx.Client, 'post', fake_post)
+    test_report = build_ntfy_report()
+    report_config = cast('dict[str, Any]', test_report.config['report'])
+    report_config[name] = {**report_config[name], 'enabled': True, **config}
+    test_report.finish_one(name)
+
+    assert len(calls) > 1
+
+
+def test_ntfy_failure_does_not_stop_other_jobs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed publication is raised only after every job has been published."""
+    import httpx
+
+    calls: list[str] = []
+
+    def fake_post(_self: object, url: str, **kwargs: Any) -> SimpleNamespace:
+        calls.append(kwargs['headers']['Title'])
+        return SimpleNamespace(status_code=500 if len(calls) == 1 else 200, text='server error')
+
+    monkeypatch.setattr(httpx.Client, 'post', fake_post)
+    with pytest.raises(RuntimeError) as pytest_wrapped_e:
+        build_ntfy_report().finish_one('ntfy', check_enabled=False)
+    assert len(calls) == 2
+    assert str(pytest_wrapped_e.value) == (
+        "Failed to publish to ntfy topic 'https://ntfy.example.com/topic': server error"
+    )
+
+
+@pytest.mark.parametrize(('count', 'expected'), [(1, '[webchanges] 1 change: '), (2, '[webchanges] 2 changes: ')])
+def test_subject_with_args_singular(count: int, expected: str) -> None:
+    """A single change reads '1 change', leaving the '[webchanges]' prefix alone (until 3.39 it read '1 changes')."""
+    test_report = build_ntfy_report()
+    job_states = test_report.job_states[:count]
+    reporter = ReporterBase(test_report, {}, job_states, 0, [], {})  # ty:ignore[invalid-argument-type]
+    subject = reporter.subject_with_args(job_states, '[webchanges] {count} changes{jobs_files}: {jobs}')
+    assert subject == expected + ', '.join(job_state.job.pretty_name() for job_state in job_states)
+
+
+def test_mailer_msg_reply_to() -> None:
+    """The Reply-To header is set from reply_to, and omitted when it is blank."""
+    reply_to = 'a@example.com, b@example.com'
+    msg = SMTPMailer.msg('from@example.com', 'to@example.com', 'Subject', 'Body', reply_to=reply_to)
+    assert msg['Reply-To'] == reply_to
+    assert SMTPMailer.msg('from@example.com', 'to@example.com', 'Subject', 'Body', reply_to='')['Reply-To'] is None
+    assert SMTPMailer.msg('from@example.com', 'to@example.com', 'Subject', 'Body')['Reply-To'] is None
+
+
+def test_shell_reporter_pipes_report_to_stdin(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """The deprecated (urlwatch) 'shell' reporter runs its command (a list, run without substitutions) with the
+    report on standard input and the reported jobs in WEBCHANGES_CHANGED_JOBS_JSON (until 3.39 it crashed with
+    KeyError)."""
+    from webchanges.storage import YamlConfigStorage
+
+    out_file = tmp_path / 'out.json'
+    script = (
+        'import json, os, pathlib, sys; pathlib.Path(sys.argv[1]).write_text(json.dumps({"stdin": sys.stdin.read(), '
+        '"jobs": json.loads(os.environ["WEBCHANGES_CHANGED_JOBS_JSON"])}), encoding="utf-8"); print("{jobs}")'
+    )
+    test_report = build_ntfy_report()
+    cast('dict[str, Any]', test_report.config['report'])['shell'] = {
+        **YamlConfigStorage.legacy_reporter_defaults('shell'),
+        'enabled': True,
+        'command': [sys.executable, '-c', script, str(out_file)],
+        'ignore_stdout': False,
+    }
+    with caplog.at_level(logging.INFO, logger='webchanges.reporters._system'):
+        test_report.finish_one('shell')
+
+    result = json.loads(out_file.read_text(encoding='utf-8'))
+    assert 'CHANGED: url job' in result['stdin']
+    assert result['stdin'].endswith('\n')
+    assert {job['name'] for job in result['jobs']} == {'shell job', 'url job'}
+    assert 'Standard output from reporter shell: {jobs}' in caplog.text  # no substitution in the command
+
+
+@pytest.mark.parametrize(('name', 'markdown'), [('slack', False), ('mattermost', True)])
+def test_slack_and_mattermost_post_to_webhook(name: str, markdown: bool, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The deprecated (urlwatch) 'slack' and 'mattermost' reporters post to their webhook like the 'webhook' reporter
+    (until 3.39 'slack' was dropped and 'mattermost' ignored), Mattermost with Markdown."""
+    import httpx
+
+    from webchanges.storage import YamlConfigStorage
+
+    calls: list[dict[str, Any]] = []
+
+    def fake_post(_self: object, url: str, **kwargs: Any) -> SimpleNamespace:
+        calls.append({'url': url, **kwargs})
+        return SimpleNamespace(status_code=200, text='ok', content=b'ok')
+
+    monkeypatch.setattr(httpx.Client, 'post', fake_post)
+    test_report = build_ntfy_report()
+    cast('dict[str, Any]', test_report.config['report'])[name] = {
+        **YamlConfigStorage.legacy_reporter_defaults(name),
+        'enabled': True,
+        'webhook_url': 'https://example.com/hook',
+    }
+    test_report.finish_one(name)
+
+    assert [call['url'] for call in calls] == ['https://example.com/hook']
+    text = calls[0]['json']['text']
+    assert ('**CHANGED: url job**' in text or '[url job](https://example.com/)' in text) is markdown
+    assert 'url job' in text
