@@ -113,8 +113,9 @@ def ssdb_storage() -> Iterator[SsdbSQLite3Storage]:
 
 @pytest.fixture(scope='session', autouse=True)
 def _close_database_engines() -> Iterator[None]:
-    """Close tests.test_storage's module-level ``DATABASE_ENGINES`` (when imported) at session end so that their
-    database connections don't survive to interpreter shutdown and emit ResourceWarnings.
+    """Close ``tests.test_storage.DATABASE_ENGINES`` (if imported) at session end.
+
+    Otherwise their database connections survive to interpreter shutdown and emit ResourceWarnings.
     """
     yield
     test_storage_module = sys.modules.get('tests.test_storage')

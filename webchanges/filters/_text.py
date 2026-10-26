@@ -304,7 +304,7 @@ class ReSubFilter(FilterBase):
 
 
 class RegexFindall(FilterBase):
-    """Extract text using regular expressions using Python's re.findall"""
+    """Extract text using regular expressions using Python's re.findall."""
 
     __kind__ = 're.findall'
 

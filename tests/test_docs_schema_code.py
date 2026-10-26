@@ -1,6 +1,7 @@
-"""Check that the code, the JSON Schemas in webchanges/_resources/ (used by editors to validate and autocomplete the
-jobs and configuration files) and the documentation in docs/ describe the same filters, job directives and
-configuration directives.
+"""Check that the code, the JSON Schemas and the docs describe the same filters and directives.
+
+The JSON Schemas in webchanges/_resources/ are used by editors to validate and autocomplete the jobs and configuration
+files; the documentation is in docs/. Covers filters, job directives and configuration directives.
 
 A name in the schema but not in the code must be marked ``"deprecated": true`` in the schema (a renamed directive that
 the code maps to its new name); a deprecated filter or job directive needs no documentation.
@@ -50,8 +51,10 @@ def schema_properties(node: dict[str, Any]) -> set[str]:
 
 
 def rst_sections(text: str) -> dict[str, str]:
-    """Maps each '.. _label:' of an rst document to its text, up to the next label; consecutive labels (e.g. those of
-    the filters sharing a section) all map to the text that follows the last one."""
+    """Map each '.. _label:' of an rst document to its text, up to the next label.
+
+    Consecutive labels (e.g. those of the filters sharing a section) all map to the text that follows the last one.
+    """
     parts = re.split(r'^\.\. _([\w.…-]+):\s*$', text, flags=re.MULTILINE)
     sections: dict[str, str] = {}
     stacked: list[str] = []
@@ -165,8 +168,10 @@ def test_filter_subdirectives_in_schema(kind: str) -> None:
 
 @pytest.mark.parametrize('kind', sorted(code_filters()))
 def test_filter_documented(kind: str) -> None:
-    """A filter not deprecated in the schema has a section in filters.rst, listing its sub-directives (a section shared
-    by several filters lists those of all of them)."""
+    """Each filter not deprecated in the schema has a section in filters.rst listing its sub-directives.
+
+    A section shared by several filters lists those of all of them.
+    """
     if SCHEMA_FILTERS.get(kind, {}).get('deprecated'):
         pytest.skip('deprecated filter')
     sections = docs_sections('filters.rst')
@@ -212,8 +217,7 @@ def test_config_directives_in_schema() -> None:
 
 @pytest.mark.parametrize('kind', sorted(k for k, v in DEFAULT_CONFIG['report'].items() if isinstance(v, dict)))
 def test_reporter_documented(kind: str) -> None:
-    """Each sub-directive of a reporter appears in its section of reporters.rst (or, for a report type,
-    reports.rst)."""
+    """Each reporter sub-directive is in its section of reporters.rst (reports.rst for report types)."""
     assert kind in ReporterBase.__subclasses__
     sections = {**docs_sections('reports.rst'), **docs_sections('reporters.rst')}
     assert kind in sections, f"No '.. _{kind}:' section in docs/reporters.rst or docs/reports.rst"

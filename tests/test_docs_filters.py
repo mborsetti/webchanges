@@ -1,6 +1,4 @@
-"""Test the jobs embedded in the documentation's filters.rst file by running them against the data in the
-data/docs_filter_testadata.yaml file.
-"""
+"""Run the jobs embedded in docs/filters.rst against tests/data/docs_filters_testdata.yaml."""
 
 from __future__ import annotations
 
@@ -124,8 +122,9 @@ testdata = load_filter_testdata()
 
 @pytest.mark.parametrize('job', FILTER_DOC_JOBS, ids=(v.url for v in FILTER_DOC_JOBS))
 def test_jobs(job: JobBase) -> None:
-    """Test the yaml code in docs/filters.rst against the source and expected results contained
-    in tests/data/docs_filters_testdata.yaml using 'url' as the key.
+    """Test the YAML in docs/filters.rst against tests/data/docs_filters_testdata.yaml.
+
+    The source and expected results are keyed by 'url'.
     """
     # Skips certain filters if packages are not installed (e.g. pdf2text and ocr as they require OS-specific
     # installations beyond pip)

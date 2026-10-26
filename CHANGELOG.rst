@@ -35,6 +35,16 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version NEXT
+-------------------
+Unreleased
+
+Fixed
+`````
+* ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
+  descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
+
+
 Version 3.39.0
 -------------------
 2026-10-26

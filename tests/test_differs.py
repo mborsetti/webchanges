@@ -804,10 +804,12 @@ def test_deepdiff_json_list(job_state: JobState) -> None:
 
 
 def test_deepdiff_json_ignore_order_compares_changed_items_in_depth(job_state: JobState) -> None:
-    """Test that with ignore_order the changed items in a list are compared in depth, reporting only the nested
-    values that changed instead of each item's entire before-and-after contents (webchanges' cutoff defaults; the
-    deepdiff library's own defaults report the items in their entirety, as tested in
-    test_deepdiff_json_ignore_order_cutoff_directives)."""
+    """With ignore_order, the changed items in a list are compared in depth.
+
+    Only the nested values that changed are reported, not each item's entire before-and-after contents (webchanges'
+    cutoff defaults; the deepdiff library's own defaults report the items in their entirety, as tested in
+    test_deepdiff_json_ignore_order_cutoff_directives).
+    """
     job_state.old_data = '[{"id": "A", "status": "open"}, {"id": "B", "status": "open"}]'
     job_state.new_data = '[{"id": "A", "status": "flown"}, {"id": "B", "status": "flown"}]'
     job_state.job.differ = {'name': 'deepdiff', 'data_type': 'json', 'ignore_order': True}
@@ -822,9 +824,11 @@ def test_deepdiff_json_ignore_order_compares_changed_items_in_depth(job_state: J
 
 
 def test_deepdiff_json_ignore_order_cutoff_directives(job_state: JobState) -> None:
-    """Test that the cutoff_* and threshold_to_diff_deeper sub-directives are passed through to DeepDiff: at the
-    deepdiff library's own defaults, the changed items of two iterables with no item in common are not paired and are
-    therefore reported in their entirety instead of in depth."""
+    """The cutoff_* and threshold_to_diff_deeper sub-directives are passed through to DeepDiff.
+
+    At the deepdiff library's own defaults, the changed items of two iterables with no item in common are not paired and
+    are therefore reported in their entirety instead of in depth.
+    """
     job_state.old_data = '[{"id": "A", "status": "open"}, {"id": "B", "status": "open"}]'
     job_state.new_data = '[{"id": "A", "status": "flown"}, {"id": "B", "status": "flown"}]'
     job_state.job.differ = {
@@ -1644,8 +1648,7 @@ def test_ai_google_retry_delay_none() -> None:
 
 
 def test_ai_google_retry_wait() -> None:
-    """429 returns the parsed delay plus the truncation buffer; 503 the fixed wait; other statuses (or an
-    unparseable 429) are not retryable."""
+    """Retry waits: 429 the parsed delay plus a buffer, 503 a fixed wait, others (or a bad 429) none."""
     parseable = _make_response(429, json_data={'error': {'details': [{'@type': '.../RetryInfo', 'retryDelay': '10s'}]}})
     assert _ai_google_retry_wait(parseable) == 10.0 + AI_GOOGLE_429_RETRY_BUFFER
 

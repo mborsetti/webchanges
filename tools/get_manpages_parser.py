@@ -1,3 +1,5 @@
+"""Expose webchanges' argument parser to argparse-manpage."""
+
 from __future__ import annotations
 
 import sys
@@ -18,6 +20,5 @@ def get_manpages_parser() -> ArgumentParser:
 
     https://github.com/praiskup/argparse-manpage/blob/main/README.md
     """
-
     null_path = Path()
     return CommandConfig([], null_path, null_path, null_path, null_path, null_path).parse_args([])

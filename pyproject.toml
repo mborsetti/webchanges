@@ -261,9 +261,9 @@ select = [
     # 'AIR',  # Airflow
     # 'ERA',  # eradicate
     # 'FAST', # FastAPI
-    # 'YTT',  # flake8-2020
+    'YTT',  # flake8-2020
     'ANN', # flake8-annotations
-    # 'ASYNC', # flake8-async
+    'ASYNC', # flake8-async
     'S',   # flake8-bandit
     'BLE', # flake8-blind-except
     # 'FBT',  # flake8-boolean-trap
@@ -281,7 +281,7 @@ select = [
     'FA',  # flake8-future-annotations
     'INT', # flake8-gettext
     'ISC', # flake8-implicit-str-concat
-    # 'ICN',  # flake8-import-conventions
+    'ICN',  # flake8-import-conventions
     'LOG', # flake8-logging
     'G',   # flake8-logging-format
     # 'INP',  # flake8-no-pep420
@@ -294,7 +294,7 @@ select = [
     'RET', # flake8-return
     # 'SLF',  # flake8-self
     'SIM', # flake8-simplify
-    # 'SLOT', # flake8-slots
+    'SLOT', # flake8-slots
     'TID', # flake8-tidy-imports
     'TD',  # flake8-todos
     'TC',  # flake8-type-checking
@@ -310,7 +310,7 @@ select = [
     'E',    # pycodestyle errors
     'W',    # pycodestyle warnings
     # 'DOC',  # pydoclint (requires enabling preview, which turns on a TON of other stuff)
-    # 'D',    # pydocstyle  # TODO
+    'D',    # pydocstyle
     'F', # Pyflakes
     # 'PGH',  # pygrep-hooks
     # 'PL',   # Pylint  # TODO
@@ -321,6 +321,10 @@ select = [
 ]
 
 ignore = [
+    'D105',   # Missing docstring in magic method (e.g., __str__). Most agree that __repr__ is self-explanatory.
+    'D107',   # Missing docstring in __init__. Class-level docstring (D101) already covers the object's purpose.
+    'D203',   # Conflicts with D211, which forbids a blank line before a class docstring).
+    'D213',   # Conflicts with D212, which says multi-line docstring summary should start on the first line (Google style).
     'FLY002', # Consider f-string instead of string join
     'PLC0415', # `import` should be at the top-level of a file
     'PT011',   # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
@@ -355,6 +359,16 @@ max-complexity = 30
 [tool.ruff.lint.per-file-ignores]
 'tests/*' = [
     'S101', # Use of `assert` detected
+    # Test functions are self-documenting:
+    'D101', # Missing docstring in public class
+    'D102', # Missing docstring in public method
+    'D103', # Missing docstring in public function
+]
+'tools/test_*' = [
+    # Test functions are self-documenting:
+    'D101', # Missing docstring in public class
+    'D102', # Missing docstring in public method
+    'D103', # Missing docstring in public function
 ]
 
 [tool.ruff.lint.pydoclint]

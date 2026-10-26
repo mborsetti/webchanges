@@ -15,13 +15,13 @@ EMPTY_RESPONSE_STATUS_CODE = 999
 
 
 class NotModifiedError(Exception):
-    """Raised when an HTTP 304 response status code (Not Modified client redirection) is received or the strong
-    validation ETag matches the previous one; this indicates that there was no change in content.
-    """
+    """Raised on HTTP 304 (Not Modified) or a strong ETag matching the previous one, i.e. no change."""
 
 
 class TransientHTTPError(Exception):
-    """Raised by subclasses of UrlJobBase when one of these HTTP response status codes is received:
+    """Raised by subclasses of UrlJobBase on a transient HTTP error.
+
+    I.e. one of these HTTP response status codes:
 
     - 429 Too Many Requests
     - 500 Internal Server Error
@@ -45,8 +45,9 @@ class TransientHTTPError(Exception):
 
 
 class TransientBrowserError(Exception):
-    """Raised by BrowserJob when a transient error is returned by the browser, either as a PlaywrightTimeoutError or
-    as a browser error listed in the 100-199 Connection related errors.
+    """Raised by BrowserJob when the browser returns a transient error.
+
+    Either a PlaywrightTimeoutError or a browser error listed in the 100-199 Connection related errors.
 
     The args[0] will contain the string 'PlaywrightTimeoutError' or the text of the browser error.
     """
@@ -56,12 +57,12 @@ class TransientBrowserError(Exception):
 
 
 class BrowserResponseError(Exception):
-    """Raised by 'url' jobs with 'use_browser: true' (i.e. using Playwright) when an HTTP error response status code is
-    received and is not one of the other Exceptions.
-    """
+    """Raised by 'use_browser: true' jobs on an HTTP error status not covered by the other exceptions."""
 
     def __init__(self, args: tuple[Any, ...], status_code: int | None = None) -> None:
-        """:param args: Tuple with the underlying error args, typically a string with the error text.
+        """Store the error args and the HTTP status code.
+
+        :param args: Tuple with the underlying error args, typically a string with the error text.
         :param status_code: The HTTP status code received.
         """
         Exception.__init__(self, *args)

@@ -123,9 +123,7 @@ class Mailer:
             cid_counter = 1
 
             def replace_img(match: re.Match) -> str:
-                """Function to replace the matched img tags with src="cid:<...>"> and to add the cid and the image to
-                the cid_dict object.
-                """
+                """Replace a matched img tag's src with "cid:<...>" and add the cid and the image to cid_dict."""
                 nonlocal cid_counter
                 image_format, image_data_b64 = match.groups()
                 image_data = base64.b64decode(image_data_b64)

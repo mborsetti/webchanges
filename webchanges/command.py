@@ -477,8 +477,7 @@ class UrlwatchCommand:
 
     @staticmethod
     def _validate_reporter_name(name: str | None, *, with_help: bool = True) -> TypeGuard[str]:
-        """Return True (narrowing ``name`` to ``str``) if it is a known reporter; otherwise print
-        an error and return False.
+        """Return whether ``name`` is a known reporter (narrowing it to ``str``), printing an error if not.
 
         :param name: Reporter name to validate.
         :param with_help: When True, include the full ``reporter_documentation()`` listing in the
@@ -513,8 +512,9 @@ class UrlwatchCommand:
         return cfgs
 
     def _first_reporter_config(self, name: str) -> _ConfigReportersList:
-        """Returns the first configuration of the reporter ``name``, for the CLI actions that check the credentials of
-        a single destination (``--smtp-login``, ``--telegram-chats`` and ``--xmpp-login``).
+        """Returns the first configuration of the reporter ``name``, for the CLI credential checks.
+
+        I.e. the actions checking a single destination: ``--smtp-login``, ``--telegram-chats`` and ``--xmpp-login``.
 
         :param name: The name (``__kind__``) of the reporter.
         :returns: The reporter's first (or only) configuration; an empty one if the reporter has none.
@@ -530,6 +530,7 @@ class UrlwatchCommand:
             cfg['color'] = False
 
     def list_error_jobs(self) -> int:
+        """Run the enabled jobs and report those that fail or return no data."""
         if not self._validate_reporter_name(self.urlwatch_config.errors, with_help=False):
             return 1
 
@@ -798,6 +799,7 @@ class UrlwatchCommand:
         return 0
 
     def delete_snapshot(self, job_id: str | int) -> int:
+        """Delete the latest snapshot of a job's history."""
         job = self._find_job_with_defaults(job_id)
         history = self.urlwatcher.ssdb_storage.get_history_snapshots(job.guid)
         if not history:
@@ -833,6 +835,7 @@ class UrlwatchCommand:
         return 1
 
     def modify_urls(self) -> int:
+        """Add, delete, change the location of, enable or disable a job."""
         if len(self.urlwatch_config.jobs_files) > 1:
             # Saving writes all the jobs to the first file only, which would duplicate those of the other files into it
             action = next(
@@ -934,8 +937,9 @@ class UrlwatchCommand:
         return 0
 
     def _set_job_enabled(self, query: str, enable: bool) -> int:
-        """Enable or disable a job (urlwatch's --enable and --disable) by setting its 'enabled' directive and
-        rewriting the jobs file, which loses its remarks.
+        """Enable or disable a job (urlwatch's --enable and --disable).
+
+        Sets its 'enabled' directive and rewrites the jobs file, which loses its remarks.
 
         :param query: The job's index number, name or URL/command.
         :param enable: True to enable the job, False to disable it.
@@ -976,6 +980,7 @@ class UrlwatchCommand:
         return 0
 
     def check_telegram_chats(self) -> None:
+        """List the chats the Telegram bot can send messages to."""
         config = cast('_ConfigReportTelegram', self._first_reporter_config('telegram'))
 
         bot_token = config['bot_token']
@@ -1171,6 +1176,7 @@ class UrlwatchCommand:
         return 0
 
     def check_smtp_login(self) -> None:
+        """Check the SMTP login, offering to store the password in the keyring."""
         from webchanges.mailer import SMTPMailer, smtp_have_password, smtp_set_password
 
         config = cast('_ConfigReportEmail', self._first_reporter_config('email'))
@@ -1225,6 +1231,7 @@ class UrlwatchCommand:
         self._exit(0)
 
     def check_xmpp_login(self) -> None:
+        """Check the XMPP login, offering to store the password in the keyring."""
         from webchanges.reporters import xmpp_have_password, xmpp_set_password
 
         xmpp_config = cast('_ConfigReportXmpp', self._first_reporter_config('xmpp'))
@@ -1264,8 +1271,7 @@ class UrlwatchCommand:
 
     @staticmethod
     def playwright_install_chrome() -> int:  # pragma: no cover
-        """Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
-        install the browser executable.
+        """Install the browser by replicating playwright.__main__.main(), as the playwright executable does.
 
         :return: Playwright's executable return code.
         """

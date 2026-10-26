@@ -430,8 +430,10 @@ def test_migrate_from_legacy_copies_when_dest_missing(
 
 
 def test_migrate_from_legacy_platform_config_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Without ~/.urlwatch, the files are copied from urlwatch's platform configuration directory, where urlwatch
-    keeps them in that case (fixed in 3.39)."""
+    """Without ~/.urlwatch, files are copied from urlwatch's platform configuration directory.
+
+    That is where urlwatch keeps them in that case (fixed in 3.39).
+    """
     fake_home = tmp_path / 'home'
     fake_home.mkdir()
     platform_dir = tmp_path / 'platform-config' / 'urlwatch'

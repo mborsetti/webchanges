@@ -32,8 +32,10 @@ _ConfigDisplay = TypedDict(
 
 
 class _ConfigReporter(TypedDict, total=False):
-    """Directives accepted by every reporter, in addition to its own ones. Reporters inherit from this (the report
-    formats -- text, html and markdown -- do not, as they are not reporters)."""
+    """Directives accepted by every reporter, in addition to its own ones.
+
+    Reporters inherit from this; the report formats (text, html and markdown) do not, as they are not reporters.
+    """
 
     # Restricts the reporter to the jobs having at least one of these tags in their own 'tags' directive.
     tags: str | list[str]

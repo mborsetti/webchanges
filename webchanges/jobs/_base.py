@@ -275,8 +275,9 @@ class JobBase(metaclass=TrackSubClasses):
         raise NotImplementedError
 
     def get_indexed_location(self) -> str:
-        """Get the job number plus its 'location', i.e. the (user_visible) URL or command. Typically used in error
-        displays.
+        """Get the job number plus its 'location', i.e. the (user_visible) URL or command.
+
+        Typically used in error displays.
 
         :returns: The job number followed by a colon and the 'location' of the job, i.e. its user_visible_url, URL,
            or command.
@@ -288,8 +289,7 @@ class JobBase(metaclass=TrackSubClasses):
         raise NotImplementedError
 
     def pretty_name(self) -> str:
-        """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (user_visible_url,
-        URL or command).
+        """Get the job's 'pretty name': its 'name' if defined, else its user_visible_url, URL or command.
 
         :returns: The 'pretty name' the job.
         """
@@ -473,8 +473,9 @@ class JobBase(metaclass=TrackSubClasses):
         return job
 
     def to_dict(self) -> dict:
-        """Return all Job object directives with a truthy value, required and optional, as a serializable dict,
-        converting Headers object (which are not JSON serializable) to dicts.
+        """Return the job's directives with a truthy value, required and optional, as a serializable dict.
+
+        Headers objects (which are not JSON serializable) are converted to dicts.
 
         :returns: A dict with all job directives as keys, ignoring those that are extras.
         """
@@ -491,8 +492,7 @@ class JobBase(metaclass=TrackSubClasses):
 
     @classmethod
     def from_dict(cls, data: dict, filenames: list[Path]) -> JobBase:
-        """Create a JobBase class from a dict, checking that all keys are recognized (i.e. listed in __required__ or
-        __optional__).
+        """Create a JobBase from a dict, checking that all keys are listed in __required__ or __optional__.
 
         :param data: Job data in dict format (e.g. from the YAML jobs file); it is modified in place.
         :returns: A JobBase type object.
@@ -697,8 +697,10 @@ class JobBase(metaclass=TrackSubClasses):
         return set(self.tags)
 
     def matching_tags(self, tags: Iterable[str]) -> set[str]:
-        """Returns the job's tags that are also in ``tags``. Used to select the jobs to run (``--tags``) and those a
-        reporter reports on (a reporter's 'tags' configuration directive).
+        """Returns the job's tags that are also in ``tags``.
+
+        Used to select the jobs to run (``--tags``) and those a reporter reports on (a reporter's 'tags' configuration
+        directive).
 
         :param tags: The tags to match the job's tags against.
         :returns: The intersection of the job's tags and ``tags``; empty (i.e. falsy) if the job matches none of them.
@@ -771,8 +773,9 @@ class Job(JobBase):
         """
 
     def get_indexed_location(self) -> str:
-        """Get the job number plus its 'location', i.e. the (user_visible) URL or command. Typically used in error
-        displays.
+        """Get the job number plus its 'location', i.e. the (user_visible) URL or command.
+
+        Typically used in error displays.
 
         :returns: The job number followed by a colon and the 'location' of the job, i.e. its user_visible_url, URL,
            or command.
@@ -780,8 +783,7 @@ class Job(JobBase):
         return f'Job {self.index_number}: {self.get_location()}'
 
     def pretty_name(self) -> str:
-        """Get the 'pretty name' of a job, i.e. either its 'name' (if defined) or the 'location' (user_visible_url,
-        URL or command).
+        """Get the job's 'pretty name': its 'name' if defined, else its user_visible_url, URL or command.
 
         :returns: The 'pretty name' the job.
         """
@@ -850,8 +852,9 @@ class UrlJobBase(Job):
         user_agent: str | None = __user_agent__,
         include_cookies: bool = True,
     ) -> Headers:
-        """Get headers and modify them to add cookies and conditional request. Headers set to null (removed) are
-        dropped first; then, if headers don't contain `User-Agent`, either the default one or the one provided as
+        """Get the headers, adding cookies and the conditional request ones.
+
+        Headers set to null (removed) are dropped first; then, if there is no `User-Agent`, either the default one or
         `user_agent` is added.
 
         :param job_state: The job state.

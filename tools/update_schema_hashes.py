@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 def main(paths: list[str]) -> int:
+    """Refresh the hash file of each schema given; return 1 if any changed."""
     changed = 0
     for path_str in paths:
         schema = Path(path_str)

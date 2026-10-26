@@ -1,3 +1,5 @@
+"""Run webchanges with ``python -m webchanges``."""
+
 if __name__ == '__main__':
     import sys
     from pathlib import Path

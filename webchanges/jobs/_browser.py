@@ -329,7 +329,7 @@ class BrowserJob(UrlJobBase):
         self,
         page: Page,
     ) -> None:
-        """Helper function to save screenshot and html content files after a Playwright Error"""
+        """Helper function to save screenshot and html content files after a Playwright Error."""
         from playwright.sync_api import Error as PlaywrightError
 
         screenshot_filename = tempfile.NamedTemporaryFile(

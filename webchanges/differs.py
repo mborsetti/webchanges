@@ -91,6 +91,8 @@ logger = logging.getLogger(__name__)
 
 
 class AiGoogleDirectives(TypedDict, total=False):
+    """The directives of the ``ai_google`` differ."""
+
     model: str
     additions_only: str
     system_instructions: str
@@ -640,6 +642,7 @@ class UnifiedDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
+        """Generate the unified diff."""
         additions_only_raw = directives.get('additions_only', self.job.additions_only)
         additions_only, additions_only_remaining = _resolve_additions_only(additions_only_raw)
         deletions_only = directives.get('deletions_only') or self.job.deletions_only
@@ -743,6 +746,7 @@ class TableDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
+        """Generate the HTML table diff."""
         out_diff: dict[ReportKind, str] = {}
         if report_kind in {'plain', 'markdown'} and _unfiltered_diff is not None and 'html' in _unfiltered_diff:
             table = _unfiltered_diff['html']
@@ -800,6 +804,7 @@ class CommandDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
+        """Run the external command to generate the diff."""
         if self.job.monospace:
             head_html = '\n'.join(
                 [
@@ -975,6 +980,8 @@ class CommandDiffer(DifferBase):
 
 
 class DeepdiffDiffer(DifferBase):
+    """Compares structured data (JSON, YAML or XML) and reports the changes."""
+
     __kind__ = 'deepdiff'
 
     __supported_directives__: dict[str, str] = {
@@ -1010,6 +1017,7 @@ class DeepdiffDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
+        """Generate the report of the changes in the data."""
         try:
             from deepdiff import DeepDiff
         except ImportError as e:  # pragma: no cover
@@ -1024,9 +1032,10 @@ class DeepdiffDiffer(DifferBase):
             report_kind: ReportKind,
             compact: bool,
         ) -> str:
-            """Customized version of deepdiff.serialization.SerializationMixin.pretty method, edited to include the
-            values deleted or added and an option for colorized HTML output. The pretty human-readable string
-            output for the diff object regardless of what view was used to generate the diff.
+            """The pretty human-readable string of the diff, regardless of the view used to generate it.
+
+            A customized version of deepdiff.serialization.SerializationMixin.pretty, edited to include the values
+            deleted or added and an option for colorized HTML output.
 
             :param ddiff: The diff object.
             :param report_kind: The report kind.
@@ -1126,9 +1135,7 @@ class DeepdiffDiffer(DifferBase):
                     }
 
             def _pretty_print_diff(ddiff: DiffLevel) -> str:
-                """Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
-                values deleted or added.
-                """
+                """Customized deepdiff pretty_print_diff() that includes the values deleted or added."""
 
                 def stringify_value(value: Any, value_type: str) -> str:  # noqa: ANN401 Dynamically typed expressions Any are disallowed
                     if value_type in {'str', 'int', 'float'}:
@@ -1170,9 +1177,7 @@ class DeepdiffDiffer(DifferBase):
                 )
 
             def _pretty_print_diff_markdown_to_html(ddiff: DiffLevel) -> str:
-                """Customized version of deepdiff.serialization.pretty_print_diff() function, edited to include the
-                values deleted or added and to convert markdown into html.
-                """
+                """Customized deepdiff pretty_print_diff() with the values deleted or added, and Markdown as HTML."""
 
                 def stringify_value(value: Any, value_type: str) -> str:  # noqa: ANN401 Dynamically typed expressions Any are disallowed
                     extras = self.job.markdown_extras
@@ -1227,8 +1232,7 @@ class DeepdiffDiffer(DifferBase):
         def _serialize_method(
             mime_type: str | None, data_label: Literal['Old', 'New']
         ) -> Literal['json', 'yaml', 'xml', 'text'] | None:
-            """Parses the media type (formerly known as MIME type) of the data and determine if it's a known
-            seralization method.
+            """Parses the data's media type (fka MIME type) to determine if it's a known serialization method.
 
             Uses data from https://www.iana.org/assignments/media-types/media-types.xhtml as well as various internet
             searches.
@@ -1464,6 +1468,7 @@ class ImageDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
+        """Generate the image highlighting the changes."""
         warnings.warn(
             f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
             f'change in the future. Please report any problems or suggestions at '
@@ -2123,6 +2128,7 @@ class AIGoogleDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:  # ty:ignore[invalid-method-override]
+        """Generate the AI summary of the changes."""
         logger.info('Job %s: Running the %s differ from hooks.py', self.job.index_number, self.__kind__)
         # warnings.warn(
         #     f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
@@ -2350,6 +2356,8 @@ class AIGoogleDiffer(DifferBase):
 
 
 class WdiffDiffer(DifferBase):
+    """Generates a word-by-word diff."""
+
     __kind__ = 'wdiff'
 
     __supported_directives__: dict[str, str] = {
@@ -2360,6 +2368,7 @@ class WdiffDiffer(DifferBase):
 
     @staticmethod
     def tokenize_markdown(markdown_string: str) -> list[str]:
+        """Split Markdown into words, keeping links whole."""
         # Escape spaces and emphasis markers inside brackets to prevent them being split
         string = re.sub(
             r'\[(.*?)\]',
@@ -2377,6 +2386,7 @@ class WdiffDiffer(DifferBase):
 
     @staticmethod
     def tokenize_html(html_string: str) -> list[str]:
+        """Split HTML into tags and words."""
         # Split by tags, keeping the tags in the resulting list
         parts = re.split(r'(<[^>]+>)', html_string)
 
@@ -2395,6 +2405,7 @@ class WdiffDiffer(DifferBase):
 
     @staticmethod
     def tokenize_plain(plain_string: str) -> list[str]:
+        """Split text into words and whitespace."""
         # Split by tags, keeping the tags in the resulting list
         tokens = re.split(r'(\s+)', plain_string)
         return [t.replace('\n', '<\\n>') for t in tokens if t]
@@ -2406,6 +2417,7 @@ class WdiffDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:
+        """Generate the word-by-word diff."""
         if not isinstance(self.state.old_data, str):
             raise ValueError("The differ 'wdiff' accepts strings only as input")
         if not isinstance(self.state.new_data, str):

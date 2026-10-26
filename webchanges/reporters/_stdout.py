@@ -97,7 +97,7 @@ class StdoutReporter(TextReporter):
             separators = (*separators, '-' * 36)
 
         class LineType(Enum):
-            """Defines the differ line types"""
+            """Defines the differ line types."""
 
             SEPARATOR = 1
             ADDITION = 2
@@ -106,7 +106,7 @@ class StdoutReporter(TextReporter):
             OTHER = 5
 
         def get_line_type(line: str, separators: Iterable[str]) -> LineType:
-            """Classifies each line"""
+            """Classifies each line."""
             if line in separators:
                 return LineType.SEPARATOR
             if line.startswith('+'):
@@ -118,7 +118,7 @@ class StdoutReporter(TextReporter):
             return LineType.OTHER
 
         def print_status_line(line: str, print_color: Callable, red_color: Callable, blue_color: Callable) -> None:
-            """Prints a status line"""
+            """Prints a status line."""
             first, second = line.split(' ', 1)
             if line.startswith('ERROR: '):
                 print_color(first, red_color(second))
@@ -133,7 +133,7 @@ class StdoutReporter(TextReporter):
             red_color: Callable,
             blue_color: Callable,
         ) -> None:
-            """Processes the lines"""
+            """Processes the lines."""
             for line in body.splitlines():
                 line_type = get_line_type(line, separators)
 

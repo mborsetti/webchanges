@@ -101,7 +101,9 @@ class TelegramReporter(MarkdownReporter):
 
     @staticmethod
     def telegram_escape_markdown(text: str, version: int = 2, entity_type: str | None = None) -> str:
-        """Helper function to escape telegram markup symbols. See https://core.telegram.org/bots/api#formatting-options
+        """Helper function to escape Telegram markup symbols.
+
+        See https://core.telegram.org/bots/api#formatting-options
 
         Inspired by https://github.com/python-telegram-bot/python-telegram-bot/blob/master/telegram/utils/helpers.py
         v13.5 30-Apr-21
@@ -166,8 +168,10 @@ class TelegramReporter(MarkdownReporter):
 
     @staticmethod
     def telegram_split_line(line: str, width: int) -> list[str]:
-        """Split an escaped line into pieces of at most width characters, preferably after a space and never between a
-        backslash and the character it escapes. Joined, the pieces are the line.
+        """Split an escaped line into pieces of at most width characters.
+
+        Preferably after a space and never between a backslash and the character it escapes. Joined, the pieces are the
+        line.
         """
         pieces = []
         while len(line) > width:
@@ -351,7 +355,7 @@ class XMPPReporter(TextReporter):
 
 
 class GotifyReporter(MarkdownReporter):
-    """Send a message to a gotify server (https://gotify.net/)"""
+    """Send a message to a gotify server (https://gotify.net/)."""
 
     MAX_LENGTH = 16 * 1024
 

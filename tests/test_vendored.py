@@ -41,7 +41,7 @@ def test_typeguard_typed_dict_invalid() -> None:
 
 
 def test_typeguard_literal_bool_int() -> None:
-    """typeguard 4.6.0 fix: bool and int Literal members are matched by type first (1 == True in Python)."""
+    """Typeguard 4.6.0 fix: bool and int Literal members are matched by type first (1 == True in Python)."""
     check_type(1, Literal[True, 1])
     with pytest.raises(TypeCheckError):
         check_type(True, Literal[1, 2])

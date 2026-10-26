@@ -87,8 +87,9 @@ RETRY_AFTER_MAX = 60.0
 
 
 def weak_dh_requests_adapter(verify: bool) -> HTTPAdapter:
-    """A transport adapter for the requests library whose SSL context lowers the OpenSSL security level to 1, so that a
-    server's weak (1024-bit) Diffie-Hellman key is accepted (the 'ignore_dh_key_too_small' directive). Works with both
+    """A requests transport adapter accepting a server's weak (1024-bit) Diffie-Hellman key.
+
+    Its SSL context lowers the OpenSSL security level to 1 (the 'ignore_dh_key_too_small' directive). Works with both
     urllib3 1.x and 2.x.
 
     :param verify: Whether certificates are verified (i.e. the job has no 'ssl_no_verify').
@@ -911,8 +912,9 @@ class UrlJob(UrlJobBase):
         headers: Any,  # noqa: ANN401 Dynamically typed expressions Any are disallowed
         timeout: float | None,
     ) -> tuple[str | bytes, str, str]:
-        """Retrieves the data with the HTTP client, retrying a transient failure (see :py:meth:`is_transient_error`)
-        as many times as set by the 'retries' directive.
+        """Retrieves the data with the HTTP client, retrying transient failures per the 'retries' directive.
+
+        See :py:meth:`is_transient_error`.
 
         :param retrieve_with_client: The method retrieving the data with the selected HTTP client.
         :param headers: The request headers.
@@ -941,9 +943,10 @@ class UrlJob(UrlJobBase):
 
     @staticmethod
     def is_transient_error(exception: Exception) -> bool:
-        """Whether the exception is a failure that a new attempt could overcome (the ones retried by the 'retries'
-        directive): a connection error (e.g. a connection reset by the server), a timeout, or a transient HTTP response
-        (429, 500, 502, 503 or 504), of any of the HTTP clients.
+        """Whether a new attempt could overcome the failure (the ones retried by the 'retries' directive).
+
+        A connection error (e.g. a connection reset by the server), a timeout, or a transient HTTP response (429, 500,
+        502, 503 or 504), of any of the HTTP clients.
 
         :param exception: The exception.
         :returns: True if the request should be retried, False otherwise.
@@ -967,8 +970,10 @@ class UrlJob(UrlJobBase):
 
     @staticmethod
     def retry_wait(exception: Exception, attempt: int) -> float:
-        """The number of seconds to wait before the next attempt: the server's Retry-After (if any) up to
-        RETRY_AFTER_MAX, otherwise an exponential backoff (1, 2, 4, ... seconds) up to RETRY_BACKOFF_MAX.
+        """The number of seconds to wait before the next attempt.
+
+        The server's Retry-After (if any) up to RETRY_AFTER_MAX, otherwise an exponential backoff (1, 2, 4, ... seconds)
+        up to RETRY_BACKOFF_MAX.
 
         :param exception: The exception raised by the failed attempt.
         :param attempt: The number of the failed attempt (starting at 1).
@@ -986,9 +991,10 @@ class UrlJob(UrlJobBase):
         """
 
         def is_connection_error(exception: Exception, *client_errors: type[BaseException]) -> bool:
-            """Whether the exception is a connection error of the HTTP client, or a transient HTTP response other
-            than the synthetic one of the empty_as_error directive (the server did respond, so an empty response is
-            not a connection problem and must not be silenced by ignore_connection_errors).
+            """Whether the exception is a connection error or a transient HTTP response.
+
+            Except the synthetic one of the empty_as_error directive: the server did respond, so an empty response is
+            not a connection problem and must not be silenced by ignore_connection_errors.
             """
             if isinstance(exception, TransientHTTPError):
                 return exception.status_code != EMPTY_RESPONSE_STATUS_CODE

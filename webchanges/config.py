@@ -101,6 +101,8 @@ class CommandConfig(BaseConfig):
         self.hooks_files = self.hooks_files or [hooks_def_file]
 
     class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
+        """Help formatter keeping the description as written."""
+
         def __init__(self, prog: str) -> None:
             """Initialize the help formatter.
 
@@ -124,7 +126,11 @@ class CommandConfig(BaseConfig):
                 pass
         description = '\n'.join(
             textwrap.wrap(
-                str(doc).replace('\n\n', '--par--').replace('\n', ' ').replace('--par--(', '\n\n'),
+                str(doc)
+                .replace('\n\n', '--par--')
+                .replace('\n', ' ')
+                .replace('--par--(', '\n\n')
+                .replace('--par--', ' '),
                 width=width,
             )
         )

@@ -1,6 +1,4 @@
-"""Test the jobs embedded in the documentation's hooks.rst file by running them against the data in the
-data/docs_hooks_testadata.yaml file.
-"""
+"""Run the jobs embedded in docs/hooks.rst against tests/data/docs_hooks_testdata.yaml."""
 
 from __future__ import annotations
 

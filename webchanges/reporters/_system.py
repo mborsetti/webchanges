@@ -69,8 +69,10 @@ class RunCommandReporter(TextReporter):
         print(result.stdout, end='')
 
     def environment(self, filtered_job_states: list[JobState]) -> dict[str, str]:
-        """The environment the command runs in: a copy of the current one (so that the outside one is not modified)
-        with the report's configuration and the directives of the jobs reported on added in JSON format.
+        """The environment the command runs in.
+
+        A copy of the current one (so that the outside one is not modified) with the report's configuration and the
+        directives of the jobs reported on added in JSON format.
 
         :param filtered_job_states: The job states reported on.
         :returns: The environment variables.
@@ -96,9 +98,10 @@ class ShellReporter(RunCommandReporter):
         super().__init__(*args, **kwargs)
 
     def submit(self) -> None:
-        """Run the command with the report on its standard input, as urlwatch does: the command (a string or a list
-        of arguments) is run without a shell and with no substitutions, its output is logged unless ignored, and a
-        non-zero exit code is logged as an error.
+        """Run the command with the report on its standard input, as urlwatch does.
+
+        The command (a string or a list of arguments) is run without a shell and with no substitutions, its output is
+        logged unless ignored, and a non-zero exit code is logged as an error.
         """
         command = self.config['command']
         if not command:

@@ -177,8 +177,9 @@ class BaseTextualFileStorage(BaseFileStorage, ABC):
         return 0
 
     def remove_remark_keys[T: Mapping[str, object]](self, _dict: T) -> T:
-        """Recursively removes all keys starting with '_' from a dict. ``T`` is bound to ``Mapping`` so that TypedDict
-        structures are accepted and returned with their type intact.
+        """Recursively removes all keys starting with '_' from a dict.
+
+        ``T`` is bound to ``Mapping`` so that TypedDict structures are accepted and returned with their type intact.
 
         :param _dict: The dict.
         :return: The dict with all keys starting with '_' removed.
@@ -208,16 +209,16 @@ class JobsBaseFileStorage(BaseTextualFileStorage, ABC):
         self.filename = filename
 
     def load_secure(self) -> list[JobBase]:
-        """Load the jobs from a text file checking that the file is secure (i.e. belongs to the current UID and only
-        the owner can write to it - Linux only).
+        """Load the jobs from a text file, checking that the file is secure (Linux only).
+
+        I.e. it belongs to the current UID and only the owner can write to it.
 
         :return: List of JobBase objects.
         """
         jobs: list[JobBase] = self.load()
 
         def is_shell_job(job: JobBase) -> bool:
-            """Check if the job uses filter 'shellpipe' or an external differ, as they call
-            subprocess.run(shell=True) (insecure).
+            """Check if the job calls subprocess.run(shell=True) (insecure): filter 'shellpipe' or an external differ.
 
             :returns: True if subprocess.run(shell=True) is invoked by job, False otherwise.
             """
@@ -254,7 +255,7 @@ class BaseYamlFileStorage(BaseTextualFileStorage, ABC):
 
     @classmethod
     def parse(cls, filename: Path) -> Any:  # noqa: ANN401 Dynamically typed expressions (typing.Any) are disallowed
-        """Return contents of YAML file if it exists
+        """Return contents of YAML file if it exists.
 
         :param filename: The filename Path.
         :return: Specified by the subclass.

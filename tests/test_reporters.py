@@ -491,8 +491,10 @@ def _fake_smtp(calls: list[tuple]) -> type:
 
 
 def test_mailer_send_timeout_and_hostname_before_connecting(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The SMTP connection has a timeout (an unresponsive server cannot block the run forever), and the local hostname
-    sent in EHLO is looked up before connecting (a slow lookup after connecting can make the server time out).
+    """The SMTP connection has a timeout, and the local hostname is looked up before connecting.
+
+    An unresponsive server cannot block the run forever, and a slow lookup of the EHLO hostname after connecting can
+    make the server time out.
     """
     calls: list[tuple] = []
     monkeypatch.setattr('webchanges.mailer.socket.getfqdn', lambda: calls.append(('getfqdn',)) or 'host.example.com')
@@ -533,22 +535,26 @@ def _telegram_chunks(text: str, max_length: int) -> list[str]:
 
 
 def test_telegram_escaping() -> None:
-    """Text is escaped, except for the inline code (only ` and \\ escaped), links and bolding."""
+    r"""Text is escaped, except for the inline code (only ` and \ escaped), links and bolding."""
     assert _telegram_chunks('Go to [the site](https://ex.com/a_b) and run `x.y`! **New**', 4096) == [
         r'Go to [the site](https://ex.com/a_b) and run `x.y`\! *New*'
     ]
 
 
 def test_telegram_code_block() -> None:
-    """A code block keeps its fences (and language), and only ` and \\ are escaped inside it, as is a differ error's
-    traceback."""
+    r"""A code block keeps its fences (and language), and only ` and \ are escaped inside it.
+
+    The same goes for a differ error's traceback.
+    """
     text = 'Error:\n```python\nprint("a_b") # `x` \\ y\n```\nDone.'
     assert _telegram_chunks(text, 4096) == ['Error:\n```python\nprint("a_b") # \\`x\\` \\\\ y\n```\nDone\\.']
 
 
 def test_telegram_code_block_across_chunks() -> None:
-    """A code block too long for one chunk is closed at the end of each chunk and reopened with its opening fence at the
-    start of the next one; no chunk is longer than the maximum or holds an empty code block."""
+    """A code block too long for one chunk is closed and reopened (with its fence) across chunks.
+
+    No chunk is longer than the maximum or holds an empty code block.
+    """
     code = [f'line {i:02} = a.b(c)\n' for i in range(30)]
     text = 'Start\n```diff\n' + ''.join(code) + '```\nEnd\n'
     chunks = _telegram_chunks(text, 80)
@@ -562,8 +568,10 @@ def test_telegram_code_block_across_chunks() -> None:
 
 
 def test_telegram_long_line() -> None:
-    """A line longer than a chunk is split across chunks without losing or adding anything, never between an escaping
-    backslash and the character it escapes, and the next line is not merged into it."""
+    """A line longer than a chunk is split across chunks without losing or adding anything.
+
+    Never between an escaping backslash and the character it escapes, and the next line is not merged into it.
+    """
     text = 'a.b ' * 30 + '\nNext line.'
     chunks = _telegram_chunks(text, 25)
     assert all(len(chunk) <= 25 for chunk in chunks)
@@ -592,8 +600,11 @@ def build_ntfy_report() -> Report:
 
 @pytest.mark.parametrize('client', ['httpx', 'requests'])
 def test_ntfy_publishes_every_job(client: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ntfy publishes one message per job with either HTTP client (until 3.39, the httpx client was closed after the
-    first job and the requests fallback raised NameError), and offers to open the location of URL jobs only."""
+    """Ntfy publishes one message per job with either HTTP client.
+
+    Until 3.39, the httpx client was closed after the first job and the requests fallback raised NameError. It offers to
+    open the location of URL jobs only.
+    """
     import requests
 
     from webchanges.reporters import _base as reporters_base
@@ -638,8 +649,11 @@ def test_ntfy_publishes_every_job(client: str, monkeypatch: pytest.MonkeyPatch) 
     ],
 )
 def test_reporters_post_more_than_once(name: str, config: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reporters posting once per job or per chunk reuse one open HTTP client (until 3.39, the httpx client was closed
-    after the first post and the second one raised RuntimeError: Cannot reopen a client instance)."""
+    """Reporters posting once per job or per chunk reuse one open HTTP client.
+
+    Until 3.39, the httpx client was closed after the first post and the second one raised RuntimeError: Cannot reopen a
+    client instance.
+    """
     import httpx
 
     calls: list[str] = []
@@ -696,9 +710,11 @@ def test_mailer_msg_reply_to() -> None:
 
 
 def test_shell_reporter_pipes_report_to_stdin(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    """The deprecated (urlwatch) 'shell' reporter runs its command (a list, run without substitutions) with the
-    report on standard input and the reported jobs in WEBCHANGES_CHANGED_JOBS_JSON (until 3.39 it crashed with
-    KeyError)."""
+    """The deprecated (urlwatch) 'shell' reporter pipes the report to its command's standard input.
+
+    The command (a list, run without substitutions) gets the reported jobs in WEBCHANGES_CHANGED_JOBS_JSON. Until 3.39
+    it crashed with KeyError.
+    """
     from webchanges.storage import YamlConfigStorage
 
     out_file = tmp_path / 'out.json'
@@ -725,8 +741,10 @@ def test_shell_reporter_pipes_report_to_stdin(tmp_path: Path, caplog: pytest.Log
 
 @pytest.mark.parametrize(('name', 'markdown'), [('slack', False), ('mattermost', True)])
 def test_slack_and_mattermost_post_to_webhook(name: str, markdown: bool, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The deprecated (urlwatch) 'slack' and 'mattermost' reporters post to their webhook like the 'webhook' reporter
-    (until 3.39 'slack' was dropped and 'mattermost' ignored), Mattermost with Markdown."""
+    """The deprecated (urlwatch) 'slack' and 'mattermost' reporters post to their webhook.
+
+    Like the 'webhook' reporter, Mattermost with Markdown. Until 3.39 'slack' was dropped and 'mattermost' ignored.
+    """
     import httpx
 
     from webchanges.storage import YamlConfigStorage
