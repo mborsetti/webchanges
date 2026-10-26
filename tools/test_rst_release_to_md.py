@@ -1,5 +1,5 @@
 # pragma: exclude file
-# ruff: noqa: S101  # Use of `assert` detected
+# Use of `assert` detected
 """Tests for ``rst_release_to_md.py`` (RELEASE.rst -> RELEASE.md converter).
 
 Lives under ``tools/`` (next to the script it tests) rather than ``tests/`` because the converter only needs

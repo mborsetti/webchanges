@@ -1,6 +1,8 @@
-# Shim required to wire argparse-manpage's build_manpages cmdclass into setuptools.
-# All other configuration lives in pyproject.toml.
-# See https://github.com/praiskup/argparse-manpage/blob/main/README.md
+"""Shim wiring argparse-manpage's ``build_manpages`` cmdclass into setuptools.
+
+All other configuration lives in pyproject.toml. See https://github.com/praiskup/argparse-manpage/blob/main/README.md
+"""
+
 from __future__ import annotations
 
 from build_manpages import build_manpages, get_build_py_cmd, get_install_cmd

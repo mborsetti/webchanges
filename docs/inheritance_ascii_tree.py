@@ -1,5 +1,4 @@
-"""Extension to Sphinx that generates a hierarchical list of classes using the contents of the ``__kind__``
-attribute."""
+"""Sphinx extension listing a class hierarchy as a tree of ``__kind__`` names."""
 
 from __future__ import annotations
 
@@ -34,9 +33,12 @@ def build_tree(klass: type, level: int) -> Iterator[str]:
 
 
 class InheritanceAsciiTree(Directive):
+    """The ``inheritance-ascii-tree`` directive; its argument is the dotted path of the root class."""
+
     required_arguments = 1
 
     def run(self) -> list[literal_block]:
+        """Return the tree as a literal block."""
         rootparts: list[str] = self.arguments.pop().split('.')
         rootname = rootparts.pop()
         rootmodulename = '.'.join(rootparts)
@@ -52,4 +54,5 @@ class InheritanceAsciiTree(Directive):
 
 
 def setup(app: Sphinx) -> None:
+    """Register the directive."""
     app.add_directive('inheritance-ascii-tree', InheritanceAsciiTree)

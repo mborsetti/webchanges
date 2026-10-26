@@ -113,7 +113,7 @@ def test_duplicates_in_jobs_yaml() -> None:
     if jobs_file.is_file():
         with pytest.raises(ValueError) as pytest_wrapped_e:
             YamlJobsStorage([jobs_file]).load_secure()
-        expected = '\n'.join(
+        expected = '\n'.join(  # noqa: FLY002 one line per item reads better than one long literal
             [
                 'Each job must have a unique URL/command (for URLs, append #1, #2, etc. to make them unique):',
                 '   • https://dupe_1',

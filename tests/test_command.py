@@ -19,7 +19,8 @@ from tests.conftest import WINDOWS_TIME_COMMAND, close_ssdb_storage
 from tests.test_storage import DATABASE_ENGINES, prepare_storage_test
 from webchanges.command import UrlwatchCommand, _human_size
 from webchanges.config import CommandConfig
-from webchanges.jobs import JobBase
+from webchanges.handler import JobState
+from webchanges.jobs import JobBase, NotModifiedError
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, SsdbStorage, YamlConfigStorage, YamlJobsStorage
 from webchanges.util import import_module_from_source
@@ -1296,6 +1297,36 @@ def test_list_error_jobs_with_error(
         urlwatch_command.handle_actions()
     assert pytest_wrapped_e.value.code == 0
     assert '\n  1: Error "' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ('name', 'exception', 'new_data', 'expected'),
+    [
+        pytest.param(None, ValueError('boom'), '', '  1: Error "boom": https://example.com/', id='error'),
+        pytest.param(
+            'Example', ValueError('boom'), '', '  1: Error "boom": Example (https://example.com/)', id='error-named'
+        ),
+        pytest.param(None, None, ' \n', '  1: No data: https://example.com/', id='no-data'),
+        pytest.param('Example', None, '', '  1: No data: Example (https://example.com/)', id='no-data-named'),
+        pytest.param(None, None, 'data', None, id='ok'),
+        pytest.param(None, NotModifiedError(304), '', None, id='not-modified'),
+    ],
+)
+def test_error_job_line(
+    urlwatch_command: UrlwatchCommand,
+    name: str | None,
+    exception: Exception | None,
+    new_data: str,
+    expected: str | None,
+) -> None:
+    job = JobBase.unserialize(
+        {'url': 'https://example.com/', 'name': name} if name else {'url': 'https://example.com/'}
+    )
+    job.index_number = 1
+    job_state = JobState(None, job)  # ty:ignore[invalid-argument-type]
+    job_state.exception = exception
+    job_state.new_data = new_data
+    assert urlwatch_command._error_job_line(job_state) == expected
 
 
 def test_prepare_jobs(urlwatch_command: UrlwatchCommand, data_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:

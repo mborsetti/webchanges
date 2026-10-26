@@ -2213,6 +2213,8 @@ class AIGoogleDiffer(DifferBase):
             return summary, model_version
 
         default_system_instructions = ''
+        # The prompts are joined from one line per item, which reads better than one long string literal
+        # ruff: disable[FLY002]
         if directives.get('additions_only') or self.job.additions_only:
             default_prompt = '\n'.join(
                 (
@@ -2274,7 +2276,7 @@ class AIGoogleDiffer(DifferBase):
                     ),
                     (
                         '*   A clear heading identifying the relevant section (e.g., "Section 4: User Guidelines" or '
-                        '"Chapteron Methodology").'
+                        '"Chapter on Methodology").'
                     ),
                     (
                         '*   A concise description of the modification, explaining whether it is an addition, '
@@ -2304,6 +2306,7 @@ class AIGoogleDiffer(DifferBase):
                     '</new_version>',
                 )
             )
+        # ruff: enable[FLY002]
 
         system_instructions = directives.get('system_instructions', default_system_instructions)
         prompt = directives.get('prompt', default_prompt).replace('\\n', '\n')
@@ -2410,6 +2413,52 @@ class WdiffDiffer(DifferBase):
         tokens = re.split(r'(\s+)', plain_string)
         return [t.replace('\n', '<\\n>') for t in tokens if t]
 
+    def tokenize(self, data: str, mime_type: str) -> list[str]:
+        """Split data into tokens, as Markdown, HTML or plain text according to its media type."""
+        if 'markdown' in mime_type:
+            return self.tokenize_markdown(data)
+        if 'html' in mime_type:
+            return self.tokenize_html(data)
+        return self.tokenize_plain(data)
+
+    @staticmethod
+    def keep_context_lines(diff_text: str, diff_html: str, contextlines: int, range_info: bool) -> tuple[str, str]:
+        """Keep only the lines with changes and the context lines around them.
+
+        :param diff_text: The text diff, whose changes are marked by ANSI color codes.
+        :param diff_html: The HTML diff, line by line the same as the text one.
+        :param contextlines: The number of context lines around each changed line.
+        :param range_info: Whether to mark each range of lines skipped with an ``@@ first...last @@`` line.
+        :returns: The text and HTML diffs.
+        """
+        lines_with_changes = [i for i, line in enumerate(diff_text.splitlines()) if '\033[9' in line]
+        if contextlines:
+            lines_to_keep: set[int] = set()
+            for i in lines_with_changes:
+                lines_to_keep.update(range(i - contextlines, i + contextlines + 1))
+        else:
+            lines_to_keep = set(lines_with_changes)
+        new_diff_text = []
+        new_diff_html = []
+        last_line = 0
+        skip = False
+        i = 0
+        for i, (line_text, line_html) in enumerate(zip(diff_text.splitlines(), diff_html.splitlines(), strict=False)):
+            if i in lines_to_keep:
+                if range_info and skip:
+                    new_diff_text.append(f'@@ {last_line + 1}...{i} @@')
+                    new_diff_html.append(f'@@ {last_line + 1}...{i} @@')
+                    skip = False
+                new_diff_text.append(line_text)
+                new_diff_html.append(line_html)
+                last_line = i + 1
+            else:
+                skip = True
+        if (i + 1) != last_line and range_info and skip:
+            new_diff_text.append(f'@@ {last_line + 1}...{i + 1} @@')
+            new_diff_html.append(f'@@ {last_line + 1}...{i + 1} @@')
+        return '\n'.join(new_diff_text), '\n'.join(new_diff_html)
+
     def differ(
         self,
         directives: dict[str, Any],
@@ -2424,18 +2473,8 @@ class WdiffDiffer(DifferBase):
             raise ValueError
 
         # Split the texts into words tokenizing newline
-        if 'markdown' in self.state.old_mime_type:
-            a = self.tokenize_markdown(self.state.old_data)
-        elif 'html' in self.state.old_mime_type:
-            a = self.tokenize_html(self.state.old_data)
-        else:
-            a = self.tokenize_plain(self.state.old_data)
-        if 'markdown' in self.state.new_mime_type:
-            b = self.tokenize_markdown(self.state.new_data)
-        elif 'html' in self.state.new_mime_type:
-            b = self.tokenize_html(self.state.new_data)
-        else:
-            b = self.tokenize_plain(self.state.new_data)
+        a = self.tokenize(self.state.old_data, self.state.old_mime_type)
+        b = self.tokenize(self.state.new_data, self.state.new_mime_type)
 
         # Create a Differ object
         import difflib
@@ -2634,39 +2673,7 @@ class WdiffDiffer(DifferBase):
             contextlines = 3
         range_info = directives.get('range_info', True)
         if contextlines < len(diff_text.splitlines()):
-            lines_with_changes = []
-            for i, line in enumerate(diff_text.splitlines()):
-                if '\033[9' in line:
-                    lines_with_changes.append(i)
-            if contextlines:
-                lines_to_keep: set[int] = set()
-                for i in lines_with_changes:
-                    lines_to_keep.update(r for r in range(i - contextlines, i + contextlines + 1))
-            else:
-                lines_to_keep = set(lines_with_changes)
-            new_diff_text = []
-            new_diff_html = []
-            last_line = 0
-            skip = False
-            i = 0
-            for i, (line_text, line_html) in enumerate(
-                zip(diff_text.splitlines(), diff_html.splitlines(), strict=False)
-            ):
-                if i in lines_to_keep:
-                    if range_info and skip:
-                        new_diff_text.append(f'@@ {last_line + 1}...{i} @@')
-                        new_diff_html.append(f'@@ {last_line + 1}...{i} @@')
-                        skip = False
-                    new_diff_text.append(line_text)
-                    new_diff_html.append(line_html)
-                    last_line = i + 1
-                else:
-                    skip = True
-            if (i + 1) != last_line and range_info and skip:
-                new_diff_text.append(f'@@ {last_line + 1}...{i + 1} @@')
-                new_diff_html.append(f'@@ {last_line + 1}...{i + 1} @@')
-            diff_text = '\n'.join(new_diff_text)
-            diff_html = '\n'.join(new_diff_html)
+            diff_text, diff_html = self.keep_context_lines(diff_text, diff_html, contextlines, range_info)
 
         if self.state.is_markdown():
             diff_text = diff_text.replace('</s>', ' ')

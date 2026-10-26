@@ -325,7 +325,6 @@ ignore = [
     'D107',   # Missing docstring in __init__. Class-level docstring (D101) already covers the object's purpose.
     'D203',   # Conflicts with D211, which forbids a blank line before a class docstring).
     'D213',   # Conflicts with D212, which says multi-line docstring summary should start on the first line (Google style).
-    'FLY002', # Consider f-string instead of string join
     'PLC0415', # `import` should be at the top-level of a file
     'PT011',   # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
     'PT030',   # pytest.warns({warning}) is too broad, set the match parameter or use a more specific warning
@@ -347,24 +346,19 @@ dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
 allowed-confusables = ['–', '‘', '’']
 
 [tool.ruff.lint.flake8-annotations]
-allow-star-arg-any = true # TODO
+allow-star-arg-any = true
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = 'single'
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds below.
-max-complexity = 30
+max-complexity = 20 # 10 is default, 13 to 15 is modern practice
 
 [tool.ruff.lint.per-file-ignores]
-'tests/*' = [
+'{tests/**,tools/test_*}' = [
+    'ANN401', #  Dynamically typed expressions (typing.Any) are disallowed
     'S101', # Use of `assert` detected
-    # Test functions are self-documenting:
-    'D101', # Missing docstring in public class
-    'D102', # Missing docstring in public method
-    'D103', # Missing docstring in public function
-]
-'tools/test_*' = [
     # Test functions are self-documenting:
     'D101', # Missing docstring in public class
     'D102', # Missing docstring in public method
