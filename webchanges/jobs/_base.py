@@ -723,7 +723,7 @@ class JobBase(metaclass=TrackSubClasses):
                 proxy = os.getenv((scheme + '_proxy').upper())
             if proxy:
                 logger.debug(
-                    f'Job {self.index_number}: Using proxy from environment variable {(scheme + "_proxy").upper()}'
+                    'Job %s: Using proxy from environment variable %s', self.index_number, (scheme + '_proxy').upper()
                 )
         return proxy
 

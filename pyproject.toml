@@ -270,7 +270,7 @@ select = [
     'INT', # flake8-gettext
     'ISC', # flake8-implicit-str-concat
     'LOG', # flake8-logging
-    # 'G',    # flake8-logging-format  # Prefer f-string to lazy `%` formatting and OK with '+'
+    'G',   # flake8-logging-format
     'PIE', # flake8-pie
     'PYI', # flake8-pyi
     'PT',  # flake8-pytest-style
@@ -301,8 +301,6 @@ select = [
 
 ignore = [
     'FLY002', # Consider f-string instead of string join
-    # 'G003',    # Logging statement uses `+`'
-    # 'G004',    # Logging statement uses f-string (Prefer f-string to lazy `%` formatting)
     'PLC0415', # `import` should be at the top-level of a file
     'PT011',   # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
     'PT030',   # pytest.warns({warning}) is too broad, set the match parameter or use a more specific warning

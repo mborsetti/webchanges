@@ -23,7 +23,7 @@ class BrowserReporter(HtmlReporter):
     def submit(self) -> None:  # ty:ignore[invalid-method-override]
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
         if not filtered_job_states:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         html_reporter = HtmlReporter(
@@ -34,7 +34,7 @@ class BrowserReporter(HtmlReporter):
         # recheck after running as diff_filters can modify job_states.verb
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
         if not filtered_job_states:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         import tempfile

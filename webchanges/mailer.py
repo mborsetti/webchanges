@@ -213,7 +213,7 @@ class SMTPMailer(Mailer):
                 server.login(self.smtp_user, passwd)
             if msg:
                 server.send_message(msg)
-                logger.info(f'SMTP email sent to {msg.get("to")} via {self.smtp_server}')
+                logger.info('SMTP email sent to %s via %s', msg.get('to'), self.smtp_server)
 
 
 @dataclass
@@ -239,7 +239,7 @@ class SendmailMailer(Mailer):
             text=True,
         )
         if p.returncode:
-            logger.error(f'Sendmail failed with {p.stderr}')
+            logger.error('Sendmail failed with %s', p.stderr)
 
 
 def smtp_have_password(smtp_server: str, from_email: str) -> bool:

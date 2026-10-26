@@ -182,7 +182,7 @@ class JobState(ContextManager):
                 error_data=self.new_error_data,
             )
         self.snapshots_db.save(guid=self.job.guid, snapshot=new_snapshot)
-        logger.info(f'Job {self.job.index_number}: Saved new data to database')
+        logger.info('Job %s: Saved new data to database', self.job.index_number)
 
     def delete_latest(self, temporary: bool = True) -> None:
         """Removes the last instance in the snapshot database."""
@@ -205,13 +205,13 @@ class JobState(ContextManager):
 
         :returns: a JobState object containing information of the job run.
         """
-        logger.info(f'{self.job.get_indexed_location()} started processing ({type(self.job).__name__})')
-        logger.debug(f'Job {self.job.index_number}: {self.job}')
+        logger.info('%s started processing (%s)', self.job.get_indexed_location(), type(self.job).__name__)
+        logger.debug('Job %s: %s', self.job.index_number, self.job)
 
         if self.exception and not isinstance(self.exception, NotModifiedError):
             self.new_timestamp = time.time()
             self.new_error_data = {'type': type(self.exception).__name__, 'message': str(self.exception)}
-            logger.info(f'{self.job.get_indexed_location()} ended processing due to exception: {self.exception}')
+            logger.info('%s ended processing due to exception: %s', self.job.get_indexed_location(), self.exception)
             return self
 
         try:
@@ -219,10 +219,14 @@ class JobState(ContextManager):
 
             self.new_timestamp = time.time()
             data, self.new_etag, mime_type = self.job.retrieve(self, headless)
-            logger.info(f'Job {self.job.index_number}: Retrieved {len(data)} bytes of {mime_type} content.')
+            logger.info('Job %s: Retrieved %s bytes of %s content.', self.job.index_number, len(data), mime_type)
 
             logger.debug(
-                f'Job {self.job.index_number}: Retrieved data={data!r} | etag={self.new_etag} | mime_type={mime_type}'
+                'Job %s: Retrieved data=%r | etag=%s | mime_type=%s',
+                self.job.index_number,
+                data,
+                self.new_etag,
+                mime_type,
             )
 
             # An empty (or whitespace-only) response is treated as an error when empty_as_error is set, so that the
@@ -289,12 +293,13 @@ class JobState(ContextManager):
                     'message': str(e),
                 }
                 logger.info(
-                    f'Job {self.job.index_number}: Job ended with an error; incrementing cumulative error runs to '
-                    f'{self.tries}'
+                    'Job %s: Job ended with an error; incrementing cumulative error runs to %s',
+                    self.job.index_number,
+                    self.tries,
                 )
 
-        logger.debug(f'Job {self.job.index_number}: Processed as {self.added_data()}')
-        logger.info(f'{self.job.get_indexed_location()} ended processing')
+        logger.debug('Job %s: Processed as %s', self.job.index_number, self.added_data())
+        logger.info('%s ended processing', self.job.get_indexed_location())
         return self
 
     def get_diff(
@@ -384,7 +389,9 @@ class Report:
         """
         if job_state.exception is not None:
             logger.info(
-                f'Job {job_state.job.index_number}: Got exception while processing job {job_state.job}',
+                'Job %s: Got exception while processing job %s',
+                job_state.job.index_number,
+                job_state.job,
                 exc_info=job_state.exception,
             )
 
@@ -463,7 +470,7 @@ class Report:
         def job_is_reportable(self: Report, job_state: JobState) -> bool:
             """Identify whether the job should generate a report based on its verb, relevant sub-directives, and the
             reporters configuration."""
-            logger.debug(f'Job {job_state.job.index_number}: Checking if job is reportable ({job_state.verb})')
+            logger.debug('Job %s: Checking if job is reportable (%s)', job_state.job.index_number, job_state.verb)
             display_cfg = self.config['display']
             match job_state.verb:
                 case 'unchanged':

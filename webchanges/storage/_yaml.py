@@ -302,7 +302,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
 
         :param args: None used.
         """
-        logger.debug(f'Loading configuration from {self.filename}')
+        logger.debug('Loading configuration from %s', self.filename)
         config: _Config | None = self.parse(self.filename)
 
         if config:
@@ -327,13 +327,16 @@ class YamlConfigStorage(BaseYamlFileStorage):
             missing = self.dict_deep_difference(DEFAULT_CONFIG, config, ignore_underline_keys=True)
             if missing:
                 logger.info(
-                    f'The configuration file {self.filename} is missing directive(s); using default value for those. '
-                    'Run with -vv or -vvv for more detalis.'
+                    'The configuration file %s is missing directive(s); using default value for those. '
+                    'Run with -vv or -vvv for more detalis.',
+                    self.filename,
                 )
                 logger.debug(
-                    f'The following default values are being used:\n'
-                    f'{yaml.safe_dump(missing)}'
-                    f'See documentation at {__docs_url__}en/stable/configuration.html'
+                    'The following default values are being used:\n'
+                    '%s'
+                    'See documentation at %sen/stable/configuration.html',
+                    yaml.safe_dump(missing),
+                    __docs_url__,
                 )
                 config = self.dict_deep_merge(config or {}, DEFAULT_CONFIG)
 
@@ -355,10 +358,10 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     config['job_defaults'][job_defaults_type]['cookies'] = cookies_from_dict(
                         config['job_defaults'][job_defaults_type]['cookies']
                     )
-            logger.info(f'Loaded configuration from {self.filename}')
+            logger.info('Loaded configuration from %s', self.filename)
 
         else:
-            logger.warning(f'No directives found in the configuration file {self.filename}; using default directives.')
+            logger.warning('No directives found in the configuration file %s; using default directives.', self.filename)
             # deepcopy so that later mutations of the loaded config cannot corrupt the shared DEFAULT_CONFIG
             config = copy.deepcopy(DEFAULT_CONFIG)
 

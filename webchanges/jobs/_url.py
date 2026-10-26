@@ -128,7 +128,7 @@ def retry_after_seconds(value: str | None) -> float | None:
     try:
         retry_at = parsedate_to_datetime(value)
     except (TypeError, ValueError):
-        logger.debug(f'Ignoring unparseable Retry-After header {value!r}')
+        logger.debug('Ignoring unparseable Retry-After header %r', value)
         return None
     if retry_at.tzinfo is None:
         retry_at = retry_at.replace(tzinfo=UTC)
@@ -185,7 +185,7 @@ class UrlJob(UrlJobBase):
                 f"Job {self.index_number}: Directive 'initialization_url' did not find key {e} to substitute in 'url'."
             ) from None
         if url != self.url:
-            logger.info(f'Job {self.index_number}: URL updated to {url}')
+            logger.info('Job %s: URL updated to %s', self.index_number, url)
         return url
 
     def _retrieve_httpx(
@@ -215,26 +215,27 @@ class UrlJob(UrlJobBase):
                     f"Please install it using e.g. 'uv pip install h2' ( {self.get_indexed_location()} )."
                 )
             logger.info(
-                f'Job {self.index_number}: Using the HTTPX HTTP client library with http_version={self.http_version}'
+                'Job %s: Using the HTTPX HTTP client library with http_version=%s', self.index_number, self.http_version
             )
         else:
             http2: bool = h2 is not None
             if http2:
-                logger.info(f'Job {self.index_number}: Using the HTTPX HTTP client library with HTTP/2 support')
+                logger.info('Job %s: Using the HTTPX HTTP client library with HTTP/2 support', self.index_number)
             else:
                 logger.info(
-                    f'Job {self.index_number}: Using the HTTPX HTTP client library (HTTP/2 support is not available '
-                    f'since h2 is not installed)'
+                    'Job %s: Using the HTTPX HTTP client library (HTTP/2 support is not available '
+                    'since h2 is not installed)',
+                    self.index_number,
                 )
 
         proxy = self.get_proxy()
         if proxy is not None:
-            logger.debug(f'Job {self.index_number}: Proxy: {proxy}')
+            logger.debug('Job %s: Proxy: %s', self.index_number, proxy)
 
         if self.fingerprints:
             logger.warning(
-                f"Job {self.index_number}: 'fingerprints' is only supported with 'http_client: curl_cffi'; "
-                f'ignoring the directive.'
+                "Job %s: 'fingerprints' is only supported with 'http_client: curl_cffi'; ignoring the directive.",
+                self.index_number,
             )
 
         if self.ignore_dh_key_too_small:
@@ -259,7 +260,7 @@ class UrlJob(UrlJobBase):
         ) as http_client:
             url = self.url
             if self.initialization_url:
-                logger.info(f'Job {self.index_number}: Initializing by navigating to {self.initialization_url}')
+                logger.info('Job %s: Initializing by navigating to %s', self.index_number, self.initialization_url)
                 init_response = http_client.get(self.initialization_url)
                 url = self._resolve_initialization_url(str(init_response.url))
 
@@ -272,9 +273,9 @@ class UrlJob(UrlJobBase):
                     params=self.params,
                 )
             except httpx.HTTPError as e:
-                logger.info(f'Job {self.index_number}: httpx error: {e}')
+                logger.info('Job %s: httpx error: %s', self.index_number, e)
                 raise
-        logger.debug(f'Job {self.index_number}: Response headers: {response.headers}')
+        logger.debug('Job %s: Response headers: %s', self.index_number, response.headers)
 
         if 400 <= response.status_code < 600:
             # Custom version of request.raise_for_status() to include returned text.
@@ -307,7 +308,7 @@ class UrlJob(UrlJobBase):
                 http_error_msg += f'\n{error_message}'
 
             if response.status_code in (429, 500, 502, 503, 504):
-                logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
+                logger.debug('Job %s: Intercepted response with %s status', self.index_number, response.status_code)
                 raise TransientHTTPError(
                     http_error_msg,
                     status_code=response.status_code,
@@ -317,14 +318,14 @@ class UrlJob(UrlJobBase):
             raise httpx.HTTPStatusError(http_error_msg, request=response.request, response=response)
 
         if response.status_code == 304:
-            logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
+            logger.debug('Job %s: Intercepted response with %s status', self.index_number, response.status_code)
             raise NotModifiedError(response.status_code)
 
         # Save ETag from response to be used as If-None-Match header in future requests
         if not response.history:  # no redirects
             etag = response.headers.get('ETag', '')
         else:
-            logger.info(f'Job {self.index_number}: ETag not captured as response was redirected to {response.url}')
+            logger.info('Job %s: ETag not captured as response was redirected to %s', self.index_number, response.url)
             etag = ''
         # Save the media type (fka MIME type)
         mime_type = response.headers.get('Content-Type', '').split(';')[0]
@@ -365,12 +366,12 @@ class UrlJob(UrlJobBase):
         import urllib3
         import urllib3.exceptions
 
-        logger.info(f'Job {self.index_number}: Using the requests HTTP client library')
+        logger.info('Job %s: Using the requests HTTP client library', self.index_number)
         proxy_str = self.get_proxy()
         if proxy_str is not None:
             scheme = urlsplit(self.url).scheme
             proxies = {scheme: proxy_str}
-            logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
+            logger.debug('Job %s: Proxies: %s', self.index_number, proxies)
         else:
             proxies = None
 
@@ -380,8 +381,8 @@ class UrlJob(UrlJobBase):
 
         if self.fingerprints:
             logger.warning(
-                f"Job {self.index_number}: 'fingerprints' is only supported with 'http_client: curl_cffi'; "
-                f'ignoring the directive.'
+                "Job %s: 'fingerprints' is only supported with 'http_client: curl_cffi'; ignoring the directive.",
+                self.index_number,
             )
 
         with requests.Session() as session:
@@ -400,7 +401,7 @@ class UrlJob(UrlJobBase):
 
             url = self.url
             if self.initialization_url:
-                logger.info(f'Job {self.index_number}: Initializing by navigating to {self.initialization_url}')
+                logger.info('Job %s: Initializing by navigating to %s', self.index_number, self.initialization_url)
                 init_response = session.get(self.initialization_url, timeout=timeout)
                 url = self._resolve_initialization_url(str(init_response.url))
 
@@ -452,7 +453,7 @@ class UrlJob(UrlJobBase):
                 http_error_msg += f'\n{error_message}'
 
             if response.status_code in (429, 500, 502, 503, 504):
-                logger.debug(f'Job {self.index_number}: Response error is transient.')
+                logger.debug('Job %s: Response error is transient.', self.index_number)
                 raise TransientHTTPError(
                     http_error_msg,
                     status_code=response.status_code,
@@ -462,14 +463,14 @@ class UrlJob(UrlJobBase):
             raise requests.HTTPError(http_error_msg, response=response)
 
         if response.status_code == 304:
-            logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
+            logger.debug('Job %s: Intercepted response with %s status', self.index_number, response.status_code)
             raise NotModifiedError(response.status_code)
 
         # Save ETag from response to be used as If-None-Match header in future requests
         if not response.history:  # no redirects
             etag = response.headers.get('ETag', '')
         else:
-            logger.info(f'Job {self.index_number}: ETag not captured as response was redirected to {response.url}')
+            logger.info('Job %s: ETag not captured as response was redirected to %s', self.index_number, response.url)
             etag = ''
         # Save the media type (fka MIME type)
         mime_type = response.headers.get('Content-Type', '').split(';')[0]
@@ -485,7 +486,10 @@ class UrlJob(UrlJobBase):
             # with whatever is detected by the charset_normalizer or chardet libraries used in requests
             # (see https://requests.readthedocs.io/en/latest/user/advanced/#encodings)
             logger.debug(
-                f'Job {self.index_number}: Encoding updated to {response.apparent_encoding} from {response.encoding}'
+                'Job %s: Encoding updated to %s from %s',
+                self.index_number,
+                response.apparent_encoding,
+                response.encoding,
             )
             response.encoding = response.apparent_encoding
 
@@ -520,21 +524,23 @@ class UrlJob(UrlJobBase):
 
         impersonate = self.impersonate or 'chrome'
         logger.info(
-            f'Job {self.index_number}: Using the curl_cffi HTTP client library '
-            f'(browser TLS impersonation: {impersonate})'
+            'Job %s: Using the curl_cffi HTTP client library (browser TLS impersonation: %s)',
+            self.index_number,
+            impersonate,
         )
         proxy_str = self.get_proxy()
         if proxy_str is not None:
             scheme = urlsplit(self.url).scheme
             proxies: dict[str, str] | None = {scheme: proxy_str}
-            logger.debug(f'Job {self.index_number}: Proxies: {proxies}')
+            logger.debug('Job %s: Proxies: %s', self.index_number, proxies)
         else:
             proxies = None
 
         if self.ignore_dh_key_too_small:
             logger.warning(
-                f'Job {self.index_number}: ignore_dh_key_too_small is not supported with the curl_cffi HTTP client '
-                f'library (TLS ciphers are fixed by the impersonated browser profile); ignoring the directive.'
+                'Job %s: ignore_dh_key_too_small is not supported with the curl_cffi HTTP client '
+                'library (TLS ciphers are fixed by the impersonated browser profile); ignoring the directive.',
+                self.index_number,
             )
 
         session_kwargs: dict[str, Any] = {
@@ -552,7 +558,7 @@ class UrlJob(UrlJobBase):
                     f'of {_CURL_CFFI_HTTP_VERSIONS} ( {self.get_indexed_location()} ).'
                 )
             session_kwargs['http_version'] = self.http_version
-            logger.info(f'Job {self.index_number}: curl_cffi http_version={self.http_version}')
+            logger.info('Job %s: curl_cffi http_version=%s', self.index_number, self.http_version)
 
         if self.fingerprints:
             allowed_fp_keys = {'ja3', 'akamai', 'extra_fp'}
@@ -565,12 +571,12 @@ class UrlJob(UrlJobBase):
             for key in allowed_fp_keys:
                 if key in self.fingerprints:
                     session_kwargs[key] = self.fingerprints[key]
-            logger.info(f'Job {self.index_number}: curl_cffi fingerprints applied: {sorted(self.fingerprints)}')
+            logger.info('Job %s: curl_cffi fingerprints applied: %s', self.index_number, sorted(self.fingerprints))
 
         with curl_cffi_requests.Session(**session_kwargs) as session:
             url = self.url
             if self.initialization_url:
-                logger.info(f'Job {self.index_number}: Initializing by navigating to {self.initialization_url}')
+                logger.info('Job %s: Initializing by navigating to %s', self.index_number, self.initialization_url)
                 init_response = session.get(self.initialization_url)
                 url = self._resolve_initialization_url(str(init_response.url))
 
@@ -618,7 +624,7 @@ class UrlJob(UrlJobBase):
                 http_error_msg += f'\n{error_message}'
 
             if response.status_code in (429, 500, 502, 503, 504):
-                logger.debug(f'Job {self.index_number}: Response error is transient.')
+                logger.debug('Job %s: Response error is transient.', self.index_number)
                 raise TransientHTTPError(
                     http_error_msg,
                     status_code=response.status_code,
@@ -628,14 +634,14 @@ class UrlJob(UrlJobBase):
             raise curl_cffi_exceptions.HTTPError(http_error_msg, response=response)
 
         if response.status_code == 304:
-            logger.debug(f'Job {self.index_number}: Intercepted response with {response.status_code} status')
+            logger.debug('Job %s: Intercepted response with %s status', self.index_number, response.status_code)
             raise NotModifiedError(response.status_code)
 
         # Save ETag from response to be used as If-None-Match header in future requests
         if not response.history:  # no redirects
             etag = response.headers.get('ETag', '')
         else:
-            logger.info(f'Job {self.index_number}: ETag not captured as response was redirected to {response.url}')
+            logger.info('Job %s: ETag not captured as response was redirected to %s', self.index_number, response.url)
             etag = ''
         # Save the media type (fka MIME type)
         mime_type = response.headers.get('Content-Type', '').split(';')[0]
@@ -677,11 +683,11 @@ class UrlJob(UrlJobBase):
         :raises NotModifiedError: If an HTTP 304 response is received.
         """
         if self._delay:
-            logger.debug(f'Job {self.index_number}: Sleeping {self._delay}s (same_site_delay directive)')
+            logger.debug('Job %s: Sleeping %ss (same_site_delay directive)', self.index_number, self._delay)
             time.sleep(self._delay)
 
         if urlparse(self.url).scheme == 'file':
-            logger.info(f'Job {self.index_number}: Using local filesystem (file URI scheme)')
+            logger.info('Job %s: Using local filesystem (file URI scheme)', self.index_number)
 
             if sys.platform == 'win32':
                 filename = Path(str(urlparse(self.url).path).lstrip('/'))
@@ -761,9 +767,9 @@ class UrlJob(UrlJobBase):
         else:
             timeout = self.timeout
 
-        logger.info(f'Job {self.index_number}: Sending {self.method} request to {self.url}')
-        logger.debug(f'Job {self.index_number}: Headers: {headers}')
-        logger.debug(f'Job {self.index_number}: Cookies: {self.cookies}')
+        logger.info('Job %s: Sending %s request to %s', self.index_number, self.method, self.url)
+        logger.debug('Job %s: Headers: %s', self.index_number, headers)
+        logger.debug('Job %s: Cookies: %s', self.index_number, self.cookies)
 
         if self.http_client == 'curl_cffi' or (
             not self.http_client
@@ -920,8 +926,13 @@ class UrlJob(UrlJobBase):
                     raise
                 wait = self.retry_wait(e, attempt)
                 logger.info(
-                    f'Job {self.index_number}: Attempt {attempt} of {attempts} failed ({type(e).__name__}: {e}); '
-                    f'retrying in {wait:g} seconds (retries directive)'
+                    'Job %s: Attempt %s of %s failed (%s: %s); retrying in %g seconds (retries directive)',
+                    self.index_number,
+                    attempt,
+                    attempts,
+                    type(e).__name__,
+                    e,
+                    wait,
                 )
                 time.sleep(wait)
         return retrieve_with_client(headers=headers, timeout=timeout)

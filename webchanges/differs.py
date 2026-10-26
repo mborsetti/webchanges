@@ -146,10 +146,10 @@ def _ai_google_retry_delay(response: httpx.Response) -> float | None:
             retry_delay = str(detail.get('retryDelay', '')).rstrip('s')
             try:
                 delay = float(retry_delay)
-                logger.debug(f'Parsed Google AI retryDelay {detail.get("retryDelay")!r} as {delay}s')
+                logger.debug('Parsed Google AI retryDelay %r as %ss', detail.get('retryDelay'), delay)
                 return delay
             except ValueError:
-                logger.debug(f'Could not parse Google AI retryDelay {detail.get("retryDelay")!r}')
+                logger.debug('Could not parse Google AI retryDelay %r', detail.get('retryDelay'))
 
     # Fallback: parse the human-readable message, e.g. "... Please retry in 15.606408828s".
     message = error.get('message', '') if isinstance(error, dict) else ''
@@ -158,7 +158,7 @@ def _ai_google_retry_delay(response: httpx.Response) -> float | None:
     if match:
         try:
             delay = float(match.group(1))
-            logger.debug(f'Parsed Google AI retry delay {delay}s from message text')
+            logger.debug('Parsed Google AI retry delay %ss from message text', delay)
             return delay
         except ValueError:  # pragma: no cover
             pass
@@ -222,27 +222,39 @@ def _ai_google_post_with_retry(
         response = http_client.post(url, **kwargs)
         response.extensions['webchanges_retries'] = retries
         response.extensions['webchanges_total_wait'] = total_wait
-        logger.debug(f'Job {job.index_number}: Google AI POST to {response.url.host} returned {response.status_code}')
+        logger.debug(
+            'Job %s: Google AI POST to %s returned %s', job.index_number, response.url.host, response.status_code
+        )
         wait = _ai_google_retry_wait(response)
         if wait is None:
             if response.status_code in (429, 503):
                 logger.warning(
-                    f'Job {job.index_number}: Google AI returned {response.status_code} but no retry delay could be '
-                    f'determined; not retrying'
+                    'Job %s: Google AI returned %s but no retry delay could be determined; not retrying',
+                    job.index_number,
+                    response.status_code,
                 )
             break
         if total_wait + wait > AI_GOOGLE_MAX_TOTAL_WAIT:
             logger.warning(
-                f'Job {job.index_number}: Google AI returned {response.status_code}; the next retry would wait '
-                f'{wait:.1f}s, exceeding the {AI_GOOGLE_MAX_TOTAL_WAIT}s cumulative ceiling (already waited '
-                f'{total_wait:.1f}s); not retrying'
+                'Job %s: Google AI returned %s; the next retry would wait '
+                '%.1fs, exceeding the %ss cumulative ceiling (already waited '
+                '%.1fs); not retrying',
+                job.index_number,
+                response.status_code,
+                wait,
+                AI_GOOGLE_MAX_TOTAL_WAIT,
+                total_wait,
             )
             break
         total_wait += wait
         retries += 1
         logger.info(
-            f'Job {job.index_number}: Google AI returned {response.status_code}; retrying in {wait:.1f}s '
-            f'(cumulative wait {total_wait:.1f}s of {AI_GOOGLE_MAX_TOTAL_WAIT}s max)'
+            'Job %s: Google AI returned %s; retrying in %.1fs (cumulative wait %.1fs of %ss max)',
+            job.index_number,
+            response.status_code,
+            wait,
+            total_wait,
+            AI_GOOGLE_MAX_TOTAL_WAIT,
         )
         time.sleep(wait)
     return response
@@ -431,7 +443,7 @@ class DifferBase(metaclass=TrackSubClasses):
            for a different report_kind.
         :returns: The output of the differ or an error message with traceback if it fails.
         """
-        logger.info(f'Job {job_state.job.index_number}: Applying differ {differ_kind}, directives {directives}')
+        logger.info('Job %s: Applying differ %s, directives %s', job_state.job.index_number, differ_kind, directives)
         differcls: TrackSubClasses | None = cls.__subclasses__.get(differ_kind)
         if differcls:
             try:
@@ -441,7 +453,11 @@ class DifferBase(metaclass=TrackSubClasses):
                 if cls.debugger_attached():
                     raise
                 logger.info(
-                    f'Job {job_state.job.index_number}: Differ {differ_kind} with {directives=} encountered error {e}'
+                    'Job %s: Differ %s with directives=%r encountered error %s',
+                    job_state.job.index_number,
+                    differ_kind,
+                    directives,
+                    e,
                 )
                 # Undo saving of new data since user won't see the diff
                 job_state.delete_latest()
@@ -845,8 +861,9 @@ class CommandDiffer(DifferBase):
             if proc.returncode == 0:
                 self.state.verb = 'changed,no_report'
                 logger.info(
-                    f"Job {self.job.index_number}: Command in differ 'command' returned 0 (no report) "
-                    f'({self.job.get_location()})'
+                    "Job %s: Command in differ 'command' returned 0 (no report) (%s)",
+                    self.job.index_number,
+                    self.job.get_location(),
                 )
                 return {'plain': '', 'markdown': '', 'html': ''}
             head_text = '\n'.join(
@@ -1224,8 +1241,9 @@ class DeepdiffDiffer(DifferBase):
             """
             if not mime_type:
                 logger.info(
-                    f"Differ {self.__kind__} data_type for {data_label} data defaulted to 'json' as media type is "
-                    'missing.'
+                    "Differ %s data_type for %s data defaulted to 'json' as media type is missing.",
+                    self.__kind__,
+                    data_label,
                 )
                 return 'json'
 
@@ -1244,14 +1262,19 @@ class DeepdiffDiffer(DifferBase):
                 return 'json'
             if media_type == 'application':
                 logger.info(
-                    f'Differ {self.__kind__} could not determine known serialization type of {data_label} data from '
-                    f"media type {mime_type}; defaulting to 'json'."
+                    'Differ %s could not determine known serialization type of %s data from '
+                    "media type %s; defaulting to 'json'.",
+                    self.__kind__,
+                    data_label,
+                    mime_type,
                 )
                 return 'json'
             if not (media_type == 'text' and subtype == 'plain'):
                 logger.info(
-                    f'Differ {self.__kind__} could not determine data type of {data_label} data from media '
-                    f"type {mime_type}; defaulting to 'text'."
+                    "Differ %s could not determine data type of %s data from media type %s; defaulting to 'text'.",
+                    self.__kind__,
+                    data_label,
+                    mime_type,
                 )
             return 'text'
 
@@ -1280,10 +1303,13 @@ class DeepdiffDiffer(DifferBase):
                     self.state.exception = e
                     self.state.traceback = self.job.format_error(e, traceback.format_exc())
                     logger.error(
-                        f'Job {self.job.index_number}: {data_label} data is invalid JSON: {e} '
-                        f'({self.job.get_location()})'
+                        'Job %s: %s data is invalid JSON: %s (%s)',
+                        self.job.index_number,
+                        data_label,
+                        e,
+                        self.job.get_location(),
                     )
-                    logger.info(f'Job {self.job.index_number}: {data!r}')
+                    logger.info('Job %s: %r', self.job.index_number, data)
                     return None, {
                         'plain': f'Differ {self.__kind__} ERROR: {data_label} data is invalid JSON\n{e}',
                         'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid JSON**\n{e}',
@@ -1296,10 +1322,13 @@ class DeepdiffDiffer(DifferBase):
                     self.state.exception = e
                     self.state.traceback = self.job.format_error(e, traceback.format_exc())
                     logger.error(
-                        f'Job {self.job.index_number}: {data_label} data is invalid YAML: {e} '
-                        f'({self.job.get_location()})'
+                        'Job %s: %s data is invalid YAML: %s (%s)',
+                        self.job.index_number,
+                        data_label,
+                        e,
+                        self.job.get_location(),
                     )
-                    logger.info(f'Job {self.job.index_number}: {data!r}')
+                    logger.info('Job %s: %r', self.job.index_number, data)
                     return None, {
                         'plain': f'Differ {self.__kind__} ERROR: {data_label} data is invalid YAML\n{e}',
                         'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid YAML**\n{e}',
@@ -1316,10 +1345,13 @@ class DeepdiffDiffer(DifferBase):
                     self.state.exception = e
                     self.state.traceback = self.job.format_error(e, traceback.format_exc())
                     logger.error(
-                        f'Job {self.job.index_number}: {data_label} data is invalid XML: {e} '
-                        f'({self.job.get_location()})'
+                        'Job %s: %s data is invalid XML: %s (%s)',
+                        self.job.index_number,
+                        data_label,
+                        e,
+                        self.job.get_location(),
                     )
-                    logger.info(f'Job {self.job.index_number}: {data!r}')
+                    logger.info('Job %s: %r', self.job.index_number, data)
                     return None, {
                         'plain': f'Differ {self.__kind__} ERROR: {data_label} data is invalid XML\n{e}',
                         'markdown': f'Differ {self.__kind__} **ERROR: {data_label} data is invalid XML**\n{e}',
@@ -1447,7 +1479,7 @@ class ImageDiffer(DifferBase):
 
         def load_image_from_web(url: str) -> Image.Image:
             """Fetches the image from an url with the first HTTP client available of httpx > requests > curl_cffi."""
-            logger.debug(f'Retrieving image from {url}')
+            logger.debug('Retrieving image from %s', url)
             if httpx is not None:
                 with httpx.stream('GET', url, timeout=10) as response:
                     response.raise_for_status()
@@ -1467,7 +1499,7 @@ class ImageDiffer(DifferBase):
 
         def load_image_from_file(filename: str) -> Image.Image:
             """Load an image from a file."""
-            logger.debug(f'Reading image from {filename}')
+            logger.debug('Reading image from %s', filename)
             return Image.open(filename)
 
         def load_image_from_base64(base_64: str) -> Image.Image:
@@ -1492,7 +1524,7 @@ class ImageDiffer(DifferBase):
                 error = missing_dependency(
                     e, 'numpy', used_by='computing the mean squared error', location=self.job.get_indexed_location()
                 )
-                logger.debug(f'{error} It is not reported.')
+                logger.debug('%s It is not reported.', error)
                 mse_value = None
             else:
                 diff_array = np.array(diff_image)
@@ -1537,7 +1569,7 @@ class ImageDiffer(DifferBase):
             directives: AiGoogleDirectives,
         ) -> tuple[str, str]:
             """Summarize changes in image using Generative AI (ALPHA).  Returns summary and model name."""
-            logger.info(f'Job {self.job.index_number}: Running ai_google for {self.__kind__} differ')
+            logger.info('Job %s: Running ai_google for %s differ', self.job.index_number, self.__kind__)
             warnings.warn(
                 f'Job {self.job.index_number}: Using differ {self.__kind__} with ai_google, which is ALPHA, '
                 f'may have bugs, and may change in the future. Please report any problems or suggestions at '
@@ -1566,8 +1598,10 @@ class ImageDiffer(DifferBase):
                     )
             if len(gemini_api_key) != 39:
                 logger.error(
-                    f'Job {self.job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
-                    f'incorrect length {len(gemini_api_key)} ({self.job.get_location()})'
+                    'Job %s: Environment variable GEMINI_API_KEY not found or is of the incorrect length %s (%s)',
+                    self.job.index_number,
+                    len(gemini_api_key),
+                    self.job.get_location(),
                 )
                 return (
                     (
@@ -1592,8 +1626,11 @@ class ImageDiffer(DifferBase):
                 mime_type = f'image/{image.format.lower()}'  # ty:ignore[unresolved-attribute]
 
                 logger.info(
-                    f'Job {self.job.index_number}: Loading {img_name} ({image.format}) to Google AI '
-                    f'({len(image_data) / 1024:,.0f} kbytes)'
+                    'Job %s: Loading %s (%s) to Google AI (%.0f kbytes)',
+                    self.job.index_number,
+                    img_name,
+                    image.format,
+                    len(image_data) / 1024,
                 )
 
                 # Initial resumable upload request
@@ -1636,7 +1673,7 @@ class ImageDiffer(DifferBase):
                 # Extract file URI from response
                 file_info = response.json()
                 file_uri = file_info['file']['uri']
-                logger.info(f'Job {self.job.index_number}: {img_name.capitalize()} loaded to {file_uri}')
+                logger.info('Job %s: %s loaded to %s', self.job.index_number, img_name.capitalize(), file_uri)
 
                 return {
                     'file_data': {
@@ -1660,9 +1697,12 @@ class ImageDiffer(DifferBase):
                     additional_parts.append(additional_part)  # ty:ignore[invalid-argument-type]
                 else:
                     logger.error(
-                        f'Job {self.job.index_number}: ai_google for {self.__kind__} HTTP Client error '
-                        f'{type(additional_part["error"])} when loading {additional_part["img_name"]} to Google AI: '
-                        f'{additional_part["error"]}'
+                        'Job %s: ai_google for %s HTTP Client error %s when loading %s to Google AI: %s',
+                        self.job.index_number,
+                        self.__kind__,
+                        type(additional_part['error']),
+                        additional_part['img_name'],
+                        additional_part['error'],
                     )
                     return (
                         (
@@ -1765,30 +1805,32 @@ class ImageDiffer(DifferBase):
         # If needed, shrink the larger image
         if new_image.size != old_image.size:
             if new_image.size > old_image.size:
-                logger.debug(f'Job {self.job.index_number}: Shrinking the new image')
+                logger.debug('Job %s: Shrinking the new image', self.job.index_number)
                 img_format = new_image.format
                 new_image = new_image.resize(old_image.size, Image.Resampling.LANCZOS)
                 new_image.format = img_format
 
             else:
-                logger.debug(f'Job {self.job.index_number}: Shrinking the old image')
+                logger.debug('Job %s: Shrinking the old image', self.job.index_number)
                 img_format = old_image.format
                 old_image = old_image.resize(new_image.size, Image.Resampling.LANCZOS)
                 old_image.format = img_format
 
         if old_image == new_image:
-            logger.info(f'Job {self.job.index_number}: New image is identical to the old one')
+            logger.info('Job %s: New image is identical to the old one', self.job.index_number)
             self.state.verb = 'unchanged'
             return {'plain': '', 'markdown': '', 'html': ''}
 
         diff_image, mse_value = compute_diff_image(old_image, new_image)
         if mse_value:
-            logger.debug(f'Job {self.job.index_number}: MSE value {mse_value:.2f}')
+            logger.debug('Job %s: MSE value %.2f', self.job.index_number, mse_value)
 
         if mse_value and mse_value < mse_threshold:
             logger.info(
-                f'Job {self.job.index_number}: MSE value {mse_value:.2f} below the threshold of {mse_threshold}; '
-                f'considering changes not worthy of a report'
+                'Job %s: MSE value %.2f below the threshold of %s; considering changes not worthy of a report',
+                self.job.index_number,
+                mse_value,
+                mse_threshold,
             )
             self.state.verb = 'changed,no_report'
             return {'plain': '', 'markdown': '', 'html': ''}
@@ -1958,8 +2000,10 @@ class AIGoogleDiffer(DifferBase):
                 )
         if len(gemini_api_key) != 39:
             logger.error(
-                f'Job {job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
-                f'incorrect length {len(gemini_api_key)} ({job.get_location()})'
+                'Job %s: Environment variable GEMINI_API_KEY not found or is of the incorrect length %s (%s)',
+                job.index_number,
+                len(gemini_api_key),
+                job.get_location(),
             )
             return (
                 (
@@ -1990,7 +2034,7 @@ class AIGoogleDiffer(DifferBase):
             data['generationConfig'].update({'thinkingConfig': {'thinkingLevel': directives['thinking_level']}})  # ty:ignore[no-matching-overload]
         elif directives.get('thinking_budget'):
             data['generationConfig'].update({'thinkingConfig': {'thinkingBudget': directives['thinking_budget']}})  # ty:ignore[no-matching-overload]
-        logger.info(f'Job {job.index_number}: Making the content generation request to Google AI model {model}')
+        logger.info('Job %s: Making the content generation request to Google AI model %s', job.index_number, model)
         model_version = model  # default
         with httpx.Client(http2=h2 is not None) as http_client:
             try:
@@ -2015,10 +2059,12 @@ class AIGoogleDiffer(DifferBase):
             candidate = result['candidates'][0]
             finish_reason = candidate['finishReason']
             model_version = result['modelVersion']
-            logger.info(f'Job {job.index_number}: AI generation finished by {finish_reason} using {model_version}')
+            logger.info('Job %s: AI generation finished by %s using %s', job.index_number, finish_reason, model_version)
             logger.debug(
-                f'Job {job.index_number}: Used {result["usageMetadata"]["totalTokenCount"]:,} tokens, '
-                f'{result["usageMetadata"]["totalTokenCount"]:,} of which for the prompt.'
+                'Job %s: Used %d tokens, %d of which for the prompt.',
+                job.index_number,
+                result['usageMetadata']['totalTokenCount'],
+                result['usageMetadata']['totalTokenCount'],
             )
             if 'content' in candidate:
                 if 'parts' in candidate['content']:
@@ -2078,7 +2124,7 @@ class AIGoogleDiffer(DifferBase):
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
     ) -> dict[ReportKind, str]:  # ty:ignore[invalid-method-override]
-        logger.info(f'Job {self.job.index_number}: Running the {self.__kind__} differ from hooks.py')
+        logger.info('Job %s: Running the %s differ from hooks.py', self.job.index_number, self.__kind__)
         # warnings.warn(
         #     f'Job {self.job.index_number}: Using differ {self.__kind__}, which is BETA, may have bugs, and may '
         #     f'change in the future. Please report any problems or suggestions at '
@@ -2101,8 +2147,10 @@ class AIGoogleDiffer(DifferBase):
                     )
             if len(gemini_api_key) != 39:
                 logger.error(
-                    f'Job {self.job.index_number}: Environment variable GEMINI_API_KEY not found or is of the '
-                    f'incorrect length {len(gemini_api_key)} ({self.job.get_location()})'
+                    'Job %s: Environment variable GEMINI_API_KEY not found or is of the incorrect length %s (%s)',
+                    self.job.index_number,
+                    len(gemini_api_key),
+                    self.job.get_location(),
                 )
                 return (
                     (

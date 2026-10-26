@@ -48,7 +48,7 @@ class SsdbSQLite3Storage(SsdbStorage):
 
         self.max_snapshots = max_snapshots
 
-        logger.debug(f'Run-time SQLite library: {sqlite3.sqlite_version}')
+        logger.debug('Run-time SQLite library: %s', sqlite3.sqlite_version)
         super().__init__(filename)
 
         self.filename.parent.mkdir(parents=True, exist_ok=True)
@@ -57,7 +57,7 @@ class SsdbSQLite3Storage(SsdbStorage):
         self.lock = threading.RLock()
 
         self.db = sqlite3.connect(filename, check_same_thread=False)
-        logger.info(f'Using sqlite3 {sqlite3.sqlite_version} database at {filename}')
+        logger.info('Using sqlite3 %s database at %s', sqlite3.sqlite_version, filename)
         self.cur = self.db.cursor()
         self.cur.execute('PRAGMA temp_store = MEMORY;')
         tables = self._execute("SELECT name FROM sqlite_master WHERE type='table';").fetchone()
@@ -108,17 +108,17 @@ class SsdbSQLite3Storage(SsdbStorage):
     def _execute(self, sql: str, args: tuple | None = None) -> sqlite3.Cursor:
         """Execute SQL command on main database"""
         if args is None:
-            logger.debug(f"Executing (perm) '{sql}'")
+            logger.debug("Executing (perm) '%s'", sql)
             return self.cur.execute(sql)
-        logger.debug(f"Executing (perm) '{sql}' with {args}")
+        logger.debug("Executing (perm) '%s' with %s", sql, args)
         return self.cur.execute(sql, args)
 
     def _temp_execute(self, sql: str, args: tuple | None = None) -> sqlite3.Cursor:
         """Execute SQL command on temp database."""
         if args is None:
-            logger.debug(f"Executing (temp) '{sql}'")
+            logger.debug("Executing (temp) '%s'", sql)
             return self.temp_cur.execute(sql)
-        logger.debug(f"Executing (temp) '{sql}' with {args[:2]}...")
+        logger.debug("Executing (temp) '%s' with %s...", sql, args[:2])
         return self.temp_cur.execute(sql, args)
 
     def _copy_temp_to_permanent(self, delete: bool = False) -> None:
@@ -147,12 +147,12 @@ class SsdbSQLite3Storage(SsdbStorage):
             if self.max_snapshots:
                 num_del = self.keep_latest(self.max_snapshots)
                 logger.debug(
-                    f'Keeping no more than {self.max_snapshots} snapshots per job: purged {num_del} older entries'
+                    'Keeping no more than %s snapshots per job: purged %s older entries', self.max_snapshots, num_del
                 )
             else:
                 self.db.commit()
             self.db.close()
-            logger.info(f'Closed main sqlite3 database file {self.filename}')
+            logger.info('Closed main sqlite3 database file %s', self.filename)
         del self.temp_cur
         del self.temp_db
         del self.temp_lock

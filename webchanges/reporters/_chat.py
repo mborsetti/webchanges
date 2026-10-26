@@ -58,7 +58,7 @@ class TelegramReporter(MarkdownReporter):
         text = '\n'.join(super().submit())  # no max_length here as we will chunk later
 
         if not text:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         chunks = self.telegram_chunk_by_line(text, max_length)
@@ -69,7 +69,7 @@ class TelegramReporter(MarkdownReporter):
 
     def submit_to_telegram(self, bot_token: str, chat_id: int | str, text: str) -> Response:
         """Submit to Telegram."""
-        logger.info(f"Sending telegram message to chat id: '{chat_id}'")
+        logger.info("Sending telegram message to chat id: '%s'", chat_id)
 
         data = {
             'chat_id': chat_id,
@@ -90,8 +90,9 @@ class TelegramReporter(MarkdownReporter):
                 raise RuntimeError(f'Telegram error: {json_res["description"]}')
         except ValueError:
             logger.error(
-                f'Failed to parse telegram response. HTTP status code: {result.status_code}, '
-                f'content: {result.content!s}'
+                'Failed to parse telegram response. HTTP status code: %s, content: %s',
+                result.status_code,
+                result.content,
             )
 
         return result
@@ -250,7 +251,7 @@ class MatrixReporter(MarkdownReporter):
         body_markdown = '\n'.join(super().submit(self.MAX_LENGTH))
 
         if not body_markdown:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         client_api = matrix_client.api.MatrixHttpApi(homeserver_url, access_token)
@@ -338,7 +339,7 @@ class XMPPReporter(TextReporter):
         text = '\n'.join(super().submit())
 
         if not text:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         xmpp = XMPP(sender, recipient, self.config['insecure_password'])

@@ -91,8 +91,8 @@ def migrate_from_legacy(
         if old_file.is_file() and not new_file.is_file():
             new_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(old_file, new_file)
-            logger.warning(f"Copied {legacy_package} '{old_file}' file to {__project_name__} '{new_file}'.")
-            logger.warning(f"You can safely delete '{old_file}'.")
+            logger.warning("Copied %s '%s' file to %s '%s'.", legacy_package, old_file, __project_name__, new_file)
+            logger.warning("You can safely delete '%s'.", old_file)
 
 
 def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> None:
@@ -133,12 +133,15 @@ def setup_logger(verbose: int | None = None, log_file: Path | None = None) -> No
         level=log_level,
         handlers=handlers,
     )
-    logger.info(f'{__project_name__}: {__version__} {__copyright__}')
+    logger.info('%s: %s %s', __project_name__, __version__, __copyright__)
     logger.info(
-        f'{platform.python_implementation()}: {platform.python_version()} '
-        f'{platform.python_build()} {platform.python_compiler()}'
+        '%s: %s %s %s',
+        platform.python_implementation(),
+        platform.python_version(),
+        platform.python_build(),
+        platform.python_compiler(),
     )
-    logger.info(f'System: {platform.platform()}')
+    logger.info('System: %s', platform.platform())
 
 
 def teardown_logger(verbose: int | None = None) -> None:
@@ -367,7 +370,7 @@ def load_hooks(hooks_file: Path, is_default: bool = False) -> None:
     """Load hooks file."""
     if not hooks_file.is_file():
         if is_default:
-            logger.info(f'Hooks file {hooks_file} does not exist or is not a file')
+            logger.info('Hooks file %s does not exist or is not a file', hooks_file)
         else:
             # do not use ImportWarning as it could be suppressed
             warnings.warn(
@@ -388,7 +391,7 @@ def load_hooks(hooks_file: Path, is_default: bool = False) -> None:
             stacklevel=1,
         )
     else:
-        logger.info(f'Importing into hooks module from {hooks_file}')
+        logger.info('Importing into hooks module from %s', hooks_file)
         import_module_from_source('hooks', hooks_file)
         logger.info('Finished importing into hooks module')
 
@@ -417,10 +420,10 @@ def sync_bundled_schemas(command_config: CommandConfig) -> None:
         try:
             bundled_hash = bundled_hash_resource.read_text(encoding='utf-8').strip()
         except (FileNotFoundError, OSError):
-            logger.debug(f'Bundled hash .{stem}.sha256 not available; skipping.')
+            logger.debug('Bundled hash .%s.sha256 not available; skipping.', stem)
             continue
         if not bundled_hash:
-            logger.debug(f'Bundled hash .{stem}.sha256 is empty; skipping.')
+            logger.debug('Bundled hash .%s.sha256 is empty; skipping.', stem)
             continue
 
         deployed_hash_file = target_dir / f'.{stem}.sha256'
@@ -441,9 +444,9 @@ def sync_bundled_schemas(command_config: CommandConfig) -> None:
             tmp_hash.write_text(f'{bundled_hash}\n', encoding='utf-8')
             tmp_hash.replace(deployed_hash_file)
         except OSError as e:
-            logger.info(f'Could not deploy {stem}.json to {target_dir}: {e}')
+            logger.info('Could not deploy %s.json to %s: %s', stem, target_dir, e)
             continue
-        logger.info(f'Updated {schema_dest} (sha256 {bundled_hash[:12]}…).')
+        logger.info('Updated %s (sha256 %s…).', schema_dest, bundled_hash[:12])
 
 
 def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_file: Path | None = None) -> None:
@@ -456,7 +459,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_fi
     """
 
     def _exit(arg: str | int | None) -> None:
-        logger.info(f'Exiting with exit code {arg}')
+        logger.info('Exiting with exit code %s', arg)
         sys.exit(arg)
 
     def print_new_version() -> int:
@@ -493,13 +496,13 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_fi
         env = os.environ.copy()
         env['PW_CLI_TARGET_LANG'] = 'python'
         cmd = [str(driver_executable), 'install', 'chrome']
-        logger.info(f'Running playwright CLI: {" ".join(cmd)}')
+        logger.info('Running playwright CLI: %s', ' '.join(cmd))
         completed_process = subprocess.run(cmd, check=False, env=env, capture_output=True, text=True)  # noqa: S603
         if completed_process.returncode:
             print(completed_process.stderr)
             return completed_process.returncode
         if completed_process.stdout:
-            logger.info(f'Success! Output of Playwright CLI: {completed_process.stdout}')
+            logger.info('Success! Output of Playwright CLI: %s', completed_process.stdout)
         return 0
 
     if urlwatch_config.check_new:
@@ -562,7 +565,7 @@ def _edit_hooks_files(hooks_files: list[Path]) -> int:
     """Open each hooks file in the user's editor and validate it on save."""
     # Mirrors the original logic from UrlwatchCommand.edit_hooks.
     for hooks_file in hooks_files:
-        logger.debug(f'Edit file {hooks_file}')
+        logger.debug('Edit file %s', hooks_file)
         hooks_edit = hooks_file.with_stem(hooks_file.stem + '_edit')
         if hooks_file.exists():
             shutil.copy(hooks_file, hooks_edit)
@@ -704,7 +707,7 @@ def show_detailed_versions() -> int:
             pass
 
         # default list of all possible dependencies
-        logger.info(f'Found no pip distribution for {__project_name__}; returning all possible dependencies.')
+        logger.info('Found no pip distribution for %s; returning all possible dependencies.', __project_name__)
         deps = [
             'aioxmpp',
             'beautifulsoup4',
@@ -980,8 +983,8 @@ def _main() -> None:  # pragma: no cover
     setup_logger(command_config.verbose, command_config.log_file)
 
     # log defaults
-    logger.debug(f'Default config path is {config_path}')
-    logger.debug(f'Default data path is {data_path}')
+    logger.debug('Default config path is %s', config_path)
+    logger.debug('Default data path is %s', data_path)
 
     # Legacy-file migration is only useful for actions that actually read or write the user's
     # config / jobs / hooks / snapshot files. Trivial actions that early-exit in
@@ -1037,7 +1040,7 @@ def _main() -> None:  # pragma: no cover
 
     # load config (which for syntax checking requires hooks to be loaded too)
     if command_config.hooks_files:
-        logger.debug(f'Hooks files to be loaded: {command_config.hooks_files}')
+        logger.debug('Hooks files to be loaded: %s', command_config.hooks_files)
         for hooks_file in command_config.hooks_files:
             load_hooks(hooks_file, is_default=not command_config.hooks_files_inputted)
     config_storage.load()

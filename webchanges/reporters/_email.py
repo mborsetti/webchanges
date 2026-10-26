@@ -27,7 +27,7 @@ class EMailReporter(TextReporter):
         body_text = '\n'.join(super().submit())
 
         if not body_text:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
@@ -91,13 +91,13 @@ class MailgunReporter(TextReporter):
         body_html = '\n'.join(self.convert(HtmlReporter).submit())
 
         if not body_text:
-            logger.info(f'Reporter {self.__kind__} has nothing to report; execution aborted')
+            logger.info('Reporter %s has nothing to report; execution aborted', self.__kind__)
             return None
 
         filtered_job_states = list(self.report.get_filtered_job_states(self.job_states))
         subject = self.subject_with_args(filtered_job_states)
 
-        logger.info(f"Sending Mailgun request for domain: '{domain}'")
+        logger.info("Sending Mailgun request for domain: '%s'", domain)
         with self.http_client as http_client:
             result = http_client.post(
                 f'https://api{region}.mailgun.net/v3/{domain}/messages',
