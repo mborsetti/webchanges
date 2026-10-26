@@ -11,7 +11,7 @@ import shutil
 import sys
 import time
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Callable, Iterator, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -25,6 +25,7 @@ from webchanges.storage import SsdbSQLite3Storage, SsdbStorage, YamlConfigStorag
 from webchanges.util import import_module_from_source
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
     from pathlib import Path
 
 py_latest_only = cast(

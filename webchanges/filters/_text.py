@@ -9,9 +9,12 @@ __lazy_modules__ = ['re', 'warnings']
 import logging
 import re
 import warnings
-from typing import Any, Generator, Iterator, Sequence
+from typing import TYPE_CHECKING, Any
 
 from webchanges.filters._base import FilterBase
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterator, Sequence
 
 logger = logging.getLogger(__name__)
 

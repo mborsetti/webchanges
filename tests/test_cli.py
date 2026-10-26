@@ -11,7 +11,7 @@ import sys
 import sysconfig
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Generator, cast
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
@@ -33,6 +33,9 @@ from webchanges.cli import (
     teardown_logger,
 )
 from webchanges.config import CommandConfig
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 is_t_build = sysconfig.get_config_var('Py_GIL_DISABLED') == 1
 

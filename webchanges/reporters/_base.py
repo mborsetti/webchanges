@@ -10,7 +10,7 @@ import html
 import itertools
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Iterable, Mapping, NoReturn, cast
+from typing import TYPE_CHECKING, Any, NoReturn, cast
 from zoneinfo import ZoneInfo
 
 from webchanges import __project_name__, __url__, __version__
@@ -18,6 +18,7 @@ from webchanges.jobs import UrlJob
 from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_html, missing_dependency
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
     from pathlib import Path
 
     from webchanges.handler import JobState, Report

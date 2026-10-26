@@ -16,7 +16,7 @@ import string
 import sys
 from io import BytesIO
 from pathlib import Path
-from typing import Callable, Generator, cast
+from typing import TYPE_CHECKING, cast
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -38,6 +38,9 @@ from webchanges.differs import (
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase, ShellJob
 from webchanges.storage import SsdbSQLite3Storage
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
 
 py_latest_only = cast(
     'Callable[[Callable], Callable]',

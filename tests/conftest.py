@@ -15,7 +15,7 @@ from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, SsdbStorage, YamlConfigStorage, YamlJobsStorage
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from collections.abc import Iterator
 
 _TESTS_DIR = Path(__file__).parent
 _DATA_DIR = _TESTS_DIR / 'data'

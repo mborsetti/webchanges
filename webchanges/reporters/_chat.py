@@ -12,7 +12,7 @@ import logging
 import os
 import re
 import warnings
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any
 
 from markdown2 import Markdown
 
@@ -21,6 +21,8 @@ from webchanges.reporters._base import MarkdownReporter, TextReporter, chunk_str
 from webchanges.util import missing_dependency
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from webchanges.reporters._base import Response
     from webchanges.storage import (
         _ConfigReportGithubIssue,

@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from ftplib import FTP
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
 
 import html2text
@@ -43,6 +43,8 @@ from webchanges.util import missing_dependency
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, Sequence
+
     from requests.adapters import HTTPAdapter
 
     from webchanges.handler import JobState

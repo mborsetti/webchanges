@@ -29,7 +29,7 @@ import time
 import warnings
 from contextlib import ExitStack
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import SplitResult, parse_qsl, quote, unquote, urlencode, urlparse, urlsplit
 
 from webchanges import __project_name__
@@ -44,6 +44,8 @@ from webchanges.jobs._exceptions import (
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     try:
         from playwright.sync_api import Browser, Page, Playwright, ProxySettings, Response
     except ImportError:  # pragma: no cover

@@ -48,7 +48,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, tzinfo
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, Literal, NoReturn, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, TypedDict
 from xml.parsers.expat import ExpatError
 
 import html2text
@@ -57,6 +57,8 @@ import yaml
 from webchanges.util import TrackSubClasses, linkify, mark_to_html, missing_dependency
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from webchanges.jobs import JobBase
 
 
@@ -87,28 +89,25 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-AiGoogleDirectives = TypedDict(
-    'AiGoogleDirectives',
-    {
-        'model': str,
-        'additions_only': str,
-        'system_instructions': str,
-        'prompt': str,
-        'prompt_ud_context_lines': int,
-        'timeout': int,
-        'max_output_tokens': int | None,
-        'media_resolution': Literal[
-            'media_resolution_low', 'media_resolution_medium', 'media_resolution_high', 'media_resolution_ultra_high'
-        ],
-        'thinking_level': Literal['low', 'medium', 'high'],
-        'temperature': float | None,
-        'top_p': float | None,
-        'top_k': float | None,
-        'thinking_budget': float | None,
-        'tools': list[Any],
-    },
-    total=False,
-)
+
+class AiGoogleDirectives(TypedDict, total=False):
+    model: str
+    additions_only: str
+    system_instructions: str
+    prompt: str
+    prompt_ud_context_lines: int
+    timeout: int
+    max_output_tokens: int | None
+    media_resolution: Literal[
+        'media_resolution_low', 'media_resolution_medium', 'media_resolution_high', 'media_resolution_ultra_high'
+    ]
+    thinking_level: Literal['low', 'medium', 'high']
+    temperature: float | None
+    top_p: float | None
+    top_k: float | None
+    thinking_budget: float | None
+    tools: list[Any]
+
 
 ReportKind = Literal['plain', 'markdown', 'html']
 

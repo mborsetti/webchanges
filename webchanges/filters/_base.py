@@ -9,7 +9,7 @@ __lazy_modules__ = ['itertools', 'warnings', 'yaml']
 import itertools
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, NoReturn
+from typing import TYPE_CHECKING, Any, Literal, NoReturn
 
 import yaml
 
@@ -17,6 +17,7 @@ from webchanges.util import TrackSubClasses, missing_dependency
 
 if TYPE_CHECKING:
     import re
+    from collections.abc import Iterable, Iterator
 
     from webchanges.handler import JobState
 

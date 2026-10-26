@@ -34,7 +34,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from datetime import datetime, tzinfo
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, TypeGuard, cast
+from typing import TYPE_CHECKING, Any, TypeGuard, cast
 from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
@@ -66,6 +66,8 @@ if httpx is not None:
         h2 = None
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
     from webchanges.main import Urlwatch
     from webchanges.reporters._base import _ConfigReportersList
     from webchanges.storage import _ConfigReportEmail, _ConfigReportEmailSmtp, _ConfigReportTelegram, _ConfigReportXmpp
@@ -1045,7 +1047,7 @@ class UrlwatchCommand:
 
             return job_state
 
-        def set_error(job_state: 'JobState', message: str) -> JobState:
+        def set_error(job_state: JobState, message: str) -> JobState:
             """Sets a job error message on a JobState."""
             try:
                 raise ValueError(message)

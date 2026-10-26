@@ -7,9 +7,12 @@ from __future__ import annotations
 __lazy_modules__ = ['warnings']
 
 import warnings
-from typing import Any, Literal, Mapping, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
 from webchanges import __project_name__
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 try:
     from typeguard import check_type  # ty:ignore[unresolved-import]

@@ -10,7 +10,7 @@ from docutils.nodes import literal_block
 from docutils.parsers.rst import Directive
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from collections.abc import Iterator
 
     from sphinx.application import Sphinx
 

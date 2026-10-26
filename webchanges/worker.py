@@ -12,7 +12,7 @@ import os
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
-from typing import TYPE_CHECKING, Callable, Iterable
+from typing import TYPE_CHECKING
 
 from webchanges.command import UrlwatchCommand
 from webchanges.handler import JobState
@@ -24,6 +24,8 @@ from webchanges.util import missing_dependency
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     from webchanges.jobs import JobBase
     from webchanges.main import Urlwatch
 

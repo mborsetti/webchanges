@@ -14,7 +14,7 @@ import os
 import re
 import textwrap
 import warnings
-from typing import TYPE_CHECKING, Any, Iterable, Literal, get_type_hints
+from typing import TYPE_CHECKING, Any, Literal, get_type_hints
 from urllib.parse import urlsplit
 
 import yaml
@@ -50,6 +50,7 @@ except ImportError:
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
     from webchanges.handler import JobState
@@ -137,8 +138,8 @@ def replace_deprecated_directives(directives: dict[str, Any]) -> None:
 class JobBase(metaclass=TrackSubClasses):
     """The base class for Jobs."""
 
-    __subclasses__: dict[str, 'JobBase'] = {}  # ty:ignore[invalid-assignment]
-    __anonymous_subclasses__: list['JobBase'] = []  # ty:ignore[invalid-assignment]
+    __subclasses__: dict[str, JobBase] = {}  # ty:ignore[invalid-assignment]
+    __anonymous_subclasses__: list[JobBase] = []  # ty:ignore[invalid-assignment]
 
     __kind__: str = ''  # The kind name
     __is_browser__: bool = False  # Whether Playwright is being launched (run separately with less parallelism)
@@ -332,7 +333,7 @@ class JobBase(metaclass=TrackSubClasses):
                 ) from None
 
     @classmethod
-    def unserialize(cls, data: dict, filenames: list[Path] | None = None) -> 'JobBase':
+    def unserialize(cls, data: dict, filenames: list[Path] | None = None) -> JobBase:
         """Unserialize a dict with job data (e.g. from the YAML jobs file) into a JobBase type object.
 
         :param data: The dict with job data (e.g. from the YAML jobs file); it is not modified.
