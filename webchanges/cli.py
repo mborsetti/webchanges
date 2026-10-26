@@ -34,9 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def python_version_warning() -> None:
-    """Check if we're running on the minimum Python version supported and if so print and issue a pending deprecation
-    warning.
-    """
+    """Print and issue a pending deprecation warning if running on the minimum Python version supported."""
     if sys.version_info[0:2] == __min_python_version__:
         current_minor_version = '.'.join(str(n) for n in sys.version_info[0:2])
         next_minor_version = f'{__min_python_version__[0]}.{__min_python_version__[1] + 1}'
@@ -55,8 +53,9 @@ def migrate_from_legacy(
     hooks_file: Path | None = None,
     ssdb_file: Path | None = None,
 ) -> None:
-    """Check for existence of legacy files for configuration, jobs and Python hooks and migrate them (i.e. make a copy
-    to new folder and/or name). Original files are not deleted.
+    """Migrate legacy configuration, jobs and hooks files by copying them to the new folder and/or name.
+
+    Original files are not deleted.
 
     :param legacy_package: The name of the legacy package to migrate (e.g. urlwatch).
     :param config_file: The new Path to the configuration file.
@@ -156,8 +155,9 @@ def teardown_logger(verbose: int | None = None) -> None:
 
 
 def _glob_files(pattern: Path, ext: str | None = None) -> list[Path]:
-    """The files matching a glob pattern, sorted; a pattern that is a directory matches the files with extension 'ext'
-    (all files if None) in its whole tree.
+    """The files matching a glob pattern, sorted.
+
+    A pattern that is a directory matches the files with extension 'ext' (all files if None) in its whole tree.
 
     :param pattern: The glob pattern, file or directory.
     :param ext: The extension, e.g. '.yaml', of the files to match within a directory.
@@ -177,7 +177,8 @@ def _expand_glob_files(
     ext: str | None = None,
     prefix: str | None = None,
 ) -> list[Path]:
-    """Searches for file both as specified and in the default directory, then retries with 'ext' extension if defined.
+    """Searches for the file as specified and in the default directory, then retries with the 'ext' extension.
+
     A directory stands for all the files with extension 'ext' in its tree.
 
     :param filename: The filename, glob pattern or directory.
@@ -223,8 +224,10 @@ def locate_glob_files(
     ext: str | None = None,
     prefix: str | None = None,
 ) -> list[Path]:
-    """Expands each filename, glob pattern or directory into the files it matches, keeping the order given (and
-    dropping duplicates) so that jobs are always concatenated, and therefore numbered, the same way.
+    """Expands each filename, glob pattern or directory into the files it matches.
+
+    The order given is kept (dropping duplicates) so that jobs are always concatenated, and therefore numbered, the same
+    way.
 
     :param filenames: The filenames, glob patterns or directories.
     :param default_path: The default directory.
@@ -241,8 +244,9 @@ def locate_glob_files(
 
 
 def _read_file_directives(config_file: Path) -> dict[str, list[Path]]:
-    """Read the 'jobs' and 'hooks' directives of the configuration file, which are needed before the file is loaded
-    (as the hooks must be imported first). Relative paths are taken from the configuration file's directory.
+    """Read the configuration file's 'jobs' and 'hooks' directives before the file is loaded.
+
+    The hooks must be imported first. Relative paths are taken from the configuration file's directory.
 
     :param config_file: The configuration file.
 
@@ -272,9 +276,10 @@ def _read_file_directives(config_file: Path) -> dict[str, list[Path]]:
 
 
 def locate_jobs_and_hooks_files(command_config: CommandConfig) -> None:
-    """Locate the jobs and hooks files: those given with the command line arguments --jobs and --hooks, else those in
-    the configuration file's 'jobs' and 'hooks' directives, else the default ones. The configuration file must already
-    have been located.
+    """Locate the jobs and hooks files.
+
+    Those given with the command line arguments --jobs and --hooks, else those in the configuration file's 'jobs' and
+    'hooks' directives, else the default ones. The configuration file must already have been located.
 
     :param command_config: The CommandConfig, whose jobs_files and hooks_files are replaced with the files found.
     """
@@ -450,8 +455,7 @@ def sync_bundled_schemas(command_config: CommandConfig) -> None:
 
 
 def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_file: Path | None = None) -> None:
-    """Handles CLI actions that do not require all classes etc. to be initialized (and command.py loaded). For speed
-    purposes.
+    """Handles CLI actions that don't need everything initialized (and command.py loaded), for speed.
 
     The editor commands (``--edit-jobs``, ``--edit-config``, ``--edit-hooks``) are dispatched here too so that a
     malformed user file does not block the user from opening it. ``default_config_file`` is the platform default so
@@ -482,8 +486,7 @@ def handle_unitialized_actions(urlwatch_config: CommandConfig, default_config_fi
         return 1
 
     def playwright_install_chrome() -> int:  # pragma: no cover
-        """Replicates playwright.___main__.main() function, which is called by the playwright executable, in order to
-        install the browser executable.
+        """Install the browser by replicating playwright.__main__.main(), as the playwright executable does.
 
         :return: Playwright's executable return code.
         """
@@ -923,8 +926,10 @@ def _stdout_is_broken() -> bool:
 
 
 def main() -> None:
-    """The entry point (console script and `python -m webchanges`): runs the program, stopping quietly if the reader of
-    stdout goes away before reading all of the output, as recommended in the documentation of the `signal` module.
+    """The entry point (console script and `python -m webchanges`): runs the program.
+
+    Stops quietly if the reader of stdout goes away before reading all of the output, as recommended in the
+    documentation of the `signal` module.
 
     :raises BrokenPipeError: If raised by anything other than writing to stdout (e.g. a server closing a connection).
     """

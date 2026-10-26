@@ -234,8 +234,11 @@ def test_legacy_urlwatch_reporters(
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """The urlwatch reporters webchanges replaced are kept and filled with their defaults (until 3.39 'slack' was
-    dropped and the others flagged as unrecognized), with a deprecation warning but no 'unrecognized' one."""
+    """The urlwatch reporters webchanges replaced are kept and filled with their defaults.
+
+    With a deprecation warning but no 'unrecognized' one. Until 3.39 'slack' was dropped and the others flagged as
+    unrecognized.
+    """
     config_path = _write_config(tmp_path, {'report': {name: legacy_config}})
     config_storage = YamlConfigStorage(config_path)
     with warnings.catch_warnings():
@@ -829,8 +832,10 @@ def test_delete_latest(database_engine: SsdbStorage) -> None:
 
 
 def test_delete_latest_temporary_sqlite3(ssdb_storage: SsdbSQLite3Storage) -> None:
-    """delete_latest(temporary=True) deletes the latest snapshot saved in this run (not yet in the permanent database)
-    and returns how many it deleted, counted in the temporary database."""
+    """delete_latest(temporary=True) deletes this run's latest snapshot and returns how many it deleted.
+
+    That snapshot is not yet in the permanent database; the count is from the temporary one.
+    """
     for timestamp, data in ((1.0, 'old'), (2.0, 'new')):
         ssdb_storage.save(guid='guid', snapshot=Snapshot(data, timestamp, 0, '', 'text/plain', {}))
     assert ssdb_storage.delete_latest('guid', temporary=True) == 1

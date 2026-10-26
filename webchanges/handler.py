@@ -67,6 +67,8 @@ Verb = Literal[
 
 
 class ErrorData(TypedDict, total=False):
+    """An exception's type and message, as saved with the snapshot."""
+
     type: str
     message: str
 
@@ -104,7 +106,7 @@ class JobState(AbstractContextManager):
     verb: Verb
 
     def __init__(self, snapshots_db: SsdbStorage, job: JobBase) -> None:
-        """Initializes the class
+        """Initializes the class.
 
         :param snapshots_db: The SsdbStorage object with the snapshot database methods.
         :param job: A JobBase object with the job information.
@@ -137,8 +139,7 @@ class JobState(AbstractContextManager):
 
     @staticmethod
     def debugging_session() -> bool:
-        """Checks if the code is currently running within an external debugger (e.g. IDE) and *NOT* in a testing
-        environment.
+        """Checks if running within an external debugger (e.g. IDE) and *NOT* in a testing environment.
 
         :returns: True if an external debugger is attached and it's not a pytest session, False otherwise.
         """
@@ -458,8 +459,9 @@ class Report:
         job_state: JobState,
         label: Verb,
     ) -> None:
-        """Sets the verb of the job in job_state to a custom label. Called by
-        :py:func:`UrlwatchCommand.check_test_reporter`.
+        """Sets the verb of the job in job_state to a custom label.
+
+        Called by :py:func:`UrlwatchCommand.check_test_reporter`.
 
         :param job_state: The JobState object with the information of the job run.
         :param label: The label to set the information of the job run to.
@@ -474,8 +476,7 @@ class Report:
         """
 
         def job_is_reportable(self: Report, job_state: JobState) -> bool:
-            """Identify whether the job should generate a report based on its verb, relevant sub-directives, and the
-            reporters configuration."""
+            """Whether the job should be reported, given its verb, sub-directives and the reporters' configuration."""
             logger.debug('Job %s: Checking if job is reportable (%s)', job_state.job.index_number, job_state.verb)
             display_cfg = self.config['display']
             match job_state.verb:
@@ -516,8 +517,9 @@ class Report:
                 yield job_state
 
     def finish(self, jobs_file: list[Path]) -> None:
-        """Finish job run: determine its duration and generate reports by submitting job_states to
-        :py:Class:`ReporterBase` :py:func:`submit_all`.
+        """Finish the job run: determine its duration and generate the reports.
+
+        Submits job_states to :py:Class:`ReporterBase` :py:func:`submit_all`.
 
         :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).
         """
@@ -533,8 +535,9 @@ class Report:
         check_enabled: bool | None = True,
         apply_tags: bool = True,
     ) -> None:
-        """Finish job run of one: determine its duration and generate reports by submitting job_states to
-        :py:Class:`ReporterBase` :py:func:`submit_one`.  Used in testing.
+        """Finish the job run for one reporter: determine its duration and generate its report.
+
+        Submits job_states to :py:Class:`ReporterBase` :py:func:`submit_one`. Used in testing.
 
         :param name: The name of the reporter to run.
         :param jobs_file: The path to the file containing the list of jobs (optional, used in footers).

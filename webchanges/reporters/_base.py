@@ -150,7 +150,9 @@ class ReporterBase(metaclass=TrackSubClasses):
         differ_config: _ConfigDifferDefaults,
         job_count_total: int | None = None,
     ) -> None:
-        """:param report: The Report object containing information about the report.
+        """Initialize the reporter with the report, the configuration and the job states.
+
+        :param report: The Report object containing information about the report.
         :param config: The configuration of the run (typically from config.yaml).
         :param job_states: The list of JobState objects containing the information about the jobs that were retrieved.
         :param duration: The duration of the retrieval of jobs.
@@ -199,7 +201,7 @@ class ReporterBase(metaclass=TrackSubClasses):
 
     @classmethod
     def get_base_config(cls, report: Report) -> dict[str, Any]:
-        """Gets the configuration of the base of the report (e.g. for stdout, it will be text)"""
+        """Gets the configuration of the base of the report (e.g. for stdout, it will be text)."""
         report_class: ReporterBase = cls.mro()[-3]  # ty:ignore[invalid-assignment]
         base_config: dict[str, Any] = report.config['report'][report_class.__kind__]  # ty:ignore[invalid-key]
         return base_config
@@ -224,8 +226,10 @@ class ReporterBase(metaclass=TrackSubClasses):
 
     @property
     def footer_checked(self) -> str:
-        """The 'Checked N sources in T' fragment of the report's footer, counting every job run (not just the ones
-        this reporter reports on; see :py:attr:`footer_coverage`)."""
+        """The 'Checked N sources in T' fragment of the report's footer.
+
+        It counts every job run, not just the ones this reporter reports on (see :py:attr:`footer_coverage`).
+        """
         return (
             f'Checked {self.job_count_total} source{"s" if self.job_count_total > 1 else ""} in '
             f'{dur_text(self.duration)}'
@@ -233,8 +237,10 @@ class ReporterBase(metaclass=TrackSubClasses):
 
     @property
     def footer_coverage(self) -> str:
-        """The report's footer fragment stating how many of the jobs run this report covers; empty unless the
-        reporter's 'tags' directive restricted it to a subset of them."""
+        """The report's footer fragment stating how many of the jobs run this report covers.
+
+        Empty unless the reporter's 'tags' directive restricted it to a subset of them.
+        """
         if self.job_count_total <= len(self.job_states):
             return ''
         return f'; this report covers {len(self.job_states)}'
@@ -261,8 +267,9 @@ class ReporterBase(metaclass=TrackSubClasses):
         check_enabled: bool | None = True,
         apply_tags: bool = True,
     ) -> bool:
-        """Run every configuration of the named reporter, i.e. the single one or, if the reporter is configured with a
-        list of configurations, each one of them in turn.
+        """Run every configuration of the named reporter.
+
+        I.e. the single one or, if the reporter is configured with a list of configurations, each one of them in turn.
 
         Each configuration may have a 'tags' directive restricting it to the jobs having at least one of those tags
         among their own 'tags' job directive.
@@ -700,8 +707,7 @@ class MarkdownReporter(ReporterBase):
     __kind__ = 'markdown'
 
     def submit(self, max_length: int | None = None, **kwargs: Any) -> Iterable[str]:
-        """Submit a job to generate the report in Markdown format.
-        We use the CommonMark spec: https://spec.commonmark.org/
+        """Submit a job to generate the report in Markdown (CommonMark spec, https://spec.commonmark.org/).
 
         :param max_length: The maximum length of the report. Unlimited if not specified.
         :param kwargs:

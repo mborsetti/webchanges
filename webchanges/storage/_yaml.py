@@ -163,9 +163,9 @@ class YamlConfigStorage(BaseYamlFileStorage):
         return defaults
 
     def fill_legacy_reporters(self, config: _Config) -> None:
-        """Fill in the default sub-directives of the urlwatch reporters in LEGACY_REPORTERS found in the configuration
-        (they are not in DEFAULT_CONFIG, so that they are not written into new configuration files), and warn about
-        those enabled.
+        """Fill in the defaults of the urlwatch reporters (LEGACY_REPORTERS) found; warn about those enabled.
+
+        They are not in DEFAULT_CONFIG, so that they are not written into new configuration files.
 
         :param config: The configuration; the reporters' configurations are replaced in place.
         """
@@ -190,9 +190,10 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 )
 
     def normalize_reporter_lists(self, config: _Config) -> None:
-        """Fill in the default sub-directives of each configuration of a reporter that is configured multiple times,
-        i.e. with a list of configurations instead of a single one (a single one gets its defaults from the deep merge
-        with DEFAULT_CONFIG done in :py:func:`load`, which cannot reach inside a list).
+        """Fill in the default sub-directives of each configuration of a reporter configured as a list.
+
+        A single configuration gets its defaults from the deep merge with DEFAULT_CONFIG done in :py:func:`load`, which
+        cannot reach inside a list.
 
         :param config: The configuration; the reporters configured with a list are replaced in place.
         :raises ValueError: If an entry of a reporter's list of configurations is not a set of directives.
@@ -218,8 +219,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             logger.info('Reporter %s is configured %d times', name, len(normalized))
 
     def check_for_unrecognized_keys(self, config: _Config) -> None:
-        """Test if config has keys not in DEFAULT_CONFIG (bad keys, e.g. typos); if so, raise ValueError. Also cleanup
-        deprecated keys in config.
+        """Raise ValueError if config has keys not in DEFAULT_CONFIG (e.g. typos); clean up deprecated keys.
 
         :param config: The configuration.
         :raises ValueError: If the configuration has keys not in DEFAULT_CONFIG (bad keys, e.g. typos)

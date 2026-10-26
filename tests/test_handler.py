@@ -50,8 +50,9 @@ ssdb_storage = SsdbSQLite3Storage(ssdb_file)  # ty:ignore[invalid-argument-type]
 
 @pytest.fixture(scope='module', autouse=True)
 def _close_module_ssdb_storage() -> Iterator[None]:
-    """Close the module-level ``ssdb_storage`` once all tests in this module have run, so its sqlite3 connections
-    don't survive to interpreter shutdown and emit ResourceWarnings.
+    """Close the module-level ``ssdb_storage`` once this module's tests have run.
+
+    So that its sqlite3 connections don't survive to interpreter shutdown and emit ResourceWarnings.
     """
     yield
     ssdb_storage.close()
@@ -366,9 +367,10 @@ def test_report_error_when_out_of_tries_sqlite3() -> None:
 def test_job_is_reportable_error_suppression(
     verb: str, directives: dict[str, bool], display_error: bool, expected: bool
 ) -> None:
-    """The get_filtered_job_states() gate honors the suppress_errors, suppress_repeated_errors and
-    suppress_error_ended job directives (issue #189: 'error,repeated' was shadowed by the startswith('error')
-    guard, so suppress_repeated_errors was never consulted).
+    """get_filtered_job_states() honors suppress_errors, suppress_repeated_errors and suppress_error_ended.
+
+    Issue #189: 'error,repeated' was shadowed by the startswith('error') guard, so suppress_repeated_errors was never
+    consulted.
     """
     config = copy.deepcopy(DEFAULT_CONFIG)
     config['display']['error'] = display_error
@@ -545,8 +547,10 @@ def test_run_classification(
     directives: dict[str, object],
     steps: list[tuple[Outcome, Verb | None, str, int]],
 ) -> None:
-    """Over consecutive runs, each run of a job gets the expected verb (None: nothing reported), and the database keeps
-    the expected snapshot data and count of consecutive failed runs ('tries').
+    """Over consecutive runs, each run of a job gets the expected verb and database state.
+
+    The verb is None when nothing is reported; the database keeps the expected snapshot data and count of consecutive
+    failed runs ('tries').
 
     Notably: a failed run never replaces the last good data, so the run after an error is compared against it; the
     'error ended' notice is only produced with suppress_repeated_errors (which mutes the error notices in between);
@@ -582,9 +586,10 @@ def test_run_max_tries_notifications(
     suppress_repeated_errors: bool,
     notified: list[bool],
 ) -> None:
-    """With max_tries: 3, a failing job is notified from its third consecutive failure, also with
-    suppress_repeated_errors, which then mutes the following failures and notifies the recovery. (The errors saved
-    by the unreported failures used to make the third one a repeated error, which suppress_repeated_errors muted.)
+    """With max_tries: 3, a failing job is notified from its third consecutive failure.
+
+    Also with suppress_repeated_errors, which then mutes the following failures and notifies the recovery. (The errors
+    saved by the unreported failures used to make the third one a repeated error, which suppress_repeated_errors muted.)
     """
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'max_tries': 3, 'suppress_repeated_errors': suppress_repeated_errors}
@@ -614,8 +619,10 @@ def test_run_read_only_leaves_database_untouched(
     outcome: Outcome,
     verb: Verb,
 ) -> None:
-    """A read-only run (--test-reporter with a joblist) classifies the job as usual but saves nothing, on every path,
-    including those that would reset the count of failed runs after an error."""
+    """A read-only run (--test-reporter with a joblist) classifies the job as usual but saves nothing.
+
+    On every path, including those that would reset the count of failed runs after an error.
+    """
     job = JobBase.unserialize({'url': 'https://www.example.com/'})
     urlwatcher.jobs = [job]
     run_once('a')
@@ -647,8 +654,10 @@ def test_differ_error_keeps_change_for_next_run(
     run_once: Callable[..., JobState | None],
     mocker: pytest_mock.MockerFixture,
 ) -> None:
-    """When the differ fails, the user sees the error instead of the diff, so the new snapshot is not kept: the next
-    run reports the change again instead of the change being lost."""
+    """When the differ fails, the new snapshot is not kept, so the next run reports the change again.
+
+    The user sees the error instead of the diff, so keeping the snapshot would lose the change.
+    """
     job = JobBase.unserialize({'url': 'https://www.example.com/'})
     urlwatcher.jobs = [job]
     run_once('a')

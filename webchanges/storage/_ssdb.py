@@ -126,8 +126,9 @@ class SsdbStorage(BaseFileStorage):
             self.save(guid=guid, snapshot=new_snapshot, temporary=False)
 
     def gc(self, known_guids: Iterable[str], keep_entries: int = 1) -> None:
-        """Garbage collect the database: delete all guids not included in known_guids and keep only last n snapshot for
-        the others.
+        """Garbage collect the database.
+
+        Delete all guids not included in known_guids and keep only the last n snapshots for the others.
 
         :param known_guids: The guids to keep.
         :param keep_entries: Number of entries to keep after deletion for the guids to keep.

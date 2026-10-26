@@ -39,9 +39,10 @@ py_latest_only = cast(
 
 @pytest.fixture(autouse=True)
 def _silence_db_close(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``handle_actions`` paths (e.g. ``--dump-history``) trigger ``ssdb_storage.close()`` mid-test, which would
-    invalidate the in-memory SQLite connection used by subsequent assertions in the same test. Replace ``close``
-    with a no-op so a single test can drive multiple actions against the same DB.
+    """Make ``ssdb_storage.close()`` a no-op so one test can drive several actions against one DB.
+
+    ``handle_actions`` paths (e.g. ``--dump-history``) call it mid-test, which would invalidate the in-memory SQLite
+    connection used by later assertions in the same test.
 
     Redis is included because ``SsdbRedisStorage.close()`` deletes its connection (``del self.db``) and the instance
     is shared via ``tests.test_storage.DATABASE_ENGINES``: closing it here would break every Redis test that runs
@@ -212,8 +213,10 @@ def test__find_job_multiple_matches(urlwatch_command: UrlwatchCommand, urlwatche
 
 
 def test_jobs_from_joblist_runs_each_job_once(urlwatch_command: UrlwatchCommand, urlwatcher: Urlwatch) -> None:
-    """A job selected more than once in the joblist (e.g. by --prepare-jobs adding a job already selected) is run
-    once (fixed in 3.39)."""
+    """A job selected more than once in the joblist is run once (fixed in 3.39).
+
+    E.g. when --prepare-jobs adds a job already selected.
+    """
     _set_jobs(urlwatcher, {'name': 'A', 'url': 'https://example.com/a'}, {'url': 'https://example.com/b'})
     urlwatcher.urlwatch_config.joblist = ['2', 1, 'A', 2, 'https://example.com/b']
     assert [job.get_location() for job in urlwatch_command.jobs_from_joblist()] == [
@@ -265,8 +268,7 @@ def test_test_job_error_includes_detail(
     urlwatch_command: UrlwatchCommand,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The error report of a failed test job carries the full detail (here, the subprocess's stderr) and not just
-    the exception's message."""
+    """A failed test job's error report has the full detail (here, stderr), not just the message."""
     urlwatch_command.urlwatcher.jobs[0].command = f'"{sys.executable}" -c "import sys; sys.exit(\'boom detail\')"'
     command_config.test_job = '1'
     with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -689,9 +691,11 @@ def test_enable_disable_job(
     message: str,
     saved_enabled: list[bool | None] | None,
 ) -> None:
-    """urlwatch's --enable and --disable set the job's enabled directive (removing it when enabling, unless
-    job_defaults would then keep the job disabled) and rewrite the jobs file, unless the job already is in the state
-    requested."""
+    """Urlwatch's --enable and --disable set the job's 'enabled' directive and rewrite the jobs file.
+
+    Enabling removes the directive unless job_defaults would then keep the job disabled; nothing is rewritten if the job
+    already is in the state requested.
+    """
     urlwatcher = urlwatch_command.urlwatcher
     _set_jobs(urlwatcher, {'name': 'a', 'url': 'https://a.example/'}, {'name': 'b', 'url': 'https://b.example/'})
     urlwatcher.jobs[1].enabled = False
@@ -711,8 +715,11 @@ def test_enable_disable_job(
 
 
 def test_serialize_keeps_false_directives() -> None:
-    """Rewriting the jobs file (e.g. with --disable) keeps the directives set to false or 0, which differ from leaving
-    them out (until 3.39 they were dropped), but not the empty headers of URL jobs."""
+    """Rewriting the jobs file (e.g. with --disable) keeps directives set to false or 0.
+
+    These differ from leaving the directive out (until 3.39 they were dropped). The empty headers of URL jobs are still
+    dropped.
+    """
     job = JobBase.unserialize(
         {'url': 'https://a.example/', 'enabled': False, 'contextlines': 0, 'additions_only': False}
     )
@@ -827,8 +834,11 @@ def test_enable_disable_no_input(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """With no input available at the confirmation prompt (e.g. stdin redirected from the null device on Windows,
-    which reports it as a terminal), --disable leaves the jobs file unmodified instead of crashing with EOFError."""
+    """With no input available at the confirmation prompt, --disable leaves the jobs file unmodified.
+
+    E.g. stdin redirected from the null device on Windows, which reports it as a terminal; this used to crash with
+    EOFError.
+    """
 
     def no_input(_: str) -> str:
         raise EOFError

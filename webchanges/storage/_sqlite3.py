@@ -25,8 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class SsdbSQLite3Storage(SsdbStorage):
-    """Handles storage of the snapshot as a SQLite database in the 'filename' file using Python's built-in sqlite3
-    module and the msgpack package.
+    """Handles snapshot storage as a SQLite database in 'filename', using sqlite3 and msgpack.
 
     A temporary database is created by __init__ and will be written by the 'save()' function (unless temporary=False).
     This data will be written to the permanent one by the 'close()' function, which is called at the end of program
@@ -41,7 +40,9 @@ class SsdbSQLite3Storage(SsdbStorage):
     """
 
     def __init__(self, filename: Path, max_snapshots: int = 4) -> None:
-        """:param filename: The full filename of the database file
+        """Initialize the snapshot database storage.
+
+        :param filename: The full filename of the database file
         :param max_snapshots: The maximum number of snapshots to retain in the database for each 'guid'
         """
         # Opens the database file and, if new, creates a table and index.
@@ -106,7 +107,7 @@ class SsdbSQLite3Storage(SsdbStorage):
         self.temp_db.commit()
 
     def _execute(self, sql: str, args: tuple | None = None) -> sqlite3.Cursor:
-        """Execute SQL command on main database"""
+        """Execute SQL command on main database."""
         if args is None:
             logger.debug("Executing (perm) '%s'", sql)
             return self.cur.execute(sql)
@@ -136,9 +137,7 @@ class SsdbSQLite3Storage(SsdbStorage):
                 self._temp_execute('DELETE FROM webchanges')
 
     def close(self) -> None:
-        """Writes the temporary database to the permanent one, purges old entries if required, and closes all database
-        connections.
-        """
+        """Writes the temporary database to the permanent one, purges old entries and closes connections."""
         self._copy_temp_to_permanent()
         with self.temp_lock:
             self.temp_db.close()
@@ -362,8 +361,9 @@ class SsdbSQLite3Storage(SsdbStorage):
         return num_del
 
     def clean(self, guid: str, keep_entries: int = 1) -> int:
-        """For the given 'guid', keep only the latest 'keep_entries' number of entries and delete all other (older)
-        ones. To delete older entries from all guids, use clean_all() instead.
+        """For the given 'guid', keep only the latest 'keep_entries' entries and delete the older ones.
+
+        To delete older entries from all guids, use clean_all() instead.
 
         :param guid: The guid.
         :param keep_entries: Number of entries to keep after deletion.

@@ -52,9 +52,7 @@ __all__ = [
 
 
 class BeautifyFilter(FilterBase):
-    """Beautify HTML (requires Python package ``BeautifulSoup`` and optionally ``jsbeautifier`` and/or
-    ``cssbeautifier``).
-    """
+    """Beautify HTML (requires ``BeautifulSoup``; optionally ``jsbeautifier`` and ``cssbeautifier``)."""
 
     __kind__ = 'beautify'
 
@@ -159,7 +157,7 @@ class Html2TextFilter(FilterBase):
     __default_subfilter__ = 'method'
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
-        """Filter (process) the data.
+        r"""Filter (process) the data.
 
         Subfilter key can be ``method`` and any method-specific option to be passed to it.
         The following ``method`` keys are supported:
@@ -192,7 +190,7 @@ class Html2TextFilter(FilterBase):
         * ``strip_tags``: A simple and fast regex-based HTML tag stripper.
 
         If the data's media type is JSON and the entire document is a JSON string (i.e. HTML that has been
-        JSON-encoded), it is decoded with ``json.loads()`` first so that e.g. ``\\u00e9`` becomes ``é``; JSON objects
+        JSON-encoded), it is decoded with ``json.loads()`` first so that e.g. ``\u00e9`` becomes ``é``; JSON objects
         and arrays are passed through unchanged.
 
         :param data: The data to be filtered (processed).

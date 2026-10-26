@@ -1,9 +1,9 @@
 # pragma: exclude file
 # ruff: noqa: S101  # Use of `assert` detected
 # ruff: noqa: S301
-"""
-Vendored version of tests for packaging.version.parse() from packaging v26.3 released on 03-Aug-26
-(code https://github.com/pypa/packaging/blob/929fd4b1410ac7ef61ef3f45b2f5d7e87711a9b5/tests/test_version.py).
+"""Vendored tests for packaging.version.parse() from packaging v26.3 (released 03-Aug-26).
+
+Code at https://github.com/pypa/packaging/blob/929fd4b1410ac7ef61ef3f45b2f5d7e87711a9b5/tests/test_version.py
 
 We make the "pretend" library optional, and skip the pickle backward-compatibility tests because their
 embedded pickle bytes reference ``packaging.version.Version`` rather than the vendored module path.
@@ -893,7 +893,7 @@ class TestVersion:
         assert getattr(v, op)(1) is NotImplemented
 
     def test_base_version_hash(self) -> None:
-        """Test that _BaseVersion hash works"""
+        """Test that _BaseVersion hash works."""
         v = SimpleVersion('1.0')
         assert isinstance(hash(v), int)
 
@@ -912,7 +912,7 @@ class TestVersion:
         assert Version('2.0') > other
 
     def test_version_compare_with_base_version_subclass(self) -> None:
-        """Test Version comparison with another _BaseVersion subclass"""
+        """Test Version comparison with another _BaseVersion subclass."""
         v1 = Version('1.0')
         v2 = SimpleVersion('1.0')
 
@@ -930,7 +930,7 @@ class TestVersion:
         assert v3 != v4
 
     def test_version_ne_with_uncached_keys(self) -> None:
-        """Test Version.__ne__ populates cache when comparing with another Version"""
+        """Test Version.__ne__ populates cache when comparing with another Version."""
         v1 = Version('1.0')
         v2 = Version('2.0')
 
@@ -949,7 +949,7 @@ class TestVersion:
         assert result is True
 
     def test_version_le_with_uncached_keys(self) -> None:
-        """Test Version.__le__ populates cache when comparing with another Version"""
+        """Test Version.__le__ populates cache when comparing with another Version."""
         v1 = Version('1.0')
         v2 = Version('2.0')
 
@@ -976,7 +976,7 @@ class TestVersion:
 
     # Tests for replace() method
     def test_replace_no_args(self) -> None:
-        """replace() with no arguments should return an equivalent version"""
+        """replace() with no arguments should return an equivalent version."""
         v = Version('1.2.3a1.post2.dev3+local')
         v_replaced = replace(v)
         assert v == v_replaced
@@ -1087,7 +1087,7 @@ class TestVersion:
         assert hash(v1) != hash(v3)
 
     def test_replace_returns_same_instance_when_unchanged(self) -> None:
-        """replace() returns the exact same object when no components change"""
+        """replace() returns the exact same object when no components change."""
         v = Version('1.2.3a1.post2.dev3+local')
         assert replace(v) is v
         assert replace(v, epoch=0) is v
@@ -1098,7 +1098,7 @@ class TestVersion:
         assert replace(v, local='local') is v
 
     def test_replace_change_pre_type(self) -> None:
-        """Can change from one pre-release type to another"""
+        """Can change from one pre-release type to another."""
         v = Version('1.2.3a1')
         assert str(replace(v, pre=('b', 2))) == '1.2.3b2'
         assert str(replace(v, pre=('rc', 1))) == '1.2.3rc1'

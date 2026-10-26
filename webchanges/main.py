@@ -40,7 +40,9 @@ class Urlwatch:
         ssdb_storage: SsdbStorage,
         jobs_storage: YamlJobsStorage,
     ) -> None:
-        """:param urlwatch_config: The CommandConfig object containing the program run information.
+        """Initialize with the run's configuration and storage objects.
+
+        :param urlwatch_config: The CommandConfig object containing the program run information.
         :param config_storage: The YamlConfigStorage object containing the configuration information.
         :param ssdb_storage: The CacheStorage object containing snapshot database information
         :param jobs_storage: The YamlJobsStorage object containing information about the jobs.
@@ -61,9 +63,7 @@ class Urlwatch:
         self.load_jobs()
 
     def check_directories(self) -> None:
-        """Check whether the configuration and jobs files directories exist. Create them and write default configuration
-        files if one not found.
-        """
+        """Check that the configuration and jobs directories exist, creating them and default files if not."""
         if (
             not (self.urlwatch_config.config_file and self.urlwatch_config.jobs_files)
             and not self.urlwatch_config.config_path.is_dir()

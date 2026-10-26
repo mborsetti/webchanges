@@ -101,7 +101,7 @@ class PypdfFilter(FilterBase):
             self.raise_import_error('pypdf', self.__kind__, e, extra='pypdf')
 
         class RenamePypdfFilter(logging.Filter):
-            """Function to rename logging name from '_.utils' to 'pypdf_utils'"""
+            """Function to rename logging name from '_.utils' to 'pypdf_utils'."""
 
             def filter(self, record: logging.LogRecord) -> bool:
                 if record.name == 'pypdf._utils':
@@ -404,9 +404,7 @@ class XmlToJsonFilter(FilterBase):
 
 
 class XmlToYamlFilter(FilterBase):
-    """Convert XML to formatted YAML (attributes become '@' keys and text '#text'), using xmltodict.  An alternative to
-    xmltojson.
-    """
+    """Convert XML to formatted YAML with xmltodict (attributes become '@' keys, text '#text')."""
 
     __kind__ = 'xmltoyaml'
 

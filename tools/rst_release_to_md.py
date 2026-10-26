@@ -22,12 +22,12 @@ _INLINE_LITERAL = re.compile(r'``([^`]+)``')
 
 
 def convert(rst: str) -> str:
-    """Convert a small subset of reStructuredText to GitHub-flavoured Markdown.
+    r"""Convert a small subset of reStructuredText to GitHub-flavoured Markdown.
 
     Supported constructs:
-        * Section heading -- ``Title\\n<line of one repeated punctuation char of >= length>``
+        * Section heading -- ``Title\n<line of one repeated punctuation char of >= length>``
           becomes ``## Title``.
-        * Inline literal -- ````foo```` becomes ``\\`foo\\```.
+        * Inline literal -- ````foo```` becomes ``\`foo\```.
         * Top-level bullet -- ``* item`` becomes ``- item`` (``*`` can be misread as emphasis
           by stricter Markdown parsers).
         * Bold (``**foo**``), nested bullets, blank lines and bullet continuation lines pass

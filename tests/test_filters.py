@@ -449,7 +449,7 @@ def test_filter_exceptions_jq(data: str, subfilter: dict[str, Any], expected: st
 
 
 def test_html2text_decodes_json_encoded_string() -> None:
-    """A JSON document that is a bare string is decoded (unescaping the \\uXXXX) before being converted."""
+    r"""A JSON document that is a bare string is decoded (unescaping the \uXXXX) before being converted."""
     json_encoded = json.dumps('<div>café — café</div>')  # i.e. '"<div>caf\\u00e9 \\u2014 caf\\u00e9</div>"'
     assert 'é' not in json_encoded  # ensure_ascii is on by default, so the input really is escaped
     data, mime_type = Html2TextFilter(job_state).filter(json_encoded, 'application/json', {})

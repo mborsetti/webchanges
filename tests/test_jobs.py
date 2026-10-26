@@ -335,8 +335,10 @@ def test_check_429_transient_error_curl_cffi(
 
 
 def test_empty_as_error(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
-    """Check that with empty_as_error an empty response raises a TransientHTTPError (status code 999) and the
-    last non-empty snapshot is preserved, so a later restoration of the same content shows as unchanged."""
+    """With empty_as_error, an empty response raises a TransientHTTPError (status code 999).
+
+    The last non-empty snapshot is preserved, so a later restoration of the same content shows as unchanged.
+    """
     job = JobBase.unserialize({'url': 'https://www.example.com/', 'empty_as_error': True})
 
     # Create a mock response object returning valid content
@@ -377,8 +379,7 @@ def test_empty_as_error(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.Mo
 
 
 def test_empty_as_error_error_ignored(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
-    """Check that the error raised by empty_as_error (status code 999) can be silenced with
-    ignore_http_error_codes."""
+    """The error raised by empty_as_error (status code 999) can be silenced with ignore_http_error_codes."""
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'empty_as_error': True, 'ignore_http_error_codes': 999}
     )
@@ -400,8 +401,10 @@ def test_empty_as_error_error_ignored(ssdb_storage: SsdbSQLite3Storage, mocker: 
 def test_empty_as_error_not_ignored_by_ignore_connection_errors(
     ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture
 ) -> None:
-    """Check that ignore_connection_errors does not silence the error raised by empty_as_error: the server did
-    respond, so an empty response is not a connection problem."""
+    """ignore_connection_errors does not silence the error raised by empty_as_error.
+
+    The server did respond, so an empty response is not a connection problem.
+    """
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'empty_as_error': True, 'ignore_connection_errors': True}
     )
@@ -462,9 +465,11 @@ def test_empty_response_without_empty_as_error(
 
 
 def test_empty_as_error_after_filtering(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
-    """Check that with empty_as_error a response that is not empty but from which the filters leave nothing (e.g. a
-    page that did not render fully) also raises a TransientHTTPError (status code 999) and the last non-empty
-    snapshot is preserved, so a later restoration of the same content shows as unchanged."""
+    """With empty_as_error, a response the filters leave empty also raises a TransientHTTPError (999).
+
+    E.g. a page that did not render fully. The last non-empty snapshot is preserved, so a later restoration of the same
+    content shows as unchanged.
+    """
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'empty_as_error': True, 'filters': [{'keep_lines_containing': 'value'}]}
     )
@@ -506,9 +511,10 @@ def test_empty_as_error_after_filtering(ssdb_storage: SsdbSQLite3Storage, mocker
 
 
 def test_empty_as_error_ignore(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
-    """Check that with empty_as_error: ignore the error raised for an empty response, or for one from which the
-    filters leave nothing, is ignored (so it is neither reported nor counted towards max_tries) while other errors
-    are not."""
+    """empty_as_error: ignore ignores the error for an empty (or filtered-to-empty) response only.
+
+    Such an error is neither reported nor counted towards max_tries; other errors are not ignored.
+    """
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'empty_as_error': 'ignore', 'filters': [{'keep_lines_containing': 'value'}]}
     )
@@ -539,8 +545,7 @@ def test_empty_as_error_ignore(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_
 
 
 def test_command_job_empty_as_error_ignore(ssdb_storage: SsdbSQLite3Storage) -> None:
-    """Check that empty_as_error: ignore also silences command jobs, which have no ignore_http_error_codes
-    directive."""
+    """empty_as_error: ignore also silences command jobs, which have no ignore_http_error_codes directive."""
     job = JobBase.unserialize({'command': f'"{sys.executable}" -c "pass"', 'empty_as_error': 'ignore'})
 
     with JobState(ssdb_storage, job) as job_state:
@@ -557,8 +562,10 @@ def test_empty_as_error_invalid_value() -> None:
 
 
 def test_command_job_empty_as_error(ssdb_storage: SsdbSQLite3Storage) -> None:
-    """Check that empty_as_error works in command jobs: no output raises a TransientHTTPError (status code 999) and
-    the last non-empty snapshot is preserved, so a later restoration of the same output shows as unchanged."""
+    """With empty_as_error, a command job with no output raises a TransientHTTPError (status code 999).
+
+    The last non-empty snapshot is preserved, so a later restoration of the same output shows as unchanged.
+    """
     print_job = JobBase.unserialize({'command': f'"{sys.executable}" -c "print(\'value: 1\')"', 'empty_as_error': True})
     # Same guid (i.e. same snapshot) as print_job, but producing no output at all.
     silent_job = JobBase.unserialize({'command': 'this is replaced below', 'empty_as_error': True})
@@ -1223,8 +1230,10 @@ def test_invalid_directive() -> None:
     ids=['url', 'browser', 'command', 'base'],
 )
 def test_format_error_transient_http_error_has_no_traceback(job_data: dict[str, Any] | None) -> None:
-    """A TransientHTTPError describes a condition of the monitored resource, not a webchanges failure, so reports
-    show its message rather than a full Python traceback."""
+    """Reports show a TransientHTTPError's message rather than a full Python traceback.
+
+    It describes a condition of the monitored resource, not a webchanges failure.
+    """
     job = JobBase.unserialize(job_data) if job_data else Job()
 
     for exception in (
@@ -1349,9 +1358,11 @@ def test_navigate_directive() -> None:
 def test_urlwatch_browser_directives(
     directives: dict[str, Any], use_browser: str | bool, user_agent: str | None, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """urlwatch's 'useragent', 'browser' and 'wait_for' directives of 'navigate' jobs are translated to a
-    'User-Agent' header, 'use_browser' and 'wait_for_selector', with a deprecation warning (until 3.39 they were
-    rejected as unrecognized, and 'wait_for' failed the job)."""
+    """Urlwatch's 'useragent', 'browser' and 'wait_for' directives of 'navigate' jobs are translated.
+
+    They become a 'User-Agent' header, 'use_browser' and 'wait_for_selector', with a deprecation warning (until 3.39
+    they were rejected as unrecognized, and 'wait_for' failed the job).
+    """
     job = cast('BrowserJob', JobBase.unserialize({'navigate': 'https://example.com/', **directives}))
     assert job.use_browser == use_browser
     assert (job.headers or {}).get('User-Agent') == user_agent
@@ -1361,7 +1372,7 @@ def test_urlwatch_browser_directives(
 
 
 def test_urlwatch_browser_directive_url_job() -> None:
-    """urlwatch's 'browser' directive does not turn a 'url' job into a browser job."""
+    """Urlwatch's 'browser' directive does not turn a 'url' job into a browser job."""
     job = JobBase.unserialize({'url': 'https://example.com/', 'browser': 'firefox'})
     assert isinstance(job, UrlJob)
     assert not job.use_browser
@@ -1497,8 +1508,10 @@ def test_shell_job_without_kind() -> None:
 
 
 def test_unserialize_leaves_input_dict_unmodified() -> None:
-    """The caller's dict (e.g. one owned by hooks.py code) must not be modified by the backwards-compatibility
-    migrations in unserialize(), which rewrite 'kind', add 'differ' and remove other job types' required keys."""
+    """unserialize() does not modify the caller's dict (e.g. one owned by hooks.py code).
+
+    Its backwards-compatibility migrations rewrite 'kind', add 'differ' and remove other job types' required keys.
+    """
     job_data = {'kind': 'shell', 'command': 'echo test', 'diff_tool': 'wdiff', 'url': ''}
     job = JobBase.unserialize(job_data)
     assert isinstance(job, ShellJob)
@@ -1516,9 +1529,7 @@ def test_with_defaults() -> None:
 
 
 def test_with_defaults_headers() -> None:
-    """Tests that the default headers are overwritten correctly: those more specific (i.e. ``url_jobs`` and
-    ``browser_jobs``) override those more generic (i.e. ``all_jobs``).
-    """
+    """More specific default headers (``url_jobs``, ``browser_jobs``) override ``all_jobs`` ones."""
     job_data = {'url': 'https://www.example.com'}
     job = JobBase.unserialize(job_data)
     config: _Config = {  # ty:ignore[missing-typed-dict-key]
@@ -1534,8 +1545,10 @@ def test_with_defaults_headers() -> None:
 
 
 def test_with_defaults_headers_job_wins_case_insensitively() -> None:
-    """The example in docs/configuration.rst: the job's headers win over url_jobs ones, which win over all_jobs ones,
-    header by header and case-insensitively."""
+    """The docs/configuration.rst example: the job's headers win over url_jobs ones, which win over all_jobs ones.
+
+    Header by header and case-insensitively.
+    """
     job = JobBase.unserialize({'url': 'https://www.example.com', 'headers': {'user-agent': 'Lynx'}})
     config: _Config = {  # ty:ignore[missing-typed-dict-key]
         'job_defaults': {
@@ -1949,8 +1962,10 @@ def test_browser_empty_body_without_empty_as_error(
 
 @playwright_required
 def test_browser_ignore_error_transient_http_codes() -> None:
-    """In browser jobs, ignore_http_error_codes also silences TransientHTTPError (incl. the synthetic 999 raised
-    by empty_as_error), fixed in 3.38."""
+    """In browser jobs, ignore_http_error_codes also silences TransientHTTPError (fixed in 3.38).
+
+    Including the synthetic 999 raised by empty_as_error.
+    """
     job = JobBase.unserialize({'url': 'https://www.example.com/', 'use_browser': True, 'ignore_http_error_codes': 999})
     assert job.ignore_error(TransientHTTPError('No data and empty_as_error is set', status_code=999)) is True
     assert job.ignore_error(TransientHTTPError('Server Error', status_code=500)) is False
@@ -1958,8 +1973,11 @@ def test_browser_ignore_error_transient_http_codes() -> None:
 
 @playwright_required
 def test_browser_ignore_connection_errors_does_not_silence_empty() -> None:
-    """In browser jobs, ignore_connection_errors silences genuine transient errors but not the synthetic 999 raised
-    by empty_as_error: the server did respond, so an empty response is not a connection problem."""
+    """In browser jobs, ignore_connection_errors does not silence empty_as_error's synthetic 999.
+
+    It still silences genuine transient errors: the server did respond, so an empty response is not a connection
+    problem.
+    """
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'use_browser': True, 'ignore_connection_errors': True}
     )
@@ -2107,8 +2125,7 @@ def test_shell_python_command_receives_verbosity(
 
 
 def test_shell_command_stdin_is_null_device(ssdb_storage: SsdbSQLite3Storage) -> None:
-    """A command that prompts for input reads EOF (stdin is the null device) and errors out instead of hanging
-    forever waiting on webchanges' inherited stdin."""
+    """A command prompting for input reads EOF (stdin is the null device) and fails instead of hanging."""
     job_data = {'command': f'"{sys.executable}" -c "print(input())"'}
     job = JobBase.unserialize(job_data)
     with JobState(ssdb_storage, job) as job_state:
@@ -2139,9 +2156,11 @@ def test_shell_stderr_directive(
     ssdb_storage: SsdbSQLite3Storage,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The stderr directive of command jobs: 'ignore' (the default) reports stderr only in the error of a failed
-    command, 'forward' (urlwatch's 'urlwatch') also writes it to webchanges' stderr, 'fail' fails the job on any stderr
-    output, and 'stdout' merges it into the data (until 3.39, any value failed the job)."""
+    """The stderr directive of command jobs (until 3.39, any value failed the job).
+
+    'ignore' (the default) reports stderr only in the error of a failed command, 'forward' (urlwatch's 'urlwatch') also
+    writes it to webchanges' stderr, 'fail' fails the job on any stderr output, and 'stdout' merges it into the data.
+    """
     script = f"import sys; print('out', flush=True); print('err', file=sys.stderr, flush=True); sys.exit({exit_code})"
     job_data: dict[str, Any] = {'command': f'"{sys.executable}" -c "{script}"'}
     if stderr:
@@ -2330,8 +2349,10 @@ def test_job_states_verb_notimestamp_changed(time_jobs_urlwatcher: Urlwatch) -> 
 
 
 class _FlakyHandler(BaseHTTPRequestHandler):
-    """Fails the first ``failures`` requests (by resetting the connection, or with the status code ``mode``), then
-    answers 200 'ok'."""
+    """Fails the first ``failures`` requests, then answers 200 'ok'.
+
+    A failure resets the connection, or answers with the status code ``mode``.
+    """
 
     count = 0
     failures = 1
@@ -2395,8 +2416,10 @@ def test_retries_transient_error(
     retry_after: str | None,
     expected_wait: float,
 ) -> None:
-    """With 'retries', a connection reset or a transient HTTP response is retried, after the server's Retry-After or
-    else the backoff (issue #196)."""
+    """With 'retries', a connection reset or a transient HTTP response is retried (issue #196).
+
+    The wait is the server's Retry-After, else the backoff.
+    """
     _FlakyHandler.mode, _FlakyHandler.retry_after = mode, retry_after
     sleep = mocker.patch('webchanges.jobs._url.time.sleep')
     job = JobBase.unserialize({'url': flaky_server, 'http_client': client, 'retries': 2, 'timeout': 5})
@@ -2421,8 +2444,7 @@ def test_retries_not_set_does_not_retry(flaky_server: str, client: str) -> None:
 
 
 def test_retries_exhausted(flaky_server: str, mocker: pytest_mock.MockerFixture) -> None:
-    """When every attempt fails, the error of the last one is raised after 1 + 'retries' attempts, with exponential
-    backoff between them."""
+    """When every attempt fails, the last error is raised after 1 + 'retries' backed-off attempts."""
     _FlakyHandler.mode, _FlakyHandler.failures = '503', 99
     sleep = mocker.patch('webchanges.jobs._url.time.sleep')
     job = JobBase.unserialize({'url': flaky_server, 'retries': 2, 'timeout': 5})
@@ -2479,8 +2501,10 @@ def test_retry_wait_caps() -> None:
 def test_ignore_dh_key_too_small_httpx_context(
     mocker: pytest_mock.MockerFixture, ssl_no_verify: bool, verify_mode: ssl.VerifyMode
 ) -> None:
-    """With ignore_dh_key_too_small, httpx gets an SSL context that lowers the security level but still verifies
-    certificates against CA certificates (unless ssl_no_verify is set)."""
+    """With ignore_dh_key_too_small, httpx gets an SSL context with a lowered security level.
+
+    It still verifies certificates against CA certificates (unless ssl_no_verify is set).
+    """
     client = mocker.patch('webchanges.jobs._url.httpx.Client', side_effect=RuntimeError('stop'))
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'ignore_dh_key_too_small': True, 'ssl_no_verify': ssl_no_verify}
@@ -2536,8 +2560,10 @@ def test_ignore_dh_key_too_small_requests_mounts_adapter(mocker: pytest_mock.Moc
 
 
 class _ScriptedHandler(BaseHTTPRequestHandler):
-    """Answers each path with the status, Content-Type, body and extra headers in ``ROUTES``; '/cookies' answers with
-    the Cookie request header received."""
+    """Answers each path as set in ``ROUTES``; '/cookies' answers with the Cookie request header received.
+
+    ``ROUTES`` sets the status, Content-Type, body and extra headers of each path.
+    """
 
     ROUTES: dict[str, tuple[int, str | None, bytes, dict[str, str]]] = {
         '/etag': (200, 'text/plain; charset=utf-8', b'hello', {'ETag': '"v1"'}),
@@ -2638,8 +2664,10 @@ def _retrieve(url: str, client: str, **directives: Any) -> tuple[str | bytes, st
 def test_http_clients_response(
     scripted_server: str, client: str, path: str, directives: dict[str, Any], expected: tuple[str, str, str]
 ) -> None:
-    """Every HTTP client returns the same data, ETag and media type, including for a redirect not followed (no_redirects
-    directive), whose data describes it according to its media type."""
+    """Every HTTP client returns the same data, ETag and media type.
+
+    Including for a redirect not followed (no_redirects directive), whose data describes it according to its media type.
+    """
     assert _retrieve(scripted_server + path, client, **directives) == expected
 
 
@@ -2667,9 +2695,11 @@ def test_http_clients_response(
 def test_http_clients_error_response(
     scripted_server: str, client: str, path: str, transient: bool, message: str, retry_after: float | None
 ) -> None:
-    """Every HTTP client raises the same error message for an HTTP error, with the response body appended (except for a
-    404): JSON compacted, HTML converted to text without its title, else as is. 429 and 5xx errors are transient and
-    carry the server's Retry-After."""
+    """Every HTTP client raises the same error message for an HTTP error.
+
+    The response body is appended (except for a 404): JSON compacted, HTML converted to text without its title, else as
+    is. 429 and 5xx errors are transient and carry the server's Retry-After.
+    """
     url = scripted_server + path
     with pytest.raises(Exception) as exc_info:
         _retrieve(url, client)
