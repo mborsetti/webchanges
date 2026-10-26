@@ -200,7 +200,7 @@ def chunk_string(text: str, length: int, numbering: bool = False) -> list[str]:
                 actual_digits = floor(log10(len(chunks))) + 1
 
             length = len(chunks)
-            return [line + ' (' + f'{{:{digits_try}d}}'.format(i + 1) + f'/{length})' for i, line in enumerate(chunks)]
+            return [f'{line} ({i + 1:{digits_try}d}/{length})' for i, line in enumerate(chunks)]
 
         except ValueError as e:
             logger.error(f'{e}')

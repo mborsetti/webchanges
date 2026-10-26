@@ -85,7 +85,7 @@ class TelegramReporter(MarkdownReporter):
             json_res = result.json()
 
             if result.status_code == 200:
-                logger.info(f"Telegram response: ok '{json_res['ok']}'. {json_res['result']}")
+                logger.info("Telegram response: ok '%s'. %s", json_res['ok'], json_res['result'])
             else:
                 raise RuntimeError(f'Telegram error: {json_res["description"]}')
         except ValueError:

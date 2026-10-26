@@ -116,7 +116,7 @@ class MailgunReporter(TextReporter):
             json_res = result.json()
 
             if result.status_code == 200:
-                logger.info(f"Mailgun response: id '{json_res['id']}'. {json_res['message']}")
+                logger.info("Mailgun response: id '%s'. %s", json_res['id'], json_res['message'])
             else:
                 raise RuntimeError(f'Mailgun error: {json_res["message"]}')
         except ValueError:

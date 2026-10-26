@@ -1847,15 +1847,13 @@ class ImageDiffer(DifferBase):
                 'html': '<br>\n'.join(htm),
             }
 
-        newline = '\n'  # For Python < 3.12 f-string {} compatibility
-        back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
         directives_for_str = {key: value for key, value in directives.items() if key != 'model'}
         if 'prompt' in directives_for_str:
             directives_for_str['prompt'] = '«custom»'
         directives_text = (
             (
                 ' (ai_google directive(s): '
-                + ', '.join(f'{key}={str(value).replace(newline, back_n)}' for key, value in directives_for_str.items())
+                + ', '.join(f'{key}={str(value).replace("\n", "\\n")}' for key, value in directives_for_str.items())
                 + ')'
             )
             if directives_for_str
@@ -2260,15 +2258,13 @@ class AIGoogleDiffer(DifferBase):
         if not summary:
             self.state.verb = 'changed,no_report'
             return {'plain': '', 'markdown': '', 'html': ''}
-        newline = '\n'  # For Python < 3.12 f-string {} compatibility
-        back_n = '\\n'  # For Python < 3.12 f-string {} compatibility
         directives_for_str = {key: value for key, value in directives.items() if key != 'model'}
         if 'prompt' in directives_for_str:
             directives_for_str['prompt'] = '«custom»'
         directives_text = (
             (
                 ' (differ directive(s): '
-                + ', '.join(f'{key}={str(value).replace(newline, back_n)}' for key, value in directives_for_str.items())
+                + ', '.join(f'{key}={str(value).replace("\n", "\\n")}' for key, value in directives_for_str.items())
                 + ')'
             )
             if directives_for_str
