@@ -480,7 +480,8 @@ class UrlJob(UrlJobBase):
                 )
                 session.mount('https://', weak_dh_requests_adapter(verify=not self.ssl_no_verify))
             if headers:
-                session.headers.update(headers)
+                # requests is typed for str values only but also accepts bytes
+                session.headers.update(headers)  # ty:ignore[no-matching-overload]
             if cookies := self.get_cookies():
                 session.cookies.update(cookies)
             if proxies:

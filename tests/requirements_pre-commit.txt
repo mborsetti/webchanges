@@ -18,7 +18,5 @@ types-docutils
 types-psutil
 types-python-dateutil
 types-PyYAML
-types-redis
-types-requests
 types-vobject
 types-xmltodict

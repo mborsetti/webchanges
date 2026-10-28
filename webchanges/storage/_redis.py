@@ -47,7 +47,8 @@ class SsdbRedisStorage(SsdbStorage):
         del self.db
 
     def get_guids(self) -> list[str]:
-        return [guid[5:].decode() for guid in self.db.keys('guid:*')]
+        # keys are bytes, as decode_responses is off
+        return [guid[5:].decode() for guid in self.db.keys('guid:*')]  # ty:ignore[unresolved-attribute]
 
     def load(self, guid: str) -> Snapshot:
         key = self._make_key(guid)
