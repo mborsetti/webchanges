@@ -13,6 +13,8 @@ updates:
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: github-actions
     directory: /
+    # PRs go to the development branch so they can be merged directly (security updates still target the default)
+    target-branch: unreleased
     schedule:
       interval: weekly
       day: friday

@@ -17,6 +17,10 @@ minimum_pre_commit_version: 4.5.1  # based on what's available at https://github
 default_language_version:
     python: python3
 
+# pre-commit.ci (https://pre-commit.ci): send autoupdate PRs to the development branch so they can be merged directly
+ci:
+    autoupdate_branch: unreleased
+
 # A list of repository mappings.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
