@@ -321,16 +321,13 @@ select = [
 ]
 
 ignore = [
-    'D105',   # Missing docstring in magic method (e.g., __str__). Most agree that __repr__ is self-explanatory.
     'D107',   # Missing docstring in __init__. Class-level docstring (D101) already covers the object's purpose.
     'D203',   # Conflicts with D211, which forbids a blank line before a class docstring).
     'D213',   # Conflicts with D212, which says multi-line docstring summary should start on the first line (Google style).
     'PLC0415', # `import` should be at the top-level of a file
-    'PT011',   # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
     'PT030',   # pytest.warns({warning}) is too broad, set the match parameter or use a more specific warning
     'RUF012',  # Mutable class attributes should be annotated with `typing.ClassVar`
     'SIM105',  # Use contextlib.suppress({exception}) instead of try-except-pass
-    'SIM115',  # Use a context manager for opening files
     'TD002',   # Missing author in TODO
     'TD003',   # Missing issue link for this TODO
 ]
@@ -358,6 +355,7 @@ max-complexity = 20 # 10 is default, 13 to 15 is modern practice
 [tool.ruff.lint.per-file-ignores]
 '{tests/**,tools/test_*}' = [
     'ANN401', #  Dynamically typed expressions (typing.Any) are disallowed
+    'PT011',   # pytest.raises({exception}) is too broad, set the match parameter or use a more specific exception
     'S101', # Use of `assert` detected
     # Test functions are self-documenting:
     'D101', # Missing docstring in public class

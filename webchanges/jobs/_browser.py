@@ -332,27 +332,25 @@ class BrowserJob(UrlJobBase):
         """Helper function to save screenshot and html content files after a Playwright Error."""
         from playwright.sync_api import Error as PlaywrightError
 
-        screenshot_filename = tempfile.NamedTemporaryFile(
-            prefix=f'{__project_name__}_screenshot_{self.index_number}_', suffix='.png', delete=False
-        ).name
+        def temp_filename(kind: str, suffix: str) -> str:
+            """Create an empty temporary file that is kept, close its handle, and return its name."""
+            fd, filename = tempfile.mkstemp(prefix=f'{__project_name__}_{kind}_{self.index_number}_', suffix=suffix)
+            os.close(fd)
+            return filename
+
+        screenshot_filename = temp_filename('screenshot', '.png')
         try:
             page.screenshot(path=screenshot_filename)
             logger.info('Job %s: Screenshot saved at %s', self.index_number, screenshot_filename)
         except PlaywrightError:
             Path(screenshot_filename).unlink()
-        full_filename = tempfile.NamedTemporaryFile(
-            prefix=f'{__project_name__}_screenshot-full_{self.index_number}_',
-            suffix='.png',
-            delete=False,
-        ).name
+        full_filename = temp_filename('screenshot-full', '.png')
         try:
             page.screenshot(path=full_filename, full_page=True)
             logger.info('Job %s: Full page image saved at %s', self.index_number, full_filename)
         except PlaywrightError:
             Path(full_filename).unlink()
-        html_filename = tempfile.NamedTemporaryFile(
-            prefix=f'{__project_name__}_content_{self.index_number}_', suffix='.html', delete=False
-        ).name
+        html_filename = temp_filename('content', '.html')
         try:
             Path(html_filename).write_text(page.content())
             logger.info('Job %s: Page HTML content saved at %s', self.index_number, html_filename)
